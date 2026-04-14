@@ -309,6 +309,10 @@ class JsonInterpreter extends ChangeNotifier {
       final subPath = path.substring(7);
       _setNestedValue(_variables, subPath, value);
       notifyListeners();
+    } else if (!path.startsWith('loop.') && !path.startsWith('params.')) {
+      // 没有前缀的直接当 global 变量（与 getVariable 行为一致）
+      _setNestedValue(_variables, path, value);
+      notifyListeners();
     }
   }
 
