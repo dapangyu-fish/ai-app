@@ -1,0 +1,50 @@
+// Widget 构建器（总入口）
+// 根据 JSON 节点的 type 字段分发到对应的控件构建器
+import 'package:flutter/material.dart';
+import 'interpreter.dart';
+import 'widgets/text_widget.dart';
+import 'widgets/button_widget.dart';
+import 'widgets/input_widget.dart';
+import 'widgets/list_widget.dart';
+import 'widgets/container_widget.dart';
+
+class JsonWidgetBuilder {
+  // 控件注册表：type → 构建器实例
+  static final Map<String, dynamic> _builders = {
+    'text': JsonTextWidget(),
+    'button': JsonButtonWidget(),
+    'input': JsonInputWidget(),
+    'list': JsonListWidget(),
+    'container': JsonContainerWidget(),
+  };
+
+  /// 根据 JSON 配置构建对应的 Flutter Widget
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final type = json['type'] as String?;
+
+    if (type == null) {
+      return const SizedBox.shrink();
+    }
+
+    final builder = _builders[type];
+    if (builder != null) {
+      return builder.build(context, json, interpreter);
+    }
+
+    // 未知类型，显示占位提示
+    return Container(
+      padding: const EdgeInsets.all(8),
+      child: Text(
+        '未知控件类型: $type',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.error,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}

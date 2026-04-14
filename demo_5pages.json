@@ -1,0 +1,545 @@
+{
+  "version": "3.2",
+  "meta": {
+    "name": "个人记事本",
+    "description": "5页演示：首页导航、新建笔记、笔记列表、搜索、关于",
+    "author": "demo"
+  },
+  "global": {
+    "variables": {
+      "noteTitle": "",
+      "noteContent": "",
+      "searchKeyword": "",
+      "notes": [],
+      "searchResults": [],
+      "noteCount": "0"
+    },
+    "functions": {
+      "addNote": {
+        "params": ["title", "content"],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "$.global.notes",
+              "value": {
+                "cat": [
+                  { "var": "$.global.notes" },
+                  ["{{ $.params.title }} | {{ $.params.content }}"]
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": { "var": "$.global.noteTitle", "value": "" }
+          },
+          {
+            "call": "@set",
+            "args": { "var": "$.global.noteContent", "value": "" }
+          },
+          {
+            "call": "@print",
+            "args": { "value": "已添加笔记：{{ $.params.title }}" }
+          }
+        ]
+      },
+      "deleteNote": {
+        "params": ["index"],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "$.global.notes",
+              "value": {
+                "filter": [
+                  { "var": "$.global.notes" },
+                  { "!=": [{ "var": "" }, { "var": "$.loop.item" }] }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@print",
+            "args": { "value": "已删除第 {{ $.params.index }} 条笔记" }
+          }
+        ]
+      },
+      "clearAllNotes": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": { "var": "$.global.notes", "value": [] }
+          },
+          {
+            "call": "@print",
+            "args": { "value": "已清空所有笔记" }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": { "value": "个人记事本启动完成" }
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "个人记事本",
+        "layout": "column",
+        "padding": 24,
+        "children": [
+          {
+            "type": "text",
+            "value": "个人记事本",
+            "position": { "type": "relative" },
+            "style": { "fontSize": 28, "fontWeight": "bold" }
+          },
+          {
+            "type": "text",
+            "value": "随时记录你的想法和灵感",
+            "position": { "type": "relative" },
+            "style": { "fontSize": 16, "color": "#888888" }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 16,
+            "color": "#F0F4FF",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "text",
+                "value": "快速入口",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 18, "fontWeight": "bold" }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "button",
+                "label": "新建笔记",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "add_note"
+                }
+              },
+              {
+                "type": "button",
+                "label": "笔记列表",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "note_list"
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "button",
+                "label": "搜索笔记",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "search"
+                }
+              },
+              {
+                "type": "button",
+                "label": "关于",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "about"
+                }
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "id": "add_note",
+        "title": "新建笔记",
+        "layout": "column",
+        "padding": 24,
+        "children": [
+          {
+            "type": "text",
+            "value": "新建笔记",
+            "position": { "type": "relative" },
+            "style": { "fontSize": 24, "fontWeight": "bold" }
+          },
+          {
+            "type": "text",
+            "value": "填写标题和内容后点击保存",
+            "position": { "type": "relative" },
+            "style": { "fontSize": 14, "color": "#888888" }
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入笔记标题...",
+            "bind": "$.global.noteTitle",
+            "position": { "type": "relative" }
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入笔记内容...",
+            "bind": "$.global.noteContent",
+            "position": { "type": "relative" }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 12,
+            "color": "#FFFBE6",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "text",
+                "value": "预览",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14, "fontWeight": "bold", "color": "#B8860B" }
+              },
+              {
+                "type": "text",
+                "value": "标题：{{ $.global.noteTitle }}",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 16 }
+              },
+              {
+                "type": "text",
+                "value": "内容：{{ $.global.noteContent }}",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14, "color": "#666666" }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "button",
+                "label": "保存笔记",
+                "position": { "type": "flex", "flex": 2 },
+                "action": {
+                  "type": "call",
+                  "call": "@global.addNote",
+                  "args": {
+                    "title": "{{ $.global.noteTitle }}",
+                    "content": "{{ $.global.noteContent }}"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "返回首页",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "id": "note_list",
+        "title": "笔记列表",
+        "layout": "column",
+        "padding": 20,
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "text",
+                "value": "我的笔记",
+                "position": { "type": "flex", "flex": 3 },
+                "style": { "fontSize": 22, "fontWeight": "bold" }
+              },
+              {
+                "type": "button",
+                "label": "清空",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "call",
+                  "call": "@global.clearAllNotes",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "list",
+            "source": "{{ $.global.notes }}",
+            "position": { "type": "relative" },
+            "item_template": {
+              "type": "container",
+              "layout": "row",
+              "padding": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ $.loop.item }}",
+                  "position": { "type": "flex", "flex": 4 },
+                  "style": { "fontSize": 15 }
+                },
+                {
+                  "type": "button",
+                  "label": "删除",
+                  "position": { "type": "flex", "flex": 1 },
+                  "action": {
+                    "type": "call",
+                    "call": "@global.deleteNote",
+                    "args": { "index": "{{ $.loop.index }}" }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "button",
+                "label": "新建笔记",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "add_note"
+                }
+              },
+              {
+                "type": "button",
+                "label": "返回首页",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "id": "search",
+        "title": "搜索笔记",
+        "layout": "column",
+        "padding": 24,
+        "children": [
+          {
+            "type": "text",
+            "value": "搜索笔记",
+            "position": { "type": "relative" },
+            "style": { "fontSize": 24, "fontWeight": "bold" }
+          },
+          {
+            "type": "text",
+            "value": "输入关键词查找笔记内容",
+            "position": { "type": "relative" },
+            "style": { "fontSize": 14, "color": "#888888" }
+          },
+          {
+            "type": "input",
+            "placeholder": "输入搜索关键词...",
+            "bind": "$.global.searchKeyword",
+            "position": { "type": "relative" }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 16,
+            "color": "#F0FFF0",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "text",
+                "value": "当前关键词：{{ $.global.searchKeyword }}",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 16 }
+              },
+              {
+                "type": "text",
+                "value": "提示：在笔记列表中浏览全部笔记",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 13, "color": "#666666" }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "button",
+                "label": "查看全部笔记",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "note_list"
+                }
+              },
+              {
+                "type": "button",
+                "label": "返回首页",
+                "position": { "type": "flex", "flex": 1 },
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "id": "about",
+        "title": "关于",
+        "layout": "column",
+        "padding": 24,
+        "children": [
+          {
+            "type": "text",
+            "value": "关于 个人记事本",
+            "position": { "type": "relative" },
+            "style": { "fontSize": 24, "fontWeight": "bold" }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 16,
+            "color": "#F5F5F5",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "text",
+                "value": "版本：v1.0.0",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 16 }
+              },
+              {
+                "type": "text",
+                "value": "引擎：JSON DSL v3.2",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 16 }
+              },
+              {
+                "type": "text",
+                "value": "平台：Flutter 跨平台",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 16 }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 16,
+            "color": "#FFF0F0",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "text",
+                "value": "功能特性",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 18, "fontWeight": "bold" }
+              },
+              {
+                "type": "text",
+                "value": "- 纯 JSON 配置驱动 UI 渲染",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14 }
+              },
+              {
+                "type": "text",
+                "value": "- 支持新建、查看、删除笔记",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14 }
+              },
+              {
+                "type": "text",
+                "value": "- 双向数据绑定 + 实时预览",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14 }
+              },
+              {
+                "type": "text",
+                "value": "- 支持多页面导航跳转",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14 }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 16,
+            "color": "#F0F0FF",
+            "position": { "type": "relative" },
+            "children": [
+              {
+                "type": "text",
+                "value": "技术栈",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 18, "fontWeight": "bold" }
+              },
+              {
+                "type": "text",
+                "value": "Flutter + Riverpod + Dio",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14 }
+              },
+              {
+                "type": "text",
+                "value": "Server-Driven UI 架构",
+                "position": { "type": "relative" },
+                "style": { "fontSize": 14 }
+              }
+            ]
+          },
+          {
+            "type": "button",
+            "label": "返回首页",
+            "position": { "type": "relative" },
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
