@@ -270,7 +270,16 @@ class JsonScreenView extends ConsumerWidget {
     // 构建页面布局
     final layoutWidget = buildScreenLayout(screenConfig, childWidgets);
 
+    // 解析页面背景色
+    final bgColorStr = screenConfig['backgroundColor'] as String?;
+    Color? bgColor;
+    if (bgColorStr != null && bgColorStr.startsWith('#')) {
+      final hex = bgColorStr.replaceFirst('#', '');
+      bgColor = Color(int.parse('FF$hex', radix: 16));
+    }
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(screenConfig['title'] ?? interpreter.appName),
         centerTitle: true,

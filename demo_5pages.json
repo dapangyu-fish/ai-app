@@ -96,6 +96,7 @@
         "title": "个人记事本",
         "layout": "column",
         "padding": 24,
+        "backgroundColor": "#F8F9FE",
         "children": [
           {
             "type": "text",
@@ -182,6 +183,7 @@
         "title": "新建笔记",
         "layout": "column",
         "padding": 24,
+        "backgroundColor": "#FFFFF0",
         "children": [
           {
             "type": "text",
@@ -271,6 +273,7 @@
         "title": "笔记列表",
         "layout": "column",
         "padding": 20,
+        "backgroundColor": "#F0F8FF",
         "children": [
           {
             "type": "container",
@@ -356,6 +359,7 @@
         "title": "搜索笔记",
         "layout": "column",
         "padding": 24,
+        "backgroundColor": "#F0FFF0",
         "children": [
           {
             "type": "text",
@@ -429,6 +433,7 @@
         "title": "关于",
         "layout": "column",
         "padding": 24,
+        "backgroundColor": "#FFF8F0",
         "children": [
           {
             "type": "text",
