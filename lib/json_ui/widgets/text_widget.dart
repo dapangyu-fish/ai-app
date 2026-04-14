@@ -1,5 +1,6 @@
-// Text 控件
-// 支持模板变量插值 {{ $.global.xxx }}、自定义样式、position 定位
+// Text 控件 — 增强版
+// 支持：style (fontSize, fontWeight, color, fontStyle, decoration,
+//       textAlign, maxLines, overflow, letterSpacing, lineHeight)
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
@@ -11,30 +12,132 @@ class JsonTextWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    // 解析模板字符串，替换 {{ }} 中的变量引用
     final rawValue = json['value'] ?? '';
     final resolvedValue = interpreter.resolveTemplate(rawValue.toString());
 
-    // 解析样式
-    final style = json['style'] as Map<String, dynamic>?;
-    final fontSize = (style?['fontSize'] as num?)?.toDouble();
-    final fontWeight = style?['fontWeight'] == 'bold'
-        ? FontWeight.bold
-        : FontWeight.normal;
-    final colorStr = style?['color'] as String?;
-    Color? color;
-    if (colorStr != null && colorStr.startsWith('#')) {
-      final hex = colorStr.replaceFirst('#', '');
-      color = Color(int.parse('FF$hex', radix: 16));
+    final style = json['style'] as Map<String, dynamic>? ?? {};
+
+    // 字号
+    final fontSize = (style['fontSize'] as num?)?.toDouble();
+
+    // 字重
+    FontWeight fontWeight = FontWeight.normal;
+    final fw = style['fontWeight']?.toString();
+    if (fw != null) {
+      fontWeight = _parseFontWeight(fw);
     }
 
-    return Text(
-      resolvedValue,
-      style: TextStyle(
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        color: color,
+    // 颜色
+    Color? color = _parseColor(style['color'] as String?);
+
+    // 斜体
+    FontStyle fontStyle = FontStyle.normal;
+    if (style['fontStyle'] == 'italic') {
+      fontStyle = FontStyle.italic;
+    }
+
+    // 下划线 / 删除线
+    TextDecoration decoration = TextDecoration.none;
+    switch (style['decoration']?.toString()) {
+      case 'underline':
+        decoration = TextDecoration.underline;
+        break;
+      case 'lineThrough':
+        decoration = TextDecoration.lineThrough;
+        break;
+      case 'overline':
+        decoration = TextDecoration.overline;
+        break;
+    }
+
+    // 对齐
+    TextAlign textAlign = TextAlign.start;
+    switch (style['textAlign']?.toString()) {
+      case 'center':
+        textAlign = TextAlign.center;
+        break;
+      case 'right':
+        textAlign = TextAlign.right;
+        break;
+      case 'justify':
+        textAlign = TextAlign.justify;
+        break;
+    }
+
+    // 溢出
+    TextOverflow? overflow;
+    final maxLines = (style['maxLines'] as num?)?.toInt();
+    switch (style['overflow']?.toString()) {
+      case 'ellipsis':
+        overflow = TextOverflow.ellipsis;
+        break;
+      case 'clip':
+        overflow = TextOverflow.clip;
+        break;
+      case 'fade':
+        overflow = TextOverflow.fade;
+        break;
+    }
+
+    // 字间距 / 行高
+    final letterSpacing = (style['letterSpacing'] as num?)?.toDouble();
+    final lineHeight = (style['lineHeight'] as num?)?.toDouble();
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        vertical: (style['paddingV'] as num?)?.toDouble() ?? 2,
+        horizontal: (style['paddingH'] as num?)?.toDouble() ?? 0,
+      ),
+      child: Text(
+        resolvedValue,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        overflow: overflow,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: color,
+          fontStyle: fontStyle,
+          decoration: decoration,
+          letterSpacing: letterSpacing,
+          height: lineHeight,
+        ),
       ),
     );
+  }
+
+  FontWeight _parseFontWeight(String fw) {
+    switch (fw) {
+      case 'bold':
+        return FontWeight.bold;
+      case 'w100':
+        return FontWeight.w100;
+      case 'w200':
+        return FontWeight.w200;
+      case 'w300':
+        return FontWeight.w300;
+      case 'w400':
+        return FontWeight.w400;
+      case 'w500':
+        return FontWeight.w500;
+      case 'w600':
+        return FontWeight.w600;
+      case 'w700':
+        return FontWeight.w700;
+      case 'w800':
+        return FontWeight.w800;
+      case 'w900':
+        return FontWeight.w900;
+      default:
+        return FontWeight.normal;
+    }
+  }
+
+  Color? _parseColor(String? colorStr) {
+    if (colorStr == null || !colorStr.startsWith('#')) return null;
+    final hex = colorStr.replaceFirst('#', '');
+    if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
+    if (hex.length == 8) return Color(int.parse(hex, radix: 16));
+    return null;
   }
 }

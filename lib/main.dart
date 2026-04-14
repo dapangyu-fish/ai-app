@@ -102,10 +102,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final jsonStr = await file.readAsString();
       final config = json.decode(jsonStr) as Map<String, dynamic>;
 
-      // 重新创建解释器（清除之前的状态）
       final interpreter = ref.read(interpreterProvider);
       interpreter.loadConfig(config);
-      interpreter.executeSteps();
+      await interpreter.executeSteps();
 
       _loadedFileName = result.files.single.name;
 
@@ -113,7 +112,6 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
       if (!mounted) return;
 
-      // 跳转到 JSON 渲染页面
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => JsonScreenView(fileName: _loadedFileName!),
@@ -237,6 +235,9 @@ class JsonScreenView extends ConsumerWidget {
     final interpreter = ref.watch(interpreterProvider);
     final currentScreenId = interpreter.currentScreenId;
 
+    // 注入 globalContext 用于 toast / dialog
+    interpreter.globalContext = context;
+
     // 查找当前 screen 定义
     final screens = interpreter.screens;
     Map<String, dynamic>? screenConfig;
@@ -254,10 +255,10 @@ class JsonScreenView extends ConsumerWidget {
       );
     }
 
-    // 设置导航回调（通过 notifyListeners 触发 rebuild）
+    // 设置导航回调
     interpreter.onNavigate = (_) {};
 
-    // 检查页面中是否包含 list 类型控件（需要特殊布局处理）
+    // 检查页面中是否包含 list 类型控件
     final children = screenConfig['children'] as List<dynamic>? ?? [];
     final hasListWidget = _containsListWidget(children);
 
@@ -286,7 +287,6 @@ class JsonScreenView extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // 如果是首屏，返回文件选择页；否则导航到首屏
             if (currentScreenId == (screens.first as Map)['id']) {
               Navigator.of(context).pop();
             } else {
@@ -297,8 +297,6 @@ class JsonScreenView extends ConsumerWidget {
         ),
       ),
       body: SafeArea(
-        // 如果页面包含 list 控件，不用 SingleChildScrollView（因为 list 自己可滚动）
-        // 否则用 SingleChildScrollView 支持内容溢出滚动
         child: hasListWidget
             ? Padding(
                 padding: EdgeInsets.all(
@@ -316,7 +314,6 @@ class JsonScreenView extends ConsumerWidget {
     );
   }
 
-  /// 递归检查 children 中是否存在 list 类型控件
   bool _containsListWidget(List<dynamic> children) {
     for (final child in children) {
       if (child is Map<String, dynamic>) {

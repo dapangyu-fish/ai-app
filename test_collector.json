@@ -34,15 +34,10 @@
         "return": "None",
         "logic": [
           {
-            "call": "@set",
+            "call": "@list_remove_at",
             "args": {
               "var": "$.global.favorites",
-              "value": {
-                "filter": [
-                  { "var": "$.global.favorites" },
-                  { "!=": [{ "var": "" }, { "var": "$.loop.item" }] }
-                ]
-              }
+              "index": "{{ $.params.index }}"
             }
           }
         ]
@@ -136,7 +131,8 @@
                 {
                   "type": "text",
                   "value": "{{ $.loop.item }}",
-                  "position": { "type": "flex", "flex": 4 }
+                  "position": { "type": "flex", "flex": 4 },
+                  "style": { "fontSize": 15, "color": "#1A1A1A" }
                 },
                 {
                   "type": "button",

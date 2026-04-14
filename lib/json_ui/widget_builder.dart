@@ -7,6 +7,10 @@ import 'widgets/button_widget.dart';
 import 'widgets/input_widget.dart';
 import 'widgets/list_widget.dart';
 import 'widgets/container_widget.dart';
+import 'widgets/divider_widget.dart';
+import 'widgets/image_widget.dart';
+import 'widgets/spacer_widget.dart';
+import 'widgets/switch_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -16,6 +20,10 @@ class JsonWidgetBuilder {
     'input': JsonInputWidget(),
     'list': JsonListWidget(),
     'container': JsonContainerWidget(),
+    'divider': JsonDividerWidget(),
+    'image': JsonImageWidget(),
+    'spacer': JsonSpacerWidget(),
+    'switch': JsonSwitchWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
@@ -38,6 +46,11 @@ class JsonWidgetBuilder {
     // 未知类型，显示占位提示
     return Container(
       padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(6),
+      ),
       child: Text(
         '未知控件类型: $type',
         style: TextStyle(

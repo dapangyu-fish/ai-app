@@ -50,15 +50,10 @@
         "return": "None",
         "logic": [
           {
-            "call": "@set",
+            "call": "@list_remove_at",
             "args": {
               "var": "$.global.notes",
-              "value": {
-                "filter": [
-                  { "var": "$.global.notes" },
-                  { "!=": [{ "var": "" }, { "var": "$.loop.item" }] }
-                ]
-              }
+              "index": "{{ $.params.index }}"
             }
           },
           {
@@ -311,7 +306,7 @@
                   "type": "text",
                   "value": "{{ $.loop.item }}",
                   "position": { "type": "flex", "flex": 4 },
-                  "style": { "fontSize": 15 }
+                  "style": { "fontSize": 15, "color": "#1A1A1A" }
                 },
                 {
                   "type": "button",

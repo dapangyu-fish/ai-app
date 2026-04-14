@@ -1,8 +1,10 @@
-// Input 控件
-// 支持 placeholder、bind（双向绑定到全局变量）、position 定位
+// Input 控件 — 增强版
+// 支持：placeholder, bind, maxLines, keyboardType, obscureText,
+//       prefix, suffix, style (borderRadius, fontSize, fillColor)
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import 'icon_registry.dart';
 
 class JsonInputWidget extends JsonBaseWidget {
   @override
@@ -11,27 +13,93 @@ class JsonInputWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    final placeholder = json['placeholder'] ?? '';
+    final placeholder = json['placeholder']?.toString() ?? '';
     final bindPath = json['bind'] as String?;
+    final maxLines = (json['maxLines'] as num?)?.toInt() ?? 1;
+    final obscureText = json['obscureText'] == true;
+    final prefix = json['prefix']?.toString();
+    final suffix = json['suffix']?.toString();
+    final prefixIcon = json['prefixIcon']?.toString();
+    final suffixIcon = json['suffixIcon']?.toString();
+    final label = json['label']?.toString();
+    final style = json['style'] as Map<String, dynamic>? ?? {};
 
-    // 获取当前绑定变量的值作为初始值
+    // 键盘类型
+    TextInputType keyboardType = TextInputType.text;
+    switch (json['keyboardType']?.toString()) {
+      case 'number':
+        keyboardType = TextInputType.number;
+        break;
+      case 'email':
+        keyboardType = TextInputType.emailAddress;
+        break;
+      case 'phone':
+        keyboardType = TextInputType.phone;
+        break;
+      case 'url':
+        keyboardType = TextInputType.url;
+        break;
+      case 'multiline':
+        keyboardType = TextInputType.multiline;
+        break;
+    }
+
+    // 样式
+    final borderRadius = (style['borderRadius'] as num?)?.toDouble() ?? 8;
+    final fontSize = (style['fontSize'] as num?)?.toDouble() ?? 14;
+    final fillColorStr = style['fillColor'] as String?;
+    Color? fillColor;
+    if (fillColorStr != null && fillColorStr.startsWith('#')) {
+      final hex = fillColorStr.replaceFirst('#', '');
+      fillColor = Color(int.parse('FF$hex', radix: 16));
+    }
+
     final currentValue = bindPath != null
         ? interpreter.getVariable(bindPath)?.toString() ?? ''
         : '';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextField(
         controller: interpreter.getTextController(bindPath ?? '', currentValue),
+        maxLines: obscureText ? 1 : maxLines,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: TextStyle(fontSize: fontSize),
         decoration: InputDecoration(
-          hintText: placeholder.toString(),
-          border: const OutlineInputBorder(),
+          hintText: placeholder,
+          labelText: label,
+          prefixText: prefix,
+          suffixText: suffix,
+          prefixIcon: prefixIcon != null
+              ? Icon(IconRegistry.get(prefixIcon))
+              : null,
+          suffixIcon: suffixIcon != null
+              ? Icon(IconRegistry.get(suffixIcon))
+              : null,
+          filled: fillColor != null,
+          fillColor: fillColor,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
+              width: 2,
+            ),
+          ),
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         ),
         onChanged: (value) {
           if (bindPath != null) {
-            // 双向绑定：实时更新全局变量
             interpreter.setVariable(bindPath, value);
           }
         },
