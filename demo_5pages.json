@@ -22,26 +22,21 @@
           {
             "call": "@set",
             "args": {
-              "var": "$.global.notes",
-              "value": {
-                "cat": [
-                  { "var": "$.global.notes" },
-                  ["{{ $.params.title }} | {{ $.params.content }}"]
-                ]
-              }
+              "var": "global.notes",
+              "value": { "merge": [{ "var": "global.notes" }, "{{ params.title }} | {{ params.content }}"] }
             }
           },
           {
             "call": "@set",
-            "args": { "var": "$.global.noteTitle", "value": "" }
+            "args": { "var": "global.noteTitle", "value": "" }
           },
           {
             "call": "@set",
-            "args": { "var": "$.global.noteContent", "value": "" }
+            "args": { "var": "global.noteContent", "value": "" }
           },
           {
             "call": "@print",
-            "args": { "value": "已添加笔记：{{ $.params.title }}" }
+            "args": { "value": "已添加笔记：{{ params.title }}" }
           }
         ]
       },
@@ -52,13 +47,13 @@
           {
             "call": "@list_remove_at",
             "args": {
-              "var": "$.global.notes",
-              "index": "{{ $.params.index }}"
+              "var": "global.notes",
+              "index": "{{ params.index }}"
             }
           },
           {
             "call": "@print",
-            "args": { "value": "已删除第 {{ $.params.index }} 条笔记" }
+            "args": { "value": "已删除第 {{ params.index }} 条笔记" }
           }
         ]
       },
@@ -68,7 +63,7 @@
         "logic": [
           {
             "call": "@set",
-            "args": { "var": "$.global.notes", "value": [] }
+            "args": { "var": "global.notes", "value": [] }
           },
           {
             "call": "@print",
@@ -195,13 +190,13 @@
           {
             "type": "input",
             "placeholder": "请输入笔记标题...",
-            "bind": "$.global.noteTitle",
+            "bind": "global.noteTitle",
             "position": { "type": "relative" }
           },
           {
             "type": "input",
             "placeholder": "请输入笔记内容...",
-            "bind": "$.global.noteContent",
+            "bind": "global.noteContent",
             "position": { "type": "relative" }
           },
           {
@@ -219,13 +214,13 @@
               },
               {
                 "type": "text",
-                "value": "标题：{{ $.global.noteTitle }}",
+                "value": "标题：{{ global.noteTitle }}",
                 "position": { "type": "relative" },
                 "style": { "fontSize": 16 }
               },
               {
                 "type": "text",
-                "value": "内容：{{ $.global.noteContent }}",
+                "value": "内容：{{ global.noteContent }}",
                 "position": { "type": "relative" },
                 "style": { "fontSize": 14, "color": "#666666" }
               }
@@ -244,8 +239,8 @@
                   "type": "call",
                   "call": "@global.addNote",
                   "args": {
-                    "title": "{{ $.global.noteTitle }}",
-                    "content": "{{ $.global.noteContent }}"
+                    "title": "{{ global.noteTitle }}",
+                    "content": "{{ global.noteContent }}"
                   }
                 }
               },
@@ -295,7 +290,7 @@
           },
           {
             "type": "list",
-            "source": "{{ $.global.notes }}",
+            "source": "{{ global.notes }}",
             "position": { "type": "relative" },
             "item_template": {
               "type": "container",
@@ -304,7 +299,7 @@
               "children": [
                 {
                   "type": "text",
-                  "value": "{{ $.loop.item }}",
+                  "value": "{{ loop.item }}",
                   "position": { "type": "flex", "flex": 4 },
                   "style": { "fontSize": 15, "color": "#1A1A1A" }
                 },
@@ -315,7 +310,7 @@
                   "action": {
                     "type": "call",
                     "call": "@global.deleteNote",
-                    "args": { "index": "{{ $.loop.index }}" }
+                    "args": { "index": "{{ loop.index }}" }
                   }
                 }
               ]
@@ -371,7 +366,7 @@
           {
             "type": "input",
             "placeholder": "输入搜索关键词...",
-            "bind": "$.global.searchKeyword",
+            "bind": "global.searchKeyword",
             "position": { "type": "relative" }
           },
           {
@@ -383,7 +378,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "当前关键词：{{ $.global.searchKeyword }}",
+                "value": "当前关键词：{{ global.searchKeyword }}",
                 "position": { "type": "relative" },
                 "style": { "fontSize": 16 }
               },

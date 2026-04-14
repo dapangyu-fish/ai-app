@@ -43,6 +43,7 @@ dependencies:
 
   # File picker
   file_picker: ^8.0.0
+  jsonlogic: ^2.0.2
 
 dev_dependencies:
   flutter_test:

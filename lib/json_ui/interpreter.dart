@@ -1,16 +1,12 @@
-// JSON DSL v3.2 解释器 — 深度重构版
+// JSON DSL v3.2 解释器 — jsonlogic 标准版
 // ───────────────────────────────────────────────
-// 核心职责：
-//   1. 解析 JSON 配置 → 维护全局 Context
-//   2. 完整的 async steps 执行引擎
-//   3. 模板表达式 {{ }} 与 JsonLogic 表达式求值
-//   4. 丰富的内置函数（HTTP / JSON / 字符串 / 数组 / 类型转换 / 控制流）
-//   5. 并发执行 @parallel
-//   6. Widget 树构建
+// 表达式引擎替换为 pub.dev/packages/jsonlogic (2.0.2)
+// 自定义扩展操作符通过 jl.add() 注册
+// 变量路径格式：global.xxx / loop.item / params.xxx（兼容 $.global.xxx 旧格式）
 // ───────────────────────────────────────────────
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'expression_engine.dart';
+import 'package:jsonlogic/jsonlogic.dart';
 import 'http_client.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
@@ -23,25 +19,16 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _functions;
   String _currentScreenId = '';
 
-  /// 循环上下文栈
   final List<Map<String, dynamic>> _loopContextStack = [];
-
-  /// 函数参数上下文栈
   final List<Map<String, dynamic>> _paramsStack = [];
-
-  /// TextField 控制器缓存
   final Map<String, TextEditingController> _textControllers = {};
 
-  /// 表达式引擎
-  late ExpressionEngine _expressionEngine;
+  /// jsonlogic 标准引擎 + 自定义操作符
+  late Jsonlogic _jl;
 
-  /// HTTP 客户端
   final DslHttpClient _httpClient = DslHttpClient();
 
-  /// 页面导航回调
   void Function(String screenId)? onNavigate;
-
-  /// 全局 BuildContext（用于 toast / dialog）
   BuildContext? globalContext;
 
   // ============ Getters ============
@@ -61,11 +48,193 @@ class JsonInterpreter extends ChangeNotifier {
     _config = {};
     _variables = {};
     _functions = {};
-    _expressionEngine = ExpressionEngine(
-      variableResolver: getVariable,
-      templateResolver: resolveTemplate,
-    );
+    _jl = _createJsonLogic();
   }
+
+  Jsonlogic _createJsonLogic() {
+    final jl = Jsonlogic(); // 已包含标准操作符
+
+    // ── 字符串扩展 ──
+    jl.add('str_len', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      return applier(params[0], data)?.toString().length ?? 0;
+    });
+    jl.add('str_upper', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return (applier(params[0], data)?.toString() ?? '').toUpperCase();
+    });
+    jl.add('str_lower', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return (applier(params[0], data)?.toString() ?? '').toLowerCase();
+    });
+    jl.add('str_trim', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return (applier(params[0], data)?.toString() ?? '').trim();
+    });
+    jl.add('str_contains', (applier, data, params) {
+      if (params.length < 2) return false;
+      final str = applier(params[0], data)?.toString() ?? '';
+      final search = applier(params[1], data)?.toString() ?? '';
+      return str.contains(search);
+    });
+    jl.add('str_replace', (applier, data, params) {
+      if (params.length < 3) return applier(params[0], data)?.toString() ?? '';
+      final str = applier(params[0], data)?.toString() ?? '';
+      final from = applier(params[1], data)?.toString() ?? '';
+      final to = applier(params[2], data)?.toString() ?? '';
+      return str.replaceAll(from, to);
+    });
+    jl.add('str_split', (applier, data, params) {
+      if (params.length < 2) return [applier(params[0], data)?.toString() ?? ''];
+      final str = applier(params[0], data)?.toString() ?? '';
+      final sep = applier(params[1], data)?.toString() ?? '';
+      return str.split(sep);
+    });
+    jl.add('str_join', (applier, data, params) {
+      if (params.isEmpty) return '';
+      final list = applier(params[0], data);
+      final sep = params.length > 1 ? applier(params[1], data)?.toString() ?? '' : '';
+      if (list is List) return list.map((e) => e?.toString() ?? '').join(sep);
+      return list?.toString() ?? '';
+    });
+
+    // ── 数组扩展 ──
+    jl.add('length', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      final val = applier(params[0], data);
+      if (val is List) return val.length;
+      if (val is String) return val.length;
+      if (val is Map) return val.length;
+      return 0;
+    });
+    jl.add('at', (applier, data, params) {
+      if (params.length < 2) return null;
+      final source = applier(params[0], data);
+      final index = _toInt(applier(params[1], data));
+      if (source is List && index >= 0 && index < source.length) {
+        return source[index];
+      }
+      return null;
+    });
+    jl.add('slice', (applier, data, params) {
+      if (params.isEmpty) return [];
+      final source = applier(params[0], data);
+      if (source is! List) return [];
+      final start = (params.length > 1 ? _toInt(applier(params[1], data)) : 0)
+          .clamp(0, source.length);
+      final end = (params.length > 2
+              ? _toInt(applier(params[2], data))
+              : source.length)
+          .clamp(start, source.length);
+      return source.sublist(start, end);
+    });
+    jl.add('sort', (applier, data, params) {
+      if (params.isEmpty) return [];
+      final source = applier(params[0], data);
+      if (source is! List) return [];
+      final copy = List<dynamic>.from(source);
+      copy.sort((a, b) {
+        if (a is num && b is num) return a.compareTo(b);
+        return a.toString().compareTo(b.toString());
+      });
+      return copy;
+    });
+    jl.add('reverse', (applier, data, params) {
+      if (params.isEmpty) return [];
+      final source = applier(params[0], data);
+      if (source is! List) return [];
+      return source.reversed.toList();
+    });
+
+    // ── 类型转换 ──
+    jl.add('to_string', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return applier(params[0], data)?.toString() ?? '';
+    });
+    jl.add('to_int', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      return _toInt(applier(params[0], data));
+    });
+    jl.add('to_double', (applier, data, params) {
+      if (params.isEmpty) return 0.0;
+      return _toDouble(applier(params[0], data));
+    });
+
+    // ── 数学扩展 ──
+    jl.add('abs', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      final v = applier(params[0], data);
+      if (v is num) return v.abs();
+      return 0;
+    });
+
+    return jl;
+  }
+
+  // ============ jsonlogic 数据上下文 ============
+
+  /// 每次求值前，将当前状态组装为 jsonlogic 的 data 参数
+  Map<String, dynamic> _buildDataContext() {
+    return {
+      'global': _variables,
+      'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
+      'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
+    };
+  }
+
+  /// 通过 jsonlogic 求值表达式
+  dynamic _evaluateExpression(dynamic value) {
+    if (value == null) return null;
+    if (value is num || value is bool) return value;
+
+    // 字符串：{{ }} 模板走 resolveExpression（返回原始类型，非字符串化）
+    if (value is String) {
+      if (value.contains('{{') && value.contains('}}')) {
+        return resolveExpression(value);
+      }
+      return value;
+    }
+
+    // Map：JsonLogic 表达式 → 预处理模板后交给 jsonlogic 求值
+    if (value is Map<String, dynamic>) {
+      final preprocessed = _resolveTemplatesInRule(value);
+      return _jl.apply(preprocessed, _buildDataContext());
+    }
+
+    // List：递归求值每个元素
+    if (value is List) {
+      return value.map((e) => _evaluateExpression(e)).toList();
+    }
+
+    return value;
+  }
+
+  /// 求值为布尔
+  bool _evaluateBool(dynamic condition) {
+    final result = _evaluateExpression(condition);
+    if (result == null) return false;
+    if (result is bool) return result;
+    if (result is num) return result != 0;
+    if (result is String) return result.isNotEmpty;
+    if (result is List) return result.isNotEmpty;
+    return true;
+  }
+
+  /// 递归预处理规则中的 {{ }} 模板字符串
+  dynamic _resolveTemplatesInRule(dynamic rule) {
+    if (rule is String && rule.contains('{{') && rule.contains('}}')) {
+      return resolveTemplate(rule);
+    }
+    if (rule is List) {
+      return rule.map((e) => _resolveTemplatesInRule(e)).toList();
+    }
+    if (rule is Map<String, dynamic>) {
+      return rule.map((k, v) => MapEntry(k, _resolveTemplatesInRule(v)));
+    }
+    return rule;
+  }
+
+  // ============ 加载配置 ============
 
   void loadConfig(Map<String, dynamic> config) {
     _config = config;
@@ -75,7 +244,6 @@ class JsonInterpreter extends ChangeNotifier {
         _deepCopy(global['variables'] as Map<String, dynamic>? ?? {});
     _functions = global['functions'] as Map<String, dynamic>? ?? {};
 
-    // 清除旧状态
     _loopContextStack.clear();
     _paramsStack.clear();
     for (final c in _textControllers.values) {
@@ -83,20 +251,12 @@ class JsonInterpreter extends ChangeNotifier {
     }
     _textControllers.clear();
 
-    // 重建表达式引擎
-    _expressionEngine = ExpressionEngine(
-      variableResolver: getVariable,
-      templateResolver: resolveTemplate,
-    );
-
-    // 默认屏幕
     if (screens.isNotEmpty) {
       _currentScreenId =
           (screens.first as Map<String, dynamic>)['id'] ?? 'home';
     }
   }
 
-  /// 执行启动 steps
   Future<void> executeSteps() async {
     final steps = _config['steps'] as List<dynamic>? ?? [];
     for (final step in steps) {
@@ -108,43 +268,50 @@ class JsonInterpreter extends ChangeNotifier {
 
   // ============ 变量读写 ============
 
+  /// 读取变量（支持 global.xxx / loop.xxx / params.xxx，兼容 $.global.xxx 旧格式）
   dynamic getVariable(String path) {
-    // $.loop.item / $.loop.index
-    if (path.startsWith(r'$.loop.')) {
-      final key = path.substring(7);
+    // 兼容旧格式：去掉 $. 前缀
+    if (path.startsWith(r'$.')) {
+      path = path.substring(2);
+    }
+
+    if (path.startsWith('loop.')) {
+      final key = path.substring(5);
       if (_loopContextStack.isNotEmpty) {
         return _loopContextStack.last[key];
       }
       return null;
     }
 
-    // $.params.xxx
-    if (path.startsWith(r'$.params.')) {
-      final key = path.substring(9);
+    if (path.startsWith('params.')) {
+      final key = path.substring(7);
       if (_paramsStack.isNotEmpty) {
         return _paramsStack.last[key];
       }
       return null;
     }
 
-    // $.global.xxx — 支持点号嵌套路径 $.global.user.name
-    if (path.startsWith(r'$.global.')) {
-      final subPath = path.substring(9);
+    if (path.startsWith('global.')) {
+      final subPath = path.substring(7);
       return _getNestedValue(_variables, subPath);
     }
 
-    return null;
+    // 没有前缀的直接当 global 变量
+    return _getNestedValue(_variables, path);
   }
 
   void setVariable(String path, dynamic value) {
-    if (path.startsWith(r'$.global.')) {
-      final subPath = path.substring(9);
+    if (path.startsWith(r'$.')) {
+      path = path.substring(2);
+    }
+
+    if (path.startsWith('global.')) {
+      final subPath = path.substring(7);
       _setNestedValue(_variables, subPath, value);
       notifyListeners();
     }
   }
 
-  /// 嵌套读取：a.b.c → _variables['a']['b']['c']
   dynamic _getNestedValue(Map<String, dynamic> map, String dotPath) {
     final keys = dotPath.split('.');
     dynamic current = map;
@@ -158,8 +325,8 @@ class JsonInterpreter extends ChangeNotifier {
     return current;
   }
 
-  /// 嵌套写入
-  void _setNestedValue(Map<String, dynamic> map, String dotPath, dynamic value) {
+  void _setNestedValue(
+      Map<String, dynamic> map, String dotPath, dynamic value) {
     final keys = dotPath.split('.');
     if (keys.length == 1) {
       map[keys[0]] = value;
@@ -190,6 +357,7 @@ class JsonInterpreter extends ChangeNotifier {
     });
   }
 
+  /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
   dynamic resolveExpression(dynamic raw) {
     if (raw is String) {
       final regex = RegExp(r'^\{\{\s*(.+?)\s*\}\}$');
@@ -257,7 +425,6 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Steps 执行引擎 ============
 
   Future<dynamic> _executeStep(Map<String, dynamic> step) async {
-    // 函数调用
     if (step.containsKey('call')) {
       final callTarget = step['call'] as String;
       final args = step['args'] as Map<String, dynamic>? ?? {};
@@ -271,11 +438,10 @@ class JsonInterpreter extends ChangeNotifier {
       return result;
     }
 
-    // 表达式求值
     if (step.containsKey('expression')) {
       final expr = step['expression'];
       final assignVar = step['assign'] as String?;
-      final result = _expressionEngine.evaluate(expr);
+      final result = _evaluateExpression(expr);
       if (assignVar != null) {
         setVariable(assignVar, result);
       }
@@ -284,7 +450,6 @@ class JsonInterpreter extends ChangeNotifier {
     return null;
   }
 
-  /// 执行函数调用（内置 + 自定义），返回结果
   Future<dynamic> _executeCall(
       String callTarget, Map<String, dynamic> args) async {
     final resolvedArgs = _resolveArgs(args);
@@ -297,7 +462,6 @@ class JsonInterpreter extends ChangeNotifier {
 
     // ──── 内置函数 ────
     switch (callTarget) {
-      // ── 基础 ──
       case '@print':
         final value = resolvedArgs['value'] ?? '';
         debugPrint('[JSON DSL] $value');
@@ -307,7 +471,7 @@ class JsonInterpreter extends ChangeNotifier {
         final varPath = resolvedArgs['var'] as String?;
         final value = resolvedArgs['value'];
         if (varPath != null) {
-          final resolved = _resolveJsonLogicValue(value);
+          final resolved = _evaluateExpression(value);
           setVariable(varPath, resolved);
         }
         return null;
@@ -331,7 +495,8 @@ class JsonInterpreter extends ChangeNotifier {
       case '@parallel':
         return await _builtinParallel(resolvedArgs);
       case '@delay':
-        final ms = _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
+        final ms =
+            _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
         await Future.delayed(Duration(milliseconds: ms));
         return null;
 
@@ -394,11 +559,11 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 数组 ──
       case '@list_length':
-        final list = _resolveJsonLogicValue(resolvedArgs['value']);
+        final list = _evaluateExpression(resolvedArgs['value']);
         return list is List ? list.length : 0;
       case '@list_add':
         final listPath = resolvedArgs['var'] as String?;
-        final item = _resolveJsonLogicValue(resolvedArgs['item']);
+        final item = _evaluateExpression(resolvedArgs['item']);
         if (listPath != null) {
           final current = getVariable(listPath);
           if (current is List) {
@@ -423,7 +588,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@list_insert':
         final listPath = resolvedArgs['var'] as String?;
         final index = _toInt(resolvedArgs['index'] ?? 0);
-        final item = _resolveJsonLogicValue(resolvedArgs['item']);
+        final item = _evaluateExpression(resolvedArgs['item']);
         if (listPath != null) {
           final current = getVariable(listPath);
           if (current is List) {
@@ -443,11 +608,11 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 类型转换 ──
       case '@to_string':
-        return _resolveJsonLogicValue(resolvedArgs['value'])?.toString() ?? '';
+        return _evaluateExpression(resolvedArgs['value'])?.toString() ?? '';
       case '@to_int':
-        return _toInt(_resolveJsonLogicValue(resolvedArgs['value']));
+        return _toInt(_evaluateExpression(resolvedArgs['value']));
       case '@to_double':
-        return _toDouble(_resolveJsonLogicValue(resolvedArgs['value']));
+        return _toDouble(_evaluateExpression(resolvedArgs['value']));
 
       // ── UI 反馈 ──
       case '@show_toast':
@@ -465,14 +630,14 @@ class JsonInterpreter extends ChangeNotifier {
     }
   }
 
-  // ============ 控制流内置函数 ============
+  // ============ 控制流 ============
 
   Future<dynamic> _builtinIf(Map<String, dynamic> args) async {
     final condition = args['condition'];
     final thenSteps = args['then'] as List<dynamic>? ?? [];
     final elseSteps = args['else'] as List<dynamic>? ?? [];
 
-    final condResult = _expressionEngine.evaluateBool(condition);
+    final condResult = _evaluateBool(condition);
 
     final steps = condResult ? thenSteps : elseSteps;
     dynamic lastResult;
@@ -490,8 +655,7 @@ class JsonInterpreter extends ChangeNotifier {
     final maxIterations = _toInt(args['max_iterations'] ?? 10000);
 
     int count = 0;
-    while (_expressionEngine.evaluateBool(condition) &&
-        count < maxIterations) {
+    while (_evaluateBool(condition) && count < maxIterations) {
       for (final step in body) {
         if (step is Map<String, dynamic>) {
           await _executeStep(step);
@@ -506,14 +670,11 @@ class JsonInterpreter extends ChangeNotifier {
     final sourceExpr = args['source'];
     final body = args['body'] as List<dynamic>? ?? [];
 
-    dynamic source = _resolveJsonLogicValue(sourceExpr);
+    dynamic source = _evaluateExpression(sourceExpr);
     if (source is! List) return null;
 
     for (var i = 0; i < source.length; i++) {
-      _loopContextStack.add({
-        'item': source[i],
-        'index': i,
-      });
+      _loopContextStack.add({'item': source[i], 'index': i});
 
       for (final step in body) {
         if (step is Map<String, dynamic>) {
@@ -573,7 +734,6 @@ class JsonInterpreter extends ChangeNotifier {
 
   Future<dynamic> _builtinParallel(Map<String, dynamic> args) async {
     final stepsList = args['steps'] as List<dynamic>? ?? [];
-
     final futures = <Future<void>>[];
     for (final step in stepsList) {
       if (step is Map<String, dynamic>) {
@@ -584,7 +744,7 @@ class JsonInterpreter extends ChangeNotifier {
     return null;
   }
 
-  // ============ HTTP 内置函数 ============
+  // ============ HTTP ============
 
   Future<Map<String, dynamic>> _builtinHttpGet(
       Map<String, dynamic> args) async {
@@ -597,7 +757,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<Map<String, dynamic>> _builtinHttpPost(
       Map<String, dynamic> args) async {
     final url = args['url']?.toString() ?? '';
-    final body = _resolveJsonLogicValue(args['body']);
+    final body = _evaluateExpression(args['body']);
     final headers = _toStringMap(args['headers']);
     final contentType = args['content_type']?.toString() ?? 'application/json';
     return await _httpClient.post(url,
@@ -607,7 +767,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<Map<String, dynamic>> _builtinHttpPut(
       Map<String, dynamic> args) async {
     final url = args['url']?.toString() ?? '';
-    final body = _resolveJsonLogicValue(args['body']);
+    final body = _evaluateExpression(args['body']);
     final headers = _toStringMap(args['headers']);
     return await _httpClient.put(url, body: body, headers: headers);
   }
@@ -619,7 +779,7 @@ class JsonInterpreter extends ChangeNotifier {
     return await _httpClient.delete(url, headers: headers);
   }
 
-  // ============ JSON 内置函数 ============
+  // ============ JSON ============
 
   dynamic _builtinJsonDecode(Map<String, dynamic> args) {
     final str = args['value']?.toString() ?? '';
@@ -632,7 +792,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   String _builtinJsonEncode(Map<String, dynamic> args) {
-    final value = _resolveJsonLogicValue(args['value']);
+    final value = _evaluateExpression(args['value']);
     try {
       return json.encode(value);
     } catch (e) {
@@ -680,7 +840,7 @@ class JsonInterpreter extends ChangeNotifier {
     return result ?? false;
   }
 
-  // ============ 自定义函数执行 ============
+  // ============ 自定义函数 ============
 
   Future<dynamic> _executeGlobalFunction(
       String funcName, Map<String, dynamic> args) async {
@@ -690,7 +850,6 @@ class JsonInterpreter extends ChangeNotifier {
       return null;
     }
 
-    // 将实参映射到形参名
     final params = funcDef['params'] as List<dynamic>? ?? [];
     final paramMap = <String, dynamic>{};
     for (final p in params) {
@@ -729,26 +888,6 @@ class JsonInterpreter extends ChangeNotifier {
       }
     }
     return resolved;
-  }
-
-  // ============ JsonLogic 值解析 ============
-
-  dynamic _resolveJsonLogicValue(dynamic value) {
-    if (value == null) return null;
-
-    if (value is Map<String, dynamic>) {
-      return _expressionEngine.evaluate(value);
-    }
-
-    if (value is List) {
-      return value.map((e) => _resolveJsonLogicValue(e)).toList();
-    }
-
-    if (value is String && value.contains('{{')) {
-      return resolveTemplate(value);
-    }
-
-    return value;
   }
 
   // ============ Widget 构建 ============
