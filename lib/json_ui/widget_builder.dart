@@ -9,8 +9,10 @@ import 'widgets/list_widget.dart';
 import 'widgets/container_widget.dart';
 import 'widgets/divider_widget.dart';
 import 'widgets/image_widget.dart';
+import 'widgets/image_picker_widget.dart';
 import 'widgets/spacer_widget.dart';
 import 'widgets/switch_widget.dart';
+import 'widgets/video_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -22,8 +24,10 @@ class JsonWidgetBuilder {
     'container': JsonContainerWidget(),
     'divider': JsonDividerWidget(),
     'image': JsonImageWidget(),
+    'image_picker': JsonImagePickerWidget(),
     'spacer': JsonSpacerWidget(),
     'switch': JsonSwitchWidget(),
+    'video': JsonVideoWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
