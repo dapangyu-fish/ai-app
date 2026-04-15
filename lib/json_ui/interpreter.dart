@@ -7,6 +7,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:jsonlogic/jsonlogic.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
@@ -706,6 +707,45 @@ class JsonInterpreter extends ChangeNotifier {
           resolvedArgs['title']?.toString() ?? '',
           resolvedArgs['message']?.toString() ?? '',
         );
+
+      // ── 本地存储 ──
+      case '@storage_set':
+        final key = resolvedArgs['key']?.toString();
+        final value = resolvedArgs['value'];
+        if (key != null) {
+          final prefs = await SharedPreferences.getInstance();
+          if (value is bool) {
+            await prefs.setBool(key, value);
+          } else if (value is int) {
+            await prefs.setInt(key, value);
+          } else if (value is double) {
+            await prefs.setDouble(key, value);
+          } else if (value is List) {
+            await prefs.setStringList(
+                key, value.map((e) => e.toString()).toList());
+          } else {
+            await prefs.setString(key, value?.toString() ?? '');
+          }
+        }
+        return null;
+      case '@storage_get':
+        final key = resolvedArgs['key']?.toString();
+        if (key != null) {
+          final prefs = await SharedPreferences.getInstance();
+          return prefs.get(key);
+        }
+        return null;
+      case '@storage_remove':
+        final key = resolvedArgs['key']?.toString();
+        if (key != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove(key);
+        }
+        return null;
+      case '@storage_clear':
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+        return null;
 
       default:
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');

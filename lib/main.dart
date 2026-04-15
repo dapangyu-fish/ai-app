@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/widgets/screen_layout.dart';
+import 'json_ui/widgets/icon_registry.dart';
 
 // ============================================================
 // Riverpod Providers
@@ -258,20 +259,37 @@ class JsonScreenView extends ConsumerWidget {
     // 设置导航回调
     interpreter.onNavigate = (_) {};
 
-    // 检查页面中是否包含 list 类型控件
+    // Tab 页面：有 tabs 字段时渲染底部导航栏
+    final tabs = screenConfig['tabs'] as List<dynamic>?;
+    if (tabs != null && tabs.isNotEmpty) {
+      return _TabScreenView(
+        screenConfig: screenConfig,
+        interpreter: interpreter,
+        screens: screens,
+      );
+    }
+
+    // 普通页面
+    return _buildRegularScreen(context, screenConfig, interpreter, screens);
+  }
+
+  Widget _buildRegularScreen(
+    BuildContext context,
+    Map<String, dynamic> screenConfig,
+    JsonInterpreter interpreter,
+    List<dynamic> screens,
+  ) {
+    final currentScreenId = interpreter.currentScreenId;
     final children = screenConfig['children'] as List<dynamic>? ?? [];
     final hasListWidget = _containsListWidget(children);
 
-    // 构建子控件列表
     final childWidgets = children
         .whereType<Map<String, dynamic>>()
         .map((childJson) => interpreter.buildWidget(context, childJson))
         .toList();
 
-    // 构建页面布局
     final layoutWidget = buildScreenLayout(screenConfig, childWidgets);
 
-    // 解析页面背景色
     final bgColorStr = screenConfig['backgroundColor'] as String?;
     Color? bgColor;
     if (bgColorStr != null && bgColorStr.startsWith('#')) {
@@ -310,6 +328,141 @@ class JsonScreenView extends ConsumerWidget {
             : SingleChildScrollView(
                 child: layoutWidget,
               ),
+      ),
+    );
+  }
+
+  bool _containsListWidget(List<dynamic> children) {
+    for (final child in children) {
+      if (child is Map<String, dynamic>) {
+        if (child['type'] == 'list') return true;
+        final subChildren = child['children'] as List<dynamic>?;
+        if (subChildren != null && _containsListWidget(subChildren)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+}
+
+// ============================================================
+// Tab 页面（底部导航栏）
+// ============================================================
+
+class _TabScreenView extends StatefulWidget {
+  final Map<String, dynamic> screenConfig;
+  final JsonInterpreter interpreter;
+  final List<dynamic> screens;
+
+  const _TabScreenView({
+    required this.screenConfig,
+    required this.interpreter,
+    required this.screens,
+  });
+
+  @override
+  State<_TabScreenView> createState() => _TabScreenViewState();
+}
+
+class _TabScreenViewState extends State<_TabScreenView> {
+  int _currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = widget.screenConfig['tabs'] as List<dynamic>;
+    final title = widget.screenConfig['title'] ?? widget.interpreter.appName;
+
+    final bgColorStr = widget.screenConfig['backgroundColor'] as String?;
+    Color? bgColor;
+    if (bgColorStr != null && bgColorStr.startsWith('#')) {
+      final hex = bgColorStr.replaceFirst('#', '');
+      bgColor = Color(int.parse('FF$hex', radix: 16));
+    }
+
+    // 当前 tab 配置
+    final currentTab = tabs[_currentIndex] as Map<String, dynamic>;
+    final tabChildren = currentTab['children'] as List<dynamic>? ?? [];
+    final tabBgColorStr = currentTab['backgroundColor'] as String?;
+
+    Color? tabBgColor;
+    if (tabBgColorStr != null && tabBgColorStr.startsWith('#')) {
+      final hex = tabBgColorStr.replaceFirst('#', '');
+      tabBgColor = Color(int.parse('FF$hex', radix: 16));
+    }
+
+    // 构建当前 tab 的内容
+    final hasListWidget = _containsListWidget(tabChildren);
+    final childWidgets = tabChildren
+        .whereType<Map<String, dynamic>>()
+        .map((childJson) =>
+            widget.interpreter.buildWidget(context, childJson))
+        .toList();
+
+    final padding =
+        (currentTab['padding'] as num?)?.toDouble() ??
+        (widget.screenConfig['padding'] as num?)?.toDouble() ??
+        0;
+
+    Widget body;
+    if (hasListWidget) {
+      body = Padding(
+        padding: EdgeInsets.all(padding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: childWidgets,
+        ),
+      );
+    } else {
+      body = SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: childWidgets,
+          ),
+        ),
+      );
+    }
+
+    // 构建底部导航栏
+    final navItems = <BottomNavigationBarItem>[];
+    for (final tab in tabs) {
+      if (tab is Map<String, dynamic>) {
+        final label = tab['label']?.toString() ?? '';
+        final iconName = tab['icon']?.toString();
+        final iconData = iconName != null
+            ? IconRegistry.get(iconName) ?? Icons.circle
+            : Icons.circle;
+        navItems.add(BottomNavigationBarItem(
+          icon: Icon(iconData),
+          label: label,
+        ));
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: tabBgColor ?? bgColor,
+      appBar: AppBar(
+        title: Text(currentTab['title']?.toString() ?? title),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SafeArea(child: body),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
+        },
+        destinations: navItems.map((item) {
+          return NavigationDestination(
+            icon: item.icon,
+            label: item.label ?? '',
+          );
+        }).toList(),
       ),
     );
   }
