@@ -22,62 +22,58 @@ class JsonVideoWidget extends JsonBaseWidget {
     final autoplay = json['autoplay'] == true;
     final looping = json['looping'] == true;
     final aspectRatio = (json['aspectRatio'] as num?)?.toDouble() ?? 16 / 9;
-    final width = (json['width'] as num?)?.toDouble();
-    final height = (json['height'] as num?)?.toDouble();
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 0;
-    final placeholder = json['placeholder']?.toString();
 
     if (src.isEmpty) {
-      return _placeholderWidget(width, height, '未配置视频地址', context);
-    }
-
-    Widget player = _VideoPlayerStateful(
-      key: ValueKey(src),
-      src: src,
-      autoplay: autoplay,
-      looping: looping,
-      aspectRatio: aspectRatio,
-      placeholder: placeholder,
-    );
-
-    if (width != null || height != null) {
-      player = SizedBox(width: width, height: height, child: player);
-    }
-
-    if (borderRadius > 0) {
-      player = ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: player,
+      return _fixedSizeBox(
+        aspectRatio,
+        borderRadius,
+        const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.videocam_off, size: 40, color: Colors.white54),
+            SizedBox(height: 8),
+            Text('未配置视频地址',
+                style: TextStyle(color: Colors.white54, fontSize: 13)),
+          ],
+        ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: player,
+    return _fixedSizeBox(
+      aspectRatio,
+      borderRadius,
+      _VideoPlayerStateful(
+        key: ValueKey(src),
+        src: src,
+        autoplay: autoplay,
+        looping: looping,
+        aspectRatio: aspectRatio,
+      ),
     );
   }
 
-  Widget _placeholderWidget(
-      double? width, double? height, String text, BuildContext context) {
-    return Container(
-      width: width,
-      height: height ?? 200,
-      decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.videocam_off, size: 40, color: Colors.white54),
-            const SizedBox(height: 8),
-            Text(text,
-                style: const TextStyle(color: Colors.white54, fontSize: 13)),
-          ],
+  /// 用 LayoutBuilder + AspectRatio 确保视频区域在 ScrollView 中有固定尺寸
+  Widget _fixedSizeBox(
+      double aspectRatio, double borderRadius, Widget child) {
+    Widget box = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: AspectRatio(
+        aspectRatio: aspectRatio,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: borderRadius > 0
+                ? BorderRadius.circular(borderRadius)
+                : null,
+          ),
+          clipBehavior:
+              borderRadius > 0 ? Clip.antiAlias : Clip.none,
+          child: child,
         ),
       ),
     );
+    return box;
   }
 }
 
@@ -87,7 +83,6 @@ class _VideoPlayerStateful extends StatefulWidget {
   final bool autoplay;
   final bool looping;
   final double aspectRatio;
-  final String? placeholder;
 
   const _VideoPlayerStateful({
     super.key,
@@ -95,7 +90,6 @@ class _VideoPlayerStateful extends StatefulWidget {
     required this.autoplay,
     required this.looping,
     required this.aspectRatio,
-    this.placeholder,
   });
 
   @override
@@ -103,7 +97,7 @@ class _VideoPlayerStateful extends StatefulWidget {
 }
 
 class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
-  late VideoPlayerController _videoController;
+  VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _isInitialized = false;
   String? _error;
@@ -117,31 +111,44 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
   Future<void> _initPlayer() async {
     try {
       final src = widget.src;
+      debugPrint('[JSON DSL Video] 正在初始化: $src');
+
+      VideoPlayerController controller;
 
       if (src.startsWith('http://') || src.startsWith('https://')) {
-        _videoController = VideoPlayerController.networkUrl(Uri.parse(src));
+        controller = VideoPlayerController.networkUrl(
+          Uri.parse(src),
+          httpHeaders: const {
+            'User-Agent': 'Mozilla/5.0',
+          },
+        );
       } else if (!kIsWeb) {
-        _videoController = VideoPlayerController.file(File(src));
+        controller = VideoPlayerController.file(File(src));
       } else {
-        setState(() => _error = '不支持的视频来源');
+        if (mounted) setState(() => _error = '不支持的视频来源');
         return;
       }
 
-      await _videoController.initialize();
+      _videoController = controller;
+
+      await controller.initialize();
+      debugPrint('[JSON DSL Video] 初始化成功: '
+          '${controller.value.size.width}x${controller.value.size.height}, '
+          '时长: ${controller.value.duration}');
+
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
 
       _chewieController = ChewieController(
-        videoPlayerController: _videoController,
+        videoPlayerController: controller,
         autoPlay: widget.autoplay,
         looping: widget.looping,
         aspectRatio: widget.aspectRatio,
         allowFullScreen: true,
         allowMuting: true,
         showControlsOnInitialize: true,
-        placeholder: widget.placeholder != null
-            ? Center(
-                child: Text(widget.placeholder!,
-                    style: const TextStyle(color: Colors.white54)))
-            : null,
         errorBuilder: (context, errorMessage) {
           return Center(
             child: Column(
@@ -150,16 +157,15 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
                 const Icon(Icons.error, color: Colors.redAccent, size: 36),
                 const SizedBox(height: 8),
                 Text('播放失败: $errorMessage',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 12)),
               ],
             ),
           );
         },
       );
 
-      if (mounted) {
-        setState(() => _isInitialized = true);
-      }
+      setState(() => _isInitialized = true);
     } catch (e) {
       debugPrint('[JSON DSL Video] 初始化失败: $e');
       if (mounted) {
@@ -171,47 +177,61 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
   @override
   void dispose() {
     _chewieController?.dispose();
-    _videoController.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
-      return Container(
-        color: Colors.black87,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  '视频加载失败',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '视频加载失败\n$_error',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _error = null;
+                  _isInitialized = false;
+                });
+                _chewieController?.dispose();
+                _videoController?.dispose();
+                _videoController = null;
+                _chewieController = null;
+                _initPlayer();
+              },
+              icon: const Icon(Icons.refresh, color: Colors.white70, size: 16),
+              label: const Text('重试',
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+            ),
+          ],
         ),
       );
     }
 
     if (!_isInitialized || _chewieController == null) {
-      return Container(
-        color: Colors.black87,
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
-              SizedBox(height: 12),
-              Text('加载中...', style: TextStyle(color: Colors.white54, fontSize: 13)),
-            ],
-          ),
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+            SizedBox(height: 12),
+            Text('视频加载中...',
+                style: TextStyle(color: Colors.white54, fontSize: 13)),
+          ],
         ),
       );
     }
