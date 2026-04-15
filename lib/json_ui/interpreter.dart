@@ -883,7 +883,8 @@ class JsonInterpreter extends ChangeNotifier {
       if (entry.value is String) {
         final str = entry.value as String;
         if (str.contains('{{') && str.contains('}}')) {
-          resolved[entry.key] = resolveTemplate(str);
+          // resolveExpression: 整体 {{ path }} 返回原始类型，混合文本返回 String
+          resolved[entry.key] = resolveExpression(str);
         } else {
           resolved[entry.key] = str;
         }
