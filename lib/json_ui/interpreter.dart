@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'http_client.dart';
+import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 
@@ -28,6 +29,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   final DslHttpClient _httpClient = DslHttpClient();
 
+  /// 依赖加载器
+  final DependencyLoader _depLoader = DependencyLoader();
+
   void Function(String screenId)? onNavigate;
   BuildContext? globalContext;
 
@@ -41,6 +45,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   String get appName =>
       (_config['meta'] as Map<String, dynamic>?)?['name'] ?? 'JSON App';
+
+  /// 获取依赖加载器（供 ref 控件使用）
+  DependencyLoader get depLoader => _depLoader;
 
   // ============ 初始化 ============
 
@@ -251,6 +258,7 @@ class JsonInterpreter extends ChangeNotifier {
 
     _loopContextStack.clear();
     _paramsStack.clear();
+    _depLoader.clear();
     for (final c in _textControllers.values) {
       c.dispose();
     }
@@ -263,6 +271,13 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<void> executeSteps() async {
+    // 先加载依赖
+    final deps = _config['dependencies'] as Map<String, dynamic>?;
+    if (deps != null && deps.isNotEmpty) {
+      await _depLoader.loadDependencies(deps);
+    }
+
+    // 再执行 steps
     final steps = _config['steps'] as List<dynamic>? ?? [];
     for (final step in steps) {
       if (step is Map<String, dynamic>) {
@@ -301,8 +316,21 @@ class JsonInterpreter extends ChangeNotifier {
       return _getNestedValue(_variables, subPath);
     }
 
-    // 没有前缀的直接当 global 变量
-    return _getNestedValue(_variables, path);
+    // 没有前缀：先查 global 变量，再查依赖模块变量
+    final globalResult = _getNestedValue(_variables, path);
+    if (globalResult != null) return globalResult;
+
+    // 尝试作为依赖变量: "depName.varPath"
+    return _getDependencyVariable(path);
+  }
+
+  /// 读取依赖模块的变量（只读）: "depName.varPath"
+  dynamic _getDependencyVariable(String fullPath) {
+    final dotIndex = fullPath.indexOf('.');
+    if (dotIndex < 0) return null;
+    final depName = fullPath.substring(0, dotIndex);
+    final varPath = fullPath.substring(dotIndex + 1);
+    return _depLoader.findVariable(depName, varPath);
   }
 
   void setVariable(String path, dynamic value) {
@@ -426,6 +454,26 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   void navigateTo(String screenId) {
+    // 支持 depName:screenId 格式导航到依赖的页面
+    if (screenId.contains(':')) {
+      final parts = screenId.split(':');
+      final depName = parts[0];
+      final depScreenId = parts[1];
+      final depScreen = _depLoader.findScreen(depName, depScreenId);
+      if (depScreen != null) {
+        // 将依赖的 screen 注入到当前 screens 列表中（如果不存在）
+        final localScreens = screens;
+        final exists = localScreens.any((s) =>
+            s is Map<String, dynamic> && s['id'] == screenId);
+        if (!exists) {
+          // 用 depName:screenId 作为唯一 ID 避免冲突
+          final injectedScreen = Map<String, dynamic>.from(depScreen);
+          injectedScreen['id'] = screenId;
+          ((_config['ui'] as Map<String, dynamic>)['screens'] as List)
+              .add(injectedScreen);
+        }
+      }
+    }
     _currentScreenId = screenId;
     onNavigate?.call(screenId);
     notifyListeners();
@@ -463,10 +511,25 @@ class JsonInterpreter extends ChangeNotifier {
       String callTarget, Map<String, dynamic> args) async {
     final resolvedArgs = _resolveArgs(args);
 
-    // 自定义全局函数
+    // 自定义全局函数: @global.funcName
     if (callTarget.startsWith('@global.')) {
       final funcName = callTarget.substring(8);
       return await _executeGlobalFunction(funcName, resolvedArgs);
+    }
+
+    // 依赖模块的函数: @depName.funcName
+    if (callTarget.startsWith('@') && callTarget.contains('.')) {
+      final dotIndex = callTarget.indexOf('.');
+      final depName = callTarget.substring(1, dotIndex);
+      final funcName = callTarget.substring(dotIndex + 1);
+
+      // 在依赖中查找函数
+      final funcDef = _depLoader.findFunction(depName, funcName);
+      if (funcDef != null) {
+        return await _executeDependencyFunction(depName, funcDef, resolvedArgs);
+      }
+      debugPrint('[JSON DSL] 未找到依赖函数: $callTarget');
+      return null;
     }
 
     // ──── 内置函数 ────
@@ -869,6 +932,18 @@ class JsonInterpreter extends ChangeNotifier {
       debugPrint('[JSON DSL] 未找到函数: $funcName');
       return null;
     }
+    return await _executeFunctionDef(funcDef, args);
+  }
+
+  /// 执行依赖模块中的函数
+  Future<dynamic> _executeDependencyFunction(
+      String depName, Map<String, dynamic> funcDef, Map<String, dynamic> args) async {
+    return await _executeFunctionDef(funcDef, args);
+  }
+
+  /// 通用函数执行器
+  Future<dynamic> _executeFunctionDef(
+      Map<String, dynamic> funcDef, Map<String, dynamic> args) async {
 
     final params = funcDef['params'] as List<dynamic>? ?? [];
     final paramMap = <String, dynamic>{};

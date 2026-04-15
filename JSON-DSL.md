@@ -1,6 +1,6 @@
-# Flutter JSON Low-Code DSL 完整开发文档 v3.2
+# Flutter JSON Low-Code DSL 完整开发文档 v3.3
 
-**文档版本**：v3.2
+**文档版本**：v3.3
 **制定日期**：2026年4月
 **状态**：正式发布
 **适用范围**：Flutter 跨平台 GUI 客户端（iOS / Android / Web / Desktop）
@@ -16,6 +16,8 @@
 - **零性能限制**：不对页面层级、Widget 数量、循环次数设上限。
 - **位置描述**：每个控件可通过 `position` 精确描述自己在页面中的位置。
 
+- **模块化**：支持 JSON 模块引用，通过 `dependencies` + 版本约束实现复用。
+
 ---
 
 ## 2. 系统架构
@@ -25,11 +27,12 @@
 │
 [JsonInterpreter (Dart)]
 │
-├── ExpressionEngine    (JsonLogic 表达式引擎)
-├── DslHttpClient       (HTTP 网络层, 基于 dio)
-├── JsonWidgetBuilder   (控件注册表 + 分发)
-│   └── widgets/        (各类控件实现)
-└── 状态管理            (Riverpod ChangeNotifierProvider)
+├── Jsonlogic            (标准 JsonLogic 引擎 + 自定义扩展操作符)
+├── DslHttpClient        (HTTP 网络层, 基于 dio)
+├── DependencyLoader     (依赖加载 + 版本校验 + 循环依赖检测)
+├── JsonWidgetBuilder    (控件注册表 + 分发)
+│   └── widgets/         (各类控件实现，含 ref 控件)
+└── 状态管理             (Riverpod ChangeNotifierProvider)
 ```
 
 ---
@@ -40,16 +43,69 @@
 
 ```json
 {
-  "version": "3.2",
+  "dsl": "3.3",
   "meta": {
-    "name": "应用名",
+    "name": "my-app",
+    "version": "1.0.0",
+    "type": "app",
     "description": "应用描述",
-    "author": "作者"
+    "author": "作者",
+    "exports": []
+  },
+  "dependencies": {
+    "common-ui": {
+      "url": "https://cdn.example.com/common-ui.json",
+      "version": "^1.2.0"
+    }
   },
   "global": { ... },
   "steps": [ ... ],
   "ui": { ... }
 }
+```
+
+| 字段 | 必须 | 说明 |
+|------|------|------|
+| `dsl` | 是 | DSL 规范版本（如 `"3.3"`），兼容旧 `version` 字段 |
+| `meta.name` | 是 | 模块唯一标识（包名） |
+| `meta.version` | 是 | 模块版本号（semver: `MAJOR.MINOR.PATCH`） |
+| `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
+| `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
+| `dependencies` | 否 | 依赖声明，key 为依赖别名，value 含 `url` 和 `version` 约束 |
+
+#### 模块类型
+
+| type | 说明 | 必须字段 | 使用方式 |
+|------|------|---------|---------|
+| `app` | 完整应用 | `ui.screens`, `steps` | 直接加载运行 |
+| `library` | 函数/页面库 | `global.functions` | 被其他模块 `dependencies` 引用 |
+| `widget` | 控件模板库 | `ui.templates` | 通过 `ref` 控件引用 |
+
+#### 版本约束语法
+
+| 写法 | 含义 |
+|------|------|
+| `"1.2.3"` | 精确版本 |
+| `"^1.2.0"` | 兼容更新: >=1.2.0 <2.0.0 |
+| `"~1.2.0"` | 小版本更新: >=1.2.0 <1.3.0 |
+| `">=1.0.0"` | 最低版本 |
+| `">=1.0.0 <2.0.0"` | 范围约束 |
+| `"*"` | 任意版本 |
+
+#### 跨模块引用规则
+
+```jsonc
+// 调用依赖的函数: @depName.funcName
+{ "call": "@common-ui.showToast", "args": { "message": "操作成功" } }
+
+// 导航到依赖的页面: depName:screenId
+{ "type": "navigate", "screen": "auth:loginPage" }
+
+// 引用依赖的控件模板: ref
+{ "type": "ref", "from": "common-ui", "widget": "userCard", "props": { "name": "张三" } }
+
+// 读取依赖的变量（只读）: depName.varPath
+"{{ common-ui.theme.primaryColor }}"
 ```
 
 ### 3.2 global（全局定义区）
@@ -380,6 +436,9 @@
 | `image` | `Image.network` | `url` | `fit`, `width`, `height`, `borderRadius` |
 | `spacer` | `SizedBox` | — | `height`, `width` |
 | `switch` | `Switch` | `bind` | `label`, `action` |
+| `image_picker` | `ImagePicker` | `bind` | `source`(gallery/camera), `placeholder`, `width`, `height`, `borderRadius` |
+| `video` | `Chewie` + `VideoPlayer` | `url` | `autoplay`, `looping`, `aspectRatio`, `borderRadius` |
+| `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
 
@@ -482,19 +541,53 @@
 "action": {
   "type": "call",
   "call": "@global.submitForm",
-  "args": { "name": "{{ $.global.username }}" }
+  "args": { "name": "{{ global.username }}" }
 }
 ```
 
-或导航：
+或导航（支持依赖页面 `depName:screenId`）：
 ```json
-"action": {
-  "type": "navigate",
-  "screen": "detail"
+"action": { "type": "navigate", "screen": "detail" }
+"action": { "type": "navigate", "screen": "auth:loginPage" }
+```
+
+**双向绑定**：`"bind": "global.xxx"` 使 input / switch 的值与变量实时同步。
+
+### 6.9 ref 控件 — 引用依赖模板
+
+```json
+{
+  "type": "ref",
+  "from": "common-ui",
+  "widget": "userCard",
+  "props": {
+    "name": "{{ global.userName }}",
+    "avatar": "{{ global.avatarUrl }}"
+  }
 }
 ```
 
-**双向绑定**：`"bind": "$.global.xxx"` 使 input / switch 的值与变量实时同步。
+引用的 widget 模板定义在依赖模块的 `ui.templates` 中：
+
+```json
+"ui": {
+  "templates": {
+    "userCard": {
+      "props": ["name", "avatar"],
+      "root": {
+        "type": "container",
+        "layout": "row",
+        "children": [
+          { "type": "image", "url": "{{ props.avatar }}", "width": 40, "height": 40, "borderRadius": 20 },
+          { "type": "text", "value": "{{ props.name }}", "style": { "fontSize": 16 } }
+        ]
+      }
+    }
+  }
+}
+```
+
+`{{ props.xxx }}` 在渲染时被替换为调用方传入的 `props` 值。
 
 ---
 
@@ -504,8 +597,9 @@
 lib/
 ├── main.dart                      # App 入口、Riverpod Provider、文件选择页、渲染页
 └── json_ui/
-    ├── interpreter.dart           # 解释器核心（async 执行引擎 + 全部内置函数）
-    ├── expression_engine.dart     # JsonLogic 表达式引擎
+    ├── interpreter.dart           # 解释器核心（async 执行引擎 + 全部内置函数 + 命名空间）
+    ├── dependency_loader.dart     # 依赖加载器（下载/版本校验/循环检测/命名空间注册）
+    ├── semver.dart                # 语义化版本解析和约束匹配
     ├── http_client.dart           # dio HTTP 客户端封装
     ├── widget_builder.dart        # 控件注册表 + type 分发
     └── widgets/
@@ -516,10 +610,22 @@ lib/
         ├── list_widget.dart       # List 控件
         ├── container_widget.dart  # Container 控件
         ├── divider_widget.dart    # Divider 控件
-        ├── image_widget.dart      # Image 控件
+        ├── image_widget.dart      # Image 控件（网络/本地/base64/GIF）
+        ├── image_picker_widget.dart # 图片选择器
+        ├── video_widget.dart      # 视频播放器（video_player + chewie）
+        ├── ref_widget.dart        # Ref 控件（引用依赖模板）
         ├── spacer_widget.dart     # Spacer 控件
         ├── switch_widget.dart     # Switch 控件
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射
+
+tools/
+└── video_server.py                # 本地视频流媒体服务器（支持 Range 请求 + /api/list）
+
+templates/                         # JSON DSL 示例配置
+├── test_collector.json            # 文本收藏夹 app
+├── demo_5pages.json               # 5 页记事本 app
+├── demo_media.json                # 图片+视频 demo
+└── demo_video_browser.json        # 视频浏览器 app（HTTP API + 列表 + 播放）
 ```

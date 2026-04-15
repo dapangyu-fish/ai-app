@@ -38,6 +38,7 @@ MIME_TYPES = {
     '.m3u8': 'application/vnd.apple.mpegurl',
     '.ts': 'video/mp2t',
     '.flv': 'video/x-flv',
+    '.json': 'application/json',
 }
 
 

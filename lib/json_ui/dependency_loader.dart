@@ -1,0 +1,242 @@
+// 依赖加载器
+// 负责：下载依赖 JSON、校验版本、检测循环依赖、注册到命名空间
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'http_client.dart';
+import 'semver.dart';
+
+/// 已加载的模块信息
+class LoadedModule {
+  final String name;
+  final SemVer version;
+  final String type; // app | library | widget
+  final List<String> exports;
+  final Map<String, dynamic> config; // 完整 JSON 配置
+  final Map<String, dynamic> functions;
+  final Map<String, dynamic> variables;
+  final List<dynamic> screens;
+  final Map<String, dynamic> templates;
+
+  LoadedModule({
+    required this.name,
+    required this.version,
+    required this.type,
+    required this.exports,
+    required this.config,
+    required this.functions,
+    required this.variables,
+    required this.screens,
+    required this.templates,
+  });
+}
+
+/// 依赖声明
+class DependencySpec {
+  final String name;
+  final String url;
+  final VersionConstraint constraint;
+
+  DependencySpec({
+    required this.name,
+    required this.url,
+    required this.constraint,
+  });
+
+  factory DependencySpec.fromJson(String name, Map<String, dynamic> json) {
+    return DependencySpec(
+      name: name,
+      url: json['url']?.toString() ?? '',
+      constraint: VersionConstraint.parse(json['version']?.toString() ?? '*'),
+    );
+  }
+}
+
+class DependencyLoader {
+  final DslHttpClient _httpClient = DslHttpClient();
+
+  /// 已加载的模块缓存（按 name 缓存，避免重复加载）
+  final Map<String, LoadedModule> _loadedModules = {};
+
+  /// 当前加载路径（用于检测循环依赖）
+  final Set<String> _loadingStack = {};
+
+  /// 获取已加载的模块
+  Map<String, LoadedModule> get modules => Map.unmodifiable(_loadedModules);
+
+  /// 清除缓存
+  void clear() {
+    _loadedModules.clear();
+    _loadingStack.clear();
+  }
+
+  /// 解析并加载所有依赖
+  Future<void> loadDependencies(Map<String, dynamic>? deps) async {
+    if (deps == null || deps.isEmpty) return;
+
+    final specs = <DependencySpec>[];
+    for (final entry in deps.entries) {
+      if (entry.value is Map<String, dynamic>) {
+        specs.add(DependencySpec.fromJson(entry.key, entry.value));
+      }
+    }
+
+    // 并发加载所有依赖
+    await Future.wait(specs.map((spec) => _loadDependency(spec)));
+  }
+
+  /// 加载单个依赖
+  Future<void> _loadDependency(DependencySpec spec) async {
+    // 已加载，校验版本
+    if (_loadedModules.containsKey(spec.name)) {
+      final existing = _loadedModules[spec.name]!;
+      if (!spec.constraint.satisfiedBy(existing.version)) {
+        debugPrint('[JSON DSL] 版本冲突: ${spec.name} '
+            '已加载 ${existing.version}, 需要 ${spec.constraint}');
+      }
+      return;
+    }
+
+    // 循环依赖检测
+    if (_loadingStack.contains(spec.name)) {
+      debugPrint('[JSON DSL] 检测到循环依赖: ${_loadingStack.join(" → ")} → ${spec.name}');
+      return;
+    }
+
+    if (spec.url.isEmpty) {
+      debugPrint('[JSON DSL] 依赖 ${spec.name} 没有提供 URL');
+      return;
+    }
+
+    _loadingStack.add(spec.name);
+
+    try {
+      debugPrint('[JSON DSL] 正在加载依赖: ${spec.name} from ${spec.url}');
+
+      // 下载 JSON
+      final response = await _httpClient.get(spec.url);
+      if (response['error'] != null || response['data'] == null) {
+        debugPrint('[JSON DSL] 加载依赖失败: ${spec.name} - ${response['error']}');
+        return;
+      }
+
+      Map<String, dynamic> config;
+      if (response['data'] is String) {
+        config = json.decode(response['data'] as String);
+      } else if (response['data'] is Map) {
+        config = Map<String, dynamic>.from(response['data'] as Map);
+      } else {
+        debugPrint('[JSON DSL] 依赖 ${spec.name} 返回了非 JSON 数据');
+        return;
+      }
+
+      // 解析模块信息
+      final meta = config['meta'] as Map<String, dynamic>? ?? {};
+      final moduleVersion = SemVer.parse(meta['version']?.toString() ?? '0.0.0');
+
+      // 版本约束校验
+      if (!spec.constraint.satisfiedBy(moduleVersion)) {
+        debugPrint('[JSON DSL] 版本不满足: ${spec.name} '
+            'v$moduleVersion 不满足 ${spec.constraint}');
+        return;
+      }
+
+      final global = config['global'] as Map<String, dynamic>? ?? {};
+      final exportsList = (meta['exports'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [];
+
+      final module = LoadedModule(
+        name: spec.name,
+        version: moduleVersion,
+        type: meta['type']?.toString() ?? 'library',
+        exports: exportsList,
+        config: config,
+        functions: global['functions'] as Map<String, dynamic>? ?? {},
+        variables: global['variables'] as Map<String, dynamic>? ?? {},
+        screens: (config['ui'] as Map<String, dynamic>?)?['screens']
+                as List<dynamic>? ??
+            [],
+        templates: (config['ui'] as Map<String, dynamic>?)?['templates']
+                as Map<String, dynamic>? ??
+            {},
+      );
+
+      _loadedModules[spec.name] = module;
+      debugPrint('[JSON DSL] 依赖加载成功: ${spec.name} v$moduleVersion '
+          '(${module.type}, exports: ${exportsList.join(", ")})');
+
+      // 递归加载子依赖
+      final subDeps = config['dependencies'] as Map<String, dynamic>?;
+      if (subDeps != null && subDeps.isNotEmpty) {
+        await loadDependencies(subDeps);
+      }
+    } catch (e) {
+      debugPrint('[JSON DSL] 加载依赖异常: ${spec.name} - $e');
+    } finally {
+      _loadingStack.remove(spec.name);
+    }
+  }
+
+  /// 查找依赖中的函数
+  Map<String, dynamic>? findFunction(String depName, String funcName) {
+    final module = _loadedModules[depName];
+    if (module == null) return null;
+
+    // 检查 exports（如果声明了 exports，只暴露列出的函数）
+    if (module.exports.isNotEmpty && !module.exports.contains(funcName)) {
+      debugPrint('[JSON DSL] 函数 $funcName 未在 $depName 的 exports 中');
+      return null;
+    }
+
+    return module.functions[funcName] as Map<String, dynamic>?;
+  }
+
+  /// 查找依赖中的 screen
+  Map<String, dynamic>? findScreen(String depName, String screenId) {
+    final module = _loadedModules[depName];
+    if (module == null) return null;
+
+    if (module.exports.isNotEmpty && !module.exports.contains(screenId)) {
+      debugPrint('[JSON DSL] Screen $screenId 未在 $depName 的 exports 中');
+      return null;
+    }
+
+    for (final screen in module.screens) {
+      if (screen is Map<String, dynamic> && screen['id'] == screenId) {
+        return screen;
+      }
+    }
+    return null;
+  }
+
+  /// 查找依赖中的 widget template
+  Map<String, dynamic>? findTemplate(String depName, String widgetName) {
+    final module = _loadedModules[depName];
+    if (module == null) return null;
+
+    if (module.exports.isNotEmpty && !module.exports.contains(widgetName)) {
+      debugPrint('[JSON DSL] Widget $widgetName 未在 $depName 的 exports 中');
+      return null;
+    }
+
+    return module.templates[widgetName] as Map<String, dynamic>?;
+  }
+
+  /// 查找依赖中的变量（只读）
+  dynamic findVariable(String depName, String varPath) {
+    final module = _loadedModules[depName];
+    if (module == null) return null;
+
+    final keys = varPath.split('.');
+    dynamic current = module.variables;
+    for (final key in keys) {
+      if (current is Map<String, dynamic> && current.containsKey(key)) {
+        current = current[key];
+      } else {
+        return null;
+      }
+    }
+    return current;
+  }
+}
