@@ -276,17 +276,17 @@ class JsonInterpreter extends ChangeNotifier {
     }
 
     if (path.startsWith('loop.')) {
-      final key = path.substring(5);
+      final subPath = path.substring(5);
       if (_loopContextStack.isNotEmpty) {
-        return _loopContextStack.last[key];
+        return _getNestedValue(_loopContextStack.last, subPath);
       }
       return null;
     }
 
     if (path.startsWith('params.')) {
-      final key = path.substring(7);
+      final subPath = path.substring(7);
       if (_paramsStack.isNotEmpty) {
-        return _paramsStack.last[key];
+        return _getNestedValue(_paramsStack.last, subPath);
       }
       return null;
     }

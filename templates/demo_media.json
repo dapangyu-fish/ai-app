@@ -151,7 +151,7 @@
           },
           {
             "type": "text",
-            "value": "需先启动: python3 tools/video_server.py",
+            "value": "需先启动: python3 tools/video_server.py --dir ~/Movies",
             "style": { "fontSize": 12, "color": "#888888" }
           },
           {

@@ -47,7 +47,12 @@ class VideoStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = unquote(self.path).lstrip('/')
 
-        # 根路径：列出可用视频
+        # JSON API：返回视频列表
+        if path == 'api/list':
+            self._serve_api_list()
+            return
+
+        # 根路径：列出可用视频（HTML）
         if not path:
             self._serve_index()
             return
@@ -59,6 +64,32 @@ class VideoStreamHandler(BaseHTTPRequestHandler):
             return
 
         self._serve_video(file_path)
+
+    def _serve_api_list(self):
+        """JSON API: 返回视频文件列表"""
+        import json as json_mod
+        port = self.server.server_port
+        videos = []
+        for f in sorted(os.listdir(self.video_dir)):
+            ext = os.path.splitext(f)[1].lower()
+            if ext in MIME_TYPES:
+                full_path = os.path.join(self.video_dir, f)
+                size_bytes = os.path.getsize(full_path)
+                size_mb = round(size_bytes / 1024 / 1024, 1)
+                videos.append({
+                    'name': f,
+                    'url': f'http://localhost:{port}/{f}',
+                    'size': f'{size_mb} MB',
+                    'size_bytes': size_bytes,
+                })
+
+        body = json_mod.dumps(videos, ensure_ascii=False).encode('utf-8')
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(body)
 
     def _serve_index(self):
         """列出视频目录中的所有文件"""
