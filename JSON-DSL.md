@@ -71,21 +71,50 @@
 }
 ```
 
-**变量路径支持嵌套**：`$.global.user.name` 可读写深层属性。
+**变量路径支持嵌套**：`global.user.name` 可读写深层属性。
+
+### 3.3 值类型规则（核心约定）
+
+在 `args` 中，值的写法决定了解释器如何处理它：
+
+| 写法 | 类型 | 解释器行为 | 示例 |
+|------|------|-----------|------|
+| `"hello"` | 原始字符串 | 直接使用 | `"value": "hello"` |
+| `123` / `true` / `[]` | 原始值 | 直接使用 | `"value": []` |
+| `"{{ path }}"` | 模板引用 | 解析为变量的**原始类型**（List/Map/String 等） | `"value": "{{ global.list }}"` → 实际 List |
+| `"前缀 {{ path }} 后缀"` | 模板插值 | 解析为**字符串**（变量 toString 后拼接） | `"value": "共 {{ global.count }} 条"` → `"共 5 条"` |
+| `{ "op": [...] }` | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
+
+**关键区分**：
+- `"{{ global.items }}"` → 返回 items 变量本身（可能是 List、Map、数字等，保留原始类型）
+- `{ "var": "global.items" }` → 通过 jsonlogic 引擎求值，效果相同但更明确
+- `"总数: {{ global.count }}"` → 返回字符串 `"总数: 5"`（混合文本，强制 String）
+
+**HTTP 响应数据处理示例**：
+```json
+// 1. 发起请求，结果存入变量（返回 { status, data, headers, error }）
+{ "call": "@http_get", "args": { "url": "..." }, "assign": "global.result" }
+
+// 2. 提取 data 字段（模板引用保留原始类型）
+{ "call": "@set", "args": { "var": "global.list", "value": "{{ global.result.data }}" } }
+
+// 3. 或用 jsonlogic 表达式提取
+{ "call": "@set", "args": { "var": "global.list", "value": { "var": "global.result.data" } } }
+```
 
 ### 3.3 steps（业务逻辑）
 
 ```json
 "steps": [
   { "call": "@print", "args": { "value": "启动" } },
-  { "call": "@http_get", "args": { "url": "https://api.example.com/data" }, "assign": "$.global.apiResult" },
-  { "expression": { "+": [1, 2, 3] }, "assign": "$.global.sum" }
+  { "call": "@http_get", "args": { "url": "https://api.example.com/data" }, "assign": "global.apiResult" },
+  { "expression": { "+": [1, 2, 3] }, "assign": "global.sum" }
 ]
 ```
 
 每个 step 支持：
-- **函数调用**：`{ "call": "...", "args": {...}, "assign": "$.global.xxx" }`
-- **表达式**：`{ "expression": {JsonLogic}, "assign": "$.global.xxx" }`
+- **函数调用**：`{ "call": "...", "args": {...}, "assign": "global.xxx" }`
+- **表达式**：`{ "expression": {JsonLogic}, "assign": "global.xxx" }`
 
 `assign` 将函数返回值 / 表达式结果存入指定变量。
 

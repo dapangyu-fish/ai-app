@@ -6,6 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Flutter **Server-Driven UI** low-code engine that renders UI and executes business logic from JSON configuration files (DSL v3.2). Users pick a JSON file at runtime; the app interprets it to build screens, handle interactions, and manage state — no recompilation needed. Targets iOS, Android, Web, macOS, Linux, and Windows.
 
+## Framework Stability Principle
+
+**框架应该是稳定可靠的。** 修改框架代码前必须遵守以下原则：
+
+1. **JSON-DSL.md 是契约**：框架的行为由 `JSON-DSL.md` 定义。任何框架改动都必须同步更新 JSON-DSL.md，任何 JSON 编写都必须遵循 JSON-DSL.md 的规范。
+2. **不因数据格式变化而改框架**：框架应能处理任意合法 JSON 数据（如 HTTP 响应的各种格式）。如果某种数据导致框架崩溃，说明框架设计有缺陷需要修复；如果只是用法不对，应修改 JSON 配置。
+3. **明确区分表达式和数据**：
+   - `{ "op": [...] }` 形式的 Map → jsonlogic 表达式，由引擎求值
+   - `"{{ path }}"` 模板 → 解析为变量原始类型
+   - 其他值（字符串/数字/布尔/数组）→ 直接使用，不做二次求值
+   - 运行时数据（如 HTTP 响应体）→ 永远不会被当作 jsonlogic 表达式执行
+4. **新功能优先通过 JSON 配置实现**：只有现有原子控件和内置函数无法满足时，才新增框架代码。
+
 ## Build & Development Commands
 
 ```bash
@@ -16,6 +29,7 @@ flutter run -d chrome        # Run on web
 flutter analyze              # Lint (uses flutter_lints via analysis_options.yaml)
 flutter test                 # Run all tests
 flutter test test/widget_test.dart   # Run a single test file
+python3 tools/video_server.py --dir ~/Movies  # 启动本地视频流媒体服务器
 ```
 
 ## Architecture
@@ -25,46 +39,53 @@ flutter test test/widget_test.dart   # Run a single test file
 ```
 JSON file (picked by user or loaded from network)
   → JsonInterpreter.loadConfig()   parse config, init variables/functions
-  → JsonInterpreter.executeSteps() run startup business logic
+  → JsonInterpreter.executeSteps() run startup business logic (async, supports HTTP)
   → JsonInterpreter.buildWidget()  recursively build Flutter widget tree
+```
+
+### Value Resolution Pipeline
+
+```
+JSON args 中的值
+  ├── 原始值 (string/number/bool/array)  → _resolveArgs 处理模板后直接使用
+  ├── "{{ path }}" 模板                   → resolveExpression → 返回变量原始类型
+  ├── "混合 {{ path }} 文本"              → resolveTemplate → 返回 String
+  └── { "op": [...] } JsonLogic 表达式    → _evaluateExpression → jsonlogic 引擎求值
 ```
 
 ### Key Modules (`lib/`)
 
-- **`main.dart`** — App entry point. Defines `interpreterProvider` (Riverpod `ChangeNotifierProvider<JsonInterpreter>`), the file-picker launch screen (`FilePickerPage`), and the rendering page (`JsonScreenView`) that watches the interpreter and rebuilds on state changes.
+- **`main.dart`** — App entry point. Riverpod `ChangeNotifierProvider<JsonInterpreter>`, file-picker launch screen, JSON rendering page.
 
-- **`json_ui/interpreter.dart`** — Core engine (`JsonInterpreter extends ChangeNotifier`). Manages:
-  - Global variables (`$.global.*`), loop context (`$.loop.item/index`), function params (`$.params.*`)
-  - Template resolution (`{{ $.global.xxx }}`)
-  - JsonLogic expression evaluation (`cat`, `filter`, `var`, `==`, `!=`)
-  - Built-in functions: `@print`, `@set`, `@if`, `@while`, `@for_each`
-  - Custom function execution (defined in `global.functions`, invoked via `@global.<name>`)
-  - TextField controller caching (keyed by bind path)
-  - Screen navigation (`navigateTo` + `notifyListeners`)
+- **`json_ui/interpreter.dart`** — Core async engine. Manages:
+  - Variables: `global.xxx` / `loop.item` / `params.xxx` (nested paths supported: `global.user.name`)
+  - Template: `{{ global.xxx }}` → original type; `"text {{ x }}"` → String
+  - Expression: jsonlogic standard package + 15 custom operators via `jl.add()`
+  - 30+ built-in functions: HTTP, JSON, string, array, control flow, UI feedback
+  - `@parallel` for concurrent execution
+  - **`@set` value 规则**: 原始值是 Map → jsonlogic 求值; 其他 → 直接赋值
 
-- **`json_ui/widget_builder.dart`** — Registry-based dispatcher. Maps JSON `type` string to a widget builder instance. Currently registered: `text`, `button`, `input`, `list`, `container`.
+- **`json_ui/widget_builder.dart`** — Registry dispatcher. Registered types: `text`, `button`, `input`, `list`, `container`, `divider`, `image`, `image_picker`, `spacer`, `switch`, `video`.
 
-- **`json_ui/widgets/`** — Individual widget implementations, all extend `JsonBaseWidget`:
-  - `text_widget.dart` — Renders `Text` with template-resolved `value` and optional `style`
-  - `button_widget.dart` — `ElevatedButton`. **Important**: pre-resolves `{{ }}` templates in `action` args at build time because the loop context stack is popped before `onPressed` fires
-  - `input_widget.dart` — `TextField` with two-way binding via `bind` path
-  - `list_widget.dart` — `ListView.builder` driven by `source` data; uses `buildWidgetInLoopContext` to push/pop loop context for each item; auto-wraps in `Expanded`
-  - `container_widget.dart` — Recursive container with `children`, `color`, `padding`
-  - `position_handler.dart` — Wraps widgets in `Positioned` (absolute), `Expanded` (flex), or pass-through (relative) based on `position.type`
-  - `screen_layout.dart` — Selects `Column`, `Row`, or `Stack` layout per screen config
+- **`json_ui/widgets/`** — All extend `JsonBaseWidget`:
+  - `button_widget.dart` — 3 variants (filled/outlined/text), icon support. **Important**: pre-resolves `{{ }}` in `action` args at build time (loop context is popped before `onPressed`)
+  - `image_widget.dart` — Network URL / local file / base64 / GIF auto-detection
+  - `image_picker_widget.dart` — Cross-platform image picker (gallery/camera)
+  - `video_widget.dart` — StatefulWidget wrapping video_player + chewie. Uses `AspectRatio` for fixed size in ScrollView
+  - `list_widget.dart` — `ListView.builder` with loop context (`loop.item`, `loop.index`, supports nested: `loop.item.name`)
+  - `icon_registry.dart` — 100+ Material icon name→IconData mapping
 
 ### State Management
 
-Riverpod with a single global `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notifyListeners()` on variable changes and navigation, triggering `ConsumerWidget` rebuilds.
+Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notifyListeners()` on variable changes and navigation.
 
 ### DSL Specification
 
-`JSON-DSL.md` contains the full v3.2 spec: top-level structure (`version`, `meta`, `global`, `steps`, `ui`), widget type mappings, position system, action/binding rules, and JsonLogic expression syntax.
-
-`test_collector.json` is a sample DSL config (text favorites app) useful as a reference for valid JSON structure.
+`JSON-DSL.md` is the single source of truth for the DSL contract. All JSON files must follow it, all framework changes must update it.
 
 ## Adding a New Widget Type
 
 1. Create `lib/json_ui/widgets/<name>_widget.dart` extending `JsonBaseWidget`
 2. Register it in `JsonWidgetBuilder._builders` map in `widget_builder.dart`
 3. The interpreter's `buildWidget` → `applyPosition` pipeline handles positioning automatically
+4. Update `JSON-DSL.md` widget type table

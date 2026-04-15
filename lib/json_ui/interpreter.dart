@@ -183,11 +183,11 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   /// 通过 jsonlogic 求值表达式
+  /// 仅用于原始 JSON 配置中的 jsonlogic 表达式（Map），不用于已解析的运行时数据
   dynamic _evaluateExpression(dynamic value) {
     if (value == null) return null;
     if (value is num || value is bool) return value;
 
-    // 字符串：{{ }} 模板走 resolveExpression（返回原始类型，非字符串化）
     if (value is String) {
       if (value.contains('{{') && value.contains('}}')) {
         return resolveExpression(value);
@@ -195,18 +195,13 @@ class JsonInterpreter extends ChangeNotifier {
       return value;
     }
 
-    // Map：尝试作为 JsonLogic 表达式求值，失败则当作普通数据返回
+    // Map → JsonLogic 表达式（来自原始 JSON 配置，不会是运行时数据）
     if (value is Map<String, dynamic>) {
       final preprocessed = _resolveTemplatesInRule(value);
-      try {
-        return _jl.apply(preprocessed, _buildDataContext());
-      } on JsonlogicException {
-        // 不是 jsonlogic 表达式（如 HTTP 返回的数据对象），原样返回
-        return preprocessed;
-      }
+      return _jl.apply(preprocessed, _buildDataContext());
     }
 
-    // List：只解析字符串模板，不递归求值 Map 元素（避免把数据对象当表达式）
+    // List → 解析字符串模板，Map/其他类型原样保留
     if (value is List) {
       return value.map((e) {
         if (e is String && e.contains('{{') && e.contains('}}')) {
@@ -483,10 +478,21 @@ class JsonInterpreter extends ChangeNotifier {
 
       case '@set':
         final varPath = resolvedArgs['var'] as String?;
-        final value = resolvedArgs['value'];
+        // 关键区分：取原始 value 判断类型
+        //   - 原始是 Map → jsonlogic 表达式，走 _evaluateExpression
+        //   - 原始是 String "{{ }}" → _resolveArgs 已解析为最终值，直接用
+        //   - 原始是其他（数字/布尔/数组等）→ 直接用
+        final rawValue = args['value'];
+        final dynamic finalValue;
+        if (rawValue is Map<String, dynamic>) {
+          // jsonlogic 表达式，需要求值
+          finalValue = _evaluateExpression(rawValue);
+        } else {
+          // 模板或原始值，_resolveArgs 已处理完毕
+          finalValue = resolvedArgs['value'];
+        }
         if (varPath != null) {
-          final resolved = _evaluateExpression(value);
-          setVariable(varPath, resolved);
+          setVariable(varPath, finalValue);
         }
         return null;
 
