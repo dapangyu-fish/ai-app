@@ -195,15 +195,25 @@ class JsonInterpreter extends ChangeNotifier {
       return value;
     }
 
-    // Map：JsonLogic 表达式 → 预处理模板后交给 jsonlogic 求值
+    // Map：尝试作为 JsonLogic 表达式求值，失败则当作普通数据返回
     if (value is Map<String, dynamic>) {
       final preprocessed = _resolveTemplatesInRule(value);
-      return _jl.apply(preprocessed, _buildDataContext());
+      try {
+        return _jl.apply(preprocessed, _buildDataContext());
+      } on JsonlogicException {
+        // 不是 jsonlogic 表达式（如 HTTP 返回的数据对象），原样返回
+        return preprocessed;
+      }
     }
 
-    // List：递归求值每个元素
+    // List：只解析字符串模板，不递归求值 Map 元素（避免把数据对象当表达式）
     if (value is List) {
-      return value.map((e) => _evaluateExpression(e)).toList();
+      return value.map((e) {
+        if (e is String && e.contains('{{') && e.contains('}}')) {
+          return resolveExpression(e);
+        }
+        return e;
+      }).toList();
     }
 
     return value;
