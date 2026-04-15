@@ -146,12 +146,17 @@
           },
           {
             "type": "text",
-            "value": "▶ 网络视频 (MP4)",
+            "value": "▶ 本地视频 (via 流媒体服务器)",
             "style": { "fontSize": 16, "fontWeight": "bold", "color": "#E0E0E0" }
           },
           {
+            "type": "text",
+            "value": "需先启动: python3 tools/video_server.py",
+            "style": { "fontSize": 12, "color": "#888888" }
+          },
+          {
             "type": "video",
-            "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            "url": "http://localhost:8080/output1.mp4",
             "autoplay": false,
             "looping": false,
             "aspectRatio": 1.78,
