@@ -48,6 +48,8 @@ dependencies:
   video_player: ^2.10.1
   chewie: ^1.13.1
   shared_preferences: ^2.5.5
+  speech_to_text: ^7.0.0
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

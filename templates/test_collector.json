@@ -3,7 +3,8 @@
   "meta": {
     "name": "文本收藏夹 App",
     "description": "输入文本 → 实时展示 → 保存到收藏列表 → 查看/删除",
-    "author": "测试用例"
+    "author": "测试用例",
+    "type": "app"
   },
   "global": {
     "variables": {
@@ -12,25 +13,46 @@
     },
     "functions": {
       "saveToFavorites": {
-        "params": ["text"],
+        "params": [
+          "text"
+        ],
         "return": "None",
         "logic": [
           {
             "call": "@set",
             "args": {
               "var": "global.favorites",
-              "value": { "merge": [{ "var": "global.favorites" }, { "var": "params.text" }] }
+              "value": {
+                "merge": [
+                  {
+                    "var": "global.favorites"
+                  },
+                  {
+                    "var": "params.text"
+                  }
+                ]
+              }
             }
           },
           {
             "call": "@set",
-            "args": { "var": "global.inputText", "value": "" }
+            "args": {
+              "var": "global.inputText",
+              "value": ""
+            }
           },
-          { "call": "@print", "args": { "value": "已保存：{{ params.text }}" } }
+          {
+            "call": "@print",
+            "args": {
+              "value": "已保存：{{ params.text }}"
+            }
+          }
         ]
       },
       "deleteFromFavorites": {
-        "params": ["index"],
+        "params": [
+          "index"
+        ],
         "return": "None",
         "logic": [
           {
@@ -47,7 +69,9 @@
   "steps": [
     {
       "call": "@print",
-      "args": { "value": "App 启动完成，文本收藏夹已就绪" }
+      "args": {
+        "value": "App 启动完成，文本收藏夹已就绪"
+      }
     }
   ],
   "ui": {
@@ -62,39 +86,61 @@
           {
             "type": "text",
             "value": "请输入文本",
-            "position": { "type": "relative" },
-            "style": { "fontSize": 20, "fontWeight": "bold" }
+            "position": {
+              "type": "relative"
+            },
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
           },
           {
             "type": "input",
             "placeholder": "在这里输入...",
             "bind": "global.inputText",
-            "position": { "type": "relative" }
+            "position": {
+              "type": "relative"
+            }
           },
           {
             "type": "text",
             "value": "实时预览：{{ global.inputText }}",
-            "position": { "type": "relative" },
-            "style": { "fontSize": 18, "color": "#666" }
+            "position": {
+              "type": "relative"
+            },
+            "style": {
+              "fontSize": 18,
+              "color": "#666"
+            }
           },
           {
             "type": "container",
-            "position": { "type": "relative" },
+            "position": {
+              "type": "relative"
+            },
             "children": [
               {
                 "type": "button",
                 "label": "保存",
-                "position": { "type": "flex", "flex": 1 },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
                 "action": {
                   "type": "call",
                   "call": "@global.saveToFavorites",
-                  "args": { "text": "{{ global.inputText }}" }
+                  "args": {
+                    "text": "{{ global.inputText }}"
+                  }
                 }
               },
               {
                 "type": "button",
                 "label": "查看收藏",
-                "position": { "type": "flex", "flex": 1 },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
                 "action": {
                   "type": "navigate",
                   "screen": "favorites"
@@ -114,7 +160,9 @@
           {
             "type": "button",
             "label": "← 返回",
-            "position": { "type": "relative" },
+            "position": {
+              "type": "relative"
+            },
             "action": {
               "type": "navigate",
               "screen": "home"
@@ -123,7 +171,9 @@
           {
             "type": "list",
             "source": "{{ global.favorites }}",
-            "position": { "type": "relative" },
+            "position": {
+              "type": "relative"
+            },
             "item_template": {
               "type": "container",
               "layout": "row",
@@ -131,17 +181,28 @@
                 {
                   "type": "text",
                   "value": "{{ loop.item }}",
-                  "position": { "type": "flex", "flex": 4 },
-                  "style": { "fontSize": 15, "color": "#1A1A1A" }
+                  "position": {
+                    "type": "flex",
+                    "flex": 4
+                  },
+                  "style": {
+                    "fontSize": 15,
+                    "color": "#1A1A1A"
+                  }
                 },
                 {
                   "type": "button",
                   "label": "删除",
-                  "position": { "type": "flex", "flex": 1 },
+                  "position": {
+                    "type": "flex",
+                    "flex": 1
+                  },
                   "action": {
                     "type": "call",
                     "call": "@global.deleteFromFavorites",
-                    "args": { "index": "{{ loop.index }}" }
+                    "args": {
+                      "index": "{{ loop.index }}"
+                    }
                   }
                 }
               ]

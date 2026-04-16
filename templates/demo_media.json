@@ -3,7 +3,8 @@
   "meta": {
     "name": "图片选择器 & 展示 Demo",
     "description": "演示 image_picker + image 控件：选择图片、展示网络图片/GIF",
-    "author": "demo"
+    "author": "demo",
+    "type": "app"
   },
   "global": {
     "variables": {
@@ -12,19 +13,29 @@
     },
     "functions": {
       "clearImage": {
-        "params": ["varName"],
+        "params": [
+          "varName"
+        ],
         "return": "None",
         "logic": [
           {
             "call": "@set",
-            "args": { "var": "{{ params.varName }}", "value": "" }
+            "args": {
+              "var": "{{ params.varName }}",
+              "value": ""
+            }
           }
         ]
       }
     }
   },
   "steps": [
-    { "call": "@print", "args": { "value": "图片 Demo 启动" } }
+    {
+      "call": "@print",
+      "args": {
+        "value": "图片 Demo 启动"
+      }
+    }
   ],
   "ui": {
     "screens": [
@@ -38,12 +49,18 @@
           {
             "type": "text",
             "value": "1. 图片选择器",
-            "style": { "fontSize": 20, "fontWeight": "bold" }
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
           },
           {
             "type": "text",
             "value": "从相册选择图片，自动预览：",
-            "style": { "fontSize": 14, "color": "#666666" }
+            "style": {
+              "fontSize": 14,
+              "color": "#666666"
+            }
           },
           {
             "type": "image_picker",
@@ -56,7 +73,12 @@
           {
             "type": "text",
             "value": "已选路径：{{ global.pickedImage }}",
-            "style": { "fontSize": 12, "color": "#999999", "maxLines": 1, "overflow": "ellipsis" }
+            "style": {
+              "fontSize": 12,
+              "color": "#999999",
+              "maxLines": 1,
+              "overflow": "ellipsis"
+            }
           },
           {
             "type": "spacer",
@@ -65,7 +87,10 @@
           {
             "type": "text",
             "value": "2. 网络图片展示",
-            "style": { "fontSize": 20, "fontWeight": "bold" }
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
           },
           {
             "type": "container",
@@ -78,7 +103,10 @@
                 "height": 100,
                 "borderRadius": 12,
                 "fit": "cover",
-                "position": { "type": "flex", "flex": 1 }
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
               },
               {
                 "type": "image",
@@ -87,7 +115,10 @@
                 "height": 100,
                 "borderRadius": 12,
                 "fit": "cover",
-                "position": { "type": "flex", "flex": 1 }
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
               }
             ]
           },
@@ -98,7 +129,10 @@
           {
             "type": "text",
             "value": "3. GIF 动图展示",
-            "style": { "fontSize": 20, "fontWeight": "bold" }
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
           },
           {
             "type": "image",
@@ -133,12 +167,19 @@
           {
             "type": "text",
             "value": "视频播放器 Demo",
-            "style": { "fontSize": 22, "fontWeight": "bold", "color": "#FFFFFF" }
+            "style": {
+              "fontSize": 22,
+              "fontWeight": "bold",
+              "color": "#FFFFFF"
+            }
           },
           {
             "type": "text",
             "value": "支持网络视频 / HLS 流媒体 / 本地文件",
-            "style": { "fontSize": 14, "color": "#AAAAAA" }
+            "style": {
+              "fontSize": 14,
+              "color": "#AAAAAA"
+            }
           },
           {
             "type": "spacer",
@@ -147,12 +188,19 @@
           {
             "type": "text",
             "value": "▶ 本地视频 (via 流媒体服务器)",
-            "style": { "fontSize": 16, "fontWeight": "bold", "color": "#E0E0E0" }
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "color": "#E0E0E0"
+            }
           },
           {
             "type": "text",
             "value": "需先启动: python3 tools/video_server.py --dir ~/Movies",
-            "style": { "fontSize": 12, "color": "#888888" }
+            "style": {
+              "fontSize": 12,
+              "color": "#888888"
+            }
           },
           {
             "type": "video",
@@ -169,7 +217,11 @@
           {
             "type": "text",
             "value": "▶ HLS 流媒体",
-            "style": { "fontSize": 16, "fontWeight": "bold", "color": "#E0E0E0" }
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "color": "#E0E0E0"
+            }
           },
           {
             "type": "video",
@@ -188,7 +240,9 @@
             "label": "← 返回图片 Demo",
             "variant": "outlined",
             "icon": "back",
-            "style": { "textColor": "#FFFFFF" },
+            "style": {
+              "textColor": "#FFFFFF"
+            },
             "action": {
               "type": "navigate",
               "screen": "home"

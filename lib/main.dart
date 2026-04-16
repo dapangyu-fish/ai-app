@@ -6,9 +6,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 import 'json_ui/interpreter.dart';
 import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
+import 'designer/designer_ball.dart';
 
 // ============================================================
 // Riverpod Providers
@@ -51,6 +53,10 @@ class JsonDslApp extends ConsumerWidget {
         brightness: Brightness.dark,
       ),
       themeMode: ThemeMode.system,
+      // 使用 builder 注入悬浮球，凌驾于所有路由之上
+      builder: (context, child) {
+        return DesignerBall(child: child ?? const SizedBox.shrink());
+      },
       home: const FilePickerPage(),
     );
   }
@@ -127,6 +133,54 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     }
   }
 
+  /// 从市场下载并加载一个 App
+  Future<void> _loadFromMarket(Map<String, dynamic> app) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final downloadPath = app['download'] as String;
+      final resp = await http
+          .get(Uri.parse('http://127.0.0.1:5566$downloadPath'))
+          .timeout(const Duration(seconds: 15));
+
+      if (resp.statusCode != 200) {
+        throw Exception('下载失败 (${resp.statusCode})');
+      }
+
+      final config = json.decode(resp.body) as Map<String, dynamic>;
+      final interpreter = ref.read(interpreterProvider);
+      interpreter.loadConfig(config);
+      await interpreter.executeSteps();
+
+      _loadedFileName = app['name'] as String;
+      setState(() => _loading = false);
+
+      if (!mounted) return;
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => JsonScreenView(fileName: _loadedFileName!),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  void _openMarket() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _MarketPage(onSelect: _loadFromMarket),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -161,7 +215,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               ),
               const SizedBox(height: 48),
 
-              // 选择文件按钮
+              // 选择本地文件
               FilledButton.icon(
                 onPressed: _loading ? null : _pickAndLoadJson,
                 icon: _loading
@@ -174,8 +228,22 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                         ),
                       )
                     : const Icon(Icons.folder_open),
-                label: Text(_loading ? '加载中...' : '选择 JSON 文件'),
+                label: Text(_loading ? '加载中...' : '选择本地文件'),
                 style: FilledButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 从市场选择
+              OutlinedButton.icon(
+                onPressed: _loading ? null : _openMarket,
+                icon: const Icon(Icons.store),
+                label: const Text('从应用市场选择'),
+                style: OutlinedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   textStyle: const TextStyle(fontSize: 16),
@@ -213,6 +281,210 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                       color: colorScheme.outline,
                     ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// 应用市场页面
+// ============================================================
+
+class _MarketPage extends StatefulWidget {
+  final Future<void> Function(Map<String, dynamic> app) onSelect;
+
+  const _MarketPage({required this.onSelect});
+
+  @override
+  State<_MarketPage> createState() => _MarketPageState();
+}
+
+class _MarketPageState extends State<_MarketPage> {
+  List<Map<String, dynamic>> _apps = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchApps();
+  }
+
+  Future<void> _fetchApps() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final resp = await http
+          .get(Uri.parse('http://127.0.0.1:5566/app-list'))
+          .timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode != 200) {
+        throw Exception('服务器错误 (${resp.statusCode})');
+      }
+
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final apps = (data['apps'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+
+      setState(() {
+        _apps = apps;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('应用市场'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchApps,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.cloud_off,
+                          size: 48, color: colorScheme.outline),
+                      const SizedBox(height: 16),
+                      Text(_error!,
+                          style: TextStyle(color: colorScheme.outline)),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                          onPressed: _fetchApps, child: const Text('重试')),
+                    ],
+                  ),
+                )
+              : _apps.isEmpty
+                  ? Center(
+                      child: Text('暂无可用应用',
+                          style: TextStyle(color: colorScheme.outline)),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _apps.length,
+                      itemBuilder: (context, index) {
+                        final app = _apps[index];
+                        return _buildAppCard(context, app, colorScheme);
+                      },
+                    ),
+    );
+  }
+
+  Widget _buildAppCard(BuildContext context, Map<String, dynamic> app,
+      ColorScheme colorScheme) {
+    final name = app['name'] as String? ?? '';
+    final desc = app['description'] as String? ?? '';
+    final version = app['version']?.toString() ?? '';
+    final author = app['author'] as String? ?? '';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Navigator.of(context).pop();
+          widget.onSelect(app);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // 图标
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.apps,
+                    color: colorScheme.onPrimaryContainer, size: 24),
+              ),
+              const SizedBox(width: 16),
+              // 信息
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        if (version.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'v$version',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: colorScheme.outline),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (desc.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        desc,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (author.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '作者: $author',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: colorScheme.outline),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.download, color: colorScheme.primary),
             ],
           ),
         ),
