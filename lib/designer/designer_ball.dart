@@ -23,7 +23,7 @@ class _DesignerBallState extends State<DesignerBall>
   static const double _ballSize = 56.0;
   static const double _peekSize = 20.0;
   static const double _edgeThreshold = 20.0;
-  static const double _dragThreshold = 200.0;
+  static const double _dragThreshold = 30.0;
 
   // ── 拖拽状态 ──
   double _left = 0;
@@ -43,9 +43,7 @@ class _DesignerBallState extends State<DesignerBall>
 
   // ── 长按对话 ──
   static const Duration _longPressDuration = Duration(seconds: 2);
-  static const Duration _idleTimeout = Duration(seconds: 15);
   Timer? _longPressTimer;
-  Timer? _idleTimer; // 空闲自动关闭字幕
   bool _chatMode = false;
   bool _isListening = false;
   bool _isThinking = false;
@@ -98,7 +96,6 @@ class _DesignerBallState extends State<DesignerBall>
   @override
   void dispose() {
     _longPressTimer?.cancel();
-    _idleTimer?.cancel();
     _nativeSpeechTimeout?.cancel();
     _streamSub?.cancel();
     _sherpaAsr.dispose();
@@ -124,18 +121,18 @@ class _DesignerBallState extends State<DesignerBall>
   // ════════════════════════════════════════════════════════
 
   void _onPointerDown(PointerDownEvent event) {
-    _pointerDown = true;
-    _movedEnough = false;
     _pointerDownPos = event.position;
     _animController.stop();
 
-    // 从收起态 → 解除收起
-    if (_hidden) {
-      setState(() {
+    setState(() {
+      _pointerDown = true;
+      _movedEnough = false;
+      // 从收起态 → 解除收起
+      if (_hidden) {
         _hidden = false;
         _hideEdge = _HideEdge.none;
-      });
-    }
+      }
+    });
 
     if (_chatMode) {
       // 对话模式 → 短延时后开始录音，移动了就当拖拽
@@ -158,7 +155,7 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _onPointerUp(PointerUpEvent event) {
-    _pointerDown = false;
+    setState(() => _pointerDown = false);
     _longPressTimer?.cancel();
     _countdownController.stop();
     _countdownController.reset();
@@ -290,14 +287,12 @@ class _DesignerBallState extends State<DesignerBall>
           _liveTranscript = null;
           _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型加载失败'));
         });
-        _resetIdleTimer();
         return;
       }
       setState(() => _isThinking = false);
     }
 
     setState(() => _chatMode = true);
-    _resetIdleTimer();
     _startListening();
   }
 
@@ -468,17 +463,6 @@ class _DesignerBallState extends State<DesignerBall>
           _isThinking = false;
           _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
         });
-        _resetIdleTimer();
-      },
-      onDone: () {
-        _streamSub = null;
-        if (_messages.isNotEmpty && _messages.last.content.isEmpty) {
-          setState(() {
-            _messages.removeLast();
-            _isThinking = false;
-          });
-        }
-        _resetIdleTimer();
       },
     );
   }
@@ -507,7 +491,6 @@ class _DesignerBallState extends State<DesignerBall>
     _nativeSpeechTimeout?.cancel();
     _stopSherpaAsr();
     _cancelCurrentStream();
-    _idleTimer?.cancel();
     _pulseController.stop();
     _pulseController.reset();
     setState(() {
@@ -528,16 +511,6 @@ class _DesignerBallState extends State<DesignerBall>
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
-      }
-    });
-  }
-
-  /// 重置空闲计时器 — 每次有新交互时调用
-  void _resetIdleTimer() {
-    _idleTimer?.cancel();
-    _idleTimer = Timer(_idleTimeout, () {
-      if (_chatMode && !_isListening && !_isThinking && _streamSub == null) {
-        _closeChatMode();
       }
     });
   }
