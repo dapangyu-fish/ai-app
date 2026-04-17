@@ -852,6 +852,8 @@ def asr_websocket(ws):
     import websocket as ws_lib
     import struct, gzip, threading
 
+    print("[ASR] WebSocket connected")
+
     # 鉴权
     try:
         auth_data = json.loads(ws.receive(timeout=10))
@@ -859,9 +861,12 @@ def asr_websocket(ws):
         r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
                          headers=_supabase_headers(token), timeout=5)
         if r.status_code != 200:
+            print(f"[ASR] Auth failed: {r.status_code}")
             ws.send(json.dumps({"error": "认证失败"})); return
         ws.send(json.dumps({"status": "ready"}))
+        print("[ASR] Auth OK, sent ready")
     except Exception as e:
+        print(f"[ASR] Auth error: {e}")
         ws.send(json.dumps({"error": f"认证异常: {e}"})); return
 
     # 连接豆包
@@ -872,7 +877,9 @@ def asr_websocket(ws):
             f"X-Api-Resource-Id: {DOUBAO_RESOURCE_ID}",
             f"X-Api-Connect-Id: {str(uuid.uuid4())}",
         ], timeout=15)
+        print("[ASR] Doubao connected")
     except Exception as e:
+        print(f"[ASR] Doubao connect failed: {e}")
         ws.send(json.dumps({"error": f"ASR连接失败: {e}"})); return
 
     # full client request
@@ -884,9 +891,11 @@ def asr_websocket(ws):
     pl = gzip.compress(json.dumps(params).encode())
     dws.send(_asr_header(0x1, 0x0, 0x1, 0x1) + struct.pack('>I', len(pl)) + pl, opcode=0x2)
     dws.recv()
+    print("[ASR] Doubao session started")
 
     # 后台线程：读豆包结果推给客户端
     stop = threading.Event()
+    audio_chunks = [0]  # 计数器
     def reader():
         while not stop.is_set():
             try:
@@ -895,10 +904,12 @@ def asr_websocket(ws):
                 if resp:
                     text = _asr_parse(resp)
                     if text is not None:
+                        print(f"[ASR] Result: {text}")
                         ws.send(json.dumps({"text": text}, ensure_ascii=False))
             except ws_lib.WebSocketTimeoutException:
                 continue
-            except Exception:
+            except Exception as ex:
+                print(f"[ASR] Reader error: {ex}")
                 break
     t = threading.Thread(target=reader, daemon=True)
     t.start()
@@ -908,19 +919,26 @@ def asr_websocket(ws):
         while True:
             msg = ws.receive(timeout=60)
             if msg is None:
+                print("[ASR] Client disconnected")
                 break
             if isinstance(msg, str):
                 if msg.strip().upper() == "END":
+                    print(f"[ASR] END received, total audio chunks: {audio_chunks[0]}")
                     emp = gzip.compress(b'')
                     dws.send(_asr_header(0x2, 0x2, 0x0, 0x1) + struct.pack('>I', len(emp)) + emp, opcode=0x2)
                     import time; time.sleep(0.8)
                     break
+                print(f"[ASR] Unexpected text msg: {msg[:100]}")
                 continue
+            audio_chunks[0] += 1
+            if audio_chunks[0] <= 3 or audio_chunks[0] % 50 == 0:
+                print(f"[ASR] Audio chunk #{audio_chunks[0]}, size={len(msg)}B")
             c = gzip.compress(msg)
             dws.send(_asr_header(0x2, 0x0, 0x0, 0x1) + struct.pack('>I', len(c)) + c, opcode=0x2)
-    except Exception:
-        pass
+    except Exception as ex:
+        print(f"[ASR] Main loop error: {ex}")
     finally:
+        print(f"[ASR] Session end, total chunks: {audio_chunks[0]}")
         stop.set(); t.join(timeout=2); dws.close()
 
 
