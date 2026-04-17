@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Terminology — 需求类型约定
+
+沟通时使用以下术语区分三类需求，避免混淆：
+
+| 术语 | 含义 | 代码范围 |
+|------|------|----------|
+| **客户端需求** | 原生 Flutter 客户端，即 JSON-DSL 框架本身的需求（登录、悬浮球、UI 框架等） | `lib/main.dart`, `lib/auth/`, `lib/designer/`, `lib/json_ui/` |
+| **后端需求** | Python Flask 服务的需求（鉴权代理、AI 对话、市场接口等） | `tools/ai_server.py` |
+| **JSON-APP 需求** | 基于 JSON-DSL 框架开发的、通过 JSON 配置下发的应用 | `templates/*.json`, `JSON-DSL.md` |
+
 ## Project Overview
 
 A Flutter **Server-Driven UI** low-code engine that renders UI and executes business logic from JSON configuration files (DSL v3.2). Users pick a JSON file at runtime; the app interprets it to build screens, handle interactions, and manage state — no recompilation needed. Targets iOS, Android, Web, macOS, Linux, and Windows.
@@ -29,6 +39,7 @@ flutter run -d chrome        # Run on web
 flutter analyze              # Lint (uses flutter_lints via analysis_options.yaml)
 flutter test                 # Run all tests
 flutter test test/widget_test.dart   # Run a single test file
+python3 tools/ai_server.py   # 启动 Flask 后端（鉴权/AI对话/市场，端口 5566）
 python3 tools/video_server.py --dir ~/Movies  # 启动本地视频流媒体服务器
 ```
 

@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "common-ui": {
-      "url": "http://103.233.254.179:5566/download/lib_common_ui.json",
+      "url": "https://app-backend.dapangyu.work/download/lib_common_ui.json",
       "version": "^1.0.0"
     }
   },

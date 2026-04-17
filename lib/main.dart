@@ -169,7 +169,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     try {
       final downloadPath = app['download'] as String;
       final resp = await http
-          .get(Uri.parse('http://103.233.254.179:5566$downloadPath'))
+          .get(Uri.parse('https://app-backend.dapangyu.work$downloadPath'))
           .timeout(const Duration(seconds: 15));
 
       if (resp.statusCode != 200) {
@@ -400,7 +400,7 @@ class _MarketPageState extends State<_MarketPage> {
 
     try {
       final resp = await http
-          .get(Uri.parse('http://103.233.254.179:5566/app-list'))
+          .get(Uri.parse('https://app-backend.dapangyu.work/app-list'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
@@ -584,6 +584,19 @@ class JsonScreenView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 沙盒 try-catch — 捕获 JSON-APP 运行时崩溃
+    try {
+      return _buildContent(context, ref);
+    } catch (e, stack) {
+      return _CrashPage(
+        error: e.toString(),
+        stackTrace: stack.toString(),
+        fileName: fileName,
+      );
+    }
+  }
+
+  Widget _buildContent(BuildContext context, WidgetRef ref) {
     final interpreter = ref.watch(interpreterProvider);
     final currentScreenId = interpreter.currentScreenId;
 
@@ -694,6 +707,86 @@ class JsonScreenView extends ConsumerWidget {
       }
     }
     return false;
+  }
+}
+
+// ============================================================
+// 崩溃页面
+// ============================================================
+
+class _CrashPage extends StatelessWidget {
+  final String error;
+  final String stackTrace;
+  final String fileName;
+
+  const _CrashPage({
+    required this.error,
+    required this.stackTrace,
+    required this.fileName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('APP 运行出错'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber_rounded, size: 48, color: cs.error),
+            const SizedBox(height: 12),
+            Text('$fileName 运行崩溃',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(error,
+                  style: TextStyle(color: cs.onErrorContainer, fontSize: 13)),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(stackTrace,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: cs.onSurface)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('返回'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

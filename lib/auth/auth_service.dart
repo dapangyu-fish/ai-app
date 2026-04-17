@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// 后端鉴权服务 — 所有请求通过 Flask 后端代理到 Supabase
 class AuthService {
-  static const String _baseUrl = 'http://103.233.254.179:5566';
+  static const String _baseUrl = 'https://app-backend.dapangyu.work';
   static const String _tokenKey = 'auth_access_token';
   static const String _refreshKey = 'auth_refresh_token';
   static const String _userKey = 'auth_user';

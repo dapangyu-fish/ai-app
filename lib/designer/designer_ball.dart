@@ -59,7 +59,9 @@ class _DesignerBallState extends State<DesignerBall>
   stt.SpeechToText? _speech; // 延迟创建，避免启动时触发权限检查
   bool _speechInited = false;
   final AiChatService _chatService = AiChatService();
-  StreamSubscription<String>? _streamSub; // 当前 SSE 流订阅
+  StreamSubscription<ChatEvent>? _streamSub;
+  Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
+  Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -327,12 +329,31 @@ class _DesignerBallState extends State<DesignerBall>
     _scrollToBottom();
 
     _streamSub = _chatService.sendStream(text).listen(
-      (accumulated) {
-        setState(() {
-          _isThinking = false;
-          _messages.last = ChatMessage(role: 'assistant', content: accumulated);
-        });
-        _scrollToBottom();
+      (event) {
+        if (event.error != null && event.content == null) {
+          // 纯错误（如配额超限）
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+          });
+          _scrollToBottom();
+          return;
+        }
+        if (event.content != null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
+          });
+          _scrollToBottom();
+        }
+        if (event.jsonApp != null) {
+          // AI 生成了 JSON-APP — 暂存，后续做试运行
+          debugPrint('[DesignerBall] AI generated JSON-APP!');
+          _lastGeneratedJson = event.jsonApp;
+        }
+        if (event.quota != null) {
+          _lastQuota = event.quota;
+        }
       },
       onError: (e) {
         debugPrint('[DesignerBall] AI stream error: $e');
