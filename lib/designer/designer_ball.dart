@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:record/record.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:web_socket_channel/io.dart';
 import '../auth/auth_service.dart';
 import 'ai_chat_service.dart';
@@ -68,6 +66,7 @@ class _DesignerBallState extends State<DesignerBall>
   final AudioRecorder _recorder = AudioRecorder();
   IOWebSocketChannel? _asrChannel;
   StreamSubscription? _asrSub;
+  StreamSubscription? _audioStreamSub; // 录音流订阅
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
@@ -106,6 +105,7 @@ class _DesignerBallState extends State<DesignerBall>
     _longPressTimer?.cancel();
     _idleTimer?.cancel();
     _nativeSpeechTimeout?.cancel();
+    _audioStreamSub?.cancel();
     _audioStreamTimer?.cancel();
     _streamSub?.cancel();
     _asrSub?.cancel();
@@ -373,21 +373,21 @@ class _DesignerBallState extends State<DesignerBall>
       // 等待 ready 确认
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // 开始录音 → PCM 16kHz 16bit mono
-      final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/asr_stream.pcm';
-      await _recorder.start(
+      // 流式录音 → PCM 16kHz 16bit mono，直接通过 stream 发送
+      final audioStream = await _recorder.startStream(
         const RecordConfig(
           encoder: AudioEncoder.pcm16bits,
           sampleRate: 16000,
           numChannels: 1,
-          bitRate: 256000,
         ),
-        path: path,
       );
+      debugPrint('[ASR] Recording stream started');
 
-      // 定时读取录音文件并发送音频块
-      _startAudioStreaming(path);
+      _audioStreamSub = audioStream.listen((data) {
+        _asrChannel?.sink.add(data);
+      }, onError: (e) {
+        debugPrint('[ASR] Audio stream error: $e');
+      });
     } catch (e) {
       debugPrint('[ASR] Start error: $e');
       setState(() {
@@ -401,25 +401,9 @@ class _DesignerBallState extends State<DesignerBall>
   Timer? _nativeSpeechTimeout; // 原生语音超时 → fallback
   Timer? _audioStreamTimer;
 
-  void _startAudioStreaming(String path) {
-    int lastOffset = 0;
-    _audioStreamTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) async {
-      try {
-        final file = File(path);
-        if (!await file.exists()) return;
-        final bytes = await file.readAsBytes();
-        if (bytes.length > lastOffset) {
-          final chunk = bytes.sublist(lastOffset);
-          lastOffset = bytes.length;
-          _asrChannel?.sink.add(chunk);
-        }
-      } catch (e) {
-        debugPrint('[ASR] Stream chunk error: $e');
-      }
-    });
-  }
-
   void _stopBackendAsr() {
+    _audioStreamSub?.cancel();
+    _audioStreamSub = null;
     _audioStreamTimer?.cancel();
     _audioStreamTimer = null;
     _recorder.stop();
