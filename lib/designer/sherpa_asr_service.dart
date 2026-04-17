@@ -6,22 +6,20 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:record/record.dart';
 
-/// 离线语音识别服务 — 基于 sherpa_onnx + streaming Zipformer 14M (int8)
+/// 离线语音识别服务 — 基于 sherpa_onnx + streaming Zipformer CTC (int8, 2025)
 ///
 /// 用作 speech_to_text 的 fallback（中国安卓手机无 Google 服务时）。
-/// 首次使用自动下载模型文件（~24MB），后续直接从本地加载。
+/// 首次使用自动下载模型文件（~25MB），后续直接从本地加载。
 class SherpaAsrService {
   static SherpaAsrService? _instance;
   static SherpaAsrService get instance => _instance ??= SherpaAsrService._();
   SherpaAsrService._();
 
   static const String _modelBase =
-      'https://app-backend.dapangyu.work/models/zipformer-zh-14M';
+      'https://app-backend.dapangyu.work/models/zipformer-ctc-zh';
 
   static const Map<String, String> _modelFiles = {
-    'encoder': 'encoder-epoch-99-avg-1.int8.onnx',
-    'decoder': 'decoder-epoch-99-avg-1.int8.onnx',
-    'joiner': 'joiner-epoch-99-avg-1.int8.onnx',
+    'model': 'model.int8.onnx',
     'tokens': 'tokens.txt',
   };
 
@@ -45,7 +43,7 @@ class SherpaAsrService {
   /// 模型文件存放目录
   Future<String> get _modelDir async {
     final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/sherpa_models/zipformer-zh-14M';
+    return '${appDir.path}/sherpa_models/zipformer-ctc-zh';
   }
 
   /// 检查模型是否已下载
@@ -79,7 +77,7 @@ class SherpaAsrService {
 
         current++;
         final label = entry.key;
-        onStatusChange?.call('下载模型 ($current/$total): $label...');
+        onStatusChange?.call('下载语音模型 ($current/$total): $label...');
         debugPrint('[SherpaASR] Downloading ${entry.value}...');
 
         final url = '$_modelBase/${entry.value}';
@@ -120,13 +118,11 @@ class SherpaAsrService {
 
       final config = sherpa.OnlineRecognizerConfig(
         model: sherpa.OnlineModelConfig(
-          transducer: sherpa.OnlineTransducerModelConfig(
-            encoder: '$dir/${_modelFiles['encoder']}',
-            decoder: '$dir/${_modelFiles['decoder']}',
-            joiner: '$dir/${_modelFiles['joiner']}',
+          zipformer2Ctc: sherpa.OnlineZipformer2CtcModelConfig(
+            model: '$dir/${_modelFiles['model']}',
           ),
           tokens: '$dir/${_modelFiles['tokens']}',
-          modelType: 'zipformer2',
+          modelType: 'zipformer2_ctc',
           numThreads: 2,
           debug: false,
         ),
