@@ -15,10 +15,8 @@ class SherpaAsrService {
   static SherpaAsrService get instance => _instance ??= SherpaAsrService._();
   SherpaAsrService._();
 
-  static const String _modelRepo =
-      'csukuangfj/sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23';
-  static const String _hfBase =
-      'https://huggingface.co/$_modelRepo/resolve/main';
+  static const String _modelBase =
+      'https://app-backend.dapangyu.work/models/zipformer-zh-14M';
 
   static const Map<String, String> _modelFiles = {
     'encoder': 'encoder-epoch-99-avg-1.int8.onnx',
@@ -84,7 +82,7 @@ class SherpaAsrService {
         onStatusChange?.call('下载模型 ($current/$total): $label...');
         debugPrint('[SherpaASR] Downloading ${entry.value}...');
 
-        final url = '$_hfBase/${entry.value}';
+        final url = '$_modelBase/${entry.value}';
         final request = await client.getUrl(Uri.parse(url));
         request.followRedirects = true;
         final response = await request.close();
