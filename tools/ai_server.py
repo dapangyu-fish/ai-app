@@ -525,7 +525,12 @@ def chat():
                         pass
 
             # 流结束 — 检测是否包含 JSON 代码块
-            json_match = re.search(r'```json\s*\n(.*?)\n```', full_content, re.DOTALL)
+            # 支持 ```json / ```JSON / ``` 后直接跟 { 等多种 AI 输出格式
+            json_match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
+            if not json_match:
+                # fallback: 尝试匹配最外层 {...} (整个回复只有一个 JSON 对象)
+                json_match = re.search(r'(\{[\s\S]*"screens"[\s\S]*\})\s*$', full_content)
+            print(f"[Chat] JSON detect: match={'YES' if json_match else 'NO'}, content_len={len(full_content)}")
             if json_match:
                 try:
                     json_app = json.loads(json_match.group(1))
@@ -534,8 +539,9 @@ def chat():
                         "json_app": json_app,
                     }, ensure_ascii=False)
                     yield f"data: {event}\n\n"
-                except json.JSONDecodeError:
-                    pass
+                    print(f"[Chat] JSON-APP sent, keys: {list(json_app.keys())}")
+                except json.JSONDecodeError as e:
+                    print(f"[Chat] JSON parse failed: {e}")
 
             # 发送配额信息
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
@@ -610,7 +616,7 @@ def fix_app():
                             yield f'data: {json.dumps({"content": content}, ensure_ascii=False)}\n\n'
                     except Exception: pass
 
-            json_match = re.search(r'```json\s*\n(.*?)\n```', full_content, re.DOTALL)
+            json_match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
             if json_match:
                 try:
                     fixed = json.loads(json_match.group(1))
