@@ -384,7 +384,9 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[ASR] Recording stream started');
 
       _audioStreamSub = audioStream.listen((data) {
-        _asrChannel?.sink.add(data);
+        try {
+          _asrChannel?.sink.add(data);
+        } catch (_) {}
       }, onError: (e) {
         debugPrint('[ASR] Audio stream error: $e');
       });
