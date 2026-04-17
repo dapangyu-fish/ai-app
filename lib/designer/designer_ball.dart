@@ -342,14 +342,21 @@ class _DesignerBallState extends State<DesignerBall>
     try {
       // 连接 WebSocket
       final wsUrl = 'wss://app-backend.dapangyu.work/api/asr/ws';
-      _asrChannel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
-      await _asrChannel!.ready;
+      final channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
+      _asrChannel = channel;
+      await channel.ready;
+
+      // 连接期间如果已取消，直接退出
+      if (!_isListening) {
+        channel.sink.close();
+        return;
+      }
 
       // 鉴权
-      _asrChannel!.sink.add(json.encode({'token': 'Bearer ${AuthService.token}'}));
+      channel.sink.add(json.encode({'token': 'Bearer ${AuthService.token}'}));
 
       // 监听识别结果
-      _asrSub = _asrChannel!.stream.listen((msg) {
+      _asrSub = channel.stream.listen((msg) {
         final data = json.decode(msg as String);
         if (data['error'] != null) {
           debugPrint('[ASR] Error: ${data['error']}');
