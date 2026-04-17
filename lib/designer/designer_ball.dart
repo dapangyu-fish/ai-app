@@ -11,6 +11,9 @@ class DesignerBall extends StatefulWidget {
   final Widget child;
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
 
+  /// 崩溃分析回调 — 由 _CrashPage 调用，自动进入对话模式发送崩溃报告
+  static void Function(String crashReport)? sendCrashReport;
+
   const DesignerBall({super.key, required this.child, this.onRunJsonApp});
 
   @override
@@ -91,6 +94,9 @@ class _DesignerBallState extends State<DesignerBall>
       vsync: this,
       duration: _longPressDuration,
     );
+
+    // 注册崩溃分析回调
+    DesignerBall.sendCrashReport = _handleCrashReport;
   }
 
   @override
@@ -484,6 +490,58 @@ class _DesignerBallState extends State<DesignerBall>
       _chatService.abort();
       setState(() => _isThinking = false);
     }
+  }
+
+  /// 处理崩溃报告 — 自动进入对话模式并发送崩溃信息给 AI
+  void _handleCrashReport(String crashReport) {
+    // 进入对话模式
+    setState(() {
+      _chatMode = true;
+      _messages.add(ChatMessage(role: 'user', content: crashReport));
+      _messages.add(ChatMessage(role: 'assistant', content: ''));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    // 直接发送给 AI
+    _cancelCurrentStream();
+    _streamSub = _chatService.sendStream(crashReport).listen(
+      (event) {
+        if (event.error != null && event.content == null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+          });
+          _scrollToBottom();
+          return;
+        }
+        if (event.content != null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
+          });
+          _scrollToBottom();
+        }
+        if (event.jsonApp != null) {
+          debugPrint('[DesignerBall] AI generated fix JSON-APP!');
+          _lastGeneratedJson = event.jsonApp;
+          setState(() {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '🔧 修复版 JSON-APP 已生成，点击试运行',
+              jsonApp: event.jsonApp,
+            ));
+          });
+          _scrollToBottom();
+        }
+      },
+      onError: (e) {
+        setState(() {
+          _isThinking = false;
+          _messages.last = ChatMessage(role: 'assistant', content: '分析失败: $e');
+        });
+      },
+    );
   }
 
   void _closeChatMode() {

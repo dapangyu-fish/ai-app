@@ -11,6 +11,7 @@ import 'json_ui/interpreter.dart';
 import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
 import 'designer/designer_ball.dart';
+import 'designer/app_storage.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 
@@ -67,11 +68,15 @@ class JsonDslApp extends ConsumerWidget {
           onRunJsonApp: (jsonConfig) async {
             final interpreter = ProviderScope.containerOf(context).read(interpreterProvider);
             try {
+              // 保存到本地
+              await AppStorage.instance.save(Map<String, dynamic>.from(jsonConfig));
               interpreter.loadConfig(jsonConfig);
               await interpreter.executeSteps();
+              final meta = jsonConfig['meta'] as Map<String, dynamic>? ?? {};
+              final name = (meta['name'] as String?) ?? 'AI 生成';
               JsonDslApp.navigatorKey.currentState?.push(
                 MaterialPageRoute(
-                  builder: (_) => JsonScreenView(fileName: 'AI 生成'),
+                  builder: (_) => JsonScreenView(fileName: name),
                 ),
               );
             } catch (e) {
@@ -226,6 +231,39 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     );
   }
 
+  void _openMyApps() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _MyAppsPage(onSelect: _loadSavedApp),
+      ),
+    );
+  }
+
+  Future<void> _loadSavedApp(SavedApp app) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final interpreter = ref.read(interpreterProvider);
+      interpreter.loadConfig(app.config);
+      await interpreter.executeSteps();
+      _loadedFileName = app.name;
+      setState(() => _loading = false);
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => JsonScreenView(fileName: app.name),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -341,6 +379,20 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                 onPressed: _loading ? null : _openMarket,
                 icon: const Icon(Icons.store),
                 label: const Text('从应用市场选择'),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 我的 APP（AI 生成的历史）
+              OutlinedButton.icon(
+                onPressed: _loading ? null : _openMyApps,
+                icon: const Icon(Icons.history),
+                label: const Text('我的 APP'),
                 style: OutlinedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
@@ -733,7 +785,7 @@ class JsonScreenView extends ConsumerWidget {
 // 崩溃页面
 // ============================================================
 
-class _CrashPage extends StatelessWidget {
+class _CrashPage extends ConsumerWidget {
   final String error;
   final String stackTrace;
   final String fileName;
@@ -745,7 +797,7 @@ class _CrashPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -794,13 +846,41 @@ class _CrashPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('返回'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      // 把崩溃信息 + JSON 配置发给 AI 分析
+                      final interpreter = ref.read(interpreterProvider);
+                      final jsonStr = interpreter.rawConfig != null
+                          ? json.encode(interpreter.rawConfig)
+                          : '(无法获取)';
+                      final crashMsg = '我的 JSON-APP 崩溃了，请分析并修复：\n\n'
+                          '## 错误\n$error\n\n'
+                          '## 堆栈\n${stackTrace.length > 500 ? stackTrace.substring(0, 500) : stackTrace}\n\n'
+                          '## JSON 配置\n```json\n$jsonStr\n```';
+                      Navigator.of(context).pop();
+                      // 通过 DesignerBall 发起 AI 对话
+                      DesignerBall.sendCrashReport?.call(crashMsg);
+                    },
+                    icon: const Icon(Icons.auto_fix_high),
+                    label: const Text('AI 分析修复'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.tertiary,
+                      foregroundColor: cs.onTertiary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('返回'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -941,5 +1021,95 @@ class _TabScreenViewState extends State<_TabScreenView> {
       }
     }
     return false;
+  }
+}
+
+
+// ============================================================
+// 我的 APP — AI 生成的历史列表
+// ============================================================
+
+class _MyAppsPage extends StatefulWidget {
+  final void Function(SavedApp app) onSelect;
+  const _MyAppsPage({required this.onSelect});
+
+  @override
+  State<_MyAppsPage> createState() => _MyAppsPageState();
+}
+
+class _MyAppsPageState extends State<_MyAppsPage> {
+  List<SavedApp>? _apps;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final apps = await AppStorage.instance.list();
+    if (mounted) setState(() => _apps = apps);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('我的 APP')),
+      body: _apps == null
+          ? const Center(child: CircularProgressIndicator())
+          : _apps!.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.inbox, size: 64, color: colorScheme.outline),
+                      const SizedBox(height: 16),
+                      Text('还没有 APP', style: TextStyle(color: colorScheme.outline, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text('长按悬浮球，用语音让 AI 帮你生成', style: TextStyle(color: colorScheme.outline, fontSize: 13)),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _apps!.length,
+                  itemBuilder: (context, index) {
+                    final app = _apps![index];
+                    final time = DateTime.tryParse(app.savedAt);
+                    final timeStr = time != null
+                        ? '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
+                        : '';
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: colorScheme.primaryContainer,
+                          child: Icon(Icons.apps, color: colorScheme.primary),
+                        ),
+                        title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(
+                          app.description.isNotEmpty ? app.description : timeStr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          onPressed: () async {
+                            await AppStorage.instance.delete(app.fileName);
+                            _load();
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          widget.onSelect(app);
+                        },
+                      ),
+                    );
+                  },
+                ),
+    );
   }
 }

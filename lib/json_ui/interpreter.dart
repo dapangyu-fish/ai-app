@@ -44,6 +44,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   String get currentScreenId => _currentScreenId;
 
+  /// 原始 JSON 配置（用于崩溃分析时发给 AI）
+  Map<String, dynamic>? get rawConfig => _config.isNotEmpty ? _config : null;
+
   String get appName =>
       (_config['meta'] as Map<String, dynamic>?)?['name'] ?? 'JSON App';
 
