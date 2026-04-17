@@ -520,7 +520,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final cs = Theme.of(context).colorScheme;
 
     Widget avatar;
-    if (avatarUrl.startsWith('data:')) {
+    if (avatarUrl.startsWith('http')) {
+      avatar = CircleAvatar(
+        radius: 48,
+        backgroundImage: NetworkImage(avatarUrl),
+        onBackgroundImageError: (_, __) {},
+      );
+    } else if (avatarUrl.startsWith('data:')) {
       final parts = avatarUrl.split(',');
       if (parts.length == 2) {
         avatar = CircleAvatar(

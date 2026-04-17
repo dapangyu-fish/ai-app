@@ -7,6 +7,8 @@ JSON DSL Backend — Flask + Supabase Auth Proxy + AI Chat (SSE) + Marketplace
 
 import json
 import os
+import base64
+import uuid
 import urllib.parse
 from functools import wraps
 
@@ -353,28 +355,53 @@ def update_user():
 @app.route("/api/auth/avatar", methods=["POST"])
 @require_auth
 def upload_avatar():
-    """上传头像（Base64），存入 user_metadata.avatar_url"""
+    """上传头像（Base64）→ Supabase Storage avatars 桶 → 更新 user_metadata"""
     body = request.get_json(silent=True) or {}
     avatar_base64 = body.get("avatar_base64", "")
 
     if not avatar_base64:
         return jsonify({"error": "avatar_base64 不能为空"}), 400
 
-    # 直接存 data URI 到 user_metadata（简单方案，不依赖 Storage 服务）
-    if not avatar_base64.startswith("data:"):
-        avatar_base64 = f"data:image/png;base64,{avatar_base64}"
+    # 去掉 data URI 前缀
+    if "," in avatar_base64:
+        avatar_base64 = avatar_base64.split(",", 1)[1]
 
-    resp = requests.put(
+    try:
+        image_bytes = base64.b64decode(avatar_base64)
+    except Exception:
+        return jsonify({"error": "无效的 Base64 数据"}), 400
+
+    user_id = request.supabase_user.get("id", "unknown")
+    file_name = f"{user_id}.png"
+
+    # 上传到 Supabase Storage (用 service_role key 绕过 RLS)
+    upload_resp = requests.post(
+        f"{SUPABASE_URL}/storage/v1/object/avatars/{file_name}",
+        headers={
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "Content-Type": "image/png",
+            "x-upsert": "true",  # 覆盖已有文件
+        },
+        data=image_bytes,
+        timeout=15,
+    )
+
+    if upload_resp.status_code >= 400:
+        return jsonify({"error": f"存储上传失败: {upload_resp.text}"}), 502
+
+    # 公开访问 URL
+    public_url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}"
+
+    # 更新 user_metadata.avatar_url 为存储 URL
+    requests.put(
         f"{SUPABASE_URL}/auth/v1/user",
         headers=_supabase_headers(request.supabase_token),
-        json={"data": {"avatar_url": avatar_base64}},
+        json={"data": {"avatar_url": public_url}},
         timeout=10,
     )
 
-    if resp.status_code >= 400:
-        return jsonify({"error": "头像上传失败"}), resp.status_code
-
-    return jsonify({"message": "头像更新成功", "avatar_url": avatar_base64})
+    return jsonify({"message": "头像更新成功", "avatar_url": public_url})
 
 
 # ══════════════════════════════════════════════════════════
