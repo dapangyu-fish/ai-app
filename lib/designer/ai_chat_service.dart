@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 /// 管理对话历史并与后端 AI 服务通信（SSE 流式，支持中断）
 class AiChatService {
-  static const String _baseUrl = 'http://127.0.0.1:5566';
+  static const String _baseUrl = 'http://103.233.254.179:5566';
 
   final List<Map<String, String>> _messages = [
     {

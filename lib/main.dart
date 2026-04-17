@@ -11,6 +11,8 @@ import 'json_ui/interpreter.dart';
 import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
 import 'designer/designer_ball.dart';
+import 'auth/auth_service.dart';
+import 'auth/auth_page.dart';
 
 // ============================================================
 // Riverpod Providers
@@ -25,7 +27,9 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
 // 入口
 // ============================================================
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthService.restoreSession();
   runApp(
     const ProviderScope(
       child: JsonDslApp(),
@@ -57,7 +61,29 @@ class JsonDslApp extends ConsumerWidget {
       builder: (context, child) {
         return DesignerBall(child: child ?? const SizedBox.shrink());
       },
-      home: const FilePickerPage(),
+      home: const _AuthGate(),
+    );
+  }
+}
+
+/// 根据登录状态决定显示登录页还是主页
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: AuthService.authNotifier,
+      builder: (context, loggedIn, _) {
+        if (loggedIn) {
+          return const FilePickerPage();
+        }
+        return AuthPage(
+          onAuthSuccess: () {
+            // authNotifier 已在 AuthService 内部更新
+          },
+        );
+      },
     );
   }
 }
@@ -143,7 +169,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     try {
       final downloadPath = app['download'] as String;
       final resp = await http
-          .get(Uri.parse('http://127.0.0.1:5566$downloadPath'))
+          .get(Uri.parse('http://103.233.254.179:5566$downloadPath'))
           .timeout(const Duration(seconds: 15));
 
       if (resp.statusCode != 200) {
@@ -186,6 +212,59 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('JSON DSL v3.2'),
+        centerTitle: true,
+        actions: [
+          if (AuthService.isLoggedIn)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.account_circle),
+              onSelected: (value) async {
+                if (value == 'profile') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ProfilePage(),
+                    ),
+                  );
+                } else if (value == 'logout') {
+                  await AuthService.signOut();
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  enabled: false,
+                  child: Text(
+                    AuthService.currentUser?['username'] ??
+                        AuthService.currentUser?['email'] ??
+                        '',
+                    style: TextStyle(color: colorScheme.onSurface),
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, size: 18),
+                      SizedBox(width: 8),
+                      Text('个人资料'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, size: 18),
+                      SizedBox(width: 8),
+                      Text('退出登录'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -321,7 +400,7 @@ class _MarketPageState extends State<_MarketPage> {
 
     try {
       final resp = await http
-          .get(Uri.parse('http://127.0.0.1:5566/app-list'))
+          .get(Uri.parse('http://103.233.254.179:5566/app-list'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
