@@ -16,6 +16,7 @@ from datetime import date
 from functools import wraps
 
 import requests
+import anthropic
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from flask_sock import Sock
 
@@ -48,6 +49,15 @@ MINIO_PUBLIC_URL = "https://app-oss-endpoint.dapangyu.work"
 PORT = 5566
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "templates")
 DSL_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "JSON-DSL.md")
+PROJECT_ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
+# Claude Agent（通过 DeepSeek Anthropic 兼容端点）
+_agent_client = anthropic.Anthropic(
+    base_url="https://api.deepseek.com/anthropic",
+    api_key=DEEPSEEK_KEY,
+)
+AGENT_MODEL = "deepseek-chat"
+AGENT_MAX_ITERATIONS = 8
 
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
@@ -443,32 +453,109 @@ def _load_registry_summary():
         return ""
 
 
-DSL_SYSTEM_PROMPT = """你是 JSON-DSL v3.3 应用设计师。用户通过语音与你交流，你帮助他们设计和生成 JSON-APP。
+AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交流，你帮助设计和生成 JSON-APP。
 
 ## 工作模式
-1. **先讨论**：了解用户需求，确认功能点和 UI 风格。简单需求可以一轮直接生成。
-2. **再生成**：用户确认后，输出完整可运行的 JSON-APP。
-3. **可修改**：用户提出调整时，修改 JSON 并重新输出完整版本。
-4. **崩溃修复**：如果用户发来崩溃日志，分析原因并输出修复后的完整 JSON。
+1. 先理解用户需求
+2. 生成 JSON-APP 前，必须用工具查阅框架代码，确认内置函数和组件确实存在
+3. 用 ```json ... ``` 代码块包裹完整可运行的 JSON-APP
+4. 回复简洁（用户在手机上看字幕）
+
+## 工具使用指引
+- read_file: 读取框架源码（如 JSON-DSL.md 规范、lib/json_ui/interpreter.dart 内置函数）
+- search_code: 搜索代码关键词
+- list_builtin_functions: 一键获取所有可用 @函数列表
 
 ## 输出要求
 - JSON 必须包含 meta（name/version/type:"app"/description）
-- 必须是完整可运行的 JSON-APP
-- 用 ```json ... ``` 代码块包裹
-- 回复尽量简洁，因为用户在手机上看字幕
-
-## JSON-DSL 规范
-{dsl_spec}
-
-## 已注册的 APP 和组件（可通过 dependencies 引用）
-{registry_summary}
+- 只使用工具确认存在的 @函数和组件类型
+- 不要自创框架中不存在的函数或属性
 """
+
+AGENT_TOOLS = [
+    {
+        "name": "read_file",
+        "description": "读取项目文件。常用: JSON-DSL.md (完整DSL规范), lib/json_ui/interpreter.dart (解释器+内置函数), lib/json_ui/widget_builder.dart (组件注册表), lib/json_ui/widgets/ (各组件实现)",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "从项目根目录的相对路径"}
+            },
+            "required": ["path"]
+        }
+    },
+    {
+        "name": "search_code",
+        "description": "在项目代码中搜索关键词，返回匹配的行和文件路径",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pattern": {"type": "string", "description": "搜索关键词或正则"},
+                "glob": {"type": "string", "description": "文件过滤，如 *.dart *.md"}
+            },
+            "required": ["pattern"]
+        }
+    },
+    {
+        "name": "list_builtin_functions",
+        "description": "列出 JSON-DSL 框架所有可用的 @内置函数",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
+    }
+]
+
+
+def _execute_agent_tool(name, inputs):
+    """执行 Agent 工具调用"""
+    if name == "read_file":
+        path = os.path.join(PROJECT_ROOT, inputs["path"])
+        real = os.path.realpath(path)
+        if not real.startswith(PROJECT_ROOT):
+            return "Access denied: path outside project"
+        try:
+            with open(path, 'r') as f:
+                content = f.read()
+            if len(content) > 15000:
+                content = content[:15000] + "\n\n... (truncated)"
+            return content
+        except FileNotFoundError:
+            return f"File not found: {inputs['path']}"
+        except Exception as e:
+            return f"Error: {e}"
+
+    elif name == "search_code":
+        import subprocess
+        pattern = inputs["pattern"]
+        glob_pat = inputs.get("glob", "*.dart")
+        try:
+            result = subprocess.run(
+                ["grep", "-rn", "--include", glob_pat, pattern, PROJECT_ROOT],
+                capture_output=True, text=True, timeout=10
+            )
+            output = result.stdout[:8000] if result.stdout else "No matches found"
+            return output
+        except Exception as e:
+            return f"Search error: {e}"
+
+    elif name == "list_builtin_functions":
+        path = os.path.join(PROJECT_ROOT, "lib/json_ui/interpreter.dart")
+        try:
+            with open(path, 'r') as f:
+                content = f.read()
+            funcs = sorted(set(re.findall(r"'(@\w+)'", content)))
+            return "可用的内置函数:\n" + "\n".join(funcs)
+        except Exception as e:
+            return f"Error: {e}"
+
+    return f"Unknown tool: {name}"
 
 
 @app.route("/chat", methods=["POST"])
 @require_auth
 def chat():
-    """SSE 流式 AI 对话 — 带配额检查和 JSON 检测"""
+    """SSE 流式 AI 对话 — Claude Agent + 工具调用"""
     user_id = request.supabase_user.get("id")
     role = request.user_role
 
@@ -485,12 +572,18 @@ def chat():
     if not messages:
         return jsonify({"error": "messages is required"}), 400
 
-    # 注入 DSL system prompt（如果消息列表第一条不是 system）
-    if not messages or messages[0].get("role") != "system":
-        dsl_spec = _load_dsl_spec()
-        registry = _load_registry_summary()
-        system_msg = DSL_SYSTEM_PROMPT.replace("{dsl_spec}", dsl_spec).replace("{registry_summary}", registry or "暂无")
-        messages.insert(0, {"role": "system", "content": system_msg})
+    # 构建 Agent 消息（过滤 system，Anthropic 用单独 system 参数）
+    agent_messages = []
+    for m in messages:
+        if m["role"] == "system":
+            continue
+        agent_messages.append({"role": m["role"], "content": m["content"]})
+
+    # 系统提示
+    system_prompt = AGENT_SYSTEM
+    registry = _load_registry_summary()
+    if registry:
+        system_prompt += f"\n## 已注册的 APP 和组件\n{registry}"
 
     # 递增配额
     _increment_quota(user_id)
@@ -498,56 +591,94 @@ def chat():
 
     def generate():
         full_content = ""
-        try:
-            resp = requests.post(
-                DEEPSEEK_URL,
-                headers={"Content-Type": "application/json",
-                         "Authorization": f"Bearer {DEEPSEEK_KEY}"},
-                json={"model": DEEPSEEK_MODEL, "messages": messages, "stream": True},
-                stream=True, timeout=120,
-            )
-            for line in resp.iter_lines(decode_unicode=True):
-                if not line:
-                    continue
-                if line.startswith("data:"):
-                    data_str = line[5:].strip()
-                    if data_str == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(data_str)
-                        delta = chunk.get("choices", [{}])[0].get("delta", {})
-                        content = delta.get("content", "")
-                        if content:
-                            full_content += content
-                            event = json.dumps({"content": content}, ensure_ascii=False)
-                            yield f"data: {event}\n\n"
-                    except (json.JSONDecodeError, IndexError, KeyError):
-                        pass
+        msgs = list(agent_messages)
 
-            # 流结束 — 检测是否包含 JSON 代码块
-            # 支持 ```json / ```JSON / ``` 后直接跟 { 等多种 AI 输出格式
+        try:
+            for iteration in range(AGENT_MAX_ITERATIONS):
+                print(f"[Agent] Iteration {iteration + 1}, messages={len(msgs)}")
+
+                # 流式调用 — 文本实时推送给客户端，工具调用在结束后处理
+                response = None
+                try:
+                    with _agent_client.messages.stream(
+                        model=AGENT_MODEL,
+                        max_tokens=8192,
+                        system=system_prompt,
+                        messages=msgs,
+                        tools=AGENT_TOOLS,
+                    ) as stream:
+                        for text in stream.text_stream:
+                            full_content += text
+                            yield f'data: {json.dumps({"content": text}, ensure_ascii=False)}\n\n'
+                        response = stream.get_final_message()
+                except Exception as e:
+                    # 流式不支持时 fallback 到非流式
+                    print(f"[Agent] Stream failed ({e}), falling back to non-stream")
+                    response = _agent_client.messages.create(
+                        model=AGENT_MODEL,
+                        max_tokens=8192,
+                        system=system_prompt,
+                        messages=msgs,
+                        tools=AGENT_TOOLS,
+                    )
+                    # 非流式：手动发送文本
+                    for block in response.content:
+                        if block.type == 'text' and block.text:
+                            full_content += block.text
+                            yield f'data: {json.dumps({"content": block.text}, ensure_ascii=False)}\n\n'
+
+                # 检查是否有工具调用
+                tool_calls = [b for b in response.content if b.type == 'tool_use']
+                if not tool_calls:
+                    print(f"[Agent] Done after {iteration + 1} iterations")
+                    break
+
+                # 构建 assistant 消息（包含 text + tool_use blocks）
+                assistant_content = []
+                for block in response.content:
+                    if block.type == 'text':
+                        assistant_content.append({"type": "text", "text": block.text})
+                    elif block.type == 'tool_use':
+                        assistant_content.append({
+                            "type": "tool_use",
+                            "id": block.id,
+                            "name": block.name,
+                            "input": block.input,
+                        })
+                msgs.append({"role": "assistant", "content": assistant_content})
+
+                # 执行工具
+                tool_results = []
+                for tc in tool_calls:
+                    result = _execute_agent_tool(tc.name, tc.input)
+                    print(f"[Agent] Tool {tc.name}: {len(result)} chars")
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tc.id,
+                        "content": result,
+                    })
+                msgs.append({"role": "user", "content": tool_results})
+
+            # JSON-APP 检测
             json_match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
             if not json_match:
-                # fallback: 尝试匹配最外层 {...} (整个回复只有一个 JSON 对象)
                 json_match = re.search(r'(\{[\s\S]*"screens"[\s\S]*\})\s*$', full_content)
-            print(f"[Chat] JSON detect: match={'YES' if json_match else 'NO'}, content_len={len(full_content)}")
+            print(f"[Agent] JSON detect: match={'YES' if json_match else 'NO'}, content_len={len(full_content)}")
             if json_match:
                 try:
                     json_app = json.loads(json_match.group(1))
-                    event = json.dumps({
-                        "has_json": True,
-                        "json_app": json_app,
-                    }, ensure_ascii=False)
-                    yield f"data: {event}\n\n"
-                    print(f"[Chat] JSON-APP sent, keys: {list(json_app.keys())}")
+                    yield f'data: {json.dumps({"has_json": True, "json_app": json_app}, ensure_ascii=False)}\n\n'
+                    print(f"[Agent] JSON-APP sent, keys: {list(json_app.keys())}")
                 except json.JSONDecodeError as e:
-                    print(f"[Chat] JSON parse failed: {e}")
+                    print(f"[Agent] JSON parse failed: {e}")
 
-            # 发送配额信息
+            # 配额
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
             yield "data: [DONE]\n\n"
 
         except Exception as e:
+            print(f"[Agent] Error: {e}")
+            import traceback; traceback.print_exc()
             yield f'data: {json.dumps({"error": str(e)})}\n\n'
             yield "data: [DONE]\n\n"
 
