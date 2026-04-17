@@ -9,8 +9,9 @@ import 'sherpa_asr_service.dart';
 /// 凌驾于所有页面之上，不影响 JSON APP。
 class DesignerBall extends StatefulWidget {
   final Widget child;
+  final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
 
-  const DesignerBall({super.key, required this.child});
+  const DesignerBall({super.key, required this.child, this.onRunJsonApp});
 
   @override
   State<DesignerBall> createState() => _DesignerBallState();
@@ -446,9 +447,16 @@ class _DesignerBallState extends State<DesignerBall>
           _scrollToBottom();
         }
         if (event.jsonApp != null) {
-          // AI 生成了 JSON-APP — 暂存，后续做试运行
           debugPrint('[DesignerBall] AI generated JSON-APP!');
           _lastGeneratedJson = event.jsonApp;
+          setState(() {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '🚀 JSON-APP 已生成，点击试运行',
+              jsonApp: event.jsonApp,
+            ));
+          });
+          _scrollToBottom();
         }
         if (event.quota != null) {
           _lastQuota = event.quota;
@@ -651,6 +659,10 @@ class _DesignerBallState extends State<DesignerBall>
                 (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
             onClose: _closeChatMode,
             scrollController: _scrollController,
+            onRunJsonApp: (jsonConfig) {
+              _closeChatMode();
+              widget.onRunJsonApp?.call(jsonConfig);
+            },
           ),
 
         // 悬浮球 — 用 Listener 捕获原始 pointer 事件

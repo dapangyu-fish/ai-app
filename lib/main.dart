@@ -59,7 +59,25 @@ class JsonDslApp extends ConsumerWidget {
       themeMode: ThemeMode.system,
       // 使用 builder 注入悬浮球，凌驾于所有路由之上
       builder: (context, child) {
-        return DesignerBall(child: child ?? const SizedBox.shrink());
+        return DesignerBall(
+          child: child ?? const SizedBox.shrink(),
+          onRunJsonApp: (jsonConfig) async {
+            final interpreter = ProviderScope.containerOf(context).read(interpreterProvider);
+            try {
+              interpreter.loadConfig(jsonConfig);
+              await interpreter.executeSteps();
+              if (context.mounted) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => JsonScreenView(fileName: 'AI 生成'),
+                  ),
+                );
+              }
+            } catch (e) {
+              debugPrint('[DesignerBall] Run JSON-APP error: $e');
+            }
+          },
+        );
       },
       home: const _AuthGate(),
     );

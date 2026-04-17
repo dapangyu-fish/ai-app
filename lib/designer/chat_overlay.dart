@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 /// 对话消息
 class ChatMessage {
-  final String role; // 'user' | 'assistant'
+  final String role; // 'user' | 'assistant' | 'system'
   final String content;
-  ChatMessage({required this.role, required this.content});
+  final Map<String, dynamic>? jsonApp; // AI 生成的 JSON-APP
+  ChatMessage({required this.role, required this.content, this.jsonApp});
 }
 
 /// 纯字幕式覆层 — 半透明浮在屏幕底部，可滚动查看历史，❌ 手动关闭。
@@ -15,6 +16,7 @@ class ChatOverlay extends StatelessWidget {
   final bool isThinking;
   final VoidCallback onClose;
   final ScrollController scrollController;
+  final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
 
   const ChatOverlay({
     super.key,
@@ -24,6 +26,7 @@ class ChatOverlay extends StatelessWidget {
     required this.onClose,
     required this.scrollController,
     this.liveTranscript,
+    this.onRunJsonApp,
   });
 
   @override
@@ -91,6 +94,9 @@ class ChatOverlay extends StatelessWidget {
                       return _buildThinkingLine();
                     }
                     final msg = visibleMessages[index];
+                    if (msg.role == 'system' && msg.jsonApp != null) {
+                      return _buildRunButton(msg.content, msg.jsonApp!);
+                    }
                     return _buildLine(
                       msg.role == 'user' ? 'you' : 'AI',
                       msg.content,
@@ -136,6 +142,37 @@ class ChatOverlay extends StatelessWidget {
                   color: Colors.white.withValues(alpha: live ? 0.6 : 0.9),
                   fontSize: 14,
                   height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRunButton(String label, Map<String, dynamic> jsonApp) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: () => onRunJsonApp?.call(jsonApp),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.play_arrow, color: Colors.white, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
