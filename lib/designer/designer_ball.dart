@@ -1,6 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:web_socket_channel/io.dart';
+import '../auth/auth_service.dart';
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
 
@@ -21,7 +27,7 @@ class _DesignerBallState extends State<DesignerBall>
   static const double _ballSize = 56.0;
   static const double _peekSize = 20.0;
   static const double _edgeThreshold = 20.0;
-  static const double _dragThreshold = 10.0;
+  static const double _dragThreshold = 200.0;
 
   // ── 拖拽状态 ──
   double _left = 0;
@@ -56,8 +62,12 @@ class _DesignerBallState extends State<DesignerBall>
   late AnimationController _countdownController;
 
   // ── 语音识别 & AI ──
-  stt.SpeechToText? _speech; // 延迟创建，避免启动时触发权限检查
+  stt.SpeechToText? _speech;
   bool _speechInited = false;
+  bool _useBackendAsr = false; // true = 用豆包 ASR fallback
+  final AudioRecorder _recorder = AudioRecorder();
+  IOWebSocketChannel? _asrChannel;
+  StreamSubscription? _asrSub;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
@@ -95,7 +105,12 @@ class _DesignerBallState extends State<DesignerBall>
   void dispose() {
     _longPressTimer?.cancel();
     _idleTimer?.cancel();
+    _nativeSpeechTimeout?.cancel();
+    _audioStreamTimer?.cancel();
     _streamSub?.cancel();
+    _asrSub?.cancel();
+    _asrChannel?.sink.close();
+    _recorder.dispose();
     _chatService.abort();
     _animController.dispose();
     _pulseController.dispose();
@@ -228,57 +243,70 @@ class _DesignerBallState extends State<DesignerBall>
 
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
-    try {
-      if (!_speechInited) {
+
+    // 先尝试原生语音识别 (macOS/iOS/部分 Android)
+    if (!_speechInited && !_useBackendAsr) {
+      try {
         _speech ??= stt.SpeechToText();
-        debugPrint('[DesignerBall] Initializing speech...');
         _speechInited = await _speech!.initialize(
           onError: (error) {
-            debugPrint('[DesignerBall] Speech error: $error');
-            setState(() => _isListening = false);
-            _pulseController.stop();
+            debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
+            _nativeSpeechTimeout?.cancel();
+            // 原生语音运行时出错 → fallback 到后端 ASR
+            if (!_useBackendAsr) {
+              _useBackendAsr = true;
+              _speech?.stop();
+              debugPrint('[DesignerBall] Native speech error, switching to backend ASR');
+              if (_isListening) {
+                _startBackendAsr();
+              }
+            } else {
+              setState(() => _isListening = false);
+              _pulseController.stop();
+            }
           },
-          onStatus: (status) {
-            debugPrint('[DesignerBall] Speech status: $status');
-          },
+          onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
         );
-        debugPrint('[DesignerBall] Speech init result: $_speechInited');
+        debugPrint('[DesignerBall] Native speech init: $_speechInited');
+      } catch (e) {
+        debugPrint('[DesignerBall] Native speech failed: $e');
+        _speechInited = false;
       }
-    } catch (e, stack) {
-      debugPrint('[DesignerBall] Speech init EXCEPTION: $e');
-      debugPrint('[DesignerBall] $stack');
-      _speechInited = false;
+
+      // 原生不可用 → 切换到后端豆包 ASR
+      if (!_speechInited) {
+        _useBackendAsr = true;
+        debugPrint('[DesignerBall] Falling back to backend ASR');
+      }
     }
 
-    setState(() {
-      _chatMode = true;
-    });
+    setState(() => _chatMode = true);
     _resetIdleTimer();
-
-    if (_speechInited) {
-      _startListening();
-    } else {
-      debugPrint('[DesignerBall] Speech not available, chat mode without voice');
-    }
+    _startListening();
   }
 
   void _startListening() {
-    if (!_speechInited || _speech == null) return;
-    debugPrint('[DesignerBall] _startListening');
-
     setState(() {
       _isListening = true;
       _liveTranscript = '';
     });
-
     _pulseController.repeat(reverse: true);
 
+    if (_useBackendAsr) {
+      _startBackendAsr();
+    } else {
+      _startNativeSpeech();
+    }
+  }
+
+  /// 原生语音识别 (Apple/Google)
+  void _startNativeSpeech() {
+    if (_speech == null) return;
     try {
       _speech!.listen(
         onResult: (result) {
-          setState(() {
-            _liveTranscript = result.recognizedWords;
-          });
+          _nativeSpeechTimeout?.cancel(); // 收到结果，取消超时
+          setState(() => _liveTranscript = result.recognizedWords);
           _scrollToBottom();
         },
         localeId: 'zh_CN',
@@ -288,19 +316,128 @@ class _DesignerBallState extends State<DesignerBall>
           partialResults: true,
         ),
       );
+
+      // 超时检测：3 秒内没有任何识别结果 → fallback 到后端 ASR
+      // 中国手机上 init 可能返回 true 但 listen 实际不工作
+      _nativeSpeechTimeout?.cancel();
+      _nativeSpeechTimeout = Timer(const Duration(seconds: 3), () {
+        if (_isListening && !_useBackendAsr && (_liveTranscript?.isEmpty ?? true)) {
+          debugPrint('[DesignerBall] Native speech timeout (no results in 3s), switching to backend ASR');
+          _speech?.stop();
+          _useBackendAsr = true;
+          _startBackendAsr();
+        }
+      });
     } catch (e) {
-      debugPrint('[DesignerBall] listen EXCEPTION: $e');
-      setState(() => _isListening = false);
+      debugPrint('[DesignerBall] Native listen error: $e');
+      // listen 直接抛异常 → fallback
+      _useBackendAsr = true;
+      debugPrint('[DesignerBall] Switching to backend ASR');
+      _startBackendAsr();
+    }
+  }
+
+  /// 后端豆包 ASR：录音 + WebSocket 实时流式识别
+  Future<void> _startBackendAsr() async {
+    try {
+      // 连接 WebSocket
+      final wsUrl = 'wss://app-backend.dapangyu.work/api/asr/ws';
+      _asrChannel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
+      await _asrChannel!.ready;
+
+      // 鉴权
+      _asrChannel!.sink.add(json.encode({'token': 'Bearer ${AuthService.token}'}));
+
+      // 监听识别结果
+      _asrSub = _asrChannel!.stream.listen((msg) {
+        final data = json.decode(msg as String);
+        if (data['error'] != null) {
+          debugPrint('[ASR] Error: ${data['error']}');
+          return;
+        }
+        if (data['text'] != null) {
+          setState(() => _liveTranscript = data['text'] as String);
+          _scrollToBottom();
+        }
+      }, onError: (e) {
+        debugPrint('[ASR] Stream error: $e');
+      });
+
+      // 等待 ready 确认
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // 开始录音 → PCM 16kHz 16bit mono
+      final dir = await getTemporaryDirectory();
+      final path = '${dir.path}/asr_stream.pcm';
+      await _recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+          numChannels: 1,
+          bitRate: 256000,
+        ),
+        path: path,
+      );
+
+      // 定时读取录音文件并发送音频块
+      _startAudioStreaming(path);
+    } catch (e) {
+      debugPrint('[ASR] Start error: $e');
+      setState(() {
+        _isListening = false;
+        _messages.add(ChatMessage(role: 'assistant', content: '语音识别启动失败: $e'));
+      });
       _pulseController.stop();
     }
   }
 
+  Timer? _nativeSpeechTimeout; // 原生语音超时 → fallback
+  Timer? _audioStreamTimer;
+
+  void _startAudioStreaming(String path) {
+    int lastOffset = 0;
+    _audioStreamTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) async {
+      try {
+        final file = File(path);
+        if (!await file.exists()) return;
+        final bytes = await file.readAsBytes();
+        if (bytes.length > lastOffset) {
+          final chunk = bytes.sublist(lastOffset);
+          lastOffset = bytes.length;
+          _asrChannel?.sink.add(chunk);
+        }
+      } catch (e) {
+        debugPrint('[ASR] Stream chunk error: $e');
+      }
+    });
+  }
+
+  void _stopBackendAsr() {
+    _audioStreamTimer?.cancel();
+    _audioStreamTimer = null;
+    _recorder.stop();
+    // 发送 END 信号
+    try { _asrChannel?.sink.add('END'); } catch (_) {}
+    // 延迟关闭让最终结果回来
+    Future.delayed(const Duration(seconds: 1), () {
+      _asrSub?.cancel();
+      _asrSub = null;
+      _asrChannel?.sink.close();
+      _asrChannel = null;
+    });
+  }
+
   Future<void> _stopListeningAndSend() async {
     debugPrint('[DesignerBall] _stopListeningAndSend');
-    try {
-      _speech?.stop();
-    } catch (e) {
-      debugPrint('[DesignerBall] speech.stop error: $e');
+    _nativeSpeechTimeout?.cancel();
+
+    // 停止语音识别
+    if (_useBackendAsr) {
+      _stopBackendAsr();
+    } else {
+      try { _speech?.stop(); } catch (e) {
+        debugPrint('[DesignerBall] speech.stop error: $e');
+      }
     }
     _pulseController.stop();
     _pulseController.reset();
@@ -397,6 +534,8 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _closeChatMode() {
     try { _speech?.stop(); } catch (_) {}
+    _nativeSpeechTimeout?.cancel();
+    _stopBackendAsr();
     _cancelCurrentStream();
     _idleTimer?.cancel();
     _pulseController.stop();

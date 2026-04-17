@@ -17,6 +17,7 @@ from functools import wraps
 
 import requests
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
+from flask_sock import Sock
 
 # ══════════════════════════════════════════════════════════
 # 配置
@@ -52,6 +53,7 @@ DSL_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
 
 app = Flask(__name__)
+sock = Sock(app)
 
 # ══════════════════════════════════════════════════════════
 # DB 辅助（直接用 psycopg2 或 HTTP 走 PostgREST）
@@ -807,6 +809,119 @@ def download_file(fname):
     if ".." in fname or "/" in fname:
         return jsonify({"error": "Invalid"}), 403
     return send_from_directory(os.path.abspath(TEMPLATES_DIR), fname, mimetype="application/json")
+
+
+# ══════════════════════════════════════════════════════════
+# 豆包 ASR — 实时流式语音识别 (WebSocket 双向代理)
+# ══════════════════════════════════════════════════════════
+
+DOUBAO_ASR_URL = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
+DOUBAO_APP_ID = "7743486317"
+DOUBAO_ACCESS_KEY = "J0z68ifh_njxKDL_ukJXFMBabaf5cUcV"
+DOUBAO_RESOURCE_ID = "volc.seedasr.sauc.duration"
+
+
+def _asr_header(msg_type, flags, serial, compress):
+    return bytes([(0x1 << 4) | 0x1, (msg_type << 4) | flags, (serial << 4) | compress, 0x00])
+
+
+def _asr_parse(data):
+    """解析豆包二进制响应 -> 识别文本"""
+    import struct as st, gzip as gz
+    if len(data) < 4 or ((data[1] >> 4) & 0xF) != 0x9:
+        return None
+    off = 8
+    if len(data) < off + 4:
+        return None
+    ps = st.unpack('>I', data[off:off+4])[0]
+    raw = data[off+4:off+4+ps]
+    if (data[2] & 0xF) == 0x1:
+        raw = gz.decompress(raw)
+    return json.loads(raw).get("result", {}).get("text")
+
+
+@sock.route("/api/asr/ws")
+def asr_websocket(ws):
+    """
+    WebSocket 实时 ASR 代理:
+      1. 客户端发文本 {"token":"Bearer xxx"} 鉴权
+      2. 客户端发二进制: PCM 音频块 (16kHz 16bit mono, 每包200ms=6400B)
+      3. 客户端发文本 "END" 结束
+      4. 服务端返文本: {"text":"实时识别"} / {"error":"..."}
+    """
+    import websocket as ws_lib
+    import struct, gzip, threading
+
+    # 鉴权
+    try:
+        auth_data = json.loads(ws.receive(timeout=10))
+        token = auth_data.get("token", "").replace("Bearer ", "")
+        r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
+                         headers=_supabase_headers(token), timeout=5)
+        if r.status_code != 200:
+            ws.send(json.dumps({"error": "认证失败"})); return
+        ws.send(json.dumps({"status": "ready"}))
+    except Exception as e:
+        ws.send(json.dumps({"error": f"认证异常: {e}"})); return
+
+    # 连接豆包
+    try:
+        dws = ws_lib.create_connection(DOUBAO_ASR_URL, header=[
+            f"X-Api-App-Key: {DOUBAO_APP_ID}",
+            f"X-Api-Access-Key: {DOUBAO_ACCESS_KEY}",
+            f"X-Api-Resource-Id: {DOUBAO_RESOURCE_ID}",
+            f"X-Api-Connect-Id: {str(uuid.uuid4())}",
+        ], timeout=15)
+    except Exception as e:
+        ws.send(json.dumps({"error": f"ASR连接失败: {e}"})); return
+
+    # full client request
+    params = {
+        "user": {"uid": "app"},
+        "audio": {"format": "pcm", "rate": 16000, "bits": 16, "channel": 1, "language": "zh-CN"},
+        "request": {"model_name": "bigmodel", "enable_itn": True, "enable_punc": True, "result_type": "full"},
+    }
+    pl = gzip.compress(json.dumps(params).encode())
+    dws.send(_asr_header(0x1, 0x0, 0x1, 0x1) + struct.pack('>I', len(pl)) + pl, opcode=0x2)
+    dws.recv()
+
+    # 后台线程：读豆包结果推给客户端
+    stop = threading.Event()
+    def reader():
+        while not stop.is_set():
+            try:
+                dws.settimeout(0.3)
+                resp = dws.recv()
+                if resp:
+                    text = _asr_parse(resp)
+                    if text is not None:
+                        ws.send(json.dumps({"text": text}, ensure_ascii=False))
+            except ws_lib.WebSocketTimeoutException:
+                continue
+            except Exception:
+                break
+    t = threading.Thread(target=reader, daemon=True)
+    t.start()
+
+    # 主循环：客户端音频转发豆包
+    try:
+        while True:
+            msg = ws.receive(timeout=60)
+            if msg is None:
+                break
+            if isinstance(msg, str):
+                if msg.strip().upper() == "END":
+                    emp = gzip.compress(b'')
+                    dws.send(_asr_header(0x2, 0x2, 0x0, 0x1) + struct.pack('>I', len(emp)) + emp, opcode=0x2)
+                    import time; time.sleep(0.8)
+                    break
+                continue
+            c = gzip.compress(msg)
+            dws.send(_asr_header(0x2, 0x0, 0x0, 0x1) + struct.pack('>I', len(c)) + c, opcode=0x2)
+    except Exception:
+        pass
+    finally:
+        stop.set(); t.join(timeout=2); dws.close()
 
 
 # ══════════════════════════════════════════════════════════
