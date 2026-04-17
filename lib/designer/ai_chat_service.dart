@@ -72,49 +72,50 @@ class AiChatService {
 
       String accumulated = '';
 
-      await for (final chunk in response.stream.transform(utf8.decoder)) {
-        final parts = chunk.split('\n');
-        for (final line in parts) {
-          final trimmed = line.trim();
-          if (trimmed.isEmpty) continue;
-          if (trimmed == 'data: [DONE]') continue;
-          if (!trimmed.startsWith('data: ')) continue;
+      // 用 LineSplitter 保证跨 TCP chunk 的行完整性
+      // （has_json 事件包含完整 JSON-APP，可能几 KB，单行会被拆到多个 chunk）
+      await for (final line in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty) continue;
+        if (trimmed == 'data: [DONE]') continue;
+        if (!trimmed.startsWith('data: ')) continue;
 
-          final dataStr = trimmed.substring(6);
-          try {
-            final data = json.decode(dataStr) as Map<String, dynamic>;
+        final dataStr = trimmed.substring(6);
+        try {
+          final data = json.decode(dataStr) as Map<String, dynamic>;
 
-            // JSON-APP 检测
-            if (data.containsKey('has_json') && data['has_json'] == true) {
-              yield ChatEvent(
-                jsonApp: data['json_app'] as Map<String, dynamic>?,
-              );
-              continue;
-            }
+          // JSON-APP 检测
+          if (data.containsKey('has_json') && data['has_json'] == true) {
+            yield ChatEvent(
+              jsonApp: data['json_app'] as Map<String, dynamic>?,
+            );
+            continue;
+          }
 
-            // 配额信息
-            if (data.containsKey('quota')) {
-              yield ChatEvent(
-                quota: data['quota'] as Map<String, dynamic>?,
-              );
-              continue;
-            }
+          // 配额信息
+          if (data.containsKey('quota')) {
+            yield ChatEvent(
+              quota: data['quota'] as Map<String, dynamic>?,
+            );
+            continue;
+          }
 
-            // 错误
-            if (data.containsKey('error')) {
-              accumulated += data['error'] as String;
-              yield ChatEvent(content: accumulated, error: data['error'] as String);
-              continue;
-            }
+          // 错误
+          if (data.containsKey('error')) {
+            accumulated += data['error'] as String;
+            yield ChatEvent(content: accumulated, error: data['error'] as String);
+            continue;
+          }
 
-            // 普通文本
-            final content = data['content'] as String? ?? '';
-            if (content.isNotEmpty) {
-              accumulated += content;
-              yield ChatEvent(content: accumulated);
-            }
-          } catch (_) {}
-        }
+          // 普通文本
+          final content = data['content'] as String? ?? '';
+          if (content.isNotEmpty) {
+            accumulated += content;
+            yield ChatEvent(content: accumulated);
+          }
+        } catch (_) {}
       }
 
       if (accumulated.isNotEmpty) {
