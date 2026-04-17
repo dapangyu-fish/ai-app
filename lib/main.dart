@@ -41,10 +41,13 @@ void main() async {
 class JsonDslApp extends ConsumerWidget {
   const JsonDslApp({super.key});
 
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'JSON DSL v3.2',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -66,13 +69,11 @@ class JsonDslApp extends ConsumerWidget {
             try {
               interpreter.loadConfig(jsonConfig);
               await interpreter.executeSteps();
-              if (context.mounted) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => JsonScreenView(fileName: 'AI 生成'),
-                  ),
-                );
-              }
+              JsonDslApp.navigatorKey.currentState?.push(
+                MaterialPageRoute(
+                  builder: (_) => JsonScreenView(fileName: 'AI 生成'),
+                ),
+              );
             } catch (e) {
               debugPrint('[DesignerBall] Run JSON-APP error: $e');
             }
