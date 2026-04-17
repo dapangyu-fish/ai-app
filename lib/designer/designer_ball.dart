@@ -1,12 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:record/record.dart';
-import 'package:web_socket_channel/io.dart';
-import '../auth/auth_service.dart';
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
+import 'sherpa_asr_service.dart';
 
 /// 悬浮设计师球 — iOS 风格丝滑拖拽 + 长按对话模式。
 /// 凌驾于所有页面之上，不影响 JSON APP。
@@ -62,11 +59,8 @@ class _DesignerBallState extends State<DesignerBall>
   // ── 语音识别 & AI ──
   stt.SpeechToText? _speech;
   bool _speechInited = false;
-  bool _useBackendAsr = false; // true = 用豆包 ASR fallback
-  final AudioRecorder _recorder = AudioRecorder();
-  IOWebSocketChannel? _asrChannel;
-  StreamSubscription? _asrSub;
-  StreamSubscription? _audioStreamSub; // 录音流订阅
+  bool _useSherpaAsr = false; // true = 用 sherpa_onnx 离线 ASR fallback
+  final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
@@ -105,12 +99,8 @@ class _DesignerBallState extends State<DesignerBall>
     _longPressTimer?.cancel();
     _idleTimer?.cancel();
     _nativeSpeechTimeout?.cancel();
-    _audioStreamSub?.cancel();
-    _audioStreamTimer?.cancel();
     _streamSub?.cancel();
-    _asrSub?.cancel();
-    _asrChannel?.sink.close();
-    _recorder.dispose();
+    _sherpaAsr.dispose();
     _chatService.abort();
     _animController.dispose();
     _pulseController.dispose();
@@ -245,20 +235,20 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint('[DesignerBall] _enterChatMode called');
 
     // 先尝试原生语音识别 (macOS/iOS/部分 Android)
-    if (!_speechInited && !_useBackendAsr) {
+    if (!_speechInited && !_useSherpaAsr) {
       try {
         _speech ??= stt.SpeechToText();
         _speechInited = await _speech!.initialize(
           onError: (error) {
             debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
             _nativeSpeechTimeout?.cancel();
-            // 原生语音运行时出错 → fallback 到后端 ASR
-            if (!_useBackendAsr) {
-              _useBackendAsr = true;
+            // 原生语音运行时出错 → fallback 到 sherpa 离线 ASR
+            if (!_useSherpaAsr) {
+              _useSherpaAsr = true;
               _speech?.stop();
-              debugPrint('[DesignerBall] Native speech error, switching to backend ASR');
+              debugPrint('[DesignerBall] Native speech error, switching to sherpa ASR');
               if (_isListening) {
-                _startBackendAsr();
+                _startSherpaAsr();
               }
             } else {
               setState(() => _isListening = false);
@@ -273,11 +263,36 @@ class _DesignerBallState extends State<DesignerBall>
         _speechInited = false;
       }
 
-      // 原生不可用 → 切换到后端豆包 ASR
+      // 原生不可用 → 切换到 sherpa 离线 ASR
       if (!_speechInited) {
-        _useBackendAsr = true;
-        debugPrint('[DesignerBall] Falling back to backend ASR');
+        _useSherpaAsr = true;
+        debugPrint('[DesignerBall] Falling back to sherpa offline ASR');
       }
+    }
+
+    // 如果用 sherpa，确保模型已下载+初始化
+    if (_useSherpaAsr) {
+      setState(() {
+        _chatMode = true;
+        _isThinking = true; // 显示加载状态
+      });
+      _sherpaAsr.onStatusChange = (status) {
+        setState(() {
+          _liveTranscript = status;
+        });
+      };
+      final ready = await _sherpaAsr.ensureReady();
+      _sherpaAsr.onStatusChange = null;
+      if (!ready) {
+        setState(() {
+          _isThinking = false;
+          _liveTranscript = null;
+          _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型加载失败'));
+        });
+        _resetIdleTimer();
+        return;
+      }
+      setState(() => _isThinking = false);
     }
 
     setState(() => _chatMode = true);
@@ -292,8 +307,8 @@ class _DesignerBallState extends State<DesignerBall>
     });
     _pulseController.repeat(reverse: true);
 
-    if (_useBackendAsr) {
-      _startBackendAsr();
+    if (_useSherpaAsr) {
+      _startSherpaAsr();
     } else {
       _startNativeSpeech();
     }
@@ -317,81 +332,44 @@ class _DesignerBallState extends State<DesignerBall>
         ),
       );
 
-      // 超时检测：3 秒内没有任何识别结果 → fallback 到后端 ASR
+      // 超时检测：3 秒内没有任何识别结果 → fallback 到 sherpa 离线 ASR
       // 中国手机上 init 可能返回 true 但 listen 实际不工作
       _nativeSpeechTimeout?.cancel();
       _nativeSpeechTimeout = Timer(const Duration(seconds: 3), () {
-        if (_isListening && !_useBackendAsr && (_liveTranscript?.isEmpty ?? true)) {
-          debugPrint('[DesignerBall] Native speech timeout (no results in 3s), switching to backend ASR');
+        if (_isListening && !_useSherpaAsr && (_liveTranscript?.isEmpty ?? true)) {
+          debugPrint('[DesignerBall] Native speech timeout (no results in 3s), switching to sherpa ASR');
           _speech?.stop();
-          _useBackendAsr = true;
-          _startBackendAsr();
+          _useSherpaAsr = true;
+          _startSherpaAsr();
         }
       });
     } catch (e) {
       debugPrint('[DesignerBall] Native listen error: $e');
       // listen 直接抛异常 → fallback
-      _useBackendAsr = true;
-      debugPrint('[DesignerBall] Switching to backend ASR');
-      _startBackendAsr();
+      _useSherpaAsr = true;
+      debugPrint('[DesignerBall] Switching to sherpa ASR');
+      _startSherpaAsr();
     }
   }
 
-  /// 后端豆包 ASR：录音 + WebSocket 实时流式识别
-  Future<void> _startBackendAsr() async {
+  /// sherpa_onnx 离线 ASR：本地录音 + 本地识别
+  Future<void> _startSherpaAsr() async {
     try {
-      // 连接 WebSocket
-      final wsUrl = 'wss://app-backend.dapangyu.work/api/asr/ws';
-      final channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
-      _asrChannel = channel;
-      await channel.ready;
+      _sherpaAsr.onResult = (text) {
+        setState(() => _liveTranscript = text);
+        _scrollToBottom();
+      };
 
-      // 连接期间如果已取消，直接退出
-      if (!_isListening) {
-        channel.sink.close();
-        return;
+      final ok = await _sherpaAsr.startListening();
+      if (!ok) {
+        setState(() {
+          _isListening = false;
+          _messages.add(ChatMessage(role: 'assistant', content: '离线语音识别启动失败'));
+        });
+        _pulseController.stop();
       }
-
-      // 鉴权
-      channel.sink.add(json.encode({'token': 'Bearer ${AuthService.token}'}));
-
-      // 监听识别结果
-      _asrSub = channel.stream.listen((msg) {
-        final data = json.decode(msg as String);
-        if (data['error'] != null) {
-          debugPrint('[ASR] Error: ${data['error']}');
-          return;
-        }
-        if (data['text'] != null) {
-          setState(() => _liveTranscript = data['text'] as String);
-          _scrollToBottom();
-        }
-      }, onError: (e) {
-        debugPrint('[ASR] Stream error: $e');
-      });
-
-      // 等待 ready 确认
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // 流式录音 → PCM 16kHz 16bit mono，直接通过 stream 发送
-      final audioStream = await _recorder.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: 16000,
-          numChannels: 1,
-        ),
-      );
-      debugPrint('[ASR] Recording stream started');
-
-      _audioStreamSub = audioStream.listen((data) {
-        try {
-          _asrChannel?.sink.add(data);
-        } catch (_) {}
-      }, onError: (e) {
-        debugPrint('[ASR] Audio stream error: $e');
-      });
     } catch (e) {
-      debugPrint('[ASR] Start error: $e');
+      debugPrint('[SherpaASR] Start error: $e');
       setState(() {
         _isListening = false;
         _messages.add(ChatMessage(role: 'assistant', content: '语音识别启动失败: $e'));
@@ -401,23 +379,10 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   Timer? _nativeSpeechTimeout; // 原生语音超时 → fallback
-  Timer? _audioStreamTimer;
 
-  void _stopBackendAsr() {
-    _audioStreamSub?.cancel();
-    _audioStreamSub = null;
-    _audioStreamTimer?.cancel();
-    _audioStreamTimer = null;
-    _recorder.stop();
-    // 发送 END 信号
-    try { _asrChannel?.sink.add('END'); } catch (_) {}
-    // 延迟关闭让最终结果回来
-    Future.delayed(const Duration(seconds: 1), () {
-      _asrSub?.cancel();
-      _asrSub = null;
-      _asrChannel?.sink.close();
-      _asrChannel = null;
-    });
+  void _stopSherpaAsr() {
+    _sherpaAsr.stopListening();
+    _sherpaAsr.onResult = null;
   }
 
   Future<void> _stopListeningAndSend() async {
@@ -425,8 +390,12 @@ class _DesignerBallState extends State<DesignerBall>
     _nativeSpeechTimeout?.cancel();
 
     // 停止语音识别
-    if (_useBackendAsr) {
-      _stopBackendAsr();
+    if (_useSherpaAsr) {
+      final finalText = await _sherpaAsr.stopListening();
+      _sherpaAsr.onResult = null;
+      if (finalText.isNotEmpty) {
+        _liveTranscript = finalText;
+      }
     } else {
       try { _speech?.stop(); } catch (e) {
         debugPrint('[DesignerBall] speech.stop error: $e');
@@ -528,7 +497,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _closeChatMode() {
     try { _speech?.stop(); } catch (_) {}
     _nativeSpeechTimeout?.cancel();
-    _stopBackendAsr();
+    _stopSherpaAsr();
     _cancelCurrentStream();
     _idleTimer?.cancel();
     _pulseController.stop();
