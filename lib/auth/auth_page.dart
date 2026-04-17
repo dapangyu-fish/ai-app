@@ -64,16 +64,37 @@ class _AuthPageState extends State<AuthPage> {
               : _usernameCtrl.text.trim(),
         );
         if (result['needs_confirm'] == true) {
-          setState(() {
-            _info = '注册成功！验证邮件已发送到 $email，请查收后登录';
-            _isLogin = true;
-          });
+          if (!context.mounted) return;
+          // 跳转到 OTP 验证页
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OtpVerifyPage(
+                email: email,
+                onVerified: widget.onAuthSuccess,
+              ),
+            ),
+          );
         } else {
           widget.onAuthSuccess();
         }
       }
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('邮箱未验证') || msg.contains('not confirmed')) {
+        // 未验证 → 跳转到验证码页面
+        if (context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OtpVerifyPage(
+                email: _emailCtrl.text.trim(),
+                onVerified: widget.onAuthSuccess,
+              ),
+            ),
+          );
+        }
+      } else {
+        setState(() => _error = msg);
+      }
     } finally {
       setState(() => _loading = false);
     }
@@ -237,6 +258,179 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 邮箱 OTP 验证码输入页面
+class OtpVerifyPage extends StatefulWidget {
+  final String email;
+  final VoidCallback onVerified;
+
+  const OtpVerifyPage({
+    super.key,
+    required this.email,
+    required this.onVerified,
+  });
+
+  @override
+  State<OtpVerifyPage> createState() => _OtpVerifyPageState();
+}
+
+class _OtpVerifyPageState extends State<OtpVerifyPage> {
+  final _codeCtrl = TextEditingController();
+  bool _loading = false;
+  String? _error;
+  String? _info;
+
+  @override
+  void dispose() {
+    _codeCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verify() async {
+    final code = _codeCtrl.text.trim();
+    if (code.isEmpty) {
+      setState(() => _error = '请输入验证码');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await AuthService.verifyOtp(email: widget.email, token: code);
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+      widget.onVerified();
+    } catch (e) {
+      setState(
+          () => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _resend() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _info = null;
+    });
+
+    try {
+      await AuthService.resendVerification(widget.email);
+      setState(() => _info = '验证邮件已重新发送');
+    } catch (e) {
+      setState(
+          () => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('邮箱验证')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              children: [
+                Icon(Icons.mark_email_read, size: 64, color: cs.primary),
+                const SizedBox(height: 16),
+                Text(
+                  '验证你的邮箱',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '验证码已发送到\n${widget.email}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 32),
+
+                // 验证码输入
+                TextField(
+                  controller: _codeCtrl,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    labelText: '6 位验证码',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onSubmitted: (_) => _verify(),
+                ),
+                const SizedBox(height: 24),
+
+                // 验证按钮
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: _loading ? null : _verify,
+                    child: _loading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('验证', style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 重新发送
+                TextButton(
+                  onPressed: _loading ? null : _resend,
+                  child: const Text('没收到？重新发送验证码'),
+                ),
+
+                if (_info != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_info!, style: TextStyle(color: Colors.green.shade700)),
+                ],
+
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: cs.error, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text(_error!,
+                                style: TextStyle(color: cs.onErrorContainer))),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

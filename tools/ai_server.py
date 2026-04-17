@@ -142,6 +142,74 @@ def register():
     return jsonify(result), 200
 
 
+@app.route("/api/auth/verify", methods=["POST"])
+def verify_otp():
+    """验证邮箱 OTP 验证码"""
+    body = request.get_json(silent=True) or {}
+    email = body.get("email", "").strip()
+    token = body.get("token", "").strip()
+
+    if not email or not token:
+        return jsonify({"error": "邮箱和验证码不能为空"}), 400
+
+    resp = requests.post(
+        f"{SUPABASE_URL}/auth/v1/verify",
+        headers=_supabase_headers(),
+        json={
+            "type": "signup",
+            "email": email,
+            "token": token,
+        },
+        timeout=15,
+    )
+
+    data = resp.json()
+    if resp.status_code >= 400:
+        msg = data.get("msg") or data.get("error_description") or "验证失败"
+        if "expired" in msg.lower() or "invalid" in msg.lower():
+            msg = "验证码已过期或无效，请重新发送"
+        return jsonify({"error": msg}), resp.status_code
+
+    # 验证成功，返回 token
+    user = data.get("user", {})
+    return jsonify({
+        "message": "邮箱验证成功",
+        "access_token": data.get("access_token"),
+        "refresh_token": data.get("refresh_token"),
+        "expires_in": data.get("expires_in", 3600),
+        "user": {
+            "id": user.get("id"),
+            "email": user.get("email"),
+            "username": user.get("user_metadata", {}).get("username", ""),
+            "avatar_url": user.get("user_metadata", {}).get("avatar_url", ""),
+        },
+    })
+
+
+@app.route("/api/auth/resend", methods=["POST"])
+def resend_verification():
+    """重新发送验证邮件"""
+    body = request.get_json(silent=True) or {}
+    email = body.get("email", "").strip()
+
+    if not email:
+        return jsonify({"error": "邮箱不能为空"}), 400
+
+    resp = requests.post(
+        f"{SUPABASE_URL}/auth/v1/resend",
+        headers=_supabase_headers(),
+        json={"type": "signup", "email": email},
+        timeout=15,
+    )
+
+    if resp.status_code >= 400:
+        data = resp.json()
+        msg = data.get("msg") or "发送失败"
+        return jsonify({"error": msg}), resp.status_code
+
+    return jsonify({"message": "验证邮件已重新发送"})
+
+
 @app.route("/api/auth/login", methods=["POST"])
 def login():
     """登录（邮箱+密码）"""

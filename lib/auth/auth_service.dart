@@ -123,6 +123,45 @@ class AuthService {
     await _saveLocal();
   }
 
+  /// 验证邮箱 OTP
+  static Future<void> verifyOtp({
+    required String email,
+    required String token,
+  }) async {
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/api/auth/verify'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'email': email, 'token': token}),
+    ).timeout(const Duration(seconds: 15));
+
+    final data = json.decode(resp.body);
+    if (resp.statusCode >= 400) {
+      throw Exception(data['error'] ?? '验证失败');
+    }
+
+    // 验证成功，保存 token
+    if (data['access_token'] != null) {
+      _accessToken = data['access_token'];
+      _refreshToken = data['refresh_token'];
+      _user = data['user'];
+      await _saveLocal();
+    }
+  }
+
+  /// 重新发送验证邮件
+  static Future<void> resendVerification(String email) async {
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/api/auth/resend'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'email': email}),
+    ).timeout(const Duration(seconds: 15));
+
+    final data = json.decode(resp.body);
+    if (resp.statusCode >= 400) {
+      throw Exception(data['error'] ?? '发送失败');
+    }
+  }
+
   /// 刷新 token
   static Future<void> refreshSession() async {
     if (_refreshToken == null) throw Exception('无 refresh token');
