@@ -458,13 +458,21 @@ AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交�
 ## 工作模式
 1. 先理解用户需求
 2. 生成 JSON-APP 前，必须用工具查阅框架代码，确认内置函数和组件确实存在
-3. 用 ```json ... ``` 代码块包裹完整可运行的 JSON-APP
-4. 回复简洁（用户在手机上看字幕）
+3. 参考 templates/ 目录下的已有模板 APP，学习正确的 JSON 结构和用法
+4. 用 ```json ... ``` 代码块包裹完整可运行的 JSON-APP
+5. 回复简洁（用户在手机上看字幕）
 
 ## 工具使用指引
-- read_file: 读取框架源码（如 JSON-DSL.md 规范、lib/json_ui/interpreter.dart 内置函数）
+- read_file: 读取框架源码或模板文件
 - search_code: 搜索代码关键词
-- list_builtin_functions: 一键获取所有可用 @函数列表
+- list_builtin_functions: 获取所有可用 @函数列表
+- list_templates: 列出所有可参考的模板 APP
+
+## 生成 JSON-APP 的标准流程
+1. 先调 list_builtin_functions 确认可用函数
+2. 调 list_templates 查看有哪些模板
+3. 用 read_file 读取一个相似的模板作为参考
+4. 基于模板结构和真实函数生成 JSON-APP
 
 ## 输出要求
 - JSON 必须包含 meta（name/version/type:"app"/description）
@@ -499,6 +507,14 @@ AGENT_TOOLS = [
     {
         "name": "list_builtin_functions",
         "description": "列出 JSON-DSL 框架所有可用的 @内置函数",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "list_templates",
+        "description": "列出 templates/ 目录下所有模板 APP 文件及其简介。生成 JSON-APP 前应先查看，选一个相似的用 read_file 读取作为参考",
         "input_schema": {
             "type": "object",
             "properties": {}
@@ -546,6 +562,27 @@ def _execute_agent_tool(name, inputs):
                 content = f.read()
             funcs = sorted(set(re.findall(r"'(@\w+)'", content)))
             return "可用的内置函数:\n" + "\n".join(funcs)
+        except Exception as e:
+            return f"Error: {e}"
+
+    elif name == "list_templates":
+        tpl_dir = os.path.join(PROJECT_ROOT, "templates")
+        try:
+            files = sorted(f for f in os.listdir(tpl_dir) if f.endswith('.json'))
+            result = []
+            for f in files:
+                path = os.path.join(tpl_dir, f)
+                try:
+                    with open(path, 'r') as fh:
+                        data = json.load(fh)
+                    meta = data.get("meta", {})
+                    name_str = meta.get("name", f)
+                    desc = meta.get("description", "")
+                    screens = len(data.get("screens", {}).get("items", data.get("ui", {}).get("items", [])))
+                    result.append(f"- {f}: {name_str} — {desc} ({screens} screens)")
+                except Exception:
+                    result.append(f"- {f}: (parse error)")
+            return "可参考的模板 APP:\n" + "\n".join(result) + "\n\n用 read_file('templates/xxx.json') 读取完整内容作为参考"
         except Exception as e:
             return f"Error: {e}"
 
