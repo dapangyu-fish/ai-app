@@ -65,6 +65,7 @@ class JsonDslApp extends ConsumerWidget {
       builder: (context, child) {
         return DesignerBall(
           child: child ?? const SizedBox.shrink(),
+          getCurrentConfig: () => ProviderScope.containerOf(context).read(interpreterProvider).rawConfig,
           onRunJsonApp: (jsonConfig) async {
             final interpreter = ProviderScope.containerOf(context).read(interpreterProvider);
             try {
@@ -785,7 +786,7 @@ class JsonScreenView extends ConsumerWidget {
 // 崩溃页面
 // ============================================================
 
-class _CrashPage extends ConsumerWidget {
+class _CrashPage extends StatelessWidget {
   final String error;
   final String stackTrace;
   final String fileName;
@@ -797,7 +798,7 @@ class _CrashPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -851,15 +852,10 @@ class _CrashPage extends ConsumerWidget {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () {
-                      // 把崩溃信息 + JSON 配置发给 AI 分析
-                      final interpreter = ref.read(interpreterProvider);
-                      final jsonStr = interpreter.rawConfig != null
-                          ? json.encode(interpreter.rawConfig)
-                          : '(无法获取)';
-                      final crashMsg = '我的 JSON-APP 崩溃了，请分析并修复：\n\n'
+                      // 把崩溃信息发给 AI 分析（JSON 配置由 DesignerBall 自动注入上下文）
+                      final crashMsg = 'JSON-APP 运行崩溃，请分析原因并输出修复后的完整 JSON：\n\n'
                           '## 错误\n$error\n\n'
-                          '## 堆栈\n${stackTrace.length > 500 ? stackTrace.substring(0, 500) : stackTrace}\n\n'
-                          '## JSON 配置\n```json\n$jsonStr\n```';
+                          '## 堆栈\n${stackTrace.length > 500 ? stackTrace.substring(0, 500) : stackTrace}';
                       Navigator.of(context).pop();
                       // 通过 DesignerBall 发起 AI 对话
                       DesignerBall.sendCrashReport?.call(crashMsg);

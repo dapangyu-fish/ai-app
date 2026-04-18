@@ -140,6 +140,19 @@ class AiChatService {
     }
   }
 
+  /// 注入当前运行的 JSON-APP 作为对话上下文（放在消息列表最前面）
+  void setAppContext(Map<String, dynamic> jsonConfig) {
+    final jsonStr = json.encode(jsonConfig);
+    _messages.insert(0, {
+      'role': 'user',
+      'content': '以下是我当前正在运行的 JSON-APP 完整配置，后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```',
+    });
+    _messages.insert(1, {
+      'role': 'assistant',
+      'content': '好的，我已了解你当前运行的 JSON-APP。请告诉我你需要什么修改或帮助。',
+    });
+  }
+
   void clear() {
     abort();
     _messages.clear();

@@ -10,11 +10,13 @@ import 'sherpa_asr_service.dart';
 class DesignerBall extends StatefulWidget {
   final Widget child;
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
+  /// 获取当前运行中的 JSON-APP 配置（用于对话上下文）
+  final Map<String, dynamic>? Function()? getCurrentConfig;
 
   /// 崩溃分析回调 — 由 _CrashPage 调用，自动进入对话模式发送崩溃报告
   static void Function(String crashReport)? sendCrashReport;
 
-  const DesignerBall({super.key, required this.child, this.onRunJsonApp});
+  const DesignerBall({super.key, required this.child, this.onRunJsonApp, this.getCurrentConfig});
 
   @override
   State<DesignerBall> createState() => _DesignerBallState();
@@ -235,8 +237,20 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
+  /// 如果当前正在运行 JSON-APP，把完整 JSON 注入为对话上下文
+  void _injectCurrentAppContext() {
+    final config = widget.getCurrentConfig?.call();
+    if (config != null && _chatService.messages.isEmpty) {
+      _chatService.setAppContext(config);
+      debugPrint('[DesignerBall] Injected current JSON-APP as context');
+    }
+  }
+
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
+
+    // 注入当前运行中的 JSON-APP 作为对话上下文
+    _injectCurrentAppContext();
 
     // 先尝试原生语音识别 (macOS/iOS/部分 Android)
     if (!_speechInited && !_useSherpaAsr) {
