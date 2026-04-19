@@ -1,10 +1,12 @@
 {
   "dsl": "3.3",
+  "appid": "d3m0sup3r1234567890abcdef1234567890",
   "meta": {
     "name": "super-app-demo",
     "version": "1.0.0",
     "type": "app",
-    "description": "P0 演示：Tab导航 + 下拉刷新 + 本地存储"
+    "description": "P0 演示：Tab导航 + 下拉刷新 + 本地存储",
+    "author": "demo"
   },
   "global": {
     "variables": {

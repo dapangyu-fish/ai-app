@@ -1,7 +1,9 @@
 {
-  "version": "3.2",
+  "dsl": "3.3",
+  "appid": "t35tc0ll3c1234567890abcdef1234567890",
   "meta": {
     "name": "文本收藏夹 App",
+    "version": "1.0.0",
     "description": "输入文本 → 实时展示 → 保存到收藏列表 → 查看/删除",
     "author": "测试用例",
     "type": "app"

@@ -44,12 +44,14 @@
 ```json
 {
   "dsl": "3.3",
+  "appid": "a1b2c3d4e5f67890",
   "meta": {
     "name": "my-app",
     "version": "1.0.0",
     "type": "app",
     "description": "应用描述",
     "author": "作者",
+    "icon_url": "https://example.com/icon.png",
     "exports": []
   },
   "dependencies": {
@@ -67,9 +69,11 @@
 | 字段 | 必须 | 说明 |
 |------|------|------|
 | `dsl` | 是 | DSL 规范版本（如 `"3.3"`），兼容旧 `version` 字段 |
+| `appid` | 否 | 应用唯一标识（UUID，发布时必须，新创建可留空） |
 | `meta.name` | 是 | 模块唯一标识（包名） |
 | `meta.version` | 是 | 模块版本号（semver: `MAJOR.MINOR.PATCH`） |
 | `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
+| `meta.icon_url` | 否 | 应用/组件的图标图片 URL，可为空 |
 | `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
 | `dependencies` | 否 | 依赖声明，key 为依赖别名，value 含 `url` 和 `version` 约束 |
 

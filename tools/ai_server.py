@@ -164,6 +164,36 @@ def require_role(*roles):
 
 
 # ══════════════════════════════════════════════════════════
+# appid 生成和检查
+# ══════════════════════════════════════════════════════════
+
+def _generate_appid():
+    """生成不重复的 appid（UUID），先检查数据库"""
+    max_attempts = 100
+    for _ in range(max_attempts):
+        appid = uuid.uuid4().hex
+        # 检查数据库中是否已存在
+        exists = _db_query(
+            "SELECT id FROM public.app_registry WHERE id = $1",
+            [appid]
+        )
+        if not exists:
+            return appid
+    raise Exception("无法生成唯一的 appid")
+
+
+def _check_appid_exists(appid):
+    """检查 appid 是否已在数据库中存在"""
+    if not appid:
+        return False
+    exists = _db_query(
+        "SELECT id FROM public.app_registry WHERE id = $1",
+        [appid]
+    )
+    return bool(exists)
+
+
+# ══════════════════════════════════════════════════════════
 # 聊天配额
 # ══════════════════════════════════════════════════════════
 
@@ -866,6 +896,23 @@ def store_components():
     return jsonify({"components": components})
 
 
+@app.route("/api/appid/new", methods=["GET"])
+@require_auth
+def new_appid():
+    """生成一个新的唯一 appid"""
+    try:
+        appid = _generate_appid()
+        return jsonify({
+            "appid": appid,
+            "status": "success"
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "status": "error"
+        }), 500
+
+
 @app.route("/api/store/publish", methods=["POST"])
 @require_auth
 @require_role("pro", "admin")
@@ -894,12 +941,15 @@ def store_publish():
     description = meta.get("description", "")
     dsl_spec = meta.get("dsl_spec", description)
 
-    # 分配 ID
-    prefix = "app" if app_type == "app" else "comp"
-    app_id = f"{prefix}_{uuid.uuid4().hex[:8]}"
-
-    # 写入 meta.id
-    json_content.setdefault("meta", {})["id"] = app_id
+    # 优先使用 JSON 中已有的 appid
+    app_id = json_content.get("appid")
+    
+    # 如果没有 appid 或 appid 已存在，生成新的
+    if not app_id or _check_appid_exists(app_id):
+        app_id = _generate_appid()
+    
+    # 写入 appid 到 JSON 顶级字段
+    json_content["appid"] = app_id
 
     # 上传到 MinIO
     bucket = "json-app" if app_type == "app" else "json-component"
@@ -924,7 +974,7 @@ def store_publish():
 
     return jsonify({
         "message": "发布成功",
-        "id": app_id,
+        "appid": app_id,
         "download_url": download_url,
     })
 
