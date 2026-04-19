@@ -948,81 +948,74 @@ class _DesignerBallState extends State<DesignerBall>
             bottom: 0,
             height: _cancelBottomZoneHeight,
             child: IgnorePointer(
-              child: Row(
-                children: [
-                  // 左半：取消区域
-                  Expanded(
-                    child: AnimatedOpacity(
-                      opacity: _dragCancelling ? 1.0 : 0.3,
-                      duration: const Duration(milliseconds: 150),
-                      child: Container(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  border: Border(
+                    top: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // 左半：取消区域
+                    Expanded(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              Colors.red.withValues(alpha: _dragCancelling ? 0.45 : 0.2),
-                              Colors.red.withValues(alpha: 0.0),
-                            ],
+                          color: _dragCancelling
+                              ? Colors.red.withValues(alpha: 0.5)
+                              : Colors.transparent,
+                          border: Border(
+                            right: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                           ),
                         ),
-                        alignment: Alignment.bottomCenter,
-                        padding: const EdgeInsets.only(bottom: 24),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.close, color: Colors.white.withValues(alpha: _dragCancelling ? 1.0 : 0.6), size: 22),
-                            const SizedBox(height: 4),
+                            Icon(Icons.close_rounded,
+                                color: _dragCancelling ? Colors.white : Colors.white70,
+                                size: 28),
+                            const SizedBox(height: 6),
                             Text(
                               '取消',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: _dragCancelling ? 1.0 : 0.6),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                                color: _dragCancelling ? Colors.white : Colors.white70,
+                                fontSize: 14,
+                                fontWeight: _dragCancelling ? FontWeight.w600 : FontWeight.w400,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                  // 右半：编辑区域
-                  Expanded(
-                    child: AnimatedOpacity(
-                      opacity: _dragInEditZone ? 1.0 : 0.3,
-                      duration: const Duration(milliseconds: 150),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              Colors.blue.withValues(alpha: _dragInEditZone ? 0.45 : 0.2),
-                              Colors.blue.withValues(alpha: 0.0),
-                            ],
-                          ),
-                        ),
-                        alignment: Alignment.bottomCenter,
-                        padding: const EdgeInsets.only(bottom: 24),
+                    // 右半：编辑区域
+                    Expanded(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        color: _dragInEditZone
+                            ? Colors.blue.withValues(alpha: 0.5)
+                            : Colors.transparent,
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.edit, color: Colors.white.withValues(alpha: _dragInEditZone ? 1.0 : 0.6), size: 22),
-                            const SizedBox(height: 4),
+                            Icon(Icons.edit_rounded,
+                                color: _dragInEditZone ? Colors.white : Colors.white70,
+                                size: 28),
+                            const SizedBox(height: 6),
                             Text(
                               '编辑',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: _dragInEditZone ? 1.0 : 0.6),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                                color: _dragInEditZone ? Colors.white : Colors.white70,
+                                fontSize: 14,
+                                fontWeight: _dragInEditZone ? FontWeight.w600 : FontWeight.w400,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1054,17 +1047,19 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   Widget _buildEditOverlay(Size screenSize) {
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final bottomOffset = keyboardHeight > 0 ? keyboardHeight + 8 : bottomPadding + 80;
     return Positioned(
       left: 12,
       right: 12,
-      bottom: bottomPadding + 80,
+      bottom: bottomOffset,
       child: Material(
         color: Colors.transparent,
         child: Container(
-          constraints: BoxConstraints(maxHeight: screenSize.height * 0.45),
+          height: screenSize.height * 0.35,
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.85),
+            color: Colors.black.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: Colors.blue.withValues(alpha: 0.3),
@@ -1073,12 +1068,11 @@ class _DesignerBallState extends State<DesignerBall>
           ),
           clipBehavior: Clip.hardEdge,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               // 标题栏
               Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.08),
                   border: Border(
@@ -1090,44 +1084,49 @@ class _DesignerBallState extends State<DesignerBall>
                 child: Row(
                   children: [
                     Icon(Icons.edit_note,
-                        color: Colors.white.withValues(alpha: 0.5), size: 16),
+                        color: Colors.white.withValues(alpha: 0.5), size: 18),
                     const SizedBox(width: 6),
                     Text(
                       '编辑消息',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const Spacer(),
                     GestureDetector(
                       onTap: _cancelEditMode,
-                      child: Icon(Icons.close,
-                          color: Colors.white60, size: 15),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(Icons.close,
+                            color: Colors.white60, size: 18),
+                      ),
                     ),
                   ],
                 ),
               ),
               // 编辑区域
-              Flexible(
+              Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                   child: TextField(
                     controller: _editTextController,
                     autofocus: true,
                     maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 15,
-                      height: 1.5,
+                      fontSize: 16,
+                      height: 1.6,
                     ),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: '编辑你的消息...',
                       hintStyle: TextStyle(
                         color: Colors.white.withValues(alpha: 0.3),
-                        fontSize: 15,
+                        fontSize: 16,
                       ),
                     ),
                   ),
@@ -1135,13 +1134,13 @@ class _DesignerBallState extends State<DesignerBall>
               ),
               // 底部操作栏
               Container(
-                padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
                 child: Row(
                   children: [
                     GestureDetector(
                       onTap: _cancelEditMode,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -1149,8 +1148,8 @@ class _DesignerBallState extends State<DesignerBall>
                         child: Text(
                           '取消',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 15,
                           ),
                         ),
                       ),
@@ -1159,7 +1158,7 @@ class _DesignerBallState extends State<DesignerBall>
                     GestureDetector(
                       onTap: _sendEditedText,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.purple,
                           borderRadius: BorderRadius.circular(8),
@@ -1167,13 +1166,13 @@ class _DesignerBallState extends State<DesignerBall>
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.send, color: Colors.white, size: 16),
+                            Icon(Icons.send, color: Colors.white, size: 18),
                             SizedBox(width: 6),
                             Text(
                               '发送',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 14,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
