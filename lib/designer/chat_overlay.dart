@@ -8,13 +8,14 @@ class ChatMessage {
   ChatMessage({required this.role, required this.content, this.jsonApp});
 }
 
-/// 纯字幕式覆层 — 半透明浮在屏幕底部，可滚动查看历史，❌ 手动关闭。
+/// 纯字幕式覆层 — 半透明浮在屏幕底部，带窗口框和标题栏。
 class ChatOverlay extends StatelessWidget {
   final List<ChatMessage> messages;
   final String? liveTranscript;
   final bool isListening;
   final bool isThinking;
   final VoidCallback onClose;
+  final VoidCallback? onClear;
   final ScrollController scrollController;
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
 
@@ -27,6 +28,7 @@ class ChatOverlay extends StatelessWidget {
     required this.scrollController,
     this.liveTranscript,
     this.onRunJsonApp,
+    this.onClear,
   });
 
   @override
@@ -43,45 +45,70 @@ class ChatOverlay extends StatelessWidget {
     }
 
     return Positioned(
-      left: 0,
-      right: 0,
+      left: 12,
+      right: 12,
       bottom: bottomPadding + 80,
       child: Container(
-        constraints: BoxConstraints(maxHeight: screen.height * 0.35),
+        constraints: BoxConstraints(maxHeight: screen.height * 0.4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 1,
+          ),
+        ),
         clipBehavior: Clip.hardEdge,
-        decoration: const BoxDecoration(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // ❌ 关闭按钮
-            Padding(
-              padding: const EdgeInsets.only(right: 24, bottom: 4),
-              child: GestureDetector(
-                onTap: onClose,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white70,
-                    size: 16,
+            // 标题栏 — 类 Windows 风格
+            Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.1),
                   ),
                 ),
               ),
+              child: Row(
+                children: [
+                  Icon(Icons.chat_bubble_outline,
+                      color: Colors.white.withValues(alpha: 0.5), size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    '对话',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (onClear != null && visibleMessages.isNotEmpty)
+                    _TitleBarButton(
+                      icon: Icons.delete_outline,
+                      onTap: onClear!,
+                    ),
+                  const SizedBox(width: 4),
+                  _TitleBarButton(
+                    icon: Icons.close,
+                    onTap: onClose,
+                  ),
+                ],
+              ),
             ),
-            // 消息列表 — 可滚动，去掉 overscroll 水波纹
+            // 消息列表
             Flexible(
               child: ScrollConfiguration(
                 behavior: _NoGlowBehavior(),
                 child: ListView.builder(
                   controller: scrollController,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shrinkWrap: true,
                   itemCount: visibleMessages.length +
                       (hasLive ? 1 : 0) +
@@ -119,9 +146,9 @@ class ChatOverlay extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isUser
-              ? Colors.purple.withValues(alpha: 0.45)
-              : Colors.black.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(12),
+              ? Colors.purple.withValues(alpha: 0.35)
+              : Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Text.rich(
           TextSpan(
@@ -159,8 +186,8 @@ class ChatOverlay extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.green.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -188,10 +215,33 @@ class ChatOverlay extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: const _ThinkingDots(),
+      ),
+    );
+  }
+}
+
+/// 标题栏按钮
+class _TitleBarButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _TitleBarButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(4),
+          color: Colors.white.withValues(alpha: 0.0),
+        ),
+        child: Icon(icon, color: Colors.white60, size: 15),
       ),
     );
   }

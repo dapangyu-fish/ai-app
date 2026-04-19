@@ -1,138 +1,139 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:record/record.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// 离线语音识别服务 — 基于 sherpa_onnx + streaming Zipformer CTC (int8, 2025)
-///
-/// 用作 speech_to_text 的 fallback（中国安卓手机无 Google 服务时）。
-/// 首次使用自动下载模型文件（~25MB），后续直接从本地加载。
+/// 离线语音识别服务 — SenseVoice 多语言
 class SherpaAsrService {
   static SherpaAsrService? _instance;
   static SherpaAsrService get instance => _instance ??= SherpaAsrService._();
   SherpaAsrService._();
 
-  static const String _modelBase =
-      'https://app-backend.dapangyu.work/models/zipformer-ctc-zh';
+  bool _forceOffline = false;
 
-  static const Map<String, String> _modelFiles = {
-    'model': 'model.int8.onnx',
-    'tokens': 'tokens.txt',
-  };
-
-  sherpa.OnlineRecognizer? _recognizer;
-  sherpa.OnlineStream? _stream;
+  sherpa.OfflineRecognizer? _recognizer;
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription? _audioSub;
   Timer? _decodeTimer;
   bool _initialized = false;
-  bool _downloading = false;
 
-  /// 当前识别文本（实时更新）
+  List<double> _audioBuffer = [];
   String currentText = '';
 
-  /// 下载进度回调
   void Function(String status)? onStatusChange;
-
-  /// 识别结果回调
   void Function(String text)? onResult;
 
-  /// 模型文件存放目录
-  Future<String> get _modelDir async {
-    final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/sherpa_models/zipformer-ctc-zh';
+  bool get forceOffline => _forceOffline;
+
+  Future<void> setForceOffline(bool value) async {
+    _forceOffline = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('force_offline_asr', value);
+    debugPrint('[SherpaASR] Force offline set to: $value');
   }
 
-  /// 检查模型是否已下载
+  void _resetRecognizer() {
+    if (_recognizer != null) {
+      try {
+        _recognizer?.free();
+      } catch (_) {}
+    }
+    _recognizer = null;
+    _initialized = false;
+    _audioBuffer = [];
+  }
+
+  Future<void> loadConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    _forceOffline = prefs.getBool('force_offline_asr') ?? false;
+    debugPrint('[SherpaASR] Config loaded: forceOffline=$_forceOffline');
+  }
+
+  static const _ossBase = 'https://app-oss-endpoint.dapangyu.work/models';
+  static const _modelId = 'sherpa-onnx/sensevoice-zh-en-ja-ko-yue-int8';
+
+  Future<String> _getModelDir() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    return '${appDir.path}/sherpa_models/$_modelId';
+  }
+
+  Map<String, String> get _modelFiles => {
+    'model': 'model.int8.onnx',
+    'tokens': 'tokens.txt',
+  };
+
   Future<bool> get isModelReady async {
-    final dir = await _modelDir;
+    final dir = await _getModelDir();
     for (final file in _modelFiles.values) {
       if (!File('$dir/$file').existsSync()) return false;
     }
     return true;
   }
 
-  /// 下载模型文件
-  Future<bool> downloadModel() async {
-    if (_downloading) return false;
-    _downloading = true;
-
+  Future<bool> downloadModels() async {
     try {
-      final dir = await _modelDir;
+      final dir = await _getModelDir();
       await Directory(dir).create(recursive: true);
-
-      final client = HttpClient();
-      int current = 0;
-      final total = _modelFiles.length;
+      final dio = Dio();
 
       for (final entry in _modelFiles.entries) {
         final file = File('$dir/${entry.value}');
         if (file.existsSync() && file.lengthSync() > 100) {
-          current++;
           continue;
         }
 
-        current++;
-        final label = entry.key;
-        onStatusChange?.call('下载语音模型 ($current/$total): $label...');
-        debugPrint('[SherpaASR] Downloading ${entry.value}...');
+        final url = '$_ossBase/$_modelId/${entry.value}';
+        debugPrint('[SherpaASR] Downloading ${entry.value} ...');
+        onStatusChange?.call('下载语音模型: ${entry.value}');
 
-        final url = '$_modelBase/${entry.value}';
-        final request = await client.getUrl(Uri.parse(url));
-        request.followRedirects = true;
-        final response = await request.close();
+        await dio.download(
+          url,
+          file.path,
+          onReceiveProgress: (received, total) {
+            if (total > 0) {
+              final pct = (received / total * 100).toStringAsFixed(0);
+              onStatusChange?.call('下载语音模型: $pct%');
+            }
+          },
+        );
 
-        if (response.statusCode != 200) {
-          debugPrint('[SherpaASR] Download failed: ${response.statusCode}');
-          _downloading = false;
-          return false;
-        }
-
-        final sink = file.openWrite();
-        await response.pipe(sink);
         debugPrint('[SherpaASR] Downloaded ${entry.value}: ${file.lengthSync()} bytes');
       }
 
-      client.close();
-      _downloading = false;
       return true;
     } catch (e) {
-      debugPrint('[SherpaASR] Download error: $e');
-      _downloading = false;
+      debugPrint('[SherpaASR] Download model error: $e');
       return false;
     }
   }
 
-  /// 初始化识别器（需要先下载模型）
   Future<bool> initialize() async {
-    if (_initialized && _recognizer != null) return true;
+    _resetRecognizer();
 
     try {
-      // 初始化 sherpa-onnx native bindings
       sherpa.initBindings();
+      final dir = await _getModelDir();
 
-      final dir = await _modelDir;
-
-      final config = sherpa.OnlineRecognizerConfig(
-        model: sherpa.OnlineModelConfig(
-          zipformer2Ctc: sherpa.OnlineZipformer2CtcModelConfig(
-            model: '$dir/${_modelFiles['model']}',
+      final config = sherpa.OfflineRecognizerConfig(
+        model: sherpa.OfflineModelConfig(
+          senseVoice: sherpa.OfflineSenseVoiceModelConfig(
+            model: '$dir/${_modelFiles['model']!}',
+            language: 'auto',
+            useInverseTextNormalization: true,
           ),
-          tokens: '$dir/${_modelFiles['tokens']}',
-          modelType: 'zipformer2_ctc',
+          tokens: '$dir/${_modelFiles['tokens']!}',
+          modelType: 'senseVoice',
           numThreads: 2,
           debug: false,
         ),
-        enableEndpoint: true,
-        rule1MinTrailingSilence: 2.4,
-        rule2MinTrailingSilence: 1.2,
-        rule3MinUtteranceLength: 20,
       );
+      _recognizer = sherpa.OfflineRecognizer(config);
 
-      _recognizer = sherpa.OnlineRecognizer(config);
       _initialized = true;
       debugPrint('[SherpaASR] Recognizer initialized');
       return true;
@@ -142,28 +143,24 @@ class SherpaAsrService {
     }
   }
 
-  /// 确保模型已下载且识别器已初始化
   Future<bool> ensureReady() async {
+    await loadConfig();
     if (_initialized && _recognizer != null) return true;
 
     if (!await isModelReady) {
-      final ok = await downloadModel();
+      final ok = await downloadModels();
       if (!ok) return false;
     }
 
     return await initialize();
   }
 
-  /// 开始录音+识别
   Future<bool> startListening() async {
     if (_recognizer == null) return false;
 
-    // 创建新的识别流
-    _stream?.free();
-    _stream = _recognizer!.createStream();
     currentText = '';
+    _audioBuffer = [];
 
-    // 开始录音 — PCM 16kHz 16bit mono
     try {
       final audioStream = await _recorder.startStream(
         const RecordConfig(
@@ -177,8 +174,7 @@ class SherpaAsrService {
         _feedAudio(data);
       });
 
-      // 定时解码 + 取结果
-      _decodeTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      _decodeTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
         _decodeAndReport();
       });
 
@@ -190,86 +186,62 @@ class SherpaAsrService {
     }
   }
 
-  /// PCM int16 bytes → Float32 normalized [-1, 1] → 喂给识别器
   void _feedAudio(Uint8List pcmBytes) {
-    if (_stream == null) return;
-
-    // PCM 16-bit little-endian → Int16List
     final byteData = ByteData.sublistView(pcmBytes);
     final sampleCount = pcmBytes.length ~/ 2;
-    final float32 = Float32List(sampleCount);
 
     for (int i = 0; i < sampleCount; i++) {
       final int16 = byteData.getInt16(i * 2, Endian.little);
-      float32[i] = int16 / 32768.0;
+      _audioBuffer.add(int16 / 32768.0);
     }
-
-    _stream!.acceptWaveform(samples: float32, sampleRate: 16000);
   }
 
-  /// 解码并通知结果
   void _decodeAndReport() {
-    if (_recognizer == null || _stream == null) return;
+    if (_recognizer != null && _audioBuffer.isNotEmpty) {
+      final stream = _recognizer!.createStream();
+      final samples = Float32List.fromList(_audioBuffer);
+      stream.acceptWaveform(samples: samples, sampleRate: 16000);
+      _recognizer!.decode(stream);
 
-    while (_recognizer!.isReady(_stream!)) {
-      _recognizer!.decode(_stream!);
-    }
-
-    final result = _recognizer!.getResult(_stream!);
-    if (result.text.isNotEmpty && result.text != currentText) {
-      currentText = result.text;
-      onResult?.call(currentText);
-    }
-
-    // 检测 endpoint（一句话结束），重置流继续识别下一句
-    if (_recognizer!.isEndpoint(_stream!)) {
-      if (currentText.isNotEmpty) {
-        debugPrint('[SherpaASR] Endpoint: $currentText');
+      final result = _recognizer!.getResult(stream);
+      if (result.text.isNotEmpty && result.text != currentText) {
+        currentText = result.text;
+        onResult?.call(currentText);
       }
-      _recognizer!.reset(_stream!);
+      stream.free();
     }
   }
 
-  /// 停止录音，返回最终识别文本
   Future<String> stopListening() async {
-    // 停止录音
     _audioSub?.cancel();
     _audioSub = null;
     await _recorder.stop();
 
-    // 标记输入结束
-    _stream?.inputFinished();
+    if (_recognizer != null && _audioBuffer.isNotEmpty) {
+      final stream = _recognizer!.createStream();
+      final samples = Float32List.fromList(_audioBuffer);
+      stream.acceptWaveform(samples: samples, sampleRate: 16000);
+      _recognizer!.decode(stream);
 
-    // 最后一次解码
-    if (_recognizer != null && _stream != null) {
-      while (_recognizer!.isReady(_stream!)) {
-        _recognizer!.decode(_stream!);
-      }
-      final result = _recognizer!.getResult(_stream!);
+      final result = _recognizer!.getResult(stream);
       if (result.text.isNotEmpty) {
         currentText = result.text;
       }
+      stream.free();
     }
 
-    // 清理
     _decodeTimer?.cancel();
     _decodeTimer = null;
-    _stream?.free();
-    _stream = null;
+    _audioBuffer = [];
 
     debugPrint('[SherpaASR] Final: $currentText');
     return currentText;
   }
 
-  /// 释放资源
   void dispose() {
     _audioSub?.cancel();
     _decodeTimer?.cancel();
     _recorder.dispose();
-    _stream?.free();
-    _recognizer?.free();
-    _stream = null;
-    _recognizer = null;
-    _initialized = false;
+    _resetRecognizer();
   }
 }

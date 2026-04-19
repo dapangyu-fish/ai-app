@@ -54,6 +54,11 @@ class _DesignerBallState extends State<DesignerBall>
   bool _isThinking = false;
   String? _liveTranscript;
 
+  // ── 录音拖拽取消 ──
+  Offset? _recordStartPos;
+  bool _dragCancelling = false;
+  static const double _cancelBottomZoneHeight = 120.0;
+
   // ── 脉冲动画（录音中） ──
   late AnimationController _pulseController;
 
@@ -63,7 +68,7 @@ class _DesignerBallState extends State<DesignerBall>
   // ── 语音识别 & AI ──
   stt.SpeechToText? _speech;
   bool _speechInited = false;
-  bool _useSherpaAsr = false; // true = 用 sherpa_onnx 离线 ASR fallback
+  bool get _useSherpaAsr => _sherpaAsr.forceOffline; // 现在从 SherpaService 读取状态
   final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
@@ -99,6 +104,16 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 注册崩溃分析回调
     DesignerBall.sendCrashReport = _handleCrashReport;
+    // 加载配置
+    _sherpaAsr.loadConfig().then((_) {
+      setState(() {});
+    });
+  }
+
+  /// 切换强制离线模式
+  Future<void> _toggleForceOffline(bool value) async {
+    await _sherpaAsr.setForceOffline(value);
+    setState(() {});
   }
 
   @override
@@ -168,9 +183,34 @@ class _DesignerBallState extends State<DesignerBall>
     _countdownController.stop();
     _countdownController.reset();
 
-    // 录音中松手 → 发送
     if (_isListening) {
-      _stopListeningAndSend();
+      _movedEnough = false;
+      if (_dragCancelling) {
+        _cancelRecording();
+      } else {
+        _stopListeningAndSend();
+      }
+      if (_recordStartPos != null) {
+        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _recordStartPos = null;
+      }
+      _dragCancelling = false;
+    }
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    setState(() => _pointerDown = false);
+    _longPressTimer?.cancel();
+    _countdownController.stop();
+    _countdownController.reset();
+
+    if (_isListening) {
+      _movedEnough = false;
+      _cancelRecording();
+      if (_recordStartPos != null) {
+        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _recordStartPos = null;
+      }
     }
   }
 
@@ -187,8 +227,19 @@ class _DesignerBallState extends State<DesignerBall>
       _countdownController.reset();
     }
 
-    // 录音中不移动球
-    if (_isListening) return;
+    if (_isListening) {
+      setState(() {
+        _left += details.delta.dx;
+        _top += details.delta.dy;
+        _left = _left.clamp(-_ballSize * 0.5, screenSize.width - _ballSize * 0.5);
+        _top = _top.clamp(-_ballSize * 0.5, screenSize.height - _ballSize * 0.5);
+
+        if (_recordStartPos != null) {
+          _dragCancelling = _isInCancelZone(screenSize);
+        }
+      });
+      return;
+    }
 
     _dragging = true;
     setState(() {
@@ -233,6 +284,13 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
+  void _onDoubleTap() {
+    if (_chatMode) return;
+    if (_messages.isEmpty) return;
+    setState(() => _chatMode = true);
+    _scrollToBottom();
+  }
+
   // ════════════════════════════════════════════════════════
   // 对话模式
   // ════════════════════════════════════════════════════════
@@ -246,13 +304,17 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
+  // 临时的 fallback 标志（只在当前会话有效，不覆盖强制离线设置）
+  bool _fallbackToSherpa = false;
+
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
+    _fallbackToSherpa = false; // 每次进入聊天模式重置 fallback 标志
 
     // 注入当前运行中的 JSON-APP 作为对话上下文
     _injectCurrentAppContext();
 
-    // 先尝试原生语音识别 (macOS/iOS/部分 Android)
+    // 如果没有强制离线，先尝试原生语音识别 (macOS/iOS/部分 Android)
     if (!_speechInited && !_useSherpaAsr) {
       try {
         _speech ??= stt.SpeechToText();
@@ -261,8 +323,8 @@ class _DesignerBallState extends State<DesignerBall>
             debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
             _nativeSpeechTimeout?.cancel();
             // 原生语音运行时出错 → fallback 到 sherpa 离线 ASR
-            if (!_useSherpaAsr) {
-              _useSherpaAsr = true;
+            if (!_useSherpaAsr && !_fallbackToSherpa) {
+              _fallbackToSherpa = true;
               _speech?.stop();
               debugPrint('[DesignerBall] Native speech error, switching to sherpa ASR');
               if (_isListening) {
@@ -281,15 +343,18 @@ class _DesignerBallState extends State<DesignerBall>
         _speechInited = false;
       }
 
-      // 原生不可用 → 切换到 sherpa 离线 ASR
+      // 原生不可用 → fallback 到 sherpa 离线 ASR
       if (!_speechInited) {
-        _useSherpaAsr = true;
+        _fallbackToSherpa = true;
         debugPrint('[DesignerBall] Falling back to sherpa offline ASR');
       }
     }
 
+    // 现在确定是否应该用 Sherpa：强制离线 或 fallback
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+
     // 如果用 sherpa，确保模型已下载+初始化
-    if (_useSherpaAsr) {
+    if (shouldUseSherpa) {
       setState(() {
         _chatMode = true;
         _isThinking = true; // 显示加载状态
@@ -317,17 +382,44 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _startListening() {
+    _recordStartPos = Offset(_left, _top);
+    _dragCancelling = false;
     setState(() {
       _isListening = true;
       _liveTranscript = '';
     });
     _pulseController.repeat(reverse: true);
 
-    if (_useSherpaAsr) {
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    if (shouldUseSherpa) {
       _startSherpaAsr();
     } else {
       _startNativeSpeech();
     }
+  }
+
+  bool _isInCancelZone(Size screenSize) {
+    final ballBottomY = _top + _ballSize;
+    return ballBottomY >= screenSize.height - _cancelBottomZoneHeight;
+  }
+
+  void _cancelRecording() {
+    debugPrint('[DesignerBall] Recording cancelled by drag');
+    _nativeSpeechTimeout?.cancel();
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    if (shouldUseSherpa) {
+      _sherpaAsr.stopListening();
+      _sherpaAsr.onResult = null;
+    } else {
+      try { _speech?.stop(); } catch (_) {}
+    }
+    _pulseController.stop();
+    _pulseController.reset();
+    setState(() {
+      _isListening = false;
+      _liveTranscript = null;
+      _dragCancelling = false;
+    });
   }
 
   /// 原生语音识别 (Apple/Google)
@@ -336,11 +428,12 @@ class _DesignerBallState extends State<DesignerBall>
     try {
       _speech!.listen(
         onResult: (result) {
-          _nativeSpeechTimeout?.cancel(); // 收到结果，取消超时
+          _nativeSpeechTimeout?.cancel();
           setState(() => _liveTranscript = result.recognizedWords);
           _scrollToBottom();
         },
         localeId: 'zh_CN',
+        listenFor: const Duration(seconds: 60),
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
           cancelOnError: false,
@@ -352,17 +445,17 @@ class _DesignerBallState extends State<DesignerBall>
       // 中国手机上 init 可能返回 true 但 listen 实际不工作
       _nativeSpeechTimeout?.cancel();
       _nativeSpeechTimeout = Timer(const Duration(seconds: 3), () {
-        if (_isListening && !_useSherpaAsr && (_liveTranscript?.isEmpty ?? true)) {
+        if (_isListening && !_useSherpaAsr && !_fallbackToSherpa && (_liveTranscript?.isEmpty ?? true)) {
           debugPrint('[DesignerBall] Native speech timeout (no results in 3s), switching to sherpa ASR');
           _speech?.stop();
-          _useSherpaAsr = true;
+          _fallbackToSherpa = true;
           _startSherpaAsr();
         }
       });
     } catch (e) {
       debugPrint('[DesignerBall] Native listen error: $e');
       // listen 直接抛异常 → fallback
-      _useSherpaAsr = true;
+      _fallbackToSherpa = true;
       debugPrint('[DesignerBall] Switching to sherpa ASR');
       _startSherpaAsr();
     }
@@ -406,9 +499,10 @@ class _DesignerBallState extends State<DesignerBall>
     _nativeSpeechTimeout?.cancel();
 
     // 停止语音识别
-    if (_useSherpaAsr) {
-      final finalText = await _sherpaAsr.stopListening();
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    if (shouldUseSherpa) {
       _sherpaAsr.onResult = null;
+      final finalText = await _sherpaAsr.stopListening();
       if (finalText.isNotEmpty) {
         _liveTranscript = finalText;
       }
@@ -570,8 +664,14 @@ class _DesignerBallState extends State<DesignerBall>
       _isListening = false;
       _isThinking = false;
       _liveTranscript = null;
-      _messages.clear();
+      _recordStartPos = null;
+      _dragCancelling = false;
     });
+  }
+
+  void _clearAndCloseChatMode() {
+    _closeChatMode();
+    _messages.clear();
     _chatService.clear();
   }
 
@@ -703,11 +803,56 @@ class _DesignerBallState extends State<DesignerBall>
             liveTranscript:
                 (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
             onClose: _closeChatMode,
+            onClear: _clearAndCloseChatMode,
             scrollController: _scrollController,
             onRunJsonApp: (jsonConfig) {
-              _closeChatMode();
+              _clearAndCloseChatMode();
               widget.onRunJsonApp?.call(jsonConfig);
             },
+          ),
+
+        // 录音取消区域 — 屏幕底部淡红提示
+        if (_isListening && _recordStartPos != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: _cancelBottomZoneHeight,
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: _dragCancelling ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 150),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.red.withValues(alpha: 0.35),
+                        Colors.red.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                  alignment: Alignment.bottomCenter,
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close, color: Colors.white70, size: 18),
+                      SizedBox(width: 4),
+                      Text(
+                        '松手取消发送',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
 
         // 悬浮球 — 用 Listener 捕获原始 pointer 事件
@@ -717,10 +862,12 @@ class _DesignerBallState extends State<DesignerBall>
           child: Listener(
             onPointerDown: _onPointerDown,
             onPointerUp: _onPointerUp,
+            onPointerCancel: _onPointerCancel,
             child: GestureDetector(
               onPanUpdate: (d) => _onPanUpdate(d, screenSize),
               onPanEnd: (d) => _onPanEnd(d, screenSize),
               onTap: () => _onTap(screenSize),
+              onDoubleTap: _onDoubleTap,
               child: _buildBall(),
             ),
           ),
@@ -733,16 +880,19 @@ class _DesignerBallState extends State<DesignerBall>
   Widget _buildBall() {
     final double opacity = _hidden ? 0.6 : 1.0;
 
+    final ballColor = _isListening
+        ? (_dragCancelling ? Colors.grey : Colors.red)
+        : Colors.purple;
+
     Widget ball = Container(
       width: _ballSize,
       height: _ballSize,
       decoration: BoxDecoration(
-        color: _isListening ? Colors.red : Colors.purple,
+        color: ballColor,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (_isListening ? Colors.red : Colors.purple)
-                .withValues(alpha: 0.4),
+            color: ballColor.withValues(alpha: 0.4),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -750,18 +900,40 @@ class _DesignerBallState extends State<DesignerBall>
       ),
       child: Center(
         child: _isListening
-            ? const Icon(Icons.mic, color: Colors.white, size: 26)
+            ? Icon(
+                _dragCancelling ? Icons.close : Icons.mic,
+                color: Colors.white,
+                size: 26,
+              )
             : _chatMode
                 ? const Icon(Icons.chat_bubble_outline,
                     color: Colors.white, size: 24)
-                : const Text(
-                    'D',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
+                : Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Text(
+                        'D',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      if (_messages.isNotEmpty)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.orangeAccent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
       ),
     );
@@ -774,7 +946,7 @@ class _DesignerBallState extends State<DesignerBall>
           return CustomPaint(
             painter: _PulseRingPainter(
               progress: _pulseController.value,
-              color: Colors.red,
+              color: _dragCancelling ? Colors.grey : Colors.red,
             ),
             child: child,
           );
@@ -801,6 +973,7 @@ class _DesignerBallState extends State<DesignerBall>
 
     return Opacity(opacity: opacity, child: ball);
   }
+
 }
 
 // ── 脉冲光环 ──

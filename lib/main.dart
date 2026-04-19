@@ -1,6 +1,6 @@
 // JSON Low-Code DSL v3.2 - 主入口
 // 使用 Material 3 设计风格，集成 Riverpod 状态管理
-// 启动页为文件选择器，选择 JSON 文件后加载渲染 Server-Driven UI
+// 启动页为文件选择器，选择 JSON 文件后加载并渲染 Server-Driven UI
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -11,6 +11,7 @@ import 'json_ui/interpreter.dart';
 import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
 import 'designer/designer_ball.dart';
+import 'designer/settings_page.dart';
 import 'designer/app_storage.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
@@ -129,6 +130,14 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
   bool _loading = false;
   String? _error;
   String? _loadedFileName;
+
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const SettingsPage(),
+      ),
+    );
+  }
 
   Future<void> _pickAndLoadJson() async {
     setState(() {
@@ -274,6 +283,10 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         title: const Text('JSON DSL v3.2'),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _openSettings,
+          ),
           if (AuthService.isLoggedIn)
             PopupMenuButton<String>(
               icon: const Icon(Icons.account_circle),
