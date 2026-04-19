@@ -157,6 +157,91 @@ supervisorctl restart ai-app
 - 标准输出日志: `/var/log/ai-app/ai-app.log`
 - 错误日志: `/var/log/ai-app/ai-app-error.log`
 
+## 发布 JSON-APP 到市场
+
+### 通过 API 发布（需要用户认证）
+
+客户端登录后，调用发布接口：
+
+```bash
+curl -X POST https://app-backend.dapangyu.work/api/store/publish \
+  -H "Authorization: Bearer <用户token>" \
+  -H "Content-Type: application/json" \
+  -d '{"json_content": <JSON-APP内容>}'
+```
+
+要求：用户角色为 `pro` 或 `admin`。
+
+### 通过服务器直接发布
+
+SSH 登录服务器后，使用 Python 脚本直接操作数据库和 MinIO：
+
+```bash
+ssh root@app-backend.dapangyu.work
+/opt/miniconda3/bin/python -c "
+import json, uuid, subprocess, tempfile, os, psycopg2, psycopg2.extras
+
+DB_CONFIG = dict(host='127.0.0.1', port=5433, dbname='jsonapp', user='jsonapp',
+                 password='hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg')
+MINIO_PUBLIC_URL = 'https://app-oss-endpoint.dapangyu.work'
+
+# 读取要发布的 JSON 文件
+with open('/root/ai-app/templates/<文件名>.json', 'r') as f:
+    json_content = json.load(f)
+
+meta = json_content.get('meta', {})
+name = meta.get('name', 'unnamed')
+version = meta.get('version', '1.0.0')
+description = meta.get('description', '')
+icon_url = meta.get('icon_url', '')
+app_type = 'app'  # 或 'component'
+
+# 生成唯一 appid
+conn = psycopg2.connect(**DB_CONFIG)
+conn.autocommit = True
+cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+app_id = uuid.uuid4().hex
+json_content['appid'] = app_id
+
+# 上传到 MinIO
+bucket = 'json-app' if app_type == 'app' else 'json-component'
+oss_key = f'{app_id}/{name}-{version}.json'
+tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+json.dump(json_content, tmp, ensure_ascii=False, indent=2)
+tmp.close()
+subprocess.run(['mc', 'cp', tmp.name, f'app/{bucket}/{oss_key}'], check=True)
+os.unlink(tmp.name)
+download_url = f'{MINIO_PUBLIC_URL}/{bucket}/{oss_key}'
+
+# 写入数据库
+cur.execute(
+    '''INSERT INTO app_registry
+       (id, type, name, version, description, author_id, author_name,
+        oss_bucket, oss_key, download_url, meta_json, dsl_spec, icon_url)
+       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+    [app_id, app_type, name, version, description, None, meta.get('author',''),
+     bucket, oss_key, download_url,
+     json.dumps(meta, ensure_ascii=False), description, icon_url])
+cur.close(); conn.close()
+print(f'发布成功! appid={app_id}')
+print(f'download_url={download_url}')
+"
+```
+
+### 完整发版流程
+
+```bash
+# 1. 本地提交并推送
+git add <files>
+git commit -m "feat: ..."
+git push
+
+# 2. 服务器部署
+ssh root@app-backend.dapangyu.work "cd /root/ai-app && git pull && supervisorctl restart ai-app"
+
+# 3. 发布到市场（在服务器上执行上面的 Python 脚本）
+```
+
 ## 目录结构
 
 - `backend/`: 后端代码目录（原 tools 目录）
