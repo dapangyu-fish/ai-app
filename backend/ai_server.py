@@ -205,6 +205,17 @@ def _check_appid_exists(appid):
     )
     return bool(exists)
 
+def _increment_version(version_str):
+    """将版本号的 patch 部分 +1，如 1.0.0 → 1.0.1"""
+    parts = version_str.split('.')
+    if len(parts) == 3:
+        parts[2] = str(int(parts[2]) + 1)
+    elif len(parts) == 2:
+        parts.append('1')
+    else:
+        return version_str + '.0.1'
+    return '.'.join(parts)
+
 # ═══════════════════════════════════════════════════════════
 # 聊天配额
 # ═══════════════════════════════════════════════════════════
@@ -917,9 +928,10 @@ def new_appid():
 @require_auth
 @require_role("pro", "admin")
 def store_publish():
-    """发布 JSON-APP/组件到市场"""
+    """发布 JSON-APP/组件到市场（支持新建和更新）"""
     body = request.get_json(silent=True) or {}
     json_content = body.get("json_content")
+    force_update = body.get("force_update", False)
     if not json_content:
         return jsonify({"error": "json_content 不能为空"}), 400
 
@@ -942,17 +954,58 @@ def store_publish():
     dsl_spec = meta.get("dsl_spec", description)
     icon_url = meta.get("icon_url", "")
 
-    # 优先使用 JSON 中已有的 appid
     app_id = json_content.get("appid")
-    
-    # 如果没有 appid 或 appid 已存在，生成新的
-    if not app_id or _check_appid_exists(app_id):
+
+    # appid 已存在 → 检测冲突或执行更新
+    if app_id and _check_appid_exists(app_id):
+        if not force_update:
+            existing = db_query(
+                "SELECT name, version, description FROM app_registry WHERE id = %s",
+                [app_id], fetch_one=True
+            )
+            suggested = _increment_version(existing["version"])
+            return jsonify({
+                "conflict": True,
+                "message": "该 appid 已存在，这将是一个更新操作",
+                "existing": {
+                    "appid": app_id,
+                    "name": existing["name"],
+                    "version": existing["version"],
+                },
+                "suggested_version": suggested,
+            }), 409
+
+        # force_update=true → 更新已有记录
+        json_content["appid"] = app_id
+        bucket = "json-app" if app_type == "app" else "json-component"
+        oss_key = f"{app_id}/{name}-{version}.json"
+        try:
+            download_url = _minio_upload(bucket, oss_key, json_content)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 502
+
+        user = request.supabase_user
+        author_name = user.get("user_metadata", {}).get("username", user.get("email", ""))
+        db_execute(
+            """UPDATE app_registry
+               SET name = %s, version = %s, description = %s,
+                   oss_key = %s, download_url = %s, meta_json = %s,
+                   dsl_spec = %s, icon_url = %s
+               WHERE id = %s""",
+            [name, version, description, oss_key, download_url,
+             json.dumps(meta, ensure_ascii=False), dsl_spec, icon_url, app_id]
+        )
+        return jsonify({
+            "message": "更新成功",
+            "appid": app_id,
+            "download_url": download_url,
+        })
+
+    # 新 APP → 生成 appid 并 INSERT
+    if not app_id:
         app_id = _generate_appid()
-    
-    # 写入 appid 到 JSON 顶级字段
     json_content["appid"] = app_id
 
-    # 上传到 MinIO
     bucket = "json-app" if app_type == "app" else "json-component"
     oss_key = f"{app_id}/{name}-{version}.json"
     try:
@@ -960,7 +1013,6 @@ def store_publish():
     except Exception as e:
         return jsonify({"error": str(e)}), 502
 
-    # 写入 registry
     user = request.supabase_user
     user_id = user.get("id")
     author_name = user.get("user_metadata", {}).get("username", user.get("email", ""))
