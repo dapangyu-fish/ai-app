@@ -144,6 +144,14 @@ def new_appid():
 @require_role("pro", "admin")
 def store_publish():
     """发布 JSON-APP/组件到市场（支持新建和更新）"""
+    try:
+        return _do_store_publish()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"服务器内部错误: {e}"}), 500
+
+def _do_store_publish():
     body = request.get_json(silent=True) or {}
     json_content = body.get("json_content")
     force_update = body.get("force_update", False)

@@ -78,7 +78,7 @@ def require_role(*roles):
             if request.user_role not in roles:
                 return jsonify({"error": f"权限不足，需要 {'/'.join(roles)} 角色"}), 403
             return f(*args, **kwargs)
-        return decorator
+        return decorated
     return decorator
 
 
