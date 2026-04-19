@@ -1,0 +1,1045 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'ai_chat_service.dart';
+import 'chat_overlay.dart';
+import 'sherpa_asr_service.dart';
+
+/// 悬浮设计师球 — iOS 风格丝滑拖拽 + 长按对话模式。
+/// 凌驾于所有页面之上，不影响 JSON APP。
+class DesignerBall extends StatefulWidget {
+  final Widget child;
+  final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
+  /// 获取当前运行中的 JSON-APP 配置（用于对话上下文）
+  final Map<String, dynamic>? Function()? getCurrentConfig;
+
+  /// 崩溃分析回调 — 由 _CrashPage 调用，自动进入对话模式发送崩溃报告
+  static void Function(String crashReport)? sendCrashReport;
+
+  const DesignerBall({super.key, required this.child, this.onRunJsonApp, this.getCurrentConfig});
+
+  @override
+  State<DesignerBall> createState() => _DesignerBallState();
+}
+
+class _DesignerBallState extends State<DesignerBall>
+    with TickerProviderStateMixin {
+  // ── 尺寸常量 ──
+  static const double _ballSize = 56.0;
+  static const double _peekSize = 20.0;
+  static const double _edgeThreshold = 20.0;
+  static const double _dragThreshold = 30.0;
+
+  // ── 拖拽状态 ──
+  double _left = 0;
+  double _top = 0;
+  bool _positioned = false;
+  bool _hidden = false;
+  _HideEdge _hideEdge = _HideEdge.none;
+  bool _dragging = false;
+  Offset _pointerDownPos = Offset.zero;
+  bool _movedEnough = false;
+  bool _pointerDown = false;
+
+  // ── 动画 ──
+  late AnimationController _animController;
+  Animation<double>? _animLeft;
+  Animation<double>? _animTop;
+
+  // ── 长按对话 ──
+  static const Duration _longPressDuration = Duration(seconds: 2);
+  Timer? _longPressTimer;
+  bool _chatMode = false;
+  bool _isListening = false;
+  bool _isThinking = false;
+  String? _liveTranscript;
+
+  // ── 录音拖拽取消 ──
+  Offset? _recordStartPos;
+  bool _dragCancelling = false;
+  static const double _cancelBottomZoneHeight = 120.0;
+
+  // ── 脉冲动画（录音中） ──
+  late AnimationController _pulseController;
+
+  // ── 长按倒计时动画 ──
+  late AnimationController _countdownController;
+
+  // ── 语音识别 & AI ──
+  stt.SpeechToText? _speech;
+  bool _speechInited = false;
+  bool get _useSherpaAsr => _sherpaAsr.forceOffline; // 现在从 SherpaService 读取状态
+  final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
+  final AiChatService _chatService = AiChatService();
+  StreamSubscription<ChatEvent>? _streamSub;
+  Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
+  Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
+  final List<ChatMessage> _messages = [];
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _animController.addListener(() {
+      setState(() {
+        if (_animLeft != null) _left = _animLeft!.value;
+        if (_animTop != null) _top = _animTop!.value;
+      });
+    });
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _countdownController = AnimationController(
+      vsync: this,
+      duration: _longPressDuration,
+    );
+
+    // 注册崩溃分析回调
+    DesignerBall.sendCrashReport = _handleCrashReport;
+    // 加载配置
+    _sherpaAsr.loadConfig().then((_) {
+      setState(() {});
+    });
+  }
+
+  /// 切换强制离线模式
+  Future<void> _toggleForceOffline(bool value) async {
+    await _sherpaAsr.setForceOffline(value);
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _longPressTimer?.cancel();
+    _nativeSpeechTimeout?.cancel();
+    _streamSub?.cancel();
+    _sherpaAsr.dispose();
+    _chatService.abort();
+    _animController.dispose();
+    _pulseController.dispose();
+    _countdownController.dispose();
+    _speech?.stop();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _initPosition(Size screenSize) {
+    if (!_positioned) {
+      _left = screenSize.width - _ballSize - 16;
+      _top = screenSize.height * 0.65;
+      _positioned = true;
+    }
+  }
+
+  // ════════════════════════════════════════════════════════
+  // 原始指针事件 — 用 Listener 捕获，不受手势竞技场影响
+  // ════════════════════════════════════════════════════════
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerDownPos = event.position;
+    _animController.stop();
+
+    setState(() {
+      _pointerDown = true;
+      _movedEnough = false;
+      // 从收起态 → 解除收起
+      if (_hidden) {
+        _hidden = false;
+        _hideEdge = _HideEdge.none;
+      }
+    });
+
+    if (_chatMode) {
+      // 对话模式 → 短延时后开始录音，移动了就当拖拽
+      _longPressTimer?.cancel();
+      _longPressTimer = Timer(const Duration(milliseconds: 300), () {
+        if (_pointerDown && !_movedEnough) {
+          _startListening();
+        }
+      });
+    } else {
+      // 开始长按倒计时（2 秒）
+      _longPressTimer?.cancel();
+      _countdownController.forward(from: 0);
+      _longPressTimer = Timer(_longPressDuration, () {
+        if (_pointerDown && !_movedEnough) {
+          _enterChatMode();
+        }
+      });
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    setState(() => _pointerDown = false);
+    _longPressTimer?.cancel();
+    _countdownController.stop();
+    _countdownController.reset();
+
+    if (_isListening) {
+      _movedEnough = false;
+      if (_dragCancelling) {
+        _cancelRecording();
+      } else {
+        _stopListeningAndSend();
+      }
+      if (_recordStartPos != null) {
+        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _recordStartPos = null;
+      }
+      _dragCancelling = false;
+    }
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    setState(() => _pointerDown = false);
+    _longPressTimer?.cancel();
+    _countdownController.stop();
+    _countdownController.reset();
+
+    if (_isListening) {
+      _movedEnough = false;
+      _cancelRecording();
+      if (_recordStartPos != null) {
+        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _recordStartPos = null;
+      }
+    }
+  }
+
+  // ════════════════════════════════════════════════════════
+  // Pan 手势 — 仅用于拖拽移动
+  // ════════════════════════════════════════════════════════
+
+  void _onPanUpdate(DragUpdateDetails details, Size screenSize) {
+    final delta = (details.globalPosition - _pointerDownPos).distance;
+    if (delta > _dragThreshold) {
+      _movedEnough = true;
+      _longPressTimer?.cancel();
+      _countdownController.stop();
+      _countdownController.reset();
+    }
+
+    if (_isListening) {
+      setState(() {
+        _left += details.delta.dx;
+        _top += details.delta.dy;
+        _left = _left.clamp(-_ballSize * 0.5, screenSize.width - _ballSize * 0.5);
+        _top = _top.clamp(-_ballSize * 0.5, screenSize.height - _ballSize * 0.5);
+
+        if (_recordStartPos != null) {
+          _dragCancelling = _isInCancelZone(screenSize);
+        }
+      });
+      return;
+    }
+
+    _dragging = true;
+    setState(() {
+      _left += details.delta.dx;
+      _top += details.delta.dy;
+      _left = _left.clamp(-_ballSize * 0.5, screenSize.width - _ballSize * 0.5);
+      _top = _top.clamp(-_ballSize * 0.5, screenSize.height - _ballSize * 0.5);
+    });
+  }
+
+  void _onPanEnd(DragEndDetails details, Size screenSize) {
+    _dragging = false;
+
+    // 如果没移动过（纯长按），不做拖拽收尾
+    if (!_movedEnough) return;
+
+    _HideEdge edge = _HideEdge.none;
+    if (_left <= _edgeThreshold) {
+      edge = _HideEdge.left;
+    } else if (_left + _ballSize >= screenSize.width - _edgeThreshold) {
+      edge = _HideEdge.right;
+    } else if (_top <= _edgeThreshold) {
+      edge = _HideEdge.top;
+    } else if (_top + _ballSize >= screenSize.height - _edgeThreshold) {
+      edge = _HideEdge.bottom;
+    }
+
+    if (edge != _HideEdge.none) {
+      _hideToEdge(edge, screenSize);
+    } else {
+      final clampedLeft = _left.clamp(0.0, screenSize.width - _ballSize);
+      final clampedTop = _top.clamp(0.0, screenSize.height - _ballSize);
+      if (clampedLeft != _left || clampedTop != _top) {
+        _animateTo(clampedLeft, clampedTop);
+      }
+    }
+  }
+
+  void _onTap(Size screenSize) {
+    if (_hidden) {
+      _revealFromEdge(screenSize);
+    }
+  }
+
+  void _onDoubleTap() {
+    if (_chatMode) return;
+    if (_messages.isEmpty) return;
+    setState(() => _chatMode = true);
+    _scrollToBottom();
+  }
+
+  // ════════════════════════════════════════════════════════
+  // 对话模式
+  // ════════════════════════════════════════════════════════
+
+  /// 如果当前正在运行 JSON-APP，把完整 JSON 注入为对话上下文
+  void _injectCurrentAppContext() {
+    final config = widget.getCurrentConfig?.call();
+    if (config != null && _chatService.messages.isEmpty) {
+      _chatService.setAppContext(config);
+      debugPrint('[DesignerBall] Injected current JSON-APP as context');
+    }
+  }
+
+  // 临时的 fallback 标志（只在当前会话有效，不覆盖强制离线设置）
+  bool _fallbackToSherpa = false;
+
+  Future<void> _enterChatMode() async {
+    debugPrint('[DesignerBall] _enterChatMode called');
+    _fallbackToSherpa = false; // 每次进入聊天模式重置 fallback 标志
+
+    // 注入当前运行中的 JSON-APP 作为对话上下文
+    _injectCurrentAppContext();
+
+    // 如果没有强制离线，先尝试原生语音识别 (macOS/iOS/部分 Android)
+    if (!_speechInited && !_useSherpaAsr) {
+      try {
+        _speech ??= stt.SpeechToText();
+        _speechInited = await _speech!.initialize(
+          onError: (error) {
+            debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
+            _nativeSpeechTimeout?.cancel();
+            // 原生语音运行时出错 → fallback 到 sherpa 离线 ASR
+            if (!_useSherpaAsr && !_fallbackToSherpa) {
+              _fallbackToSherpa = true;
+              _speech?.stop();
+              debugPrint('[DesignerBall] Native speech error, switching to sherpa ASR');
+              if (_isListening) {
+                _startSherpaAsr();
+              }
+            } else {
+              setState(() => _isListening = false);
+              _pulseController.stop();
+            }
+          },
+          onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
+        );
+        debugPrint('[DesignerBall] Native speech init: $_speechInited');
+      } catch (e) {
+        debugPrint('[DesignerBall] Native speech failed: $e');
+        _speechInited = false;
+      }
+
+      // 原生不可用 → fallback 到 sherpa 离线 ASR
+      if (!_speechInited) {
+        _fallbackToSherpa = true;
+        debugPrint('[DesignerBall] Falling back to sherpa offline ASR');
+      }
+    }
+
+    // 现在确定是否应该用 Sherpa：强制离线 或 fallback
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+
+    // 如果用 sherpa，确保模型已下载+初始化
+    if (shouldUseSherpa) {
+      setState(() {
+        _chatMode = true;
+        _isThinking = true; // 显示加载状态
+      });
+      _sherpaAsr.onStatusChange = (status) {
+        setState(() {
+          _liveTranscript = status;
+        });
+      };
+      final ready = await _sherpaAsr.ensureReady();
+      _sherpaAsr.onStatusChange = null;
+      if (!ready) {
+        setState(() {
+          _isThinking = false;
+          _liveTranscript = null;
+          _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型加载失败'));
+        });
+        return;
+      }
+      setState(() => _isThinking = false);
+    }
+
+    setState(() => _chatMode = true);
+    _startListening();
+  }
+
+  void _startListening() {
+    _recordStartPos = Offset(_left, _top);
+    _dragCancelling = false;
+    setState(() {
+      _isListening = true;
+      _liveTranscript = '';
+    });
+    _pulseController.repeat(reverse: true);
+
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    if (shouldUseSherpa) {
+      _startSherpaAsr();
+    } else {
+      _startNativeSpeech();
+    }
+  }
+
+  bool _isInCancelZone(Size screenSize) {
+    final ballBottomY = _top + _ballSize;
+    return ballBottomY >= screenSize.height - _cancelBottomZoneHeight;
+  }
+
+  void _cancelRecording() {
+    debugPrint('[DesignerBall] Recording cancelled by drag');
+    _nativeSpeechTimeout?.cancel();
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    if (shouldUseSherpa) {
+      _sherpaAsr.stopListening();
+      _sherpaAsr.onResult = null;
+    } else {
+      try { _speech?.stop(); } catch (_) {}
+    }
+    _pulseController.stop();
+    _pulseController.reset();
+    setState(() {
+      _isListening = false;
+      _liveTranscript = null;
+      _dragCancelling = false;
+    });
+  }
+
+  /// 原生语音识别 (Apple/Google)
+  void _startNativeSpeech() {
+    if (_speech == null) return;
+    try {
+      _speech!.listen(
+        onResult: (result) {
+          _nativeSpeechTimeout?.cancel();
+          setState(() => _liveTranscript = result.recognizedWords);
+          _scrollToBottom();
+        },
+        localeId: 'zh_CN',
+        listenFor: const Duration(seconds: 60),
+        listenOptions: stt.SpeechListenOptions(
+          listenMode: stt.ListenMode.dictation,
+          cancelOnError: false,
+          partialResults: true,
+        ),
+      );
+
+      // 超时检测：3 秒内没有任何识别结果 → fallback 到 sherpa 离线 ASR
+      // 中国手机上 init 可能返回 true 但 listen 实际不工作
+      _nativeSpeechTimeout?.cancel();
+      _nativeSpeechTimeout = Timer(const Duration(seconds: 3), () {
+        if (_isListening && !_useSherpaAsr && !_fallbackToSherpa && (_liveTranscript?.isEmpty ?? true)) {
+          debugPrint('[DesignerBall] Native speech timeout (no results in 3s), switching to sherpa ASR');
+          _speech?.stop();
+          _fallbackToSherpa = true;
+          _startSherpaAsr();
+        }
+      });
+    } catch (e) {
+      debugPrint('[DesignerBall] Native listen error: $e');
+      // listen 直接抛异常 → fallback
+      _fallbackToSherpa = true;
+      debugPrint('[DesignerBall] Switching to sherpa ASR');
+      _startSherpaAsr();
+    }
+  }
+
+  /// sherpa_onnx 离线 ASR：本地录音 + 本地识别
+  Future<void> _startSherpaAsr() async {
+    try {
+      _sherpaAsr.onResult = (text) {
+        setState(() => _liveTranscript = text);
+        _scrollToBottom();
+      };
+
+      final ok = await _sherpaAsr.startListening();
+      if (!ok) {
+        setState(() {
+          _isListening = false;
+          _messages.add(ChatMessage(role: 'assistant', content: '离线语音识别启动失败'));
+        });
+        _pulseController.stop();
+      }
+    } catch (e) {
+      debugPrint('[SherpaASR] Start error: $e');
+      setState(() {
+        _isListening = false;
+        _messages.add(ChatMessage(role: 'assistant', content: '语音识别启动失败: $e'));
+      });
+      _pulseController.stop();
+    }
+  }
+
+  Timer? _nativeSpeechTimeout; // 原生语音超时 → fallback
+
+  void _stopSherpaAsr() {
+    _sherpaAsr.stopListening();
+    _sherpaAsr.onResult = null;
+  }
+
+  Future<void> _stopListeningAndSend() async {
+    debugPrint('[DesignerBall] _stopListeningAndSend');
+    _nativeSpeechTimeout?.cancel();
+
+    // 停止语音识别
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    if (shouldUseSherpa) {
+      _sherpaAsr.onResult = null;
+      final finalText = await _sherpaAsr.stopListening();
+      if (finalText.isNotEmpty) {
+        _liveTranscript = finalText;
+      }
+    } else {
+      try { _speech?.stop(); } catch (e) {
+        debugPrint('[DesignerBall] speech.stop error: $e');
+      }
+    }
+    _pulseController.stop();
+    _pulseController.reset();
+
+    final text = _liveTranscript?.trim() ?? '';
+
+    if (text.isEmpty) {
+      setState(() {
+        _isListening = false;
+        _liveTranscript = null;
+      });
+      return;
+    }
+
+    // 中断上一条还在进行的流
+    _cancelCurrentStream();
+
+    // 原子 setState：清掉 transcript + 加用户消息 + 空 assistant 占位
+    setState(() {
+      _isListening = false;
+      _liveTranscript = null;
+      _messages.add(ChatMessage(role: 'user', content: text));
+      _messages.add(ChatMessage(role: 'assistant', content: ''));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    _streamSub = _chatService.sendStream(text).listen(
+      (event) {
+        if (event.error != null && event.content == null) {
+          // 纯错误（如配额超限）
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+          });
+          _scrollToBottom();
+          return;
+        }
+        if (event.content != null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
+          });
+          _scrollToBottom();
+        }
+        if (event.jsonApp != null) {
+          debugPrint('[DesignerBall] AI generated JSON-APP!');
+          _lastGeneratedJson = event.jsonApp;
+          setState(() {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '🚀 JSON-APP 已生成，点击试运行',
+              jsonApp: event.jsonApp,
+            ));
+          });
+          _scrollToBottom();
+        }
+        if (event.quota != null) {
+          _lastQuota = event.quota;
+        }
+      },
+      onError: (e) {
+        debugPrint('[DesignerBall] AI stream error: $e');
+        setState(() {
+          _isThinking = false;
+          _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+        });
+      },
+    );
+  }
+
+  /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
+  void _cancelCurrentStream() {
+    if (_streamSub != null) {
+      // 保存已收到的部分回复到对话历史
+      if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+        final partial = _messages.last.content;
+        _chatService.commitPartial(partial);
+        // 如果占位消息是空的就移除
+        if (partial.isEmpty) {
+          _messages.removeLast();
+        }
+      }
+      _streamSub?.cancel();
+      _streamSub = null;
+      _chatService.abort();
+      setState(() => _isThinking = false);
+    }
+  }
+
+  /// 处理崩溃报告 — 自动进入对话模式并发送崩溃信息给 AI
+  void _handleCrashReport(String crashReport) {
+    // 进入对话模式
+    setState(() {
+      _chatMode = true;
+      _messages.add(ChatMessage(role: 'user', content: crashReport));
+      _messages.add(ChatMessage(role: 'assistant', content: ''));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    // 直接发送给 AI
+    _cancelCurrentStream();
+    _streamSub = _chatService.sendStream(crashReport).listen(
+      (event) {
+        if (event.error != null && event.content == null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+          });
+          _scrollToBottom();
+          return;
+        }
+        if (event.content != null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
+          });
+          _scrollToBottom();
+        }
+        if (event.jsonApp != null) {
+          debugPrint('[DesignerBall] AI generated fix JSON-APP!');
+          _lastGeneratedJson = event.jsonApp;
+          setState(() {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '🔧 修复版 JSON-APP 已生成，点击试运行',
+              jsonApp: event.jsonApp,
+            ));
+          });
+          _scrollToBottom();
+        }
+      },
+      onError: (e) {
+        setState(() {
+          _isThinking = false;
+          _messages.last = ChatMessage(role: 'assistant', content: '分析失败: $e');
+        });
+      },
+    );
+  }
+
+  void _closeChatMode() {
+    try { _speech?.stop(); } catch (_) {}
+    _nativeSpeechTimeout?.cancel();
+    _stopSherpaAsr();
+    _cancelCurrentStream();
+    _pulseController.stop();
+    _pulseController.reset();
+    setState(() {
+      _chatMode = false;
+      _isListening = false;
+      _isThinking = false;
+      _liveTranscript = null;
+      _recordStartPos = null;
+      _dragCancelling = false;
+    });
+  }
+
+  void _clearAndCloseChatMode() {
+    _closeChatMode();
+    _messages.clear();
+    _chatService.clear();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // 位置动画
+  // ════════════════════════════════════════════════════════
+
+  void _animateTo(double targetLeft, double targetTop) {
+    _animLeft = null;
+    _animTop = null;
+    _animController.reset();
+    _animLeft = Tween<double>(begin: _left, end: targetLeft).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animTop = Tween<double>(begin: _top, end: targetTop).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animController.forward();
+  }
+
+  void _hideToEdge(_HideEdge edge, Size screenSize) {
+    double targetLeft = _left;
+    double targetTop = _top;
+
+    switch (edge) {
+      case _HideEdge.left:
+        targetLeft = -_ballSize + _peekSize;
+      case _HideEdge.right:
+        targetLeft = screenSize.width - _peekSize;
+      case _HideEdge.top:
+        targetTop = -_ballSize + _peekSize;
+      case _HideEdge.bottom:
+        targetTop = screenSize.height - _peekSize;
+      case _HideEdge.none:
+        return;
+    }
+
+    if (edge == _HideEdge.left || edge == _HideEdge.right) {
+      targetTop = targetTop.clamp(0.0, screenSize.height - _ballSize);
+    } else {
+      targetLeft = targetLeft.clamp(0.0, screenSize.width - _ballSize);
+    }
+
+    _animLeft = null;
+    _animTop = null;
+    _animController.reset();
+    _animLeft = Tween<double>(begin: _left, end: targetLeft).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animTop = Tween<double>(begin: _top, end: targetTop).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animController.forward().then((_) {
+      if (!_dragging) {
+        setState(() {
+          _hidden = true;
+          _hideEdge = edge;
+        });
+      }
+    });
+  }
+
+  void _revealFromEdge(Size screenSize) {
+    double targetLeft = _left;
+    double targetTop = _top;
+
+    switch (_hideEdge) {
+      case _HideEdge.left:
+        targetLeft = 0;
+      case _HideEdge.right:
+        targetLeft = screenSize.width - _ballSize;
+      case _HideEdge.top:
+        targetTop = 0;
+      case _HideEdge.bottom:
+        targetTop = screenSize.height - _ballSize;
+      case _HideEdge.none:
+        return;
+    }
+
+    setState(() => _hidden = false);
+
+    _animLeft = null;
+    _animTop = null;
+    _animController.reset();
+    _animLeft = Tween<double>(begin: _left, end: targetLeft).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animTop = Tween<double>(begin: _top, end: targetTop).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animController.forward().then((_) {
+      _hideEdge = _HideEdge.none;
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // 构建
+  // ════════════════════════════════════════════════════════
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    _initPosition(screenSize);
+
+    return DefaultTextStyle(
+      style: const TextStyle(decoration: TextDecoration.none),
+      child: Stack(
+      children: [
+        widget.child,
+
+        // 字幕覆层
+        if (_chatMode)
+          ChatOverlay(
+            messages: _messages,
+            isListening: _isListening,
+            isThinking: _isThinking,
+            liveTranscript:
+                (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
+            onClose: _closeChatMode,
+            onClear: _clearAndCloseChatMode,
+            scrollController: _scrollController,
+            onRunJsonApp: (jsonConfig) {
+              _clearAndCloseChatMode();
+              widget.onRunJsonApp?.call(jsonConfig);
+            },
+          ),
+
+        // 录音取消区域 — 屏幕底部淡红提示
+        if (_isListening && _recordStartPos != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: _cancelBottomZoneHeight,
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: _dragCancelling ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 150),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.red.withValues(alpha: 0.35),
+                        Colors.red.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                  alignment: Alignment.bottomCenter,
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close, color: Colors.white70, size: 18),
+                      SizedBox(width: 4),
+                      Text(
+                        '松手取消发送',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // 悬浮球 — 用 Listener 捕获原始 pointer 事件
+        Positioned(
+          left: _left,
+          top: _top,
+          child: Listener(
+            onPointerDown: _onPointerDown,
+            onPointerUp: _onPointerUp,
+            onPointerCancel: _onPointerCancel,
+            child: GestureDetector(
+              onPanUpdate: (d) => _onPanUpdate(d, screenSize),
+              onPanEnd: (d) => _onPanEnd(d, screenSize),
+              onTap: () => _onTap(screenSize),
+              onDoubleTap: _onDoubleTap,
+              child: _buildBall(),
+            ),
+          ),
+        ),
+      ],
+    ),
+    );
+  }
+
+  Widget _buildBall() {
+    final double opacity = _hidden ? 0.6 : 1.0;
+
+    final ballColor = _isListening
+        ? (_dragCancelling ? Colors.grey : Colors.red)
+        : Colors.purple;
+
+    Widget ball = Container(
+      width: _ballSize,
+      height: _ballSize,
+      decoration: BoxDecoration(
+        color: ballColor,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: ballColor.withValues(alpha: 0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: _isListening
+            ? Icon(
+                _dragCancelling ? Icons.close : Icons.mic,
+                color: Colors.white,
+                size: 26,
+              )
+            : _chatMode
+                ? const Icon(Icons.chat_bubble_outline,
+                    color: Colors.white, size: 24)
+                : Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Text(
+                        'D',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      if (_messages.isNotEmpty)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.orangeAccent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+      ),
+    );
+
+    // 录音中脉冲光环
+    if (_isListening) {
+      ball = AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          return CustomPaint(
+            painter: _PulseRingPainter(
+              progress: _pulseController.value,
+              color: _dragCancelling ? Colors.grey : Colors.red,
+            ),
+            child: child,
+          );
+        },
+        child: ball,
+      );
+    }
+
+    // 长按倒计时环形进度
+    if (_pointerDown && !_chatMode && !_movedEnough) {
+      ball = AnimatedBuilder(
+        animation: _countdownController,
+        builder: (context, child) {
+          return CustomPaint(
+            painter: _CountdownRingPainter(
+              progress: _countdownController.value,
+            ),
+            child: child,
+          );
+        },
+        child: ball,
+      );
+    }
+
+    return Opacity(opacity: opacity, child: ball);
+  }
+
+}
+
+// ── 脉冲光环 ──
+
+class _PulseRingPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  _PulseRingPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final baseRadius = size.width / 2;
+    final maxExpand = 12.0;
+
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.3 * (1 - progress))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    canvas.drawCircle(center, baseRadius + maxExpand * progress, paint);
+  }
+
+  @override
+  bool shouldRepaint(_PulseRingPainter old) => old.progress != progress;
+}
+
+// ── 长按倒计时环形进度 ──
+
+class _CountdownRingPainter extends CustomPainter {
+  final double progress;
+
+  _CountdownRingPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 + 4;
+
+    // 底环
+    final bgPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    // 进度环
+    final fgPaint = Paint()
+      ..color = Colors.purpleAccent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+
+    final sweepAngle = 2 * 3.14159265 * progress;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -3.14159265 / 2, // 从顶部开始
+      sweepAngle,
+      false,
+      fgPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CountdownRingPainter old) => old.progress != progress;
+}
+
+enum _HideEdge { none, left, right, top, bottom }

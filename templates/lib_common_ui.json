@@ -1,0 +1,59 @@
+{
+  "dsl": "3.3",
+  "appid": "l1bc0mm0n1234567890abcdef1234567890",
+  "meta": {
+    "name": "common-ui",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "通用 UI 函数库 — 提供 toast / confirm / 格式化等工具函数",
+    "author": "demo",
+    "exports": ["showSuccess", "showError", "confirm", "formatSize", "takePhoto", "pickImage"]
+  },
+  "global": {
+    "variables": {
+      "theme": {
+        "primaryColor": "#6C5CE7",
+        "successColor": "#00B894",
+        "errorColor": "#D63031"
+      }
+    },
+    "functions": {
+      "showSuccess": {
+        "params": ["message"],
+        "logic": [
+          { "call": "@show_toast", "args": { "message": "✅ {{ params.message }}" } }
+        ]
+      },
+      "showError": {
+        "params": ["message"],
+        "logic": [
+          { "call": "@show_toast", "args": { "message": "❌ {{ params.message }}" } }
+        ]
+      },
+      "confirm": {
+        "params": ["title", "message"],
+        "logic": [
+          { "call": "@show_dialog", "args": { "title": "{{ params.title }}", "message": "{{ params.message }}" } }
+        ]
+      },
+      "formatSize": {
+        "params": ["bytes"],
+        "logic": [
+          { "call": "@print", "args": { "value": "格式化文件大小: {{ params.bytes }}" } }
+        ]
+      },
+      "takePhoto": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@take_photo", "args": { "bind": "{{ params.bind }}", "quality": 85 } }
+        ]
+      },
+      "pickImage": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@pick_image", "args": { "bind": "{{ params.bind }}", "quality": 85 } }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,281 @@
+{
+  "dsl": "3.3",
+  "appid": "d3m0v1d301234567890abcdef1234567890",
+  "meta": {
+    "name": "视频浏览器",
+    "version": "1.0.0",
+    "description": "从流媒体服务器获取播放列表 → 选择视频 → 播放",
+    "author": "demo",
+    "type": "app"
+  },
+  "global": {
+    "variables": {
+      "videoList": [],
+      "currentVideoUrl": "",
+      "currentVideoName": "",
+      "loadError": ""
+    },
+    "functions": {
+      "fetchVideoList": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@http_get",
+            "args": {
+              "url": "http://localhost:8080/api/list"
+            },
+            "assign": "global.apiResult"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.videoList",
+              "value": "{{ global.apiResult.data }}"
+            }
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "已加载视频列表"
+            }
+          }
+        ]
+      },
+      "playVideo": {
+        "params": [
+          "url",
+          "name"
+        ],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentVideoUrl",
+              "value": "{{ params.url }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentVideoName",
+              "value": "{{ params.name }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "player"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": {
+        "value": "视频浏览器启动，正在获取播放列表..."
+      }
+    },
+    {
+      "call": "@global.fetchVideoList",
+      "args": {}
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "视频浏览器",
+        "layout": "column",
+        "padding": 20,
+        "backgroundColor": "#111118",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "text",
+                "value": "播放列表",
+                "position": {
+                  "type": "flex",
+                  "flex": 3
+                },
+                "style": {
+                  "fontSize": 22,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF"
+                }
+              },
+              {
+                "type": "button",
+                "label": "刷新",
+                "icon": "refresh",
+                "variant": "outlined",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "style": {
+                  "textColor": "#AAAAAA"
+                },
+                "action": {
+                  "type": "call",
+                  "call": "@global.fetchVideoList",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "来源: http://localhost:8080",
+            "style": {
+              "fontSize": 12,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "divider",
+            "color": "#333333",
+            "height": 20,
+            "thickness": 0.5
+          },
+          {
+            "type": "list",
+            "source": "{{ global.videoList }}",
+            "item_template": {
+              "type": "container",
+              "layout": "row",
+              "padding": 12,
+              "borderRadius": 10,
+              "color": "#1E1E2A",
+              "margin": 4,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "position": {
+                    "type": "flex",
+                    "flex": 4
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.name }}",
+                      "style": {
+                        "fontSize": 15,
+                        "color": "#EAEAEA",
+                        "fontWeight": "w500"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.size }}",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#888888"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "label": "播放",
+                  "icon": "video",
+                  "variant": "filled",
+                  "position": {
+                    "type": "flex",
+                    "flex": 2
+                  },
+                  "style": {
+                    "backgroundColor": "#6C5CE7",
+                    "borderRadius": 8
+                  },
+                  "action": {
+                    "type": "call",
+                    "call": "@global.playVideo",
+                    "args": {
+                      "url": "{{ loop.item.url }}",
+                      "name": "{{ loop.item.name }}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "player",
+        "title": "{{ global.currentVideoName }}",
+        "layout": "column",
+        "padding": 0,
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "container",
+            "padding": 16,
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.currentVideoName }}",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF"
+                }
+              }
+            ]
+          },
+          {
+            "type": "video",
+            "url": "{{ global.currentVideoUrl }}",
+            "autoplay": true,
+            "looping": false,
+            "aspectRatio": 1.78,
+            "borderRadius": 0
+          },
+          {
+            "type": "container",
+            "padding": 16,
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.currentVideoUrl }}",
+                "style": {
+                  "fontSize": 11,
+                  "color": "#666666",
+                  "maxLines": 1,
+                  "overflow": "ellipsis"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "button",
+                "label": "返回列表",
+                "icon": "list",
+                "variant": "outlined",
+                "style": {
+                  "textColor": "#AAAAAA"
+                },
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

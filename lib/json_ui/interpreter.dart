@@ -1,17 +1,17 @@
-// JSON DSL v3.2 解释器 — 深度重构版
+// JSON DSL v3.2 解释器 — jsonlogic 标准版
 // ───────────────────────────────────────────────
-// 核心职责：
-//   1. 解析 JSON 配置 → 维护全局 Context
-//   2. 完整的 async steps 执行引擎
-//   3. 模板表达式 {{ }} 与 JsonLogic 表达式求值
-//   4. 丰富的内置函数（HTTP / JSON / 字符串 / 数组 / 类型转换 / 控制流）
-//   5. 并发执行 @parallel
-//   6. Widget 树构建
+// 表达式引擎替换为 pub.dev/packages/jsonlogic (2.0.2)
+// 自定义扩展操作符通过 jl.add() 注册
+// 变量路径格式：global.xxx / loop.item / params.xxx（兼容 $.global.xxx 旧格式）
 // ───────────────────────────────────────────────
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'expression_engine.dart';
+import 'package:jsonlogic/jsonlogic.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'http_client.dart';
+import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 
@@ -23,25 +23,19 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _functions;
   String _currentScreenId = '';
 
-  /// 循环上下文栈
   final List<Map<String, dynamic>> _loopContextStack = [];
-
-  /// 函数参数上下文栈
   final List<Map<String, dynamic>> _paramsStack = [];
-
-  /// TextField 控制器缓存
   final Map<String, TextEditingController> _textControllers = {};
 
-  /// 表达式引擎
-  late ExpressionEngine _expressionEngine;
+  /// jsonlogic 标准引擎 + 自定义操作符
+  late Jsonlogic _jl;
 
-  /// HTTP 客户端
   final DslHttpClient _httpClient = DslHttpClient();
 
-  /// 页面导航回调
-  void Function(String screenId)? onNavigate;
+  /// 依赖加载器
+  final DependencyLoader _depLoader = DependencyLoader();
 
-  /// 全局 BuildContext（用于 toast / dialog）
+  void Function(String screenId)? onNavigate;
   BuildContext? globalContext;
 
   // ============ Getters ============
@@ -52,8 +46,14 @@ class JsonInterpreter extends ChangeNotifier {
 
   String get currentScreenId => _currentScreenId;
 
+  /// 原始 JSON 配置（用于崩溃分析时发给 AI）
+  Map<String, dynamic>? get rawConfig => _config.isNotEmpty ? _config : null;
+
   String get appName =>
       (_config['meta'] as Map<String, dynamic>?)?['name'] ?? 'JSON App';
+
+  /// 获取依赖加载器（供 ref 控件使用）
+  DependencyLoader get depLoader => _depLoader;
 
   // ============ 初始化 ============
 
@@ -61,11 +61,198 @@ class JsonInterpreter extends ChangeNotifier {
     _config = {};
     _variables = {};
     _functions = {};
-    _expressionEngine = ExpressionEngine(
-      variableResolver: getVariable,
-      templateResolver: resolveTemplate,
-    );
+    _jl = _createJsonLogic();
   }
+
+  Jsonlogic _createJsonLogic() {
+    final jl = Jsonlogic(); // 已包含标准操作符
+
+    // ── 字符串扩展 ──
+    jl.add('str_len', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      return applier(params[0], data)?.toString().length ?? 0;
+    });
+    jl.add('str_upper', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return (applier(params[0], data)?.toString() ?? '').toUpperCase();
+    });
+    jl.add('str_lower', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return (applier(params[0], data)?.toString() ?? '').toLowerCase();
+    });
+    jl.add('str_trim', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return (applier(params[0], data)?.toString() ?? '').trim();
+    });
+    jl.add('str_contains', (applier, data, params) {
+      if (params.length < 2) return false;
+      final str = applier(params[0], data)?.toString() ?? '';
+      final search = applier(params[1], data)?.toString() ?? '';
+      return str.contains(search);
+    });
+    jl.add('str_replace', (applier, data, params) {
+      if (params.length < 3) return applier(params[0], data)?.toString() ?? '';
+      final str = applier(params[0], data)?.toString() ?? '';
+      final from = applier(params[1], data)?.toString() ?? '';
+      final to = applier(params[2], data)?.toString() ?? '';
+      return str.replaceAll(from, to);
+    });
+    jl.add('str_split', (applier, data, params) {
+      if (params.length < 2) return [applier(params[0], data)?.toString() ?? ''];
+      final str = applier(params[0], data)?.toString() ?? '';
+      final sep = applier(params[1], data)?.toString() ?? '';
+      return str.split(sep);
+    });
+    jl.add('str_join', (applier, data, params) {
+      if (params.isEmpty) return '';
+      final list = applier(params[0], data);
+      final sep = params.length > 1 ? applier(params[1], data)?.toString() ?? '' : '';
+      if (list is List) return list.map((e) => e?.toString() ?? '').join(sep);
+      return list?.toString() ?? '';
+    });
+
+    // ── 数组扩展 ──
+    jl.add('length', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      final val = applier(params[0], data);
+      if (val is List) return val.length;
+      if (val is String) return val.length;
+      if (val is Map) return val.length;
+      return 0;
+    });
+    jl.add('at', (applier, data, params) {
+      if (params.length < 2) return null;
+      final source = applier(params[0], data);
+      final index = _toInt(applier(params[1], data));
+      if (source is List && index >= 0 && index < source.length) {
+        return source[index];
+      }
+      return null;
+    });
+    jl.add('slice', (applier, data, params) {
+      if (params.isEmpty) return [];
+      final source = applier(params[0], data);
+      if (source is! List) return [];
+      final start = (params.length > 1 ? _toInt(applier(params[1], data)) : 0)
+          .clamp(0, source.length);
+      final end = (params.length > 2
+              ? _toInt(applier(params[2], data))
+              : source.length)
+          .clamp(start, source.length);
+      return source.sublist(start, end);
+    });
+    jl.add('sort', (applier, data, params) {
+      if (params.isEmpty) return [];
+      final source = applier(params[0], data);
+      if (source is! List) return [];
+      final copy = List<dynamic>.from(source);
+      copy.sort((a, b) {
+        if (a is num && b is num) return a.compareTo(b);
+        return a.toString().compareTo(b.toString());
+      });
+      return copy;
+    });
+    jl.add('reverse', (applier, data, params) {
+      if (params.isEmpty) return [];
+      final source = applier(params[0], data);
+      if (source is! List) return [];
+      return source.reversed.toList();
+    });
+
+    // ── 类型转换 ──
+    jl.add('to_string', (applier, data, params) {
+      if (params.isEmpty) return '';
+      return applier(params[0], data)?.toString() ?? '';
+    });
+    jl.add('to_int', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      return _toInt(applier(params[0], data));
+    });
+    jl.add('to_double', (applier, data, params) {
+      if (params.isEmpty) return 0.0;
+      return _toDouble(applier(params[0], data));
+    });
+
+    // ── 数学扩展 ──
+    jl.add('abs', (applier, data, params) {
+      if (params.isEmpty) return 0;
+      final v = applier(params[0], data);
+      if (v is num) return v.abs();
+      return 0;
+    });
+
+    return jl;
+  }
+
+  // ============ jsonlogic 数据上下文 ============
+
+  /// 每次求值前，将当前状态组装为 jsonlogic 的 data 参数
+  Map<String, dynamic> _buildDataContext() {
+    return {
+      'global': _variables,
+      'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
+      'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
+    };
+  }
+
+  /// 通过 jsonlogic 求值表达式
+  /// 仅用于原始 JSON 配置中的 jsonlogic 表达式（Map），不用于已解析的运行时数据
+  dynamic _evaluateExpression(dynamic value) {
+    if (value == null) return null;
+    if (value is num || value is bool) return value;
+
+    if (value is String) {
+      if (value.contains('{{') && value.contains('}}')) {
+        return resolveExpression(value);
+      }
+      return value;
+    }
+
+    // Map → JsonLogic 表达式（来自原始 JSON 配置，不会是运行时数据）
+    if (value is Map<String, dynamic>) {
+      final preprocessed = _resolveTemplatesInRule(value);
+      return _jl.apply(preprocessed, _buildDataContext());
+    }
+
+    // List → 解析字符串模板，Map/其他类型原样保留
+    if (value is List) {
+      return value.map((e) {
+        if (e is String && e.contains('{{') && e.contains('}}')) {
+          return resolveExpression(e);
+        }
+        return e;
+      }).toList();
+    }
+
+    return value;
+  }
+
+  /// 求值为布尔
+  bool _evaluateBool(dynamic condition) {
+    final result = _evaluateExpression(condition);
+    if (result == null) return false;
+    if (result is bool) return result;
+    if (result is num) return result != 0;
+    if (result is String) return result.isNotEmpty;
+    if (result is List) return result.isNotEmpty;
+    return true;
+  }
+
+  /// 递归预处理规则中的 {{ }} 模板字符串
+  dynamic _resolveTemplatesInRule(dynamic rule) {
+    if (rule is String && rule.contains('{{') && rule.contains('}}')) {
+      return resolveTemplate(rule);
+    }
+    if (rule is List) {
+      return rule.map((e) => _resolveTemplatesInRule(e)).toList();
+    }
+    if (rule is Map<String, dynamic>) {
+      return rule.map((k, v) => MapEntry(k, _resolveTemplatesInRule(v)));
+    }
+    return rule;
+  }
+
+  // ============ 加载配置 ============
 
   void loadConfig(Map<String, dynamic> config) {
     _config = config;
@@ -75,29 +262,28 @@ class JsonInterpreter extends ChangeNotifier {
         _deepCopy(global['variables'] as Map<String, dynamic>? ?? {});
     _functions = global['functions'] as Map<String, dynamic>? ?? {};
 
-    // 清除旧状态
     _loopContextStack.clear();
     _paramsStack.clear();
+    _depLoader.clear();
     for (final c in _textControllers.values) {
       c.dispose();
     }
     _textControllers.clear();
 
-    // 重建表达式引擎
-    _expressionEngine = ExpressionEngine(
-      variableResolver: getVariable,
-      templateResolver: resolveTemplate,
-    );
-
-    // 默认屏幕
     if (screens.isNotEmpty) {
       _currentScreenId =
           (screens.first as Map<String, dynamic>)['id'] ?? 'home';
     }
   }
 
-  /// 执行启动 steps
   Future<void> executeSteps() async {
+    // 先加载依赖
+    final deps = _config['dependencies'] as Map<String, dynamic>?;
+    if (deps != null && deps.isNotEmpty) {
+      await _depLoader.loadDependencies(deps);
+    }
+
+    // 再执行 steps
     final steps = _config['steps'] as List<dynamic>? ?? [];
     for (final step in steps) {
       if (step is Map<String, dynamic>) {
@@ -108,43 +294,67 @@ class JsonInterpreter extends ChangeNotifier {
 
   // ============ 变量读写 ============
 
+  /// 读取变量（支持 global.xxx / loop.xxx / params.xxx，兼容 $.global.xxx 旧格式）
   dynamic getVariable(String path) {
-    // $.loop.item / $.loop.index
-    if (path.startsWith(r'$.loop.')) {
-      final key = path.substring(7);
+    // 兼容旧格式：去掉 $. 前缀
+    if (path.startsWith(r'$.')) {
+      path = path.substring(2);
+    }
+
+    if (path.startsWith('loop.')) {
+      final subPath = path.substring(5);
       if (_loopContextStack.isNotEmpty) {
-        return _loopContextStack.last[key];
+        return _getNestedValue(_loopContextStack.last, subPath);
       }
       return null;
     }
 
-    // $.params.xxx
-    if (path.startsWith(r'$.params.')) {
-      final key = path.substring(9);
+    if (path.startsWith('params.')) {
+      final subPath = path.substring(7);
       if (_paramsStack.isNotEmpty) {
-        return _paramsStack.last[key];
+        return _getNestedValue(_paramsStack.last, subPath);
       }
       return null;
     }
 
-    // $.global.xxx — 支持点号嵌套路径 $.global.user.name
-    if (path.startsWith(r'$.global.')) {
-      final subPath = path.substring(9);
+    if (path.startsWith('global.')) {
+      final subPath = path.substring(7);
       return _getNestedValue(_variables, subPath);
     }
 
-    return null;
+    // 没有前缀：先查 global 变量，再查依赖模块变量
+    final globalResult = _getNestedValue(_variables, path);
+    if (globalResult != null) return globalResult;
+
+    // 尝试作为依赖变量: "depName.varPath"
+    return _getDependencyVariable(path);
+  }
+
+  /// 读取依赖模块的变量（只读）: "depName.varPath"
+  dynamic _getDependencyVariable(String fullPath) {
+    final dotIndex = fullPath.indexOf('.');
+    if (dotIndex < 0) return null;
+    final depName = fullPath.substring(0, dotIndex);
+    final varPath = fullPath.substring(dotIndex + 1);
+    return _depLoader.findVariable(depName, varPath);
   }
 
   void setVariable(String path, dynamic value) {
-    if (path.startsWith(r'$.global.')) {
-      final subPath = path.substring(9);
+    if (path.startsWith(r'$.')) {
+      path = path.substring(2);
+    }
+
+    if (path.startsWith('global.')) {
+      final subPath = path.substring(7);
       _setNestedValue(_variables, subPath, value);
+      notifyListeners();
+    } else if (!path.startsWith('loop.') && !path.startsWith('params.')) {
+      // 没有前缀的直接当 global 变量（与 getVariable 行为一致）
+      _setNestedValue(_variables, path, value);
       notifyListeners();
     }
   }
 
-  /// 嵌套读取：a.b.c → _variables['a']['b']['c']
   dynamic _getNestedValue(Map<String, dynamic> map, String dotPath) {
     final keys = dotPath.split('.');
     dynamic current = map;
@@ -158,8 +368,8 @@ class JsonInterpreter extends ChangeNotifier {
     return current;
   }
 
-  /// 嵌套写入
-  void _setNestedValue(Map<String, dynamic> map, String dotPath, dynamic value) {
+  void _setNestedValue(
+      Map<String, dynamic> map, String dotPath, dynamic value) {
     final keys = dotPath.split('.');
     if (keys.length == 1) {
       map[keys[0]] = value;
@@ -190,6 +400,7 @@ class JsonInterpreter extends ChangeNotifier {
     });
   }
 
+  /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
   dynamic resolveExpression(dynamic raw) {
     if (raw is String) {
       final regex = RegExp(r'^\{\{\s*(.+?)\s*\}\}$');
@@ -249,6 +460,26 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   void navigateTo(String screenId) {
+    // 支持 depName:screenId 格式导航到依赖的页面
+    if (screenId.contains(':')) {
+      final parts = screenId.split(':');
+      final depName = parts[0];
+      final depScreenId = parts[1];
+      final depScreen = _depLoader.findScreen(depName, depScreenId);
+      if (depScreen != null) {
+        // 将依赖的 screen 注入到当前 screens 列表中（如果不存在）
+        final localScreens = screens;
+        final exists = localScreens.any((s) =>
+            s is Map<String, dynamic> && s['id'] == screenId);
+        if (!exists) {
+          // 用 depName:screenId 作为唯一 ID 避免冲突
+          final injectedScreen = Map<String, dynamic>.from(depScreen);
+          injectedScreen['id'] = screenId;
+          ((_config['ui'] as Map<String, dynamic>)['screens'] as List)
+              .add(injectedScreen);
+        }
+      }
+    }
     _currentScreenId = screenId;
     onNavigate?.call(screenId);
     notifyListeners();
@@ -257,7 +488,6 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Steps 执行引擎 ============
 
   Future<dynamic> _executeStep(Map<String, dynamic> step) async {
-    // 函数调用
     if (step.containsKey('call')) {
       final callTarget = step['call'] as String;
       final args = step['args'] as Map<String, dynamic>? ?? {};
@@ -271,11 +501,10 @@ class JsonInterpreter extends ChangeNotifier {
       return result;
     }
 
-    // 表达式求值
     if (step.containsKey('expression')) {
       final expr = step['expression'];
       final assignVar = step['assign'] as String?;
-      final result = _expressionEngine.evaluate(expr);
+      final result = _evaluateExpression(expr);
       if (assignVar != null) {
         setVariable(assignVar, result);
       }
@@ -284,20 +513,33 @@ class JsonInterpreter extends ChangeNotifier {
     return null;
   }
 
-  /// 执行函数调用（内置 + 自定义），返回结果
   Future<dynamic> _executeCall(
       String callTarget, Map<String, dynamic> args) async {
     final resolvedArgs = _resolveArgs(args);
 
-    // 自定义全局函数
+    // 自定义全局函数: @global.funcName
     if (callTarget.startsWith('@global.')) {
       final funcName = callTarget.substring(8);
       return await _executeGlobalFunction(funcName, resolvedArgs);
     }
 
+    // 依赖模块的函数: @depName.funcName
+    if (callTarget.startsWith('@') && callTarget.contains('.')) {
+      final dotIndex = callTarget.indexOf('.');
+      final depName = callTarget.substring(1, dotIndex);
+      final funcName = callTarget.substring(dotIndex + 1);
+
+      // 在依赖中查找函数
+      final funcDef = _depLoader.findFunction(depName, funcName);
+      if (funcDef != null) {
+        return await _executeDependencyFunction(depName, funcDef, resolvedArgs);
+      }
+      debugPrint('[JSON DSL] 未找到依赖函数: $callTarget');
+      return null;
+    }
+
     // ──── 内置函数 ────
     switch (callTarget) {
-      // ── 基础 ──
       case '@print':
         final value = resolvedArgs['value'] ?? '';
         debugPrint('[JSON DSL] $value');
@@ -305,10 +547,21 @@ class JsonInterpreter extends ChangeNotifier {
 
       case '@set':
         final varPath = resolvedArgs['var'] as String?;
-        final value = resolvedArgs['value'];
+        // 关键区分：取原始 value 判断类型
+        //   - 原始是 Map → jsonlogic 表达式，走 _evaluateExpression
+        //   - 原始是 String "{{ }}" → _resolveArgs 已解析为最终值，直接用
+        //   - 原始是其他（数字/布尔/数组等）→ 直接用
+        final rawValue = args['value'];
+        final dynamic finalValue;
+        if (rawValue is Map<String, dynamic>) {
+          // jsonlogic 表达式，需要求值
+          finalValue = _evaluateExpression(rawValue);
+        } else {
+          // 模板或原始值，_resolveArgs 已处理完毕
+          finalValue = resolvedArgs['value'];
+        }
         if (varPath != null) {
-          final resolved = _resolveJsonLogicValue(value);
-          setVariable(varPath, resolved);
+          setVariable(varPath, finalValue);
         }
         return null;
 
@@ -331,7 +584,8 @@ class JsonInterpreter extends ChangeNotifier {
       case '@parallel':
         return await _builtinParallel(resolvedArgs);
       case '@delay':
-        final ms = _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
+        final ms =
+            _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
         await Future.delayed(Duration(milliseconds: ms));
         return null;
 
@@ -394,11 +648,11 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 数组 ──
       case '@list_length':
-        final list = _resolveJsonLogicValue(resolvedArgs['value']);
+        final list = _evaluateExpression(resolvedArgs['value']);
         return list is List ? list.length : 0;
       case '@list_add':
         final listPath = resolvedArgs['var'] as String?;
-        final item = _resolveJsonLogicValue(resolvedArgs['item']);
+        final item = _evaluateExpression(resolvedArgs['item']);
         if (listPath != null) {
           final current = getVariable(listPath);
           if (current is List) {
@@ -423,7 +677,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@list_insert':
         final listPath = resolvedArgs['var'] as String?;
         final index = _toInt(resolvedArgs['index'] ?? 0);
-        final item = _resolveJsonLogicValue(resolvedArgs['item']);
+        final item = _evaluateExpression(resolvedArgs['item']);
         if (listPath != null) {
           final current = getVariable(listPath);
           if (current is List) {
@@ -443,11 +697,11 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 类型转换 ──
       case '@to_string':
-        return _resolveJsonLogicValue(resolvedArgs['value'])?.toString() ?? '';
+        return _evaluateExpression(resolvedArgs['value'])?.toString() ?? '';
       case '@to_int':
-        return _toInt(_resolveJsonLogicValue(resolvedArgs['value']));
+        return _toInt(_evaluateExpression(resolvedArgs['value']));
       case '@to_double':
-        return _toDouble(_resolveJsonLogicValue(resolvedArgs['value']));
+        return _toDouble(_evaluateExpression(resolvedArgs['value']));
 
       // ── UI 反馈 ──
       case '@show_toast':
@@ -459,20 +713,341 @@ class JsonInterpreter extends ChangeNotifier {
           resolvedArgs['message']?.toString() ?? '',
         );
 
+      // ── 本地存储 ──
+      case '@storage_set':
+        final key = resolvedArgs['key']?.toString();
+        final value = resolvedArgs['value'];
+        if (key != null) {
+          final prefs = await SharedPreferences.getInstance();
+          if (value is bool) {
+            await prefs.setBool(key, value);
+          } else if (value is int) {
+            await prefs.setInt(key, value);
+          } else if (value is double) {
+            await prefs.setDouble(key, value);
+          } else if (value is List) {
+            await prefs.setStringList(
+                key, value.map((e) => e.toString()).toList());
+          } else {
+            await prefs.setString(key, value?.toString() ?? '');
+          }
+        }
+        return null;
+      case '@storage_get':
+        final key = resolvedArgs['key']?.toString();
+        if (key != null) {
+          final prefs = await SharedPreferences.getInstance();
+          return prefs.get(key);
+        }
+        return null;
+      case '@storage_remove':
+        final key = resolvedArgs['key']?.toString();
+        if (key != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove(key);
+        }
+        return null;
+      case '@storage_clear':
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+        return null;
+
+      // ── 随机数 ──
+      case '@random':
+        final min = _toInt(resolvedArgs['min'] ?? 0);
+        final max = _toInt(resolvedArgs['max'] ?? 100);
+        return min + Random().nextInt(max - min + 1);
+
+      case '@random_float':
+        final min = _toDouble(resolvedArgs['min'] ?? 0.0);
+        final max = _toDouble(resolvedArgs['max'] ?? 1.0);
+        return min + Random().nextDouble() * (max - min);
+
+      case '@random_bool':
+        return Random().nextBool();
+
+      case '@random_chars':
+        final length = _toInt(resolvedArgs['length'] ?? 8);
+        final charset = resolvedArgs['charset']?.toString() ?? 'alphanumeric';
+        final buffer = StringBuffer();
+        String chars;
+        switch (charset) {
+          case 'numeric':
+            chars = '0123456789';
+            break;
+          case 'alpha':
+            chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            break;
+          case 'upper':
+            chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            break;
+          case 'lower':
+            chars = 'abcdefghijklmnopqrstuvwxyz';
+            break;
+          case 'hex':
+            chars = '0123456789abcdef';
+            break;
+          case 'alphanumeric':
+          default:
+            chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            break;
+        }
+        for (var i = 0; i < length; i++) {
+          buffer.write(chars[Random().nextInt(chars.length)]);
+        }
+        return buffer.toString();
+
+      case '@uuid':
+        final random = Random();
+        final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+        bytes[6] = (bytes[6] & 0x0F) | 0x40;
+        bytes[8] = (bytes[8] & 0x3F) | 0x80;
+        final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
+        return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
+
+      case '@random_pick':
+        final list = _evaluateExpression(resolvedArgs['list']);
+        if (list is List && list.isNotEmpty) {
+          return list[Random().nextInt(list.length)];
+        }
+        return null;
+
+      // ── 时间日期 ──
+      case '@timestamp':
+        return DateTime.now().millisecondsSinceEpoch;
+
+      case '@date_format':
+        final ts = resolvedArgs['timestamp'];
+        final format = resolvedArgs['format']?.toString() ?? 'YYYY-MM-DD HH:mm:ss';
+        DateTime dt;
+        if (ts is int) {
+          dt = DateTime.fromMillisecondsSinceEpoch(ts);
+        } else if (ts is double) {
+          dt = DateTime.fromMillisecondsSinceEpoch(ts.toInt());
+        } else {
+          dt = DateTime.now();
+        }
+        var result = format;
+        result = result.replaceAll('YYYY', dt.year.toString());
+        result = result.replaceAll('MM', dt.month.toString().padLeft(2, '0'));
+        result = result.replaceAll('DD', dt.day.toString().padLeft(2, '0'));
+        result = result.replaceAll('HH', dt.hour.toString().padLeft(2, '0'));
+        result = result.replaceAll('mm', dt.minute.toString().padLeft(2, '0'));
+        result = result.replaceAll('ss', dt.second.toString().padLeft(2, '0'));
+        return result;
+
+      // ── 字符串扩展 ──
+      case '@str_repeat':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final count = _toInt(resolvedArgs['count'] ?? 0);
+        return str * count;
+
+      case '@str_reverse':
+        return (resolvedArgs['value']?.toString() ?? '').split('').reversed.join();
+
+      case '@str_pad':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final targetLength = _toInt(resolvedArgs['length'] ?? 0);
+        final padStr = resolvedArgs['pad']?.toString() ?? ' ';
+        final direction = resolvedArgs['direction']?.toString() ?? 'right';
+        if (str.length >= targetLength) return str;
+        final padCount = targetLength - str.length;
+        final padding = (padStr * ((padCount / padStr.length).ceil())).substring(0, padCount);
+        return direction == 'left' ? '$padding$str' : '$str$padding';
+
+      case '@str_join':
+        final list = _evaluateExpression(resolvedArgs['list']);
+        final separator = resolvedArgs['separator']?.toString() ?? '';
+        if (list is List) {
+          return list.map((e) => e?.toString() ?? '').join(separator);
+        }
+        return list?.toString() ?? '';
+
+      case '@str_capitalize':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        if (str.isEmpty) return str;
+        return str[0].toUpperCase() + str.substring(1);
+
+      case '@str_count':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final search = resolvedArgs['search']?.toString() ?? '';
+        if (search.isEmpty) return 0;
+        return search.allMatches(str).length;
+
+      case '@str_index_of':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final search = resolvedArgs['search']?.toString() ?? '';
+        return str.indexOf(search);
+
+      case '@str_last_index_of':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final search = resolvedArgs['search']?.toString() ?? '';
+        return str.lastIndexOf(search);
+
+      case '@str_between':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final start = resolvedArgs['start']?.toString() ?? '';
+        final end = resolvedArgs['end']?.toString() ?? '';
+        final startIndex = str.indexOf(start);
+        if (startIndex < 0) return '';
+        final afterStart = str.substring(startIndex + start.length);
+        final endIndex = afterStart.indexOf(end);
+        if (endIndex < 0) return afterStart;
+        return afterStart.substring(0, endIndex);
+
+      case '@str_mask':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final start = _toInt(resolvedArgs['start'] ?? 0);
+        final end = _toInt(resolvedArgs['end'] ?? str.length);
+        final maskChar = resolvedArgs['mask']?.toString() ?? '*';
+        if (str.isEmpty || start >= str.length) return str;
+        final s = start.clamp(0, str.length);
+        final e = end.clamp(s, str.length);
+        return str.substring(0, s) + maskChar * (e - s) + str.substring(e);
+
+      // ── 数组扩展 ──
+      case '@list_shuffle':
+        final listPath = resolvedArgs['var'] as String?;
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final newList = List<dynamic>.from(current)..shuffle(Random());
+            setVariable(listPath, newList);
+            return newList;
+          }
+        }
+        return null;
+
+      case '@list_sample':
+        final listPath = resolvedArgs['var'] as String?;
+        final count = _toInt(resolvedArgs['count'] ?? 1);
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List && current.isNotEmpty) {
+            final shuffled = List<dynamic>.from(current)..shuffle(Random());
+            return shuffled.take(count.clamp(0, shuffled.length)).toList();
+          }
+        }
+        return [];
+
+      case '@list_unique':
+        final listPath = resolvedArgs['var'] as String?;
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final seen = <dynamic>{};
+            final result = <dynamic>[];
+            for (final item in current) {
+              if (!seen.contains(item)) {
+                seen.add(item);
+                result.add(item);
+              }
+            }
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_flatten':
+        final listPath = resolvedArgs['var'] as String?;
+        final depth = _toInt(resolvedArgs['depth'] ?? 1);
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final result = _flattenList(current, depth);
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_sort':
+        final sortListPath = resolvedArgs['var'] as String?;
+        final sortKey = resolvedArgs['key'] as String?;
+        final sortDesc = resolvedArgs['desc'] == true || resolvedArgs['desc'] == 'true';
+        if (sortListPath != null) {
+          final current = getVariable(sortListPath);
+          if (current is List) {
+            final result = List<dynamic>.from(current);
+            if (sortKey != null && sortKey.isNotEmpty) {
+              result.sort((a, b) {
+                final va = a is Map ? a[sortKey] : null;
+                final vb = b is Map ? b[sortKey] : null;
+                int cmp;
+                if (va is Comparable && vb is Comparable) {
+                  cmp = va.compareTo(vb);
+                } else {
+                  cmp = va.toString().compareTo(vb.toString());
+                }
+                return sortDesc ? -cmp : cmp;
+              });
+            } else {
+              result.sort((a, b) {
+                int cmp;
+                if (a is Comparable && b is Comparable) {
+                  cmp = a.compareTo(b);
+                } else {
+                  cmp = a.toString().compareTo(b.toString());
+                }
+                return sortDesc ? -cmp : cmp;
+              });
+            }
+            setVariable(sortListPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_reverse':
+        final listPath = resolvedArgs['var'] as String?;
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final result = current.reversed.toList();
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_slice':
+        final listPath = resolvedArgs['var'] as String?;
+        final start = _toInt(resolvedArgs['start'] ?? 0);
+        final end = resolvedArgs['end'];
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final e = end != null ? _toInt(end) : current.length;
+            final s = start.clamp(0, current.length);
+            final clampedEnd = e.clamp(s, current.length);
+            final result = current.sublist(s, clampedEnd);
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      // ── 图片拍摄 / 选择 ──
+      case '@take_photo':
+        return await _pickOrTakeImage(resolvedArgs, ImageSource.camera);
+      case '@pick_image':
+        return await _pickOrTakeImage(resolvedArgs, ImageSource.gallery);
+
       default:
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');
         return null;
     }
   }
 
-  // ============ 控制流内置函数 ============
+  // ============ 控制流 ============
 
   Future<dynamic> _builtinIf(Map<String, dynamic> args) async {
     final condition = args['condition'];
     final thenSteps = args['then'] as List<dynamic>? ?? [];
     final elseSteps = args['else'] as List<dynamic>? ?? [];
 
-    final condResult = _expressionEngine.evaluateBool(condition);
+    final condResult = _evaluateBool(condition);
 
     final steps = condResult ? thenSteps : elseSteps;
     dynamic lastResult;
@@ -490,8 +1065,7 @@ class JsonInterpreter extends ChangeNotifier {
     final maxIterations = _toInt(args['max_iterations'] ?? 10000);
 
     int count = 0;
-    while (_expressionEngine.evaluateBool(condition) &&
-        count < maxIterations) {
+    while (_evaluateBool(condition) && count < maxIterations) {
       for (final step in body) {
         if (step is Map<String, dynamic>) {
           await _executeStep(step);
@@ -506,14 +1080,11 @@ class JsonInterpreter extends ChangeNotifier {
     final sourceExpr = args['source'];
     final body = args['body'] as List<dynamic>? ?? [];
 
-    dynamic source = _resolveJsonLogicValue(sourceExpr);
+    dynamic source = _evaluateExpression(sourceExpr);
     if (source is! List) return null;
 
     for (var i = 0; i < source.length; i++) {
-      _loopContextStack.add({
-        'item': source[i],
-        'index': i,
-      });
+      _loopContextStack.add({'item': source[i], 'index': i});
 
       for (final step in body) {
         if (step is Map<String, dynamic>) {
@@ -573,7 +1144,6 @@ class JsonInterpreter extends ChangeNotifier {
 
   Future<dynamic> _builtinParallel(Map<String, dynamic> args) async {
     final stepsList = args['steps'] as List<dynamic>? ?? [];
-
     final futures = <Future<void>>[];
     for (final step in stepsList) {
       if (step is Map<String, dynamic>) {
@@ -584,7 +1154,7 @@ class JsonInterpreter extends ChangeNotifier {
     return null;
   }
 
-  // ============ HTTP 内置函数 ============
+  // ============ HTTP ============
 
   Future<Map<String, dynamic>> _builtinHttpGet(
       Map<String, dynamic> args) async {
@@ -597,7 +1167,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<Map<String, dynamic>> _builtinHttpPost(
       Map<String, dynamic> args) async {
     final url = args['url']?.toString() ?? '';
-    final body = _resolveJsonLogicValue(args['body']);
+    final body = _evaluateExpression(args['body']);
     final headers = _toStringMap(args['headers']);
     final contentType = args['content_type']?.toString() ?? 'application/json';
     return await _httpClient.post(url,
@@ -607,7 +1177,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<Map<String, dynamic>> _builtinHttpPut(
       Map<String, dynamic> args) async {
     final url = args['url']?.toString() ?? '';
-    final body = _resolveJsonLogicValue(args['body']);
+    final body = _evaluateExpression(args['body']);
     final headers = _toStringMap(args['headers']);
     return await _httpClient.put(url, body: body, headers: headers);
   }
@@ -619,7 +1189,7 @@ class JsonInterpreter extends ChangeNotifier {
     return await _httpClient.delete(url, headers: headers);
   }
 
-  // ============ JSON 内置函数 ============
+  // ============ JSON ============
 
   dynamic _builtinJsonDecode(Map<String, dynamic> args) {
     final str = args['value']?.toString() ?? '';
@@ -632,7 +1202,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   String _builtinJsonEncode(Map<String, dynamic> args) {
-    final value = _resolveJsonLogicValue(args['value']);
+    final value = _evaluateExpression(args['value']);
     try {
       return json.encode(value);
     } catch (e) {
@@ -680,7 +1250,54 @@ class JsonInterpreter extends ChangeNotifier {
     return result ?? false;
   }
 
-  // ============ 自定义函数执行 ============
+  Future<String?> _pickOrTakeImage(
+    Map<String, dynamic> args,
+    ImageSource source,
+  ) async {
+    final bindPath = args['bind'] as String?;
+    final maxWidth = (args['max_width'] as num?)?.toDouble() ?? 1920;
+    final maxHeight = (args['max_height'] as num?)?.toDouble() ?? 1920;
+    final quality = (args['quality'] as num?)?.toInt() ?? 85;
+
+    final picker = ImagePicker();
+    try {
+      final XFile? picked = await picker.pickImage(
+        source: source,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        imageQuality: quality,
+      );
+      if (picked != null) {
+        if (bindPath != null) {
+          setVariable(bindPath, picked.path);
+        }
+        return picked.path;
+      }
+    } catch (e) {
+      debugPrint('[JSON DSL] 图片获取失败: $e');
+      if (source == ImageSource.camera) {
+        try {
+          final XFile? picked = await picker.pickImage(
+            source: ImageSource.gallery,
+            maxWidth: maxWidth,
+            maxHeight: maxHeight,
+            imageQuality: quality,
+          );
+          if (picked != null) {
+            if (bindPath != null) {
+              setVariable(bindPath, picked.path);
+            }
+            return picked.path;
+          }
+        } catch (e2) {
+          debugPrint('[JSON DSL] 图片选择 fallback 也失败: $e2');
+        }
+      }
+    }
+    return null;
+  }
+
+  // ============ 自定义函数 ============
 
   Future<dynamic> _executeGlobalFunction(
       String funcName, Map<String, dynamic> args) async {
@@ -689,8 +1306,19 @@ class JsonInterpreter extends ChangeNotifier {
       debugPrint('[JSON DSL] 未找到函数: $funcName');
       return null;
     }
+    return await _executeFunctionDef(funcDef, args);
+  }
 
-    // 将实参映射到形参名
+  /// 执行依赖模块中的函数
+  Future<dynamic> _executeDependencyFunction(
+      String depName, Map<String, dynamic> funcDef, Map<String, dynamic> args) async {
+    return await _executeFunctionDef(funcDef, args);
+  }
+
+  /// 通用函数执行器
+  Future<dynamic> _executeFunctionDef(
+      Map<String, dynamic> funcDef, Map<String, dynamic> args) async {
+
     final params = funcDef['params'] as List<dynamic>? ?? [];
     final paramMap = <String, dynamic>{};
     for (final p in params) {
@@ -720,7 +1348,8 @@ class JsonInterpreter extends ChangeNotifier {
       if (entry.value is String) {
         final str = entry.value as String;
         if (str.contains('{{') && str.contains('}}')) {
-          resolved[entry.key] = resolveTemplate(str);
+          // resolveExpression: 整体 {{ path }} 返回原始类型，混合文本返回 String
+          resolved[entry.key] = resolveExpression(str);
         } else {
           resolved[entry.key] = str;
         }
@@ -729,26 +1358,6 @@ class JsonInterpreter extends ChangeNotifier {
       }
     }
     return resolved;
-  }
-
-  // ============ JsonLogic 值解析 ============
-
-  dynamic _resolveJsonLogicValue(dynamic value) {
-    if (value == null) return null;
-
-    if (value is Map<String, dynamic>) {
-      return _expressionEngine.evaluate(value);
-    }
-
-    if (value is List) {
-      return value.map((e) => _resolveJsonLogicValue(e)).toList();
-    }
-
-    if (value is String && value.contains('{{')) {
-      return resolveTemplate(value);
-    }
-
-    return value;
   }
 
   // ============ Widget 构建 ============
@@ -815,6 +1424,19 @@ class JsonInterpreter extends ChangeNotifier {
       return val.map((k, v) => MapEntry(k.toString(), v.toString()));
     }
     return null;
+  }
+
+  List<dynamic> _flattenList(List<dynamic> list, int depth) {
+    if (depth <= 0) return list;
+    final result = <dynamic>[];
+    for (final item in list) {
+      if (item is List) {
+        result.addAll(_flattenList(item, depth - 1));
+      } else {
+        result.add(item);
+      }
+    }
+    return result;
   }
 
   @override

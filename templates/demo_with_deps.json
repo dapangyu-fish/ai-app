@@ -1,0 +1,234 @@
+{
+  "dsl": "3.3",
+  "appid": "d3m0w1thd1234567890abcdef1234567890",
+  "meta": {
+    "name": "demo-with-deps",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "演示依赖引用：引用 common-ui 库的函数",
+    "author": "demo"
+  },
+  "dependencies": {
+    "common-ui": {
+      "url": "https://app-backend.dapangyu.work/download/lib_common_ui.json",
+      "version": "^1.0.0"
+    }
+  },
+  "global": {
+    "variables": {
+      "userName": ""
+    },
+    "functions": {
+      "greet": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@common-ui.showSuccess",
+            "args": {
+              "message": "欢迎 {{ global.userName }}！"
+            }
+          }
+        ]
+      },
+      "clearName": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@common-ui.confirm",
+            "args": {
+              "title": "确认",
+              "message": "确定要清除用户名吗？"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.userName",
+              "value": ""
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": {
+        "value": "Demo 启动，正在加载依赖..."
+      }
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "依赖引用 Demo",
+        "layout": "column",
+        "padding": 24,
+        "backgroundColor": "#F8F9FE",
+        "children": [
+          {
+            "type": "text",
+            "value": "模块化 Demo",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "此 App 引用了 common-ui ^1.0.0 库",
+            "style": {
+              "fontSize": 14,
+              "color": "#888888"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "input",
+            "placeholder": "输入你的名字...",
+            "bind": "global.userName",
+            "prefixIcon": "person"
+          },
+          {
+            "type": "text",
+            "value": "你好, {{ global.userName }}",
+            "style": {
+              "fontSize": 18,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "button",
+                "label": "打招呼",
+                "icon": "emoji",
+                "variant": "filled",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "action": {
+                  "type": "call",
+                  "call": "@global.greet",
+                  "args": {}
+                }
+              },
+              {
+                "type": "button",
+                "label": "成功提示",
+                "icon": "check",
+                "variant": "outlined",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "action": {
+                  "type": "call",
+                  "call": "@common-ui.showSuccess",
+                  "args": {
+                    "message": "直接调用依赖函数！"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "button",
+                "label": "错误提示",
+                "icon": "error",
+                "variant": "outlined",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "action": {
+                  "type": "call",
+                  "call": "@common-ui.showError",
+                  "args": {
+                    "message": "这是一个错误提示"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "清除名字",
+                "icon": "delete",
+                "variant": "text",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "action": {
+                  "type": "call",
+                  "call": "@global.clearName",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 24
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 16,
+            "borderRadius": 12,
+            "color": "#F0F0FF",
+            "children": [
+              {
+                "type": "text",
+                "value": "依赖信息",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "主题色: {{ common-ui.theme.primaryColor }}",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#666666"
+                }
+              },
+              {
+                "type": "text",
+                "value": "成功色: {{ common-ui.theme.successColor }}",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#666666"
+                }
+              },
+              {
+                "type": "text",
+                "value": "错误色: {{ common-ui.theme.errorColor }}",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#666666"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
