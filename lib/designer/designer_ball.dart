@@ -57,7 +57,12 @@ class _DesignerBallState extends State<DesignerBall>
   // ── 录音拖拽取消 ──
   Offset? _recordStartPos;
   bool _dragCancelling = false;
+  bool _dragInEditZone = false;
   static const double _cancelBottomZoneHeight = 120.0;
+
+  // ── 编辑模式 ──
+  bool _editMode = false;
+  final TextEditingController _editTextController = TextEditingController();
 
   // ── 脉冲动画（录音中） ──
   late AnimationController _pulseController;
@@ -126,6 +131,7 @@ class _DesignerBallState extends State<DesignerBall>
     _animController.dispose();
     _pulseController.dispose();
     _countdownController.dispose();
+    _editTextController.dispose();
     _speech?.stop();
     _scrollController.dispose();
     super.dispose();
@@ -187,6 +193,8 @@ class _DesignerBallState extends State<DesignerBall>
       _movedEnough = false;
       if (_dragCancelling) {
         _cancelRecording();
+      } else if (_dragInEditZone) {
+        _enterEditMode();
       } else {
         _stopListeningAndSend();
       }
@@ -195,6 +203,7 @@ class _DesignerBallState extends State<DesignerBall>
         _recordStartPos = null;
       }
       _dragCancelling = false;
+      _dragInEditZone = false;
     }
   }
 
@@ -220,7 +229,7 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _onPanUpdate(DragUpdateDetails details, Size screenSize) {
     final delta = (details.globalPosition - _pointerDownPos).distance;
-    if (delta > _dragThreshold) {
+    if (delta > _dragThreshold && !_chatMode) {
       _movedEnough = true;
       _longPressTimer?.cancel();
       _countdownController.stop();
@@ -236,6 +245,7 @@ class _DesignerBallState extends State<DesignerBall>
 
         if (_recordStartPos != null) {
           _dragCancelling = _isInCancelZone(screenSize);
+          _dragInEditZone = _isInEditZone(screenSize);
         }
       });
       return;
@@ -309,12 +319,10 @@ class _DesignerBallState extends State<DesignerBall>
 
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
-    _fallbackToSherpa = false; // 每次进入聊天模式重置 fallback 标志
+    _fallbackToSherpa = false;
 
-    // 注入当前运行中的 JSON-APP 作为对话上下文
     _injectCurrentAppContext();
 
-    // 如果没有强制离线，先尝试原生语音识别 (macOS/iOS/部分 Android)
     if (!_speechInited && !_useSherpaAsr) {
       try {
         _speech ??= stt.SpeechToText();
@@ -322,7 +330,6 @@ class _DesignerBallState extends State<DesignerBall>
           onError: (error) {
             debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
             _nativeSpeechTimeout?.cancel();
-            // 原生语音运行时出错 → fallback 到 sherpa 离线 ASR
             if (!_useSherpaAsr && !_fallbackToSherpa) {
               _fallbackToSherpa = true;
               _speech?.stop();
@@ -343,21 +350,24 @@ class _DesignerBallState extends State<DesignerBall>
         _speechInited = false;
       }
 
-      // 原生不可用 → fallback 到 sherpa 离线 ASR
+      // 手已离开 → 中止
+      if (!_pointerDown) {
+        debugPrint('[DesignerBall] Pointer lifted during speech init, aborting');
+        return;
+      }
+
       if (!_speechInited) {
         _fallbackToSherpa = true;
         debugPrint('[DesignerBall] Falling back to sherpa offline ASR');
       }
     }
 
-    // 现在确定是否应该用 Sherpa：强制离线 或 fallback
     final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
 
-    // 如果用 sherpa，确保模型已下载+初始化
     if (shouldUseSherpa) {
       setState(() {
         _chatMode = true;
-        _isThinking = true; // 显示加载状态
+        _isThinking = true;
       });
       _sherpaAsr.onStatusChange = (status) {
         setState(() {
@@ -366,6 +376,17 @@ class _DesignerBallState extends State<DesignerBall>
       };
       final ready = await _sherpaAsr.ensureReady();
       _sherpaAsr.onStatusChange = null;
+
+      // 手已离开 → 中止
+      if (!_pointerDown) {
+        debugPrint('[DesignerBall] Pointer lifted during sherpa init, aborting');
+        setState(() {
+          _isThinking = false;
+          _liveTranscript = null;
+        });
+        return;
+      }
+
       if (!ready) {
         setState(() {
           _isThinking = false;
@@ -377,7 +398,12 @@ class _DesignerBallState extends State<DesignerBall>
       setState(() => _isThinking = false);
     }
 
+    // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
+    if (!_pointerDown) {
+      debugPrint('[DesignerBall] Pointer lifted before startListening, skipping');
+      return;
+    }
     _startListening();
   }
 
@@ -400,7 +426,16 @@ class _DesignerBallState extends State<DesignerBall>
 
   bool _isInCancelZone(Size screenSize) {
     final ballBottomY = _top + _ballSize;
-    return ballBottomY >= screenSize.height - _cancelBottomZoneHeight;
+    final ballCenterX = _left + _ballSize / 2;
+    return ballBottomY >= screenSize.height - _cancelBottomZoneHeight &&
+        ballCenterX < screenSize.width / 2;
+  }
+
+  bool _isInEditZone(Size screenSize) {
+    final ballBottomY = _top + _ballSize;
+    final ballCenterX = _left + _ballSize / 2;
+    return ballBottomY >= screenSize.height - _cancelBottomZoneHeight &&
+        ballCenterX >= screenSize.width / 2;
   }
 
   void _cancelRecording() {
@@ -419,6 +454,100 @@ class _DesignerBallState extends State<DesignerBall>
       _isListening = false;
       _liveTranscript = null;
       _dragCancelling = false;
+      _dragInEditZone = false;
+    });
+  }
+
+  void _enterEditMode() {
+    debugPrint('[DesignerBall] Entering edit mode');
+    _nativeSpeechTimeout?.cancel();
+    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    String finalText = _liveTranscript?.trim() ?? '';
+
+    if (shouldUseSherpa) {
+      _sherpaAsr.stopListening().then((sherpaText) {
+        if (sherpaText.isNotEmpty) finalText = sherpaText;
+        _editTextController.text = finalText;
+      });
+      _sherpaAsr.onResult = null;
+    } else {
+      try { _speech?.stop(); } catch (_) {}
+      _editTextController.text = finalText;
+    }
+
+    _pulseController.stop();
+    _pulseController.reset();
+    setState(() {
+      _isListening = false;
+      _liveTranscript = null;
+      _dragCancelling = false;
+      _dragInEditZone = false;
+      _editMode = true;
+      _editTextController.text = finalText;
+    });
+  }
+
+  void _sendEditedText() {
+    final text = _editTextController.text.trim();
+    setState(() => _editMode = false);
+    _editTextController.clear();
+
+    if (text.isEmpty) return;
+
+    _cancelCurrentStream();
+
+    setState(() {
+      _messages.add(ChatMessage(role: 'user', content: text));
+      _messages.add(ChatMessage(role: 'assistant', content: ''));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    _streamSub = _chatService.sendStream(text).listen(
+      (event) {
+        if (event.error != null && event.content == null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+          });
+          _scrollToBottom();
+          return;
+        }
+        if (event.content != null) {
+          setState(() {
+            _isThinking = false;
+            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
+          });
+          _scrollToBottom();
+        }
+        if (event.jsonApp != null) {
+          _lastGeneratedJson = event.jsonApp;
+          setState(() {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '🚀 JSON-APP 已生成，点击试运行',
+              jsonApp: event.jsonApp,
+            ));
+          });
+          _scrollToBottom();
+        }
+        if (event.quota != null) {
+          _lastQuota = event.quota;
+        }
+      },
+      onError: (e) {
+        setState(() {
+          _isThinking = false;
+          _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+        });
+      },
+    );
+  }
+
+  void _cancelEditMode() {
+    setState(() {
+      _editMode = false;
+      _editTextController.clear();
     });
   }
 
@@ -811,7 +940,7 @@ class _DesignerBallState extends State<DesignerBall>
             },
           ),
 
-        // 录音取消区域 — 屏幕底部淡红提示
+        // 录音底部操作栏 — 左取消 / 右编辑
         if (_isListening && _recordStartPos != null)
           Positioned(
             left: 0,
@@ -819,41 +948,88 @@ class _DesignerBallState extends State<DesignerBall>
             bottom: 0,
             height: _cancelBottomZoneHeight,
             child: IgnorePointer(
-              child: AnimatedOpacity(
-                opacity: _dragCancelling ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 150),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        Colors.red.withValues(alpha: 0.35),
-                        Colors.red.withValues(alpha: 0.0),
-                      ],
-                    ),
-                  ),
-                  alignment: Alignment.bottomCenter,
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.close, color: Colors.white70, size: 18),
-                      SizedBox(width: 4),
-                      Text(
-                        '松手取消发送',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+              child: Row(
+                children: [
+                  // 左半：取消区域
+                  Expanded(
+                    child: AnimatedOpacity(
+                      opacity: _dragCancelling ? 1.0 : 0.3,
+                      duration: const Duration(milliseconds: 150),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.red.withValues(alpha: _dragCancelling ? 0.45 : 0.2),
+                              Colors.red.withValues(alpha: 0.0),
+                            ],
+                          ),
+                        ),
+                        alignment: Alignment.bottomCenter,
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.close, color: Colors.white.withValues(alpha: _dragCancelling ? 1.0 : 0.6), size: 22),
+                            const SizedBox(height: 4),
+                            Text(
+                              '取消',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: _dragCancelling ? 1.0 : 0.6),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  // 右半：编辑区域
+                  Expanded(
+                    child: AnimatedOpacity(
+                      opacity: _dragInEditZone ? 1.0 : 0.3,
+                      duration: const Duration(milliseconds: 150),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.blue.withValues(alpha: _dragInEditZone ? 0.45 : 0.2),
+                              Colors.blue.withValues(alpha: 0.0),
+                            ],
+                          ),
+                        ),
+                        alignment: Alignment.bottomCenter,
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit, color: Colors.white.withValues(alpha: _dragInEditZone ? 1.0 : 0.6), size: 22),
+                            const SizedBox(height: 4),
+                            Text(
+                              '编辑',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: _dragInEditZone ? 1.0 : 0.6),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+
+        // 编辑模式覆层
+        if (_editMode)
+          _buildEditOverlay(screenSize),
 
         // 悬浮球 — 用 Listener 捕获原始 pointer 事件
         Positioned(
@@ -877,11 +1053,149 @@ class _DesignerBallState extends State<DesignerBall>
     );
   }
 
+  Widget _buildEditOverlay(Size screenSize) {
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    return Positioned(
+      left: 12,
+      right: 12,
+      bottom: bottomPadding + 80,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(maxHeight: screenSize.height * 0.45),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.blue.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 标题栏
+              Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_note,
+                        color: Colors.white.withValues(alpha: 0.5), size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      '编辑消息',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _cancelEditMode,
+                      child: Icon(Icons.close,
+                          color: Colors.white60, size: 15),
+                    ),
+                  ],
+                ),
+              ),
+              // 编辑区域
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                  child: TextField(
+                    controller: _editTextController,
+                    autofocus: true,
+                    maxLines: null,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      height: 1.5,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '编辑你的消息...',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // 底部操作栏
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: _cancelEditMode,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '取消',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _sendEditedText,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.purple,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.send, color: Colors.white, size: 16),
+                            SizedBox(width: 6),
+                            Text(
+                              '发送',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBall() {
     final double opacity = _hidden ? 0.6 : 1.0;
 
     final ballColor = _isListening
-        ? (_dragCancelling ? Colors.grey : Colors.red)
+        ? (_dragCancelling ? Colors.grey : (_dragInEditZone ? Colors.blue : Colors.red))
         : Colors.purple;
 
     Widget ball = Container(
@@ -901,7 +1215,7 @@ class _DesignerBallState extends State<DesignerBall>
       child: Center(
         child: _isListening
             ? Icon(
-                _dragCancelling ? Icons.close : Icons.mic,
+                _dragCancelling ? Icons.close : (_dragInEditZone ? Icons.edit : Icons.mic),
                 color: Colors.white,
                 size: 26,
               )
@@ -946,7 +1260,7 @@ class _DesignerBallState extends State<DesignerBall>
           return CustomPaint(
             painter: _PulseRingPainter(
               progress: _pulseController.value,
-              color: _dragCancelling ? Colors.grey : Colors.red,
+              color: _dragCancelling ? Colors.grey : (_dragInEditZone ? Colors.blue : Colors.red),
             ),
             child: child,
           );
