@@ -839,24 +839,26 @@ def fix_app():
 # ═══════════════════════════════════════════════════════════
 
 def _minio_upload(bucket, key, data, content_type="application/json"):
-    """上传文件到 MinIO（使用 requests + 预签名 PUT 的简易方式）"""
-    # 简易方案：用 mc 命令行上传
-    import subprocess
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        if isinstance(data, str):
-            f.write(data)
-        else:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        tmp_path = f.name
-
-    result = subprocess.run(
-        ["mc", "cp", tmp_path, f"app/{bucket}/{key}"],
-        capture_output=True, text=True, timeout=30,
+    """上传文件到 MinIO（使用 Python SDK）"""
+    import io
+    from minio import Minio
+    client = Minio(
+        "127.0.0.1:9000",
+        access_key=MINIO_ACCESS_KEY,
+        secret_key=MINIO_SECRET_KEY,
+        secure=False,
     )
-    os.unlink(tmp_path)
-    if result.returncode != 0:
-        raise Exception(f"MinIO upload failed: {result.stderr}")
+    if isinstance(data, dict):
+        data = json.dumps(data, ensure_ascii=False, indent=2)
+    data_bytes = data.encode("utf-8") if isinstance(data, str) else data
+
+    if not client.bucket_exists(bucket):
+        client.make_bucket(bucket)
+
+    client.put_object(
+        bucket, key, io.BytesIO(data_bytes), len(data_bytes),
+        content_type=content_type,
+    )
     return f"{MINIO_PUBLIC_URL}/{bucket}/{key}"
 
 @app.route("/api/store/apps", methods=["GET"])

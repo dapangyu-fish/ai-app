@@ -3,33 +3,37 @@
 Store 模块 - JSON App 管理
 """
 
+import io
 import json
 import os
 import uuid
-import tempfile
-import subprocess
 from flask import request, jsonify, send_from_directory
-from config import TEMPLATES_DIR, MINIO_PUBLIC_URL
+from minio import Minio
+from config import TEMPLATES_DIR, MINIO_PUBLIC_URL, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
 from database import db_query, db_execute
 from auth import require_auth, require_role
 
+_minio_client = Minio(
+    "127.0.0.1:9000",
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
+    secure=False,
+)
+
 
 def _minio_upload(bucket, key, data, content_type="application/json"):
-    """上传文件到 MinIO（使用 mc 命令行）"""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        if isinstance(data, str):
-            f.write(data)
-        else:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        tmp_path = f.name
+    """上传文件到 MinIO（使用 Python SDK）"""
+    if isinstance(data, dict):
+        data = json.dumps(data, ensure_ascii=False, indent=2)
+    data_bytes = data.encode("utf-8") if isinstance(data, str) else data
 
-    result = subprocess.run(
-        ["mc", "cp", tmp_path, f"app/{bucket}/{key}"],
-        capture_output=True, text=True, timeout=30,
+    if not _minio_client.bucket_exists(bucket):
+        _minio_client.make_bucket(bucket)
+
+    _minio_client.put_object(
+        bucket, key, io.BytesIO(data_bytes), len(data_bytes),
+        content_type=content_type,
     )
-    os.unlink(tmp_path)
-    if result.returncode != 0:
-        raise Exception(f"MinIO upload failed: {result.stderr}")
     return f"{MINIO_PUBLIC_URL}/{bucket}/{key}"
 
 
