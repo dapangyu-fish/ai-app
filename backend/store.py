@@ -229,7 +229,8 @@ def app_list():
                     "version": meta.get("version", "1.0.0"),
                     "description": meta.get("description", ""),
                     "icon_url": meta.get("icon_url", ""),
-                    "file": f,
+                    "author": meta.get("author", ""),
+                    "download": f"/download/{f}",
                 })
             except Exception:
                 continue

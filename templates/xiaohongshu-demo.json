@@ -1,0 +1,374 @@
+{
+  "dsl": "3.3",
+  "appid": "xhsd3m0app1234567890abcdef12345678",
+  "meta": {
+    "name": "小红书 Demo",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "一个小红书风格的示例应用",
+    "author": "AI Designer",
+    "icon_url": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop"
+  },
+  "global": {
+    "variables": {
+      "currentScreen": "home",
+      "selectedPostIndex": -1,
+      "likedPosts": [],
+      "posts": [
+        {
+          "title": "春日樱花 | 绝美打卡地推荐",
+          "author": "小花花",
+          "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+          "image": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=500&fit=crop",
+          "likes": 1234,
+          "comments": 89,
+          "content": "这是我今年发现的最美樱花打卡地！\n\n位置：XX公园\n\n拍照技巧：\n1. 早上 7-9 点光线最佳\n2. 用大光圈虚化背景\n3. 搭配浅色系衣服",
+          "tags": "樱花, 拍照, 春天"
+        },
+        {
+          "title": "极简早餐 | 3分钟搞定",
+          "author": "美食家小王",
+          "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+          "image": "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400&h=400&fit=crop",
+          "likes": 892,
+          "comments": 45,
+          "content": "早起懒人的福音！\n\n材料：\n- 一片吐司\n- 一颗鸡蛋\n- 适量牛油果\n\n做法：\n1. 吐司烤一下\n2. 煎个太阳蛋\n3. 牛油果切片摆上\n\n健康又美味！",
+          "tags": "早餐, 快手菜, 健康"
+        },
+        {
+          "title": "城市夜景 | 氛围感拉满",
+          "author": "摄影师小李",
+          "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
+          "image": "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=400&h=550&fit=crop",
+          "likes": 2341,
+          "comments": 156,
+          "content": "分享一组超有感觉的城市夜景！\n\n设备：iPhone 14 Pro\n\n调色参数：\n- 曝光：+0.3\n- 对比度：-10\n- 色温：-5\n- 饱和度：+8\n\n快来试试吧！",
+          "tags": "夜景, 摄影, 调色"
+        },
+        {
+          "title": "OOTD | 今日份温柔",
+          "author": "穿搭达人",
+          "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100&h=100&fit=crop",
+          "image": "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=450&fit=crop",
+          "likes": 1892,
+          "comments": 123,
+          "content": "今天是温柔系穿搭～\n\n上衣：米白色针织衫\n下装：浅灰色阔腿裤\n包包：奶茶色链条包\n鞋子：小白鞋\n\n整体色系超和谐！",
+          "tags": "穿搭, OOTD, 温柔风"
+        },
+        {
+          "title": "周末手冲咖啡",
+          "author": "咖啡控",
+          "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
+          "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=500&fit=crop",
+          "likes": 765,
+          "comments": 67,
+          "content": "周末的正确打开方式～\n\n豆子：云南日晒\n水温：92度\n粉水比：1:15\n\n入口有柑橘和茉莉花的香气，太治愈了！",
+          "tags": "咖啡, 手冲, 周末"
+        },
+        {
+          "title": "治愈系绿植",
+          "author": "植物控",
+          "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
+          "image": "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=400&h=520&fit=crop",
+          "likes": 1023,
+          "comments": 78,
+          "content": "给大家看看我的绿植小角落！\n\n推荐新手友好的植物：\n- 龟背竹\n- 绿萝\n- 虎皮兰\n- 多肉\n\n看着它们心情就好～",
+          "tags": "绿植, 家居, 治愈"
+        }
+      ]
+    },
+    "functions": {
+      "goHome": {
+        "params": [],
+        "logic": [
+          { "call": "@set", "args": { "var": "global.currentScreen", "value": "home" } },
+          { "call": "@set", "args": { "var": "global.selectedPostIndex", "value": -1 } }
+        ]
+      },
+      "viewPost": {
+        "params": ["index"],
+        "logic": [
+          { "call": "@set", "args": { "var": "global.selectedPostIndex", "value": "{{ params.index }}" } },
+          { "call": "@set", "args": { "var": "global.currentScreen", "value": "detail" } }
+        ]
+      },
+      "toggleLike": {
+        "params": ["index"],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "in": [{ "var": "params.index" }, { "var": "global.likedPosts" }] },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.likedPosts",
+                    "value": {
+                      "filter": [
+                        { "var": "global.likedPosts" },
+                        { "!=": [{ "var": "" }, { "var": "params.index" }] }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.likedPosts",
+                    "value": { "merge": [{ "var": "global.likedPosts" }, { "var": "params.index" }] }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    { "call": "@print", "args": { "value": "小红书 Demo 启动" } }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "发现",
+        "layout": "column",
+        "padding": 16,
+        "backgroundColor": "#FAFAFA",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "text",
+                "value": "发现",
+                "style": { "fontSize": 24, "fontWeight": "bold" },
+                "position": { "type": "flex", "flex": 1 }
+              },
+              {
+                "type": "button",
+                "label": "搜索",
+                "icon": "search",
+                "variant": "text"
+              }
+            ]
+          },
+          { "type": "spacer", "height": 12 },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "button",
+                "label": "推荐",
+                "variant": "filled",
+                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+              },
+              {
+                "type": "button",
+                "label": "穿搭",
+                "variant": "outlined",
+                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+              },
+              {
+                "type": "button",
+                "label": "美食",
+                "variant": "outlined",
+                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+              },
+              {
+                "type": "button",
+                "label": "旅行",
+                "variant": "outlined",
+                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+              }
+            ]
+          },
+          { "type": "spacer", "height": 16 },
+          {
+            "type": "list",
+            "source": "{{ global.posts }}",
+            "item_template": {
+              "type": "container",
+              "layout": "column",
+              "padding": 0,
+              "borderRadius": 12,
+              "color": "#FFFFFF",
+              "elevation": 1,
+              "margin": 4,
+              "children": [
+                {
+                  "type": "image",
+                  "url": "{{ loop.item.image }}",
+                  "width": -1,
+                  "height": 200,
+                  "borderRadius": 12
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.title }}",
+                      "style": { "fontSize": 15, "fontWeight": "bold", "maxLines": 2, "overflow": "ellipsis" }
+                    },
+                    { "type": "spacer", "height": 8 },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "image",
+                          "url": "{{ loop.item.avatar }}",
+                          "width": 24,
+                          "height": 24,
+                          "borderRadius": 12,
+                          "position": { "type": "relative" }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.author }}",
+                          "style": { "fontSize": 12, "color": "#888888" },
+                          "position": { "type": "flex", "flex": 1 }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.likes }}",
+                          "style": { "fontSize": 12, "color": "#888888" }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "action": {
+                "type": "call",
+                "call": "@global.viewPost",
+                "args": { "index": "{{ loop.index }}" }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "detail",
+        "title": "笔记详情",
+        "layout": "column",
+        "padding": 0,
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "button",
+            "label": "返回",
+            "icon": "arrow_back",
+            "variant": "text",
+            "action": { "type": "navigate", "screen": "home" }
+          },
+          {
+            "type": "image",
+            "url": "{{ global.posts[global.selectedPostIndex].image }}",
+            "width": -1,
+            "height": 280
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 16,
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.posts[global.selectedPostIndex].title }}",
+                "style": { "fontSize": 20, "fontWeight": "bold" }
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "image",
+                    "url": "{{ global.posts[global.selectedPostIndex].avatar }}",
+                    "width": 40,
+                    "height": 40,
+                    "borderRadius": 20
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.posts[global.selectedPostIndex].author }}",
+                    "style": { "fontSize": 16, "fontWeight": "bold" },
+                    "position": { "type": "flex", "flex": 1 }
+                  },
+                  {
+                    "type": "button",
+                    "label": "+ 关注",
+                    "variant": "outlined",
+                    "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 4 }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 16 },
+              {
+                "type": "text",
+                "value": "{{ global.posts[global.selectedPostIndex].content }}",
+                "style": { "fontSize": 15, "lineHeight": 1.6 }
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "text",
+                "value": "# {{ global.posts[global.selectedPostIndex].tags }}",
+                "style": { "fontSize": 13, "color": "#4A90D9" }
+              },
+              { "type": "spacer", "height": 16 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "点赞",
+                    "icon": "favorite",
+                    "variant": "text",
+                    "position": { "type": "flex", "flex": 1 },
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleLike",
+                      "args": { "index": "{{ global.selectedPostIndex }}" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "评论",
+                    "icon": "chat",
+                    "variant": "text",
+                    "position": { "type": "flex", "flex": 1 }
+                  },
+                  {
+                    "type": "button",
+                    "label": "收藏",
+                    "icon": "bookmark",
+                    "variant": "text",
+                    "position": { "type": "flex", "flex": 1 }
+                  },
+                  {
+                    "type": "button",
+                    "label": "分享",
+                    "icon": "share",
+                    "variant": "text",
+                    "position": { "type": "flex", "flex": 1 }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

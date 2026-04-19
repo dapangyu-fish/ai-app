@@ -40,8 +40,8 @@ def _extract_user_info(user):
     """从 Supabase 用户对象提取用户信息"""
     meta = user.get("user_metadata", {})
     return {
-        "id": user.get("id"),
-        "email": user.get("email"),
+        "id": str(user.get("id", "")),
+        "email": user.get("email", ""),
         "username": meta.get("username", ""),
         "avatar_url": meta.get("avatar_url", ""),
         "role": _get_user_role(user),
