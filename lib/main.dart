@@ -1139,7 +1139,15 @@ class _MyAppsPageState extends State<_MyAppsPage> {
         body: json.encode({'json_content': app.config}),
       ).timeout(const Duration(seconds: 30));
 
-      final data = json.decode(resp.body) as Map<String, dynamic>;
+      debugPrint('[Upload] status=${resp.statusCode}, body=${resp.body.length > 200 ? resp.body.substring(0, 200) : resp.body}');
+
+      Map<String, dynamic> data;
+      try {
+        data = json.decode(resp.body) as Map<String, dynamic>;
+      } catch (_) {
+        _showSnackBar('服务器返回异常 (${resp.statusCode}): ${resp.body.length > 100 ? resp.body.substring(0, 100) : resp.body}');
+        return;
+      }
 
       if (resp.statusCode == 409 && data['conflict'] == true) {
         final existing = data['existing'] as Map<String, dynamic>;
@@ -1174,7 +1182,13 @@ class _MyAppsPageState extends State<_MyAppsPage> {
           }),
         ).timeout(const Duration(seconds: 30));
 
-        final data2 = json.decode(resp2.body) as Map<String, dynamic>;
+        Map<String, dynamic> data2;
+        try {
+          data2 = json.decode(resp2.body) as Map<String, dynamic>;
+        } catch (_) {
+          _showSnackBar('服务器返回异常 (${resp2.statusCode})');
+          return;
+        }
         if (resp2.statusCode == 200) {
           _showSnackBar('更新成功: ${app.name} v$confirmedVersion');
         } else {
