@@ -3,7 +3,7 @@
 JSON DSL Backend — Flask
 Auth Proxy + User Roles + Chat Quota + AI Chat (SSE) + App Store (OSS)
 
-启动: python3 tools/ai_server.py
+启动: python backend/ai_server.py
 """
 
 import json
@@ -17,12 +17,14 @@ from functools import wraps
 
 import requests
 import anthropic
+import psycopg2
+from psycopg2.extras import DictCursor
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from flask_sock import Sock
 
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # 配置
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "http://127.0.0.1:8000")
 SUPABASE_ANON_KEY = (
@@ -35,7 +37,6 @@ SUPABASE_SERVICE_KEY = (
     ".eyJyb2xlIjogInNlcnZpY2Vfcm9sZSIsICJpc3MiOiAic3VwYWJhc2UiLCAiaWF0IjogMTc3NjM2NTQ2MiwgImV4cCI6IDIwOTE3MjU0NjJ9"
     ".vF-RNvJfdUyhExR8cFdefdMVmw4yHCCaFMd_-gZC5Es"
 )
-SUPABASE_DB_URL = "postgresql://supabase_admin:kWwuSeqL4Xey66QsUBD7MsUl@127.0.0.1:5432/postgres"
 
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_KEY = "sk-63a3f89ae09440f2b05e21f56410eb68"
@@ -45,6 +46,13 @@ MINIO_ENDPOINT = "http://127.0.0.1:9000"
 MINIO_ACCESS_KEY = "m3wZkIA5EgmEwkctueZM"
 MINIO_SECRET_KEY = "m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk"
 MINIO_PUBLIC_URL = "https://app-oss-endpoint.dapangyu.work"
+
+# PostgreSQL 配置
+DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
+DB_PORT = int(os.environ.get("DB_PORT", "5433"))
+DB_NAME = os.environ.get("DB_NAME", "jsonapp")
+DB_USER = os.environ.get("DB_USER", "jsonapp")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg")
 
 PORT = 5566
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "templates")
@@ -65,46 +73,55 @@ ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
 app = Flask(__name__)
 sock = Sock(app)
 
-# ══════════════════════════════════════════════════════════
-# DB 辅助（直接用 psycopg2 或 HTTP 走 PostgREST）
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
+# 数据库连接
+# ═══════════════════════════════════════════════════════════
 
-def _db_query(sql, params=None):
-    """通过 docker exec 执行 SQL（简易方案，避免额外依赖）"""
-    import subprocess
-    if params:
-        for i, p in enumerate(params):
-            ph = f"${i+1}"
-            if isinstance(p, str):
-                sql = sql.replace(ph, f"'{p}'", 1)
-            elif p is None:
-                sql = sql.replace(ph, "NULL", 1)
-            else:
-                sql = sql.replace(ph, str(p), 1)
-
-    result = subprocess.run(
-        ["docker", "exec", "supabase-db", "psql", "-U", "supabase_admin",
-         "-d", "postgres", "-t", "-A", "-c", sql],
-        capture_output=True, text=True, timeout=10
+def get_db_connection():
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD
     )
-    return result.stdout.strip()
+    return conn
 
+def db_query(sql, params=None, fetch_one=False, fetch_all=False):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute(sql, params or ())
+            if fetch_one:
+                result = cur.fetchone()
+                return dict(result) if result else None
+            elif fetch_all:
+                results = cur.fetchall()
+                return [dict(row) for row in results]
+            else:
+                conn.commit()
+                return None
+    finally:
+        conn.close()
 
-def _db_execute(sql, params=None):
-    """执行 INSERT/UPDATE/DELETE"""
-    _db_query(sql, params)
+def db_execute(sql, params=None):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params or ())
+        conn.commit()
+    finally:
+        conn.close()
 
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # 工具函数
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 def _supabase_headers(token=None):
     h = {"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"}
     if token:
         h["Authorization"] = f"Bearer {token}"
     return h
-
 
 def _service_headers():
     return {
@@ -113,11 +130,9 @@ def _service_headers():
         "Content-Type": "application/json",
     }
 
-
 def _get_user_role(user):
     """从 app_metadata 获取角色，默认 user"""
     return user.get("app_metadata", {}).get("role", "user")
-
 
 def _extract_user_info(user):
     meta = user.get("user_metadata", {})
@@ -128,7 +143,6 @@ def _extract_user_info(user):
         "avatar_url": meta.get("avatar_url", ""),
         "role": _get_user_role(user),
     }
-
 
 def require_auth(f):
     @wraps(f)
@@ -150,7 +164,6 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-
 def require_role(*roles):
     """装饰器：要求特定角色"""
     def decorator(f):
@@ -162,10 +175,9 @@ def require_role(*roles):
         return decorated
     return decorator
 
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # appid 生成和检查
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 def _generate_appid():
     """生成不重复的 appid（UUID），先检查数据库"""
@@ -173,55 +185,56 @@ def _generate_appid():
     for _ in range(max_attempts):
         appid = uuid.uuid4().hex
         # 检查数据库中是否已存在
-        exists = _db_query(
-            "SELECT id FROM public.app_registry WHERE id = $1",
-            [appid]
+        exists = db_query(
+            "SELECT id FROM app_registry WHERE id = %s",
+            [appid],
+            fetch_one=True
         )
         if not exists:
             return appid
     raise Exception("无法生成唯一的 appid")
 
-
 def _check_appid_exists(appid):
     """检查 appid 是否已在数据库中存在"""
     if not appid:
         return False
-    exists = _db_query(
-        "SELECT id FROM public.app_registry WHERE id = $1",
-        [appid]
+    exists = db_query(
+        "SELECT id FROM app_registry WHERE id = %s",
+        [appid],
+        fetch_one=True
     )
     return bool(exists)
 
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # 聊天配额
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 def _get_quota_info(user_id, role):
     """返回 (used, limit, remaining)"""
     limit = ROLE_QUOTAS.get(role, 30)
     today = date.today().isoformat()
-    row = _db_query(
-        f"SELECT used_count FROM public.chat_quotas WHERE user_id = $1 AND date = $2",
-        [user_id, today]
+    row = db_query(
+        "SELECT used_count FROM chat_quotas WHERE user_id = %s AND date = %s",
+        [user_id, today],
+        fetch_one=True
     )
-    used = int(row) if row else 0
+    used = row["used_count"] if row else 0
     return used, limit, max(0, limit - used)
-
 
 def _increment_quota(user_id):
     today = date.today().isoformat()
-    _db_execute(
-        f"INSERT INTO public.chat_quotas (user_id, date, used_count) "
-        f"VALUES ($1, $2, 1) "
-        f"ON CONFLICT (user_id, date) DO UPDATE SET used_count = chat_quotas.used_count + 1",
+    # 使用 INSERT ... ON CONFLICT DO UPDATE
+    db_execute(
+        """INSERT INTO chat_quotas (user_id, date, used_count)
+           VALUES (%s, %s, 1)
+           ON CONFLICT (user_id, date)
+           DO UPDATE SET used_count = chat_quotas.used_count + 1""",
         [user_id, today]
     )
 
-
-# ══════════════════════════════════════════════════════════
-# Auth API（保留原有，增加 role 字段）
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
+# Auth API（通过 Supabase Auth）
+# ═══════════════════════════════════════════════════════════
 
 @app.route("/api/auth/register", methods=["POST"])
 def register():
@@ -262,7 +275,6 @@ def register():
 
     return jsonify(result), 200
 
-
 @app.route("/api/auth/verify", methods=["POST"])
 def verify_otp():
     body = request.get_json(silent=True) or {}
@@ -293,7 +305,6 @@ def verify_otp():
         "user": _extract_user_info(user),
     })
 
-
 @app.route("/api/auth/resend", methods=["POST"])
 def resend_verification():
     body = request.get_json(silent=True) or {}
@@ -309,7 +320,6 @@ def resend_verification():
     if resp.status_code >= 400:
         return jsonify({"error": resp.json().get("msg", "发送失败")}), resp.status_code
     return jsonify({"message": "验证邮件已重新发送"})
-
 
 @app.route("/api/auth/login", methods=["POST"])
 def login():
@@ -342,7 +352,6 @@ def login():
         "user": _extract_user_info(user),
     })
 
-
 @app.route("/api/auth/refresh", methods=["POST"])
 def refresh_token():
     body = request.get_json(silent=True) or {}
@@ -368,7 +377,6 @@ def refresh_token():
         "user": _extract_user_info(user),
     })
 
-
 @app.route("/api/auth/logout", methods=["POST"])
 @require_auth
 def logout():
@@ -376,12 +384,10 @@ def logout():
                   headers=_supabase_headers(request.supabase_token), timeout=10)
     return jsonify({"message": "已登出"})
 
-
 @app.route("/api/auth/user", methods=["GET"])
 @require_auth
 def get_user():
     return jsonify(_extract_user_info(request.supabase_user))
-
 
 @app.route("/api/auth/user", methods=["PUT"])
 @require_auth
@@ -400,7 +406,6 @@ def update_user():
     if resp.status_code >= 400:
         return jsonify({"error": data.get("msg", "更新失败")}), resp.status_code
     return jsonify({"message": "更新成功", "user": _extract_user_info(data)})
-
 
 @app.route("/api/auth/avatar", methods=["POST"])
 @require_auth
@@ -434,7 +439,6 @@ def upload_avatar():
                  json={"data": {"avatar_url": public_url}}, timeout=10)
     return jsonify({"message": "头像更新成功", "avatar_url": public_url})
 
-
 @app.route("/api/auth/quota", methods=["GET"])
 @require_auth
 def get_quota():
@@ -448,10 +452,9 @@ def get_quota():
         "remaining": remaining,
     })
 
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # AI Chat (SSE) — 带配额检查 + JSON 代码块检测
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 def _load_dsl_spec():
     """加载 JSON-DSL.md 规范"""
@@ -461,27 +464,23 @@ def _load_dsl_spec():
     except Exception:
         return ""
 
-
 def _load_registry_summary():
     """从 app_registry 加载已有 app/component 摘要"""
     try:
-        rows = _db_query(
-            "SELECT type, name, version, description, dsl_spec FROM public.app_registry "
-            "WHERE is_public = true ORDER BY type, name"
+        rows = db_query(
+            "SELECT type, name, version, description, dsl_spec FROM app_registry WHERE is_public = true ORDER BY type, name",
+            fetch_all=True
         )
         if not rows:
             return ""
         lines = []
-        for row in rows.split("\n"):
-            parts = row.split("|")
-            if len(parts) >= 4:
-                t, n, v, d = parts[0], parts[1], parts[2], parts[3]
-                spec = parts[4] if len(parts) > 4 else ""
-                lines.append(f"- [{t}] {n} v{v}: {d}" + (f"\n  规格: {spec}" if spec else ""))
+        for row in rows:
+            lines.append(f"- [{row['type']}] {row['name']} v{row['version']}: {row['description']}")
+            if row.get("dsl_spec"):
+                lines.append(f"  规格: {row['dsl_spec']}")
         return "\n".join(lines)
     except Exception:
         return ""
-
 
 AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交流，你帮助设计和生成 JSON-APP。
 
@@ -505,7 +504,7 @@ AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交�
 4. 基于模板结构和真实函数生成 JSON-APP
 
 ## 输出要求
-- JSON 必须包含 meta（name/version/type:"app"/description）
+- JSON 必须包含 meta（name/version/type:"app"/description/icon_url）
 - 只使用工具确认存在的 @函数和组件类型
 - 不要自创框架中不存在的函数或属性
 """
@@ -551,7 +550,6 @@ AGENT_TOOLS = [
         }
     }
 ]
-
 
 def _execute_agent_tool(name, inputs):
     """执行 Agent 工具调用"""
@@ -603,13 +601,12 @@ def _execute_agent_tool(name, inputs):
             for f in files:
                 path = os.path.join(tpl_dir, f)
                 try:
-                    with open(path, 'r') as fh:
+                    with open(path, 'r', encoding='utf-8') as fh:
                         data = json.load(fh)
                     meta = data.get("meta", {})
                     name_str = meta.get("name", f)
                     desc = meta.get("description", "")
-                    screens = len(data.get("screens", {}).get("items", data.get("ui", {}).get("items", [])))
-                    result.append(f"- {f}: {name_str} — {desc} ({screens} screens)")
+                    result.append(f"- {f}: {name_str} — {desc}")
                 except Exception:
                     result.append(f"- {f}: (parse error)")
             return "可参考的模板 APP:\n" + "\n".join(result) + "\n\n用 read_file('templates/xxx.json') 读取完整内容作为参考"
@@ -617,7 +614,6 @@ def _execute_agent_tool(name, inputs):
             return f"Error: {e}"
 
     return f"Unknown tool: {name}"
-
 
 @app.route("/chat", methods=["POST"])
 @require_auth
@@ -756,10 +752,9 @@ def chat():
                  "Access-Control-Allow-Origin": "*"},
     )
 
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # AI 崩溃修复
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 @app.route("/api/ai/fix-app", methods=["POST"])
 @require_auth
@@ -828,10 +823,9 @@ def fix_app():
     return Response(stream_with_context(generate()), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*"})
 
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # App Store — 基于 app_registry + MinIO
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 def _minio_upload(bucket, key, data, content_type="application/json"):
     """上传文件到 MinIO（使用 requests + 预签名 PUT 的简易方式）"""
@@ -854,47 +848,54 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
         raise Exception(f"MinIO upload failed: {result.stderr}")
     return f"{MINIO_PUBLIC_URL}/{bucket}/{key}"
 
-
 @app.route("/api/store/apps", methods=["GET"])
 def store_apps():
     """列出所有公开 APP"""
-    rows = _db_query(
-        "SELECT id, name, version, description, author_name, download_url, tags "
-        "FROM public.app_registry WHERE type = 'app' AND is_public = true ORDER BY created_at DESC"
+    rows = db_query(
+        "SELECT id, name, version, description, author_name, download_url, tags, icon_url, meta_json FROM app_registry WHERE type = 'app' AND is_public = true ORDER BY created_at DESC",
+        fetch_all=True
     )
     apps = []
-    if rows:
-        for row in rows.split("\n"):
-            parts = row.split("|")
-            if len(parts) >= 6:
-                apps.append({
-                    "id": parts[0], "name": parts[1], "version": parts[2],
-                    "description": parts[3], "author": parts[4],
-                    "download_url": parts[5],
-                    "tags": parts[6].strip("{}").split(",") if len(parts) > 6 and parts[6] else [],
-                })
+    for row in rows:
+        app_data = {
+            "id": row["id"],
+            "name": row["name"],
+            "version": row["version"],
+            "description": row["description"],
+            "author": row["author_name"],
+            "download_url": row["download_url"],
+            "tags": row["tags"] or []
+        }
+        # 优先从 icon_url 字段读取，如果没有则从 meta_json 读取
+        if row.get("icon_url"):
+            app_data["icon_url"] = row["icon_url"]
+        elif row.get("meta_json") and isinstance(row["meta_json"], dict):
+            app_data["icon_url"] = row["meta_json"].get("icon_url", "")
+        else:
+            app_data["icon_url"] = ""
+        apps.append(app_data)
     return jsonify({"apps": apps})
-
 
 @app.route("/api/store/components", methods=["GET"])
 def store_components():
     """列出所有公开组件"""
-    rows = _db_query(
-        "SELECT id, name, version, description, author_name, download_url "
-        "FROM public.app_registry WHERE type = 'component' AND is_public = true ORDER BY name"
+    rows = db_query(
+        "SELECT id, name, version, description, author_name, download_url, icon_url FROM app_registry WHERE type = 'component' AND is_public = true ORDER BY name",
+        fetch_all=True
     )
     components = []
-    if rows:
-        for row in rows.split("\n"):
-            parts = row.split("|")
-            if len(parts) >= 6:
-                components.append({
-                    "id": parts[0], "name": parts[1], "version": parts[2],
-                    "description": parts[3], "author": parts[4],
-                    "download_url": parts[5],
-                })
+    for row in rows:
+        comp_data = {
+            "id": row["id"],
+            "name": row["name"],
+            "version": row["version"],
+            "description": row["description"],
+            "author": row["author_name"],
+            "download_url": row["download_url"],
+            "icon_url": row.get("icon_url", "")
+        }
+        components.append(comp_data)
     return jsonify({"components": components})
-
 
 @app.route("/api/appid/new", methods=["GET"])
 @require_auth
@@ -911,7 +912,6 @@ def new_appid():
             "error": str(e),
             "status": "error"
         }), 500
-
 
 @app.route("/api/store/publish", methods=["POST"])
 @require_auth
@@ -940,6 +940,7 @@ def store_publish():
     version = meta.get("version", "1.0.0")
     description = meta.get("description", "")
     dsl_spec = meta.get("dsl_spec", description)
+    icon_url = meta.get("icon_url", "")
 
     # 优先使用 JSON 中已有的 appid
     app_id = json_content.get("appid")
@@ -963,13 +964,16 @@ def store_publish():
     user = request.supabase_user
     user_id = user.get("id")
     author_name = user.get("user_metadata", {}).get("username", user.get("email", ""))
-    _db_execute(
-        "INSERT INTO public.app_registry "
-        "(id, type, name, version, description, author_id, author_name, oss_bucket, oss_key, download_url, meta_json, dsl_spec) "
-        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-        [app_id, app_type, name, version, description, user_id, author_name,
-         bucket, oss_key, download_url,
-         json.dumps(meta, ensure_ascii=False), dsl_spec]
+    db_execute(
+        """INSERT INTO app_registry
+           (id, type, name, version, description, author_id, author_name,
+            oss_bucket, oss_key, download_url, meta_json, dsl_spec, icon_url)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+        [
+            app_id, app_type, name, version, description, user_id, author_name,
+            bucket, oss_key, download_url,
+            json.dumps(meta, ensure_ascii=False), dsl_spec, icon_url
+        ]
     )
 
     return jsonify({
@@ -978,220 +982,65 @@ def store_publish():
         "download_url": download_url,
     })
 
-
 @app.route("/api/store/delete/<app_id>", methods=["DELETE"])
 @require_auth
 def store_delete(app_id):
     """下架 APP/组件"""
-    row = _db_query(f"SELECT author_id FROM public.app_registry WHERE id = $1", [app_id])
+    row = db_query("SELECT author_id FROM app_registry WHERE id = %s", [app_id], fetch_one=True)
     if not row:
         return jsonify({"error": "未找到"}), 404
 
     user_id = request.supabase_user.get("id")
-    if row != user_id and request.user_role != "admin":
+    if str(row["author_id"]) != str(user_id) and request.user_role != "admin":
         return jsonify({"error": "只有作者或管理员可以删除"}), 403
 
-    _db_execute(f"DELETE FROM public.app_registry WHERE id = $1", [app_id])
+    db_execute("DELETE FROM app_registry WHERE id = %s", [app_id])
     return jsonify({"message": "已删除"})
 
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # 兼容旧市场接口（从 templates/ 读取）
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
-def _scan_templates():
-    apps = []
-    if not os.path.isdir(TEMPLATES_DIR):
-        return apps
-    for fname in sorted(os.listdir(TEMPLATES_DIR)):
-        if not fname.endswith(".json"): continue
-        try:
-            with open(os.path.join(TEMPLATES_DIR, fname), "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception: continue
-        meta = data.get("meta", {})
-        if meta.get("type") == "library" or "ui" not in data:
-            continue
-        apps.append({
-            "file": fname,
-            "name": meta.get("name", fname.replace(".json", "")),
-            "version": meta.get("version", data.get("version", "?")),
-            "description": meta.get("description", ""),
-            "author": meta.get("author", ""),
-            "download": f"/download/{urllib.parse.quote(fname)}",
-        })
-    return apps
-
-
-@app.route("/app-list")
+@app.route("/app-list", methods=["GET"])
 def app_list():
-    return jsonify({"apps": _scan_templates()})
-
-
-@app.route("/download/<path:fname>")
-def download_file(fname):
-    if ".." in fname or "/" in fname:
-        return jsonify({"error": "Invalid"}), 403
-    return send_from_directory(os.path.abspath(TEMPLATES_DIR), fname, mimetype="application/json")
-
-
-# ══════════════════════════════════════════════════════════
-# 豆包 ASR — 实时流式语音识别 (WebSocket 双向代理)
-# ══════════════════════════════════════════════════════════
-
-DOUBAO_ASR_URL = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
-DOUBAO_APP_ID = "7743486317"
-DOUBAO_ACCESS_KEY = "J0z68ifh_njxKDL_ukJXFMBabaf5cUcV"
-DOUBAO_RESOURCE_ID = "volc.seedasr.sauc.duration"
-
-
-def _asr_header(msg_type, flags, serial, compress):
-    return bytes([(0x1 << 4) | 0x1, (msg_type << 4) | flags, (serial << 4) | compress, 0x00])
-
-
-def _asr_parse(data):
-    """解析豆包二进制响应 -> 识别文本"""
-    import struct as st, gzip as gz
-    if len(data) < 4 or ((data[1] >> 4) & 0xF) != 0x9:
-        return None
-    off = 8
-    if len(data) < off + 4:
-        return None
-    ps = st.unpack('>I', data[off:off+4])[0]
-    raw = data[off+4:off+4+ps]
-    if (data[2] & 0xF) == 0x1:
-        raw = gz.decompress(raw)
-    return json.loads(raw).get("result", {}).get("text")
-
-
-@sock.route("/api/asr/ws")
-def asr_websocket(ws):
-    """
-    WebSocket 实时 ASR 代理:
-      1. 客户端发文本 {"token":"Bearer xxx"} 鉴权
-      2. 客户端发二进制: PCM 音频块 (16kHz 16bit mono, 每包200ms=6400B)
-      3. 客户端发文本 "END" 结束
-      4. 服务端返文本: {"text":"实时识别"} / {"error":"..."}
-    """
-    import websocket as ws_lib
-    import struct, gzip, threading
-
-    print("[ASR] WebSocket connected")
-
-    # 鉴权
+    """旧接口：列出 templates/ 目录下的 JSON 应用"""
+    apps = []
     try:
-        auth_data = json.loads(ws.receive(timeout=10))
-        token = auth_data.get("token", "").replace("Bearer ", "")
-        r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
-                         headers=_supabase_headers(token), timeout=5)
-        if r.status_code != 200:
-            print(f"[ASR] Auth failed: {r.status_code}")
-            ws.send(json.dumps({"error": "认证失败"})); return
-        ws.send(json.dumps({"status": "ready"}))
-        print("[ASR] Auth OK, sent ready")
-    except Exception as e:
-        print(f"[ASR] Auth error: {e}")
-        ws.send(json.dumps({"error": f"认证异常: {e}"})); return
-
-    # 连接豆包
-    try:
-        dws = ws_lib.create_connection(DOUBAO_ASR_URL, header=[
-            f"X-Api-App-Key: {DOUBAO_APP_ID}",
-            f"X-Api-Access-Key: {DOUBAO_ACCESS_KEY}",
-            f"X-Api-Resource-Id: {DOUBAO_RESOURCE_ID}",
-            f"X-Api-Connect-Id: {str(uuid.uuid4())}",
-        ], timeout=15)
-        print("[ASR] Doubao connected")
-    except Exception as e:
-        print(f"[ASR] Doubao connect failed: {e}")
-        ws.send(json.dumps({"error": f"ASR连接失败: {e}"})); return
-
-    # full client request
-    params = {
-        "user": {"uid": "app"},
-        "audio": {"format": "pcm", "rate": 16000, "bits": 16, "channel": 1, "language": "zh-CN"},
-        "request": {"model_name": "bigmodel", "enable_itn": True, "enable_punc": True, "result_type": "full"},
-    }
-    pl = gzip.compress(json.dumps(params).encode())
-    dws.send(_asr_header(0x1, 0x0, 0x1, 0x1) + struct.pack('>I', len(pl)) + pl, opcode=0x2)
-    dws.recv()
-    print("[ASR] Doubao session started")
-
-    # 后台线程：读豆包结果推给客户端
-    stop = threading.Event()
-    audio_chunks = [0]  # 计数器
-    def reader():
-        while not stop.is_set():
+        files = sorted(os.listdir(TEMPLATES_DIR))
+        for f in files:
+            if not f.endswith(".json"):
+                continue
             try:
-                dws.settimeout(0.3)
-                resp = dws.recv()
-                if resp:
-                    text = _asr_parse(resp)
-                    if text is not None:
-                        print(f"[ASR] Result: {text}")
-                        ws.send(json.dumps({"text": text}, ensure_ascii=False))
-            except ws_lib.WebSocketTimeoutException:
+                with open(os.path.join(TEMPLATES_DIR, f), 'r', encoding='utf-8') as fh:
+                    data = json.load(fh)
+                meta = data.get("meta", {})
+                apps.append({
+                    "name": meta.get("name", f),
+                    "version": meta.get("version", "1.0.0"),
+                    "description": meta.get("description", ""),
+                    "icon_url": meta.get("icon_url", ""),
+                    "file": f,
+                })
+            except Exception:
                 continue
-            except Exception as ex:
-                print(f"[ASR] Reader error: {ex}")
-                break
-    t = threading.Thread(target=reader, daemon=True)
-    t.start()
+    except Exception:
+        pass
+    return jsonify({"apps": apps})
 
-    # 主循环：客户端音频转发豆包
-    try:
-        while True:
-            msg = ws.receive(timeout=60)
-            if msg is None:
-                print("[ASR] Client disconnected")
-                break
-            if isinstance(msg, str):
-                if msg.strip().upper() == "END":
-                    print(f"[ASR] END received, total audio chunks: {audio_chunks[0]}")
-                    emp = gzip.compress(b'')
-                    dws.send(_asr_header(0x2, 0x2, 0x0, 0x1) + struct.pack('>I', len(emp)) + emp, opcode=0x2)
-                    import time; time.sleep(0.8)
-                    break
-                print(f"[ASR] Unexpected text msg: {msg[:100]}")
-                continue
-            audio_chunks[0] += 1
-            if audio_chunks[0] <= 3 or audio_chunks[0] % 50 == 0:
-                print(f"[ASR] Audio chunk #{audio_chunks[0]}, size={len(msg)}B")
-            c = gzip.compress(msg)
-            dws.send(_asr_header(0x2, 0x0, 0x0, 0x1) + struct.pack('>I', len(c)) + c, opcode=0x2)
-    except Exception as ex:
-        print(f"[ASR] Main loop error: {ex}")
-    finally:
-        print(f"[ASR] Session end, total chunks: {audio_chunks[0]}")
-        stop.set(); t.join(timeout=2); dws.close()
+@app.route("/download/<path:filename>", methods=["GET"])
+def download_file(filename):
+    """下载 templates/ 目录下的文件"""
+    return send_from_directory(TEMPLATES_DIR, filename)
 
-
-# ══════════════════════════════════════════════════════════
-# CORS
-# ══════════════════════════════════════════════════════════
-
-@app.after_request
-def after_request(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    return response
-
-@app.route("/", defaults={"path": ""}, methods=["OPTIONS"])
-@app.route("/<path:path>", methods=["OPTIONS"])
-def options_handler(path):
-    return "", 204
-
-
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 # 启动
-# ══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     print(f"🚀 JSON DSL Backend on http://0.0.0.0:{PORT}")
-    print(f"   Auth:  /api/auth/{{register,login,verify,refresh,logout,user,avatar,quota}}")
-    print(f"   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
-    print(f"   Fix:   POST /api/ai/fix-app (crash repair)")
-    print(f"   Store: /api/store/{{apps,components,publish,delete}}")
-    print(f"   Old:   /app-list, /download/<file>")
-    app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
+    print("   Auth: /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
+    print("   Chat: POST /chat (SSE, quota-limited, DSL-aware)")
+    print("   Fix: POST /api/ai/fix-app (crash repair)")
+    print("   Store: /api/store/{apps,components,publish,delete}")
+    print("   Old: /app-list, /download/<file>")
+    app.run(host="0.0.0.0", port=PORT)

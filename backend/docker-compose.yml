@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15.8
+    container_name: jsonapp-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: jsonapp
+      POSTGRES_PASSWORD: hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg
+      POSTGRES_DB: jsonapp
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jsonapp -d jsonapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
