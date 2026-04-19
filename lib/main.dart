@@ -1048,6 +1048,9 @@ class _MyAppsPage extends StatefulWidget {
 
 class _MyAppsPageState extends State<_MyAppsPage> {
   List<SavedApp>? _apps;
+  bool _uploading = false;
+
+  bool get _isAdmin => AuthService.currentUser?['role'] == 'admin';
 
   @override
   void initState() {
@@ -1058,6 +1061,135 @@ class _MyAppsPageState extends State<_MyAppsPage> {
   Future<void> _load() async {
     final apps = await AppStorage.instance.list();
     if (mounted) setState(() => _apps = apps);
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
+    );
+  }
+
+  Future<String?> _showVersionDialog({
+    required String existingName,
+    required String existingVersion,
+    required String suggestedVersion,
+  }) {
+    final controller = TextEditingController(text: suggestedVersion);
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          title: const Text('更新确认'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: Theme.of(ctx).textTheme.bodyMedium,
+                  children: [
+                    TextSpan(text: existingName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const TextSpan(text: ' 已存在于市场'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text('当前版本: v$existingVersion', style: TextStyle(color: cs.onSurfaceVariant)),
+              const SizedBox(height: 12),
+              const Text('这将是一个更新操作，请确认新版本号:'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  labelText: '版本号',
+                  prefixIcon: const Icon(Icons.tag),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              child: const Text('确认更新'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _uploadToMarket(SavedApp app) async {
+    if (_uploading) return;
+    setState(() => _uploading = true);
+
+    try {
+      final resp = await http.post(
+        Uri.parse('https://app-backend.dapangyu.work/api/store/publish'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${AuthService.token}',
+        },
+        body: json.encode({'json_content': app.config}),
+      ).timeout(const Duration(seconds: 30));
+
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+
+      if (resp.statusCode == 409 && data['conflict'] == true) {
+        final existing = data['existing'] as Map<String, dynamic>;
+        final suggestedVersion = data['suggested_version'] as String;
+
+        if (!mounted) return;
+        final confirmedVersion = await _showVersionDialog(
+          existingName: existing['name'] as String? ?? app.name,
+          existingVersion: existing['version'] as String? ?? '1.0.0',
+          suggestedVersion: suggestedVersion,
+        );
+
+        if (confirmedVersion == null || confirmedVersion.isEmpty) {
+          _showSnackBar('已取消上传');
+          return;
+        }
+
+        final updatedConfig = Map<String, dynamic>.from(app.config);
+        final meta = Map<String, dynamic>.from(updatedConfig['meta'] ?? {});
+        meta['version'] = confirmedVersion;
+        updatedConfig['meta'] = meta;
+
+        final resp2 = await http.post(
+          Uri.parse('https://app-backend.dapangyu.work/api/store/publish'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${AuthService.token}',
+          },
+          body: json.encode({
+            'json_content': updatedConfig,
+            'force_update': true,
+          }),
+        ).timeout(const Duration(seconds: 30));
+
+        final data2 = json.decode(resp2.body) as Map<String, dynamic>;
+        if (resp2.statusCode == 200) {
+          _showSnackBar('更新成功: ${app.name} v$confirmedVersion');
+        } else {
+          _showSnackBar('更新失败: ${data2['error'] ?? '未知错误'}');
+        }
+      } else if (resp.statusCode == 200) {
+        _showSnackBar('发布成功: ${app.name}');
+      } else {
+        _showSnackBar('发布失败: ${data['error'] ?? '未知错误'}');
+      }
+    } catch (e) {
+      _showSnackBar('上传失败: ${e.toString().replaceFirst("Exception: ", "")}');
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   @override
@@ -1081,43 +1213,78 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _apps!.length,
-                  itemBuilder: (context, index) {
-                    final app = _apps![index];
-                    final time = DateTime.tryParse(app.savedAt);
-                    final timeStr = time != null
-                        ? '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
-                        : '';
+              : Stack(
+                  children: [
+                    ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _apps!.length,
+                      itemBuilder: (context, index) {
+                        final app = _apps![index];
+                        final time = DateTime.tryParse(app.savedAt);
+                        final timeStr = time != null
+                            ? '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
+                            : '';
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: colorScheme.primaryContainer,
-                          child: Icon(Icons.apps, color: colorScheme.primary),
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: colorScheme.primaryContainer,
+                              child: Icon(Icons.apps, color: colorScheme.primary),
+                            ),
+                            title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(
+                              app.description.isNotEmpty ? app.description : timeStr,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_isAdmin)
+                                  IconButton(
+                                    icon: Icon(Icons.cloud_upload_outlined,
+                                        size: 20, color: colorScheme.primary),
+                                    tooltip: '上传到市场',
+                                    onPressed: _uploading ? null : () => _uploadToMarket(app),
+                                  ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                  onPressed: () async {
+                                    await AppStorage.instance.delete(app.fileName);
+                                    _load();
+                                  },
+                                ),
+                              ],
+                            ),
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              widget.onSelect(app);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                    if (_uploading)
+                      Container(
+                        color: Colors.black26,
+                        child: const Center(
+                          child: Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text('正在上传到市场...'),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                        title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(
-                          app.description.isNotEmpty ? app.description : timeStr,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          onPressed: () async {
-                            await AppStorage.instance.delete(app.fileName);
-                            _load();
-                          },
-                        ),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          widget.onSelect(app);
-                        },
                       ),
-                    );
-                  },
+                  ],
                 ),
     );
   }
