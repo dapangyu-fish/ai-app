@@ -5,15 +5,14 @@
     "name": "小红书 Demo",
     "version": "1.0.0",
     "type": "app",
-    "description": "一个小红书风格的示例应用",
+    "description": "一个小红书风格的示例应用：帖子列表 + 详情页 + 点赞",
     "author": "AI Designer",
     "icon_url": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop"
   },
   "global": {
     "variables": {
-      "currentScreen": "home",
-      "selectedPostIndex": -1,
-      "likedPosts": [],
+      "selectedPost": null,
+      "likedIndexes": [],
       "posts": [
         {
           "title": "春日樱花 | 绝美打卡地推荐",
@@ -22,7 +21,7 @@
           "image": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=500&fit=crop",
           "likes": 1234,
           "comments": 89,
-          "content": "这是我今年发现的最美樱花打卡地！\n\n位置：XX公园\n\n拍照技巧：\n1. 早上 7-9 点光线最佳\n2. 用大光圈虚化背景\n3. 搭配浅色系衣服",
+          "content": "这是我今年发现的最美樱花打卡地！\n\n位置：XX公园\n\n拍照技巧：\n1. 早上7-9点光线最佳\n2. 用大光圈虚化背景\n3. 搭配浅色系衣服",
           "tags": "樱花, 拍照, 春天"
         },
         {
@@ -78,18 +77,17 @@
       ]
     },
     "functions": {
-      "goHome": {
-        "params": [],
-        "logic": [
-          { "call": "@set", "args": { "var": "global.currentScreen", "value": "home" } },
-          { "call": "@set", "args": { "var": "global.selectedPostIndex", "value": -1 } }
-        ]
-      },
       "viewPost": {
         "params": ["index"],
         "logic": [
-          { "call": "@set", "args": { "var": "global.selectedPostIndex", "value": "{{ params.index }}" } },
-          { "call": "@set", "args": { "var": "global.currentScreen", "value": "detail" } }
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.selectedPost",
+              "value": { "at": [{ "var": "global.posts" }, { "var": "params.index" }] }
+            }
+          },
+          { "call": "@navigate", "args": { "screen": "detail" } }
         ]
       },
       "toggleLike": {
@@ -98,15 +96,15 @@
           {
             "call": "@if",
             "args": {
-              "condition": { "in": [{ "var": "params.index" }, { "var": "global.likedPosts" }] },
+              "condition": { "in": [{ "var": "params.index" }, { "var": "global.likedIndexes" }] },
               "then": [
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global.likedPosts",
+                    "var": "global.likedIndexes",
                     "value": {
                       "filter": [
-                        { "var": "global.likedPosts" },
+                        { "var": "global.likedIndexes" },
                         { "!=": [{ "var": "" }, { "var": "params.index" }] }
                       ]
                     }
@@ -117,13 +115,14 @@
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global.likedPosts",
-                    "value": { "merge": [{ "var": "global.likedPosts" }, { "var": "params.index" }] }
+                    "var": "global.likedIndexes",
+                    "value": { "merge": [{ "var": "global.likedIndexes" }, [{ "var": "params.index" }]] }
                   }
                 }
               ]
             }
-          }
+          },
+          { "call": "@show_toast", "args": { "message": "已操作" } }
         ]
       }
     }
@@ -193,6 +192,7 @@
           {
             "type": "list",
             "source": "{{ global.posts }}",
+            "emptyText": "暂无帖子",
             "item_template": {
               "type": "container",
               "layout": "column",
@@ -205,7 +205,7 @@
                 {
                   "type": "image",
                   "url": "{{ loop.item.image }}",
-                  "width": -1,
+                  "fit": "fitWidth",
                   "height": 200,
                   "borderRadius": 12
                 },
@@ -229,8 +229,7 @@
                           "url": "{{ loop.item.avatar }}",
                           "width": 24,
                           "height": 24,
-                          "borderRadius": 12,
-                          "position": { "type": "relative" }
+                          "borderRadius": 12
                         },
                         {
                           "type": "text",
@@ -244,15 +243,24 @@
                           "style": { "fontSize": 12, "color": "#888888" }
                         }
                       ]
+                    },
+                    { "type": "spacer", "height": 8 },
+                    {
+                      "type": "button",
+                      "label": "查看详情",
+                      "variant": "outlined",
+                      "icon": "arrow_forward",
+                      "style": { "borderRadius": 8 },
+                      "position": { "type": "flex", "flex": 1 },
+                      "action": {
+                        "type": "call",
+                        "call": "@global.viewPost",
+                        "args": { "index": "{{ loop.index }}" }
+                      }
                     }
                   ]
                 }
-              ],
-              "action": {
-                "type": "call",
-                "call": "@global.viewPost",
-                "args": { "index": "{{ loop.index }}" }
-              }
+              ]
             }
           }
         ]
@@ -265,16 +273,29 @@
         "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "button",
-            "label": "返回",
-            "icon": "arrow_back",
-            "variant": "text",
-            "action": { "type": "navigate", "screen": "home" }
+            "type": "container",
+            "layout": "row",
+            "padding": 8,
+            "children": [
+              {
+                "type": "button",
+                "label": "返回",
+                "icon": "arrow_back",
+                "variant": "text",
+                "action": { "type": "navigate", "screen": "home" }
+              },
+              {
+                "type": "text",
+                "value": "笔记详情",
+                "style": { "fontSize": 18, "fontWeight": "bold" },
+                "position": { "type": "flex", "flex": 1 }
+              }
+            ]
           },
           {
             "type": "image",
-            "url": "{{ global.posts[global.selectedPostIndex].image }}",
-            "width": -1,
+            "url": "{{ global.selectedPost.image }}",
+            "fit": "fitWidth",
             "height": 280
           },
           {
@@ -284,7 +305,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "{{ global.posts[global.selectedPostIndex].title }}",
+                "value": "{{ global.selectedPost.title }}",
                 "style": { "fontSize": 20, "fontWeight": "bold" }
               },
               { "type": "spacer", "height": 12 },
@@ -294,14 +315,14 @@
                 "children": [
                   {
                     "type": "image",
-                    "url": "{{ global.posts[global.selectedPostIndex].avatar }}",
+                    "url": "{{ global.selectedPost.avatar }}",
                     "width": 40,
                     "height": 40,
                     "borderRadius": 20
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.posts[global.selectedPostIndex].author }}",
+                    "value": "{{ global.selectedPost.author }}",
                     "style": { "fontSize": 16, "fontWeight": "bold" },
                     "position": { "type": "flex", "flex": 1 }
                   },
@@ -316,16 +337,20 @@
               { "type": "spacer", "height": 16 },
               {
                 "type": "text",
-                "value": "{{ global.posts[global.selectedPostIndex].content }}",
+                "value": "{{ global.selectedPost.content }}",
                 "style": { "fontSize": 15, "lineHeight": 1.6 }
               },
               { "type": "spacer", "height": 12 },
               {
                 "type": "text",
-                "value": "# {{ global.posts[global.selectedPostIndex].tags }}",
+                "value": "# {{ global.selectedPost.tags }}",
                 "style": { "fontSize": 13, "color": "#4A90D9" }
               },
               { "type": "spacer", "height": 16 },
+              {
+                "type": "divider"
+              },
+              { "type": "spacer", "height": 8 },
               {
                 "type": "container",
                 "layout": "row",
@@ -335,12 +360,7 @@
                     "label": "点赞",
                     "icon": "favorite",
                     "variant": "text",
-                    "position": { "type": "flex", "flex": 1 },
-                    "action": {
-                      "type": "call",
-                      "call": "@global.toggleLike",
-                      "args": { "index": "{{ global.selectedPostIndex }}" }
-                    }
+                    "position": { "type": "flex", "flex": 1 }
                   },
                   {
                     "type": "button",

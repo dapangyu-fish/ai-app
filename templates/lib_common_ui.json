@@ -7,7 +7,7 @@
     "type": "library",
     "description": "通用 UI 函数库 — 提供 toast / confirm / 格式化等工具函数",
     "author": "demo",
-    "exports": ["showSuccess", "showError", "confirm", "formatSize"]
+    "exports": ["showSuccess", "showError", "confirm", "formatSize", "takePhoto", "pickImage"]
   },
   "global": {
     "variables": {
@@ -40,6 +40,18 @@
         "params": ["bytes"],
         "logic": [
           { "call": "@print", "args": { "value": "格式化文件大小: {{ params.bytes }}" } }
+        ]
+      },
+      "takePhoto": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@take_photo", "args": { "bind": "{{ params.bind }}", "quality": 85 } }
+        ]
+      },
+      "pickImage": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@pick_image", "args": { "bind": "{{ params.bind }}", "quality": 85 } }
         ]
       }
     }

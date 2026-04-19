@@ -5,8 +5,10 @@
 // 变量路径格式：global.xxx / loop.item / params.xxx（兼容 $.global.xxx 旧格式）
 // ───────────────────────────────────────────────
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jsonlogic/jsonlogic.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
@@ -750,6 +752,288 @@ class JsonInterpreter extends ChangeNotifier {
         await prefs.clear();
         return null;
 
+      // ── 随机数 ──
+      case '@random':
+        final min = _toInt(resolvedArgs['min'] ?? 0);
+        final max = _toInt(resolvedArgs['max'] ?? 100);
+        return min + Random().nextInt(max - min + 1);
+
+      case '@random_float':
+        final min = _toDouble(resolvedArgs['min'] ?? 0.0);
+        final max = _toDouble(resolvedArgs['max'] ?? 1.0);
+        return min + Random().nextDouble() * (max - min);
+
+      case '@random_bool':
+        return Random().nextBool();
+
+      case '@random_chars':
+        final length = _toInt(resolvedArgs['length'] ?? 8);
+        final charset = resolvedArgs['charset']?.toString() ?? 'alphanumeric';
+        final buffer = StringBuffer();
+        String chars;
+        switch (charset) {
+          case 'numeric':
+            chars = '0123456789';
+            break;
+          case 'alpha':
+            chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            break;
+          case 'upper':
+            chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            break;
+          case 'lower':
+            chars = 'abcdefghijklmnopqrstuvwxyz';
+            break;
+          case 'hex':
+            chars = '0123456789abcdef';
+            break;
+          case 'alphanumeric':
+          default:
+            chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            break;
+        }
+        for (var i = 0; i < length; i++) {
+          buffer.write(chars[Random().nextInt(chars.length)]);
+        }
+        return buffer.toString();
+
+      case '@uuid':
+        final random = Random();
+        final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+        bytes[6] = (bytes[6] & 0x0F) | 0x40;
+        bytes[8] = (bytes[8] & 0x3F) | 0x80;
+        final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
+        return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
+
+      case '@random_pick':
+        final list = _evaluateExpression(resolvedArgs['list']);
+        if (list is List && list.isNotEmpty) {
+          return list[Random().nextInt(list.length)];
+        }
+        return null;
+
+      // ── 时间日期 ──
+      case '@timestamp':
+        return DateTime.now().millisecondsSinceEpoch;
+
+      case '@date_format':
+        final ts = resolvedArgs['timestamp'];
+        final format = resolvedArgs['format']?.toString() ?? 'YYYY-MM-DD HH:mm:ss';
+        DateTime dt;
+        if (ts is int) {
+          dt = DateTime.fromMillisecondsSinceEpoch(ts);
+        } else if (ts is double) {
+          dt = DateTime.fromMillisecondsSinceEpoch(ts.toInt());
+        } else {
+          dt = DateTime.now();
+        }
+        var result = format;
+        result = result.replaceAll('YYYY', dt.year.toString());
+        result = result.replaceAll('MM', dt.month.toString().padLeft(2, '0'));
+        result = result.replaceAll('DD', dt.day.toString().padLeft(2, '0'));
+        result = result.replaceAll('HH', dt.hour.toString().padLeft(2, '0'));
+        result = result.replaceAll('mm', dt.minute.toString().padLeft(2, '0'));
+        result = result.replaceAll('ss', dt.second.toString().padLeft(2, '0'));
+        return result;
+
+      // ── 字符串扩展 ──
+      case '@str_repeat':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final count = _toInt(resolvedArgs['count'] ?? 0);
+        return str * count;
+
+      case '@str_reverse':
+        return (resolvedArgs['value']?.toString() ?? '').split('').reversed.join();
+
+      case '@str_pad':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final targetLength = _toInt(resolvedArgs['length'] ?? 0);
+        final padStr = resolvedArgs['pad']?.toString() ?? ' ';
+        final direction = resolvedArgs['direction']?.toString() ?? 'right';
+        if (str.length >= targetLength) return str;
+        final padCount = targetLength - str.length;
+        final padding = (padStr * ((padCount / padStr.length).ceil())).substring(0, padCount);
+        return direction == 'left' ? '$padding$str' : '$str$padding';
+
+      case '@str_join':
+        final list = _evaluateExpression(resolvedArgs['list']);
+        final separator = resolvedArgs['separator']?.toString() ?? '';
+        if (list is List) {
+          return list.map((e) => e?.toString() ?? '').join(separator);
+        }
+        return list?.toString() ?? '';
+
+      case '@str_capitalize':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        if (str.isEmpty) return str;
+        return str[0].toUpperCase() + str.substring(1);
+
+      case '@str_count':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final search = resolvedArgs['search']?.toString() ?? '';
+        if (search.isEmpty) return 0;
+        return search.allMatches(str).length;
+
+      case '@str_index_of':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final search = resolvedArgs['search']?.toString() ?? '';
+        return str.indexOf(search);
+
+      case '@str_last_index_of':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final search = resolvedArgs['search']?.toString() ?? '';
+        return str.lastIndexOf(search);
+
+      case '@str_between':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final start = resolvedArgs['start']?.toString() ?? '';
+        final end = resolvedArgs['end']?.toString() ?? '';
+        final startIndex = str.indexOf(start);
+        if (startIndex < 0) return '';
+        final afterStart = str.substring(startIndex + start.length);
+        final endIndex = afterStart.indexOf(end);
+        if (endIndex < 0) return afterStart;
+        return afterStart.substring(0, endIndex);
+
+      case '@str_mask':
+        final str = resolvedArgs['value']?.toString() ?? '';
+        final start = _toInt(resolvedArgs['start'] ?? 0);
+        final end = _toInt(resolvedArgs['end'] ?? str.length);
+        final maskChar = resolvedArgs['mask']?.toString() ?? '*';
+        if (str.isEmpty || start >= str.length) return str;
+        final s = start.clamp(0, str.length);
+        final e = end.clamp(s, str.length);
+        return str.substring(0, s) + maskChar * (e - s) + str.substring(e);
+
+      // ── 数组扩展 ──
+      case '@list_shuffle':
+        final listPath = resolvedArgs['var'] as String?;
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final newList = List<dynamic>.from(current)..shuffle(Random());
+            setVariable(listPath, newList);
+            return newList;
+          }
+        }
+        return null;
+
+      case '@list_sample':
+        final listPath = resolvedArgs['var'] as String?;
+        final count = _toInt(resolvedArgs['count'] ?? 1);
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List && current.isNotEmpty) {
+            final shuffled = List<dynamic>.from(current)..shuffle(Random());
+            return shuffled.take(count.clamp(0, shuffled.length)).toList();
+          }
+        }
+        return [];
+
+      case '@list_unique':
+        final listPath = resolvedArgs['var'] as String?;
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final seen = <dynamic>{};
+            final result = <dynamic>[];
+            for (final item in current) {
+              if (!seen.contains(item)) {
+                seen.add(item);
+                result.add(item);
+              }
+            }
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_flatten':
+        final listPath = resolvedArgs['var'] as String?;
+        final depth = _toInt(resolvedArgs['depth'] ?? 1);
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final result = _flattenList(current, depth);
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_sort':
+        final sortListPath = resolvedArgs['var'] as String?;
+        final sortKey = resolvedArgs['key'] as String?;
+        final sortDesc = resolvedArgs['desc'] == true || resolvedArgs['desc'] == 'true';
+        if (sortListPath != null) {
+          final current = getVariable(sortListPath);
+          if (current is List) {
+            final result = List<dynamic>.from(current);
+            if (sortKey != null && sortKey.isNotEmpty) {
+              result.sort((a, b) {
+                final va = a is Map ? a[sortKey] : null;
+                final vb = b is Map ? b[sortKey] : null;
+                int cmp;
+                if (va is Comparable && vb is Comparable) {
+                  cmp = va.compareTo(vb);
+                } else {
+                  cmp = va.toString().compareTo(vb.toString());
+                }
+                return sortDesc ? -cmp : cmp;
+              });
+            } else {
+              result.sort((a, b) {
+                int cmp;
+                if (a is Comparable && b is Comparable) {
+                  cmp = a.compareTo(b);
+                } else {
+                  cmp = a.toString().compareTo(b.toString());
+                }
+                return sortDesc ? -cmp : cmp;
+              });
+            }
+            setVariable(sortListPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_reverse':
+        final listPath = resolvedArgs['var'] as String?;
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final result = current.reversed.toList();
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      case '@list_slice':
+        final listPath = resolvedArgs['var'] as String?;
+        final start = _toInt(resolvedArgs['start'] ?? 0);
+        final end = resolvedArgs['end'];
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final e = end != null ? _toInt(end) : current.length;
+            final s = start.clamp(0, current.length);
+            final clampedEnd = e.clamp(s, current.length);
+            final result = current.sublist(s, clampedEnd);
+            setVariable(listPath, result);
+            return result;
+          }
+        }
+        return null;
+
+      // ── 图片拍摄 / 选择 ──
+      case '@take_photo':
+        return await _pickOrTakeImage(resolvedArgs, ImageSource.camera);
+      case '@pick_image':
+        return await _pickOrTakeImage(resolvedArgs, ImageSource.gallery);
+
       default:
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');
         return null;
@@ -966,6 +1250,53 @@ class JsonInterpreter extends ChangeNotifier {
     return result ?? false;
   }
 
+  Future<String?> _pickOrTakeImage(
+    Map<String, dynamic> args,
+    ImageSource source,
+  ) async {
+    final bindPath = args['bind'] as String?;
+    final maxWidth = (args['max_width'] as num?)?.toDouble() ?? 1920;
+    final maxHeight = (args['max_height'] as num?)?.toDouble() ?? 1920;
+    final quality = (args['quality'] as num?)?.toInt() ?? 85;
+
+    final picker = ImagePicker();
+    try {
+      final XFile? picked = await picker.pickImage(
+        source: source,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        imageQuality: quality,
+      );
+      if (picked != null) {
+        if (bindPath != null) {
+          setVariable(bindPath, picked.path);
+        }
+        return picked.path;
+      }
+    } catch (e) {
+      debugPrint('[JSON DSL] 图片获取失败: $e');
+      if (source == ImageSource.camera) {
+        try {
+          final XFile? picked = await picker.pickImage(
+            source: ImageSource.gallery,
+            maxWidth: maxWidth,
+            maxHeight: maxHeight,
+            imageQuality: quality,
+          );
+          if (picked != null) {
+            if (bindPath != null) {
+              setVariable(bindPath, picked.path);
+            }
+            return picked.path;
+          }
+        } catch (e2) {
+          debugPrint('[JSON DSL] 图片选择 fallback 也失败: $e2');
+        }
+      }
+    }
+    return null;
+  }
+
   // ============ 自定义函数 ============
 
   Future<dynamic> _executeGlobalFunction(
@@ -1093,6 +1424,19 @@ class JsonInterpreter extends ChangeNotifier {
       return val.map((k, v) => MapEntry(k.toString(), v.toString()));
     }
     return null;
+  }
+
+  List<dynamic> _flattenList(List<dynamic> list, int depth) {
+    if (depth <= 0) return list;
+    final result = <dynamic>[];
+    for (final item in list) {
+      if (item is List) {
+        result.addAll(_flattenList(item, depth - 1));
+      } else {
+        result.add(item);
+      }
+    }
+    return result;
   }
 
   @override
