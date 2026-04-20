@@ -14,6 +14,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
 
   bool _forceOffline = false;
+  String _selectedModelId = 'sensevoice';
 
   @override
   void initState() {
@@ -25,6 +26,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _forceOffline = prefs.getBool('force_offline_asr') ?? false;
+      _selectedModelId = prefs.getString('asr_model_id') ?? 'sensevoice';
     });
   }
 
@@ -32,6 +34,13 @@ class _SettingsPageState extends State<SettingsPage> {
     await _sherpaAsr.setForceOffline(value);
     setState(() {
       _forceOffline = value;
+    });
+  }
+
+  Future<void> _selectModel(String modelId) async {
+    await _sherpaAsr.setModel(modelId);
+    setState(() {
+      _selectedModelId = modelId;
     });
   }
 
@@ -69,37 +78,38 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16.0),
+            Text(
+              '语音模型',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8.0),
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Icon(Icons.model_training, color: cs.onSurface),
-                    const SizedBox(width: 12.0),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'SenseVoice',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16.0,
-                              color: cs.onSurface,
-                            ),
-                          ),
-                          Text(
-                            '支持：中文、英文、日文、韩文、粤语',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+              child: Column(
+                children: SherpaAsrService.availableModels.map((model) {
+                  final selected = model.id == _selectedModelId;
+                  return RadioListTile<String>(
+                    value: model.id,
+                    groupValue: _selectedModelId,
+                    onChanged: (v) {
+                      if (v != null) _selectModel(v);
+                    },
+                    title: Text(
+                      model.name,
+                      style: TextStyle(
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
-                  ],
-                ),
+                    secondary: Icon(
+                      Icons.model_training,
+                      color: selected ? cs.primary : cs.outline,
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ],
