@@ -1,12 +1,10 @@
-// JSON Low-Code DSL v3.2 - 主入口
-// 使用 Material 3 设计风格，集成 Riverpod 状态管理
-// 启动页为文件选择器，选择 JSON 文件后加载并渲染 Server-Driven UI
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:google_fonts/google_fonts.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
@@ -39,27 +37,196 @@ void main() async {
   );
 }
 
-/// 应用根组件 — Material 3 主题
+/// 应用根组件
 class JsonDslApp extends ConsumerWidget {
   const JsonDslApp({super.key});
 
   static final navigatorKey = GlobalKey<NavigatorState>();
 
+  static TextTheme _buildTextTheme(Brightness brightness) {
+    final base = brightness == Brightness.dark
+        ? ThemeData.dark().textTheme
+        : ThemeData.light().textTheme;
+    return GoogleFonts.interTextTheme(base);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: 'JSON DSL v3.2',
+      title: 'MyApp',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
         brightness: Brightness.light,
+        textTheme: _buildTextTheme(Brightness.light),
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: const ColorScheme.light(
+          surface: Colors.white,
+          onSurface: Colors.black,
+          primary: Colors.black,
+          onPrimary: Colors.white,
+          secondary: Color(0xFF666666),
+          onSecondary: Colors.white,
+          surfaceContainerHighest: Color(0xFFF2F2F2),
+          surfaceContainerHigh: Color(0xFFF5F5F5),
+          surfaceContainer: Color(0xFFF0F0F0),
+          outline: Color(0xFFE0E0E0),
+          onSurfaceVariant: Color(0xFF666666),
+          error: Color(0xFFB00020),
+          errorContainer: Color(0xFFFCE4EC),
+          onErrorContainer: Color(0xFFB00020),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFFF5F5F5),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            textStyle: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.black,
+            side: const BorderSide(color: Color(0xFFE0E0E0)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.black,
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFF2F2F2),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Colors.black, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: Colors.black.withValues(alpha: 0.08),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Color(0xFFE0E0E0),
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
         brightness: Brightness.dark,
+        textTheme: _buildTextTheme(Brightness.dark),
+        scaffoldBackgroundColor: Colors.black,
+        colorScheme: const ColorScheme.dark(
+          surface: Colors.black,
+          onSurface: Colors.white,
+          primary: Colors.white,
+          onPrimary: Colors.black,
+          secondary: Color(0xFF999999),
+          onSecondary: Colors.black,
+          surfaceContainerHighest: Color(0xFF1A1A1A),
+          surfaceContainerHigh: Color(0xFF1A1A1A),
+          surfaceContainer: Color(0xFF1A1A1A),
+          outline: Color(0xFF333333),
+          onSurfaceVariant: Color(0xFF999999),
+          error: Color(0xFFCF6679),
+          errorContainer: Color(0xFF442626),
+          onErrorContainer: Color(0xFFCF6679),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF1A1A1A),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            textStyle: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: const BorderSide(color: Color(0xFF333333)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF1A1A1A),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Colors.white, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.black,
+          indicatorColor: Colors.white.withValues(alpha: 0.08),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Color(0xFF333333),
+        ),
       ),
       themeMode: ThemeMode.system,
       // 使用 builder 注入悬浮球，凌驾于所有路由之上
@@ -105,9 +272,7 @@ class _AuthGate extends StatelessWidget {
           return const FilePickerPage();
         }
         return AuthPage(
-          onAuthSuccess: () {
-            // authNotifier 已在 AuthService 内部更新
-          },
+          onAuthSuccess: () {},
         );
       },
     );
@@ -115,10 +280,9 @@ class _AuthGate extends StatelessWidget {
 }
 
 // ============================================================
-// 启动页：文件选择器
+// 启动页：主页
 // ============================================================
 
-/// 启动页面 - 用户选择 JSON 文件后加载并渲染
 class FilePickerPage extends ConsumerStatefulWidget {
   const FilePickerPage({super.key});
 
@@ -189,11 +353,10 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         _loading = false;
         _error = e.toString();
       });
-      debugPrint('[JSON DSL] 加载文件失败: $e');
+      debugPrint('[MyApp] 加载文件失败: $e');
     }
   }
 
-  /// 从市场下载并加载一个 App
   Future<void> _loadFromMarket(Map<String, dynamic> app) async {
     setState(() {
       _loading = true;
@@ -274,163 +437,242 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     }
   }
 
+  Widget _buildEntryCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback? onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 28, color: cs.onSurface),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
+    final username = AuthService.currentUser?['username'] ??
+        AuthService.currentUser?['email']?.toString().split('@').first ??
+        '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('JSON DSL v3.2'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _openSettings,
-          ),
-          if (AuthService.isLoggedIn)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.account_circle),
-              onSelected: (value) async {
-                if (value == 'profile') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ProfilePage(),
-                    ),
-                  );
-                } else if (value == 'logout') {
-                  await AuthService.signOut();
-                }
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  enabled: false,
-                  child: Text(
-                    AuthService.currentUser?['username'] ??
-                        AuthService.currentUser?['email'] ??
-                        '',
-                    style: TextStyle(color: colorScheme.onSurface),
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person, size: 18),
-                      SizedBox(width: 8),
-                      Text('个人资料'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, size: 18),
-                      SizedBox(width: 8),
-                      Text('退出登录'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // App 图标
-              Icon(
-                Icons.code,
-                size: 80,
-                color: colorScheme.primary,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'JSON DSL v3.2',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
+              // Top bar
+              Row(
+                children: [
+                  Text(
+                    'MyApp',
+                    style: GoogleFonts.inter(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
                     ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Server-Driven UI 低代码引擎',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 48),
-
-              // 选择本地文件
-              FilledButton.icon(
-                onPressed: _loading ? null : _pickAndLoadJson,
-                icon: _loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.settings_outlined, color: cs.onSurface),
+                    onPressed: _openSettings,
+                  ),
+                  if (AuthService.isLoggedIn)
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.account_circle_outlined, color: cs.onSurface),
+                      onSelected: (value) async {
+                        if (value == 'profile') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ProfilePage(),
+                            ),
+                          );
+                        } else if (value == 'logout') {
+                          await AuthService.signOut();
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          enabled: false,
+                          child: Text(
+                            AuthService.currentUser?['username'] ??
+                                AuthService.currentUser?['email'] ??
+                                '',
+                            style: TextStyle(color: cs.onSurface),
+                          ),
                         ),
-                      )
-                    : const Icon(Icons.folder_open),
-                label: Text(_loading ? '加载中...' : '选择本地文件'),
-                style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 16),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'profile',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person_outline, size: 18),
+                              SizedBox(width: 8),
+                              Text('个人资料'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout, size: 18),
+                              SizedBox(width: 8),
+                              Text('退出登录'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+
+              const SizedBox(height: 36),
+
+              // Welcome
+              Text(
+                'Hi, $username',
+                style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '探索和运行你的应用',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: cs.onSurfaceVariant,
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
-              // 从市场选择
-              OutlinedButton.icon(
-                onPressed: _loading ? null : _openMarket,
-                icon: const Icon(Icons.store),
-                label: const Text('从应用市场选择'),
-                style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 16),
+              // Cards grid
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildEntryCard(
+                      icon: Icons.store_outlined,
+                      title: '应用市场',
+                      subtitle: '发现精彩应用',
+                      onTap: _loading ? null : _openMarket,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildEntryCard(
+                      icon: Icons.apps_outlined,
+                      title: '我的 APP',
+                      subtitle: '历史记录',
+                      onTap: _loading ? null : _openMyApps,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Local file card
+              Card(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _loading ? null : _pickAndLoadJson,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    child: Row(
+                      children: [
+                        Icon(Icons.folder_open_outlined, size: 24, color: cs.onSurface),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '选择本地文件',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '从设备导入 JSON 配置',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_loading)
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: cs.onSurface,
+                            ),
+                          )
+                        else
+                          Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                      ],
+                    ),
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 16),
-
-              // 我的 APP（AI 生成的历史）
-              OutlinedButton.icon(
-                onPressed: _loading ? null : _openMyApps,
-                icon: const Icon(Icons.history),
-                label: const Text('我的 APP'),
-                style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 16),
-                ),
-              ),
-
-              // 错误提示
+              // Error
               if (_error != null) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(12),
+                    color: cs.errorContainer,
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: colorScheme.error),
+                      Icon(Icons.error_outline, color: cs.error, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _error!,
-                          style: TextStyle(color: colorScheme.onErrorContainer),
+                          style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
                         ),
                       ),
                     ],
@@ -438,12 +680,17 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                 ),
               ],
 
-              const SizedBox(height: 32),
-              Text(
-                '支持格式：JSON DSL v3.2 配置文件',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.outline,
-                    ),
+              const SizedBox(height: 48),
+
+              // Version
+              Center(
+                child: Text(
+                  'v1.1.0',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
               ),
             ],
           ),
@@ -510,11 +757,11 @@ class _MarketPageState extends State<_MarketPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('应用市场'),
+        title: Text('应用市场', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -524,41 +771,38 @@ class _MarketPageState extends State<_MarketPage> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: cs.onSurface))
           : _error != null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.cloud_off,
-                          size: 48, color: colorScheme.outline),
+                      Icon(Icons.cloud_off, size: 48, color: cs.onSurfaceVariant),
                       const SizedBox(height: 16),
-                      Text(_error!,
-                          style: TextStyle(color: colorScheme.outline)),
+                      Text(_error!, style: TextStyle(color: cs.onSurfaceVariant)),
                       const SizedBox(height: 16),
-                      FilledButton(
-                          onPressed: _fetchApps, child: const Text('重试')),
+                      FilledButton(onPressed: _fetchApps, child: const Text('重试')),
                     ],
                   ),
                 )
               : _apps.isEmpty
                   ? Center(
                       child: Text('暂无可用应用',
-                          style: TextStyle(color: colorScheme.outline)),
+                          style: TextStyle(color: cs.onSurfaceVariant)),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: _apps.length,
                       itemBuilder: (context, index) {
                         final app = _apps[index];
-                        return _buildAppCard(context, app, colorScheme);
+                        return _buildAppCard(context, app, cs);
                       },
                     ),
     );
   }
 
   Widget _buildAppCard(BuildContext context, Map<String, dynamic> app,
-      ColorScheme colorScheme) {
+      ColorScheme cs) {
     final name = app['name'] as String? ?? '';
     final desc = app['description'] as String? ?? '';
     final version = app['version']?.toString() ?? '';
@@ -567,7 +811,7 @@ class _MarketPageState extends State<_MarketPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: () {
           Navigator.of(context).pop();
           widget.onSelect(app);
@@ -576,19 +820,16 @@ class _MarketPageState extends State<_MarketPage> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // 图标
               Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
+                  color: cs.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.apps,
-                    color: colorScheme.onPrimaryContainer, size: 24),
+                child: Icon(Icons.apps, color: cs.onSurface, size: 24),
               ),
               const SizedBox(width: 16),
-              // 信息
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -598,10 +839,11 @@ class _MarketPageState extends State<_MarketPage> {
                         Expanded(
                           child: Text(
                             name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
                           ),
                         ),
                         if (version.isNotEmpty)
@@ -609,15 +851,15 @@ class _MarketPageState extends State<_MarketPage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest,
+                              color: cs.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               'v$version',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(color: colorScheme.outline),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: cs.onSurfaceVariant,
+                              ),
                             ),
                           ),
                       ],
@@ -626,10 +868,10 @@ class _MarketPageState extends State<_MarketPage> {
                       const SizedBox(height: 4),
                       Text(
                         desc,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: cs.onSurfaceVariant,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -638,17 +880,17 @@ class _MarketPageState extends State<_MarketPage> {
                       const SizedBox(height: 4),
                       Text(
                         '作者: $author',
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelSmall
-                            ?.copyWith(color: colorScheme.outline),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.download, color: colorScheme.primary),
+              Icon(Icons.download_outlined, color: cs.onSurfaceVariant),
             ],
           ),
         ),
@@ -815,7 +1057,7 @@ class _CrashPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('APP 运行出错'),
+        title: Text('运行出错', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -1208,22 +1450,24 @@ class _MyAppsPageState extends State<_MyAppsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('我的 APP')),
+      appBar: AppBar(
+        title: Text('我的 APP', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      ),
       body: _apps == null
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: cs.onSurface))
           : _apps!.isEmpty
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.inbox, size: 64, color: colorScheme.outline),
+                      Icon(Icons.inbox_outlined, size: 64, color: cs.onSurfaceVariant),
                       const SizedBox(height: 16),
-                      Text('还没有 APP', style: TextStyle(color: colorScheme.outline, fontSize: 16)),
+                      Text('还没有 APP', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Text('长按悬浮球，用语音让 AI 帮你生成', style: TextStyle(color: colorScheme.outline, fontSize: 13)),
+                      Text('长按悬浮球，用语音让 AI 帮你生成', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
                     ],
                   ),
                 )
@@ -1243,8 +1487,8 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: colorScheme.primaryContainer,
-                              child: Icon(Icons.apps, color: colorScheme.primary),
+                              backgroundColor: cs.surfaceContainerHighest,
+                              child: Icon(Icons.apps, color: cs.onSurface),
                             ),
                             title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(
@@ -1258,12 +1502,12 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                                 if (_isAdmin)
                                   IconButton(
                                     icon: Icon(Icons.cloud_upload_outlined,
-                                        size: 20, color: colorScheme.primary),
+                                        size: 20, color: cs.onSurfaceVariant),
                                     tooltip: '上传到市场',
                                     onPressed: _uploading ? null : () => _uploadToMarket(app),
                                   ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                  icon: Icon(Icons.delete_outline, size: 20, color: cs.onSurfaceVariant),
                                   onPressed: () async {
                                     await AppStorage.instance.delete(app.fileName);
                                     _load();

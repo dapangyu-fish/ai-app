@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'sherpa_asr_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -36,77 +37,69 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('设置'),
+        title: Text('设置', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         centerTitle: true,
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            _buildSectionTitle('语音识别'),
+            Text(
+              '语音识别',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
             const SizedBox(height: 8.0),
-            _buildOfflineSwitch(),
+            Card(
+              child: SwitchListTile(
+                secondary: Icon(Icons.mic_off, color: cs.onSurface),
+                title: const Text('强制使用离线语音'),
+                subtitle: const Text(
+                  '开启后，语音识别会优先使用本地模型，不依赖网络',
+                ),
+                value: _forceOffline,
+                onChanged: _toggleOffline,
+              ),
+            ),
             const SizedBox(height: 16.0),
-            _buildModelInfo(colorScheme),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-    );
-  }
-
-  Widget _buildOfflineSwitch() {
-    return Card(
-      child: SwitchListTile(
-        secondary: const Icon(Icons.mic_off),
-        title: const Text('强制使用离线语音'),
-        subtitle: const Text(
-          '开启后，语音识别会优先使用本地模型，不依赖网络',
-        ),
-        value: _forceOffline,
-        onChanged: _toggleOffline,
-      ),
-    );
-  }
-
-  Widget _buildModelInfo(ColorScheme colorScheme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            const Icon(Icons.model_training),
-            const SizedBox(width: 12.0),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'SenseVoice',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.0,
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.model_training, color: cs.onSurface),
+                    const SizedBox(width: 12.0),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'SenseVoice',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16.0,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                          Text(
+                            '支持：中文、英文、日文、韩文、粤语',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    '支持：中文、英文、日文、韩文、粤语',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
