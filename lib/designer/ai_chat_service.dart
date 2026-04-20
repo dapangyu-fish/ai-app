@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
 
 /// AI 对话事件
@@ -13,9 +14,67 @@ class ChatEvent {
   ChatEvent({this.content, this.jsonApp, this.quota, this.error});
 }
 
+/// AI 供应商信息
+class AiProvider {
+  final String id;
+  final String name;
+  final String description;
+  final String defaultModel;
+
+  AiProvider({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.defaultModel,
+  });
+
+  factory AiProvider.fromJson(Map<String, dynamic> json) {
+    return AiProvider(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String? ?? '',
+      defaultModel: json['default_model'] as String? ?? '',
+    );
+  }
+}
+
 /// 管理对话历史并与后端 AI 服务通信（SSE 流式，支持中断）
 class AiChatService {
   static const String _baseUrl = 'https://app-backend.dapangyu.work';
+  static const String _providerKey = 'ai_provider';
+
+  static String _selectedProvider = 'deepseek';
+  static List<AiProvider> _providers = [];
+
+  static String get selectedProvider => _selectedProvider;
+  static List<AiProvider> get providers => _providers;
+
+  static Future<void> loadProvider() async {
+    final prefs = await SharedPreferences.getInstance();
+    _selectedProvider = prefs.getString(_providerKey) ?? 'deepseek';
+  }
+
+  static Future<void> setProvider(String providerId) async {
+    _selectedProvider = providerId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_providerKey, providerId);
+  }
+
+  static Future<List<AiProvider>> fetchProviders() async {
+    try {
+      final resp = await http
+          .get(Uri.parse('$_baseUrl/api/ai/providers'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        _providers = (data['providers'] as List<dynamic>)
+            .map((e) => AiProvider.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return _providers;
+      }
+    } catch (_) {}
+    return _providers;
+  }
 
   final List<Map<String, String>> _messages = [];
 
@@ -45,7 +104,10 @@ class AiChatService {
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      request.body = json.encode({'messages': _messages});
+      request.body = json.encode({
+        'messages': _messages,
+        'provider': _selectedProvider,
+      });
 
       final response = await client.send(request).timeout(
         const Duration(seconds: 120),

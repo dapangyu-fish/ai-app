@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ai_chat_service.dart';
 
 /// 对话消息
 class ChatMessage {
@@ -18,6 +19,7 @@ class ChatOverlay extends StatelessWidget {
   final VoidCallback? onClear;
   final ScrollController scrollController;
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
+  final void Function(String providerId)? onProviderChanged;
 
   const ChatOverlay({
     super.key,
@@ -29,6 +31,7 @@ class ChatOverlay extends StatelessWidget {
     this.liveTranscript,
     this.onRunJsonApp,
     this.onClear,
+    this.onProviderChanged,
   });
 
   @override
@@ -87,6 +90,14 @@ class ChatOverlay extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                  if (AiChatService.providers.length > 1) ...[
+                    const SizedBox(width: 8),
+                    _ProviderChip(
+                      providers: AiChatService.providers,
+                      selectedId: AiChatService.selectedProvider,
+                      onChanged: onProviderChanged,
+                    ),
+                  ],
                   const Spacer(),
                   if (onClear != null && visibleMessages.isNotEmpty)
                     _TitleBarButton(
@@ -253,6 +264,95 @@ class _NoGlowBehavior extends ScrollBehavior {
   Widget buildOverscrollIndicator(
       BuildContext context, Widget child, ScrollableDetails details) {
     return child;
+  }
+}
+
+/// 供应商选择小标签 — 点击弹出切换菜单
+class _ProviderChip extends StatelessWidget {
+  final List<AiProvider> providers;
+  final String selectedId;
+  final void Function(String providerId)? onChanged;
+
+  const _ProviderChip({
+    required this.providers,
+    required this.selectedId,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final current = providers
+        .where((p) => p.id == selectedId)
+        .firstOrNull;
+    final label = current?.name ?? selectedId;
+
+    return GestureDetector(
+      onTap: () => _showMenu(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.smart_toy,
+                color: Colors.white.withValues(alpha: 0.6), size: 11),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.expand_more,
+                color: Colors.white.withValues(alpha: 0.4), size: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMenu(BuildContext context) {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final offset = box.localToGlobal(Offset.zero);
+
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + box.size.height + 4,
+        offset.dx + box.size.width,
+        0,
+      ),
+      items: providers.map((p) {
+        return PopupMenuItem<String>(
+          value: p.id,
+          child: Row(
+            children: [
+              if (p.id == selectedId)
+                const Icon(Icons.check, size: 16, color: Colors.green)
+              else
+                const SizedBox(width: 16),
+              const SizedBox(width: 8),
+              Text(p.name),
+            ],
+          ),
+        );
+      }).toList(),
+    ).then((value) {
+      if (value != null && value != selectedId) {
+        onChanged?.call(value);
+      }
+    });
   }
 }
 

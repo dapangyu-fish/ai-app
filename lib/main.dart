@@ -10,6 +10,7 @@ import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
 import 'designer/designer_ball.dart';
 import 'designer/settings_page.dart';
+import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
@@ -30,6 +31,7 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.restoreSession();
+  await AiChatService.loadProvider();
   runApp(
     const ProviderScope(
       child: JsonDslApp(),
