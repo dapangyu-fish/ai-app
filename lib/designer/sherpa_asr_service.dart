@@ -34,7 +34,7 @@ const kAsrModels = <AsrModel>[
   AsrModel(
     id: 'sensevoice',
     name: 'SenseVoice',
-    description: '中文、英文、日文、韩文、粤语',
+    description: '中英日韩粤 多语言 (~50MB)',
     ossPath: 'sherpa-onnx/sensevoice-zh-en-ja-ko-yue-int8',
     files: {
       'model': 'model.int8.onnx',
@@ -45,12 +45,12 @@ const kAsrModels = <AsrModel>[
   AsrModel(
     id: 'qwen3-asr',
     name: 'Qwen3 ASR 0.6B',
-    description: '中英多语言，高准确率',
+    description: '通义千问语音识别 (~600MB)',
     ossPath: 'sherpa-onnx/qwen3-asr-0.6B-int8',
     files: {
-      'conv_frontend': 'conv_frontend.int8.onnx',
-      'encoder': 'encoder.int8.onnx',
-      'decoder': 'decoder.int8.onnx',
+      'conv_frontend': 'conv_frontend-int8.onnx',
+      'encoder': 'encoder-int8.onnx',
+      'decoder': 'decoder-int8.onnx',
       'tokenizer': 'tokenizer.json',
       'tokens': 'tokens.txt',
     },
@@ -59,12 +59,12 @@ const kAsrModels = <AsrModel>[
   AsrModel(
     id: 'funasr-nano',
     name: 'FunASR Nano',
-    description: '超轻量，中文优化',
+    description: '阿里FunASR 轻量模型 (~400MB)',
     ossPath: 'sherpa-onnx/funasr-nano-int8',
     files: {
-      'encoder_adaptor': 'encoder_adaptor.int8.onnx',
-      'llm': 'llm.int8.onnx',
-      'embedding': 'embedding.int8.onnx',
+      'encoder_adaptor': 'encoder_adaptor-int8.onnx',
+      'llm': 'llm-int8.onnx',
+      'embedding': 'embedding.onnx',
       'tokenizer': 'tokenizer.json',
       'tokens': 'tokens.txt',
     },
@@ -254,6 +254,7 @@ class SherpaAsrService {
             llm: '$dir/${model.files['llm']!}',
             embedding: '$dir/${model.files['embedding']!}',
             tokenizer: '$dir/${model.files['tokenizer']!}',
+            language: 'auto',
           ),
           tokens: '$dir/${model.files['tokens']!}',
           modelType: 'funasrNano',
