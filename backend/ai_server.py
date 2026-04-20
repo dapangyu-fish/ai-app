@@ -38,9 +38,29 @@ SUPABASE_SERVICE_KEY = (
     ".vF-RNvJfdUyhExR8cFdefdMVmw4yHCCaFMd_-gZC5Es"
 )
 
-DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_KEY = "sk-63a3f89ae09440f2b05e21f56410eb68"
-DEEPSEEK_MODEL = "deepseek-chat"
+GLM_KEY = os.environ.get("GLM_API_KEY", "")
+
+AI_PROVIDERS = {
+    "deepseek": {
+        "id": "deepseek",
+        "name": "DeepSeek",
+        "anthropic_base_url": "https://api.deepseek.com/anthropic",
+        "openai_base_url": "https://api.deepseek.com/chat/completions",
+        "api_key": DEEPSEEK_KEY,
+        "model": "deepseek-chat",
+    },
+    "glm": {
+        "id": "glm",
+        "name": "GLM (智谱)",
+        "anthropic_base_url": "https://open.bigmodel.cn/api/paas/v4/anthropic",
+        "openai_base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "api_key": GLM_KEY,
+        "model": "glm-4-flash",
+    },
+}
+
+DEFAULT_PROVIDER = "deepseek"
 
 MINIO_ENDPOINT = "http://127.0.0.1:9000"
 MINIO_ACCESS_KEY = "m3wZkIA5EgmEwkctueZM"
@@ -59,13 +79,15 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "
 DSL_SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "JSON-DSL.md")
 PROJECT_ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-# Claude Agent（通过 DeepSeek Anthropic 兼容端点）
-_agent_client = anthropic.Anthropic(
-    base_url="https://api.deepseek.com/anthropic",
-    api_key=DEEPSEEK_KEY,
-)
-AGENT_MODEL = "deepseek-chat"
 AGENT_MAX_ITERATIONS = 8
+
+def _get_provider(provider_id=None):
+    pid = provider_id or DEFAULT_PROVIDER
+    return AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
+
+def _get_agent_client(provider_id=None):
+    p = _get_provider(provider_id)
+    return anthropic.Anthropic(base_url=p["anthropic_base_url"], api_key=p["api_key"])
 
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
@@ -464,6 +486,21 @@ def get_quota():
     })
 
 # ═══════════════════════════════════════════════════════════
+# AI 供应商列表
+# ═══════════════════════════════════════════════════════════
+
+@app.route("/api/providers", methods=["GET"])
+def list_providers():
+    providers = []
+    for pid, p in AI_PROVIDERS.items():
+        providers.append({
+            "id": p["id"],
+            "name": p["name"],
+            "model": p["model"],
+        })
+    return jsonify({"providers": providers, "default": DEFAULT_PROVIDER})
+
+# ═══════════════════════════════════════════════════════════
 # AI Chat (SSE) — 带配额检查 + JSON 代码块检测
 # ═══════════════════════════════════════════════════════════
 
@@ -646,6 +683,11 @@ def chat():
     if not messages:
         return jsonify({"error": "messages is required"}), 400
 
+    provider_id = body.get("provider", DEFAULT_PROVIDER)
+    provider = _get_provider(provider_id)
+    agent_client = _get_agent_client(provider_id)
+    agent_model = provider["model"]
+
     # 构建 Agent 消息（过滤 system，Anthropic 用单独 system 参数）
     agent_messages = []
     for m in messages:
@@ -674,8 +716,8 @@ def chat():
                 # 流式调用 — 文本实时推送给客户端，工具调用在结束后处理
                 response = None
                 try:
-                    with _agent_client.messages.stream(
-                        model=AGENT_MODEL,
+                    with agent_client.messages.stream(
+                        model=agent_model,
                         max_tokens=8192,
                         system=system_prompt,
                         messages=msgs,
@@ -688,8 +730,8 @@ def chat():
                 except Exception as e:
                     # 流式不支持时 fallback 到非流式
                     print(f"[Agent] Stream failed ({e}), falling back to non-stream")
-                    response = _agent_client.messages.create(
-                        model=AGENT_MODEL,
+                    response = agent_client.messages.create(
+                        model=agent_model,
                         max_tokens=8192,
                         system=system_prompt,
                         messages=msgs,
@@ -778,6 +820,9 @@ def fix_app():
     if not crash_log or not json_config:
         return jsonify({"error": "crash_log 和 json_config 不能为空"}), 400
 
+    provider_id = body.get("provider", DEFAULT_PROVIDER)
+    provider = _get_provider(provider_id)
+
     # 不额外消耗配额，但需要登录
     prompt = f"""以下 JSON-APP 运行时崩溃了，请修复：
 
@@ -801,10 +846,10 @@ def fix_app():
         full_content = ""
         try:
             resp = requests.post(
-                DEEPSEEK_URL,
+                provider["openai_base_url"],
                 headers={"Content-Type": "application/json",
-                         "Authorization": f"Bearer {DEEPSEEK_KEY}"},
-                json={"model": DEEPSEEK_MODEL, "messages": messages, "stream": True},
+                         "Authorization": f"Bearer {provider['api_key']}"},
+                json={"model": provider["model"], "messages": messages, "stream": True},
                 stream=True, timeout=120,
             )
             for line in resp.iter_lines(decode_unicode=True):
@@ -1104,5 +1149,7 @@ if __name__ == "__main__":
     print("   Chat: POST /chat (SSE, quota-limited, DSL-aware)")
     print("   Fix: POST /api/ai/fix-app (crash repair)")
     print("   Store: /api/store/{apps,components,publish,delete}")
+    print("   Providers: GET /api/providers")
     print("   Old: /app-list, /download/<file>")
+    print(f"   Available AI providers: {', '.join(AI_PROVIDERS.keys())}")
     app.run(host="0.0.0.0", port=PORT)
