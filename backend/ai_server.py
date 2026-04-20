@@ -39,24 +39,35 @@ SUPABASE_SERVICE_KEY = (
 )
 
 DEEPSEEK_KEY = "sk-63a3f89ae09440f2b05e21f56410eb68"
-GLM_KEY = os.environ.get("GLM_API_KEY", "")
 
 AI_PROVIDERS = {
     "deepseek": {
         "id": "deepseek",
         "name": "DeepSeek",
-        "anthropic_base_url": "https://api.deepseek.com/anthropic",
-        "openai_base_url": "https://api.deepseek.com/chat/completions",
+        "description": "DeepSeek AI — 通用对话模型",
+        "type": "anthropic",
+        "base_url": "https://api.deepseek.com/anthropic",
         "api_key": DEEPSEEK_KEY,
-        "model": "deepseek-chat",
+        "models": {
+            "default": "deepseek-chat",
+        },
+        "agent_model": "deepseek-chat",
     },
     "glm": {
         "id": "glm",
         "name": "GLM (智谱)",
-        "anthropic_base_url": "https://open.bigmodel.cn/api/paas/v4/anthropic",
-        "openai_base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        "api_key": GLM_KEY,
-        "model": "glm-4-flash",
+        "description": "智谱 GLM — 多模型系列",
+        "type": "anthropic",
+        "base_url": os.environ.get("ANTHROPIC_BASE_URL", "http://14.103.26.181"),
+        "api_key": os.environ.get("ANTHROPIC_AUTH_TOKEN", "sk-FUsE9Q3QaEjHo7qnad7ffBINpQHkkETW16K8OXl26SHfRUfN"),
+        "models": {
+            "default": os.environ.get("ANTHROPIC_MODEL", "glm-5"),
+            "haiku": os.environ.get("ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
+            "sonnet": os.environ.get("ANTHROPIC_DEFAULT_SONNET_MODEL", "glm-5-turbo"),
+            "opus": os.environ.get("ANTHROPIC_DEFAULT_OPUS_MODEL", "glm-5.1"),
+            "reasoning": os.environ.get("ANTHROPIC_REASONING_MODEL", "glm-5.1"),
+        },
+        "agent_model": os.environ.get("ANTHROPIC_MODEL", "glm-5"),
     },
 }
 
@@ -87,7 +98,11 @@ def _get_provider(provider_id=None):
 
 def _get_agent_client(provider_id=None):
     p = _get_provider(provider_id)
-    return anthropic.Anthropic(base_url=p["anthropic_base_url"], api_key=p["api_key"])
+    return anthropic.Anthropic(base_url=p["base_url"], api_key=p["api_key"])
+
+def _get_agent_model(provider_id=None):
+    p = _get_provider(provider_id)
+    return p["agent_model"]
 
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
@@ -489,14 +504,16 @@ def get_quota():
 # AI 供应商列表
 # ═══════════════════════════════════════════════════════════
 
-@app.route("/api/providers", methods=["GET"])
+@app.route("/api/ai/providers", methods=["GET"])
 def list_providers():
     providers = []
     for pid, p in AI_PROVIDERS.items():
         providers.append({
             "id": p["id"],
             "name": p["name"],
-            "model": p["model"],
+            "description": p.get("description", ""),
+            "models": list(p["models"].keys()),
+            "default_model": p["models"]["default"],
         })
     return jsonify({"providers": providers, "default": DEFAULT_PROVIDER})
 
@@ -684,9 +701,8 @@ def chat():
         return jsonify({"error": "messages is required"}), 400
 
     provider_id = body.get("provider", DEFAULT_PROVIDER)
-    provider = _get_provider(provider_id)
     agent_client = _get_agent_client(provider_id)
-    agent_model = provider["model"]
+    agent_model = _get_agent_model(provider_id)
 
     # 构建 Agent 消息（过滤 system，Anthropic 用单独 system 参数）
     agent_messages = []
@@ -821,7 +837,8 @@ def fix_app():
         return jsonify({"error": "crash_log 和 json_config 不能为空"}), 400
 
     provider_id = body.get("provider", DEFAULT_PROVIDER)
-    provider = _get_provider(provider_id)
+    fix_client = _get_agent_client(provider_id)
+    fix_model = _get_agent_model(provider_id)
 
     # 不额外消耗配额，但需要登录
     prompt = f"""以下 JSON-APP 运行时崩溃了，请修复：
@@ -837,33 +854,36 @@ def fix_app():
 请分析原因并输出修复后的完整 JSON（用 ```json 代码块包裹）。"""
 
     dsl_spec = _load_dsl_spec()
+    system_prompt = f"你是 JSON-DSL 调试专家。\n\n## 规范\n{dsl_spec}"
     messages = [
-        {"role": "system", "content": f"你是 JSON-DSL 调试专家。\n\n## 规范\n{dsl_spec}"},
         {"role": "user", "content": prompt},
     ]
 
     def generate():
         full_content = ""
         try:
-            resp = requests.post(
-                provider["openai_base_url"],
-                headers={"Content-Type": "application/json",
-                         "Authorization": f"Bearer {provider['api_key']}"},
-                json={"model": provider["model"], "messages": messages, "stream": True},
-                stream=True, timeout=120,
-            )
-            for line in resp.iter_lines(decode_unicode=True):
-                if not line: continue
-                if line.startswith("data:"):
-                    data_str = line[5:].strip()
-                    if data_str == "[DONE]": break
-                    try:
-                        chunk = json.loads(data_str)
-                        content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                        if content:
-                            full_content += content
-                            yield f'data: {json.dumps({"content": content}, ensure_ascii=False)}\n\n'
-                    except Exception: pass
+            try:
+                with fix_client.messages.stream(
+                    model=fix_model,
+                    max_tokens=8192,
+                    system=system_prompt,
+                    messages=messages,
+                ) as stream:
+                    for text in stream.text_stream:
+                        full_content += text
+                        yield f'data: {json.dumps({"content": text}, ensure_ascii=False)}\n\n'
+            except Exception as e:
+                print(f"[FixApp] Stream failed ({e}), falling back to non-stream")
+                response = fix_client.messages.create(
+                    model=fix_model,
+                    max_tokens=8192,
+                    system=system_prompt,
+                    messages=messages,
+                )
+                for block in response.content:
+                    if block.type == 'text' and block.text:
+                        full_content += block.text
+                        yield f'data: {json.dumps({"content": block.text}, ensure_ascii=False)}\n\n'
 
             json_match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
             if json_match:
@@ -1149,7 +1169,7 @@ if __name__ == "__main__":
     print("   Chat: POST /chat (SSE, quota-limited, DSL-aware)")
     print("   Fix: POST /api/ai/fix-app (crash repair)")
     print("   Store: /api/store/{apps,components,publish,delete}")
-    print("   Providers: GET /api/providers")
+    print("   Providers: GET /api/ai/providers")
     print("   Old: /app-list, /download/<file>")
     print(f"   Available AI providers: {', '.join(AI_PROVIDERS.keys())}")
     app.run(host="0.0.0.0", port=PORT)

@@ -18,15 +18,22 @@ class ChatEvent {
 class AiProvider {
   final String id;
   final String name;
-  final String model;
+  final String description;
+  final String defaultModel;
 
-  AiProvider({required this.id, required this.name, required this.model});
+  AiProvider({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.defaultModel,
+  });
 
   factory AiProvider.fromJson(Map<String, dynamic> json) {
     return AiProvider(
       id: json['id'] as String,
       name: json['name'] as String,
-      model: json['model'] as String,
+      description: json['description'] as String? ?? '',
+      defaultModel: json['default_model'] as String? ?? '',
     );
   }
 }
@@ -56,7 +63,7 @@ class AiChatService {
   static Future<List<AiProvider>> fetchProviders() async {
     try {
       final resp = await http
-          .get(Uri.parse('$_baseUrl/api/providers'))
+          .get(Uri.parse('$_baseUrl/api/ai/providers'))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = json.decode(resp.body) as Map<String, dynamic>;

@@ -314,6 +314,11 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
+  void _onProviderChanged(String providerId) {
+    AiChatService.setProvider(providerId);
+    setState(() {});
+  }
+
   // 临时的 fallback 标志（只在当前会话有效，不覆盖强制离线设置）
   bool _fallbackToSherpa = false;
 
@@ -322,6 +327,11 @@ class _DesignerBallState extends State<DesignerBall>
     _fallbackToSherpa = false;
 
     _injectCurrentAppContext();
+
+    // 后台拉取供应商列表（不阻塞进入对话模式）
+    AiChatService.fetchProviders().then((_) {
+      if (mounted) setState(() {});
+    });
 
     if (!_speechInited && !_useSherpaAsr) {
       try {
@@ -934,6 +944,7 @@ class _DesignerBallState extends State<DesignerBall>
             onClose: _closeChatMode,
             onClear: _clearAndCloseChatMode,
             scrollController: _scrollController,
+            onProviderChanged: _onProviderChanged,
             onRunJsonApp: (jsonConfig) {
               _clearAndCloseChatMode();
               widget.onRunJsonApp?.call(jsonConfig);

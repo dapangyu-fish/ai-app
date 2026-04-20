@@ -136,7 +136,9 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             subtitle: Text(
-              '模型: ${provider.model}',
+              provider.description.isNotEmpty
+                  ? '${provider.description} (${provider.defaultModel})'
+                  : '模型: ${provider.defaultModel}',
               style: TextStyle(
                 color: colorScheme.onSurfaceVariant,
                 fontSize: 12,
