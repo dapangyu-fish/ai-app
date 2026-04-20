@@ -5,9 +5,9 @@
     "name": "user",
     "version": "1.0.0",
     "type": "library",
-    "description": "用户信息组件库 — 提供获取用户资料、头像、token 等函数",
+    "description": "用户信息组件库 — 提供获取用户资料、头像、token、登录检查、资料更新等函数",
     "author": "demo",
-    "exports": ["loadUserInfo", "getUserAvatar", "getUserEmail", "getUserName", "getAuthToken", "checkLogin"]
+    "exports": ["loadUserInfo", "getUserAvatar", "getUserEmail", "getUserName", "getAuthToken", "checkLogin", "requireLogin", "showUserGreeting", "updateUsername"]
   },
   "global": {
     "variables": {
@@ -51,6 +51,58 @@
         "params": ["bind"],
         "logic": [
           { "call": "@is_logged_in", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      },
+      "requireLogin": {
+        "params": [],
+        "logic": [
+          { "call": "@is_logged_in", "args": { "bind": "global._login_check" } },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!": [{ "var": "global._login_check" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "请先登录" } }
+              ],
+              "else": []
+            }
+          }
+        ]
+      },
+      "showUserGreeting": {
+        "params": [],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._userInfo" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "欢迎回来，{{ global._userInfo.username }}" } }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "请先登录" } }
+              ]
+            }
+          }
+        ]
+      },
+      "updateUsername": {
+        "params": ["new_name"],
+        "logic": [
+          { "call": "@update_profile", "args": { "username": "{{ params.new_name }}" }, "assign": "global._update_result" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._update_result.error" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "更新失败" } }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "用户名已更新" } }
+              ]
+            }
+          }
         ]
       }
     }

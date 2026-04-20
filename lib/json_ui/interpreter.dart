@@ -1062,6 +1062,42 @@ class JsonInterpreter extends ChangeNotifier {
         }
         return loggedIn;
 
+      case '@logout':
+        await AuthService.signOut();
+        return null;
+
+      case '@refresh_user':
+        try {
+          return await AuthService.fetchUser();
+        } catch (e) {
+          debugPrint('[JSON DSL] refresh_user 失败: $e');
+          return null;
+        }
+
+      case '@update_profile':
+        final username = resolvedArgs['username'] as String?;
+        final avatarUrl = resolvedArgs['avatar_url'] as String?;
+        try {
+          return await AuthService.updateProfile(
+            username: username,
+            avatarUrl: avatarUrl,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] update_profile 失败: $e');
+          return {'error': e.toString()};
+        }
+
+      case '@upload_avatar':
+        final base64Data = resolvedArgs['base64'] as String?;
+        if (base64Data == null || base64Data.isEmpty) return null;
+        try {
+          final url = await AuthService.uploadAvatar(base64Data);
+          return url;
+        } catch (e) {
+          debugPrint('[JSON DSL] upload_avatar 失败: $e');
+          return null;
+        }
+
       default:
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');
         return null;
