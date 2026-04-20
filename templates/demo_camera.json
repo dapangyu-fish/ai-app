@@ -131,7 +131,7 @@
                 "text": "拍照",
                 "icon": "camera_alt",
                 "variant": "filled",
-                "action": { "call": "takeAndSave" }
+                "action": { "call": "@global.takeAndSave" }
               },
               { "type": "spacer", "height": 8 },
               {
@@ -139,7 +139,7 @@
                 "text": "从相册选择",
                 "icon": "photo_library",
                 "variant": "outlined",
-                "action": { "call": "pickAndSave" }
+                "action": { "call": "@global.pickAndSave" }
               }
             ]
           },
@@ -166,7 +166,7 @@
                     "text": "清空",
                     "icon": "delete_outline",
                     "variant": "text",
-                    "action": { "call": "clearPhotos" }
+                    "action": { "call": "@global.clearPhotos" }
                   }
                 ]
               },
