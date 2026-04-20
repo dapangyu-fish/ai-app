@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'sherpa_asr_service.dart';
 import 'ai_chat_service.dart';
 
@@ -17,6 +18,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _selectedProvider = AiChatService.selectedProvider;
   List<AiProvider> _providers = AiChatService.providers;
   bool _loadingProviders = false;
+  String _selectedModelId = 'sensevoice';
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _forceOffline = prefs.getBool('force_offline_asr') ?? false;
       _selectedProvider = AiChatService.selectedProvider;
+      _selectedModelId = prefs.getString('asr_model_id') ?? 'sensevoice';
     });
   }
 
@@ -58,44 +61,89 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
+  Future<void> _selectModel(String modelId) async {
+    await _sherpaAsr.setModel(modelId);
+    setState(() {
+      _selectedModelId = modelId;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('设置'),
+        title: Text('设置', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         centerTitle: true,
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            _buildSectionTitle('AI 供应商'),
+            _buildSectionTitle('AI 供应商', cs),
             const SizedBox(height: 8.0),
-            _buildProviderSelector(colorScheme),
+            _buildProviderSelector(cs),
             const SizedBox(height: 24.0),
-            _buildSectionTitle('语音识别'),
+            _buildSectionTitle('语音识别', cs),
             const SizedBox(height: 8.0),
-            _buildOfflineSwitch(),
+            Card(
+              child: SwitchListTile(
+                secondary: Icon(Icons.mic_off, color: cs.onSurface),
+                title: const Text('强制使用离线语音'),
+                subtitle: const Text(
+                  '开启后，语音识别会优先使用本地模型，不依赖网络',
+                ),
+                value: _forceOffline,
+                onChanged: _toggleOffline,
+              ),
+            ),
             const SizedBox(height: 16.0),
-            _buildModelInfo(colorScheme),
+            _buildSectionTitle('语音模型', cs),
+            const SizedBox(height: 8.0),
+            Card(
+              child: Column(
+                children: SherpaAsrService.availableModels.map((model) {
+                  final selected = model.id == _selectedModelId;
+                  return RadioListTile<String>(
+                    value: model.id,
+                    groupValue: _selectedModelId,
+                    onChanged: (v) {
+                      if (v != null) _selectModel(v);
+                    },
+                    title: Text(
+                      model.name,
+                      style: TextStyle(
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                    secondary: Icon(
+                      Icons.model_training,
+                      color: selected ? cs.primary : cs.outline,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, ColorScheme cs) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+      style: GoogleFonts.inter(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: cs.onSurface,
+      ),
     );
   }
 
-  Widget _buildProviderSelector(ColorScheme colorScheme) {
+  Widget _buildProviderSelector(ColorScheme cs) {
     if (_loadingProviders && _providers.isEmpty) {
       return const Card(
         child: Padding(
@@ -140,64 +188,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   ? '${provider.description} (${provider.defaultModel})'
                   : '模型: ${provider.defaultModel}',
               style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
+                color: cs.onSurfaceVariant,
                 fontSize: 12,
               ),
             ),
             secondary: Icon(
               Icons.smart_toy,
-              color: selected ? colorScheme.primary : colorScheme.outline,
+              color: selected ? cs.primary : cs.outline,
             ),
           );
         }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildOfflineSwitch() {
-    return Card(
-      child: SwitchListTile(
-        secondary: const Icon(Icons.mic_off),
-        title: const Text('强制使用离线语音'),
-        subtitle: const Text(
-          '开启后，语音识别会优先使用本地模型，不依赖网络',
-        ),
-        value: _forceOffline,
-        onChanged: _toggleOffline,
-      ),
-    );
-  }
-
-  Widget _buildModelInfo(ColorScheme colorScheme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            const Icon(Icons.model_training),
-            const SizedBox(width: 12.0),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'SenseVoice',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.0,
-                    ),
-                  ),
-                  Text(
-                    '支持：中文、英文、日文、韩文、粤语',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

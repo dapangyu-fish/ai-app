@@ -34,6 +34,7 @@ def create_app():
     # 注册 Chat 路由
     app.add_url_rule("/chat", methods=["POST"], view_func=chat.chat)
     app.add_url_rule("/api/ai/fix-app", methods=["POST"], view_func=chat.fix_app)
+    app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=chat.list_providers)
 
     # 注册 Store 路由
     app.add_url_rule("/api/store/apps", methods=["GET"], view_func=store.store_apps)
@@ -41,8 +42,6 @@ def create_app():
     app.add_url_rule("/api/appid/new", methods=["GET"], view_func=store.new_appid)
     app.add_url_rule("/api/store/publish", methods=["POST"], view_func=store.store_publish)
     app.add_url_rule("/api/store/delete/<app_id>", methods=["DELETE"], view_func=store.store_delete)
-    app.add_url_rule("/app-list", methods=["GET"], view_func=store.app_list)
-    app.add_url_rule("/download/<path:filename>", methods=["GET"], view_func=store.download_file)
 
     return app
 
@@ -56,5 +55,4 @@ if __name__ == "__main__":
     print("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
     print("   Fix:   POST /api/ai/fix-app (crash repair)")
     print("   Store: /api/store/{apps,components,publish,delete}")
-    print("   Old:   /app-list, /download/<file>")
     app.run(host="0.0.0.0", port=PORT, debug=False)

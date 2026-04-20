@@ -100,3 +100,49 @@ Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notif
 2. Register it in `JsonWidgetBuilder._builders` map in `widget_builder.dart`
 3. The interpreter's `buildWidget` → `applyPosition` pipeline handles positioning automatically
 4. Update `JSON-DSL.md` widget type table
+
+## MinIO 对象存储操作
+
+服务器上的 MinIO 用于存储模型文件、JSON-APP 等静态资源。
+
+### 连接信息
+
+- 服务器内网地址: `127.0.0.1:9000`（仅服务器本地访问）
+- 公网地址: `https://app-oss-endpoint.dapangyu.work`
+- Access Key: `m3wZkIA5EgmEwkctueZM`
+- Secret Key: `m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk`
+- Bucket 列表: `json-app`、`json-component`、`models`
+
+### 上传文件到 MinIO
+
+通过 SSH 登录服务器，使用 Python minio SDK 上传：
+
+```bash
+ssh root@app-backend.dapangyu.work
+
+/opt/miniconda3/bin/python3 << 'EOF'
+from minio import Minio
+
+c = Minio('127.0.0.1:9000',
+          access_key='m3wZkIA5EgmEwkctueZM',
+          secret_key='m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk',
+          secure=False)
+
+# 上传单个文件
+c.fput_object('models', 'sherpa-onnx/xxx/model.onnx', '/本地路径/model.onnx')
+
+# 列出 bucket 内容
+for obj in c.list_objects('models', recursive=True):
+    print(f'{obj.object_name}  {obj.size/1048576:.1f}MB')
+EOF
+```
+
+### 上传大文件（如 ASR 模型）的标准流程
+
+1. 先将文件下载到服务器 `/mnt/storage00/`（服务器带宽大，比本地快）
+2. 如果是压缩包，在服务器上解压（`tar xjf xxx.tar.bz2 --exclude='test_wavs'`）
+3. SSH 到服务器，用 minio SDK 将解压后的**单个文件**逐个上传到对应 bucket 和路径
+4. 客户端代码按单个文件从 `https://app-oss-endpoint.dapangyu.work/<bucket>/<path>` 下载
+
+**注意**: 不要上传压缩包本身，客户端是按单个文件下载的。上传前先看客户端代码确认需要哪些文件和目录结构。
+
