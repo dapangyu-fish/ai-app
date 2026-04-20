@@ -7,11 +7,10 @@ import json
 import os
 import re
 import anthropic
-import requests
 from flask import request, jsonify, Response, stream_with_context
 from config import (
-    DEEPSEEK_URL, DEEPSEEK_KEY, DEEPSEEK_MODEL,
-    DSL_SPEC_PATH, PROJECT_ROOT, AGENT_MODEL,
+    AI_PROVIDERS, DEFAULT_PROVIDER,
+    DSL_SPEC_PATH, PROJECT_ROOT,
     AGENT_MAX_ITERATIONS, ROLE_QUOTAS
 )
 from database import db_query, get_quota_info, increment_quota
@@ -181,11 +180,34 @@ def _execute_agent_tool(name, inputs):
     return f"Unknown tool: {name}"
 
 
-# 初始化 Agent 客户端
-_agent_client = anthropic.Anthropic(
-    base_url="https://api.deepseek.com/anthropic",
-    api_key=DEEPSEEK_KEY,
-)
+def _get_provider(provider_id=None):
+    pid = provider_id or DEFAULT_PROVIDER
+    return AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
+
+
+def _get_agent_client(provider_id=None):
+    provider = _get_provider(provider_id)
+    return anthropic.Anthropic(
+        base_url=provider["base_url"],
+        api_key=provider["api_key"],
+    )
+
+
+def _get_agent_model(provider_id=None):
+    provider = _get_provider(provider_id)
+    return provider.get("agent_model", provider["models"]["default"])
+
+
+def list_providers():
+    providers = []
+    for pid, cfg in AI_PROVIDERS.items():
+        providers.append({
+            "id": cfg["id"],
+            "name": cfg["name"],
+            "description": cfg.get("description", ""),
+            "default_model": cfg["models"]["default"],
+        })
+    return jsonify({"providers": providers})
 
 
 @require_auth
@@ -206,6 +228,10 @@ def chat():
     messages = body.get("messages", [])
     if not messages:
         return jsonify({"error": "messages is required"}), 400
+
+    provider_id = body.get("provider")
+    agent_client = _get_agent_client(provider_id)
+    agent_model = _get_agent_model(provider_id)
 
     # 构建 Agent 消息（过滤 system，Anthropic 用单独 system 参数）
     agent_messages = []
@@ -235,8 +261,8 @@ def chat():
                 # 流式调用 — 文本实时推送给客户端，工具调用在结束后处理
                 response = None
                 try:
-                    with _agent_client.messages.stream(
-                        model=AGENT_MODEL,
+                    with agent_client.messages.stream(
+                        model=agent_model,
                         max_tokens=8192,
                         system=system_prompt,
                         messages=msgs,
@@ -249,8 +275,8 @@ def chat():
                 except Exception as e:
                     # 流式不支持时 fallback 到非流式
                     print(f"[Agent] Stream failed ({e}), falling back to non-stream")
-                    response = _agent_client.messages.create(
-                        model=AGENT_MODEL,
+                    response = agent_client.messages.create(
+                        model=agent_model,
                         max_tokens=8192,
                         system=system_prompt,
                         messages=msgs,
@@ -331,11 +357,11 @@ def fix_app():
     body = request.get_json(silent=True) or {}
     crash_log = body.get("crash_log", "")
     json_config = body.get("json_config", "")
+    provider_id = body.get("provider")
 
     if not crash_log or not json_config:
         return jsonify({"error": "crash_log 和 json_config 不能为空"}), 400
 
-    # 不额外消耗配额，但需要登录
     prompt = f"""以下 JSON-APP 运行时崩溃了，请修复：
 
 ## 崩溃日志
@@ -349,33 +375,23 @@ def fix_app():
 请分析原因并输出修复后的完整 JSON（用 ```json 代码块包裹）。"""
 
     dsl_spec = _load_dsl_spec()
-    messages = [
-        {"role": "system", "content": f"你是 JSON-DSL 调试专家。\n\n## 规范\n{dsl_spec}"},
-        {"role": "user", "content": prompt},
-    ]
+    system_prompt = f"你是 JSON-DSL 调试专家。\n\n## 规范\n{dsl_spec}"
+
+    client = _get_agent_client(provider_id)
+    model = _get_agent_model(provider_id)
 
     def generate():
         full_content = ""
         try:
-            resp = requests.post(
-                DEEPSEEK_URL,
-                headers={"Content-Type": "application/json",
-                         "Authorization": f"Bearer {DEEPSEEK_KEY}"},
-                json={"model": DEEPSEEK_MODEL, "messages": messages, "stream": True},
-                stream=True, timeout=120,
-            )
-            for line in resp.iter_lines(decode_unicode=True):
-                if not line: continue
-                if line.startswith("data:"):
-                    data_str = line[5:].strip()
-                    if data_str == "[DONE]": break
-                    try:
-                        chunk = json.loads(data_str)
-                        content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                        if content:
-                            full_content += content
-                            yield f'data: {json.dumps({"content": content}, ensure_ascii=False)}\n\n'
-                    except Exception: pass
+            with client.messages.stream(
+                model=model,
+                max_tokens=8192,
+                system=system_prompt,
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                for text in stream.text_stream:
+                    full_content += text
+                    yield f'data: {json.dumps({"content": text}, ensure_ascii=False)}\n\n'
 
             json_match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
             if json_match:

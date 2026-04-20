@@ -364,9 +364,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     });
 
     try {
-      final downloadPath = app['download'] as String;
+      final downloadUrl = app['download_url'] as String;
       final resp = await http
-          .get(Uri.parse('https://app-backend.dapangyu.work$downloadPath'))
+          .get(Uri.parse(downloadUrl))
           .timeout(const Duration(seconds: 15));
 
       if (resp.statusCode != 200) {
@@ -732,7 +732,7 @@ class _MarketPageState extends State<_MarketPage> {
 
     try {
       final resp = await http
-          .get(Uri.parse('https://app-backend.dapangyu.work/app-list'))
+          .get(Uri.parse('https://app-backend.dapangyu.work/api/store/apps'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
