@@ -25,7 +25,7 @@
             "args": {
               "condition": { "var": "global.is_logged_in" },
               "then": [
-                { "call": "@get_user", "args": {}, "assign": "global.user" },
+                { "call": "@get_user_info", "args": {}, "assign": "global.user" },
                 { "call": "@set", "args": { "var": "global.status_text", "value": "已登录" } },
                 { "call": "@set", "args": { "var": "global.new_username", "value": "{{ global.user.username }}" } }
               ],
@@ -116,7 +116,7 @@
       "showToken": {
         "params": [],
         "logic": [
-          { "call": "@get_user_token", "args": {}, "assign": "global._token" },
+          { "call": "@get_auth_token", "args": {}, "assign": "global._token" },
           {
             "call": "@if",
             "args": {

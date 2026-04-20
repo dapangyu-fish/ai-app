@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "user": {
-      "url": "https://app-backend.dapangyu.work/download/lib_user.json",
+      "url": "https://app-oss-endpoint.dapangyu.work/json-component/f2cd3cf5ed42462796ef1e6807c21f3e/user-1.0.0.json",
       "version": "^1.0.0"
     }
   },

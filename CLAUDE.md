@@ -146,3 +146,88 @@ EOF
 
 **注意**: 不要上传压缩包本身，客户端是按单个文件下载的。上传前先看客户端代码确认需要哪些文件和目录结构。
 
+## 发布 JSON-APP / 组件到市场
+
+市场数据存储在两处：MinIO 对象存储（JSON 文件）+ PostgreSQL `app_registry` 表（元数据）。客户端通过 `/api/store/apps` 和 `/api/store/components` 接口读取数据库列表，通过 MinIO 公网 URL 下载 JSON 文件。
+
+### 数据库信息
+
+- 主机: `127.0.0.1:5433`（服务器本地）
+- 数据库: `jsonapp`，用户: `jsonapp`
+- 密码: `hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg`
+- 表: `app_registry`
+
+### 发布步骤
+
+1. 将本地 JSON 文件 SCP 到服务器：
+```bash
+scp templates/xxx.json root@app-backend.dapangyu.work:/tmp/
+```
+
+2. SSH 到服务器执行发布脚本：
+```bash
+ssh root@app-backend.dapangyu.work
+/opt/miniconda3/bin/python -c "
+import json, uuid, subprocess, tempfile, os, psycopg2, psycopg2.extras
+
+DB_CONFIG = dict(host='127.0.0.1', port=5433, dbname='jsonapp', user='jsonapp',
+                 password='hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg')
+MINIO_PUBLIC_URL = 'https://app-oss-endpoint.dapangyu.work'
+
+with open('/tmp/xxx.json', 'r') as f:
+    json_content = json.load(f)
+
+meta = json_content.get('meta', {})
+name = meta.get('name', 'unnamed')
+version = meta.get('version', '1.0.0')
+description = meta.get('description', '')
+icon_url = meta.get('icon_url', '')
+# meta.type 为 'library' 或 'component' 时用 component，否则用 app
+app_type = 'component' if meta.get('type') in ('library', 'component') else 'app'
+
+conn = psycopg2.connect(**DB_CONFIG)
+conn.autocommit = True
+cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+# 检查是否已存在（按 name 查重）
+cur.execute('SELECT id FROM app_registry WHERE name = %s', [name])
+existing = cur.fetchone()
+if existing:
+    app_id = existing['id']
+    cur.execute('DELETE FROM app_registry WHERE id = %s', [app_id])
+    print(f'Updating existing: {name} (id={app_id})')
+else:
+    app_id = uuid.uuid4().hex
+    print(f'New publish: {name} (id={app_id})')
+
+json_content['appid'] = app_id
+bucket = 'json-app' if app_type == 'app' else 'json-component'
+oss_key = f'{app_id}/{name}-{version}.json'
+
+tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+json.dump(json_content, tmp, ensure_ascii=False, indent=2)
+tmp.close()
+subprocess.run(['mc', 'cp', tmp.name, f'app/{bucket}/{oss_key}'], check=True)
+os.unlink(tmp.name)
+
+download_url = f'{MINIO_PUBLIC_URL}/{bucket}/{oss_key}'
+cur.execute(
+    '''INSERT INTO app_registry
+       (id, type, name, version, description, author_id, author_name,
+        oss_bucket, oss_key, download_url, meta_json, dsl_spec, icon_url)
+       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+    [app_id, app_type, name, version, description, None, meta.get('author',''),
+     bucket, oss_key, download_url,
+     json.dumps(meta, ensure_ascii=False), description, icon_url])
+cur.close(); conn.close()
+print(f'Published! download_url={download_url}')
+"
+```
+
+### 注意事项
+
+- **library 依赖 URL**：如果发布的是 library（如 `lib_user.json`），发布后需要将其 MinIO download_url 更新到所有依赖它的 demo JSON 的 `dependencies.xxx.url` 字段中
+- **app_type 判断**：`meta.type` 为 `library` 或 `component` → `component` bucket；其他 → `app` bucket
+- **查重逻辑**：按 `name` 字段查重，已存在则删除旧记录后重新插入（保留原 appid）
+- **客户端接口**：`/api/store/apps` 列出 app，`/api/store/components` 列出组件（旧的 `/app-list` 已下线）
+

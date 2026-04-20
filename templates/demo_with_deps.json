@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "common-ui": {
-      "url": "https://app-backend.dapangyu.work/download/lib_common_ui.json",
+      "url": "https://app-oss-endpoint.dapangyu.work/json-component/4f88e9e7f9b44a8996530185153641ec/common-ui-1.0.0.json",
       "version": "^1.0.0"
     }
   },
