@@ -232,6 +232,9 @@ class AuthService {
       body: json.encode(body),
     ).timeout(const Duration(seconds: 10));
 
+    if (resp.statusCode >= 400 && !resp.body.trimLeft().startsWith('{')) {
+      throw Exception('服务器错误 (${resp.statusCode})');
+    }
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
       throw Exception(data['error'] ?? '更新失败');

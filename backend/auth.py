@@ -228,6 +228,7 @@ def refresh_token():
     })
 
 
+@require_auth
 def logout():
     """用户登出"""
     requests.post(f"{SUPABASE_URL}/auth/v1/logout",
@@ -235,11 +236,13 @@ def logout():
     return jsonify({"message": "已登出"})
 
 
+@require_auth
 def get_user():
     """获取当前用户信息"""
     return jsonify(_extract_user_info(request.supabase_user))
 
 
+@require_auth
 def update_user():
     """更新用户信息"""
     body = request.get_json(silent=True) or {}
@@ -258,6 +261,7 @@ def update_user():
     return jsonify({"message": "更新成功", "user": _extract_user_info(data)})
 
 
+@require_auth
 def upload_avatar():
     """上传头像"""
     body = request.get_json(silent=True) or {}
@@ -290,6 +294,7 @@ def upload_avatar():
     return jsonify({"message": "头像更新成功", "avatar_url": public_url})
 
 
+@require_auth
 def get_quota():
     """获取用户配额"""
     user_id = request.supabase_user.get("id")
