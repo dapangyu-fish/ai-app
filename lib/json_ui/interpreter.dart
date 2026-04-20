@@ -14,6 +14,7 @@ import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
+import '../auth/auth_service.dart';
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -1033,6 +1034,33 @@ class JsonInterpreter extends ChangeNotifier {
         return await _pickOrTakeImage(resolvedArgs, ImageSource.camera);
       case '@pick_image':
         return await _pickOrTakeImage(resolvedArgs, ImageSource.gallery);
+
+      // ── 用户信息 ──
+      case '@get_user_info':
+        final userInfo = AuthService.currentUser != null
+            ? Map<String, dynamic>.from(AuthService.currentUser!)
+            : null;
+        final bindPath = resolvedArgs['bind'] as String?;
+        if (bindPath != null && userInfo != null) {
+          setVariable(bindPath, userInfo);
+        }
+        return userInfo;
+
+      case '@get_auth_token':
+        final token = AuthService.token;
+        final tokenBind = resolvedArgs['bind'] as String?;
+        if (tokenBind != null && token != null) {
+          setVariable(tokenBind, token);
+        }
+        return token;
+
+      case '@is_logged_in':
+        final loggedIn = AuthService.isLoggedIn;
+        final loginBind = resolvedArgs['bind'] as String?;
+        if (loginBind != null) {
+          setVariable(loginBind, loggedIn);
+        }
+        return loggedIn;
 
       default:
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');

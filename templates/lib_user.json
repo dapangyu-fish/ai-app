@@ -1,0 +1,62 @@
+{
+  "dsl": "3.3",
+  "appid": "l1bus3r00001234567890abcdef1234567890",
+  "meta": {
+    "name": "user",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "用户信息组件库 — 提供获取用户资料、头像、token 等函数",
+    "author": "demo",
+    "exports": ["loadUserInfo", "getUserAvatar", "getUserEmail", "getUserName", "getAuthToken", "checkLogin"]
+  },
+  "global": {
+    "variables": {
+      "_userInfo": null
+    },
+    "functions": {
+      "loadUserInfo": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      },
+      "getUserAvatar": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._userInfo.avatar_url }}" } }
+        ]
+      },
+      "getUserEmail": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._userInfo.email }}" } }
+        ]
+      },
+      "getUserName": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._userInfo.username }}" } }
+        ]
+      },
+      "getAuthToken": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_auth_token", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      },
+      "checkLogin": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@is_logged_in", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  }
+}

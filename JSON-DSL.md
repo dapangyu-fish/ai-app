@@ -400,6 +400,31 @@
 | `@storage_remove` | `{ "key": "userName" }` | 删除指定 key |
 | `@storage_clear` | — | 清空所有本地存储 |
 
+### 4.14 用户信息
+
+| 函数 | 参数 | 返回值 | 说明 |
+|------|------|--------|------|
+| `@get_user_info` | `{ "bind": "global.user" }` | `Map?` | 获取当前登录用户信息并写入 bind 变量，未登录返回 null |
+| `@get_auth_token` | `{ "bind": "global.token" }` | `String?` | 获取当前 access token 并写入 bind 变量，未登录返回 null |
+| `@is_logged_in` | `{ "bind": "global.logged" }` | `bool` | 检查登录状态并写入 bind 变量 |
+
+**@get_user_info 返回字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String` | 用户唯一 ID |
+| `email` | `String` | 邮箱 |
+| `username` | `String` | 用户名 |
+| `avatar_url` | `String?` | 头像 URL |
+| `role` | `String?` | 用户角色 |
+
+**示例**：
+```json
+{ "call": "@get_user_info", "args": { "bind": "global.user" } }
+{ "call": "@get_auth_token", "args": { "bind": "global.token" } }
+{ "call": "@is_logged_in", "args": { "bind": "global.is_logged" } }
+```
+
 ---
 
 ## 5. JsonLogic 表达式引擎
