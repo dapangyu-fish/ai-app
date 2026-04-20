@@ -234,7 +234,7 @@ class SherpaAsrService {
                 encoderAdaptor: '$dir/${model.files['encoder_adaptor']!}',
                 llm: '$dir/${model.files['llm']!}',
                 embedding: '$dir/${model.files['embedding']!}',
-                tokenizer: '$dir/${model.files['qwen_tokenizer']!}',
+                tokenizer: '$dir/Qwen3-0.6B',
               ),
               tokens: '',
               modelType: 'funasr_nano',
