@@ -54,6 +54,7 @@ dependencies:
   path_provider: ^2.1.0
   web_socket_channel: ^3.0.0
   sherpa_onnx: ^1.12.36
+  flutter_openim_sdk: ^3.8.0
 
 dev_dependencies:
   flutter_test:

@@ -12,6 +12,7 @@ from config import PORT
 import auth
 import chat
 import store
+from openim import openim_bp
 
 
 def create_app():
@@ -44,6 +45,9 @@ def create_app():
     app.add_url_rule("/app-list", methods=["GET"], view_func=store.app_list)
     app.add_url_rule("/download/<path:filename>", methods=["GET"], view_func=store.download_file)
 
+    # 注册 OpenIM 路由
+    app.register_blueprint(openim_bp)
+
     return app
 
 
@@ -56,5 +60,6 @@ if __name__ == "__main__":
     print("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
     print("   Fix:   POST /api/ai/fix-app (crash repair)")
     print("   Store: /api/store/{apps,components,publish,delete}")
+    print("   IM:    /api/im/{token,update_profile,push_token}")
     print("   Old:   /app-list, /download/<file>")
     app.run(host="0.0.0.0", port=PORT, debug=False)

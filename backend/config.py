@@ -49,5 +49,10 @@ DSL_SPEC_PATH = os.path.join(PROJECT_ROOT, "JSON-DSL.md")
 AGENT_MODEL = "deepseek-chat"
 AGENT_MAX_ITERATIONS = 8
 
+# OpenIM 配置
+OPENIM_API_URL = os.environ.get("OPENIM_API_URL", "http://127.0.0.1:10002")
+OPENIM_WS_URL = os.environ.get("OPENIM_WS_URL", "ws://127.0.0.1:10001")
+OPENIM_ADMIN_SECRET = os.environ.get("OPENIM_ADMIN_SECRET", "openIM_secret_2024")
+
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}

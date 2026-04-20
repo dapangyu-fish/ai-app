@@ -15,6 +15,8 @@ import 'designer/settings_page.dart';
 import 'designer/app_storage.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
+import 'im/im_service.dart';
+import 'im/conversation_list.dart';
 
 // ============================================================
 // Riverpod Providers
@@ -32,6 +34,10 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.restoreSession();
+  // 如果已登录, 后台初始化 IM 连接
+  if (AuthService.isLoggedIn) {
+    IMService.instance.restoreSession();
+  }
   runApp(
     const ProviderScope(
       child: JsonDslApp(),
@@ -102,6 +108,7 @@ class _AuthGate extends StatelessWidget {
       valueListenable: AuthService.authNotifier,
       builder: (context, loggedIn, _) {
         if (loggedIn) {
+          IMService.instance.login();
           return const FilePickerPage();
         }
         return AuthPage(
@@ -283,6 +290,60 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         title: const Text('JSON DSL v3.2'),
         centerTitle: true,
         actions: [
+          // IM 消息入口 (带未读数角标)
+          ValueListenableBuilder<int>(
+            valueListenable: IMService.instance.unreadCountNotifier,
+            builder: (context, unread, _) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chat),
+                    tooltip: '消息',
+                    onPressed: () {
+                      if (!IMService.instance.isLoggedIn) {
+                        IMService.instance.login().then((ok) {
+                          if (ok && mounted) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const IMConversationPage()),
+                            );
+                          } else if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('IM 连接失败, 请稍后重试')),
+                            );
+                          }
+                        });
+                      } else {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const IMConversationPage()),
+                        );
+                      }
+                    },
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Text(
+                          unread > 99 ? '99+' : unread.toString(),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onError,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: _openSettings,
@@ -298,6 +359,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                     ),
                   );
                 } else if (value == 'logout') {
+                  await IMService.instance.logout();
                   await AuthService.signOut();
                 }
               },
