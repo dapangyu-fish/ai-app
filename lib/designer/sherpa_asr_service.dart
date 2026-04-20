@@ -14,6 +14,7 @@ class AsrModelInfo {
   final String ossPath;
   final String modelType;
   final Map<String, String> files;
+  final bool isStreaming;
 
   const AsrModelInfo({
     required this.id,
@@ -21,6 +22,7 @@ class AsrModelInfo {
     required this.ossPath,
     required this.modelType,
     required this.files,
+    this.isStreaming = false,
   });
 }
 
@@ -71,12 +73,27 @@ class SherpaAsrService {
         'qwen_tokenizer': 'Qwen3-0.6B/tokenizer.json',
       },
     ),
+    AsrModelInfo(
+      id: 'streaming-zipformer',
+      name: 'Zipformer Streaming (中英)',
+      ossPath: 'sherpa-onnx/streaming-zipformer-small-bilingual-zh-en-int8',
+      modelType: 'streamingZipformer',
+      isStreaming: true,
+      files: {
+        'encoder': 'encoder-epoch-99-avg-1.int8.onnx',
+        'decoder': 'decoder-epoch-99-avg-1.int8.onnx',
+        'joiner': 'joiner-epoch-99-avg-1.int8.onnx',
+        'tokens': 'tokens.txt',
+      },
+    ),
   ];
 
   bool _forceOffline = false;
   String _selectedModelId = 'sensevoice';
 
   sherpa.OfflineRecognizer? _recognizer;
+  sherpa.OnlineRecognizer? _onlineRecognizer;
+  sherpa.OnlineStream? _onlineStream;
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription? _audioSub;
   Timer? _decodeTimer;
@@ -112,12 +129,12 @@ class SherpaAsrService {
   }
 
   void _resetRecognizer() {
-    if (_recognizer != null) {
-      try {
-        _recognizer?.free();
-      } catch (_) {}
-    }
+    try { _recognizer?.free(); } catch (_) {}
     _recognizer = null;
+    try { _onlineStream?.free(); } catch (_) {}
+    _onlineStream = null;
+    try { _onlineRecognizer?.free(); } catch (_) {}
+    _onlineRecognizer = null;
     _initialized = false;
     _audioBuffer = [];
   }
@@ -191,6 +208,10 @@ class SherpaAsrService {
       final dir = await _getModelDir();
       final model = _currentModel;
 
+      if (model.isStreaming) {
+        return _initStreaming(dir, model);
+      }
+
       final sherpa.OfflineRecognizerConfig config;
 
       switch (model.modelType) {
@@ -259,9 +280,40 @@ class SherpaAsrService {
     }
   }
 
+  Future<bool> _initStreaming(String dir, AsrModelInfo model) async {
+    try {
+      final config = sherpa.OnlineRecognizerConfig(
+        model: sherpa.OnlineModelConfig(
+          transducer: sherpa.OnlineTransducerModelConfig(
+            encoder: '$dir/${model.files['encoder']!}',
+            decoder: '$dir/${model.files['decoder']!}',
+            joiner: '$dir/${model.files['joiner']!}',
+          ),
+          tokens: '$dir/${model.files['tokens']!}',
+          modelType: 'zipformer2',
+          numThreads: 2,
+          debug: false,
+        ),
+        enableEndpoint: true,
+        rule1MinTrailingSilence: 2.4,
+        rule2MinTrailingSilence: 1.2,
+        rule3MinUtteranceLength: 20,
+      );
+      _onlineRecognizer = sherpa.OnlineRecognizer(config);
+      _initialized = true;
+      debugPrint('[SherpaASR] Online recognizer initialized (${model.id})');
+      return true;
+    } catch (e) {
+      debugPrint('[SherpaASR] Streaming init error: $e');
+      return false;
+    }
+  }
+
   Future<bool> ensureReady() async {
     await loadConfig();
-    if (_initialized && _recognizer != null) return true;
+    if (_initialized && (_recognizer != null || _onlineRecognizer != null)) {
+      return true;
+    }
 
     if (!await isModelReady) {
       final ok = await downloadModels();
@@ -272,10 +324,14 @@ class SherpaAsrService {
   }
 
   Future<bool> startListening() async {
-    if (_recognizer == null) return false;
+    if (_recognizer == null && _onlineRecognizer == null) return false;
 
     currentText = '';
     _audioBuffer = [];
+
+    if (_currentModel.isStreaming && _onlineRecognizer != null) {
+      _onlineStream = _onlineRecognizer!.createStream();
+    }
 
     try {
       final audioStream = await _recorder.startStream(
@@ -306,13 +362,41 @@ class SherpaAsrService {
     final byteData = ByteData.sublistView(pcmBytes);
     final sampleCount = pcmBytes.length ~/ 2;
 
-    for (int i = 0; i < sampleCount; i++) {
-      final int16 = byteData.getInt16(i * 2, Endian.little);
-      _audioBuffer.add(int16 / 32768.0);
+    if (_currentModel.isStreaming && _onlineStream != null) {
+      final samples = Float32List(sampleCount);
+      for (int i = 0; i < sampleCount; i++) {
+        samples[i] = byteData.getInt16(i * 2, Endian.little) / 32768.0;
+      }
+      _onlineStream!.acceptWaveform(samples: samples, sampleRate: 16000);
+    } else {
+      for (int i = 0; i < sampleCount; i++) {
+        final int16 = byteData.getInt16(i * 2, Endian.little);
+        _audioBuffer.add(int16 / 32768.0);
+      }
     }
   }
 
   void _decodeAndReport() {
+    if (_currentModel.isStreaming) {
+      _decodeStreaming();
+    } else {
+      _decodeOffline();
+    }
+  }
+
+  void _decodeStreaming() {
+    if (_onlineRecognizer == null || _onlineStream == null) return;
+    while (_onlineRecognizer!.isReady(_onlineStream!)) {
+      _onlineRecognizer!.decode(_onlineStream!);
+    }
+    final result = _onlineRecognizer!.getResult(_onlineStream!);
+    if (result.text.isNotEmpty && result.text != currentText) {
+      currentText = result.text;
+      onResult?.call(currentText);
+    }
+  }
+
+  void _decodeOffline() {
     if (_recognizer != null && _audioBuffer.isNotEmpty) {
       final stream = _recognizer!.createStream();
       final samples = Float32List.fromList(_audioBuffer);
@@ -333,7 +417,18 @@ class SherpaAsrService {
     _audioSub = null;
     await _recorder.stop();
 
-    if (_recognizer != null && _audioBuffer.isNotEmpty) {
+    if (_currentModel.isStreaming && _onlineRecognizer != null && _onlineStream != null) {
+      _onlineStream!.inputFinished();
+      while (_onlineRecognizer!.isReady(_onlineStream!)) {
+        _onlineRecognizer!.decode(_onlineStream!);
+      }
+      final result = _onlineRecognizer!.getResult(_onlineStream!);
+      if (result.text.isNotEmpty) {
+        currentText = result.text;
+      }
+      _onlineStream!.free();
+      _onlineStream = null;
+    } else if (_recognizer != null && _audioBuffer.isNotEmpty) {
       final stream = _recognizer!.createStream();
       final samples = Float32List.fromList(_audioBuffer);
       stream.acceptWaveform(samples: samples, sampleRate: 16000);
