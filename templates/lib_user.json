@@ -1,0 +1,117 @@
+{
+  "dsl": "3.3",
+  "appid": "l1bus3r00001234567890abcdef1234567890",
+  "meta": {
+    "name": "user-utils",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "用户信息工具库 — 提供登录检查、用户信息获取、资料更新等函数",
+    "author": "demo",
+    "exports": ["requireLogin", "loadUserInfo", "showUserGreeting", "updateUsername", "pickAndUploadAvatar"]
+  },
+  "global": {
+    "variables": {},
+    "functions": {
+      "requireLogin": {
+        "params": [],
+        "logic": [
+          { "call": "@is_logged_in", "args": {}, "assign": "global._login_check" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!": [{ "var": "global._login_check" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "请先登录" } }
+              ],
+              "else": []
+            }
+          }
+        ]
+      },
+      "loadUserInfo": {
+        "params": ["target_var"],
+        "logic": [
+          { "call": "@is_logged_in", "args": {}, "assign": "global._is_logged" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "var": "global._is_logged" },
+              "then": [
+                { "call": "@get_user", "args": {}, "assign": "global._fetched_user" },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": { "!!": [{ "var": "global._fetched_user" }] },
+                    "then": [
+                      { "call": "@set", "args": { "var": "{{ params.target_var }}", "value": "{{ global._fetched_user }}" } }
+                    ],
+                    "else": []
+                  }
+                }
+              ],
+              "else": [
+                { "call": "@set", "args": { "var": "{{ params.target_var }}", "value": null } }
+              ]
+            }
+          }
+        ]
+      },
+      "showUserGreeting": {
+        "params": [],
+        "logic": [
+          { "call": "@get_user", "args": {}, "assign": "global._greet_user" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._greet_user" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "欢迎回来，{{ global._greet_user.username }}" } }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "请先登录" } }
+              ]
+            }
+          }
+        ]
+      },
+      "updateUsername": {
+        "params": ["new_name"],
+        "logic": [
+          { "call": "@update_profile", "args": { "username": "{{ params.new_name }}" }, "assign": "global._update_result" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._update_result.error" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "更新失败" } }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "用户名已更新" } }
+              ]
+            }
+          }
+        ]
+      },
+      "pickAndUploadAvatar": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@pick_image", "args": { "bind": "global._avatar_path", "max_width": 256, "max_height": 256, "quality": 80 } },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._avatar_path" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "头像上传中..." } }
+              ],
+              "else": []
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  }
+}

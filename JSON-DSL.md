@@ -400,6 +400,34 @@
 | `@storage_remove` | `{ "key": "userName" }` | 删除指定 key |
 | `@storage_clear` | — | 清空所有本地存储 |
 
+### 4.14 用户信息
+
+| 函数 | 参数 | 返回值 | 说明 |
+|------|------|--------|------|
+| `@get_user` | — | `Map?` | 获取当前登录用户信息（id, email, username, avatar_url 等），未登录返回 null |
+| `@get_user_token` | — | `String?` | 获取当前用户的 access token，未登录返回 null |
+| `@is_logged_in` | — | `bool` | 判断用户是否已登录 |
+| `@logout` | — | `null` | 登出当前用户 |
+| `@refresh_user` | — | `Map?` | 从后端重新获取最新用户信息，失败返回 null |
+| `@update_profile` | `{ "username": "新名称", "avatar_url": "https://..." }` | `Map` | 更新用户名或头像 URL，失败返回含 error 字段 |
+| `@upload_avatar` | `{ "base64": "..." }` | `String?` | 上传 base64 头像，返回头像 URL，失败返回 null |
+
+**@get_user 返回字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String` | 用户唯一 ID |
+| `email` | `String` | 邮箱 |
+| `username` | `String` | 用户名 |
+| `avatar_url` | `String?` | 头像 URL |
+
+**示例**：
+```json
+{ "call": "@get_user", "args": {}, "assign": "global.user" }
+{ "call": "@is_logged_in", "args": {}, "assign": "global.logged_in" }
+{ "call": "@update_profile", "args": { "username": "{{ global.new_name }}" }, "assign": "global.result" }
+```
+
 ---
 
 ## 5. JsonLogic 表达式引擎

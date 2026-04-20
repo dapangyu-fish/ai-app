@@ -1,0 +1,376 @@
+{
+  "dsl": "3.3",
+  "appid": "d3m0us3r1234567890abcdef1234567890",
+  "meta": {
+    "name": "demo-user",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "用户信息演示 — 展示登录状态、用户资料查看与编辑",
+    "author": "demo"
+  },
+  "global": {
+    "variables": {
+      "is_logged_in": false,
+      "user": null,
+      "new_username": "",
+      "status_text": "检查中..."
+    },
+    "functions": {
+      "checkLogin": {
+        "params": [],
+        "logic": [
+          { "call": "@is_logged_in", "args": {}, "assign": "global.is_logged_in" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "var": "global.is_logged_in" },
+              "then": [
+                { "call": "@get_user", "args": {}, "assign": "global.user" },
+                { "call": "@set", "args": { "var": "global.status_text", "value": "已登录" } },
+                { "call": "@set", "args": { "var": "global.new_username", "value": "{{ global.user.username }}" } }
+              ],
+              "else": [
+                { "call": "@set", "args": { "var": "global.user", "value": null } },
+                { "call": "@set", "args": { "var": "global.status_text", "value": "未登录" } }
+              ]
+            }
+          }
+        ]
+      },
+      "refreshUser": {
+        "params": [],
+        "logic": [
+          { "call": "@set", "args": { "var": "global.status_text", "value": "刷新中..." } },
+          { "call": "@refresh_user", "args": {}, "assign": "global.user" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global.user" }] },
+              "then": [
+                { "call": "@set", "args": { "var": "global.status_text", "value": "已刷新" } },
+                { "call": "@set", "args": { "var": "global.new_username", "value": "{{ global.user.username }}" } },
+                { "call": "@show_toast", "args": { "message": "用户信息已刷新" } }
+              ],
+              "else": [
+                { "call": "@set", "args": { "var": "global.status_text", "value": "刷新失败" } },
+                { "call": "@show_toast", "args": { "message": "刷新失败，请检查网络" } }
+              ]
+            }
+          }
+        ]
+      },
+      "saveUsername": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "and": [
+                { "!!": [{ "var": "global.new_username" }] },
+                { ">": [{ "str_len": [{ "var": "global.new_username" }] }, 0] }
+              ]},
+              "then": [
+                { "call": "@update_profile", "args": { "username": "{{ global.new_username }}" }, "assign": "global._save_result" },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": { "!!": [{ "var": "global._save_result.error" }] },
+                    "then": [
+                      { "call": "@show_toast", "args": { "message": "保存失败" } }
+                    ],
+                    "else": [
+                      { "call": "@show_toast", "args": { "message": "用户名已更新" } },
+                      { "call": "@global.checkLogin", "args": {} }
+                    ]
+                  }
+                }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "用户名不能为空" } }
+              ]
+            }
+          }
+        ]
+      },
+      "doLogout": {
+        "params": [],
+        "logic": [
+          { "call": "@show_dialog", "args": { "title": "确认退出", "message": "确定要退出登录吗？" }, "assign": "global._confirm" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "var": "global._confirm" },
+              "then": [
+                { "call": "@logout", "args": {} },
+                { "call": "@set", "args": { "var": "global.is_logged_in", "value": false } },
+                { "call": "@set", "args": { "var": "global.user", "value": null } },
+                { "call": "@set", "args": { "var": "global.status_text", "value": "已退出" } },
+                { "call": "@show_toast", "args": { "message": "已退出登录" } },
+                { "call": "@navigate", "args": { "screen": "home" } }
+              ],
+              "else": []
+            }
+          }
+        ]
+      },
+      "showToken": {
+        "params": [],
+        "logic": [
+          { "call": "@get_user_token", "args": {}, "assign": "global._token" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._token" }] },
+              "then": [
+                { "call": "@str_mask", "args": { "value": "{{ global._token }}", "start": 10, "end": 100, "mask": "*" }, "assign": "global._masked" },
+                { "call": "@show_dialog", "args": { "title": "Access Token", "message": "{{ global._masked }}" } }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "未登录，无 Token" } }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    { "call": "@global.checkLogin", "args": {} }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "用户信息",
+        "layout": "column",
+        "padding": 20,
+        "children": [
+          {
+            "type": "container",
+            "color": "#F0F4FF",
+            "borderRadius": 16,
+            "padding": 24,
+            "children": [
+              {
+                "type": "text",
+                "value": "登录状态",
+                "style": { "fontSize": 14, "color": "#666666" }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "{{ global.status_text }}",
+                "style": { "fontSize": 24, "fontWeight": "bold" }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "container",
+            "visible": "{{ global.is_logged_in }}",
+            "color": "#FFFFFF",
+            "borderRadius": 16,
+            "borderColor": "#E0E0E0",
+            "borderWidth": 1,
+            "padding": 20,
+            "children": [
+              {
+                "type": "text",
+                "value": "用户资料",
+                "style": { "fontSize": 18, "fontWeight": "bold" }
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "邮箱：",
+                    "style": { "fontSize": 14, "color": "#888888" },
+                    "position": { "type": "flex", "flex": 1 }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.user.email }}",
+                    "style": { "fontSize": 14 },
+                    "position": { "type": "flex", "flex": 2 }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "用户名：",
+                    "style": { "fontSize": 14, "color": "#888888" },
+                    "position": { "type": "flex", "flex": 1 }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.user.username }}",
+                    "style": { "fontSize": 14 },
+                    "position": { "type": "flex", "flex": 2 }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "用户ID：",
+                    "style": { "fontSize": 14, "color": "#888888" },
+                    "position": { "type": "flex", "flex": 1 }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.user.id }}",
+                    "style": { "fontSize": 12, "color": "#AAAAAA" },
+                    "position": { "type": "flex", "flex": 2 }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "container",
+            "visible": "{{ global.is_logged_in }}",
+            "children": [
+              {
+                "type": "button",
+                "label": "刷新用户信息",
+                "variant": "outlined",
+                "icon": "refresh",
+                "action": { "type": "call", "call": "@global.refreshUser", "args": {} },
+                "position": { "type": "width", "value": "match_parent" }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "button",
+                "label": "查看 Token",
+                "variant": "outlined",
+                "icon": "key",
+                "action": { "type": "call", "call": "@global.showToken", "args": {} },
+                "position": { "type": "width", "value": "match_parent" }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "button",
+                "label": "编辑资料",
+                "variant": "filled",
+                "icon": "edit",
+                "action": { "type": "navigate", "screen": "edit_profile" },
+                "position": { "type": "width", "value": "match_parent" }
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "button",
+                "label": "退出登录",
+                "variant": "text",
+                "icon": "logout",
+                "style": { "textColor": "#FF4444" },
+                "action": { "type": "call", "call": "@global.doLogout", "args": {} },
+                "position": { "type": "width", "value": "match_parent" }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "visible": { "!": [{ "var": "global.is_logged_in" }] },
+            "color": "#FFF3E0",
+            "borderRadius": 12,
+            "padding": 20,
+            "children": [
+              {
+                "type": "text",
+                "value": "您尚未登录，请先在应用中登录后再使用本功能。",
+                "style": { "fontSize": 14, "color": "#E65100" }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "edit_profile",
+        "title": "编辑资料",
+        "layout": "column",
+        "padding": 20,
+        "children": [
+          {
+            "type": "text",
+            "value": "修改用户名",
+            "style": { "fontSize": 18, "fontWeight": "bold" }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "input",
+            "label": "新用户名",
+            "bind": "global.new_username",
+            "position": { "type": "width", "value": "match_parent" }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "button",
+            "label": "保存",
+            "variant": "filled",
+            "icon": "save",
+            "action": { "type": "call", "call": "@global.saveUsername", "args": {} },
+            "position": { "type": "width", "value": "match_parent" }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "button",
+            "label": "返回",
+            "variant": "outlined",
+            "icon": "arrow_back",
+            "action": { "type": "navigate", "screen": "home" },
+            "position": { "type": "width", "value": "match_parent" }
+          }
+        ]
+      }
+    ]
+  }
+}

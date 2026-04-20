@@ -14,6 +14,7 @@ import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
+import '../auth/auth_service.dart';
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -1033,6 +1034,54 @@ class JsonInterpreter extends ChangeNotifier {
         return await _pickOrTakeImage(resolvedArgs, ImageSource.camera);
       case '@pick_image':
         return await _pickOrTakeImage(resolvedArgs, ImageSource.gallery);
+
+      // ── 用户信息 ──
+      case '@get_user':
+        return AuthService.currentUser != null
+            ? Map<String, dynamic>.from(AuthService.currentUser!)
+            : null;
+
+      case '@get_user_token':
+        return AuthService.token;
+
+      case '@is_logged_in':
+        return AuthService.isLoggedIn;
+
+      case '@logout':
+        await AuthService.signOut();
+        return null;
+
+      case '@refresh_user':
+        try {
+          return await AuthService.fetchUser();
+        } catch (e) {
+          debugPrint('[JSON DSL] refresh_user 失败: $e');
+          return null;
+        }
+
+      case '@update_profile':
+        final username = resolvedArgs['username'] as String?;
+        final avatarUrl = resolvedArgs['avatar_url'] as String?;
+        try {
+          return await AuthService.updateProfile(
+            username: username,
+            avatarUrl: avatarUrl,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] update_profile 失败: $e');
+          return {'error': e.toString()};
+        }
+
+      case '@upload_avatar':
+        final base64Data = resolvedArgs['base64'] as String?;
+        if (base64Data == null || base64Data.isEmpty) return null;
+        try {
+          final url = await AuthService.uploadAvatar(base64Data);
+          return url;
+        } catch (e) {
+          debugPrint('[JSON DSL] upload_avatar 失败: $e');
+          return null;
+        }
 
       default:
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');
