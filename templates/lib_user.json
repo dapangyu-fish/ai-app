@@ -1,0 +1,114 @@
+{
+  "dsl": "3.3",
+  "appid": "l1bus3r00001234567890abcdef1234567890",
+  "meta": {
+    "name": "user",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "用户信息组件库 — 提供获取用户资料、头像、token、登录检查、资料更新等函数",
+    "author": "demo",
+    "exports": ["loadUserInfo", "getUserAvatar", "getUserEmail", "getUserName", "getAuthToken", "checkLogin", "requireLogin", "showUserGreeting", "updateUsername"]
+  },
+  "global": {
+    "variables": {
+      "_userInfo": null
+    },
+    "functions": {
+      "loadUserInfo": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      },
+      "getUserAvatar": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._userInfo.avatar_url }}" } }
+        ]
+      },
+      "getUserEmail": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._userInfo.email }}" } }
+        ]
+      },
+      "getUserName": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._userInfo.username }}" } }
+        ]
+      },
+      "getAuthToken": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@get_auth_token", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      },
+      "checkLogin": {
+        "params": ["bind"],
+        "logic": [
+          { "call": "@is_logged_in", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      },
+      "requireLogin": {
+        "params": [],
+        "logic": [
+          { "call": "@is_logged_in", "args": { "bind": "global._login_check" } },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!": [{ "var": "global._login_check" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "请先登录" } }
+              ],
+              "else": []
+            }
+          }
+        ]
+      },
+      "showUserGreeting": {
+        "params": [],
+        "logic": [
+          { "call": "@get_user_info", "args": { "bind": "global._userInfo" } },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._userInfo" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "欢迎回来，{{ global._userInfo.username }}" } }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "请先登录" } }
+              ]
+            }
+          }
+        ]
+      },
+      "updateUsername": {
+        "params": ["new_name"],
+        "logic": [
+          { "call": "@update_profile", "args": { "username": "{{ params.new_name }}" }, "assign": "global._update_result" },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!!": [{ "var": "global._update_result.error" }] },
+              "then": [
+                { "call": "@show_toast", "args": { "message": "更新失败" } }
+              ],
+              "else": [
+                { "call": "@show_toast", "args": { "message": "用户名已更新" } }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  }
+}
