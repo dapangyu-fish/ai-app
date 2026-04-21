@@ -340,6 +340,17 @@ class _DesignerBallState extends State<DesignerBall>
             debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
             if (error.errorMsg == 'error_network') {
               _handleNetworkError();
+            } else if (error.errorMsg == 'error_speech_timeout') {
+              // 场景1修复：原生平台超时（用户长时间不说话）
+              // 如果用户还在按住球，重新启动监听
+              if (_isListening && _pointerDown && !_useSherpaAsr) {
+                debugPrint('[DesignerBall] 原生平台超时，重新启动监听');
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  if (_isListening && _pointerDown && !_useSherpaAsr) {
+                    _startNativeSpeech();
+                  }
+                });
+              }
             }
           },
           onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
@@ -562,10 +573,21 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] listen 参数: listenFor=60s, pauseFor=60s');
       _speech!.listen(
         onResult: (result) {
-          _nativeSpeechReceivedCallback = true; // 标记已收到回调
+          _nativeSpeechReceivedCallback = true;
           debugPrint('[DesignerBall] 收到识别结果: ${result.recognizedWords}, finalResult=${result.finalResult}');
           setState(() => _liveTranscript = result.recognizedWords);
           _scrollToBottom();
+
+          // 场景2修复：收到 finalResult=true 时，原生引擎会自动停止
+          // 如果用户还在按住球，重新启动监听以继续录音
+          if (result.finalResult && _isListening && _pointerDown) {
+            debugPrint('[DesignerBall] 收到 finalResult，重新启动监听继续录音');
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (_isListening && _pointerDown && !_useSherpaAsr) {
+                _startNativeSpeech();
+              }
+            });
+          }
         },
         localeId: 'zh_CN',
         listenFor: const Duration(seconds: 60),
