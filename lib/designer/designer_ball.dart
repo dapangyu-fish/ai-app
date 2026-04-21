@@ -342,13 +342,7 @@ class _DesignerBallState extends State<DesignerBall>
               _handleNetworkError();
             }
           },
-          onStatus: (status) {
-            debugPrint('[DesignerBall] Speech status: $status');
-            if ((status == 'done' || status == 'notListening') && _isListening) {
-              // 超时或停止监听，自动发送
-              _stopListeningAndSend();
-            }
-          },
+          onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
         );
         debugPrint('[DesignerBall] Native speech init: $_speechInited');
       } catch (e) {
@@ -565,9 +559,11 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint('[DesignerBall] 启动原生语音识别 (Apple/Google Speech)');
     if (_speech == null) return;
     try {
+      debugPrint('[DesignerBall] listen 参数: listenFor=60s, pauseFor=60s');
       _speech!.listen(
         onResult: (result) {
           _nativeSpeechReceivedCallback = true; // 标记已收到回调
+          debugPrint('[DesignerBall] 收到识别结果: ${result.recognizedWords}, finalResult=${result.finalResult}');
           setState(() => _liveTranscript = result.recognizedWords);
           _scrollToBottom();
         },
@@ -580,6 +576,7 @@ class _DesignerBallState extends State<DesignerBall>
           partialResults: true,
         ),
       );
+      debugPrint('[DesignerBall] listen 调用完成，等待用户说话');
     } catch (e) {
       debugPrint('[DesignerBall] Native listen error: $e');
       setState(() {
