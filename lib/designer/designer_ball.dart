@@ -342,7 +342,13 @@ class _DesignerBallState extends State<DesignerBall>
               _handleNetworkError();
             }
           },
-          onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
+          onStatus: (status) {
+            debugPrint('[DesignerBall] Speech status: $status');
+            if ((status == 'done' || status == 'notListening') && _isListening) {
+              // 超时或停止监听，自动发送
+              _stopListeningAndSend();
+            }
+          },
         );
         debugPrint('[DesignerBall] Native speech init: $_speechInited');
       } catch (e) {
@@ -568,15 +574,6 @@ class _DesignerBallState extends State<DesignerBall>
         localeId: 'zh_CN',
         listenFor: const Duration(seconds: 60),
         pauseFor: const Duration(seconds: 60),
-        onStatus: (status) {
-          debugPrint('[DesignerBall] Speech status: $status');
-          if (status == 'done' || status == 'notListening') {
-            // 超时或停止监听，返回普通状态
-            if (_isListening) {
-              _stopListeningAndSend();
-            }
-          }
-        },
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
           cancelOnError: false,
