@@ -665,6 +665,11 @@ class _DesignerBallState extends State<DesignerBall>
       await _sherpaAsr.setForceOffline(true);
       await _sherpaAsr.setModel(result['modelId'] as String);
 
+      // 更新本地状态
+      setState(() {
+        _useSherpaAsr = true;
+      });
+
       debugPrint('[DesignerBall] 用户选择开启离线模式，模型: ${result['modelId']}');
 
       // 停止当前识别，重新开始
