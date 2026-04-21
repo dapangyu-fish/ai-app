@@ -290,7 +290,7 @@ class SherpaAsrService {
             joiner: '$dir/${model.files['joiner']!}',
           ),
           tokens: '$dir/${model.files['tokens']!}',
-          modelType: 'zipformer2',
+          modelType: 'zipformer',
           numThreads: 2,
           debug: false,
         ),
