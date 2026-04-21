@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'ai_chat_service.dart';
@@ -41,6 +42,7 @@ class _DesignerBallState extends State<DesignerBall>
   Offset _pointerDownPos = Offset.zero;
   bool _movedEnough = false;
   bool _pointerDown = false;
+  double _lastHapticDistance = 0; // 上次触发震动的拖拽距离
 
   // ── 动画 ──
   late AnimationController _animController;
@@ -154,6 +156,10 @@ class _DesignerBallState extends State<DesignerBall>
   void _onPointerDown(PointerDownEvent event) {
     _pointerDownPos = event.position;
     _animController.stop();
+    _lastHapticDistance = 0; // 重置震动距离计数器
+
+    // 触觉反馈：按下时轻微震动
+    HapticFeedback.lightImpact();
 
     setState(() {
       _pointerDown = true;
@@ -236,6 +242,12 @@ class _DesignerBallState extends State<DesignerBall>
       _longPressTimer?.cancel();
       _countdownController.stop();
       _countdownController.reset();
+    }
+
+    // 拖拽震动：每移动 10 像素触发一次轻微震动
+    if (delta - _lastHapticDistance >= 10) {
+      HapticFeedback.selectionClick();
+      _lastHapticDistance = delta;
     }
 
     if (_isListening) {
