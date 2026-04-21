@@ -333,6 +333,8 @@ class _DesignerBallState extends State<DesignerBall>
       if (mounted) setState(() {});
     });
 
+    debugPrint('[DesignerBall] 初始状态: forceOffline=$_useSherpaAsr, speechInited=$_speechInited');
+
     if (!_speechInited && !_useSherpaAsr) {
       try {
         _speech ??= stt.SpeechToText();
@@ -368,11 +370,12 @@ class _DesignerBallState extends State<DesignerBall>
 
       if (!_speechInited) {
         _fallbackToSherpa = true;
-        debugPrint('[DesignerBall] Falling back to sherpa offline ASR');
+        debugPrint('[DesignerBall] Native speech init 失败，降级到 sherpa offline ASR');
       }
     }
 
     final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    debugPrint('[DesignerBall] 最终决策: ${shouldUseSherpa ? "离线模式(sherpa)" : "在线模式(native speech)"}');
 
     if (shouldUseSherpa) {
       setState(() {
@@ -427,6 +430,7 @@ class _DesignerBallState extends State<DesignerBall>
     _pulseController.repeat(reverse: true);
 
     final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    debugPrint('[DesignerBall] ASR决策: forceOffline=$_useSherpaAsr, fallback=$_fallbackToSherpa → ${shouldUseSherpa ? "离线(sherpa)" : "在线(native)"}');
     if (shouldUseSherpa) {
       _startSherpaAsr();
     } else {
@@ -563,6 +567,7 @@ class _DesignerBallState extends State<DesignerBall>
 
   /// 原生语音识别 (Apple/Google)
   void _startNativeSpeech() {
+    debugPrint('[DesignerBall] 启动原生语音识别 (Apple/Google Speech)');
     if (_speech == null) return;
     try {
       _speech!.listen(
@@ -602,6 +607,7 @@ class _DesignerBallState extends State<DesignerBall>
 
   /// sherpa_onnx 离线 ASR：本地录音 + 本地识别
   Future<void> _startSherpaAsr() async {
+    debugPrint('[DesignerBall] 启动离线语音识别 (sherpa_onnx, model=${_sherpaAsr.selectedModelId})');
     try {
       _sherpaAsr.onResult = (text) {
         setState(() => _liveTranscript = text);
