@@ -562,20 +562,10 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] listen 参数: listenFor=60s, pauseFor=60s');
       _speech!.listen(
         onResult: (result) {
-          _nativeSpeechReceivedCallback = true;
+          _nativeSpeechReceivedCallback = true; // 标记已收到回调
           debugPrint('[DesignerBall] 收到识别结果: ${result.recognizedWords}, finalResult=${result.finalResult}');
           setState(() => _liveTranscript = result.recognizedWords);
           _scrollToBottom();
-
-          // 如果收到 finalResult，重新启动监听以继续录音
-          if (result.finalResult && _isListening && _pointerDown) {
-            debugPrint('[DesignerBall] 收到 finalResult，重新启动监听以继续录音');
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (_isListening && _pointerDown) {
-                _startNativeSpeech();
-              }
-            });
-          }
         },
         localeId: 'zh_CN',
         listenFor: const Duration(seconds: 60),
