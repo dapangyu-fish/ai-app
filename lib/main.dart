@@ -733,8 +733,9 @@ class _MarketPageState extends State<_MarketPage> {
     });
 
     try {
+      // 从 Registry 服务获取应用列表（只获取 type=app 的包）
       final resp = await http
-          .get(Uri.parse('https://app-backend.dapangyu.work/api/store/apps'))
+          .get(Uri.parse('https://registry.dapangyu.work/packages?type=app'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
@@ -742,11 +743,11 @@ class _MarketPageState extends State<_MarketPage> {
       }
 
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      final apps = (data['apps'] as List<dynamic>)
+      final packages = (data['packages'] as List<dynamic>)
           .cast<Map<String, dynamic>>();
 
       setState(() {
-        _apps = apps;
+        _apps = packages;
         _loading = false;
       });
     } catch (e) {
@@ -1360,8 +1361,9 @@ class _MyAppsPageState extends State<_MyAppsPage> {
     setState(() => _uploading = true);
 
     try {
+      // 使用新的 Registry 服务发布接口
       final resp = await http.post(
-        Uri.parse('https://app-backend.dapangyu.work/api/store/publish'),
+        Uri.parse('https://registry.dapangyu.work/publish'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${AuthService.token}',
@@ -1379,14 +1381,31 @@ class _MyAppsPageState extends State<_MyAppsPage> {
         return;
       }
 
-      if (resp.statusCode == 409 && data['conflict'] == true) {
-        final existing = data['existing'] as Map<String, dynamic>;
-        final suggestedVersion = data['suggested_version'] as String;
+      // Registry 返回 409 表示版本已存在
+      if (resp.statusCode == 409) {
+        final existingVersions = data['existing_versions'] as List<dynamic>?;
+        final currentVersion = (app.config['meta'] as Map<String, dynamic>?)?['version'] as String? ?? '1.0.0';
+
+        // 计算建议的新版本号
+        String suggestedVersion = currentVersion;
+        if (existingVersions != null && existingVersions.isNotEmpty) {
+          final versions = existingVersions.map((v) => v.toString()).toList();
+          versions.sort((a, b) {
+            final aParts = a.split('.').map(int.parse).toList();
+            final bParts = b.split('.').map(int.parse).toList();
+            for (var i = 0; i < 3; i++) {
+              if (aParts[i] != bParts[i]) return bParts[i].compareTo(aParts[i]);
+            }
+            return 0;
+          });
+          final latestParts = versions[0].split('.').map(int.parse).toList();
+          suggestedVersion = '${latestParts[0]}.${latestParts[1]}.${latestParts[2] + 1}';
+        }
 
         if (!mounted) return;
         final confirmedVersion = await _showVersionDialog(
-          existingName: existing['name'] as String? ?? app.name,
-          existingVersion: existing['version'] as String? ?? '1.0.0',
+          existingName: app.name,
+          existingVersion: existingVersions?.isNotEmpty == true ? existingVersions!.first.toString() : currentVersion,
           suggestedVersion: suggestedVersion,
         );
 
@@ -1395,13 +1414,14 @@ class _MyAppsPageState extends State<_MyAppsPage> {
           return;
         }
 
+        // 更新版本号并重新发布
         final updatedConfig = Map<String, dynamic>.from(app.config);
         final meta = Map<String, dynamic>.from(updatedConfig['meta'] ?? {});
         meta['version'] = confirmedVersion;
         updatedConfig['meta'] = meta;
 
         final resp2 = await http.post(
-          Uri.parse('https://app-backend.dapangyu.work/api/store/publish'),
+          Uri.parse('https://registry.dapangyu.work/publish'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ${AuthService.token}',
@@ -1419,6 +1439,7 @@ class _MyAppsPageState extends State<_MyAppsPage> {
           _showSnackBar('服务器返回异常 (${resp2.statusCode})');
           return;
         }
+
         if (resp2.statusCode == 200) {
           _showSnackBar('更新成功: ${app.name} v$confirmedVersion');
         } else {

@@ -148,86 +148,113 @@ EOF
 
 ## 发布 JSON-APP / 组件到市场
 
-市场数据存储在两处：MinIO 对象存储（JSON 文件）+ PostgreSQL `app_registry` 表（元数据）。客户端通过 `/api/store/apps` 和 `/api/store/components` 接口读取数据库列表，通过 MinIO 公网 URL 下载 JSON 文件。
+### 发布方式
 
-### 数据库信息
+**推荐方式：通过 Registry API 发布**
 
-- 主机: `127.0.0.1:5433`（服务器本地）
-- 数据库: `jsonapp`，用户: `jsonapp`
-- 密码: `hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg`
-- 表: `app_registry`
+所有包（官方包和用户包）统一通过 Registry 服务发布，支持命名空间管理和版本控制。
 
-### 发布步骤
+#### 1. 官方包发布（admin 专用）
 
-1. 将本地 JSON 文件 SCP 到服务器：
+官方包无命名空间（如 `common-ui`, `data-utils`），只有 admin 角色可以发布。
+
 ```bash
-scp templates/xxx.json root@app-backend.dapangyu.work:/tmp/
+curl -X POST https://registry.dapangyu.work/publish \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <admin_token>" \
+  -d @templates/lib_common_ui.json
 ```
 
-2. SSH 到服务器执行发布脚本：
+#### 2. 用户包发布
+
+用户包必须带命名空间（如 `mycompany/app-name` 或 `mycompany/frontend/ui-kit`）。
+
+**首次发布前，创建命名空间**：
 ```bash
-ssh root@app-backend.dapangyu.work
-/opt/miniconda3/bin/python -c "
-import json, uuid, subprocess, tempfile, os, psycopg2, psycopg2.extras
-
-DB_CONFIG = dict(host='127.0.0.1', port=5433, dbname='jsonapp', user='jsonapp',
-                 password='hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg')
-MINIO_PUBLIC_URL = 'https://app-oss-endpoint.dapangyu.work'
-
-with open('/tmp/xxx.json', 'r') as f:
-    json_content = json.load(f)
-
-meta = json_content.get('meta', {})
-name = meta.get('name', 'unnamed')
-version = meta.get('version', '1.0.0')
-description = meta.get('description', '')
-icon_url = meta.get('icon_url', '')
-# meta.type 为 'library' 或 'component' 时用 component，否则用 app
-app_type = 'component' if meta.get('type') in ('library', 'component') else 'app'
-
-conn = psycopg2.connect(**DB_CONFIG)
-conn.autocommit = True
-cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-# 检查是否已存在（按 name 查重）
-cur.execute('SELECT id FROM app_registry WHERE name = %s', [name])
-existing = cur.fetchone()
-if existing:
-    app_id = existing['id']
-    cur.execute('DELETE FROM app_registry WHERE id = %s', [app_id])
-    print(f'Updating existing: {name} (id={app_id})')
-else:
-    app_id = uuid.uuid4().hex
-    print(f'New publish: {name} (id={app_id})')
-
-json_content['appid'] = app_id
-bucket = 'json-app' if app_type == 'app' else 'json-component'
-oss_key = f'{app_id}/{name}-{version}.json'
-
-tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-json.dump(json_content, tmp, ensure_ascii=False, indent=2)
-tmp.close()
-subprocess.run(['mc', 'cp', tmp.name, f'app/{bucket}/{oss_key}'], check=True)
-os.unlink(tmp.name)
-
-download_url = f'{MINIO_PUBLIC_URL}/{bucket}/{oss_key}'
-cur.execute(
-    '''INSERT INTO app_registry
-       (id, type, name, version, description, author_id, author_name,
-        oss_bucket, oss_key, download_url, meta_json, dsl_spec, icon_url)
-       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
-    [app_id, app_type, name, version, description, None, meta.get('author',''),
-     bucket, oss_key, download_url,
-     json.dumps(meta, ensure_ascii=False), description, icon_url])
-cur.close(); conn.close()
-print(f'Published! download_url={download_url}')
-"
+curl -X POST https://registry.dapangyu.work/namespace/create \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user_token>" \
+  -d '{
+    "namespace": "mycompany",
+    "sub_namespace": "frontend"
+  }'
 ```
 
-### 注意事项
+**发布包**：
+```bash
+curl -X POST https://registry.dapangyu.work/publish \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user_token>" \
+  -d '{
+    "json_content": {
+      "dsl": "3.3",
+      "meta": {
+        "name": "mycompany/frontend/ui-kit",
+        "version": "1.0.0",
+        "type": "library"
+      },
+      "global": { ... }
+    }
+  }'
+```
 
-- **library 依赖 URL**：如果发布的是 library（如 `lib_user.json`），发布后需要将其 MinIO download_url 更新到所有依赖它的 demo JSON 的 `dependencies.xxx.url` 字段中
-- **app_type 判断**：`meta.type` 为 `library` 或 `component` → `component` bucket；其他 → `app` bucket
-- **查重逻辑**：按 `name` 字段查重，已存在则删除旧记录后重新插入（保留原 appid）
-- **客户端接口**：`/api/store/apps` 列出 app，`/api/store/components` 列出组件（旧的 `/app-list` 已下线）
+### 命名空间规则
+
+| 类型 | 格式 | 示例 | 权限 |
+|------|------|------|------|
+| 官方包 | 无 `/` | `common-ui`, `data-utils` | admin 专属 |
+| 用户包（一级） | `namespace/app` | `mycompany/app-name` | 命名空间所有者 |
+| 用户包（二级） | `namespace/sub/app` | `mycompany/frontend/ui-kit` | 命名空间所有者 |
+
+### 依赖声明（简化格式）
+
+发布后，其他应用可以通过简化格式引用：
+
+```json
+{
+  "dependencies": {
+    "common-ui": "^1.0.0",
+    "mycompany/frontend/ui-kit": "~1.0.0"
+  }
+}
+```
+
+框架会自动通过 Registry 解析依赖 URL，无需手动填写完整的 MinIO 路径。
+
+### Registry 服务信息
+
+- **域名**: https://registry.dapangyu.work
+- **端口**: 3254
+- **文档**: `backend/REGISTRY_README.md`
+- **健康检查**: `GET /health`
+
+### 批量发布测试组件
+
+使用 `backend/migrate_templates.py` 脚本可以批量发布 `templates/` 目录下的所有模板文件到 Registry：
+
+```bash
+# 在项目根目录执行
+python3 backend/migrate_templates.py
+```
+
+**注意事项**：
+1. 包名必须符合规范：小写字母、数字、`-` 和 `_`，不能包含中文或特殊字符
+2. 每个 JSON 文件必须包含 `meta` 字段，包含 `name`、`version`、`type` 等信息
+3. 脚本使用测试 token（`test-token`），具有 admin 权限
+4. 已存在的版本会被跳过，不会覆盖
+
+**脚本输出示例**：
+```
+处理: calculator.json
+  名称: calculator
+  版本: 1.0.0
+  类型: app
+  ✅ 发布成功
+
+处理: lib_common_ui.json
+  名称: common-ui
+  版本: 1.0.0
+  类型: library
+  ⚠️  版本已存在: ['1.0.0']
+```
 

@@ -1313,7 +1313,9 @@ class JsonInterpreter extends ChangeNotifier {
       context: ctx,
       builder: (dialogCtx) => AlertDialog(
         title: Text(title),
-        content: Text(message),
+        content: SingleChildScrollView(
+          child: SelectableText(message),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),

@@ -2,7 +2,7 @@
   "dsl": "3.3",
   "appid": "d3m0m3d141234567890abcdef1234567890",
   "meta": {
-    "name": "图片选择器 & 展示 Demo",
+    "name": "demo-media",
     "version": "1.0.0",
     "description": "演示 image_picker + image 控件：选择图片、展示网络图片/GIF",
     "author": "demo",

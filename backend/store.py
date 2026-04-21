@@ -77,34 +77,17 @@ def _increment_version(version_str):
 
 
 def store_apps():
-    """列出所有公开 APP"""
-    rows = db_query(
-        "SELECT id, name, version, description, author_name, download_url, tags, icon_url, meta_json FROM app_registry WHERE type = 'app' AND is_public = true ORDER BY created_at DESC",
-        fetch_all=True
-    )
-    apps = []
-    for row in rows:
-        app_data = {
-            "id": row["id"] or "",
-            "name": row["name"] or "",
-            "version": row["version"] or "",
-            "description": row["description"] or "",
-            "author": row["author_name"] or "",
-            "download_url": row["download_url"] or "",
-            "tags": row["tags"] or []
-        }
-        # 优先从 icon_url 字段读取，如果没有则从 meta_json 读取
-        icon_url = row.get("icon_url")
-        if icon_url:
-            app_data["icon_url"] = icon_url
-        else:
-            meta_json = row.get("meta_json")
-            if meta_json and isinstance(meta_json, dict):
-                app_data["icon_url"] = meta_json.get("icon_url", "")
-            else:
-                app_data["icon_url"] = ""
-        apps.append(app_data)
-    return jsonify({"apps": apps})
+    """
+    [已废弃] 列出所有公开 APP
+    请使用新的 Registry 服务: GET https://registry.dapangyu.work/packages?type=app
+    """
+    # 返回废弃警告
+    return jsonify({
+        "deprecated": True,
+        "message": "此接口已废弃，请使用 Registry 服务",
+        "new_endpoint": "https://registry.dapangyu.work/packages?type=app",
+        "apps": []
+    }), 410  # 410 Gone
 
 
 def store_components():
@@ -147,13 +130,16 @@ def new_appid():
 @require_auth
 @require_role("pro", "admin")
 def store_publish():
-    """发布 JSON-APP/组件到市场（支持新建和更新）"""
-    try:
-        return _do_store_publish()
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"服务器内部错误: {e}"}), 500
+    """
+    [已废弃] 发布 JSON-APP/组件到市场
+    请使用新的 Registry 服务: POST https://registry.dapangyu.work/publish
+    """
+    return jsonify({
+        "deprecated": True,
+        "message": "此接口已废弃，请使用 Registry 服务",
+        "new_endpoint": "https://registry.dapangyu.work/publish",
+        "migration_guide": "请参考 REGISTRY_README.md 了解如何迁移到新的发布流程"
+    }), 410  # 410 Gone
 
 def _do_store_publish():
     body = request.get_json(silent=True) or {}

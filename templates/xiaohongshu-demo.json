@@ -2,7 +2,7 @@
   "dsl": "3.3",
   "appid": "xhsd3m0app1234567890abcdef12345678",
   "meta": {
-    "name": "小红书 Demo",
+    "name": "xiaohongshu-demo",
     "version": "1.0.0",
     "type": "app",
     "description": "一个小红书风格的示例应用：帖子列表 + 详情页 + 点赞",

@@ -75,7 +75,32 @@
 | `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
 | `meta.icon_url` | 否 | 应用/组件的图标图片 URL，可为空 |
 | `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
-| `dependencies` | 否 | 依赖声明，key 为依赖别名，value 含 `url` 和 `version` 约束 |
+| `dependencies` | 否 | 依赖声明，支持简化格式（推荐）和完整格式 |
+
+#### 依赖声明格式
+
+**简化格式（推荐）**：
+```json
+"dependencies": {
+  "common-ui": "^1.0.0",
+  "data-utils": "~1.2.0",
+  "mycompany/frontend/ui-kit": ">=1.0.0"
+}
+```
+
+框架会自动通过 Registry 服务（`https://registry.dapangyu.work`）解析依赖的下载 URL。
+
+**完整格式（兼容旧版）**：
+```json
+"dependencies": {
+  "common-ui": {
+    "url": "https://app-oss-endpoint.dapangyu.work/json-component/common-ui/common-ui-1.0.0.json",
+    "version": "^1.0.0"
+  }
+}
+```
+
+如果提供了 `url` 字段，框架会直接使用该 URL，不通过 Registry 解析。
 
 #### 模块类型
 
@@ -95,6 +120,24 @@
 | `">=1.0.0"` | 最低版本 |
 | `">=1.0.0 <2.0.0"` | 范围约束 |
 | `"*"` | 任意版本 |
+
+#### 命名空间规则
+
+| 类型 | 格式 | 示例 | 权限 |
+|------|------|------|------|
+| 官方包 | 无 `/` | `common-ui`, `data-utils` | 只有 admin 可发布 |
+| 用户包（一级） | `namespace/app` | `mycompany/app-name` | 命名空间所有者 |
+| 用户包（二级） | `namespace/sub/app` | `mycompany/frontend/ui-kit` | 命名空间所有者 |
+
+**首次发布用户包时**，需要先创建命名空间：
+```bash
+POST https://registry.dapangyu.work/namespace/create
+Authorization: Bearer <token>
+{
+  "namespace": "mycompany",
+  "sub_namespace": "frontend"  # 可选
+}
+```
 
 #### 跨模块引用规则
 
@@ -660,6 +703,11 @@
   "height": 200,
   "children": [ ... ]
 }
+```
+
+**layout**：`row`（默认）/ `column`
+
+> **注意**：container 的默认 layout 是 `row`（横排），不是 `column`。如果需要子元素竖排显示，必须显式指定 `"layout": "column"`。
 ```
 
 ### 6.8 action 与双向绑定

@@ -2,7 +2,7 @@
   "dsl": "3.3",
   "appid": "d3m0v1d301234567890abcdef1234567890",
   "meta": {
-    "name": "视频浏览器",
+    "name": "demo-video-browser",
     "version": "1.0.0",
     "description": "从流媒体服务器获取播放列表 → 选择视频 → 播放",
     "author": "demo",

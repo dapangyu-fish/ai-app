@@ -9,10 +9,7 @@
     "author": "demo"
   },
   "dependencies": {
-    "common-ui": {
-      "url": "https://app-oss-endpoint.dapangyu.work/json-component/4f88e9e7f9b44a8996530185153641ec/common-ui-1.0.0.json",
-      "version": "^1.0.0"
-    }
+    "common-ui": "^1.0.0"
   },
   "global": {
     "variables": {
