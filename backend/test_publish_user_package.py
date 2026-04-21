@@ -32,9 +32,7 @@ def test_namespace_creation():
     if resp.json().get("available"):
         print(f"2. 创建命名空间 '{namespace}'...")
         resp = requests.post(f"{REGISTRY_URL}/namespace/create", json={
-            "name": namespace,
-            "owner": "test-user@example.com",
-            "description": "My Company's UI Components"
+            "namespace": namespace
         }, headers=HEADERS, verify=False)
         print(f"   响应: {resp.json()}\n")
     else:
@@ -49,9 +47,12 @@ def test_user_package_publish():
     version = "1.0.0"
 
     package_content = {
-        "name": package_name,
-        "version": version,
-        "description": "My Company UI Kit",
+        "meta": {
+            "name": package_name,
+            "version": version,
+            "type": "library",
+            "description": "My Company UI Kit"
+        },
         "components": {
             "CustomButton": {
                 "type": "Container",
@@ -103,16 +104,13 @@ def test_user_package_publish():
 
     print(f"1. 发布用户包 '{package_name}' v{version}...")
     resp = requests.post(f"{REGISTRY_URL}/publish", json={
-        "name": package_name,
-        "version": version,
-        "content": package_content,
-        "author": "test-user@example.com"
+        "json_content": package_content
     }, headers=HEADERS, verify=False)
 
     result = resp.json()
     print(f"   响应: {json.dumps(result, indent=2)}\n")
 
-    if result.get("success"):
+    if result.get("message") == "发布成功":
         print(f"✅ 发布成功！")
         print(f"   下载地址: {result.get('download_url')}\n")
         return True
@@ -160,9 +158,8 @@ def test_nested_namespace():
     if resp.json().get("available"):
         print(f"2. 创建嵌套命名空间 '{namespace}'...")
         resp = requests.post(f"{REGISTRY_URL}/namespace/create", json={
-            "name": namespace,
-            "owner": "frontend-team@example.com",
-            "description": "Frontend Team Components"
+            "namespace": "mycompany",
+            "sub_namespace": "frontend"
         }, headers=HEADERS, verify=False)
         print(f"   响应: {resp.json()}\n")
 
@@ -171,9 +168,12 @@ def test_nested_namespace():
     version = "1.0.0"
 
     package_content = {
-        "name": package_name,
-        "version": version,
-        "description": "Form Components Kit",
+        "meta": {
+            "name": package_name,
+            "version": version,
+            "type": "library",
+            "description": "Form Components Kit"
+        },
         "components": {
             "FormInput": {
                 "type": "TextField",
@@ -189,10 +189,7 @@ def test_nested_namespace():
 
     print(f"3. 发布嵌套包 '{package_name}' v{version}...")
     resp = requests.post(f"{REGISTRY_URL}/publish", json={
-        "name": package_name,
-        "version": version,
-        "content": package_content,
-        "author": "frontend-team@example.com"
+        "json_content": package_content
     }, headers=HEADERS, verify=False)
 
     result = resp.json()

@@ -304,6 +304,62 @@ def resolve():
     })
 
 
+@app.route('/packages', methods=['GET'])
+def list_packages():
+    """
+    列出所有可用的包
+    GET /packages?type=app  # 可选：过滤类型（app/library）
+    """
+    filter_type = request.args.get('type', '').strip()
+
+    # 加载索引
+    index = _load_index()
+
+    packages = []
+    for name, info in index['packages'].items():
+        # 获取最新版本的元数据
+        latest_version = info.get('latest', info['versions'][0] if info['versions'] else '1.0.0')
+        path = info['path']
+        filename = f"{name.split('/')[-1]}-{latest_version}.json"
+        download_url = f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{path}/{filename}"
+
+        # 尝试从 MinIO 读取完整的包信息（包含 description 等）
+        description = ''
+        author = ''
+        package_type = info.get('type', 'library')
+
+        try:
+            oss_key = f"{path}/{filename}"
+            response = minio_client.get_object(BUCKET_COMPONENT, oss_key)
+            content = json.loads(response.read().decode('utf-8'))
+            meta = content.get('meta', {})
+            description = meta.get('description', '')
+            author = meta.get('author', '')
+            package_type = meta.get('type', 'library')
+        except Exception:
+            pass
+
+        # 类型过滤
+        if filter_type and package_type != filter_type:
+            continue
+
+        packages.append({
+            "name": name,
+            "version": latest_version,
+            "description": description,
+            "author": author,
+            "type": package_type,
+            "download_url": download_url,
+            "created_at": info.get('created_at'),
+            "registry_type": info.get('type', 'user')  # official/user
+        })
+
+    return jsonify({
+        "packages": packages,
+        "total": len(packages)
+    })
+
+
 @app.route('/package/<path:name>', methods=['GET'])
 def get_package(name):
     """
