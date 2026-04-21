@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -245,11 +246,11 @@ class _DesignerBallState extends State<DesignerBall>
     }
 
     // 拖拽震动：累积实际移动的路径长度，每 10 像素触发一次震动
-    final moveDelta = (details.delta.dx * details.delta.dx + details.delta.dy * details.delta.dy).abs();
+    final moveDelta = sqrt(details.delta.dx * details.delta.dx + details.delta.dy * details.delta.dy);
     _accumulatedDragDistance += moveDelta;
-    if (_accumulatedDragDistance >= 100) { // 10px * 10px = 100
+    if (_accumulatedDragDistance >= 10) {
       HapticFeedback.selectionClick();
-      _accumulatedDragDistance = 0;
+      _accumulatedDragDistance -= 10; // 减去触发阈值，保留余数
     }
 
     if (_isListening) {
