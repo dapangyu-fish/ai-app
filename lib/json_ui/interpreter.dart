@@ -324,8 +324,9 @@ class JsonInterpreter extends ChangeNotifier {
     }
 
     // 没有前缀：先查 global 变量，再查依赖模块变量
-    final globalResult = _getNestedValue(_variables, path);
-    if (globalResult != null) return globalResult;
+    if (_hasNestedKey(_variables, path)) {
+      return _getNestedValue(_variables, path);
+    }
 
     // 尝试作为依赖变量: "depName.varPath"
     return _getDependencyVariable(path);
@@ -367,6 +368,19 @@ class JsonInterpreter extends ChangeNotifier {
       }
     }
     return current;
+  }
+
+  bool _hasNestedKey(Map<String, dynamic> map, String dotPath) {
+    final keys = dotPath.split('.');
+    dynamic current = map;
+    for (final key in keys) {
+      if (current is Map<String, dynamic> && current.containsKey(key)) {
+        current = current[key];
+      } else {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _setNestedValue(
@@ -757,6 +771,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@random':
         final min = _toInt(resolvedArgs['min'] ?? 0);
         final max = _toInt(resolvedArgs['max'] ?? 100);
+        if (min >= max) return min;
         return min + Random().nextInt(max - min + 1);
 
       case '@random_float':

@@ -102,17 +102,8 @@ class JsonListWidget extends JsonBaseWidget {
       itemBuilder: (ctx, index) {
         // 最后一项：加载更多
         if (index == items.length && onLoadMore != null) {
-          // 自动触发加载
-          interpreter.executeAction(onLoadMore, ctx);
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
+          return _LoadMoreTrigger(
+            onTrigger: () => interpreter.executeAction(onLoadMore, ctx),
           );
         }
 
@@ -134,5 +125,37 @@ class JsonListWidget extends JsonBaseWidget {
     }
 
     return Expanded(child: listView);
+  }
+}
+
+class _LoadMoreTrigger extends StatefulWidget {
+  final Future<void> Function() onTrigger;
+  const _LoadMoreTrigger({required this.onTrigger});
+
+  @override
+  State<_LoadMoreTrigger> createState() => _LoadMoreTriggerState();
+}
+
+class _LoadMoreTriggerState extends State<_LoadMoreTrigger> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onTrigger();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(16),
+      child: Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+    );
   }
 }

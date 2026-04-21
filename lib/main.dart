@@ -905,6 +905,19 @@ class _MarketPageState extends State<_MarketPage> {
 // JSON 渲染页面
 // ============================================================
 
+bool _containsListInChildren(List<dynamic> children) {
+  for (final child in children) {
+    if (child is Map<String, dynamic>) {
+      if (child['type'] == 'list') return true;
+      final subChildren = child['children'] as List<dynamic>?;
+      if (subChildren != null && _containsListInChildren(subChildren)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// 根据当前 screen ID 渲染对应的 JSON 页面
 class JsonScreenView extends ConsumerWidget {
   final String fileName;
@@ -974,14 +987,12 @@ class JsonScreenView extends ConsumerWidget {
   ) {
     final currentScreenId = interpreter.currentScreenId;
     final children = screenConfig['children'] as List<dynamic>? ?? [];
-    final hasListWidget = _containsListWidget(children);
+    final hasListWidget = _containsListInChildren(children);
 
     final childWidgets = children
         .whereType<Map<String, dynamic>>()
         .map((childJson) => interpreter.buildWidget(context, childJson))
         .toList();
-
-    final layoutWidget = buildScreenLayout(screenConfig, childWidgets);
 
     final bgColorStr = screenConfig['backgroundColor'] as String?;
     Color? bgColor;
@@ -1019,24 +1030,12 @@ class JsonScreenView extends ConsumerWidget {
                 ),
               )
             : SingleChildScrollView(
-                child: layoutWidget,
+                child: buildScreenLayout(screenConfig, childWidgets),
               ),
       ),
     );
   }
 
-  bool _containsListWidget(List<dynamic> children) {
-    for (final child in children) {
-      if (child is Map<String, dynamic>) {
-        if (child['type'] == 'list') return true;
-        final subChildren = child['children'] as List<dynamic>?;
-        if (subChildren != null && _containsListWidget(subChildren)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
 }
 
 // ============================================================
@@ -1188,7 +1187,7 @@ class _TabScreenViewState extends State<_TabScreenView> {
     }
 
     // 构建当前 tab 的内容
-    final hasListWidget = _containsListWidget(tabChildren);
+    final hasListWidget = _containsListInChildren(tabChildren);
     final childWidgets = tabChildren
         .whereType<Map<String, dynamic>>()
         .map((childJson) =>
@@ -1261,19 +1260,6 @@ class _TabScreenViewState extends State<_TabScreenView> {
         }).toList(),
       ),
     );
-  }
-
-  bool _containsListWidget(List<dynamic> children) {
-    for (final child in children) {
-      if (child is Map<String, dynamic>) {
-        if (child['type'] == 'list') return true;
-        final subChildren = child['children'] as List<dynamic>?;
-        if (subChildren != null && _containsListWidget(subChildren)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 }
 
