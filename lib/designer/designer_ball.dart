@@ -73,6 +73,7 @@ class _DesignerBallState extends State<DesignerBall>
   // ── 语音识别 & AI ──
   stt.SpeechToText? _speech;
   bool _speechInited = false;
+  bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
   bool get _useSherpaAsr => _sherpaAsr.forceOffline; // 现在从 SherpaService 读取状态
   final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
   final AiChatService _chatService = AiChatService();
@@ -423,6 +424,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _startListening() {
     _recordStartPos = Offset(_left, _top);
     _dragCancelling = false;
+    _nativeSpeechReceivedCallback = false; // 重置回调标记
     setState(() {
       _isListening = true;
       _liveTranscript = '';
@@ -573,6 +575,7 @@ class _DesignerBallState extends State<DesignerBall>
       _speech!.listen(
         onResult: (result) {
           _nativeSpeechTimeout?.cancel();
+          _nativeSpeechReceivedCallback = true; // 标记已收到回调
           setState(() => _liveTranscript = result.recognizedWords);
           _scrollToBottom();
         },
@@ -585,12 +588,12 @@ class _DesignerBallState extends State<DesignerBall>
         ),
       );
 
-      // 超时检测：3 秒内没有任何识别结果 → fallback 到 sherpa 离线 ASR
-      // 中国手机上 init 可能返回 true 但 listen 实际不工作
+      // 超时检测：3 秒内没有收到任何 onResult 回调 → fallback 到 sherpa 离线 ASR
+      // 中国手机上 init 可能返回 true 但 listen 实际不工作（Google 服务不可用）
       _nativeSpeechTimeout?.cancel();
       _nativeSpeechTimeout = Timer(const Duration(seconds: 3), () {
-        if (_isListening && !_useSherpaAsr && !_fallbackToSherpa && (_liveTranscript?.isEmpty ?? true)) {
-          debugPrint('[DesignerBall] Native speech timeout (no results in 3s), switching to sherpa ASR');
+        if (_isListening && !_useSherpaAsr && !_fallbackToSherpa && !_nativeSpeechReceivedCallback) {
+          debugPrint('[DesignerBall] Native speech timeout (no callback in 3s), switching to sherpa ASR');
           _speech?.stop();
           _fallbackToSherpa = true;
           _startSherpaAsr();
