@@ -125,7 +125,6 @@ class _DesignerBallState extends State<DesignerBall>
   @override
   void dispose() {
     _longPressTimer?.cancel();
-    _nativeSpeechTimeout?.cancel();
     _streamSub?.cancel();
     _sherpaAsr.dispose();
     _chatService.abort();
@@ -320,12 +319,8 @@ class _DesignerBallState extends State<DesignerBall>
     setState(() {});
   }
 
-  // 临时的 fallback 标志（只在当前会话有效，不覆盖强制离线设置）
-  bool _fallbackToSherpa = false;
-
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
-    _fallbackToSherpa = false;
 
     _injectCurrentAppContext();
 
@@ -342,18 +337,6 @@ class _DesignerBallState extends State<DesignerBall>
         _speechInited = await _speech!.initialize(
           onError: (error) {
             debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
-            _nativeSpeechTimeout?.cancel();
-            if (!_useSherpaAsr && !_fallbackToSherpa) {
-              _fallbackToSherpa = true;
-              _speech?.stop();
-              debugPrint('[DesignerBall] Native speech error, switching to sherpa ASR');
-              if (_isListening) {
-                _startSherpaAsr();
-              }
-            } else {
-              setState(() => _isListening = false);
-              _pulseController.stop();
-            }
           },
           onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
         );
@@ -370,12 +353,14 @@ class _DesignerBallState extends State<DesignerBall>
       }
 
       if (!_speechInited) {
-        _fallbackToSherpa = true;
-        debugPrint('[DesignerBall] Native speech init 失败，降级到 sherpa offline ASR');
+        setState(() {
+          _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中开启"强制离线模式"'));
+        });
+        return;
       }
     }
 
-    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    final shouldUseSherpa = _useSherpaAsr;
     debugPrint('[DesignerBall] 最终决策: ${shouldUseSherpa ? "离线模式(sherpa)" : "在线模式(native speech)"}');
 
     if (shouldUseSherpa) {
@@ -431,8 +416,8 @@ class _DesignerBallState extends State<DesignerBall>
     });
     _pulseController.repeat(reverse: true);
 
-    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
-    debugPrint('[DesignerBall] ASR决策: forceOffline=$_useSherpaAsr, fallback=$_fallbackToSherpa → ${shouldUseSherpa ? "离线(sherpa)" : "在线(native)"}');
+    final shouldUseSherpa = _useSherpaAsr;
+    debugPrint('[DesignerBall] ASR决策: forceOffline=$_useSherpaAsr → ${shouldUseSherpa ? "离线(sherpa)" : "在线(native)"}');
     if (shouldUseSherpa) {
       _startSherpaAsr();
     } else {
@@ -456,8 +441,7 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _cancelRecording() {
     debugPrint('[DesignerBall] Recording cancelled by drag');
-    _nativeSpeechTimeout?.cancel();
-    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    final shouldUseSherpa = _useSherpaAsr;
     if (shouldUseSherpa) {
       _sherpaAsr.stopListening();
       _sherpaAsr.onResult = null;
@@ -476,8 +460,7 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _enterEditMode() {
     debugPrint('[DesignerBall] Entering edit mode');
-    _nativeSpeechTimeout?.cancel();
-    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    final shouldUseSherpa = _useSherpaAsr;
     String finalText = _liveTranscript?.trim() ?? '';
 
     if (shouldUseSherpa) {
@@ -574,7 +557,6 @@ class _DesignerBallState extends State<DesignerBall>
     try {
       _speech!.listen(
         onResult: (result) {
-          _nativeSpeechTimeout?.cancel();
           _nativeSpeechReceivedCallback = true; // 标记已收到回调
           setState(() => _liveTranscript = result.recognizedWords);
           _scrollToBottom();
@@ -587,24 +569,13 @@ class _DesignerBallState extends State<DesignerBall>
           partialResults: true,
         ),
       );
-
-      // 超时检测：3 秒内没有收到任何 onResult 回调 → fallback 到 sherpa 离线 ASR
-      // 中国手机上 init 可能返回 true 但 listen 实际不工作（Google 服务不可用）
-      _nativeSpeechTimeout?.cancel();
-      _nativeSpeechTimeout = Timer(const Duration(seconds: 3), () {
-        if (_isListening && !_useSherpaAsr && !_fallbackToSherpa && !_nativeSpeechReceivedCallback) {
-          debugPrint('[DesignerBall] Native speech timeout (no callback in 3s), switching to sherpa ASR');
-          _speech?.stop();
-          _fallbackToSherpa = true;
-          _startSherpaAsr();
-        }
-      });
     } catch (e) {
       debugPrint('[DesignerBall] Native listen error: $e');
-      // listen 直接抛异常 → fallback
-      _fallbackToSherpa = true;
-      debugPrint('[DesignerBall] Switching to sherpa ASR');
-      _startSherpaAsr();
+      setState(() {
+        _isListening = false;
+        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别启动失败，请在设置中开启"强制离线模式"'));
+      });
+      _pulseController.stop();
     }
   }
 
@@ -635,8 +606,6 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  Timer? _nativeSpeechTimeout; // 原生语音超时 → fallback
-
   void _stopSherpaAsr() {
     _sherpaAsr.stopListening();
     _sherpaAsr.onResult = null;
@@ -644,10 +613,9 @@ class _DesignerBallState extends State<DesignerBall>
 
   Future<void> _stopListeningAndSend() async {
     debugPrint('[DesignerBall] _stopListeningAndSend');
-    _nativeSpeechTimeout?.cancel();
 
     // 停止语音识别
-    final shouldUseSherpa = _useSherpaAsr || _fallbackToSherpa;
+    final shouldUseSherpa = _useSherpaAsr;
     if (shouldUseSherpa) {
       _sherpaAsr.onResult = null;
       final finalText = await _sherpaAsr.stopListening();
@@ -802,7 +770,6 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _closeChatMode() {
     try { _speech?.stop(); } catch (_) {}
-    _nativeSpeechTimeout?.cancel();
     _stopSherpaAsr();
     _cancelCurrentStream();
     _pulseController.stop();
