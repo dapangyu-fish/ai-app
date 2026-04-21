@@ -54,6 +54,7 @@ class _DesignerBallState extends State<DesignerBall>
   bool _isListening = false;
   bool _isThinking = false;
   String? _liveTranscript;
+  String _accumulatedTranscript = ''; // 累积的已确认文本（用于多段识别）
 
   // ── 录音拖拽取消 ──
   Offset? _recordStartPos;
@@ -425,6 +426,7 @@ class _DesignerBallState extends State<DesignerBall>
     _recordStartPos = Offset(_left, _top);
     _dragCancelling = false;
     _nativeSpeechReceivedCallback = false; // 重置回调标记
+    _accumulatedTranscript = ''; // 清空累积文本
     setState(() {
       _isListening = true;
       _liveTranscript = '';
@@ -575,13 +577,22 @@ class _DesignerBallState extends State<DesignerBall>
         onResult: (result) {
           _nativeSpeechReceivedCallback = true;
           debugPrint('[DesignerBall] 收到识别结果: ${result.recognizedWords}, finalResult=${result.finalResult}');
-          setState(() => _liveTranscript = result.recognizedWords);
+
+          // 拼接累积文本和当前识别结果
+          final currentText = result.recognizedWords;
+          final fullText = _accumulatedTranscript.isEmpty
+              ? currentText
+              : '$_accumulatedTranscript $currentText';
+
+          setState(() => _liveTranscript = fullText);
           _scrollToBottom();
 
           // 场景2修复：收到 finalResult=true 时，原生引擎会自动停止
           // 如果用户还在按住球，重新启动监听以继续录音
           if (result.finalResult && _isListening && _pointerDown) {
-            debugPrint('[DesignerBall] 收到 finalResult，重新启动监听继续录音');
+            debugPrint('[DesignerBall] 收到 finalResult，保存已识别文本并重新启动监听');
+            // 保存已确认的文本
+            _accumulatedTranscript = fullText;
             Future.delayed(const Duration(milliseconds: 100), () {
               if (_isListening && _pointerDown && !_useSherpaAsr) {
                 _startNativeSpeech();
