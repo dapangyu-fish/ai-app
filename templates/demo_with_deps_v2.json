@@ -1,0 +1,174 @@
+{
+  "dsl": "3.3",
+  "appid": "d3m0w1thd1234567890abcdef1234567890",
+  "meta": {
+    "name": "demo-with-deps-v2",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "演示新的简化依赖声明格式",
+    "author": "demo"
+  },
+  "dependencies": {
+    "common-ui": "^1.0.0",
+    "data-utils": "^1.0.0"
+  },
+  "global": {
+    "variables": {
+      "userName": "",
+      "randomNumber": 0
+    },
+    "functions": {
+      "greet": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@common-ui.showSuccess",
+            "args": {
+              "message": "欢迎 {{ global.userName }}！"
+            }
+          }
+        ]
+      },
+      "generateRandom": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@data-utils.randomInt",
+            "args": {
+              "min": 1,
+              "max": 100
+            },
+            "assign": "global.randomNumber"
+          },
+          {
+            "call": "@common-ui.showToast",
+            "args": {
+              "message": "随机数: {{ global.randomNumber }}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": {
+        "value": "Demo 启动，使用新的简化依赖格式"
+      }
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "简化依赖 Demo",
+        "layout": "column",
+        "padding": 24,
+        "backgroundColor": "#F8F9FE",
+        "children": [
+          {
+            "type": "text",
+            "value": "新的依赖声明格式",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "color": "#1A1A1A"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 8
+          },
+          {
+            "type": "text",
+            "value": "无需手动填写完整 URL，框架自动通过 Registry 解析",
+            "style": {
+              "fontSize": 14,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 32
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入你的名字",
+            "bind": "global.userName",
+            "prefixIcon": "person",
+            "style": {
+              "borderRadius": 12,
+              "fontSize": 15
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "button",
+            "label": "打招呼",
+            "variant": "filled",
+            "icon": "waving_hand",
+            "action": {
+              "type": "call",
+              "call": "@global.greet"
+            },
+            "style": {
+              "backgroundColor": "#4CAF50",
+              "textColor": "#FFFFFF"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "button",
+            "label": "生成随机数",
+            "variant": "outlined",
+            "icon": "casino",
+            "action": {
+              "type": "call",
+              "call": "@global.generateRandom"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 32
+          },
+          {
+            "type": "container",
+            "color": "#E3F2FD",
+            "padding": 16,
+            "borderRadius": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "依赖说明",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold",
+                  "color": "#1976D2"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "• common-ui: ^1.0.0\n• data-utils: ^1.0.0",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#424242"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

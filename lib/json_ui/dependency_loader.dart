@@ -5,6 +5,19 @@ import 'package:flutter/material.dart';
 import 'http_client.dart';
 import 'semver.dart';
 
+/// Registry 配置
+class RegistryConfig {
+  static const String defaultRegistry = 'https://registry.dapangyu.work';
+
+  // 支持多源（未来扩展）
+  static const Map<String, String> registries = {
+    'default': 'https://registry.dapangyu.work',
+    'local': 'http://localhost:3254',
+  };
+
+  static String get registryUrl => registries['default']!;
+}
+
 /// 已加载的模块信息
 class LoadedModule {
   final String name;
@@ -33,20 +46,41 @@ class LoadedModule {
 /// 依赖声明
 class DependencySpec {
   final String name;
-  final String url;
+  final String? url; // 可选，如果为空则通过 registry 解析
   final VersionConstraint constraint;
 
   DependencySpec({
     required this.name,
-    required this.url,
+    this.url,
     required this.constraint,
   });
 
-  factory DependencySpec.fromJson(String name, Map<String, dynamic> json) {
+  factory DependencySpec.fromJson(String name, dynamic json) {
+    // 新格式：简化版本约束字符串
+    // "common-ui": "^1.0.0"
+    if (json is String) {
+      return DependencySpec(
+        name: name,
+        url: null,
+        constraint: VersionConstraint.parse(json),
+      );
+    }
+
+    // 旧格式：对象格式
+    // "common-ui": { "url": "...", "version": "^1.0.0" }
+    if (json is Map<String, dynamic>) {
+      return DependencySpec(
+        name: name,
+        url: json['url']?.toString(),
+        constraint: VersionConstraint.parse(json['version']?.toString() ?? '*'),
+      );
+    }
+
+    // 默认
     return DependencySpec(
       name: name,
-      url: json['url']?.toString() ?? '',
-      constraint: VersionConstraint.parse(json['version']?.toString() ?? '*'),
+      url: null,
+      constraint: VersionConstraint.parse('*'),
     );
   }
 }
@@ -75,13 +109,47 @@ class DependencyLoader {
 
     final specs = <DependencySpec>[];
     for (final entry in deps.entries) {
-      if (entry.value is Map<String, dynamic>) {
-        specs.add(DependencySpec.fromJson(entry.key, entry.value));
-      }
+      specs.add(DependencySpec.fromJson(entry.key, entry.value));
     }
 
     // 并发加载所有依赖
     await Future.wait(specs.map((spec) => _loadDependency(spec)));
+  }
+
+  /// 通过 Registry 解析依赖 URL
+  Future<String?> _resolveFromRegistry(String name, String versionConstraint) async {
+    try {
+      final url = '${RegistryConfig.registryUrl}/resolve?name=$name&version=${Uri.encodeComponent(versionConstraint)}';
+      debugPrint('[JSON DSL] 正在通过 Registry 解析: $name@$versionConstraint');
+
+      final response = await _httpClient.get(url);
+      if (response['error'] != null || response['data'] == null) {
+        debugPrint('[JSON DSL] Registry 解析失败: ${response['error']}');
+        return null;
+      }
+
+      Map<String, dynamic> data;
+      if (response['data'] is String) {
+        data = json.decode(response['data'] as String);
+      } else if (response['data'] is Map) {
+        data = Map<String, dynamic>.from(response['data'] as Map);
+      } else {
+        return null;
+      }
+
+      final downloadUrl = data['download_url']?.toString();
+      final resolvedVersion = data['version']?.toString();
+
+      if (downloadUrl != null) {
+        debugPrint('[JSON DSL] Registry 解析成功: $name@$resolvedVersion → $downloadUrl');
+        return downloadUrl;
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('[JSON DSL] Registry 解析异常: $e');
+      return null;
+    }
   }
 
   /// 加载单个依赖
@@ -102,18 +170,25 @@ class DependencyLoader {
       return;
     }
 
-    if (spec.url.isEmpty) {
-      debugPrint('[JSON DSL] 依赖 ${spec.name} 没有提供 URL');
-      return;
-    }
-
     _loadingStack.add(spec.name);
 
     try {
-      debugPrint('[JSON DSL] 正在加载依赖: ${spec.name} from ${spec.url}');
+      String? downloadUrl = spec.url;
+
+      // 如果没有 URL，通过 Registry 解析
+      if (downloadUrl == null || downloadUrl.isEmpty) {
+        downloadUrl = await _resolveFromRegistry(spec.name, spec.constraint.toString());
+
+        if (downloadUrl == null) {
+          debugPrint('[JSON DSL] 无法解析依赖: ${spec.name}');
+          return;
+        }
+      }
+
+      debugPrint('[JSON DSL] 正在加载依赖: ${spec.name} from $downloadUrl');
 
       // 下载 JSON
-      final response = await _httpClient.get(spec.url);
+      final response = await _httpClient.get(downloadUrl);
       if (response['error'] != null || response['data'] == null) {
         debugPrint('[JSON DSL] 加载依赖失败: ${spec.name} - ${response['error']}');
         return;
