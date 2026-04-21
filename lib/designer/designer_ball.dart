@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
@@ -337,6 +338,9 @@ class _DesignerBallState extends State<DesignerBall>
         _speechInited = await _speech!.initialize(
           onError: (error) {
             debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
+            if (error.errorMsg == 'error_network') {
+              _handleNetworkError();
+            }
           },
           onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
         );
@@ -576,6 +580,98 @@ class _DesignerBallState extends State<DesignerBall>
         _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别启动失败，请在设置中开启"强制离线模式"'));
       });
       _pulseController.stop();
+    }
+  }
+
+  /// 处理网络错误，引导用户开启离线模式
+  Future<void> _handleNetworkError() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dontShow = prefs.getBool('dont_show_network_error_dialog') ?? false;
+
+    if (dontShow) {
+      debugPrint('[DesignerBall] 用户已选择不再提示网络错误');
+      return;
+    }
+
+    if (!mounted) return;
+
+    bool dontShowAgain = false;
+    String selectedModel = _sherpaAsr.selectedModelId;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('网络语音识别不可用'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('检测到网络问题，无法使用在线语音识别。是否切换到离线模型？'),
+              const SizedBox(height: 16),
+              const Text('选择离线模型：', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...SherpaAsrService.availableModels.map((model) => RadioListTile<String>(
+                title: Text(model.name),
+                value: model.id,
+                groupValue: selectedModel,
+                onChanged: (value) {
+                  setDialogState(() {
+                    selectedModel = value!;
+                  });
+                },
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+              )),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                title: const Text('不再提示'),
+                value: dontShowAgain,
+                onChanged: (value) {
+                  setDialogState(() {
+                    dontShowAgain = value ?? false;
+                  });
+                },
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, {
+                'enable': true,
+                'dontShow': dontShowAgain,
+                'modelId': selectedModel,
+              }),
+              child: const Text('开启离线模式'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null && result['enable'] == true) {
+      // 保存"不再提示"设置
+      if (result['dontShow'] == true) {
+        await prefs.setBool('dont_show_network_error_dialog', true);
+      }
+
+      // 保存离线模式设置
+      await _sherpaAsr.setForceOffline(true);
+      await _sherpaAsr.setModel(result['modelId'] as String);
+
+      debugPrint('[DesignerBall] 用户选择开启离线模式，模型: ${result['modelId']}');
+
+      // 停止当前识别，重新开始
+      if (_isListening) {
+        try { await _speech?.stop(); } catch (_) {}
+        _startListening();
+      }
     }
   }
 
