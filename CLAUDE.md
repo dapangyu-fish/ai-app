@@ -228,3 +228,33 @@ curl -X POST https://registry.dapangyu.work/publish \
 - **文档**: `backend/REGISTRY_README.md`
 - **健康检查**: `GET /health`
 
+### 批量发布测试组件
+
+使用 `backend/migrate_templates.py` 脚本可以批量发布 `templates/` 目录下的所有模板文件到 Registry：
+
+```bash
+# 在项目根目录执行
+python3 backend/migrate_templates.py
+```
+
+**注意事项**：
+1. 包名必须符合规范：小写字母、数字、`-` 和 `_`，不能包含中文或特殊字符
+2. 每个 JSON 文件必须包含 `meta` 字段，包含 `name`、`version`、`type` 等信息
+3. 脚本使用测试 token（`test-token`），具有 admin 权限
+4. 已存在的版本会被跳过，不会覆盖
+
+**脚本输出示例**：
+```
+处理: calculator.json
+  名称: calculator
+  版本: 1.0.0
+  类型: app
+  ✅ 发布成功
+
+处理: lib_common_ui.json
+  名称: common-ui
+  版本: 1.0.0
+  类型: library
+  ⚠️  版本已存在: ['1.0.0']
+```
+

@@ -705,6 +705,11 @@ Authorization: Bearer <token>
 }
 ```
 
+**layout**：`row`（默认）/ `column`
+
+> **注意**：container 的默认 layout 是 `row`（横排），不是 `column`。如果需要子元素竖排显示，必须显式指定 `"layout": "column"`。
+```
+
 ### 6.8 action 与双向绑定
 
 **action 格式**：
