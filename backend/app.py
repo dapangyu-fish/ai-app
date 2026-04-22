@@ -29,7 +29,6 @@ def create_app():
     app.add_url_rule("/api/auth/user", methods=["GET"], view_func=auth.get_user)
     app.add_url_rule("/api/auth/user", methods=["PUT"], view_func=auth.update_user)
     app.add_url_rule("/api/auth/avatar", methods=["POST"], view_func=auth.upload_avatar)
-    app.add_url_rule("/api/auth/avatar/<file_name>", methods=["GET"], view_func=auth.get_avatar)
     app.add_url_rule("/api/auth/quota", methods=["GET"], view_func=auth.get_quota)
 
     # 注册 Chat 路由
