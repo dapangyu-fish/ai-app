@@ -16,6 +16,7 @@ import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import '../auth/auth_service.dart';
+import '../designer/app_storage.dart';
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -1146,6 +1147,41 @@ class JsonInterpreter extends ChangeNotifier {
         } catch (e) {
           debugPrint('[JSON DSL] upload_avatar 失败: $e');
           return null;
+        }
+
+      case '@get_app_config':
+        final bindPath = resolvedArgs['bind'] as String?;
+        if (bindPath != null) {
+          setVariable(bindPath, rawConfig);
+        }
+        return rawConfig;
+
+      case '@apply_app_config':
+        final newConfig = resolvedArgs['config'] as Map<String, dynamic>?;
+        if (newConfig == null) return false;
+        try {
+          // 修改内存中的配置
+          loadConfig(newConfig);
+          // 重新执行初始化
+          await executeSteps();
+          notifyListeners();
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] apply_app_config 失败: $e');
+          return false;
+        }
+
+      case '@save_app_config':
+        final configToSave = resolvedArgs['config'] as Map<String, dynamic>? ?? rawConfig;
+        if (configToSave == null) return false;
+        try {
+          final appStorageClass = AppStorage.instance;
+          final fileName = await appStorageClass.save(configToSave);
+          debugPrint('[JSON DSL] 保存 APP 成功: $fileName');
+          return fileName;
+        } catch (e) {
+          debugPrint('[JSON DSL] save_app_config 失败: $e');
+          return false;
         }
 
       default:

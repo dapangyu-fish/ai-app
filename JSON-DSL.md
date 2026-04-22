@@ -233,6 +233,9 @@ Authorization: Bearer <token>
 | `@set` | `{ "var": "$.global.xxx", "value": ... }` | 设置变量（value 支持 JsonLogic 表达式） |
 | `@navigate` | `{ "screen": "screenId" }` | 页面跳转 |
 | `@delay` | `{ "ms": 1000 }` | 延迟指定毫秒 |
+| `@get_app_config` | `{ "bind": "global.config" }` | 获取当前正在运行的完整 JSON App 配置并绑定到变量，返回该对象 |
+| `@apply_app_config` | `{ "config": {expr} }` | 修改内存中当前 App 的配置并重载渲染（不保存到文件） |
+| `@save_app_config` | `{ "config": {expr} }` | 将配置持久化保存到本地设备，参数为空则保存当前内存中的最新配置 |
 
 ### 4.2 控制流
 
