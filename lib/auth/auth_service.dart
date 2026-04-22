@@ -20,7 +20,18 @@ class AuthService {
   static final ValueNotifier<bool> authNotifier = ValueNotifier(false);
 
   static bool get isLoggedIn => _accessToken != null;
-  static Map<String, dynamic>? get currentUser => _user;
+  static Map<String, dynamic>? get currentUser {
+    if (_user == null) return null;
+    final u = Map<String, dynamic>.from(_user!);
+    if (u['avatar_url'] is String) {
+      String url = u['avatar_url'];
+      if (url.contains('127.0.0.1')) {
+        url = url.replaceAll(RegExp(r'http://127\.0\.0\.1:\d+'), 'https://app-auth.dapangyu.work');
+      }
+      u['avatar_url'] = url;
+    }
+    return u;
+  }
   static String? get token => _accessToken;
 
   /// 从本地存储恢复登录状态（App 启动时调用）
