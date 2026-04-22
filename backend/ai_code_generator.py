@@ -45,15 +45,15 @@ def _load_registry_summary():
         return ""
 
 
-AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交流，你帮助设计和生成 JSON-APP。
+AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交流，你帮助设计、生成和修复 JSON-APP。
 
 ## 工作模式
 1. 先简要说明你的修改意图或改动点（流式发给前端）。
 2. 将完整可运行的最终 JSON 必须放置在 `<app_json>` 和 `</app_json>` 标签之内（不要用 markdown）。
-3. 先用工具查阅框架代码，确认内置函数和组件确实存在。
-4. 参考 templates/ 目录下的已有模板 APP，学习正确的 JSON 结构和用法。
+3. **必须先用工具查阅框架代码，确认内置函数和组件确实存在。**
+4. **必须参考 templates/ 目录下的已有模板 APP，学习正确的 JSON 结构和用法。**
 5. 对话回复极度简洁（用户在手机上看字幕），JSON 则在单独的 <app_json> 中全量输出。
-6. **极其重要：在输出完 `</app_json>` 闭合标签之后，你必须再说一两句话（200字以内），明确告知用户“生成已成功”并简短介绍你生成的 APP 具备了什么功能。不然用户会以为卡住了！**
+6. **极其重要：在输出完 `</app_json>` 闭合标签之后，你必须再说一两句话（200字以内），明确告知用户"生成已成功"并简短介绍你生成的 APP 具备了什么功能。不然用户会以为卡住了！**
 
 ## 工具使用指引
 - read_file: 读取框架源码或模板文件
@@ -61,11 +61,20 @@ AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交�
 - list_builtin_functions: 获取所有可用 @函数列表
 - list_templates: 列出所有可参考的模板 APP
 
+## ★ 强制执行的研究步骤（无论是新建、修改还是修 bug，每次对话都必须执行！）
+**在输出任何 JSON 之前，你必须按顺序完成以下步骤，不得跳过：**
+1. 调用 `read_file('JSON-DSL.md')` 通读框架规范文档，了解所有支持的组件类型和属性。
+2. 调用 `list_builtin_functions` 确认所有可用的 @内置函数列表。
+3. 调用 `list_templates` 查看所有可参考的模板 APP。
+4. 调用 `read_file('templates/xxx.json')` 读取至少一个与用户需求最相似的模板，学习正确写法。
+5. 如有不确定的组件属性或行为，用 `search_code` 或 `read_file` 阅读对应的 Dart 源码确认。
+
+只有完成上述步骤后，你才可以开始输出 JSON-APP。
+**如果你跳过了这些步骤，很可能会生成错误的 JSON，导致用户白屏或崩溃！**
+
 ## 生成 JSON-APP 的标准流程
-1. 先调 list_builtin_functions 确认可用函数
-2. 调 list_templates 查看有哪些模板
-3. 用 read_file 读取一个相似的模板作为参考
-4. 严格按照以下骨架生成 JSON-APP：
+1. 先完成上面的 ★ 强制研究步骤
+2. 严格按照以下骨架生成 JSON-APP：
    ```json
    {
      "dsl": "3.3",
@@ -76,6 +85,12 @@ AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交�
    }
    ```
    绝对禁止使用 `entry`、`pages` 等不属于 DSL 3.3 的顶级字段！必须把页面写在 `ui.screens` 里！
+
+## 修复/修改 JSON-APP 的标准流程
+1. 先完成上面的 ★ 强制研究步骤
+2. 仔细阅读用户提供的崩溃日志或修改需求
+3. 用 `search_code` 在框架源码中确认相关组件的真实行为（如属性名拼写、action 格式等）
+4. 基于模板和源码验证后的知识，修改 JSON 并输出完整的修复版
 
 ## 输出要求
 - JSON 必须包含 meta（name/version/type:"app"/description/icon_url）
@@ -509,7 +524,7 @@ def chat():
 
 @require_auth
 def fix_app():
-    """接收崩溃日志 + JSON，返回修复建议"""
+    """接收崩溃日志 + JSON，使用 Agent + 工具调用返回修复版 JSON"""
     body = request.get_json(silent=True) or {}
     crash_log = body.get("crash_log", "")
     json_config = body.get("json_config", "")
@@ -518,20 +533,26 @@ def fix_app():
     if not crash_log or not json_config:
         return jsonify({"error": "crash_log 和 json_config 不能为空"}), 400
 
-    prompt = f"""以下 JSON-APP 运行时崩溃了，请修复：
+    json_str = json_config if isinstance(json_config, str) else json.dumps(json_config, ensure_ascii=False, indent=2)
+
+    prompt = f"""以下 JSON-APP 运行时崩溃了，请按照"修复/修改 JSON-APP 的标准流程"进行修复。
 
 ## 崩溃日志
 {crash_log}
 
 ## 当前 JSON
 ```json
-{json_config if isinstance(json_config, str) else json.dumps(json_config, ensure_ascii=False, indent=2)}
+{json_str}
 ```
 
-请分析原因并输出修复后的完整 JSON（用 ```json 代码块包裹）。"""
+请严格按照 ★ 强制研究步骤操作：先读框架规范文档、确认内置函数、参考模板，然后再输出修复后的完整 JSON。
+修复后的 JSON 请放在 <app_json> 和 </app_json> 标签内。"""
 
-    dsl_spec = _load_dsl_spec()
-    system_prompt = f"你是 JSON-DSL 调试专家。\n\n## 规范\n{dsl_spec}"
+    # 使用统一的 AGENT_SYSTEM（含强制研究步骤）
+    system_prompt = AGENT_SYSTEM
+    registry = _load_registry_summary()
+    if registry:
+        system_prompt += f"\n## 已注册的 APP 和组件\n{registry}"
 
     provider = _get_provider(provider_id)
     client = _get_agent_client(provider_id)
@@ -539,29 +560,163 @@ def fix_app():
 
     def generate():
         full_content = ""
+        json_content = ""
+        msgs = [{"role": "user", "content": prompt}]
+
         try:
-            call_kwargs = {
-                "model": model,
-                "max_tokens": 8192,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": prompt}],
-            }
-            if provider.get("extra_body"):
-                call_kwargs["extra_body"] = provider["extra_body"]
+            for iteration in range(AGENT_MAX_ITERATIONS):
+                print(f"[FixApp Agent] Iteration {iteration + 1}, messages={len(msgs)}")
 
-            with client.messages.stream(**call_kwargs) as stream:
-                for text in stream.text_stream:
-                    full_content += text
-                    yield f'data: {json.dumps({"content": text}, ensure_ascii=False)}\n\n'
+                response = None
+                buffer = ""
+                inside_json = False
 
-            json_match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
-            if json_match:
+                call_kwargs = {
+                    "model": model,
+                    "max_tokens": 8192,
+                    "system": system_prompt,
+                    "messages": msgs,
+                    "tools": AGENT_TOOLS,
+                }
+                if provider.get("extra_body"):
+                    call_kwargs["extra_body"] = provider["extra_body"]
+
                 try:
-                    fixed = json.loads(json_match.group(1))
-                    yield f'data: {json.dumps({"has_json": True, "json_app": fixed}, ensure_ascii=False)}\n\n'
-                except Exception: pass
+                    with client.messages.stream(**call_kwargs) as stream:
+                        for text in stream.text_stream:
+                            if not inside_json:
+                                buffer += text
+                                if "<app_json>" in buffer:
+                                    parts = buffer.split("<app_json>")
+                                    if parts[0]:
+                                        yield f'data: {json.dumps({"content": parts[0]}, ensure_ascii=False)}\n\n'
+                                        full_content += parts[0]
+                                    yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
+                                    inside_json = True
+                                    json_content = parts[1] if len(parts) > 1 else ""
+                                    buffer = ""
+                                else:
+                                    if "<" in buffer:
+                                        idx = buffer.rfind("<")
+                                        if len(buffer) - idx < 15:
+                                            safe_part = buffer[:idx]
+                                            if safe_part:
+                                                yield f'data: {json.dumps({"content": safe_part}, ensure_ascii=False)}\n\n'
+                                                full_content += safe_part
+                                            buffer = buffer[idx:]
+                                        else:
+                                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                                            full_content += buffer
+                                            buffer = ""
+                                    else:
+                                        yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                                        full_content += buffer
+                                        buffer = ""
+                            else:
+                                json_content += text
+                                if "</app_json>" in json_content:
+                                    parts = json_content.split("</app_json>")
+                                    json_content = parts[0]
+                                    inside_json = False
+                                    if len(parts) > 1 and parts[1]:
+                                        buffer = parts[1]
+                                        if "<" not in buffer:
+                                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                                            full_content += buffer
+                                            buffer = ""
+
+                        response = stream.get_final_message()
+
+                        if buffer and not inside_json:
+                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                            full_content += buffer
+                except Exception as e:
+                    print(f"[FixApp Agent] Stream failed ({e}), falling back to non-stream")
+                    response = client.messages.create(**call_kwargs)
+                    for block in response.content:
+                        if block.type == 'text' and block.text:
+                            full_content += block.text
+                            yield f'data: {json.dumps({"content": block.text}, ensure_ascii=False)}\n\n'
+
+                # 检查是否有工具调用
+                tool_calls = [b for b in response.content if b.type == 'tool_use']
+                if not tool_calls:
+                    print(f"[FixApp Agent] Done after {iteration + 1} iterations")
+                    break
+
+                # 构建 assistant 消息
+                assistant_content = []
+                for block in response.content:
+                    if block.type == 'text':
+                        assistant_content.append({"type": "text", "text": block.text})
+                    elif block.type == 'tool_use':
+                        assistant_content.append({
+                            "type": "tool_use",
+                            "id": block.id,
+                            "name": block.name,
+                            "input": block.input,
+                        })
+                msgs.append({"role": "assistant", "content": assistant_content})
+
+                # 执行工具
+                tool_results = []
+                for tc in tool_calls:
+                    result = _execute_agent_tool(tc.name, tc.input)
+                    print(f"[FixApp Agent] Tool {tc.name}: {len(result)} chars")
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tc.id,
+                        "content": result,
+                    })
+                msgs.append({"role": "user", "content": tool_results})
+
+            # JSON-APP 检测与上传
+            json_str_out = ""
+            if json_content and "{" in json_content:
+                json_str_out = json_content
+            else:
+                match = re.search(r'<app_json>\s*(\{.*?\})\s*</app_json>', full_content, re.DOTALL)
+                if match:
+                    json_str_out = match.group(1)
+                else:
+                    match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
+                    if match:
+                        json_str_out = match.group(1)
+
+            if json_str_out:
+                if "</app_json>" in json_str_out:
+                    json_str_out = json_str_out.split("</app_json>")[0]
+                try:
+                    fixed_app = json.loads(json_str_out)
+                    print(f"[FixApp Agent] JSON parse success, keys: {list(fixed_app.keys())}")
+
+                    import uuid, requests
+                    from store import _minio_presigned_put, _minio_presigned_get
+
+                    filename = f"fix_{uuid.uuid4().hex}.json"
+                    bucket = "ai-chat-temp"
+                    put_url = _minio_presigned_put(bucket, filename)
+                    get_url = _minio_presigned_get(bucket, filename)
+
+                    upload_resp = requests.put(
+                        put_url,
+                        data=json.dumps(fixed_app, ensure_ascii=False).encode('utf-8'),
+                        headers={'Content-Type': 'application/json'}
+                    )
+
+                    if upload_resp.status_code == 200:
+                        yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
+                        print(f"[FixApp Agent] MinIO upload success: {get_url}")
+                    else:
+                        yield f'data: {json.dumps({"has_json": True, "json_app": fixed_app}, ensure_ascii=False)}\n\n'
+                except Exception as e:
+                    print(f"[FixApp Agent] JSON parse or upload failed: {e}")
+
             yield "data: [DONE]\n\n"
+
         except Exception as e:
+            print(f"[FixApp Agent] Error: {e}")
+            import traceback; traceback.print_exc()
             yield f'data: {json.dumps({"error": str(e)})}\n\n'
             yield "data: [DONE]\n\n"
 

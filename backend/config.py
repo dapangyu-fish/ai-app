@@ -87,7 +87,7 @@ PORT = int(os.environ.get("PORT", "5566"))
 
 # 路径配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.realpath(os.path.join(BASE_DIR, ".."))
+PROJECT_ROOT = os.environ.get("SERVER_PROJECT_PATH", os.path.realpath(os.path.join(BASE_DIR, "..")))
 TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
 DSL_SPEC_PATH = os.path.join(PROJECT_ROOT, "JSON-DSL.md")
 
