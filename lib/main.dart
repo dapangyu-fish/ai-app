@@ -33,6 +33,46 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 捕捉全局渲染和布局异常（防止布局越界等导致直接白屏）
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    'UI 渲染/布局崩溃',
+                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                details.exception.toString(),
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
+
   await AuthService.restoreSession();
   await AiChatService.loadProvider();
   runApp(
