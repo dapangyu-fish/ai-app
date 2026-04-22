@@ -227,11 +227,57 @@ class AiChatService {
   }
 
   /// 注入当前运行的 JSON-APP 作为对话上下文（放在消息列表最前面）
-  void setAppContext(Map<String, dynamic> jsonConfig) {
+  /// 优先通过预签名 URL 上传到 MinIO，仅在消息中携带链接；失败时回退到内联 JSON。
+  Future<void> setAppContext(Map<String, dynamic> jsonConfig) async {
     final jsonStr = json.encode(jsonConfig);
+    String contextContent;
+
+    try {
+      final token = AuthService.token;
+      // 1. 获取预签名上传 / 下载 URL
+      final urlResp = await http
+          .get(
+            Uri.parse('$_baseUrl/api/ai/upload_url'),
+            headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (urlResp.statusCode == 200) {
+        final urlData = json.decode(urlResp.body) as Map<String, dynamic>;
+        final putUrl = urlData['put_url'] as String;
+        final getUrl = urlData['get_url'] as String;
+
+        // 2. PUT 上传 JSON 到 MinIO
+        final uploadResp = await http
+            .put(
+              Uri.parse(putUrl),
+              headers: {'Content-Type': 'application/json'},
+              body: utf8.encode(jsonStr),
+            )
+            .timeout(const Duration(seconds: 15));
+
+        if (uploadResp.statusCode == 200) {
+          // 成功 → 只放链接
+          contextContent =
+              '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），'
+              '后续对话请基于这个配置进行修改或分析：\n\n'
+              '[json_app_url]$getUrl[/json_app_url]';
+        } else {
+          throw Exception('MinIO PUT failed: ${uploadResp.statusCode}');
+        }
+      } else {
+        throw Exception('upload_url API failed: ${urlResp.statusCode}');
+      }
+    } catch (e) {
+      // 回退：直接内联 JSON
+      contextContent =
+          '以下是我当前正在运行的 JSON-APP 完整配置，'
+          '后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```';
+    }
+
     _messages.insert(0, {
       'role': 'user',
-      'content': '以下是我当前正在运行的 JSON-APP 完整配置，后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```',
+      'content': contextContent,
     });
     _messages.insert(1, {
       'role': 'assistant',

@@ -203,6 +203,40 @@ def _execute_agent_tool(name, inputs):
     return f"Unknown tool: {name}"
 
 
+def _resolve_json_urls(content):
+    """将消息中的 [json_app_url]...[/json_app_url] 标签替换为实际 JSON 内容。
+    客户端会先将大 JSON 上传到 MinIO，消息里只放下载链接。
+    后端在发给 AI 之前把链接解析成真正的 JSON 文本。
+    """
+    if not isinstance(content, str) or "[json_app_url]" not in content:
+        return content
+
+    import requests as _req
+
+    def _fetch_and_replace(match):
+        url = match.group(1).strip()
+        try:
+            resp = _req.get(url, timeout=15)
+            if resp.status_code == 200:
+                # 验证是合法 JSON
+                json.loads(resp.text)
+                print(f"[Agent] Resolved JSON URL: {len(resp.text)} chars")
+                return f"```json\n{resp.text}\n```"
+            else:
+                print(f"[Agent] JSON URL fetch failed: HTTP {resp.status_code}")
+                return f"(JSON 下载失败: HTTP {resp.status_code})"
+        except Exception as e:
+            print(f"[Agent] JSON URL fetch error: {e}")
+            return f"(JSON 下载异常: {e})"
+
+    return re.sub(
+        r'\[json_app_url\](.*?)\[/json_app_url\]',
+        _fetch_and_replace,
+        content,
+        flags=re.DOTALL,
+    )
+
+
 def _get_provider(provider_id=None):
     pid = provider_id or DEFAULT_PROVIDER
     return AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
@@ -274,7 +308,8 @@ def chat():
     for m in messages:
         if m["role"] == "system":
             continue
-        agent_messages.append({"role": m["role"], "content": m["content"]})
+        content = _resolve_json_urls(m["content"])
+        agent_messages.append({"role": m["role"], "content": content})
 
     # 系统提示
     system_prompt = AGENT_SYSTEM

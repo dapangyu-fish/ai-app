@@ -368,10 +368,10 @@ class _DesignerBallState extends State<DesignerBall>
   // ════════════════════════════════════════════════════════
 
   /// 如果当前正在运行 JSON-APP，把完整 JSON 注入为对话上下文
-  void _injectCurrentAppContext() {
+  Future<void> _injectCurrentAppContext() async {
     final config = widget.getCurrentConfig?.call();
     if (config != null && _chatService.messages.isEmpty) {
-      _chatService.setAppContext(config);
+      await _chatService.setAppContext(config);
       debugPrint('[DesignerBall] Injected current JSON-APP as context');
     }
   }
@@ -387,7 +387,7 @@ class _DesignerBallState extends State<DesignerBall>
     // 进入对话模式的重震动反馈
     HapticFeedback.heavyImpact();
 
-    _injectCurrentAppContext();
+    await _injectCurrentAppContext();
 
     // 后台拉取供应商列表（不阻塞进入对话模式）
     AiChatService.fetchProviders().then((_) {
