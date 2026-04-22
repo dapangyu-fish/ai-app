@@ -198,6 +198,13 @@ def _get_provider(provider_id=None):
 
 def _get_agent_client(provider_id=None):
     provider = _get_provider(provider_id)
+    api_key = provider.get("api_key", "")
+    masked_key = f"{api_key[:4]}***{api_key[-4:]}" if len(api_key) > 8 else "***"
+    print(f"\n[AI_SERVER] Initiating Agent Client:")
+    print(f"  - Provider ID: {provider.get('id')}")
+    print(f"  - Base URL: {provider.get('base_url')}")
+    print(f"  - API Key: {masked_key}")
+    print(f"  - Agent Model: {provider.get('agent_model', provider.get('models', {}).get('default'))}\n")
     return anthropic.Anthropic(
         base_url=provider["base_url"],
         api_key=provider["api_key"],
