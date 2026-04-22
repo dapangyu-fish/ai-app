@@ -551,7 +551,13 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = AuthService.currentUser;
-    final avatarUrl = user?['avatar_url'] as String? ?? '';
+    String avatarUrl = user?['avatar_url'] as String? ?? '';
+    if (avatarUrl.isNotEmpty && avatarUrl.startsWith('http')) {
+      avatarUrl = avatarUrl.contains('?') 
+          ? '$avatarUrl&_cb=${AuthService.avatarCacheBuster}'
+          : '$avatarUrl?_cb=${AuthService.avatarCacheBuster}';
+    }
+    debugPrint('[ProfilePage] Final avatarUrl to render: $avatarUrl');
     final cs = Theme.of(context).colorScheme;
 
     Widget avatar;
@@ -559,7 +565,10 @@ class _ProfilePageState extends State<ProfilePage> {
       avatar = CircleAvatar(
         radius: 48,
         backgroundImage: NetworkImage(avatarUrl),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (e, stack) {
+          debugPrint('[ProfilePage] NetworkImage ERROR: $e');
+        },
+        child: const Icon(Icons.person, color: Colors.transparent),
       );
     } else if (avatarUrl.startsWith('data:')) {
       final parts = avatarUrl.split(',');

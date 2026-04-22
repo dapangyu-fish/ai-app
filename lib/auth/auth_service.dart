@@ -14,6 +14,8 @@ class AuthService {
   static String? _refreshToken;
   static Map<String, dynamic>? _user;
 
+  static String avatarCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+
   // 通知监听者
   static final ValueNotifier<bool> authNotifier = ValueNotifier(false);
 
@@ -261,14 +263,8 @@ class AuthService {
       throw Exception(data['error'] ?? '头像上传失败');
     }
 
-    // 给 URL 加客户端时间戳，确保绕过所有层级缓存（CDN + Flutter ImageCache）
     String avatarUrl = data['avatar_url'];
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    if (avatarUrl.contains('?')) {
-      avatarUrl = '$avatarUrl&_t=$ts';
-    } else {
-      avatarUrl = '$avatarUrl?_t=$ts';
-    }
+    avatarCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
 
     _user?['avatar_url'] = avatarUrl;
     await _saveLocal();
