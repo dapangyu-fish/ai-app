@@ -2,7 +2,7 @@
   "dsl": "3.3",
   "meta": {
     "name": "demo-user-profile",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "type": "app",
     "description": "用户资料演示",
     "author": "demo"
@@ -85,6 +85,7 @@
           {
             "type": "container",
             "layout": "column",
+            "crossAxisAlignment": "center",
             "color": "#F0F4FF",
             "borderRadius": 16,
             "padding": 20,

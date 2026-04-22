@@ -40,15 +40,28 @@ class JsonContainerWidget extends JsonBaseWidget {
         .map((childJson) => interpreter.buildWidget(context, childJson))
         .toList();
 
+    CrossAxisAlignment crossAlign = CrossAxisAlignment.center;
+    if (json['crossAxisAlignment'] == 'start') crossAlign = CrossAxisAlignment.start;
+    else if (json['crossAxisAlignment'] == 'end') crossAlign = CrossAxisAlignment.end;
+    else if (json['crossAxisAlignment'] == 'stretch') crossAlign = CrossAxisAlignment.stretch;
+    else if (layout == 'column' && json['crossAxisAlignment'] == null) crossAlign = CrossAxisAlignment.stretch;
+
+    MainAxisAlignment mainAlign = MainAxisAlignment.start;
+    if (json['mainAxisAlignment'] == 'center') mainAlign = MainAxisAlignment.center;
+    else if (json['mainAxisAlignment'] == 'end') mainAlign = MainAxisAlignment.end;
+    else if (json['mainAxisAlignment'] == 'spaceBetween') mainAlign = MainAxisAlignment.spaceBetween;
+
     Widget layoutWidget;
     if (layout == 'row') {
       layoutWidget = Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: crossAlign,
+        mainAxisAlignment: mainAlign,
         children: childWidgets,
       );
     } else {
       layoutWidget = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: crossAlign,
+        mainAxisAlignment: mainAlign,
         mainAxisSize: MainAxisSize.min,
         children: childWidgets,
       );
