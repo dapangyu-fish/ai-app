@@ -302,6 +302,7 @@ def chat():
                                     if parts[0]:
                                         yield f'data: {json.dumps({"content": parts[0]}, ensure_ascii=False)}\n\n'
                                         full_content += parts[0]
+                                    yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
                                     inside_json = True
                                     json_content = parts[1] if len(parts) > 1 else ""
                                     buffer = ""

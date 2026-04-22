@@ -15,6 +15,7 @@ class ChatOverlay extends StatelessWidget {
   final String? liveTranscript;
   final bool isListening;
   final bool isThinking;
+  final bool isGeneratingJson;
   final VoidCallback onClose;
   final VoidCallback? onClear;
   final ScrollController scrollController;
@@ -26,6 +27,7 @@ class ChatOverlay extends StatelessWidget {
     required this.messages,
     required this.isListening,
     required this.isThinking,
+    this.isGeneratingJson = false,
     required this.onClose,
     required this.scrollController,
     this.liveTranscript,
@@ -43,7 +45,7 @@ class ChatOverlay extends StatelessWidget {
         messages.where((m) => m.content.isNotEmpty).toList();
     final hasLive = liveTranscript != null && liveTranscript!.isNotEmpty;
 
-    if (visibleMessages.isEmpty && !hasLive && !isThinking) {
+    if (visibleMessages.isEmpty && !hasLive && !isThinking && !isGeneratingJson) {
       return const SizedBox.shrink();
     }
 
@@ -65,7 +67,7 @@ class ChatOverlay extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 标题栏 — 类 Windows 风格
+            // 标题栏
             Container(
               height: 36,
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -123,13 +125,17 @@ class ChatOverlay extends StatelessWidget {
                   shrinkWrap: true,
                   itemCount: visibleMessages.length +
                       (hasLive ? 1 : 0) +
-                      (isThinking ? 1 : 0),
+                      (isThinking ? 1 : 0) +
+                      (isGeneratingJson ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (hasLive && index == visibleMessages.length) {
                       return _buildLine('you', liveTranscript!, live: true);
                     }
-                    if (index >= visibleMessages.length + (hasLive ? 1 : 0)) {
+                    if (isThinking && index == visibleMessages.length + (hasLive ? 1 : 0)) {
                       return _buildThinkingLine();
+                    }
+                    if (isGeneratingJson && index == visibleMessages.length + (hasLive ? 1 : 0) + (isThinking ? 1 : 0)) {
+                      return _buildGeneratingLine();
                     }
                     final msg = visibleMessages[index];
                     if (msg.role == 'system' && msg.jsonApp != null) {
@@ -230,6 +236,41 @@ class ChatOverlay extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: const _ThinkingDots(),
+      ),
+    );
+  }
+
+  Widget _buildGeneratingLine() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.purpleAccent.shade100),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '正在生成并上传代码...',
+              style: TextStyle(
+                color: Colors.purpleAccent.shade100,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

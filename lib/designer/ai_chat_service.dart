@@ -10,8 +10,9 @@ class ChatEvent {
   final Map<String, dynamic>? jsonApp;  // 检测到的 JSON-APP
   final Map<String, dynamic>? quota;    // 配额信息
   final String? error;
+  final bool isGeneratingJson; // 正在生成 JSON
 
-  ChatEvent({this.content, this.jsonApp, this.quota, this.error});
+  ChatEvent({this.content, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false});
 }
 
 /// AI 供应商信息
@@ -144,9 +145,14 @@ class AiChatService {
         if (trimmed == 'data: [DONE]') continue;
         if (!trimmed.startsWith('data: ')) continue;
 
-        final dataStr = trimmed.substring(6);
-        try {
-          final data = json.decode(dataStr) as Map<String, dynamic>;
+          final dataStr = trimmed.substring(6);
+          try {
+            final data = json.decode(dataStr) as Map<String, dynamic>;
+
+            if (data.containsKey('generating_json') && data['generating_json'] == true) {
+              yield ChatEvent(isGeneratingJson: true);
+              continue;
+            }
 
           // JSON-APP 检测
           if (data.containsKey('has_json') && data['has_json'] == true) {

@@ -58,6 +58,7 @@ class _DesignerBallState extends State<DesignerBall>
   bool _chatMode = false;
   bool _isListening = false;
   bool _isThinking = false;
+  bool _isGeneratingJson = false;
   String? _liveTranscript;
   String _accumulatedTranscript = ''; // 累积的已确认文本（用于多段识别）
 
@@ -583,9 +584,17 @@ class _DesignerBallState extends State<DesignerBall>
 
     _streamSub = _chatService.sendStream(text).listen(
       (event) {
+        if (event.isGeneratingJson) {
+          setState(() {
+            _isGeneratingJson = true;
+          });
+          _scrollToBottom();
+          return;
+        }
         if (event.error != null && event.content == null) {
           setState(() {
             _isThinking = false;
+            _isGeneratingJson = false;
             _messages.last = ChatMessage(role: 'assistant', content: event.error!);
           });
           _scrollToBottom();
@@ -601,6 +610,7 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.jsonApp != null) {
           _lastGeneratedJson = event.jsonApp;
           setState(() {
+            _isGeneratingJson = false;
             _messages.add(ChatMessage(
               role: 'system',
               content: '🚀 JSON-APP 已生成，点击试运行',
@@ -616,6 +626,7 @@ class _DesignerBallState extends State<DesignerBall>
       onError: (e) {
         setState(() {
           _isThinking = false;
+          _isGeneratingJson = false;
           _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
         });
       },
@@ -1116,6 +1127,7 @@ class _DesignerBallState extends State<DesignerBall>
             messages: _messages,
             isListening: _isListening,
             isThinking: _isThinking,
+            isGeneratingJson: _isGeneratingJson,
             liveTranscript:
                 (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
             onClose: _closeChatMode,
