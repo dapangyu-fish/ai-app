@@ -55,10 +55,10 @@ AI_PROVIDERS = {
         "base_url": os.environ.get("CC_ANTHROPIC_BASE_URL", "https://cc-vibe.com"),
         "api_key": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", "sk-68900ea64051c89cbba31fa0a3f4198fdaffd8272c3d6b2ce3acf82bd098e6a5"),
         "models": {
-            "default": "claude-opus-4-7",
-            "opus": "claude-opus-4-7",
+            "default": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
+            "opus": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
         },
-        "agent_model": "claude-opus-4-7",
+        "agent_model": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
         "extra_body": {
             "skipDangerousModePermissionPrompt": True
         }
