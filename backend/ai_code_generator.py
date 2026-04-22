@@ -205,6 +205,11 @@ def _get_agent_client(provider_id=None):
     print(f"  - Base URL: {provider.get('base_url')}")
     print(f"  - API Key: {masked_key}")
     print(f"  - Agent Model: {provider.get('agent_model', provider.get('models', {}).get('default'))}\n")
+    
+    # 强制清理环境变量中的残留 token，防止 anthropic SDK 错误地发送 Authorization: Bearer 头
+    if "ANTHROPIC_AUTH_TOKEN" in os.environ:
+        os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
+
     return anthropic.Anthropic(
         base_url=provider["base_url"],
         api_key=provider["api_key"],
