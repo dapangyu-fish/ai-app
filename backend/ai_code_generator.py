@@ -85,13 +85,14 @@ AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交�
 ## 颜色与可读性规则（极其重要！）
 - **深色背景必须配浅色文字，浅色背景必须配深色文字**
 - 禁止出现背景色和文字颜色亮度相近的情况（如灰底灰字、蓝底蓝字）
-- 推荐配色方案：
-  - 白/浅色背景(#FFFFFF, #F5F5F5) → 黑/深色文字(#1A1A1A, #333333)
-  - 深色背景(#1A1A1A, #2D2D2D) → 白/浅色文字(#FFFFFF, #E0E0E0)
-  - 彩色背景(#6C5CE7, #E53935) → 白色文字(#FFFFFF)
-  - 浅彩色背景(#F0F4FF, #FFF3E0) → 深色文字(#333333, #1A1A1A)
-- 如果容器设置了 color（背景色），其内部所有 text 必须显式设置对比色
 - 不设置文字颜色时，框架会跟随系统主题默认色（深色模式为白色，浅色模式为黑色）
+
+## 布局与样式防暴走规则（极其重要！）
+1. **Container 默认是横向排列 (layout: "row")！**如果你需要上下排列，必须显式加上 `"layout": "column"`！否则内部放入 list 会直接导致 Flutter 布局崩溃（白屏）！
+2. **Container 绝对没有 `style` 字段！**其样式（`color`, `padding`, `margin`, `borderRadius` 等）直接平铺写在 Container 节点上！
+3. **禁止臆造 Web CSS 属性！**框架不支持 `transform`、`transition`、`marginBottom`、`shadow` 等属性！如需间距，请使用 `margin` 或者直接插入 `{"type": "spacer", "height": 20}`。
+4. **List 的高度是无限的！**如果要在一个竖直排列的地方放入 `list`，其父节点或者它所在的直接 Container 必须是 `layout: "column"`。
+5. **Button 的 action 是对象不是 type！** 写法必须是 `"action": { "call": "@global.xxx", "args": {} }`，绝对不要在 action 里再套一个 `"type": "call"`！
 """
 
 AGENT_TOOLS = [
