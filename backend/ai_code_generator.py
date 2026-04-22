@@ -48,11 +48,11 @@ def _load_registry_summary():
 AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交流，你帮助设计和生成 JSON-APP。
 
 ## 工作模式
-1. 先理解用户需求
-2. 生成 JSON-APP 前，必须用工具查阅框架代码，确认内置函数和组件确实存在
-3. 参考 templates/ 目录下的已有模板 APP，学习正确的 JSON 结构和用法
-4. 用 ```json ... ``` 代码块包裹完整可运行的 JSON-APP
-5. 回复简洁（用户在手机上看字幕）
+1. 先简要说明你的修改意图或改动点（流式发给前端）。
+2. 将完整可运行的最终 JSON 必须放置在 `<app_json>` 和 `</app_json>` 标签之内（不要用 markdown）。
+3. 先用工具查阅框架代码，确认内置函数和组件确实存在。
+4. 参考 templates/ 目录下的已有模板 APP，学习正确的 JSON 结构和用法。
+5. 对话回复极度简洁（用户在手机上看字幕），JSON 则在单独的 <app_json> 中全量输出。
 
 ## 工具使用指引
 - read_file: 读取框架源码或模板文件
@@ -269,8 +269,11 @@ def chat():
             for iteration in range(AGENT_MAX_ITERATIONS):
                 print(f"[Agent] Iteration {iteration + 1}, messages={len(msgs)}")
 
-                # 流式调用 — 文本实时推送给客户端，工具调用在结束后处理
                 response = None
+                buffer = ""
+                inside_json = False
+                json_content = ""
+
                 try:
                     with agent_client.messages.stream(
                         model=agent_model,
@@ -280,11 +283,39 @@ def chat():
                         tools=AGENT_TOOLS,
                     ) as stream:
                         for text in stream.text_stream:
-                            full_content += text
-                            yield f'data: {json.dumps({"content": text}, ensure_ascii=False)}\n\n'
+                            if not inside_json:
+                                buffer += text
+                                if "<app_json>" in buffer:
+                                    parts = buffer.split("<app_json>")
+                                    if parts[0]:
+                                        yield f'data: {json.dumps({"content": parts[0]}, ensure_ascii=False)}\n\n'
+                                        full_content += parts[0]
+                                    inside_json = True
+                                    json_content = parts[1] if len(parts) > 1 else ""
+                                    buffer = ""
+                                else:
+                                    # Safe yield logic to avoid splitting <app_json>
+                                    if "<" in buffer:
+                                        idx = buffer.rfind("<")
+                                        if len(buffer) - idx < 15:
+                                            safe_part = buffer[:idx]
+                                            if safe_part:
+                                                yield f'data: {json.dumps({"content": safe_part}, ensure_ascii=False)}\n\n'
+                                                full_content += safe_part
+                                            buffer = buffer[idx:]
+                                        else:
+                                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                                            full_content += buffer
+                                            buffer = ""
+                                    else:
+                                        yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                                        full_content += buffer
+                                        buffer = ""
+                            else:
+                                json_content += text
+                                
                         response = stream.get_final_message()
                 except Exception as e:
-                    # 流式不支持时 fallback 到非流式
                     print(f"[Agent] Stream failed ({e}), falling back to non-stream")
                     response = agent_client.messages.create(
                         model=agent_model,

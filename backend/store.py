@@ -37,6 +37,40 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
     return f"{MINIO_PUBLIC_URL}/{bucket}/{key}"
 
 
+def _minio_presigned_put(bucket, key, expires_hours=1):
+    from datetime import timedelta
+    if not _minio_client.bucket_exists(bucket):
+        _minio_client.make_bucket(bucket)
+    return _minio_client.presigned_put_object(bucket, key, expires=timedelta(hours=expires_hours))
+
+
+def _minio_presigned_get(bucket, key, expires_hours=1):
+    from datetime import timedelta
+    if not _minio_client.bucket_exists(bucket):
+        _minio_client.make_bucket(bucket)
+    return _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
+
+
+@require_auth
+def get_ai_upload_url():
+    """获取前端临时上传大 JSON 的 PUT 链接"""
+    import uuid
+    filename = f"{uuid.uuid4().hex}.json"
+    bucket = "ai-chat-temp"
+    try:
+        put_url = _minio_presigned_put(bucket, filename)
+        # 前端将 PUT 上传到 put_url，并将此 get_url 发送给大模型用于下载
+        get_url = _minio_presigned_get(bucket, filename)
+        return jsonify({
+            "put_url": put_url,
+            "get_url": get_url,
+            "filename": filename
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 def _generate_appid():
     """生成不重复的 appid（UUID）"""
     max_attempts = 100
