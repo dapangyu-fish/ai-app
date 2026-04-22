@@ -2,9 +2,9 @@
   "dsl": "3.3",
   "meta": {
     "name": "lib_user",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "type": "library",
-    "description": "用户信息组件库",
+    "description": "用户信息组件库 — 读取/修改用户资料",
     "author": "demo",
     "exports": [
       "loadUserInfo",
@@ -12,7 +12,9 @@
       "getUserEmail",
       "getUserName",
       "getAuthToken",
-      "checkLogin"
+      "checkLogin",
+      "updateAvatar",
+      "updateName"
     ]
   },
   "global": {
@@ -21,29 +23,18 @@
     },
     "functions": {
       "loadUserInfo": {
-        "params": [
-          "bind"
-        ],
+        "params": ["bind"],
         "logic": [
           {
             "call": "@get_user_info",
-            "args": {
-              "bind": "{{ params.bind }}"
-            }
+            "args": { "bind": "{{ params.bind }}" }
           }
         ]
       },
       "getUserAvatar": {
-        "params": [
-          "bind"
-        ],
+        "params": ["bind"],
         "logic": [
-          {
-            "call": "@get_user_info",
-            "args": {
-              "bind": "global._info"
-            }
-          },
+          { "call": "@get_user_info", "args": { "bind": "global._info" } },
           {
             "call": "@set",
             "args": {
@@ -54,16 +45,9 @@
         ]
       },
       "getUserEmail": {
-        "params": [
-          "bind"
-        ],
+        "params": ["bind"],
         "logic": [
-          {
-            "call": "@get_user_info",
-            "args": {
-              "bind": "global._info"
-            }
-          },
+          { "call": "@get_user_info", "args": { "bind": "global._info" } },
           {
             "call": "@set",
             "args": {
@@ -74,16 +58,9 @@
         ]
       },
       "getUserName": {
-        "params": [
-          "bind"
-        ],
+        "params": ["bind"],
         "logic": [
-          {
-            "call": "@get_user_info",
-            "args": {
-              "bind": "global._info"
-            }
-          },
+          { "call": "@get_user_info", "args": { "bind": "global._info" } },
           {
             "call": "@set",
             "args": {
@@ -94,28 +71,58 @@
         ]
       },
       "getAuthToken": {
-        "params": [
-          "bind"
-        ],
+        "params": ["bind"],
         "logic": [
-          {
-            "call": "@get_auth_token",
-            "args": {
-              "bind": "{{ params.bind }}"
-            }
-          }
+          { "call": "@get_auth_token", "args": { "bind": "{{ params.bind }}" } }
         ]
       },
       "checkLogin": {
-        "params": [
-          "bind"
-        ],
+        "params": ["bind"],
+        "logic": [
+          { "call": "@is_logged_in", "args": { "bind": "{{ params.bind }}" } }
+        ]
+      },
+      "updateAvatar": {
+        "params": ["imagePath"],
         "logic": [
           {
-            "call": "@is_logged_in",
+            "call": "@file_to_base64",
             "args": {
-              "bind": "{{ params.bind }}"
+              "path": "{{ params.imagePath }}",
+              "bind": "global._avatarB64"
             }
+          },
+          {
+            "call": "@upload_avatar",
+            "args": {
+              "base64": "{{ global._avatarB64 }}",
+              "bind": "global._newAvatarUrl"
+            }
+          },
+          {
+            "call": "@update_profile",
+            "args": {
+              "avatar_url": "{{ global._newAvatarUrl }}"
+            }
+          },
+          {
+            "call": "@refresh_user",
+            "args": {}
+          }
+        ]
+      },
+      "updateName": {
+        "params": ["newName"],
+        "logic": [
+          {
+            "call": "@update_profile",
+            "args": {
+              "username": "{{ params.newName }}"
+            }
+          },
+          {
+            "call": "@refresh_user",
+            "args": {}
           }
         ]
       }

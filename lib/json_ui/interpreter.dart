@@ -5,6 +5,7 @@
 // 变量路径格式：global.xxx / loop.item / params.xxx（兼容 $.global.xxx 旧格式）
 // ───────────────────────────────────────────────
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jsonlogic/jsonlogic.dart';
@@ -728,6 +729,17 @@ class JsonInterpreter extends ChangeNotifier {
           resolvedArgs['message']?.toString() ?? '',
         );
 
+      case '@show_input_dialog':
+        final title = resolvedArgs['title']?.toString() ?? '输入';
+        final hint = resolvedArgs['hint']?.toString() ?? '';
+        final defaultValue = resolvedArgs['defaultValue']?.toString() ?? '';
+        final bindPath = resolvedArgs['bind'] as String?;
+        final result = await _showTextInputDialog(title, hint, defaultValue);
+        if (bindPath != null) {
+          setVariable(bindPath, result);
+        }
+        return result;
+
       // ── 本地存储 ──
       case '@storage_set':
         final key = resolvedArgs['key']?.toString();
@@ -1050,6 +1062,25 @@ class JsonInterpreter extends ChangeNotifier {
       case '@pick_image':
         return await _pickOrTakeImage(resolvedArgs, ImageSource.gallery);
 
+      case '@file_to_base64':
+        final filePath = resolvedArgs['path'] as String?;
+        if (filePath == null || filePath.isEmpty) return null;
+        try {
+          final file = File(filePath);
+          if (await file.exists()) {
+            final bytes = await file.readAsBytes();
+            final b64 = base64Encode(bytes);
+            final b64Bind = resolvedArgs['bind'] as String?;
+            if (b64Bind != null) {
+              setVariable(b64Bind, b64);
+            }
+            return b64;
+          }
+        } catch (e) {
+          debugPrint('[JSON DSL] file_to_base64 失败: $e');
+        }
+        return null;
+
       // ── 用户信息 ──
       case '@get_user_info':
         final userInfo = AuthService.currentUser != null
@@ -1107,6 +1138,10 @@ class JsonInterpreter extends ChangeNotifier {
         if (base64Data == null || base64Data.isEmpty) return null;
         try {
           final url = await AuthService.uploadAvatar(base64Data);
+          final bindPath = resolvedArgs['bind'] as String?;
+          if (bindPath != null) {
+            setVariable(bindPath, url);
+          }
           return url;
         } catch (e) {
           debugPrint('[JSON DSL] upload_avatar 失败: $e');
@@ -1329,6 +1364,39 @@ class JsonInterpreter extends ChangeNotifier {
       ),
     );
     return result ?? false;
+  }
+
+  Future<String?> _showTextInputDialog(String title, String hint, String defaultValue) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+
+    final controller = TextEditingController(text: defaultValue);
+    final result = await showDialog<String>(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: hint,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(null),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(controller.text),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
   }
 
   Future<String?> _pickOrTakeImage(
