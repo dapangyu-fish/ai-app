@@ -285,6 +285,122 @@ class AiChatService {
     });
   }
 
+  /// 使用 Claude CLI 生成/修改/修复 JSON-APP
+  /// [userPrompt] 用户的需求描述
+  /// [currentApp] 当前运行的 APP JSON（修改/修复场景）
+  /// [crashLog] 崩溃日志（修复场景）
+  Stream<ChatEvent> generateApp(String userPrompt, {
+    Map<String, dynamic>? currentApp,
+    String? crashLog,
+  }) async* {
+    abort();
+
+    final client = http.Client();
+    _activeClient = client;
+
+    try {
+      final request = http.Request('POST', Uri.parse('$_baseUrl/api/ai/generate'));
+      request.headers['Content-Type'] = 'application/json';
+      final token = AuthService.token;
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.body = json.encode({
+        'prompt': userPrompt,
+        if (currentApp != null) 'current_app': currentApp,
+        if (crashLog != null) 'crash_log': crashLog,
+        'provider': _selectedProvider,
+      });
+
+      final response = await client.send(request).timeout(
+        const Duration(seconds: 300), // Claude CLI 可能运行较久
+      );
+
+      if (response.statusCode == 429) {
+        final body = await response.stream.bytesToString();
+        final data = json.decode(body);
+        yield ChatEvent(error: data['error'] ?? '配额已用完', quota: data['quota']);
+        return;
+      }
+
+      if (response.statusCode == 401) {
+        yield ChatEvent(error: '请先登录');
+        return;
+      }
+
+      if (response.statusCode != 200) {
+        final body = await response.stream.bytesToString();
+        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
+        return;
+      }
+
+      String accumulated = '';
+
+      await for (final line in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty) continue;
+        if (trimmed == 'data: [DONE]') continue;
+        if (!trimmed.startsWith('data: ')) continue;
+
+        final dataStr = trimmed.substring(6);
+        try {
+          final data = json.decode(dataStr) as Map<String, dynamic>;
+
+          // JSON-APP 检测
+          if (data.containsKey('has_json') && data['has_json'] == true) {
+            Map<String, dynamic>? parsedApp;
+            if (data.containsKey('json_url') && data['json_url'] != null) {
+              try {
+                final url = data['json_url'] as String;
+                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+                if (getResp.statusCode == 200) {
+                  final jsonBody = utf8.decode(getResp.bodyBytes);
+                  parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+                }
+              } catch (e) {
+                yield ChatEvent(error: '下载 JSON 异常: $e');
+              }
+            } else {
+              parsedApp = data['json_app'] as Map<String, dynamic>?;
+            }
+            if (parsedApp != null) {
+              yield ChatEvent(jsonApp: parsedApp);
+            }
+            continue;
+          }
+
+          // 配额
+          if (data.containsKey('quota')) {
+            yield ChatEvent(quota: data['quota'] as Map<String, dynamic>?);
+            continue;
+          }
+
+          // 错误
+          if (data.containsKey('error')) {
+            yield ChatEvent(content: accumulated, error: data['error'] as String);
+            continue;
+          }
+
+          // 普通文本（Claude CLI 的输出）
+          final content = data['content'] as String? ?? '';
+          if (content.isNotEmpty) {
+            accumulated += content;
+            yield ChatEvent(content: accumulated);
+          }
+        } catch (_) {}
+      }
+    } on http.ClientException {
+      // abort()
+    } catch (e) {
+      yield ChatEvent(error: '网络错误: $e');
+    } finally {
+      if (_activeClient == client) _activeClient = null;
+      client.close();
+    }
+  }
+
   void clear() {
     abort();
     _messages.clear();

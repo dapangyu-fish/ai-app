@@ -30,6 +30,11 @@ AI_PROVIDERS = {
             "default": "deepseek-chat",
         },
         "agent_model": "deepseek-chat",
+        "cli_env": {
+            "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+            "ANTHROPIC_API_KEY": DEEPSEEK_KEY,
+        },
+        "cli_model": "deepseek-chat",
     },
     "glm": {
         "id": "glm",
@@ -46,6 +51,11 @@ AI_PROVIDERS = {
             "reasoning": os.environ.get("GLM_ANTHROPIC_REASONING_MODEL", "glm-5.1"),
         },
         "agent_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
+        "cli_env": {
+            "ANTHROPIC_BASE_URL": os.environ.get("GLM_ANTHROPIC_BASE_URL", "http://14.103.26.181"),
+            "ANTHROPIC_API_KEY": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", "sk-FUsE9Q3QaEjHo7qnad7ffBINpQHkkETW16K8OXl26SHfRUfN"),
+        },
+        "cli_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
     },
     "cc": {
         "id": "cc",
@@ -61,7 +71,12 @@ AI_PROVIDERS = {
         "agent_model": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
         "extra_body": {
             "skipDangerousModePermissionPrompt": True
-        }
+        },
+        "cli_env": {
+            "ANTHROPIC_BASE_URL": os.environ.get("CC_ANTHROPIC_BASE_URL", "https://cc-vibe.com"),
+            "ANTHROPIC_API_KEY": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", "sk-68900ea64051c89cbba31fa0a3f4198fdaffd8272c3d6b2ce3acf82bd098e6a5"),
+        },
+        "cli_model": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
     },
 }
 
@@ -90,6 +105,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.environ.get("SERVER_PROJECT_PATH", os.path.realpath(os.path.join(BASE_DIR, "..")))
 TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
 DSL_SPEC_PATH = os.path.join(PROJECT_ROOT, "JSON-DSL.md")
+PROMPTS_DIR = os.path.join(BASE_DIR, "prompts")
+GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
 
 # Agent 配置
 AGENT_MAX_ITERATIONS = 8

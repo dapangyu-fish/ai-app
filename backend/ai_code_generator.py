@@ -6,11 +6,13 @@
 import json
 import os
 import re
+import uuid
+import subprocess
 import anthropic
 from flask import request, jsonify, Response, stream_with_context
 from config import (
     AI_PROVIDERS, DEFAULT_PROVIDER,
-    DSL_SPEC_PATH, PROJECT_ROOT,
+    DSL_SPEC_PATH, PROJECT_ROOT, GENERATE_PROMPT_PATH,
     AGENT_MAX_ITERATIONS, ROLE_QUOTAS
 )
 from database import db_query, get_quota_info, increment_quota
@@ -292,6 +294,194 @@ def list_providers():
             "default_model": cfg["models"]["default"],
         })
     return jsonify({"providers": providers})
+
+
+def _load_generate_prompt():
+    """加载 Claude CLI 代码生成提示词"""
+    try:
+        with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        print(f"[GenerateApp] Failed to load prompt: {e}")
+        return ""
+
+
+@require_auth
+def generate_app():
+    """使用 Claude CLI 生成/修改/修复 JSON-APP"""
+    user_id = request.supabase_user.get("id")
+    role = request.user_role
+
+    # 配额检查
+    used, limit, remaining = get_quota_info(user_id, role, ROLE_QUOTAS)
+    if remaining <= 0:
+        return jsonify({
+            "error": f"今日对话次数已用完（{used}/{limit}）",
+            "quota": {"used": used, "limit": limit, "remaining": 0},
+        }), 429
+
+    body = request.get_json(silent=True) or {}
+    user_prompt = body.get("prompt", "")
+    current_app = body.get("current_app")  # 现有 APP 的 JSON（修改/修复场景）
+    crash_log = body.get("crash_log")      # 崩溃日志（修复场景）
+    provider_id = body.get("provider")
+
+    if not user_prompt and not crash_log:
+        return jsonify({"error": "prompt 或 crash_log 不能为空"}), 400
+
+    provider = _get_provider(provider_id)
+    cli_env = provider.get("cli_env", {})
+    cli_model = provider.get("cli_model", provider["models"]["default"])
+
+    if not cli_env.get("ANTHROPIC_API_KEY"):
+        return jsonify({"error": f"供应商 {provider['name']} 未配置 CLI 环境变量"}), 500
+
+    # 生成唯一的输出路径
+    output_filename = f"ai-gen-{uuid.uuid4().hex}.json"
+    output_path = os.path.join("/tmp", output_filename)
+
+    # 加载系统提示词
+    system_prompt = _load_generate_prompt()
+
+    # 拼接用户提示词
+    parts = []
+    if current_app:
+        app_json_str = current_app if isinstance(current_app, str) else json.dumps(current_app, ensure_ascii=False, indent=2)
+        parts.append(f"## 当前正在运行的 JSON-APP\n```json\n{app_json_str}\n```")
+    if crash_log:
+        parts.append(f"## 崩溃日志\n{crash_log}")
+    if user_prompt:
+        parts.append(f"## 用户需求\n{user_prompt}")
+    parts.append(f"\n请将最终生成的完整 JSON-APP 保存到文件: {output_path}")
+
+    full_prompt = "\n\n".join(parts)
+
+    # 构建环境变量
+    env = os.environ.copy()
+    env["ANTHROPIC_API_KEY"] = cli_env["ANTHROPIC_API_KEY"]
+    env["ANTHROPIC_BASE_URL"] = cli_env["ANTHROPIC_BASE_URL"]
+    # 清理可能冲突的旧变量
+    env.pop("ANTHROPIC_AUTH_TOKEN", None)
+
+    # 构建 Claude CLI 命令
+    cmd = [
+        "claude", "-p",
+        "--model", cli_model,
+        "--output-format", "stream-json",
+        "--dangerously-skip-permissions",
+        "--no-session-persistence",
+        "--system-prompt", system_prompt,
+        full_prompt,
+    ]
+
+    masked_key = f"{cli_env['ANTHROPIC_API_KEY'][:4]}***{cli_env['ANTHROPIC_API_KEY'][-4:]}"
+    print(f"\n[GenerateApp] Starting Claude CLI:")
+    print(f"  - Provider: {provider['name']}")
+    print(f"  - Model: {cli_model}")
+    print(f"  - Base URL: {cli_env['ANTHROPIC_BASE_URL']}")
+    print(f"  - API Key: {masked_key}")
+    print(f"  - CWD: {PROJECT_ROOT}")
+    print(f"  - Output: {output_path}\n")
+
+    # 递增配额
+    increment_quota(user_id)
+    new_remaining = remaining - 1
+
+    def generate():
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=PROJECT_ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                bufsize=1,
+            )
+
+            # 实时读取 stdout，逐行解析 stream-json 格式并推送 SSE
+            for raw_line in iter(proc.stdout.readline, b''):
+                line = raw_line.decode("utf-8", errors="replace").strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                    # stream-json 格式: {"type": "assistant", "content": [{"type": "text", "text": "..."}]}
+                    if event.get("type") == "assistant":
+                        for block in event.get("content", []):
+                            if block.get("type") == "text" and block.get("text"):
+                                yield f'data: {json.dumps({"content": block["text"]}, ensure_ascii=False)}\n\n'
+                    elif event.get("type") == "result":
+                        # 最终结果
+                        result_text = event.get("result", "")
+                        if result_text:
+                            yield f'data: {json.dumps({"content": result_text}, ensure_ascii=False)}\n\n'
+                except json.JSONDecodeError:
+                    # 非 JSON 行，当作普通文本输出
+                    if line:
+                        yield f'data: {json.dumps({"content": line}, ensure_ascii=False)}\n\n'
+
+            proc.wait()
+            stderr_output = proc.stderr.read().decode("utf-8", errors="replace")
+            if proc.returncode != 0:
+                print(f"[GenerateApp] CLI exited with code {proc.returncode}")
+                if stderr_output:
+                    print(f"[GenerateApp] stderr: {stderr_output[:500]}")
+
+            # 检查输出文件是否存在
+            if os.path.exists(output_path):
+                try:
+                    with open(output_path, "r", encoding="utf-8") as f:
+                        app_json = json.load(f)
+                    print(f"[GenerateApp] JSON file found, keys: {list(app_json.keys())}")
+
+                    # 上传到 MinIO
+                    import requests as _req
+                    from store import _minio_presigned_put, _minio_presigned_get
+
+                    bucket = "ai-chat-temp"
+                    put_url = _minio_presigned_put(bucket, output_filename)
+                    get_url = _minio_presigned_get(bucket, output_filename)
+
+                    upload_resp = _req.put(
+                        put_url,
+                        data=json.dumps(app_json, ensure_ascii=False).encode("utf-8"),
+                        headers={"Content-Type": "application/json"},
+                    )
+
+                    if upload_resp.status_code == 200:
+                        yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
+                        print(f"[GenerateApp] MinIO upload success: {get_url}")
+                    else:
+                        # 上传失败，直接返回 JSON
+                        yield f'data: {json.dumps({"has_json": True, "json_app": app_json}, ensure_ascii=False)}\n\n'
+                except Exception as e:
+                    print(f"[GenerateApp] JSON read/upload failed: {e}")
+                finally:
+                    # 清理临时文件
+                    try:
+                        os.remove(output_path)
+                    except Exception:
+                        pass
+            else:
+                print(f"[GenerateApp] Output file not found: {output_path}")
+                yield f'data: {json.dumps({"content": "\n\n⚠️ Claude 未生成 JSON 文件，请检查提示词或重试。"}, ensure_ascii=False)}\n\n'
+
+            # 配额信息
+            yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            print(f"[GenerateApp] Error: {e}")
+            import traceback; traceback.print_exc()
+            yield f'data: {json.dumps({"error": str(e)})}\n\n'
+            yield "data: [DONE]\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
+                 "Access-Control-Allow-Origin": "*"},
+    )
 
 
 @require_auth
