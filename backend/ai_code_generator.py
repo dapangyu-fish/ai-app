@@ -325,8 +325,26 @@ def chat():
                                         buffer = ""
                             else:
                                 json_content += text
-                                
+                                if "</app_json>" in json_content:
+                                    parts = json_content.split("</app_json>")
+                                    json_content = parts[0]
+                                    inside_json = False
+                                    
+                                    # 如果模型在 </app_json> 之后还有话说，把剩下的话放回 buffer 继续跑
+                                    if len(parts) > 1 and parts[1]:
+                                        buffer = parts[1]
+                                        # 立即发出去，防止滞留在 buffer
+                                        if "<" not in buffer:
+                                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                                            full_content += buffer
+                                            buffer = ""
+                                            
                         response = stream.get_final_message()
+                        
+                        # 循环结束后，如果有残留的安全 buffer，全刷出去
+                        if buffer and not inside_json:
+                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
+                            full_content += buffer
                 except Exception as e:
                     print(f"[Agent] Stream failed ({e}), falling back to non-stream")
                     response = agent_client.messages.create(
