@@ -10,8 +10,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Supabase 配置
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "http://127.0.0.1:8000")
-SUPABASE_PUBLIC_URL = os.environ.get("SUPABASE_PUBLIC_URL", "https://app-auth.dapangyu.work")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://app-auth.dapangyu.work")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
