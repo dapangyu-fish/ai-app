@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'http_client.dart';
 import 'semver.dart';
+import 'cache_manager.dart';
 
 /// Registry 配置
 class RegistryConfig {
@@ -116,41 +117,7 @@ class DependencyLoader {
     await Future.wait(specs.map((spec) => _loadDependency(spec)));
   }
 
-  /// 通过 Registry 解析依赖 URL
-  Future<String?> _resolveFromRegistry(String name, String versionConstraint) async {
-    try {
-      final url = '${RegistryConfig.registryUrl}/resolve?name=$name&version=${Uri.encodeComponent(versionConstraint)}';
-      debugPrint('[JSON DSL] 正在通过 Registry 解析: $name@$versionConstraint');
 
-      final response = await _httpClient.get(url);
-      if (response['error'] != null || response['data'] == null) {
-        debugPrint('[JSON DSL] Registry 解析失败: ${response['error']}');
-        return null;
-      }
-
-      Map<String, dynamic> data;
-      if (response['data'] is String) {
-        data = json.decode(response['data'] as String);
-      } else if (response['data'] is Map) {
-        data = Map<String, dynamic>.from(response['data'] as Map);
-      } else {
-        return null;
-      }
-
-      final downloadUrl = data['download_url']?.toString();
-      final resolvedVersion = data['version']?.toString();
-
-      if (downloadUrl != null) {
-        debugPrint('[JSON DSL] Registry 解析成功: $name@$resolvedVersion → $downloadUrl');
-        return downloadUrl;
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('[JSON DSL] Registry 解析异常: $e');
-      return null;
-    }
-  }
 
   /// 加载单个依赖
   Future<void> _loadDependency(DependencySpec spec) async {
@@ -173,34 +140,11 @@ class DependencyLoader {
     _loadingStack.add(spec.name);
 
     try {
-      String? downloadUrl = spec.url;
-
-      // 如果没有 URL，通过 Registry 解析
-      if (downloadUrl == null || downloadUrl.isEmpty) {
-        downloadUrl = await _resolveFromRegistry(spec.name, spec.constraint.toString());
-
-        if (downloadUrl == null) {
-          debugPrint('[JSON DSL] 无法解析依赖: ${spec.name}');
-          return;
-        }
-      }
-
-      debugPrint('[JSON DSL] 正在加载依赖: ${spec.name} from $downloadUrl');
-
-      // 下载 JSON
-      final response = await _httpClient.get(downloadUrl);
-      if (response['error'] != null || response['data'] == null) {
-        debugPrint('[JSON DSL] 加载依赖失败: ${spec.name} - ${response['error']}');
-        return;
-      }
-
-      Map<String, dynamic> config;
-      if (response['data'] is String) {
-        config = json.decode(response['data'] as String);
-      } else if (response['data'] is Map) {
-        config = Map<String, dynamic>.from(response['data'] as Map);
-      } else {
-        debugPrint('[JSON DSL] 依赖 ${spec.name} 返回了非 JSON 数据');
+      // 通过 CacheManager 获取资源（自带本地缓存 + 后台热更新）
+      final config = await CacheManager.instance.getResource(spec.name, spec.constraint, type: 'library');
+      
+      if (config == null) {
+        debugPrint('[JSON DSL] 加载依赖失败或无法解析: ${spec.name}');
         return;
       }
 

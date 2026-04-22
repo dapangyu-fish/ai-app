@@ -6,6 +6,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'json_ui/interpreter.dart';
+import 'json_ui/widget_builder.dart';
+import 'json_ui/cache_manager.dart';
+import 'json_ui/semver.dart';
 import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
 import 'designer/designer_ball.dart';
@@ -366,21 +369,25 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     });
 
     try {
-      final downloadUrl = app['download_url'] as String;
-      final resp = await http
-          .get(Uri.parse(downloadUrl))
-          .timeout(const Duration(seconds: 15));
+      final name = app['name'] as String;
+      final version = app['version'] as String;
+      
+      // 使用 CacheManager 走统一的热更新缓存策略，传确切的版本号进行约束
+      final config = await CacheManager.instance.getResource(
+        name, 
+        VersionConstraint.parse('^$version'), 
+        type: 'app'
+      );
 
-      if (resp.statusCode != 200) {
-        throw Exception('下载失败 (${resp.statusCode})');
+      if (config == null) {
+        throw Exception('无法解析或下载该应用配置');
       }
 
-      final config = json.decode(resp.body) as Map<String, dynamic>;
       final interpreter = ref.read(interpreterProvider);
       interpreter.loadConfig(config);
       await interpreter.executeSteps();
 
-      _loadedFileName = app['name'] as String;
+      _loadedFileName = name;
       setState(() => _loading = false);
 
       if (!mounted) return;
