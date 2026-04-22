@@ -157,12 +157,17 @@ EOF
 #### 1. 官方包发布（admin 专用）
 
 官方包无命名空间（如 `common-ui`, `data-utils`），只有 admin 角色可以发布。
+推荐使用内置的 Python 发布工具，支持批量发布和测试环境绕过：
 
 ```bash
-curl -X POST https://registry.dapangyu.work/publish \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <admin_token>" \
-  -d @templates/lib_common_ui.json
+# 发布指定文件（默认使用测试环境 token）
+python3 backend/publish_script.py lib_user.json demo_user_profile.json
+
+# 批量发布 templates 目录下的所有组件
+python3 backend/publish_script.py
+
+# 使用真实的 admin token 发布
+python3 backend/publish_script.py lib_user.json --token <admin_token>
 ```
 
 #### 2. 用户包发布
