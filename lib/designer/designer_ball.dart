@@ -311,7 +311,12 @@ class _DesignerBallState extends State<DesignerBall>
       edge = _HideEdge.bottom;
     }
 
-    if (edge != _HideEdge.none) {
+    if (edge == _HideEdge.left || edge == _HideEdge.right) {
+      // 左右边缘：吸附到边缘但不隐藏，避免与 Android 系统返回手势冲突
+      final targetLeft = edge == _HideEdge.left ? 0.0 : screenSize.width - _ballSize;
+      final targetTop = _top.clamp(0.0, screenSize.height - _ballSize);
+      _animateTo(targetLeft, targetTop);
+    } else if (edge != _HideEdge.none) {
       _hideToEdge(edge, screenSize);
     } else {
       final clampedLeft = _left.clamp(0.0, screenSize.width - _ballSize);
@@ -1000,27 +1005,22 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _hideToEdge(_HideEdge edge, Size screenSize) {
+    // 注意：左右边缘不再隐藏（在 _handleDragEnd 中直接吸附），只处理上下
     double targetLeft = _left;
     double targetTop = _top;
 
     switch (edge) {
-      case _HideEdge.left:
-        targetLeft = -_ballSize + _peekSize;
-      case _HideEdge.right:
-        targetLeft = screenSize.width - _peekSize;
       case _HideEdge.top:
         targetTop = -_ballSize + _peekSize;
       case _HideEdge.bottom:
         targetTop = screenSize.height - _peekSize;
+      case _HideEdge.left:
+      case _HideEdge.right:
       case _HideEdge.none:
         return;
     }
 
-    if (edge == _HideEdge.left || edge == _HideEdge.right) {
-      targetTop = targetTop.clamp(0.0, screenSize.height - _ballSize);
-    } else {
-      targetLeft = targetLeft.clamp(0.0, screenSize.width - _ballSize);
-    }
+    targetLeft = targetLeft.clamp(0.0, screenSize.width - _ballSize);
 
     _animLeft = null;
     _animTop = null;
@@ -1046,14 +1046,12 @@ class _DesignerBallState extends State<DesignerBall>
     double targetTop = _top;
 
     switch (_hideEdge) {
-      case _HideEdge.left:
-        targetLeft = 0;
-      case _HideEdge.right:
-        targetLeft = screenSize.width - _ballSize;
       case _HideEdge.top:
         targetTop = 0;
       case _HideEdge.bottom:
         targetTop = screenSize.height - _ballSize;
+      case _HideEdge.left:
+      case _HideEdge.right:
       case _HideEdge.none:
         return;
     }
