@@ -17,9 +17,7 @@ from minio import Minio
 # 配置
 # ═══════════════════════════════════════════════════════════
 
-MINIO_ENDPOINT = "127.0.0.1:9000"
-MINIO_ACCESS_KEY = "m3wZkIA5EgmEwkctueZM"
-MINIO_SECRET_KEY = "m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk"
+from config import MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_SECURE
 
 DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
 DB_PORT = int(os.environ.get("DB_PORT", "5433"))
@@ -51,7 +49,7 @@ def main():
         MINIO_ENDPOINT,
         access_key=MINIO_ACCESS_KEY,
         secret_key=MINIO_SECRET_KEY,
-        secure=False,
+        secure=MINIO_SECURE,
     )
 
     # 查询所有 component 类型的包

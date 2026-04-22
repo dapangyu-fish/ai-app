@@ -9,15 +9,15 @@ import os
 import uuid
 from flask import request, jsonify, send_from_directory
 from minio import Minio
-from config import TEMPLATES_DIR, MINIO_PUBLIC_URL, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
+from config import TEMPLATES_DIR, MINIO_PUBLIC_URL, MINIO_ENDPOINT, MINIO_SECURE, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
 from database import db_query, db_execute
 from auth import require_auth, require_role
 
 _minio_client = Minio(
-    "127.0.0.1:9000",
+    MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=False,
+    secure=MINIO_SECURE,
 )
 
 

@@ -23,17 +23,10 @@ from minio import Minio
 # 配置
 # ═══════════════════════════════════════════════════════════
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "http://127.0.0.1:8000")
-SUPABASE_ANON_KEY = (
-    "eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9"
-    ".eyJyb2xlIjogImFub24iLCAiaXNzIjogInN1cGFiYXNlIiwgImlhdCI6IDE3NzYzNjU0NjIsICJleHAiOiAyMDkxNzI1NDYyfQ"
-    ".yDol0HCrVCJ_XlWTAb3k89aAwb-KzMlSMw-EHEIpB2k"
+from config import (
+    SUPABASE_URL, SUPABASE_ANON_KEY,
+    MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_PUBLIC_URL, MINIO_SECURE
 )
-
-MINIO_ENDPOINT = "127.0.0.1:9000"
-MINIO_ACCESS_KEY = "m3wZkIA5EgmEwkctueZM"
-MINIO_SECRET_KEY = "m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk"
-MINIO_PUBLIC_URL = "https://app-oss-endpoint.dapangyu.work"
 
 BUCKET_APP = "json-app"
 BUCKET_COMPONENT = "json-component"
@@ -48,7 +41,7 @@ minio_client = Minio(
     MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=False,
+    secure=MINIO_SECURE,
 )
 
 # ═══════════════════════════════════════════════════════════

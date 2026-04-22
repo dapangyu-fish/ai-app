@@ -37,26 +37,28 @@ AI_PROVIDERS = {
         "name": "GLM (智谱)",
         "description": "智谱 GLM — 多模型系列",
         "type": "anthropic",
-        "base_url": os.environ.get("ANTHROPIC_BASE_URL", "http://14.103.26.181"),
-        "api_key": os.environ.get("ANTHROPIC_AUTH_TOKEN", "sk-FUsE9Q3QaEjHo7qnad7ffBINpQHkkETW16K8OXl26SHfRUfN"),
+        "base_url": os.environ.get("GLM_ANTHROPIC_BASE_URL", "http://14.103.26.181"),
+        "api_key": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", "sk-FUsE9Q3QaEjHo7qnad7ffBINpQHkkETW16K8OXl26SHfRUfN"),
         "models": {
-            "default": os.environ.get("ANTHROPIC_MODEL", "glm-5"),
-            "haiku": os.environ.get("ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
-            "sonnet": os.environ.get("ANTHROPIC_DEFAULT_SONNET_MODEL", "glm-5-turbo"),
-            "opus": os.environ.get("ANTHROPIC_DEFAULT_OPUS_MODEL", "glm-5.1"),
-            "reasoning": os.environ.get("ANTHROPIC_REASONING_MODEL", "glm-5.1"),
+            "default": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
+            "haiku": os.environ.get("GLM_ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
+            "sonnet": os.environ.get("GLM_ANTHROPIC_DEFAULT_SONNET_MODEL", "glm-5-turbo"),
+            "opus": os.environ.get("GLM_ANTHROPIC_DEFAULT_OPUS_MODEL", "glm-5.1"),
+            "reasoning": os.environ.get("GLM_ANTHROPIC_REASONING_MODEL", "glm-5.1"),
         },
-        "agent_model": os.environ.get("ANTHROPIC_MODEL", "glm-5"),
+        "agent_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
     },
 }
 
 DEFAULT_PROVIDER = "deepseek"
 
 # MinIO 配置
-MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "http://127.0.0.1:9000")
+MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "https://app-oss-endpoint.dapangyu.work")
+_minio_url_parts = MINIO_PUBLIC_URL.split("://")
+MINIO_SECURE = _minio_url_parts[0] == "https" if len(_minio_url_parts) > 1 else True
+MINIO_ENDPOINT = _minio_url_parts[-1]
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "")
 MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
-MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "https://app-oss-endpoint.dapangyu.work")
 
 # PostgreSQL 配置
 DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
