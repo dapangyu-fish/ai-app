@@ -20,15 +20,37 @@
       "loadSavedName": {
         "params": [],
         "logic": [
-          { "call": "@storage_get", "args": { "key": "userName" }, "assign": "global.savedName" },
-          { "call": "@print", "args": { "value": "已从本地读取: {{ global.savedName }}" } }
+          {
+            "call": "@storage_get",
+            "args": {
+              "key": "userName"
+            },
+            "assign": "global.savedName"
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "已从本地读取: {{ global.savedName }}"
+            }
+          }
         ]
       },
       "saveName": {
         "params": [],
         "logic": [
-          { "call": "@storage_set", "args": { "key": "userName", "value": "{{ global.savedName }}" } },
-          { "call": "@show_toast", "args": { "message": "已保存到本地: {{ global.savedName }}" } }
+          {
+            "call": "@storage_set",
+            "args": {
+              "key": "userName",
+              "value": "{{ global.savedName }}"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已保存到本地: {{ global.savedName }}"
+            }
+          }
         ]
       },
       "addNote": {
@@ -38,24 +60,62 @@
             "call": "@set",
             "args": {
               "var": "global.notes",
-              "value": { "merge": [{ "var": "global.notes" }, { "var": "global.noteInput" }] }
+              "value": {
+                "merge": [
+                  {
+                    "var": "global.notes"
+                  },
+                  {
+                    "var": "global.noteInput"
+                  }
+                ]
+              }
             }
           },
-          { "call": "@set", "args": { "var": "global.noteInput", "value": "" } },
-          { "call": "@show_toast", "args": { "message": "已添加" } }
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.noteInput",
+              "value": ""
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已添加"
+            }
+          }
         ]
       },
       "deleteNote": {
-        "params": ["index"],
+        "params": [
+          "index"
+        ],
         "logic": [
-          { "call": "@list_remove_at", "args": { "var": "global.notes", "index": "{{ params.index }}" } }
+          {
+            "call": "@list_remove_at",
+            "args": {
+              "var": "global.notes",
+              "index": "{{ params.index }}"
+            }
+          }
         ]
       },
       "refreshNotes": {
         "params": [],
         "logic": [
-          { "call": "@show_toast", "args": { "message": "刷新完成" } },
-          { "call": "@print", "args": { "value": "下拉刷新触发" } }
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "刷新完成"
+            }
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "下拉刷新触发"
+            }
+          }
         ]
       },
       "sendMessage": {
@@ -65,17 +125,38 @@
             "call": "@set",
             "args": {
               "var": "global.messages",
-              "value": { "merge": [{ "var": "global.messages" }, "{{ global.messageInput }}"] }
+              "value": {
+                "merge": [
+                  {
+                    "var": "global.messages"
+                  },
+                  "{{ global.messageInput }}"
+                ]
+              }
             }
           },
-          { "call": "@set", "args": { "var": "global.messageInput", "value": "" } }
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.messageInput",
+              "value": ""
+            }
+          }
         ]
       }
     }
   },
   "steps": [
-    { "call": "@print", "args": { "value": "Super App Demo 启动" } },
-    { "call": "@global.loadSavedName", "args": {} }
+    {
+      "call": "@print",
+      "args": {
+        "value": "Super App Demo 启动"
+      }
+    },
+    {
+      "call": "@global.loadSavedName",
+      "args": {}
+    }
   ],
   "ui": {
     "screens": [
@@ -94,14 +175,23 @@
               {
                 "type": "text",
                 "value": "欢迎回来, {{ global.savedName }}",
-                "style": { "fontSize": 22, "fontWeight": "bold" }
+                "style": {
+                  "fontSize": 22,
+                  "fontWeight": "bold"
+                }
               },
               {
                 "type": "text",
                 "value": "这是一个带 Tab 导航的 Super App 骨架",
-                "style": { "fontSize": 14, "color": "#888888" }
+                "style": {
+                  "fontSize": 14,
+                  "color": "#888888"
+                }
               },
-              { "type": "spacer", "height": 20 },
+              {
+                "type": "spacer",
+                "height": 20
+              },
               {
                 "type": "container",
                 "layout": "column",
@@ -113,7 +203,10 @@
                   {
                     "type": "text",
                     "value": "本地存储",
-                    "style": { "fontSize": 16, "fontWeight": "bold" }
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold"
+                    }
                   },
                   {
                     "type": "input",
@@ -130,23 +223,40 @@
                         "label": "保存到本地",
                         "icon": "save",
                         "variant": "filled",
-                        "position": { "type": "flex", "flex": 1 },
-                        "action": { "type": "call", "call": "@global.saveName", "args": {} }
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        },
+                        "action": {
+                          "type": "call",
+                          "call": "@global.saveName",
+                          "args": {}
+                        }
                       },
                       {
                         "type": "button",
                         "label": "从本地读取",
                         "icon": "refresh",
                         "variant": "outlined",
-                        "position": { "type": "flex", "flex": 1 },
-                        "action": { "type": "call", "call": "@global.loadSavedName", "args": {} }
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        },
+                        "action": {
+                          "type": "call",
+                          "call": "@global.loadSavedName",
+                          "args": {}
+                        }
                       }
                     ]
                   },
                   {
                     "type": "text",
                     "value": "提示: 退出 App 后重新打开，数据仍在",
-                    "style": { "fontSize": 12, "color": "#999999" }
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#999999"
+                    }
                   }
                 ]
               }
@@ -167,14 +277,24 @@
                     "type": "input",
                     "placeholder": "写点什么...",
                     "bind": "global.noteInput",
-                    "position": { "type": "flex", "flex": 3 }
+                    "position": {
+                      "type": "flex",
+                      "flex": 3
+                    }
                   },
                   {
                     "type": "button",
                     "label": "添加",
                     "icon": "add",
-                    "position": { "type": "flex", "flex": 1 },
-                    "action": { "type": "call", "call": "@global.addNote", "args": {} }
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "action": {
+                      "type": "call",
+                      "call": "@global.addNote",
+                      "args": {}
+                    }
                   }
                 ]
               },
@@ -195,20 +315,33 @@
                     {
                       "type": "text",
                       "value": "{{ loop.item }}",
-                      "position": { "type": "flex", "flex": 4 },
-                      "style": { "fontSize": 15, "color": "#333333" }
+                      "position": {
+                        "type": "flex",
+                        "flex": 4
+                      },
+                      "style": {
+                        "fontSize": 15,
+                        "color": "#333333"
+                      }
                     },
                     {
                       "type": "button",
                       "label": "删除",
                       "variant": "text",
                       "icon": "delete",
-                      "position": { "type": "flex", "flex": 1 },
-                      "style": { "textColor": "#FF4444" },
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
+                      "style": {
+                        "textColor": "#FF4444"
+                      },
                       "action": {
                         "type": "call",
                         "call": "@global.deleteNote",
-                        "args": { "index": "{{ loop.index }}" }
+                        "args": {
+                          "index": "{{ loop.index }}"
+                        }
                       }
                     }
                   ]
@@ -238,7 +371,10 @@
                     {
                       "type": "text",
                       "value": "{{ loop.item }}",
-                      "style": { "fontSize": 14, "color": "#333333" }
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#333333"
+                      }
                     }
                   ]
                 }
@@ -251,14 +387,24 @@
                     "type": "input",
                     "placeholder": "输入消息...",
                     "bind": "global.messageInput",
-                    "position": { "type": "flex", "flex": 3 }
+                    "position": {
+                      "type": "flex",
+                      "flex": 3
+                    }
                   },
                   {
                     "type": "button",
                     "label": "发送",
                     "icon": "send",
-                    "position": { "type": "flex", "flex": 1 },
-                    "action": { "type": "call", "call": "@global.sendMessage", "args": {} }
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "action": {
+                      "type": "call",
+                      "call": "@global.sendMessage",
+                      "args": {}
+                    }
                   }
                 ]
               }
@@ -282,22 +428,35 @@
                   {
                     "type": "text",
                     "value": "{{ global.savedName }}",
-                    "style": { "fontSize": 24, "fontWeight": "bold", "textAlign": "center" }
+                    "style": {
+                      "fontSize": 24,
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    }
                   },
                   {
                     "type": "text",
                     "value": "Super App 用户",
-                    "style": { "fontSize": 14, "color": "#888888", "textAlign": "center" }
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#888888",
+                      "textAlign": "center"
+                    }
                   }
                 ]
               },
-              { "type": "spacer", "height": 16 },
+              {
+                "type": "spacer",
+                "height": 16
+              },
               {
                 "type": "button",
                 "label": "清除本地数据",
                 "icon": "delete",
                 "variant": "outlined",
-                "style": { "textColor": "#FF4444" },
+                "style": {
+                  "textColor": "#FF4444"
+                },
                 "action": {
                   "type": "call",
                   "call": "@storage_clear",

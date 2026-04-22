@@ -78,25 +78,52 @@
     },
     "functions": {
       "viewPost": {
-        "params": ["index"],
+        "params": [
+          "index"
+        ],
         "logic": [
           {
             "call": "@set",
             "args": {
               "var": "global.selectedPost",
-              "value": { "at": [{ "var": "global.posts" }, { "var": "params.index" }] }
+              "value": {
+                "at": [
+                  {
+                    "var": "global.posts"
+                  },
+                  {
+                    "var": "params.index"
+                  }
+                ]
+              }
             }
           },
-          { "call": "@navigate", "args": { "screen": "detail" } }
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "detail"
+            }
+          }
         ]
       },
       "toggleLike": {
-        "params": ["index"],
+        "params": [
+          "index"
+        ],
         "logic": [
           {
             "call": "@if",
             "args": {
-              "condition": { "in": [{ "var": "params.index" }, { "var": "global.likedIndexes" }] },
+              "condition": {
+                "in": [
+                  {
+                    "var": "params.index"
+                  },
+                  {
+                    "var": "global.likedIndexes"
+                  }
+                ]
+              },
               "then": [
                 {
                   "call": "@set",
@@ -104,8 +131,19 @@
                     "var": "global.likedIndexes",
                     "value": {
                       "filter": [
-                        { "var": "global.likedIndexes" },
-                        { "!=": [{ "var": "" }, { "var": "params.index" }] }
+                        {
+                          "var": "global.likedIndexes"
+                        },
+                        {
+                          "!=": [
+                            {
+                              "var": ""
+                            },
+                            {
+                              "var": "params.index"
+                            }
+                          ]
+                        }
                       ]
                     }
                   }
@@ -116,19 +154,40 @@
                   "call": "@set",
                   "args": {
                     "var": "global.likedIndexes",
-                    "value": { "merge": [{ "var": "global.likedIndexes" }, [{ "var": "params.index" }]] }
+                    "value": {
+                      "merge": [
+                        {
+                          "var": "global.likedIndexes"
+                        },
+                        [
+                          {
+                            "var": "params.index"
+                          }
+                        ]
+                      ]
+                    }
                   }
                 }
               ]
             }
           },
-          { "call": "@show_toast", "args": { "message": "已操作" } }
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已操作"
+            }
+          }
         ]
       }
     }
   },
   "steps": [
-    { "call": "@print", "args": { "value": "小红书 Demo 启动" } }
+    {
+      "call": "@print",
+      "args": {
+        "value": "小红书 Demo 启动"
+      }
+    }
   ],
   "ui": {
     "screens": [
@@ -146,8 +205,14 @@
               {
                 "type": "text",
                 "value": "发现",
-                "style": { "fontSize": 24, "fontWeight": "bold" },
-                "position": { "type": "flex", "flex": 1 }
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold"
+                },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
               },
               {
                 "type": "button",
@@ -157,7 +222,10 @@
               }
             ]
           },
-          { "type": "spacer", "height": 12 },
+          {
+            "type": "spacer",
+            "height": 12
+          },
           {
             "type": "container",
             "layout": "row",
@@ -166,29 +234,48 @@
                 "type": "button",
                 "label": "推荐",
                 "variant": "filled",
-                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+                "style": {
+                  "borderRadius": 20,
+                  "paddingH": 16,
+                  "paddingV": 6
+                }
               },
               {
                 "type": "button",
                 "label": "穿搭",
                 "variant": "outlined",
-                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+                "style": {
+                  "borderRadius": 20,
+                  "paddingH": 16,
+                  "paddingV": 6
+                }
               },
               {
                 "type": "button",
                 "label": "美食",
                 "variant": "outlined",
-                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+                "style": {
+                  "borderRadius": 20,
+                  "paddingH": 16,
+                  "paddingV": 6
+                }
               },
               {
                 "type": "button",
                 "label": "旅行",
                 "variant": "outlined",
-                "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 6 }
+                "style": {
+                  "borderRadius": 20,
+                  "paddingH": 16,
+                  "paddingV": 6
+                }
               }
             ]
           },
-          { "type": "spacer", "height": 16 },
+          {
+            "type": "spacer",
+            "height": 16
+          },
           {
             "type": "list",
             "source": "{{ global.posts }}",
@@ -217,9 +304,17 @@
                     {
                       "type": "text",
                       "value": "{{ loop.item.title }}",
-                      "style": { "fontSize": 15, "fontWeight": "bold", "maxLines": 2, "overflow": "ellipsis" }
+                      "style": {
+                        "fontSize": 15,
+                        "fontWeight": "bold",
+                        "maxLines": 2,
+                        "overflow": "ellipsis"
+                      }
                     },
-                    { "type": "spacer", "height": 8 },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
                     {
                       "type": "container",
                       "layout": "row",
@@ -234,28 +329,47 @@
                         {
                           "type": "text",
                           "value": "{{ loop.item.author }}",
-                          "style": { "fontSize": 12, "color": "#888888" },
-                          "position": { "type": "flex", "flex": 1 }
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#888888"
+                          },
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
                         },
                         {
                           "type": "text",
                           "value": "{{ loop.item.likes }}",
-                          "style": { "fontSize": 12, "color": "#888888" }
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#888888"
+                          }
                         }
                       ]
                     },
-                    { "type": "spacer", "height": 8 },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
                     {
                       "type": "button",
                       "label": "查看详情",
                       "variant": "outlined",
                       "icon": "arrow_forward",
-                      "style": { "borderRadius": 8 },
-                      "position": { "type": "flex", "flex": 1 },
+                      "style": {
+                        "borderRadius": 8
+                      },
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
                       "action": {
                         "type": "call",
                         "call": "@global.viewPost",
-                        "args": { "index": "{{ loop.index }}" }
+                        "args": {
+                          "index": "{{ loop.index }}"
+                        }
                       }
                     }
                   ]
@@ -282,13 +396,22 @@
                 "label": "返回",
                 "icon": "arrow_back",
                 "variant": "text",
-                "action": { "type": "navigate", "screen": "home" }
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
               },
               {
                 "type": "text",
                 "value": "笔记详情",
-                "style": { "fontSize": 18, "fontWeight": "bold" },
-                "position": { "type": "flex", "flex": 1 }
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold"
+                },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
               }
             ]
           },
@@ -306,9 +429,15 @@
               {
                 "type": "text",
                 "value": "{{ global.selectedPost.title }}",
-                "style": { "fontSize": 20, "fontWeight": "bold" }
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold"
+                }
               },
-              { "type": "spacer", "height": 12 },
+              {
+                "type": "spacer",
+                "height": 12
+              },
               {
                 "type": "container",
                 "layout": "row",
@@ -323,34 +452,62 @@
                   {
                     "type": "text",
                     "value": "{{ global.selectedPost.author }}",
-                    "style": { "fontSize": 16, "fontWeight": "bold" },
-                    "position": { "type": "flex", "flex": 1 }
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold"
+                    },
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
                   },
                   {
                     "type": "button",
                     "label": "+ 关注",
                     "variant": "outlined",
-                    "style": { "borderRadius": 20, "paddingH": 16, "paddingV": 4 }
+                    "style": {
+                      "borderRadius": 20,
+                      "paddingH": 16,
+                      "paddingV": 4
+                    }
                   }
                 ]
               },
-              { "type": "spacer", "height": 16 },
+              {
+                "type": "spacer",
+                "height": 16
+              },
               {
                 "type": "text",
                 "value": "{{ global.selectedPost.content }}",
-                "style": { "fontSize": 15, "lineHeight": 1.6 }
+                "style": {
+                  "fontSize": 15,
+                  "lineHeight": 1.6
+                }
               },
-              { "type": "spacer", "height": 12 },
+              {
+                "type": "spacer",
+                "height": 12
+              },
               {
                 "type": "text",
                 "value": "# {{ global.selectedPost.tags }}",
-                "style": { "fontSize": 13, "color": "#4A90D9" }
+                "style": {
+                  "fontSize": 13,
+                  "color": "#4A90D9"
+                }
               },
-              { "type": "spacer", "height": 16 },
+              {
+                "type": "spacer",
+                "height": 16
+              },
               {
                 "type": "divider"
               },
-              { "type": "spacer", "height": 8 },
+              {
+                "type": "spacer",
+                "height": 8
+              },
               {
                 "type": "container",
                 "layout": "row",
@@ -360,28 +517,40 @@
                     "label": "点赞",
                     "icon": "favorite",
                     "variant": "text",
-                    "position": { "type": "flex", "flex": 1 }
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
                   },
                   {
                     "type": "button",
                     "label": "评论",
                     "icon": "chat",
                     "variant": "text",
-                    "position": { "type": "flex", "flex": 1 }
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
                   },
                   {
                     "type": "button",
                     "label": "收藏",
                     "icon": "bookmark",
                     "variant": "text",
-                    "position": { "type": "flex", "flex": 1 }
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
                   },
                   {
                     "type": "button",
                     "label": "分享",
                     "icon": "share",
                     "variant": "text",
-                    "position": { "type": "flex", "flex": 1 }
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
                   }
                 ]
               }

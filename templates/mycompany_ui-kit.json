@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "name": "mycompany/ui-kit",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "My Company UI Kit"
+  },
+  "components": {
+    "CustomButton": {
+      "type": "Container",
+      "props": {
+        "padding": {
+          "all": 16
+        },
+        "decoration": {
+          "color": "#007AFF",
+          "borderRadius": {
+            "all": 8
+          }
+        }
+      },
+      "children": [
+        {
+          "type": "Text",
+          "props": {
+            "data": "Custom Button",
+            "style": {
+              "color": "#FFFFFF",
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }
+        }
+      ]
+    },
+    "CustomCard": {
+      "type": "Card",
+      "props": {
+        "elevation": 4,
+        "margin": {
+          "all": 8
+        }
+      },
+      "children": [
+        {
+          "type": "Padding",
+          "props": {
+            "padding": {
+              "all": 16
+            }
+          },
+          "children": [
+            {
+              "type": "Text",
+              "props": {
+                "data": "Custom Card",
+                "style": {
+                  "fontSize": 18
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

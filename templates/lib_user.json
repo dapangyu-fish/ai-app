@@ -6,7 +6,14 @@
     "type": "library",
     "description": "用户信息组件库",
     "author": "demo",
-    "exports": ["loadUserInfo", "getUserAvatar", "getUserEmail", "getUserName", "getAuthToken", "checkLogin"]
+    "exports": [
+      "loadUserInfo",
+      "getUserAvatar",
+      "getUserEmail",
+      "getUserName",
+      "getAuthToken",
+      "checkLogin"
+    ]
   },
   "global": {
     "variables": {
@@ -14,46 +21,108 @@
     },
     "functions": {
       "loadUserInfo": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_user_info", "args": { "bind": "{{ params.bind }}" } }
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
         ]
       },
       "getUserAvatar": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_user_info", "args": { "bind": "global._info" } },
-          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._info.avatar_url }}" } }
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._info.avatar_url }}"
+            }
+          }
         ]
       },
       "getUserEmail": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_user_info", "args": { "bind": "global._info" } },
-          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._info.email }}" } }
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._info.email }}"
+            }
+          }
         ]
       },
       "getUserName": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_user_info", "args": { "bind": "global._info" } },
-          { "call": "@set", "args": { "var": "{{ params.bind }}", "value": "{{ global._info.username }}" } }
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._info.username }}"
+            }
+          }
         ]
       },
       "getAuthToken": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_auth_token", "args": { "bind": "{{ params.bind }}" } }
+          {
+            "call": "@get_auth_token",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
         ]
       },
       "checkLogin": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@is_logged_in", "args": { "bind": "{{ params.bind }}" } }
+          {
+            "call": "@is_logged_in",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
         ]
       }
     }
   },
   "steps": [],
-  "ui": { "screens": [] }
+  "ui": {
+    "screens": []
+  }
 }

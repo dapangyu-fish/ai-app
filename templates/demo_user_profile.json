@@ -24,20 +24,59 @@
       "loadAll": {
         "params": [],
         "logic": [
-          { "call": "@lib_user.checkLogin", "args": { "bind": "global.isLoggedIn" } },
+          {
+            "call": "@lib_user.checkLogin",
+            "args": {
+              "bind": "global.isLoggedIn"
+            }
+          },
           {
             "call": "@if",
             "args": {
-              "condition": { "var": "global.isLoggedIn" },
+              "condition": {
+                "var": "global.isLoggedIn"
+              },
               "then": [
-                { "call": "@lib_user.loadUserInfo", "args": { "bind": "global.userInfo" } },
-                { "call": "@lib_user.getUserAvatar", "args": { "bind": "global.avatarUrl" } },
-                { "call": "@lib_user.getUserName", "args": { "bind": "global.userName" } },
-                { "call": "@lib_user.getUserEmail", "args": { "bind": "global.userEmail" } },
-                { "call": "@set", "args": { "var": "global.statusText", "value": "已登录" } }
+                {
+                  "call": "@lib_user.loadUserInfo",
+                  "args": {
+                    "bind": "global.userInfo"
+                  }
+                },
+                {
+                  "call": "@lib_user.getUserAvatar",
+                  "args": {
+                    "bind": "global.avatarUrl"
+                  }
+                },
+                {
+                  "call": "@lib_user.getUserName",
+                  "args": {
+                    "bind": "global.userName"
+                  }
+                },
+                {
+                  "call": "@lib_user.getUserEmail",
+                  "args": {
+                    "bind": "global.userEmail"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.statusText",
+                    "value": "已登录"
+                  }
+                }
               ],
               "else": [
-                { "call": "@set", "args": { "var": "global.statusText", "value": "未登录" } }
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.statusText",
+                    "value": "未登录"
+                  }
+                }
               ]
             }
           }
@@ -46,24 +85,60 @@
       "refreshInfo": {
         "params": [],
         "logic": [
-          { "call": "@set", "args": { "var": "global.statusText", "value": "刷新中..." } },
-          { "call": "@global.loadAll", "args": {} },
-          { "call": "@show_toast", "args": { "message": "已刷新" } }
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.statusText",
+              "value": "刷新中..."
+            }
+          },
+          {
+            "call": "@global.loadAll",
+            "args": {}
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已刷新"
+            }
+          }
         ]
       },
       "showToken": {
         "params": [],
         "logic": [
-          { "call": "@lib_user.getAuthToken", "args": { "bind": "global.authToken" } },
+          {
+            "call": "@lib_user.getAuthToken",
+            "args": {
+              "bind": "global.authToken"
+            }
+          },
           {
             "call": "@if",
             "args": {
-              "condition": { "!!": [{ "var": "global.authToken" }] },
+              "condition": {
+                "!!": [
+                  {
+                    "var": "global.authToken"
+                  }
+                ]
+              },
               "then": [
-                { "call": "@show_dialog", "args": { "title": "Access Token", "message": "{{ global.authToken }}" } }
+                {
+                  "call": "@show_dialog",
+                  "args": {
+                    "title": "Access Token",
+                    "message": "{{ global.authToken }}"
+                  }
+                }
               ],
               "else": [
-                { "call": "@show_toast", "args": { "message": "无 Token" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "无 Token"
+                  }
+                }
               ]
             }
           }
@@ -72,7 +147,10 @@
     }
   },
   "steps": [
-    { "call": "@global.loadAll", "args": {} }
+    {
+      "call": "@global.loadAll",
+      "args": {}
+    }
   ],
   "ui": {
     "screens": [
@@ -97,21 +175,36 @@
                 "height": 72,
                 "borderRadius": 36
               },
-              { "type": "spacer", "height": 12 },
+              {
+                "type": "spacer",
+                "height": 12
+              },
               {
                 "type": "text",
                 "value": "{{ global.userName }}",
-                "style": { "fontSize": 20, "fontWeight": "bold" }
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold"
+                }
               },
-              { "type": "spacer", "height": 4 },
+              {
+                "type": "spacer",
+                "height": 4
+              },
               {
                 "type": "text",
                 "value": "{{ global.userEmail }}",
-                "style": { "fontSize": 14, "color": "#666666" }
+                "style": {
+                  "fontSize": 14,
+                  "color": "#666666"
+                }
               }
             ]
           },
-          { "type": "spacer", "height": 16 },
+          {
+            "type": "spacer",
+            "height": 16
+          },
           {
             "type": "container",
             "layout": "column",
@@ -122,43 +215,77 @@
               {
                 "type": "text",
                 "value": "登录状态",
-                "style": { "fontSize": 12, "color": "#999999" }
+                "style": {
+                  "fontSize": 12,
+                  "color": "#999999"
+                }
               },
-              { "type": "spacer", "height": 2 },
+              {
+                "type": "spacer",
+                "height": 2
+              },
               {
                 "type": "text",
                 "value": "{{ global.statusText }}",
-                "style": { "fontSize": 15, "fontWeight": "bold" }
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold"
+                }
               },
-              { "type": "divider" },
+              {
+                "type": "divider"
+              },
               {
                 "type": "text",
                 "value": "用户 ID",
-                "style": { "fontSize": 12, "color": "#999999" }
+                "style": {
+                  "fontSize": 12,
+                  "color": "#999999"
+                }
               },
-              { "type": "spacer", "height": 2 },
+              {
+                "type": "spacer",
+                "height": 2
+              },
               {
                 "type": "text",
                 "value": "{{ global.userInfo.id }}",
-                "style": { "fontSize": 13, "color": "#333333" }
+                "style": {
+                  "fontSize": 13,
+                  "color": "#333333"
+                }
               }
             ]
           },
-          { "type": "spacer", "height": 20 },
+          {
+            "type": "spacer",
+            "height": 20
+          },
           {
             "type": "button",
             "label": "刷新信息",
             "variant": "filled",
             "icon": "refresh",
-            "action": { "type": "call", "call": "@global.refreshInfo", "args": {} }
+            "action": {
+              "type": "call",
+              "call": "@global.refreshInfo",
+              "args": {}
+            }
           },
-          { "type": "spacer", "height": 10 },
+          {
+            "type": "spacer",
+            "height": 10
+          },
           {
             "type": "button",
             "label": "查看 Token",
             "variant": "outlined",
             "icon": "key",
-            "action": { "type": "call", "call": "@global.showToken", "args": {} }
+            "action": {
+              "type": "call",
+              "call": "@global.showToken",
+              "args": {}
+            }
           }
         ]
       }
