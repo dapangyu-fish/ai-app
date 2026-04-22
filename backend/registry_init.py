@@ -17,13 +17,10 @@ from minio import Minio
 # 配置
 # ═══════════════════════════════════════════════════════════
 
-from config import MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_SECURE
-
-DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
-DB_PORT = int(os.environ.get("DB_PORT", "5433"))
-DB_NAME = os.environ.get("DB_NAME", "jsonapp")
-DB_USER = os.environ.get("DB_USER", "jsonapp")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg")
+from config import (
+    MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_SECURE,
+    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+)
 
 BUCKET_COMPONENT = "json-component"
 INDEX_FILE = "_index.json"
