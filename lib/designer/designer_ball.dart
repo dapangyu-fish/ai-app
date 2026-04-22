@@ -7,6 +7,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
 import 'sherpa_asr_service.dart';
+import 'gesture_exclusion_helper.dart';
 
 /// 悬浮设计师球 — iOS 风格丝滑拖拽 + 长按对话模式。
 /// 凌驾于所有页面之上，不影响 JSON APP。
@@ -152,6 +153,22 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   // ════════════════════════════════════════════════════════
+  // Android 系统手势排除
+  // ════════════════════════════════════════════════════════
+
+  /// 更新 Android 系统手势排除区域，确保悬浮球区域不触发系统返回手势
+  void _updateGestureExclusion() {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    GestureExclusionHelper.setExclusionRect(
+      left: _left,
+      top: _top,
+      width: _ballSize,
+      height: _ballSize,
+      devicePixelRatio: dpr,
+    );
+  }
+
+  // ════════════════════════════════════════════════════════
   // 原始指针事件 — 用 Listener 捕获，不受手势竞技场影响
   // ════════════════════════════════════════════════════════
 
@@ -162,6 +179,9 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 触觉反馈：按下时中等震动
     HapticFeedback.mediumImpact();
+
+    // 设置系统手势排除区域，防止拖拽时触发 Android 系统返回
+    _updateGestureExclusion();
 
     // 隐藏态：先触发露出动画，阻止拖拽（避免触发系统返回手势）
     if (_hidden) {
@@ -203,6 +223,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _onPointerUp(PointerUpEvent event, Size screenSize) {
     setState(() => _pointerDown = false);
     _longPressTimer?.cancel();
+    GestureExclusionHelper.clearExclusionRects();
     _countdownController.stop();
     _countdownController.reset();
 
@@ -230,6 +251,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _onPointerCancel(PointerCancelEvent event) {
     setState(() => _pointerDown = false);
     _longPressTimer?.cancel();
+    GestureExclusionHelper.clearExclusionRects();
     _countdownController.stop();
     _countdownController.reset();
 
