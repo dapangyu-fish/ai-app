@@ -65,7 +65,17 @@ AGENT_SYSTEM = """你是 JSON-DSL 应用设计师。用户通过语音与你交�
 1. 先调 list_builtin_functions 确认可用函数
 2. 调 list_templates 查看有哪些模板
 3. 用 read_file 读取一个相似的模板作为参考
-4. 基于模板结构和真实函数生成 JSON-APP
+4. 严格按照以下骨架生成 JSON-APP：
+   ```json
+   {
+     "dsl": "3.3",
+     "meta": { "name": "app_name", "version": "1.0.0", "type": "app" },
+     "global": { "variables": {}, "functions": {} },
+     "steps": [],
+     "ui": { "screens": [ { "id": "main", "title": "...", "layout": "column", "children": [] } ] }
+   }
+   ```
+   绝对禁止使用 `entry`、`pages` 等不属于 DSL 3.3 的顶级字段！必须把页面写在 `ui.screens` 里！
 
 ## 输出要求
 - JSON 必须包含 meta（name/version/type:"app"/description/icon_url）
