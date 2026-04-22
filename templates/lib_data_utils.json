@@ -3,7 +3,7 @@
   "appid": "l1bd4ta1234567890abcdef1234567890",
   "meta": {
     "name": "data-utils",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "library",
     "description": "数据处理工具库 — 随机数/UUID/时间日期/字符串处理/数组操作",
     "author": "AI Designer",
@@ -48,249 +48,764 @@
     "variables": {},
     "functions": {
       "randomInt": {
-        "params": ["min", "max"],
+        "params": [
+          "min",
+          "max"
+        ],
         "logic": [
-          { "call": "@random", "args": { "min": "{{ params.min }}", "max": "{{ params.max }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@random",
+            "args": {
+              "min": "{{ params.min }}",
+              "max": "{{ params.max }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "randomFloat": {
-        "params": ["min", "max"],
+        "params": [
+          "min",
+          "max"
+        ],
         "logic": [
-          { "call": "@random_float", "args": { "min": "{{ params.min }}", "max": "{{ params.max }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@random_float",
+            "args": {
+              "min": "{{ params.min }}",
+              "max": "{{ params.max }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "randomBool": {
         "params": [],
         "logic": [
-          { "call": "@random_bool", "args": {}, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@random_bool",
+            "args": {},
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "randomChars": {
-        "params": ["length", "charset"],
+        "params": [
+          "length",
+          "charset"
+        ],
         "logic": [
-          { "call": "@random_chars", "args": { "length": "{{ params.length }}", "charset": "{{ params.charset }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@random_chars",
+            "args": {
+              "length": "{{ params.length }}",
+              "charset": "{{ params.charset }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "randomCode": {
-        "params": ["length"],
+        "params": [
+          "length"
+        ],
         "logic": [
-          { "call": "@random_chars", "args": { "length": "{{ params.length }}", "charset": "numeric" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@random_chars",
+            "args": {
+              "length": "{{ params.length }}",
+              "charset": "numeric"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "randomHex": {
-        "params": ["length"],
+        "params": [
+          "length"
+        ],
         "logic": [
-          { "call": "@random_chars", "args": { "length": "{{ params.length }}", "charset": "hex" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@random_chars",
+            "args": {
+              "length": "{{ params.length }}",
+              "charset": "hex"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "uuid": {
         "params": [],
         "logic": [
-          { "call": "@uuid", "args": {}, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@uuid",
+            "args": {},
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "randomPick": {
-        "params": ["list"],
+        "params": [
+          "list"
+        ],
         "logic": [
-          { "call": "@random_pick", "args": { "list": "{{ params.list }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@random_pick",
+            "args": {
+              "list": "{{ params.list }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "timestamp": {
         "params": [],
         "logic": [
-          { "call": "@timestamp", "args": {}, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "dateFormat": {
-        "params": ["timestamp", "format"],
+        "params": [
+          "timestamp",
+          "format"
+        ],
         "logic": [
-          { "call": "@date_format", "args": { "timestamp": "{{ params.timestamp }}", "format": "{{ params.format }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@date_format",
+            "args": {
+              "timestamp": "{{ params.timestamp }}",
+              "format": "{{ params.format }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "nowFormatted": {
-        "params": ["format"],
+        "params": [
+          "format"
+        ],
         "logic": [
-          { "call": "@timestamp", "args": {}, "assign": "global._ts" },
-          { "call": "@date_format", "args": { "timestamp": "{{ global._ts }}", "format": "{{ params.format }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._ts"
+          },
+          {
+            "call": "@date_format",
+            "args": {
+              "timestamp": "{{ global._ts }}",
+              "format": "{{ params.format }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strRepeat": {
-        "params": ["value", "count"],
+        "params": [
+          "value",
+          "count"
+        ],
         "logic": [
-          { "call": "@str_repeat", "args": { "value": "{{ params.value }}", "count": "{{ params.count }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_repeat",
+            "args": {
+              "value": "{{ params.value }}",
+              "count": "{{ params.count }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strReverse": {
-        "params": ["value"],
+        "params": [
+          "value"
+        ],
         "logic": [
-          { "call": "@str_reverse", "args": { "value": "{{ params.value }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_reverse",
+            "args": {
+              "value": "{{ params.value }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strPadLeft": {
-        "params": ["value", "length", "pad"],
+        "params": [
+          "value",
+          "length",
+          "pad"
+        ],
         "logic": [
-          { "call": "@str_pad", "args": { "value": "{{ params.value }}", "length": "{{ params.length }}", "pad": "{{ params.pad }}", "direction": "left" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_pad",
+            "args": {
+              "value": "{{ params.value }}",
+              "length": "{{ params.length }}",
+              "pad": "{{ params.pad }}",
+              "direction": "left"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strPadRight": {
-        "params": ["value", "length", "pad"],
+        "params": [
+          "value",
+          "length",
+          "pad"
+        ],
         "logic": [
-          { "call": "@str_pad", "args": { "value": "{{ params.value }}", "length": "{{ params.length }}", "pad": "{{ params.pad }}", "direction": "right" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_pad",
+            "args": {
+              "value": "{{ params.value }}",
+              "length": "{{ params.length }}",
+              "pad": "{{ params.pad }}",
+              "direction": "right"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strJoin": {
-        "params": ["list", "separator"],
+        "params": [
+          "list",
+          "separator"
+        ],
         "logic": [
-          { "call": "@str_join", "args": { "list": "{{ params.list }}", "separator": "{{ params.separator }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_join",
+            "args": {
+              "list": "{{ params.list }}",
+              "separator": "{{ params.separator }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strCapitalize": {
-        "params": ["value"],
+        "params": [
+          "value"
+        ],
         "logic": [
-          { "call": "@str_capitalize", "args": { "value": "{{ params.value }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_capitalize",
+            "args": {
+              "value": "{{ params.value }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strCount": {
-        "params": ["value", "search"],
+        "params": [
+          "value",
+          "search"
+        ],
         "logic": [
-          { "call": "@str_count", "args": { "value": "{{ params.value }}", "search": "{{ params.search }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_count",
+            "args": {
+              "value": "{{ params.value }}",
+              "search": "{{ params.search }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strIndexOf": {
-        "params": ["value", "search"],
+        "params": [
+          "value",
+          "search"
+        ],
         "logic": [
-          { "call": "@str_index_of", "args": { "value": "{{ params.value }}", "search": "{{ params.search }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_index_of",
+            "args": {
+              "value": "{{ params.value }}",
+              "search": "{{ params.search }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strLastIndexOf": {
-        "params": ["value", "search"],
+        "params": [
+          "value",
+          "search"
+        ],
         "logic": [
-          { "call": "@str_last_index_of", "args": { "value": "{{ params.value }}", "search": "{{ params.search }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_last_index_of",
+            "args": {
+              "value": "{{ params.value }}",
+              "search": "{{ params.search }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strBetween": {
-        "params": ["value", "start", "end"],
+        "params": [
+          "value",
+          "start",
+          "end"
+        ],
         "logic": [
-          { "call": "@str_between", "args": { "value": "{{ params.value }}", "start": "{{ params.start }}", "end": "{{ params.end }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_between",
+            "args": {
+              "value": "{{ params.value }}",
+              "start": "{{ params.start }}",
+              "end": "{{ params.end }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strMask": {
-        "params": ["value", "start", "end", "mask"],
+        "params": [
+          "value",
+          "start",
+          "end",
+          "mask"
+        ],
         "logic": [
-          { "call": "@str_mask", "args": { "value": "{{ params.value }}", "start": "{{ params.start }}", "end": "{{ params.end }}", "mask": "{{ params.mask }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_mask",
+            "args": {
+              "value": "{{ params.value }}",
+              "start": "{{ params.start }}",
+              "end": "{{ params.end }}",
+              "mask": "{{ params.mask }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strMaskPhone": {
-        "params": ["phone"],
+        "params": [
+          "phone"
+        ],
         "logic": [
-          { "call": "@str_mask", "args": { "value": "{{ params.phone }}", "start": 3, "end": 7, "mask": "*" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_mask",
+            "args": {
+              "value": "{{ params.phone }}",
+              "start": 3,
+              "end": 7,
+              "mask": "*"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strMaskEmail": {
-        "params": ["email"],
+        "params": [
+          "email"
+        ],
         "logic": [
-          { "call": "@str_between", "args": { "value": "{{ params.email }}", "start": "", "end": "@" }, "assign": "global._localPart" },
-          { "call": "@str_between", "args": { "value": "{{ params.email }}", "start": "@", "end": "" }, "assign": "global._domain" },
-          { "call": "@str_mask", "args": { "value": "{{ global._localPart }}", "start": 1, "end": 99, "mask": "*" }, "assign": "global._maskedLocal" },
-          { "expression": { "cat": ["{{ global._maskedLocal }}", "@", "{{ global._domain }}"] }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_between",
+            "args": {
+              "value": "{{ params.email }}",
+              "start": "",
+              "end": "@"
+            },
+            "assign": "global._localPart"
+          },
+          {
+            "call": "@str_between",
+            "args": {
+              "value": "{{ params.email }}",
+              "start": "@",
+              "end": ""
+            },
+            "assign": "global._domain"
+          },
+          {
+            "call": "@str_mask",
+            "args": {
+              "value": "{{ global._localPart }}",
+              "start": 1,
+              "end": 99,
+              "mask": "*"
+            },
+            "assign": "global._maskedLocal"
+          },
+          {
+            "expression": {
+              "cat": [
+                "{{ global._maskedLocal }}",
+                "@",
+                "{{ global._domain }}"
+              ]
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "strMaskCard": {
-        "params": ["cardNo"],
+        "params": [
+          "cardNo"
+        ],
         "logic": [
-          { "call": "@str_mask", "args": { "value": "{{ params.cardNo }}", "start": 3, "end": -4, "mask": "*" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@str_mask",
+            "args": {
+              "value": "{{ params.cardNo }}",
+              "start": 3,
+              "end": -4,
+              "mask": "*"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "listShuffle": {
-        "params": ["var"],
+        "params": [
+          "var"
+        ],
         "logic": [
-          { "call": "@list_shuffle", "args": { "var": "{{ params.var }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@list_shuffle",
+            "args": {
+              "var": "{{ params.var }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "listSample": {
-        "params": ["var", "count"],
+        "params": [
+          "var",
+          "count"
+        ],
         "logic": [
-          { "call": "@list_sample", "args": { "var": "{{ params.var }}", "count": "{{ params.count }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@list_sample",
+            "args": {
+              "var": "{{ params.var }}",
+              "count": "{{ params.count }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "listUnique": {
-        "params": ["var"],
+        "params": [
+          "var"
+        ],
         "logic": [
-          { "call": "@list_unique", "args": { "var": "{{ params.var }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@list_unique",
+            "args": {
+              "var": "{{ params.var }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "listFlatten": {
-        "params": ["var", "depth"],
+        "params": [
+          "var",
+          "depth"
+        ],
         "logic": [
-          { "call": "@list_flatten", "args": { "var": "{{ params.var }}", "depth": "{{ params.depth }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@list_flatten",
+            "args": {
+              "var": "{{ params.var }}",
+              "depth": "{{ params.depth }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "listSort": {
-        "params": ["var", "key", "desc"],
+        "params": [
+          "var",
+          "key",
+          "desc"
+        ],
         "logic": [
-          { "call": "@list_sort", "args": { "var": "{{ params.var }}", "key": "{{ params.key }}", "desc": "{{ params.desc }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@list_sort",
+            "args": {
+              "var": "{{ params.var }}",
+              "key": "{{ params.key }}",
+              "desc": "{{ params.desc }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "listReverse": {
-        "params": ["var"],
+        "params": [
+          "var"
+        ],
         "logic": [
-          { "call": "@list_reverse", "args": { "var": "{{ params.var }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@list_reverse",
+            "args": {
+              "var": "{{ params.var }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "listSlice": {
-        "params": ["var", "start", "end"],
+        "params": [
+          "var",
+          "start",
+          "end"
+        ],
         "logic": [
-          { "call": "@list_slice", "args": { "var": "{{ params.var }}", "start": "{{ params.start }}", "end": "{{ params.end }}" }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@list_slice",
+            "args": {
+              "var": "{{ params.var }}",
+              "start": "{{ params.start }}",
+              "end": "{{ params.end }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "generateId": {
-        "params": ["prefix"],
+        "params": [
+          "prefix"
+        ],
         "logic": [
-          { "call": "@timestamp", "args": {}, "assign": "global._ts" },
-          { "call": "@random_chars", "args": { "length": 6, "charset": "numeric" }, "assign": "global._rand" },
-          { "expression": { "cat": ["{{ params.prefix }}", "{{ global._ts }}", "{{ global._rand }}"] }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._ts"
+          },
+          {
+            "call": "@random_chars",
+            "args": {
+              "length": 6,
+              "charset": "numeric"
+            },
+            "assign": "global._rand"
+          },
+          {
+            "expression": {
+              "cat": [
+                "{{ params.prefix }}",
+                "{{ global._ts }}",
+                "{{ global._rand }}"
+              ]
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
       "generateOrderNo": {
         "params": [],
         "logic": [
-          { "call": "@date_format", "args": { "format": "YYYYMMDDHHmmss" }, "assign": "global._datePart" },
-          { "call": "@random_chars", "args": { "length": 6, "charset": "numeric" }, "assign": "global._randPart" },
-          { "expression": { "cat": ["ORD", "{{ global._datePart }}", "{{ global._randPart }}"] }, "assign": "global._result" },
-          { "expression": { "var": "global._result" } }
+          {
+            "call": "@date_format",
+            "args": {
+              "format": "YYYYMMDDHHmmss"
+            },
+            "assign": "global._datePart"
+          },
+          {
+            "call": "@random_chars",
+            "args": {
+              "length": 6,
+              "charset": "numeric"
+            },
+            "assign": "global._randPart"
+          },
+          {
+            "expression": {
+              "cat": [
+                "ORD",
+                "{{ global._datePart }}",
+                "{{ global._randPart }}"
+              ]
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       }
     }

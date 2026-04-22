@@ -3,11 +3,18 @@
   "appid": "l1bc0mm0n1234567890abcdef1234567890",
   "meta": {
     "name": "common-ui",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "library",
     "description": "通用 UI 函数库 — 提供 toast / confirm / 格式化等工具函数",
     "author": "demo",
-    "exports": ["showSuccess", "showError", "confirm", "formatSize", "takePhoto", "pickImage"]
+    "exports": [
+      "showSuccess",
+      "showError",
+      "confirm",
+      "formatSize",
+      "takePhoto",
+      "pickImage"
+    ]
   },
   "global": {
     "variables": {
@@ -19,39 +26,85 @@
     },
     "functions": {
       "showSuccess": {
-        "params": ["message"],
+        "params": [
+          "message"
+        ],
         "logic": [
-          { "call": "@show_toast", "args": { "message": "✅ {{ params.message }}" } }
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "✅ {{ params.message }}"
+            }
+          }
         ]
       },
       "showError": {
-        "params": ["message"],
+        "params": [
+          "message"
+        ],
         "logic": [
-          { "call": "@show_toast", "args": { "message": "❌ {{ params.message }}" } }
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "❌ {{ params.message }}"
+            }
+          }
         ]
       },
       "confirm": {
-        "params": ["title", "message"],
+        "params": [
+          "title",
+          "message"
+        ],
         "logic": [
-          { "call": "@show_dialog", "args": { "title": "{{ params.title }}", "message": "{{ params.message }}" } }
+          {
+            "call": "@show_dialog",
+            "args": {
+              "title": "{{ params.title }}",
+              "message": "{{ params.message }}"
+            }
+          }
         ]
       },
       "formatSize": {
-        "params": ["bytes"],
+        "params": [
+          "bytes"
+        ],
         "logic": [
-          { "call": "@print", "args": { "value": "格式化文件大小: {{ params.bytes }}" } }
+          {
+            "call": "@print",
+            "args": {
+              "value": "格式化文件大小: {{ params.bytes }}"
+            }
+          }
         ]
       },
       "takePhoto": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@take_photo", "args": { "bind": "{{ params.bind }}", "quality": 85 } }
+          {
+            "call": "@take_photo",
+            "args": {
+              "bind": "{{ params.bind }}",
+              "quality": 85
+            }
+          }
         ]
       },
       "pickImage": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@pick_image", "args": { "bind": "{{ params.bind }}", "quality": 85 } }
+          {
+            "call": "@pick_image",
+            "args": {
+              "bind": "{{ params.bind }}",
+              "quality": 85
+            }
+          }
         ]
       }
     }
