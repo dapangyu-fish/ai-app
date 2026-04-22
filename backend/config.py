@@ -47,6 +47,22 @@ AI_PROVIDERS = {
         },
         "agent_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
     },
+    "cc": {
+        "id": "cc",
+        "name": "CC-4.7",
+        "description": "CC Anthropic API Proxy",
+        "type": "anthropic",
+        "base_url": os.environ.get("CC_ANTHROPIC_BASE_URL", "https://cc-vibe.com"),
+        "api_key": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", "sk-68900ea64051c89cbba31fa0a3f4198fdaffd8272c3d6b2ce3acf82bd098e6a5"),
+        "models": {
+            "default": "claude-opus-4-7",
+            "opus": "claude-opus-4-7",
+        },
+        "agent_model": "claude-opus-4-7",
+        "extra_body": {
+            "skipDangerousModePermissionPrompt": True
+        }
+    },
 }
 
 DEFAULT_PROVIDER = "deepseek"

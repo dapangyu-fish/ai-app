@@ -265,6 +265,7 @@ def chat():
         return jsonify({"error": "messages is required"}), 400
 
     provider_id = body.get("provider")
+    provider = _get_provider(provider_id)
     agent_client = _get_agent_client(provider_id)
     agent_model = _get_agent_model(provider_id)
 
@@ -298,14 +299,18 @@ def chat():
                 inside_json = False
                 json_content = ""
 
+                call_kwargs = {
+                    "model": agent_model,
+                    "max_tokens": 8192,
+                    "system": system_prompt,
+                    "messages": msgs,
+                    "tools": AGENT_TOOLS,
+                }
+                if provider.get("extra_body"):
+                    call_kwargs["extra_body"] = provider["extra_body"]
+
                 try:
-                    with agent_client.messages.stream(
-                        model=agent_model,
-                        max_tokens=8192,
-                        system=system_prompt,
-                        messages=msgs,
-                        tools=AGENT_TOOLS,
-                    ) as stream:
+                    with agent_client.messages.stream(**call_kwargs) as stream:
                         for text in stream.text_stream:
                             if not inside_json:
                                 buffer += text
@@ -360,13 +365,7 @@ def chat():
                             full_content += buffer
                 except Exception as e:
                     print(f"[Agent] Stream failed ({e}), falling back to non-stream")
-                    response = agent_client.messages.create(
-                        model=agent_model,
-                        max_tokens=8192,
-                        system=system_prompt,
-                        messages=msgs,
-                        tools=AGENT_TOOLS,
-                    )
+                    response = agent_client.messages.create(**call_kwargs)
                     # 非流式：手动发送文本
                     for block in response.content:
                         if block.type == 'text' and block.text:
@@ -499,18 +498,23 @@ def fix_app():
     dsl_spec = _load_dsl_spec()
     system_prompt = f"你是 JSON-DSL 调试专家。\n\n## 规范\n{dsl_spec}"
 
+    provider = _get_provider(provider_id)
     client = _get_agent_client(provider_id)
     model = _get_agent_model(provider_id)
 
     def generate():
         full_content = ""
         try:
-            with client.messages.stream(
-                model=model,
-                max_tokens=8192,
-                system=system_prompt,
-                messages=[{"role": "user", "content": prompt}],
-            ) as stream:
+            call_kwargs = {
+                "model": model,
+                "max_tokens": 8192,
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": prompt}],
+            }
+            if provider.get("extra_body"):
+                call_kwargs["extra_body"] = provider["extra_body"]
+
+            with client.messages.stream(**call_kwargs) as stream:
                 for text in stream.text_stream:
                     full_content += text
                     yield f'data: {json.dumps({"content": text}, ensure_ascii=False)}\n\n'
