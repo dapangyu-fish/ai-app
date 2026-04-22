@@ -1091,7 +1091,10 @@ class JsonInterpreter extends ChangeNotifier {
 
       case '@update_profile':
         final username = resolvedArgs['username'] as String?;
-        final avatarUrl = resolvedArgs['avatar_url'] as String?;
+        String? avatarUrl = resolvedArgs['avatar_url'] as String?;
+        if (avatarUrl != null && avatarUrl.startsWith('/')) {
+          avatarUrl = '${AuthService.baseUrl}$avatarUrl';
+        }
         try {
           return await AuthService.updateProfile(
             username: username,

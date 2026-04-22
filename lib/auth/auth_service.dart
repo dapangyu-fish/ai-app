@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// 后端鉴权服务 — 所有请求通过 Flask 后端代理到 Supabase
 class AuthService {
-  static const String _baseUrl = 'https://app-backend.dapangyu.work';
+  static const String baseUrl = 'https://app-backend.dapangyu.work';
   static const String _tokenKey = 'auth_access_token';
   static const String _refreshKey = 'auth_refresh_token';
   static const String _userKey = 'auth_user';
@@ -76,7 +76,7 @@ class AuthService {
     String? username,
   }) async {
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/register'),
+      Uri.parse('$baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'email': email,
@@ -107,7 +107,7 @@ class AuthService {
     required String password,
   }) async {
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/login'),
+      Uri.parse('$baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'email': email, 'password': password}),
     ).timeout(const Duration(seconds: 15));
@@ -129,7 +129,7 @@ class AuthService {
     required String token,
   }) async {
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/verify'),
+      Uri.parse('$baseUrl/api/auth/verify'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'email': email, 'token': token}),
     ).timeout(const Duration(seconds: 15));
@@ -151,7 +151,7 @@ class AuthService {
   /// 重新发送验证邮件
   static Future<void> resendVerification(String email) async {
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/resend'),
+      Uri.parse('$baseUrl/api/auth/resend'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'email': email}),
     ).timeout(const Duration(seconds: 15));
@@ -167,7 +167,7 @@ class AuthService {
     if (_refreshToken == null) throw Exception('无 refresh token');
 
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/refresh'),
+      Uri.parse('$baseUrl/api/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'refresh_token': _refreshToken}),
     ).timeout(const Duration(seconds: 10));
@@ -187,7 +187,7 @@ class AuthService {
   static Future<void> signOut() async {
     try {
       await http.post(
-        Uri.parse('$_baseUrl/api/auth/logout'),
+        Uri.parse('$baseUrl/api/auth/logout'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_accessToken',
@@ -200,7 +200,7 @@ class AuthService {
   /// 获取最新用户信息
   static Future<Map<String, dynamic>> fetchUser() async {
     final resp = await http.get(
-      Uri.parse('$_baseUrl/api/auth/user'),
+      Uri.parse('$baseUrl/api/auth/user'),
       headers: {'Authorization': 'Bearer $_accessToken'},
     ).timeout(const Duration(seconds: 10));
 
@@ -224,7 +224,7 @@ class AuthService {
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;
 
     final resp = await http.put(
-      Uri.parse('$_baseUrl/api/auth/user'),
+      Uri.parse('$baseUrl/api/auth/user'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_accessToken',
@@ -248,7 +248,7 @@ class AuthService {
   /// 上传头像 (base64)
   static Future<String> uploadAvatar(String base64Data) async {
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/avatar'),
+      Uri.parse('$baseUrl/api/auth/avatar'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_accessToken',

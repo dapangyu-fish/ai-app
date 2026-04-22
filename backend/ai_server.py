@@ -482,7 +482,7 @@ def upload_avatar():
     if upload_resp.status_code >= 400:
         return jsonify({"error": f"存储上传失败: {upload_resp.text}"}), 502
 
-    public_url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}?t={int(time.time())}"
+    public_url = f"/api/auth/avatar/{file_name}?t={int(time.time())}"
     meta_resp = requests.put(f"{SUPABASE_URL}/auth/v1/user",
                  headers=_supabase_headers(request.supabase_token),
                  json={"data": {"avatar_url": public_url}}, timeout=10)
@@ -502,6 +502,15 @@ def get_quota():
         "limit": limit,
         "remaining": remaining,
     })
+
+@app.route("/api/auth/avatar/<file_name>", methods=["GET"])
+def get_avatar(file_name):
+    """代理获取头像"""
+    url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}"
+    resp = requests.get(url, timeout=10)
+    if resp.status_code == 200:
+        return Response(resp.content, content_type=resp.headers.get("content-type", "image/png"))
+    return jsonify({"error": "Not Found"}), 404
 
 # ═══════════════════════════════════════════════════════════
 # AI 供应商列表

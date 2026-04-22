@@ -551,10 +551,14 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = AuthService.currentUser;
-    final avatarUrl = user?['avatar_url'] as String? ?? '';
+    String avatarUrl = user?['avatar_url'] as String? ?? '';
     final cs = Theme.of(context).colorScheme;
 
     Widget avatar;
+    if (avatarUrl.startsWith('/')) {
+      avatarUrl = '${AuthService.baseUrl}$avatarUrl';
+    }
+
     if (avatarUrl.startsWith('http')) {
       avatar = CircleAvatar(
         radius: 48,
