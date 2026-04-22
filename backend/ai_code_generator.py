@@ -333,7 +333,7 @@ def generate_app():
     cli_env = provider.get("cli_env", {})
     cli_model = provider.get("cli_model", provider["models"]["default"])
 
-    if not cli_env.get("ANTHROPIC_API_KEY"):
+    if not cli_env.get("ANTHROPIC_AUTH_TOKEN"):
         return jsonify({"error": f"供应商 {provider['name']} 未配置 CLI 环境变量"}), 500
 
     # 生成唯一的输出路径
@@ -358,28 +358,31 @@ def generate_app():
 
     # 构建环境变量
     env = os.environ.copy()
-    env["ANTHROPIC_API_KEY"] = cli_env["ANTHROPIC_API_KEY"]
-    env["ANTHROPIC_BASE_URL"] = cli_env["ANTHROPIC_BASE_URL"]
+    # 注入该供应商的所有 CLI 环境变量
+    for k, v in cli_env.items():
+        env[k] = v
     # 清理可能冲突的旧变量
-    env.pop("ANTHROPIC_AUTH_TOKEN", None)
+    env.pop("ANTHROPIC_API_KEY", None)
 
     # 构建 Claude CLI 命令
     cmd = [
         "claude", "-p",
         "--model", cli_model,
         "--output-format", "stream-json",
+        "--verbose",
         "--dangerously-skip-permissions",
         "--no-session-persistence",
         "--system-prompt", system_prompt,
         full_prompt,
     ]
 
-    masked_key = f"{cli_env['ANTHROPIC_API_KEY'][:4]}***{cli_env['ANTHROPIC_API_KEY'][-4:]}"
+    auth_token = cli_env.get("ANTHROPIC_AUTH_TOKEN", "")
+    masked_key = f"{auth_token[:4]}***{auth_token[-4:]}" if len(auth_token) > 8 else "***"
     print(f"\n[GenerateApp] Starting Claude CLI:")
     print(f"  - Provider: {provider['name']}")
     print(f"  - Model: {cli_model}")
-    print(f"  - Base URL: {cli_env['ANTHROPIC_BASE_URL']}")
-    print(f"  - API Key: {masked_key}")
+    print(f"  - Base URL: {cli_env.get('ANTHROPIC_BASE_URL')}")
+    print(f"  - Auth Token: {masked_key}")
     print(f"  - CWD: {PROJECT_ROOT}")
     print(f"  - Output: {output_path}\n")
 
