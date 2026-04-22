@@ -1497,6 +1497,14 @@ class _DesignerBallState extends State<DesignerBall>
       );
     }
 
+    // 按住时放大 + 松手弹回 — iOS 灵动效果
+    ball = AnimatedScale(
+      scale: _pointerDown ? 1.18 : 1.0,
+      duration: Duration(milliseconds: _pointerDown ? 150 : 400),
+      curve: _pointerDown ? Curves.easeOut : Curves.elasticOut,
+      child: ball,
+    );
+
     return Opacity(opacity: opacity, child: ball);
   }
 
