@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:math' show sqrt, pi;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,8 +28,8 @@ class DesignerBall extends StatefulWidget {
 class _DesignerBallState extends State<DesignerBall>
     with TickerProviderStateMixin {
   // ── 尺寸常量 ──
-  static const double _ballSize = 56.0;
-  static const double _peekSize = 20.0;
+  static const double _ballSize = 64.0;
+  static const double _peekSize = 22.0;
   static const double _edgeThreshold = 20.0;
   static const double _dragThreshold = 30.0;
 
@@ -43,6 +43,7 @@ class _DesignerBallState extends State<DesignerBall>
   Offset _pointerDownPos = Offset.zero;
   bool _movedEnough = false;
   bool _pointerDown = false;
+  bool _revealing = false; // 正在从边缘露出动画中，阻止拖拽
   double _accumulatedDragDistance = 0; // 累积拖拽路径长度
 
   // ── 动画 ──
@@ -159,17 +160,24 @@ class _DesignerBallState extends State<DesignerBall>
     _animController.stop();
     _accumulatedDragDistance = 0; // 重置累积拖拽距离
 
-    // 触觉反馈：按下时轻微震动
-    HapticFeedback.lightImpact();
+    // 触觉反馈：按下时中等震动
+    HapticFeedback.mediumImpact();
+
+    // 隐藏态：先触发露出动画，阻止拖拽（避免触发系统返回手势）
+    if (_hidden) {
+      final screenSize = MediaQuery.of(context).size;
+      setState(() {
+        _pointerDown = true;
+        _movedEnough = false;
+        _revealing = true;
+      });
+      _revealFromEdge(screenSize);
+      return; // 不启动长按计时器，等露出后用户再操作
+    }
 
     setState(() {
       _pointerDown = true;
       _movedEnough = false;
-      // 从收起态 → 解除收起
-      if (_hidden) {
-        _hidden = false;
-        _hideEdge = _HideEdge.none;
-      }
     });
 
     if (_chatMode) {
@@ -192,7 +200,7 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  void _onPointerUp(PointerUpEvent event) {
+  void _onPointerUp(PointerUpEvent event, Size screenSize) {
     setState(() => _pointerDown = false);
     _longPressTimer?.cancel();
     _countdownController.stop();
@@ -213,6 +221,9 @@ class _DesignerBallState extends State<DesignerBall>
       }
       _dragCancelling = false;
       _dragInEditZone = false;
+    } else {
+      // 非录音态：处理拖拽收尾（吸边等）
+      _handleDragEnd(screenSize);
     }
   }
 
@@ -233,11 +244,14 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   // ════════════════════════════════════════════════════════
-  // Pan 手势 — 仅用于拖拽移动
+  // Pointer Move — 直接在 Listener 层处理，消除手势竞技场延迟
   // ════════════════════════════════════════════════════════
 
-  void _onPanUpdate(DragUpdateDetails details, Size screenSize) {
-    final delta = (details.globalPosition - _pointerDownPos).distance;
+  void _onPointerMove(PointerMoveEvent event, Size screenSize) {
+    // 露出动画进行中，忽略拖拽
+    if (_revealing) return;
+
+    final delta = (event.position - _pointerDownPos).distance;
     if (delta > _dragThreshold && !_chatMode) {
       _movedEnough = true;
       _longPressTimer?.cancel();
@@ -245,18 +259,21 @@ class _DesignerBallState extends State<DesignerBall>
       _countdownController.reset();
     }
 
-    // 拖拽震动：累积实际移动的路径长度，每 10 像素触发一次震动
-    final moveDelta = sqrt(details.delta.dx * details.delta.dx + details.delta.dy * details.delta.dy);
+    final dx = event.delta.dx;
+    final dy = event.delta.dy;
+
+    // 拖拽震动：累积实际移动的路径长度，每 15 像素触发一次震动
+    final moveDelta = sqrt(dx * dx + dy * dy);
     _accumulatedDragDistance += moveDelta;
-    if (_accumulatedDragDistance >= 10) {
+    if (_accumulatedDragDistance >= 15) {
       HapticFeedback.selectionClick();
-      _accumulatedDragDistance -= 10; // 减去触发阈值，保留余数
+      _accumulatedDragDistance -= 15; // 减去触发阈值，保留余数
     }
 
     if (_isListening) {
       setState(() {
-        _left += details.delta.dx;
-        _top += details.delta.dy;
+        _left += dx;
+        _top += dy;
         _left = _left.clamp(-_ballSize * 0.5, screenSize.width - _ballSize * 0.5);
         _top = _top.clamp(-_ballSize * 0.5, screenSize.height - _ballSize * 0.5);
 
@@ -270,14 +287,14 @@ class _DesignerBallState extends State<DesignerBall>
 
     _dragging = true;
     setState(() {
-      _left += details.delta.dx;
-      _top += details.delta.dy;
+      _left += dx;
+      _top += dy;
       _left = _left.clamp(-_ballSize * 0.5, screenSize.width - _ballSize * 0.5);
       _top = _top.clamp(-_ballSize * 0.5, screenSize.height - _ballSize * 0.5);
     });
   }
 
-  void _onPanEnd(DragEndDetails details, Size screenSize) {
+  void _handleDragEnd(Size screenSize) {
     _dragging = false;
 
     // 如果没移动过（纯长按），不做拖拽收尾
@@ -338,6 +355,9 @@ class _DesignerBallState extends State<DesignerBall>
 
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
+
+    // 进入对话模式的重震动反馈
+    HapticFeedback.heavyImpact();
 
     _injectCurrentAppContext();
 
@@ -731,6 +751,18 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _startSherpaAsr() async {
     debugPrint('[DesignerBall] 启动离线语音识别 (sherpa_onnx, model=${_sherpaAsr.selectedModelId})');
     try {
+      // 确保 recognizer 已初始化（防止 chatMode 下重复按球但 recognizer 还没 ready）
+      if (!await _sherpaAsr.ensureReady()) {
+        debugPrint('[DesignerBall] sherpa ensureReady failed in _startSherpaAsr');
+        setState(() {
+          _isListening = false;
+          _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型未就绪，请在设置中重新下载'));
+        });
+        _pulseController.stop();
+        _pulseController.reset();
+        return;
+      }
+
       _sherpaAsr.onResult = (text) {
         setState(() => _liveTranscript = text);
         _scrollToBottom();
@@ -1039,6 +1071,7 @@ class _DesignerBallState extends State<DesignerBall>
     );
     _animController.forward().then((_) {
       _hideEdge = _HideEdge.none;
+      _revealing = false; // 露出动画完成，允许拖拽
     });
   }
 
@@ -1159,20 +1192,19 @@ class _DesignerBallState extends State<DesignerBall>
         if (_editMode)
           _buildEditOverlay(screenSize),
 
-        // 悬浮球 — 用 Listener 捕获原始 pointer 事件
+        // 悬浮球 — 全部用 Listener 捕获原始 pointer 事件，消除手势竞技场延迟
         Positioned(
           left: _left,
           top: _top,
           child: Listener(
             onPointerDown: _onPointerDown,
-            onPointerUp: _onPointerUp,
+            onPointerMove: (e) => _onPointerMove(e, screenSize),
+            onPointerUp: (e) => _onPointerUp(e, screenSize),
             onPointerCancel: _onPointerCancel,
             child: GestureDetector(
-              onPanUpdate: (d) => _onPanUpdate(d, screenSize),
-              onPanEnd: (d) => _onPanEnd(d, screenSize),
               onTap: () => _onTap(screenSize),
               onDoubleTap: _onDoubleTap,
-              child: _buildBall(),
+              child: _buildBall(context),
             ),
           ),
         ),
@@ -1325,12 +1357,26 @@ class _DesignerBallState extends State<DesignerBall>
     );
   }
 
-  Widget _buildBall() {
+  Widget _buildBall(BuildContext context) {
     final double opacity = _hidden ? 0.6 : 1.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final ballColor = _isListening
-        ? (_dragCancelling ? Colors.grey : (_dragInEditZone ? Colors.blue : Colors.red))
-        : Colors.purple;
+    // 跟随主题的颜色方案
+    final Color defaultBg = isDark ? Colors.white : Colors.black;
+    final Color defaultFg = isDark ? Colors.black : Colors.white;
+    const Color listeningColor = Color(0xFFE53935); // 柔和红
+    const Color editZoneColor = Color(0xFF1E88E5); // 柔和蓝
+    const Color cancelColor = Color(0xFF757575); // 灰色
+
+    final Color ballColor;
+    final Color iconColor;
+    if (_isListening) {
+      ballColor = _dragCancelling ? cancelColor : (_dragInEditZone ? editZoneColor : listeningColor);
+      iconColor = Colors.white;
+    } else {
+      ballColor = defaultBg;
+      iconColor = defaultFg;
+    }
 
     Widget ball = Container(
       width: _ballSize,
@@ -1340,44 +1386,55 @@ class _DesignerBallState extends State<DesignerBall>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: ballColor.withValues(alpha: 0.4),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
+            blurRadius: 16,
+            spreadRadius: 1,
             offset: const Offset(0, 4),
           ),
+          if (!_isListening && !isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
+            ),
         ],
       ),
       child: Center(
         child: _isListening
             ? Icon(
                 _dragCancelling ? Icons.close : (_dragInEditZone ? Icons.edit : Icons.mic),
-                color: Colors.white,
-                size: 26,
+                color: iconColor,
+                size: 28,
               )
             : _chatMode
-                ? const Icon(Icons.chat_bubble_outline,
-                    color: Colors.white, size: 24)
+                ? Icon(Icons.chat_bubble_outline,
+                    color: iconColor, size: 26)
                 : Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Text(
+                      Text(
                         'D',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          color: iconColor,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
                           letterSpacing: 1,
                         ),
                       ),
                       if (_messages.isNotEmpty)
                         Positioned(
-                          top: 8,
-                          right: 8,
+                          top: 10,
+                          right: 10,
                           child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.orangeAccent,
+                            width: 9,
+                            height: 9,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.black : Colors.orangeAccent,
                               shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark ? Colors.white : Colors.black,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
@@ -1394,7 +1451,7 @@ class _DesignerBallState extends State<DesignerBall>
           return CustomPaint(
             painter: _PulseRingPainter(
               progress: _pulseController.value,
-              color: _dragCancelling ? Colors.grey : (_dragInEditZone ? Colors.blue : Colors.red),
+              color: _dragCancelling ? cancelColor : (_dragInEditZone ? editZoneColor : listeningColor),
             ),
             child: child,
           );
@@ -1411,6 +1468,7 @@ class _DesignerBallState extends State<DesignerBall>
           return CustomPaint(
             painter: _CountdownRingPainter(
               progress: _countdownController.value,
+              ringColor: isDark ? Colors.white : Colors.black,
             ),
             child: child,
           );
@@ -1436,12 +1494,12 @@ class _PulseRingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final baseRadius = size.width / 2;
-    final maxExpand = 12.0;
+    const maxExpand = 14.0;
 
     final paint = Paint()
-      ..color = color.withValues(alpha: 0.3 * (1 - progress))
+      ..color = color.withValues(alpha: 0.35 * (1 - progress))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+      ..strokeWidth = 3.5;
 
     canvas.drawCircle(center, baseRadius + maxExpand * progress, paint);
   }
@@ -1454,32 +1512,34 @@ class _PulseRingPainter extends CustomPainter {
 
 class _CountdownRingPainter extends CustomPainter {
   final double progress;
+  final Color ringColor;
 
-  _CountdownRingPainter({required this.progress});
+  _CountdownRingPainter({required this.progress, required this.ringColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 + 4;
+    final radius = size.width / 2 + 6;
 
     // 底环
     final bgPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
+      ..color = ringColor.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, bgPaint);
 
-    // 进度环
+    // 进度环 — 跟随主题色
     final fgPaint = Paint()
-      ..color = Colors.purpleAccent
+      ..color = ringColor.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
 
-    final sweepAngle = 2 * 3.14159265 * progress;
+    final sweepAngle = 2 * pi * progress;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      -3.14159265 / 2, // 从顶部开始
+      -pi / 2, // 从顶部开始
       sweepAngle,
       false,
       fgPaint,
@@ -1487,7 +1547,7 @@ class _CountdownRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CountdownRingPainter old) => old.progress != progress;
+  bool shouldRepaint(_CountdownRingPainter old) => old.progress != progress || old.ringColor != ringColor;
 }
 
 enum _HideEdge { none, left, right, top, bottom }

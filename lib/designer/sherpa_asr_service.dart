@@ -88,6 +88,15 @@ class SherpaAsrService {
     ),
   ];
 
+  // ONNX 模型文件最小合理尺寸 (bytes)，小于此值说明下载不完整或损坏
+  // 这些值是模型实际大小的 ~10%，足以发现截断/损坏的文件
+  static const Map<String, int> _minModelSizes = {
+    'sensevoice': 20 * 1024 * 1024,         // model.int8.onnx ~230MB
+    'qwen3-asr': 10 * 1024 * 1024,          // encoder ~600MB
+    'funasr-nano': 10 * 1024 * 1024,        // llm ~600MB
+    'streaming-zipformer': 500 * 1024,      // encoder ~5MB, decoder ~3MB, joiner ~1MB
+  };
+
   bool _forceOffline = false;
   String _selectedModelId = 'sensevoice';
 
@@ -154,10 +163,90 @@ class SherpaAsrService {
 
   Future<bool> get isModelReady async {
     final dir = await _getModelDir();
+    final minSize = _minModelSizes[_currentModel.id] ?? 1024;
     for (final file in _currentModel.files.values) {
-      if (!File('$dir/$file').existsSync()) return false;
+      final f = File('$dir/$file');
+      if (!f.existsSync()) return false;
+      // 检查文件尺寸，太小说明下载不完整或损坏
+      if (f.lengthSync() < minSize) {
+        debugPrint('[SherpaASR] Model file too small (likely corrupted): $file (${f.lengthSync()} bytes < $minSize)');
+        return false;
+      }
     }
     return true;
+  }
+
+  /// 清理损坏的模型文件，强制重新下载
+  Future<void> _cleanCorruptedModels() async {
+    final dir = await _getModelDir();
+    final minSize = _minModelSizes[_currentModel.id] ?? 1024;
+    for (final file in _currentModel.files.values) {
+      final f = File('$dir/$file');
+      if (f.existsSync() && f.lengthSync() < minSize) {
+        debugPrint('[SherpaASR] Removing corrupted model file: $file');
+        f.deleteSync();
+      }
+    }
+  }
+
+  /// 获取指定模型的磁盘状态（文件数/总大小）
+  Future<Map<String, dynamic>> getModelStatus(String modelId) async {
+    final model = availableModels.firstWhere((m) => m.id == modelId,
+        orElse: () => availableModels.first);
+    final appDir = await getApplicationDocumentsDirectory();
+    final dir = '${appDir.path}/sherpa_models/${model.ossPath}';
+    int totalSize = 0;
+    int fileCount = 0;
+    int totalFiles = model.files.length;
+    for (final file in model.files.values) {
+      final f = File('$dir/$file');
+      if (f.existsSync()) {
+        totalSize += f.lengthSync();
+        fileCount++;
+      }
+    }
+    return {
+      'downloaded': fileCount,
+      'total': totalFiles,
+      'size': totalSize,
+      'ready': fileCount == totalFiles,
+    };
+  }
+
+  /// 清理指定模型的所有本地文件并重新下载
+  Future<bool> cleanAndRedownload(String modelId, {void Function(String)? onProgress}) async {
+    final model = availableModels.firstWhere((m) => m.id == modelId,
+        orElse: () => availableModels.first);
+    final appDir = await getApplicationDocumentsDirectory();
+    final dir = '${appDir.path}/sherpa_models/${model.ossPath}';
+
+    // 释放当前 recognizer（如果正在使用该模型）
+    if (modelId == _selectedModelId) {
+      _resetRecognizer();
+    }
+
+    // 删除所有模型文件
+    for (final file in model.files.values) {
+      final f = File('$dir/$file');
+      if (f.existsSync()) {
+        debugPrint('[SherpaASR] Deleting: $file');
+        f.deleteSync();
+      }
+    }
+    debugPrint('[SherpaASR] Cleaned all files for $modelId');
+
+    // 重新下载
+    final prevOnStatus = onStatusChange;
+    onStatusChange = onProgress;
+    
+    // 临时切换到目标模型进行下载
+    final prevModelId = _selectedModelId;
+    _selectedModelId = modelId;
+    final ok = await downloadModels();
+    _selectedModelId = prevModelId;
+    
+    onStatusChange = prevOnStatus;
+    return ok;
   }
 
   Future<bool> downloadModels() async {
@@ -316,8 +405,15 @@ class SherpaAsrService {
     }
 
     if (!await isModelReady) {
+      // 清理损坏文件后重新下载
+      await _cleanCorruptedModels();
       final ok = await downloadModels();
       if (!ok) return false;
+      // 下载后再次校验
+      if (!await isModelReady) {
+        debugPrint('[SherpaASR] Model files still invalid after download');
+        return false;
+      }
     }
 
     return await initialize();

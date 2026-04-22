@@ -535,6 +535,10 @@ class _ProfilePageState extends State<ProfilePage> {
       final b64 = base64Encode(bytes);
       await AuthService.uploadAvatar(b64);
 
+      // 清除图片缓存，确保新头像立即显示
+      imageCache.clear();
+      imageCache.clearLiveImages();
+
       setState(() => _message = '头像已更新');
     } catch (e) {
       setState(

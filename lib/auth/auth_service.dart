@@ -261,8 +261,17 @@ class AuthService {
       throw Exception(data['error'] ?? '头像上传失败');
     }
 
-    _user?['avatar_url'] = data['avatar_url'];
+    // 给 URL 加客户端时间戳，确保绕过所有层级缓存（CDN + Flutter ImageCache）
+    String avatarUrl = data['avatar_url'];
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    if (avatarUrl.contains('?')) {
+      avatarUrl = '$avatarUrl&_t=$ts';
+    } else {
+      avatarUrl = '$avatarUrl?_t=$ts';
+    }
+
+    _user?['avatar_url'] = avatarUrl;
     await _saveLocal();
-    return data['avatar_url'];
+    return avatarUrl;
   }
 }

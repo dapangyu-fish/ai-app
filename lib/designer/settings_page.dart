@@ -20,11 +20,17 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _loadingProviders = false;
   String _selectedModelId = 'sensevoice';
 
+  // 模型状态和下载进度
+  Map<String, Map<String, dynamic>> _modelStatuses = {};
+  String? _downloadingModelId;
+  String _downloadProgress = '';
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _fetchProviders();
+    _loadModelStatuses();
   }
 
   Future<void> _loadSettings() async {
@@ -47,6 +53,16 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _loadModelStatuses() async {
+    final statuses = <String, Map<String, dynamic>>{};
+    for (final model in SherpaAsrService.availableModels) {
+      statuses[model.id] = await _sherpaAsr.getModelStatus(model.id);
+    }
+    if (mounted) {
+      setState(() => _modelStatuses = statuses);
+    }
+  }
+
   Future<void> _toggleOffline(bool value) async {
     await _sherpaAsr.setForceOffline(value);
     setState(() {
@@ -66,6 +82,46 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _selectedModelId = modelId;
     });
+  }
+
+  Future<void> _redownloadModel(String modelId) async {
+    setState(() {
+      _downloadingModelId = modelId;
+      _downloadProgress = '正在清理...';
+    });
+
+    final ok = await _sherpaAsr.cleanAndRedownload(
+      modelId,
+      onProgress: (status) {
+        if (mounted) {
+          setState(() => _downloadProgress = status);
+        }
+      },
+    );
+
+    // 刷新状态
+    await _loadModelStatuses();
+
+    if (mounted) {
+      setState(() {
+        _downloadingModelId = null;
+        _downloadProgress = '';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ok ? '模型下载完成' : '模型下载失败，请检查网络'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  String _formatSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(1)} GB';
   }
 
   @override
@@ -101,31 +157,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 16.0),
             _buildSectionTitle('语音模型', cs),
             const SizedBox(height: 8.0),
-            Card(
-              child: Column(
-                children: SherpaAsrService.availableModels.map((model) {
-                  final selected = model.id == _selectedModelId;
-                  return RadioListTile<String>(
-                    value: model.id,
-                    groupValue: _selectedModelId,
-                    onChanged: (v) {
-                      if (v != null) _selectModel(v);
-                    },
-                    title: Text(
-                      model.name,
-                      style: TextStyle(
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                    secondary: Icon(
-                      Icons.model_training,
-                      color: selected ? cs.primary : cs.outline,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
+            _buildModelList(cs),
           ],
         ),
       ),
@@ -196,6 +228,102 @@ class _SettingsPageState extends State<SettingsPage> {
               Icons.smart_toy,
               color: selected ? cs.primary : cs.outline,
             ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildModelList(ColorScheme cs) {
+    return Card(
+      child: Column(
+        children: SherpaAsrService.availableModels.map((model) {
+          final selected = model.id == _selectedModelId;
+          final status = _modelStatuses[model.id];
+          final isDownloading = _downloadingModelId == model.id;
+          final downloaded = status?['downloaded'] ?? 0;
+          final total = status?['total'] ?? 0;
+          final size = status?['size'] ?? 0;
+          final isReady = status?['ready'] ?? false;
+
+          return Column(
+            children: [
+              RadioListTile<String>(
+                value: model.id,
+                groupValue: _selectedModelId,
+                onChanged: isDownloading ? null : (v) {
+                  if (v != null) _selectModel(v);
+                },
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        model.name,
+                        style: TextStyle(
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    if (isReady && !isDownloading)
+                      Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  ],
+                ),
+                subtitle: isDownloading
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _downloadProgress,
+                              style: TextStyle(
+                                color: cs.primary,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              backgroundColor: cs.outline.withValues(alpha: 0.2),
+                              color: cs.primary,
+                            ),
+                          ],
+                        ),
+                      )
+                    : Text(
+                        isReady
+                            ? '已下载 · $downloaded/$total 文件 · ${_formatSize(size)}'
+                            : downloaded > 0
+                                ? '不完整 · $downloaded/$total 文件 · ${_formatSize(size)}'
+                                : '未下载',
+                        style: TextStyle(
+                          color: isReady ? cs.onSurfaceVariant : cs.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                secondary: isDownloading
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: cs.primary,
+                        ),
+                      )
+                    : IconButton(
+                        icon: Icon(
+                          isReady ? Icons.refresh : Icons.download,
+                          color: cs.onSurfaceVariant,
+                          size: 22,
+                        ),
+                        tooltip: isReady ? '重新下载' : '下载',
+                        onPressed: _downloadingModelId != null
+                            ? null
+                            : () => _redownloadModel(model.id),
+                      ),
+              ),
+              if (model.id != SherpaAsrService.availableModels.last.id)
+                Divider(height: 1, indent: 16, endIndent: 16, color: cs.outline.withValues(alpha: 0.2)),
+            ],
           );
         }).toList(),
       ),

@@ -4,6 +4,7 @@
 """
 
 import base64
+import time
 import requests
 from functools import wraps
 from flask import request, jsonify
@@ -287,10 +288,12 @@ def upload_avatar():
     if upload_resp.status_code >= 400:
         return jsonify({"error": f"存储上传失败: {upload_resp.text}"}), 502
 
-    public_url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}"
-    requests.put(f"{SUPABASE_URL}/auth/v1/user",
+    public_url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}?t={int(time.time())}"
+    meta_resp = requests.put(f"{SUPABASE_URL}/auth/v1/user",
                  headers=_supabase_headers(request.supabase_token),
                  json={"data": {"avatar_url": public_url}}, timeout=10)
+    if meta_resp.status_code >= 400:
+        return jsonify({"error": f"头像已上传但更新用户信息失败: {meta_resp.text}"}), 502
     return jsonify({"message": "头像更新成功", "avatar_url": public_url})
 
 
