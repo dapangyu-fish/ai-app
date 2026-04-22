@@ -374,18 +374,55 @@ def chat():
                     })
                 msgs.append({"role": "user", "content": tool_results})
 
-            # JSON-APP 检测
-            json_match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
-            if not json_match:
-                json_match = re.search(r'(\{[\s\S]*"screens"[\s\S]*\})\s*$', full_content)
-            print(f"[Agent] JSON detect: match={'YES' if json_match else 'NO'}, content_len={len(full_content)}")
-            if json_match:
+            # JSON-APP 检测与 MinIO 上传
+            json_str = ""
+            if json_content and "{" in json_content:
+                # 已经流式拦截了
+                json_str = json_content
+            else:
+                # Fallback: 尝试从全量文本提取
+                match = re.search(r'<app_json>\s*(\{.*?\})\s*</app_json>', full_content, re.DOTALL)
+                if match:
+                    json_str = match.group(1)
+                else:
+                    # 兼容可能输出到 Markdown 的情况
+                    match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
+                    if match:
+                        json_str = match.group(1)
+
+            print(f"[Agent] JSON detect: match={'YES' if json_str else 'NO'}, content_len={len(full_content)}")
+            
+            if json_str:
+                # 剔除可能多余的结束标签
+                if "</app_json>" in json_str:
+                    json_str = json_str.split("</app_json>")[0]
+                
                 try:
-                    json_app = json.loads(json_match.group(1))
-                    yield f'data: {json.dumps({"has_json": True, "json_app": json_app}, ensure_ascii=False)}\n\n'
-                    print(f"[Agent] JSON-APP sent, keys: {list(json_app.keys())}")
-                except json.JSONDecodeError as e:
-                    print(f"[Agent] JSON parse failed: {e}")
+                    fixed_app = json.loads(json_str)
+                    print(f"[Agent] JSON-APP parse success, keys: {list(fixed_app.keys())}")
+                    
+                    # 上传到 MinIO
+                    import uuid, requests
+                    from store import _minio_presigned_put, _minio_presigned_get
+                    
+                    filename = f"gen_{uuid.uuid4().hex}.json"
+                    bucket = "ai-chat-temp"
+                    put_url = _minio_presigned_put(bucket, filename)
+                    get_url = _minio_presigned_get(bucket, filename)
+                    
+                    upload_resp = requests.put(
+                        put_url, 
+                        data=json.dumps(fixed_app, ensure_ascii=False).encode('utf-8'),
+                        headers={'Content-Type': 'application/json'}
+                    )
+                    
+                    if upload_resp.status_code == 200:
+                        yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
+                        print(f"[Agent] MinIO upload success: {get_url}")
+                    else:
+                        yield f'data: {json.dumps({"error": f"上传 JSON 失败: HTTP {upload_resp.status_code}"}, ensure_ascii=False)}\n\n'
+                except Exception as e:
+                    print(f"[Agent] JSON parse or upload failed: {e}")
 
             # 配额
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
