@@ -150,9 +150,27 @@ class AiChatService {
 
           // JSON-APP 检测
           if (data.containsKey('has_json') && data['has_json'] == true) {
-            yield ChatEvent(
-              jsonApp: data['json_app'] as Map<String, dynamic>?,
-            );
+            Map<String, dynamic>? parsedApp;
+            if (data.containsKey('json_url') && data['json_url'] != null) {
+              try {
+                final url = data['json_url'] as String;
+                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+                if (getResp.statusCode == 200) {
+                  final jsonBody = utf8.decode(getResp.bodyBytes);
+                  parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+                } else {
+                  yield ChatEvent(error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+                }
+              } catch (e) {
+                yield ChatEvent(error: '下载 JSON 异常: $e');
+              }
+            } else {
+              parsedApp = data['json_app'] as Map<String, dynamic>?;
+            }
+            
+            if (parsedApp != null) {
+              yield ChatEvent(jsonApp: parsedApp);
+            }
             continue;
           }
 
