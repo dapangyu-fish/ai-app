@@ -10,7 +10,7 @@ from flask import Flask
 from flask_sock import Sock
 from config import PORT
 import auth
-import chat
+import ai_code_generator as chat
 import store
 
 
