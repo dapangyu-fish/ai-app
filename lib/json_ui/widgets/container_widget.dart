@@ -77,7 +77,7 @@ class JsonContainerWidget extends JsonBaseWidget {
             borderRadius > 0 ? BorderRadius.circular(borderRadius) : null,
         border: border,
       ),
-      child: layoutWidget,
+      child: _wrapWithContrastText(context, bgColor, layoutWidget),
     );
 
     // 阴影 (elevation)
@@ -89,7 +89,7 @@ class JsonContainerWidget extends JsonBaseWidget {
         color: bgColor ?? Theme.of(context).colorScheme.surface,
         child: Padding(
           padding: padding > 0 ? EdgeInsets.all(padding) : EdgeInsets.zero,
-          child: layoutWidget,
+          child: _wrapWithContrastText(context, bgColor ?? Theme.of(context).colorScheme.surface, layoutWidget),
         ),
       );
     }
@@ -97,6 +97,23 @@ class JsonContainerWidget extends JsonBaseWidget {
     return Padding(
       padding: EdgeInsets.all(margin),
       child: container,
+    );
+  }
+
+  /// 当容器有背景色时，自动为子控件设置对比文字颜色
+  /// 防止 AI 生成的 JSON-APP 出现背景色和文字颜色相近导致看不清的问题
+  Widget _wrapWithContrastText(BuildContext context, Color? bgColor, Widget child) {
+    if (bgColor == null) return child;
+
+    // 计算背景亮度，选择对比文字颜色
+    final luminance = bgColor.computeLuminance();
+    final contrastColor = luminance > 0.5
+        ? const Color(0xFF1A1A1A)  // 浅色背景 → 深色文字
+        : const Color(0xFFFFFFFF); // 深色背景 → 白色文字
+
+    return DefaultTextStyle.merge(
+      style: TextStyle(color: contrastColor),
+      child: child,
     );
   }
 
