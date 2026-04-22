@@ -88,15 +88,6 @@ class SherpaAsrService {
     ),
   ];
 
-  // ONNX 模型文件最小合理尺寸 (bytes)，小于此值说明下载不完整或损坏
-  // 这些值是模型实际大小的 ~10%，足以发现截断/损坏的文件
-  static const Map<String, int> _minModelSizes = {
-    'sensevoice': 20 * 1024 * 1024,         // model.int8.onnx ~230MB
-    'qwen3-asr': 10 * 1024 * 1024,          // encoder ~600MB
-    'funasr-nano': 10 * 1024 * 1024,        // llm ~600MB
-    'streaming-zipformer': 500 * 1024,      // encoder ~5MB, decoder ~3MB, joiner ~1MB
-  };
-
   bool _forceOffline = false;
   String _selectedModelId = 'sensevoice';
 
@@ -163,15 +154,9 @@ class SherpaAsrService {
 
   Future<bool> get isModelReady async {
     final dir = await _getModelDir();
-    final minSize = _minModelSizes[_currentModel.id] ?? 1024;
     for (final file in _currentModel.files.values) {
       final f = File('$dir/$file');
       if (!f.existsSync()) return false;
-      // 检查文件尺寸，太小说明下载不完整或损坏
-      if (f.lengthSync() < minSize) {
-        debugPrint('[SherpaASR] Model file too small (likely corrupted): $file (${f.lengthSync()} bytes < $minSize)');
-        return false;
-      }
     }
     return true;
   }
@@ -179,11 +164,10 @@ class SherpaAsrService {
   /// 清理损坏的模型文件，强制重新下载
   Future<void> _cleanCorruptedModels() async {
     final dir = await _getModelDir();
-    final minSize = _minModelSizes[_currentModel.id] ?? 1024;
     for (final file in _currentModel.files.values) {
       final f = File('$dir/$file');
-      if (f.existsSync() && f.lengthSync() < minSize) {
-        debugPrint('[SherpaASR] Removing corrupted model file: $file');
+      if (f.existsSync() && f.lengthSync() == 0) {
+        debugPrint('[SherpaASR] Removing corrupted 0-byte model file: $file');
         f.deleteSync();
       }
     }
@@ -258,7 +242,7 @@ class SherpaAsrService {
 
       for (final entry in model.files.entries) {
         final file = File('$dir/${entry.value}');
-        if (file.existsSync() && file.lengthSync() > 100) {
+        if (file.existsSync() && file.lengthSync() > 0) {
           continue;
         }
 
