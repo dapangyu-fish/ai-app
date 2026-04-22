@@ -258,3 +258,36 @@ python3 backend/migrate_templates.py
   ⚠️  版本已存在: ['1.0.0']
 ```
 
+## Antigravity AI 上下文同步
+
+AI 编程助手 Antigravity 的上下文数据存储在 `~/.gemini/antigravity/`，通过私有 Git 仓库在多台开发机之间同步。
+
+**仓库地址**: `git@github.com:dapangyu-fish/antigravity.git`
+
+### 推送上下文（当前电脑 → 远端）
+
+在结束工作时**手动**执行：
+
+```bash
+cd ~/.gemini/antigravity
+git add .
+git commit -m "sync: $(date '+%Y-%m-%d %H:%M') from $(hostname)"
+git push
+```
+
+### 拉取上下文（远端 → 当前电脑）
+
+在另一台电脑开始工作前**手动**执行：
+
+```bash
+cd ~/.gemini/antigravity
+git pull
+```
+
+### 首次在新电脑上设置
+
+```bash
+git clone git@github.com:dapangyu-fish/antigravity.git ~/.gemini/antigravity
+```
+
+> **注意**: `installation_id` 已被 `.gitignore` 忽略，每台机器会自动生成自己的 ID，无需同步。
