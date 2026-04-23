@@ -153,6 +153,11 @@ class AiChatService {
               yield ChatEvent(isGeneratingJson: true);
               continue;
             }
+            // 生成结束（失败时后端会发 generating_json: false）
+            if (data.containsKey('generating_json') && data['generating_json'] == false) {
+              // 不需要额外处理，后续的 error 事件会重置状态
+              continue;
+            }
 
           // JSON-APP 检测
           if (data.containsKey('has_json') && data['has_json'] == true) {
@@ -190,8 +195,7 @@ class AiChatService {
 
           // 错误
           if (data.containsKey('error')) {
-            accumulated += data['error'] as String;
-            yield ChatEvent(content: accumulated, error: data['error'] as String);
+            yield ChatEvent(error: data['error'] as String);
             continue;
           }
 

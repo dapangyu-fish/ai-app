@@ -312,7 +312,6 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
         "--model", cli_model,
         "--output-format", "stream-json",
         "--verbose",
-        "--dangerously-skip-permissions",
         "--no-session-persistence",
     ]
     if sys_prompt_file:
