@@ -1,11 +1,11 @@
 {
   "dsl": "3.3",
-  "appid": "contacts_drift_app_002",
+  "appid": "contacts_drift_app_003",
   "meta": {
     "name": "contacts-drift",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "app",
-    "description": "使用 Drift/SQLite 持久化存储的通讯录应用 — 与日记 APP 完全隔离的独立数据库",
+    "description": "通讯录(Drift版)",
     "author": "AI Designer",
     "display_name": "通讯录(Drift版)"
   },
@@ -26,7 +26,8 @@
       "editNotes": "",
       "viewContact": null,
       "searchKeyword": "",
-      "_confirmResult": false
+      "_confirmResult": false,
+      "_ts": 0
     },
     "functions": {
       "initDB": {
@@ -67,12 +68,6 @@
                   "type": "INTEGER"
                 }
               ]
-            }
-          },
-          {
-            "call": "@print",
-            "args": {
-              "value": "📇 通讯录数据库已初始化 (appid: contacts_drift_app_002)"
             }
           }
         ]

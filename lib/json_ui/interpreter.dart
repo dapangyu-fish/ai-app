@@ -595,17 +595,17 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 控制流 ──
       case '@if':
-        return await _builtinIf(resolvedArgs);
+        return await _builtinIf(args);
       case '@while':
-        return await _builtinWhile(resolvedArgs);
+        return await _builtinWhile(args);
       case '@for_each':
-        return await _builtinForEach(resolvedArgs);
+        return await _builtinForEach(args);
       case '@loop_by_num':
-        return await _builtinLoopByNum(resolvedArgs);
+        return await _builtinLoopByNum(args);
       case '@try_catch':
-        return await _builtinTryCatch(resolvedArgs);
+        return await _builtinTryCatch(args);
       case '@parallel':
-        return await _builtinParallel(resolvedArgs);
+        return await _builtinParallel(args);
       case '@delay':
         final ms =
             _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
