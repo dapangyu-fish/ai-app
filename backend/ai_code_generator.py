@@ -100,6 +100,17 @@ AGENT_TOOLS = [
             "type": "object",
             "properties": {}
         }
+    },
+    {
+        "name": "trigger_generate",
+        "description": "当用户需求已经足够清晰时，调用此工具触发 Claude CLI 来生成或修改 JSON-APP。prompt 参数是对需求的完整总结（包含所有用户提到的功能、样式等细节）。调用后系统会自动启动代码生成流程。",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "对用户需求的完整总结，作为生成 JSON-APP 的输入"}
+            },
+            "required": ["prompt"]
+        }
     }
 ]
 
@@ -437,13 +448,14 @@ def generate_app():
 
 
 # ---------------------------------------------------------------------------
-#  Chat — 纯对话澄清需求（不做 JSON 生成）
+#  Chat — 对话 + Agent 触发生成
 # ---------------------------------------------------------------------------
 
 @require_auth
 def chat():
-    """SSE 流式 AI 对话 — 纯对话模式，只负责澄清需求。
-    JSON 生成由客户端主动调 /api/ai/generate 端点触发。
+    """SSE 流式 AI 对话。
+    轻量 SDK Agent 负责澄清需求。当 Agent 判断需求已清晰时，
+    它会调用 trigger_generate 工具，后端自动切换到 Claude CLI 生成 JSON-APP。
     """
     user_id = request.supabase_user.get("id")
     role = request.user_role
@@ -451,7 +463,7 @@ def chat():
     used, limit, remaining = get_quota_info(user_id, role, ROLE_QUOTAS)
     if remaining <= 0:
         return jsonify({
-            "error": f"今日对话次数已用完（{used}/{limit}）",
+            "error": f"今日对话次数已用完（{used}/{limit})",
             "quota": {"used": used, "limit": limit, "remaining": 0},
         }), 429
 
@@ -462,6 +474,7 @@ def chat():
 
     provider_id = body.get("provider")
     provider = _get_provider(provider_id)
+    current_app = body.get("current_app")  # 客户端传来的当前 JSON
     agent_client = _get_agent_client(provider_id)
     agent_model = _get_agent_model(provider_id)
 
@@ -513,6 +526,26 @@ def chat():
                     print(f"[Agent] Done after {iteration + 1} iterations")
                     break
 
+                # 检查是否有 trigger_generate 调用
+                gen_call = next((tc for tc in tool_calls if tc.name == 'trigger_generate'), None)
+                if gen_call:
+                    gen_prompt = gen_call.input.get('prompt', '')
+                    print(f"[Agent] trigger_generate called, prompt={gen_prompt[:100]}...")
+
+                    # 通知前端开始生成
+                    yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
+
+                    # 启动 Claude CLI
+                    if provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
+                        output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
+                        cli_system = _load_generate_prompt()
+                        cli_prompt = _build_user_prompt(gen_prompt, current_app, None, output_path)
+                        yield from _run_claude_cli(cli_system, cli_prompt, provider, output_path, tag="Chat-CLI")
+                    else:
+                        yield f'data: {json.dumps({"error": "供应商未配置 CLI 环境变量"}, ensure_ascii=False)}\n\n'
+                    break  # 生成完毕，结束对话循环
+
+                # 处理普通工具调用
                 assistant_content = []
                 for block in response.content:
                     if block.type == 'text':
@@ -526,6 +559,8 @@ def chat():
 
                 tool_results = []
                 for tc in tool_calls:
+                    if tc.name == 'trigger_generate':
+                        continue  # 已处理
                     result = _execute_agent_tool(tc.name, tc.input)
                     print(f"[Agent] Tool {tc.name}: {len(result)} chars")
                     tool_results.append({
