@@ -26,6 +26,20 @@ class _AuthPageState extends State<AuthPage> {
   bool _obscure = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loadLastEmail();
+  }
+
+  Future<void> _loadLastEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastEmail = prefs.getString('auth_last_email');
+    if (lastEmail != null && mounted) {
+      _emailCtrl.text = lastEmail;
+    }
+  }
+
+  @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
@@ -55,6 +69,7 @@ class _AuthPageState extends State<AuthPage> {
     try {
       if (_isLogin) {
         await AuthService.signIn(email: email, password: password);
+        await _saveLastEmail(email);
         widget.onAuthSuccess();
       } else {
         final result = await AuthService.register(
@@ -75,6 +90,7 @@ class _AuthPageState extends State<AuthPage> {
             ),
           );
         } else {
+          await _saveLastEmail(email);
           widget.onAuthSuccess();
         }
       }
@@ -86,7 +102,10 @@ class _AuthPageState extends State<AuthPage> {
             MaterialPageRoute(
               builder: (_) => OtpVerifyPage(
                 email: _emailCtrl.text.trim(),
-                onVerified: widget.onAuthSuccess,
+                onVerified: () async {
+                  await _saveLastEmail(_emailCtrl.text.trim());
+                  widget.onAuthSuccess();
+                },
               ),
             ),
           );

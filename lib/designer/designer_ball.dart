@@ -53,7 +53,7 @@ class _DesignerBallState extends State<DesignerBall>
   Animation<double>? _animTop;
 
   // ── 长按对话 ──
-  static const Duration _longPressDuration = Duration(seconds: 2);
+  static const Duration _longPressDuration = Duration(milliseconds: 1500);
   Timer? _longPressTimer;
   bool _chatMode = false;
   bool _isListening = false;
@@ -201,24 +201,30 @@ class _DesignerBallState extends State<DesignerBall>
       _movedEnough = false;
     });
 
-    if (_chatMode) {
-      // 对话模式 → 短延时后开始录音，移动了就当拖拽
-      _longPressTimer?.cancel();
-      _longPressTimer = Timer(const Duration(milliseconds: 300), () {
-        if (_pointerDown && !_movedEnough) {
-          _startListening();
+    // 开始长按倒计时，通过 Timer 手动驱动进度
+    final durationMs = _chatMode ? 1000 : _longPressDuration.inMilliseconds;
+    _longPressTimer?.cancel();
+    _countdownController.value = 0.0;
+    final startTime = DateTime.now();
+    _longPressTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      final elapsed = DateTime.now().difference(startTime);
+      final progress = elapsed.inMilliseconds / durationMs;
+      
+      if (mounted) {
+        _countdownController.value = progress.clamp(0.0, 1.0);
+      }
+      
+      if (progress >= 1.0) {
+        timer.cancel();
+        if (_pointerDown && !_movedEnough && mounted) {
+          if (_chatMode) {
+            _startListening();
+          } else {
+            _enterChatMode();
+          }
         }
-      });
-    } else {
-      // 开始长按倒计时（2 秒）
-      _longPressTimer?.cancel();
-      _countdownController.forward(from: 0);
-      _longPressTimer = Timer(_longPressDuration, () {
-        if (_pointerDown && !_movedEnough) {
-          _enterChatMode();
-        }
-      });
-    }
+      }
+    });
   }
 
   void _onPointerUp(PointerUpEvent event, Size screenSize) {
@@ -238,7 +244,7 @@ class _DesignerBallState extends State<DesignerBall>
         _stopListeningAndSend();
       }
       if (_recordStartPos != null) {
-        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _handleDragEnd(screenSize);
         _recordStartPos = null;
       }
       _dragCancelling = false;
@@ -249,7 +255,7 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  void _onPointerCancel(PointerCancelEvent event) {
+  void _onPointerCancel(PointerCancelEvent event, Size screenSize) {
     setState(() => _pointerDown = false);
     _longPressTimer?.cancel();
     GestureExclusionHelper.clearExclusionRects();
@@ -260,7 +266,7 @@ class _DesignerBallState extends State<DesignerBall>
       _movedEnough = false;
       _cancelRecording();
       if (_recordStartPos != null) {
-        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _handleDragEnd(screenSize);
         _recordStartPos = null;
       }
     }
@@ -531,16 +537,13 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint('[DesignerBall] Entering edit mode');
     final shouldUseSherpa = _useSherpaAsr;
     String finalText = _liveTranscript?.trim() ?? '';
+    _editTextController.text = finalText;
 
     if (shouldUseSherpa) {
-      _sherpaAsr.stopListening().then((sherpaText) {
-        if (sherpaText.isNotEmpty) finalText = sherpaText;
-        _editTextController.text = finalText;
-      });
+      _sherpaAsr.stopListening();
       _sherpaAsr.onResult = null;
     } else {
       try { _speech?.stop(); } catch (_) {}
-      _editTextController.text = finalText;
     }
 
     _pulseController.stop();
@@ -551,7 +554,6 @@ class _DesignerBallState extends State<DesignerBall>
       _dragCancelling = false;
       _dragInEditZone = false;
       _editMode = true;
-      _editTextController.text = finalText;
     });
   }
 
@@ -1322,7 +1324,7 @@ class _DesignerBallState extends State<DesignerBall>
             onPointerDown: _onPointerDown,
             onPointerMove: (e) => _onPointerMove(e, screenSize),
             onPointerUp: (e) => _onPointerUp(e, screenSize),
-            onPointerCancel: _onPointerCancel,
+            onPointerCancel: (e) => _onPointerCancel(e, screenSize),
             child: GestureDetector(
               onTap: () => _onTap(screenSize),
               onDoubleTap: _onDoubleTap,
@@ -1583,7 +1585,7 @@ class _DesignerBallState extends State<DesignerBall>
     }
 
     // 长按倒计时环形进度
-    if (_pointerDown && !_chatMode && !_movedEnough) {
+    if (_pointerDown && !_movedEnough && !_isListening) {
       ball = AnimatedBuilder(
         animation: _countdownController,
         builder: (context, child) {

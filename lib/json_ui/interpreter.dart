@@ -1718,33 +1718,14 @@ class JsonInterpreter extends ChangeNotifier {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
 
-    final controller = TextEditingController(text: defaultValue);
-    final result = await showDialog<String>(
+    return await showDialog<String>(
       context: ctx,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(null),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(controller.text),
-            child: const Text('确定'),
-          ),
-        ],
+      builder: (dialogCtx) => _TextInputDialog(
+        title: title,
+        hint: hint,
+        defaultValue: defaultValue,
       ),
     );
-    controller.dispose();
-    return result;
   }
 
   Future<String?> _pickOrTakeImage(
@@ -1839,20 +1820,28 @@ class JsonInterpreter extends ChangeNotifier {
 
   // ============ 参数解析 ============
 
+  dynamic _resolveValue(dynamic value) {
+    if (value is String) {
+      if (value.contains('{{') && value.contains('}}')) {
+        return resolveExpression(value);
+      }
+      return value;
+    } else if (value is List) {
+      return value.map((e) => _resolveValue(e)).toList();
+    } else if (value is Map<String, dynamic>) {
+      final resolvedMap = <String, dynamic>{};
+      value.forEach((k, v) {
+        resolvedMap[k] = _resolveValue(v);
+      });
+      return resolvedMap;
+    }
+    return value;
+  }
+
   Map<String, dynamic> _resolveArgs(Map<String, dynamic> args) {
     final resolved = <String, dynamic>{};
     for (final entry in args.entries) {
-      if (entry.value is String) {
-        final str = entry.value as String;
-        if (str.contains('{{') && str.contains('}}')) {
-          // resolveExpression: 整体 {{ path }} 返回原始类型，混合文本返回 String
-          resolved[entry.key] = resolveExpression(str);
-        } else {
-          resolved[entry.key] = str;
-        }
-      } else {
-        resolved[entry.key] = entry.value;
-      }
+      resolved[entry.key] = _resolveValue(entry.value);
     }
     return resolved;
   }
@@ -1943,5 +1932,61 @@ class JsonInterpreter extends ChangeNotifier {
     }
     _textControllers.clear();
     super.dispose();
+  }
+}
+
+class _TextInputDialog extends StatefulWidget {
+  final String title;
+  final String hint;
+  final String defaultValue;
+
+  const _TextInputDialog({
+    required this.title,
+    required this.hint,
+    required this.defaultValue,
+  });
+
+  @override
+  State<_TextInputDialog> createState() => _TextInputDialogState();
+}
+
+class _TextInputDialogState extends State<_TextInputDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.defaultValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('确定'),
+        ),
+      ],
+    );
   }
 }

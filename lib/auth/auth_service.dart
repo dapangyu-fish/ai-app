@@ -179,21 +179,28 @@ class AuthService {
   static Future<void> refreshSession() async {
     if (_refreshToken == null) throw Exception('无 refresh token');
 
-    final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/refresh'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'refresh_token': _refreshToken}),
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final resp = await http.post(
+        Uri.parse('$_baseUrl/api/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'refresh_token': _refreshToken}),
+      ).timeout(const Duration(seconds: 10));
 
-    final data = json.decode(resp.body);
-    if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '刷新失败');
+      final data = json.decode(resp.body);
+      if (resp.statusCode >= 400) {
+        // 明确被服务器拒绝（如过期/无效），清理本地状态
+        await _clearLocal();
+        throw Exception(data['error'] ?? '刷新失败');
+      }
+
+      _accessToken = data['access_token'];
+      _refreshToken = data['refresh_token'];
+      _user = data['user'];
+      await _saveLocal();
+    } catch (e) {
+      // 网络错误等保留本地状态，上抛异常
+      rethrow;
     }
-
-    _accessToken = data['access_token'];
-    _refreshToken = data['refresh_token'];
-    _user = data['user'];
-    await _saveLocal();
   }
 
   /// 登出
@@ -210,12 +217,29 @@ class AuthService {
     await _clearLocal();
   }
 
+  /// 带自动刷新 Token 的 HTTP 请求包装器
+  static Future<http.Response> _authRequest(
+    Future<http.Response> Function() requestFunc,
+  ) async {
+    var response = await requestFunc();
+    if (response.statusCode == 401 && _refreshToken != null) {
+      try {
+        await refreshSession();
+        // 刷新成功，重试请求
+        response = await requestFunc();
+      } catch (_) {
+        // 刷新失败，保持原响应，上层会抛出异常
+      }
+    }
+    return response;
+  }
+
   /// 获取最新用户信息
   static Future<Map<String, dynamic>> fetchUser() async {
-    final resp = await http.get(
+    final resp = await _authRequest(() => http.get(
       Uri.parse('$_baseUrl/api/auth/user'),
       headers: {'Authorization': 'Bearer $_accessToken'},
-    ).timeout(const Duration(seconds: 10));
+    ).timeout(const Duration(seconds: 10)));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -236,14 +260,14 @@ class AuthService {
     if (username != null) body['username'] = username;
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;
 
-    final resp = await http.put(
+    final resp = await _authRequest(() => http.put(
       Uri.parse('$_baseUrl/api/auth/user'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_accessToken',
       },
       body: json.encode(body),
-    ).timeout(const Duration(seconds: 10));
+    ).timeout(const Duration(seconds: 10)));
 
     if (resp.statusCode >= 400 && !resp.body.trimLeft().startsWith('{')) {
       throw Exception('服务器错误 (${resp.statusCode})');
@@ -260,14 +284,14 @@ class AuthService {
 
   /// 上传头像 (base64)
   static Future<String> uploadAvatar(String base64Data) async {
-    final resp = await http.post(
+    final resp = await _authRequest(() => http.post(
       Uri.parse('$_baseUrl/api/auth/avatar'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_accessToken',
       },
       body: json.encode({'avatar_base64': base64Data}),
-    ).timeout(const Duration(seconds: 15));
+    ).timeout(const Duration(seconds: 15)));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {

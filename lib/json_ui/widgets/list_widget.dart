@@ -107,12 +107,13 @@ class JsonListWidget extends JsonBaseWidget {
           );
         }
 
-        return interpreter.buildWidgetInLoopContext(
+        final itemWidget = interpreter.buildWidgetInLoopContext(
           context: ctx,
           json: itemTemplate,
           loopItem: items[index],
           loopIndex: index,
         );
+        return IntrinsicHeight(child: itemWidget);
       },
     );
 

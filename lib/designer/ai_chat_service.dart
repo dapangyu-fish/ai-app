@@ -113,9 +113,30 @@ class AiChatService {
         'provider': _selectedProvider,
       });
 
-      final response = await client.send(request).timeout(
+      var response = await client.send(request).timeout(
         const Duration(seconds: 120),
       );
+
+      if (response.statusCode == 401 && AuthService.token != null) {
+        try {
+          await AuthService.refreshSession();
+          final retryRequest = http.Request('POST', Uri.parse('$_baseUrl/chat'));
+          retryRequest.headers['Content-Type'] = 'application/json';
+          final newToken = AuthService.token;
+          if (newToken != null) {
+            retryRequest.headers['Authorization'] = 'Bearer $newToken';
+          }
+          retryRequest.body = json.encode({
+            'messages': _messages,
+            'provider': _selectedProvider,
+          });
+          response = await client.send(retryRequest).timeout(
+            const Duration(seconds: 120),
+          );
+        } catch (_) {
+          // 刷新失败，保持原 401 response，后续逻辑会处理
+        }
+      }
 
       if (response.statusCode == 429) {
         final body = await response.stream.bytesToString();

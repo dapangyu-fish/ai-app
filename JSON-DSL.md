@@ -350,6 +350,7 @@ Authorization: Bearer <token>
 |------|------|------|
 | `@show_toast` | `{ "message": "保存成功" }` | 底部 SnackBar 提示 |
 | `@show_dialog` | `{ "title": "确认", "message": "确定删除？" }` | 弹窗，返回 `true`/`false` |
+| `@show_input_dialog`| `{ "title": "修改", "hint": "请输入", "defaultValue": "", "bind": "global.val" }` | 文本输入弹窗，返回输入的字符串（点击取消返回 null） |
 | `@take_photo` | `{ "bind": "global.photo" }` | 调用摄像头拍照，返回图片路径并绑定到变量 |
 | `@pick_image` | `{ "bind": "global.photo" }` | 打开相册选择图片，返回图片路径并绑定到变量 |
 
@@ -437,16 +438,34 @@ Authorization: Bearer <token>
 | `@list_reverse` | `{ "var": "global.list" }` | `List` | 反转数组（原地修改） |
 | `@list_slice` | `{ "var": "global.list", "start": 1, "end": 4 }` | `List` | 切片（原地修改） |
 
-### 4.13 本地存储
+### 4.13 本地存储 (SharedPreferences)
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
-| `@storage_set` | `{ "key": "userName", "value": "张三" }` | 写入本地存储 |
+| `@storage_set` | `{ "key": "userName", "value": "张三" }` | 写入本地存储 (轻量数据) |
 | `@storage_get` | `{ "key": "userName" }` | 读取本地存储 |
 | `@storage_remove` | `{ "key": "userName" }` | 删除指定 key |
 | `@storage_clear` | — | 清空所有本地存储 |
 
-### 4.14 用户信息
+### 4.14 数据库持久化 (Drift / SQLite)
+
+提供强大的结构化数据存储能力，**每个独立 APP (appid) 拥有自己独立的数据库文件**，彻底做到数据隔离。
+
+| 函数 | 参数 | 返回值 | 说明 |
+|------|------|--------|------|
+| `@db_create_table` | `{ "table": "users", "columns": [ { "name": "id", "type": "TEXT", "primary": "true" }, { "name": "age", "type": "INTEGER" } ] }` | `null` | 动态建表，支持类型：`TEXT`, `INTEGER`, `REAL`, `BLOB` |
+| `@db_insert` | `{ "table": "users", "data": { "id": "1", "name": "Tom" } }` | `int` | 插入一行数据，返回插入的行号 |
+| `@db_query` | `{ "table": "users", "where": "age > ?", "whereArgs": [18], "orderBy": "age DESC", "limit": 10 }` | `List<Map>` | 查询数据，支持条件、排序和分页 |
+| `@db_update` | `{ "table": "users", "data": { "age": 20 }, "where": "id = ?", "whereArgs": ["1"] }` | `int` | 更新数据，返回影响的行数 |
+| `@db_delete` | `{ "table": "users", "where": "id = ?", "whereArgs": ["1"] }` | `int` | 删除数据，返回影响的行数 |
+| `@db_count` | `{ "table": "users", "where": "age > ?", "whereArgs": [18] }` | `int` | 统计匹配条件的记录数量 |
+| `@db_kv_set` | `{ "key": "theme", "value": "dark" }` | `null` | 使用底层数据库存储 Key-Value |
+| `@db_kv_get` | `{ "key": "theme" }` | `dynamic` | 读取数据库 Key-Value |
+| `@db_kv_delete` | `{ "key": "theme" }` | `null` | 删除数据库 Key-Value |
+
+> **注意**：由于 SQLite 的特性，`whereArgs` 中的值必须是与 `?` 对应的数组，模板变量可以通过 `[ "{{ global.id }}" ]` 传递。
+
+### 4.15 用户信息
 
 | 函数 | 参数 | 返回值 | 说明 |
 |------|------|--------|------|
@@ -811,7 +830,11 @@ templates/                         # JSON DSL 示例配置
 ├── demo_super_app.json            # Super App（Tab 导航 + 本地存储）
 ├── demo_with_deps.json            # 依赖引用 demo（引用 common-ui）
 ├── xiaohongshu-demo.json          # 小红书风格 demo
+├── diary-app.json                 # 日记本 (基于 file_read/write 的文件存储方案)
+├── diary-drift.json               # 日记本 (基于 SQLite 的结构化持久化方案)
+├── demo_contacts_drift.json       # 联系人 (SQLite 增删改查及搜索高级特性 Demo)
 ├── lib_common_ui.json             # 通用 UI 函数库（toast/confirm/格式化）
+├── lib_database.json              # 数据库包装库 (可选)
 └── lib_data_utils.json            # 数据处理工具库（随机/UUID/时间/字符串/数组）
 ```
 

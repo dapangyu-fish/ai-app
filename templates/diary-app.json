@@ -3,7 +3,7 @@
   "appid": "d1ary4pp1234567890abcdef1234567890",
   "meta": {
     "name": "diary-app",
-    "version": "1.1.0",
+    "version": "1.1.4",
     "type": "app",
     "description": "一个简洁实用的日记应用 — 支持新建、编辑、删除日记，数据持久化到本地文件",
     "author": "AI Designer",
@@ -51,7 +51,7 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
+              "condition": {
                 "===": [
                   {
                     "var": "global.currentTitle"
@@ -195,7 +195,7 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
+              "condition": {
                 "===": [
                   {
                     "var": "global.editTitle"
@@ -302,7 +302,7 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
+              "condition": {
                 "===": [
                   {
                     "var": "global._confirmResult"
@@ -501,6 +501,7 @@
                 "emptyText": "还没有日记，点击上方「写日记」开始吧 ✨",
                 "item_template": {
                   "type": "container",
+                  "layout": "column",
                   "margin": 6,
                   "marginLeft": 12,
                   "marginRight": 12,
@@ -508,6 +509,7 @@
                   "color": "#FFFDF7",
                   "borderRadius": 12,
                   "shadow": 2,
+                  "crossAxisAlignment": "stretch",
                   "onTap": {
                     "type": "call",
                     "call": "@global.viewDetail",
