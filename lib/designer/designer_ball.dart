@@ -689,6 +689,38 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
+  Future<void> _handleRetryDownload(String url) async {
+    setState(() {
+      _messages.removeLast(); // 移除重试按钮那条消息
+      _isGeneratingJson = true; // 显示骨架屏动画
+    });
+    _scrollToBottom();
+    
+    try {
+      final parsedApp = await _chatService.retryDownloadJson(url);
+      _lastGeneratedJson = parsedApp;
+      setState(() {
+        _isGeneratingJson = false;
+        _messages.add(ChatMessage(
+          role: 'system',
+          content: '🚀 JSON-APP 已成功下载，点击试运行',
+          jsonApp: parsedApp,
+        ));
+      });
+      _scrollToBottom();
+    } catch (e) {
+      setState(() {
+        _isGeneratingJson = false;
+        _messages.add(ChatMessage(
+          role: 'assistant',
+          content: '下载重试失败: $e',
+          failedJsonUrl: url,
+        ));
+      });
+      _scrollToBottom();
+    }
+  }
+
   void _cancelEditMode() {
     setState(() {
       _editMode = false;
@@ -1191,6 +1223,7 @@ class _DesignerBallState extends State<DesignerBall>
             scrollController: _scrollController,
             onProviderChanged: _onProviderChanged,
             onUploadCurrentApp: _handleUploadCurrentApp,
+            onRetryDownload: _handleRetryDownload,
             onRunJsonApp: (jsonConfig) {
               _clearAndCloseChatMode();
               widget.onRunJsonApp?.call(jsonConfig);

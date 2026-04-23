@@ -7,7 +7,8 @@ class ChatMessage {
   final String content;
   final Map<String, dynamic>? jsonApp; // AI 生成的 JSON-APP
   final String? action; // 客户端动作，例如 'UPLOAD_CURRENT_APP'
-  ChatMessage({required this.role, required this.content, this.jsonApp, this.action});
+  final String? failedJsonUrl; // 下载失败的 URL
+  ChatMessage({required this.role, required this.content, this.jsonApp, this.action, this.failedJsonUrl});
 }
 
 /// 纯字幕式覆层 — 半透明浮在屏幕底部，带窗口框和标题栏。
@@ -23,6 +24,7 @@ class ChatOverlay extends StatelessWidget {
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
   final void Function(String providerId)? onProviderChanged;
   final VoidCallback? onUploadCurrentApp;
+  final void Function(String url)? onRetryDownload;
 
   const ChatOverlay({
     super.key,
@@ -37,6 +39,7 @@ class ChatOverlay extends StatelessWidget {
     this.onClear,
     this.onProviderChanged,
     this.onUploadCurrentApp,
+    this.onRetryDownload,
   });
 
   @override
@@ -144,6 +147,9 @@ class ChatOverlay extends StatelessWidget {
                     if (msg.action == 'UPLOAD_CURRENT_APP') {
                       return _buildActionLine(msg.content, '上传当前应用配置', onUploadCurrentApp);
                     }
+                    if (msg.failedJsonUrl != null) {
+                      return _buildRetryLine(msg.content, msg.failedJsonUrl!);
+                    }
                     if (msg.role == 'system' && msg.jsonApp != null) {
                       return _buildRunButton(msg.content, msg.jsonApp!);
                     }
@@ -228,6 +234,43 @@ class ChatOverlay extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRetryLine(String content, String url) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (content.isNotEmpty) _buildLine('assistant', content),
+          GestureDetector(
+            onTap: () => onRetryDownload?.call(url),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.refresh, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '重试下载 JSON',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

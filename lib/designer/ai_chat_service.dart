@@ -13,8 +13,9 @@ class ChatEvent {
   final String? error;
   final bool isGeneratingJson; // 正在生成 JSON
   final String? requestAction; // 比如 "upload_current_app"
+  final String? failedJsonUrl; // 下载失败的 JSON URL
 
-  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction});
+  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl});
 }
 
 /// AI 供应商信息
@@ -171,17 +172,17 @@ class AiChatService {
           if (data.containsKey('has_json') && data['has_json'] == true) {
             Map<String, dynamic>? parsedApp;
             if (data.containsKey('json_url') && data['json_url'] != null) {
+              final url = data['json_url'] as String;
               try {
-                final url = data['json_url'] as String;
                 final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
                 if (getResp.statusCode == 200) {
                   final jsonBody = utf8.decode(getResp.bodyBytes);
                   parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
                 } else {
-                  yield ChatEvent(error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+                  yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
                 }
               } catch (e) {
-                yield ChatEvent(error: '下载 JSON 异常: $e');
+                yield ChatEvent(failedJsonUrl: url, error: '下载 JSON 异常: $e');
               }
             } else {
               parsedApp = data['json_app'] as Map<String, dynamic>?;
@@ -412,6 +413,17 @@ class AiChatService {
     } finally {
       if (_activeClient == client) _activeClient = null;
       client.close();
+    }
+  }
+
+  /// 重试下载 JSON
+  Future<Map<String, dynamic>> retryDownloadJson(String url) async {
+    final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+    if (getResp.statusCode == 200) {
+      final jsonBody = utf8.decode(getResp.bodyBytes);
+      return json.decode(jsonBody) as Map<String, dynamic>;
+    } else {
+      throw Exception('HTTP ${getResp.statusCode}');
     }
   }
 
