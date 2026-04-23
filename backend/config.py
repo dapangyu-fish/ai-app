@@ -121,6 +121,9 @@ PROMPTS_DIR = os.path.join(BASE_DIR, "prompts")
 GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
 CHAT_AGENT_PROMPT_PATH = os.path.join(PROMPTS_DIR, "chat_agent_prompt.md")
 
+# Claude CLI 路径（可通过环境变量覆盖）
+CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "/root/.nvm/versions/node/v22.22.2/bin/claude")
+
 # Agent 配置
 AGENT_MAX_ITERATIONS = 8
 

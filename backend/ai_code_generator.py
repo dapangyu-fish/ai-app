@@ -13,7 +13,7 @@ from flask import request, jsonify, Response, stream_with_context
 from config import (
     AI_PROVIDERS, DEFAULT_PROVIDER,
     DSL_SPEC_PATH, PROJECT_ROOT, GENERATE_PROMPT_PATH, CHAT_AGENT_PROMPT_PATH,
-    AGENT_MAX_ITERATIONS, ROLE_QUOTAS
+    AGENT_MAX_ITERATIONS, ROLE_QUOTAS, CLAUDE_BIN
 )
 from database import db_query, get_quota_info, increment_quota
 from auth import require_auth
@@ -288,7 +288,7 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
     env.pop("ANTHROPIC_API_KEY", None)
 
     cmd = [
-        "claude", "-p",
+        CLAUDE_BIN, "-p",
         "--model", cli_model,
         "--output-format", "stream-json",
         "--verbose",
