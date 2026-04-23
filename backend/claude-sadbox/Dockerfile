@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:26.04
 
 # 避免在 apt-get install 时出现交互式提示
 ENV DEBIAN_FRONTEND=noninteractive
