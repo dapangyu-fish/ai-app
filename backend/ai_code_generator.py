@@ -307,6 +307,7 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             f.write(system_prompt)
 
     cmd = [
+        "is_sandbox=1",
         CLAUDE_BIN, "-p",
         "--model", cli_model,
         "--output-format", "stream-json",
