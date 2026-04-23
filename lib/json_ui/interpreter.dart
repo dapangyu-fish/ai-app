@@ -1516,7 +1516,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> _builtinWhile(Map<String, dynamic> args) async {
     final condition = args['condition'];
     final body = args['body'] as List<dynamic>? ?? [];
-    final maxIterations = _toInt(args['max_iterations'] ?? 10000);
+    final maxIterations = _toInt(_resolveTemplatesInRule(args['max_iterations']) ?? 10000);
 
     int count = 0;
     while (_evaluateBool(condition) && count < maxIterations) {
@@ -1552,7 +1552,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<dynamic> _builtinLoopByNum(Map<String, dynamic> args) async {
-    final count = _toInt(args['count'] ?? 0);
+    final count = _toInt(_resolveTemplatesInRule(args['count']) ?? 0);
     final body = args['body'] as List<dynamic>? ?? [];
 
     for (var i = 0; i < count; i++) {
@@ -1572,7 +1572,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> _builtinTryCatch(Map<String, dynamic> args) async {
     final trySteps = args['try'] as List<dynamic>? ?? [];
     final catchSteps = args['catch'] as List<dynamic>? ?? [];
-    final errorVar = args['error_var'] as String?;
+    final errorVar = _resolveTemplatesInRule(args['error_var']) as String?;
 
     try {
       dynamic lastResult;
