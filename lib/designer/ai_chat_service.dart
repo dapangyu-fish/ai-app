@@ -247,9 +247,9 @@ class AiChatService {
     }
   }
 
-  /// 注入当前运行的 JSON-APP 作为对话上下文（放在消息列表最前面）
+  /// 上传当前运行的 JSON-APP，返回包含链接的文本。
   /// 优先通过预签名 URL 上传到 MinIO，仅在消息中携带链接；失败时回退到内联 JSON。
-  Future<void> setAppContext(Map<String, dynamic> jsonConfig) async {
+  Future<String> uploadCurrentApp(Map<String, dynamic> jsonConfig) async {
     final jsonStr = json.encode(jsonConfig);
     String contextContent;
 
@@ -296,14 +296,7 @@ class AiChatService {
           '后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```';
     }
 
-    _messages.insert(0, {
-      'role': 'user',
-      'content': contextContent,
-    });
-    _messages.insert(1, {
-      'role': 'assistant',
-      'content': '好的，我已了解你当前运行的 JSON-APP。请告诉我你需要什么修改或帮助。',
-    });
+    return contextContent;
   }
 
   /// 使用 Claude CLI 生成/修改/修复 JSON-APP
