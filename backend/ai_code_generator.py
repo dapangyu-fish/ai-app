@@ -268,7 +268,7 @@ def _get_agent_client(provider_id=None):
     print(f"  - Base URL: {provider.get('base_url')}")
     print(f"  - API Key: {masked_key}")
     print(f"  - Agent Model: {provider.get('agent_model', provider.get('models', {}).get('default'))}\n")
-    
+
     # 强制清理环境变量中的残留 token，防止 anthropic SDK 错误地发送 Authorization: Bearer 头
     if "ANTHROPIC_AUTH_TOKEN" in os.environ:
         os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
@@ -296,14 +296,146 @@ def list_providers():
     return jsonify({"providers": providers})
 
 
+# ---------------------------------------------------------------------------
+#  Claude CLI 代码生成（generate_app / fix_app 共用）
+# ---------------------------------------------------------------------------
+
 def _load_generate_prompt():
     """加载 Claude CLI 代码生成提示词"""
     try:
         with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
             return f.read()
     except Exception as e:
-        print(f"[GenerateApp] Failed to load prompt: {e}")
+        print(f"[CLI] Failed to load prompt: {e}")
         return ""
+
+
+def _build_user_prompt(user_prompt, current_app, crash_log, output_path):
+    """构建用户提示词，拼接当前 APP、崩溃日志和用户需求"""
+    parts = []
+    if current_app:
+        app_str = current_app if isinstance(current_app, str) else json.dumps(current_app, ensure_ascii=False, indent=2)
+        parts.append(f"## 当前正在运行的 JSON-APP\n```json\n{app_str}\n```")
+    if crash_log:
+        parts.append(f"## 崩溃日志\n{crash_log}")
+    if user_prompt:
+        parts.append(f"## 用户需求\n{user_prompt}")
+    parts.append(f"\n请将最终生成的完整 JSON-APP 保存到文件: {output_path}")
+    return "\n\n".join(parts)
+
+
+def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"):
+    """运行 Claude CLI 并 yield SSE 事件字符串。
+
+    通过 stdin 传递 user_prompt（避免超长 CLI 参数），
+    实时解析 stream-json 输出，最后将生成的 JSON 文件上传到 MinIO。
+    """
+    cli_env = provider.get("cli_env", {})
+    cli_model = provider.get("cli_model", provider["models"]["default"])
+
+    env = os.environ.copy()
+    for k, v in cli_env.items():
+        env[k] = v
+    env.pop("ANTHROPIC_API_KEY", None)
+
+    cmd = [
+        "claude", "-p",
+        "--model", cli_model,
+        "--output-format", "stream-json",
+        "--verbose",
+        "--dangerously-skip-permissions",
+        "--no-session-persistence",
+    ]
+    if system_prompt:
+        cmd.extend(["--system-prompt", system_prompt])
+
+    auth_token = cli_env.get("ANTHROPIC_AUTH_TOKEN", "")
+    masked = f"{auth_token[:4]}***{auth_token[-4:]}" if len(auth_token) > 8 else "***"
+    print(f"\n[{tag}] Starting Claude CLI:")
+    print(f"  - Provider: {provider['name']}")
+    print(f"  - Model: {cli_model}")
+    print(f"  - Base URL: {cli_env.get('ANTHROPIC_BASE_URL')}")
+    print(f"  - Auth Token: {masked}")
+    print(f"  - CWD: {PROJECT_ROOT}")
+    print(f"  - Output: {output_path}\n")
+
+    proc = subprocess.Popen(
+        cmd,
+        cwd=PROJECT_ROOT,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        bufsize=1,
+    )
+
+    # 通过 stdin 传递用户提示词（避免超长 CLI 参数）
+    if user_prompt:
+        proc.stdin.write(user_prompt.encode("utf-8"))
+    proc.stdin.close()
+
+    # 实时读取 stdout，逐行解析 stream-json 格式并推送 SSE
+    for raw_line in iter(proc.stdout.readline, b''):
+        line = raw_line.decode("utf-8", errors="replace").strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+            if event.get("type") == "assistant":
+                for block in event.get("content", []):
+                    if block.get("type") == "text" and block.get("text"):
+                        yield f'data: {json.dumps({"content": block["text"]}, ensure_ascii=False)}\n\n'
+            elif event.get("type") == "result":
+                result_text = event.get("result", "")
+                if result_text:
+                    yield f'data: {json.dumps({"content": result_text}, ensure_ascii=False)}\n\n'
+        except json.JSONDecodeError:
+            if line:
+                yield f'data: {json.dumps({"content": line}, ensure_ascii=False)}\n\n'
+
+    proc.wait()
+    stderr_output = proc.stderr.read().decode("utf-8", errors="replace")
+    if proc.returncode != 0:
+        print(f"[{tag}] CLI exited with code {proc.returncode}")
+        if stderr_output:
+            print(f"[{tag}] stderr: {stderr_output[:500]}")
+
+    # 检查输出文件并上传到 MinIO
+    output_filename = os.path.basename(output_path)
+    if os.path.exists(output_path):
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                app_json = json.load(f)
+            print(f"[{tag}] JSON file found, keys: {list(app_json.keys())}")
+
+            import requests as _req
+            from store import _minio_presigned_put, _minio_presigned_get
+
+            bucket = "ai-chat-temp"
+            put_url = _minio_presigned_put(bucket, output_filename)
+            get_url = _minio_presigned_get(bucket, output_filename)
+
+            upload_resp = _req.put(
+                put_url,
+                data=json.dumps(app_json, ensure_ascii=False).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+
+            if upload_resp.status_code == 200:
+                yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
+                print(f"[{tag}] MinIO upload success: {get_url}")
+            else:
+                yield f'data: {json.dumps({"has_json": True, "json_app": app_json}, ensure_ascii=False)}\n\n'
+        except Exception as e:
+            print(f"[{tag}] JSON read/upload failed: {e}")
+        finally:
+            try:
+                os.remove(output_path)
+            except Exception:
+                pass
+    else:
+        print(f"[{tag}] Output file not found: {output_path}")
+        yield f'data: {json.dumps({"content": "\n\n⚠️ Claude 未生成 JSON 文件，请检查提示词或重试。"}, ensure_ascii=False)}\n\n'
 
 
 @require_auth
@@ -312,7 +444,6 @@ def generate_app():
     user_id = request.supabase_user.get("id")
     role = request.user_role
 
-    # 配额检查
     used, limit, remaining = get_quota_info(user_id, role, ROLE_QUOTAS)
     if remaining <= 0:
         return jsonify({
@@ -322,157 +453,29 @@ def generate_app():
 
     body = request.get_json(silent=True) or {}
     user_prompt = body.get("prompt", "")
-    current_app = body.get("current_app")  # 现有 APP 的 JSON（修改/修复场景）
-    crash_log = body.get("crash_log")      # 崩溃日志（修复场景）
+    current_app = body.get("current_app")
+    crash_log = body.get("crash_log")
     provider_id = body.get("provider")
 
     if not user_prompt and not crash_log:
         return jsonify({"error": "prompt 或 crash_log 不能为空"}), 400
 
     provider = _get_provider(provider_id)
-    cli_env = provider.get("cli_env", {})
-    cli_model = provider.get("cli_model", provider["models"]["default"])
-
-    if not cli_env.get("ANTHROPIC_AUTH_TOKEN"):
+    if not provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
         return jsonify({"error": f"供应商 {provider['name']} 未配置 CLI 环境变量"}), 500
 
-    # 生成唯一的输出路径
-    output_filename = f"ai-gen-{uuid.uuid4().hex}.json"
-    output_path = os.path.join("/tmp", output_filename)
-
-    # 加载系统提示词
+    output_path = os.path.join("/tmp", f"ai-gen-{uuid.uuid4().hex}.json")
     system_prompt = _load_generate_prompt()
+    full_prompt = _build_user_prompt(user_prompt, current_app, crash_log, output_path)
 
-    # 拼接用户提示词
-    parts = []
-    if current_app:
-        app_json_str = current_app if isinstance(current_app, str) else json.dumps(current_app, ensure_ascii=False, indent=2)
-        parts.append(f"## 当前正在运行的 JSON-APP\n```json\n{app_json_str}\n```")
-    if crash_log:
-        parts.append(f"## 崩溃日志\n{crash_log}")
-    if user_prompt:
-        parts.append(f"## 用户需求\n{user_prompt}")
-    parts.append(f"\n请将最终生成的完整 JSON-APP 保存到文件: {output_path}")
-
-    full_prompt = "\n\n".join(parts)
-
-    # 构建环境变量
-    env = os.environ.copy()
-    # 注入该供应商的所有 CLI 环境变量
-    for k, v in cli_env.items():
-        env[k] = v
-    # 清理可能冲突的旧变量
-    env.pop("ANTHROPIC_API_KEY", None)
-
-    # 构建 Claude CLI 命令
-    cmd = [
-        "claude", "-p",
-        "--model", cli_model,
-        "--output-format", "stream-json",
-        "--verbose",
-        "--dangerously-skip-permissions",
-        "--no-session-persistence",
-        "--system-prompt", system_prompt,
-        full_prompt,
-    ]
-
-    auth_token = cli_env.get("ANTHROPIC_AUTH_TOKEN", "")
-    masked_key = f"{auth_token[:4]}***{auth_token[-4:]}" if len(auth_token) > 8 else "***"
-    print(f"\n[GenerateApp] Starting Claude CLI:")
-    print(f"  - Provider: {provider['name']}")
-    print(f"  - Model: {cli_model}")
-    print(f"  - Base URL: {cli_env.get('ANTHROPIC_BASE_URL')}")
-    print(f"  - Auth Token: {masked_key}")
-    print(f"  - CWD: {PROJECT_ROOT}")
-    print(f"  - Output: {output_path}\n")
-
-    # 递增配额
     increment_quota(user_id)
     new_remaining = remaining - 1
 
     def generate():
         try:
-            proc = subprocess.Popen(
-                cmd,
-                cwd=PROJECT_ROOT,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                bufsize=1,
-            )
-
-            # 实时读取 stdout，逐行解析 stream-json 格式并推送 SSE
-            for raw_line in iter(proc.stdout.readline, b''):
-                line = raw_line.decode("utf-8", errors="replace").strip()
-                if not line:
-                    continue
-                try:
-                    event = json.loads(line)
-                    # stream-json 格式: {"type": "assistant", "content": [{"type": "text", "text": "..."}]}
-                    if event.get("type") == "assistant":
-                        for block in event.get("content", []):
-                            if block.get("type") == "text" and block.get("text"):
-                                yield f'data: {json.dumps({"content": block["text"]}, ensure_ascii=False)}\n\n'
-                    elif event.get("type") == "result":
-                        # 最终结果
-                        result_text = event.get("result", "")
-                        if result_text:
-                            yield f'data: {json.dumps({"content": result_text}, ensure_ascii=False)}\n\n'
-                except json.JSONDecodeError:
-                    # 非 JSON 行，当作普通文本输出
-                    if line:
-                        yield f'data: {json.dumps({"content": line}, ensure_ascii=False)}\n\n'
-
-            proc.wait()
-            stderr_output = proc.stderr.read().decode("utf-8", errors="replace")
-            if proc.returncode != 0:
-                print(f"[GenerateApp] CLI exited with code {proc.returncode}")
-                if stderr_output:
-                    print(f"[GenerateApp] stderr: {stderr_output[:500]}")
-
-            # 检查输出文件是否存在
-            if os.path.exists(output_path):
-                try:
-                    with open(output_path, "r", encoding="utf-8") as f:
-                        app_json = json.load(f)
-                    print(f"[GenerateApp] JSON file found, keys: {list(app_json.keys())}")
-
-                    # 上传到 MinIO
-                    import requests as _req
-                    from store import _minio_presigned_put, _minio_presigned_get
-
-                    bucket = "ai-chat-temp"
-                    put_url = _minio_presigned_put(bucket, output_filename)
-                    get_url = _minio_presigned_get(bucket, output_filename)
-
-                    upload_resp = _req.put(
-                        put_url,
-                        data=json.dumps(app_json, ensure_ascii=False).encode("utf-8"),
-                        headers={"Content-Type": "application/json"},
-                    )
-
-                    if upload_resp.status_code == 200:
-                        yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
-                        print(f"[GenerateApp] MinIO upload success: {get_url}")
-                    else:
-                        # 上传失败，直接返回 JSON
-                        yield f'data: {json.dumps({"has_json": True, "json_app": app_json}, ensure_ascii=False)}\n\n'
-                except Exception as e:
-                    print(f"[GenerateApp] JSON read/upload failed: {e}")
-                finally:
-                    # 清理临时文件
-                    try:
-                        os.remove(output_path)
-                    except Exception:
-                        pass
-            else:
-                print(f"[GenerateApp] Output file not found: {output_path}")
-                yield f'data: {json.dumps({"content": "\n\n⚠️ Claude 未生成 JSON 文件，请检查提示词或重试。"}, ensure_ascii=False)}\n\n'
-
-            # 配额信息
+            yield from _run_claude_cli(system_prompt, full_prompt, provider, output_path, tag="GenerateApp")
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
             yield "data: [DONE]\n\n"
-
         except Exception as e:
             print(f"[GenerateApp] Error: {e}")
             import traceback; traceback.print_exc()
@@ -486,6 +489,10 @@ def generate_app():
                  "Access-Control-Allow-Origin": "*"},
     )
 
+
+# ---------------------------------------------------------------------------
+#  Chat — Anthropic SDK + 工具调用（保留原有 Agent 模式）
+# ---------------------------------------------------------------------------
 
 @require_auth
 def chat():
@@ -590,7 +597,7 @@ def chat():
                                     parts = json_content.split("</app_json>")
                                     json_content = parts[0]
                                     inside_json = False
-                                    
+
                                     # 如果模型在 </app_json> 之后还有话说，把剩下的话放回 buffer 继续跑
                                     if len(parts) > 1 and parts[1]:
                                         buffer = parts[1]
@@ -599,9 +606,9 @@ def chat():
                                             yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
                                             full_content += buffer
                                             buffer = ""
-                                            
+
                         response = stream.get_final_message()
-                        
+
                         # 循环结束后，如果有残留的安全 buffer，全刷出去
                         if buffer and not inside_json:
                             yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
@@ -664,31 +671,31 @@ def chat():
                         json_str = match.group(1)
 
             print(f"[Agent] JSON detect: match={'YES' if json_str else 'NO'}, content_len={len(full_content)}")
-            
+
             if json_str:
                 # 剔除可能多余的结束标签
                 if "</app_json>" in json_str:
                     json_str = json_str.split("</app_json>")[0]
-                
+
                 try:
                     fixed_app = json.loads(json_str)
                     print(f"[Agent] JSON-APP parse success, keys: {list(fixed_app.keys())}")
-                    
+
                     # 上传到 MinIO
                     import uuid, requests
                     from store import _minio_presigned_put, _minio_presigned_get
-                    
+
                     filename = f"gen_{uuid.uuid4().hex}.json"
                     bucket = "ai-chat-temp"
                     put_url = _minio_presigned_put(bucket, filename)
                     get_url = _minio_presigned_get(bucket, filename)
-                    
+
                     upload_resp = requests.put(
-                        put_url, 
+                        put_url,
                         data=json.dumps(fixed_app, ensure_ascii=False).encode('utf-8'),
                         headers={'Content-Type': 'application/json'}
                     )
-                    
+
                     if upload_resp.status_code == 200:
                         yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
                         print(f"[Agent] MinIO upload success: {get_url}")
@@ -715,9 +722,13 @@ def chat():
     )
 
 
+# ---------------------------------------------------------------------------
+#  Fix App — 使用 Claude CLI 修复崩溃的 JSON-APP
+# ---------------------------------------------------------------------------
+
 @require_auth
 def fix_app():
-    """接收崩溃日志 + JSON，使用 Agent + 工具调用返回修复版 JSON"""
+    """接收崩溃日志 + JSON，使用 Claude CLI 返回修复版 JSON"""
     body = request.get_json(silent=True) or {}
     crash_log = body.get("crash_log", "")
     json_config = body.get("json_config", "")
@@ -726,192 +737,32 @@ def fix_app():
     if not crash_log or not json_config:
         return jsonify({"error": "crash_log 和 json_config 不能为空"}), 400
 
-    json_str = json_config if isinstance(json_config, str) else json.dumps(json_config, ensure_ascii=False, indent=2)
-
-    prompt = f"""以下 JSON-APP 运行时崩溃了，请按照"修复/修改 JSON-APP 的标准流程"进行修复。
-
-## 崩溃日志
-{crash_log}
-
-## 当前 JSON
-```json
-{json_str}
-```
-
-请严格按照 ★ 强制研究步骤操作：先读框架规范文档、确认内置函数、参考模板，然后再输出修复后的完整 JSON。
-修复后的 JSON 请放在 <app_json> 和 </app_json> 标签内。"""
-
-    # 使用统一的 AGENT_SYSTEM（含强制研究步骤）
-    system_prompt = AGENT_SYSTEM
-    registry = _load_registry_summary()
-    if registry:
-        system_prompt += f"\n## 已注册的 APP 和组件\n{registry}"
-
     provider = _get_provider(provider_id)
-    client = _get_agent_client(provider_id)
-    model = _get_agent_model(provider_id)
+    if not provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
+        return jsonify({"error": f"供应商 {provider['name']} 未配置 CLI 环境变量"}), 500
+
+    output_path = os.path.join("/tmp", f"ai-fix-{uuid.uuid4().hex}.json")
+    system_prompt = _load_generate_prompt()
+    full_prompt = _build_user_prompt(
+        "请修复这个崩溃的 JSON-APP，确保修复后可以正常运行。",
+        json_config,
+        crash_log,
+        output_path,
+    )
 
     def generate():
-        full_content = ""
-        json_content = ""
-        msgs = [{"role": "user", "content": prompt}]
-
         try:
-            for iteration in range(AGENT_MAX_ITERATIONS):
-                print(f"[FixApp Agent] Iteration {iteration + 1}, messages={len(msgs)}")
-
-                response = None
-                buffer = ""
-                inside_json = False
-
-                call_kwargs = {
-                    "model": model,
-                    "max_tokens": 8192,
-                    "system": system_prompt,
-                    "messages": msgs,
-                    "tools": AGENT_TOOLS,
-                }
-                if provider.get("extra_body"):
-                    call_kwargs["extra_body"] = provider["extra_body"]
-
-                try:
-                    with client.messages.stream(**call_kwargs) as stream:
-                        for text in stream.text_stream:
-                            if not inside_json:
-                                buffer += text
-                                if "<app_json>" in buffer:
-                                    parts = buffer.split("<app_json>")
-                                    if parts[0]:
-                                        yield f'data: {json.dumps({"content": parts[0]}, ensure_ascii=False)}\n\n'
-                                        full_content += parts[0]
-                                    yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
-                                    inside_json = True
-                                    json_content = parts[1] if len(parts) > 1 else ""
-                                    buffer = ""
-                                else:
-                                    if "<" in buffer:
-                                        idx = buffer.rfind("<")
-                                        if len(buffer) - idx < 15:
-                                            safe_part = buffer[:idx]
-                                            if safe_part:
-                                                yield f'data: {json.dumps({"content": safe_part}, ensure_ascii=False)}\n\n'
-                                                full_content += safe_part
-                                            buffer = buffer[idx:]
-                                        else:
-                                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
-                                            full_content += buffer
-                                            buffer = ""
-                                    else:
-                                        yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
-                                        full_content += buffer
-                                        buffer = ""
-                            else:
-                                json_content += text
-                                if "</app_json>" in json_content:
-                                    parts = json_content.split("</app_json>")
-                                    json_content = parts[0]
-                                    inside_json = False
-                                    if len(parts) > 1 and parts[1]:
-                                        buffer = parts[1]
-                                        if "<" not in buffer:
-                                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
-                                            full_content += buffer
-                                            buffer = ""
-
-                        response = stream.get_final_message()
-
-                        if buffer and not inside_json:
-                            yield f'data: {json.dumps({"content": buffer}, ensure_ascii=False)}\n\n'
-                            full_content += buffer
-                except Exception as e:
-                    print(f"[FixApp Agent] Stream failed ({e}), falling back to non-stream")
-                    response = client.messages.create(**call_kwargs)
-                    for block in response.content:
-                        if block.type == 'text' and block.text:
-                            full_content += block.text
-                            yield f'data: {json.dumps({"content": block.text}, ensure_ascii=False)}\n\n'
-
-                # 检查是否有工具调用
-                tool_calls = [b for b in response.content if b.type == 'tool_use']
-                if not tool_calls:
-                    print(f"[FixApp Agent] Done after {iteration + 1} iterations")
-                    break
-
-                # 构建 assistant 消息
-                assistant_content = []
-                for block in response.content:
-                    if block.type == 'text':
-                        assistant_content.append({"type": "text", "text": block.text})
-                    elif block.type == 'tool_use':
-                        assistant_content.append({
-                            "type": "tool_use",
-                            "id": block.id,
-                            "name": block.name,
-                            "input": block.input,
-                        })
-                msgs.append({"role": "assistant", "content": assistant_content})
-
-                # 执行工具
-                tool_results = []
-                for tc in tool_calls:
-                    result = _execute_agent_tool(tc.name, tc.input)
-                    print(f"[FixApp Agent] Tool {tc.name}: {len(result)} chars")
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": tc.id,
-                        "content": result,
-                    })
-                msgs.append({"role": "user", "content": tool_results})
-
-            # JSON-APP 检测与上传
-            json_str_out = ""
-            if json_content and "{" in json_content:
-                json_str_out = json_content
-            else:
-                match = re.search(r'<app_json>\s*(\{.*?\})\s*</app_json>', full_content, re.DOTALL)
-                if match:
-                    json_str_out = match.group(1)
-                else:
-                    match = re.search(r'```(?:json|JSON)?\s*\n?\s*(\{.*?\})\s*\n?```', full_content, re.DOTALL)
-                    if match:
-                        json_str_out = match.group(1)
-
-            if json_str_out:
-                if "</app_json>" in json_str_out:
-                    json_str_out = json_str_out.split("</app_json>")[0]
-                try:
-                    fixed_app = json.loads(json_str_out)
-                    print(f"[FixApp Agent] JSON parse success, keys: {list(fixed_app.keys())}")
-
-                    import uuid, requests
-                    from store import _minio_presigned_put, _minio_presigned_get
-
-                    filename = f"fix_{uuid.uuid4().hex}.json"
-                    bucket = "ai-chat-temp"
-                    put_url = _minio_presigned_put(bucket, filename)
-                    get_url = _minio_presigned_get(bucket, filename)
-
-                    upload_resp = requests.put(
-                        put_url,
-                        data=json.dumps(fixed_app, ensure_ascii=False).encode('utf-8'),
-                        headers={'Content-Type': 'application/json'}
-                    )
-
-                    if upload_resp.status_code == 200:
-                        yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
-                        print(f"[FixApp Agent] MinIO upload success: {get_url}")
-                    else:
-                        yield f'data: {json.dumps({"has_json": True, "json_app": fixed_app}, ensure_ascii=False)}\n\n'
-                except Exception as e:
-                    print(f"[FixApp Agent] JSON parse or upload failed: {e}")
-
+            yield from _run_claude_cli(system_prompt, full_prompt, provider, output_path, tag="FixApp")
             yield "data: [DONE]\n\n"
-
         except Exception as e:
-            print(f"[FixApp Agent] Error: {e}")
+            print(f"[FixApp] Error: {e}")
             import traceback; traceback.print_exc()
             yield f'data: {json.dumps({"error": str(e)})}\n\n'
             yield "data: [DONE]\n\n"
 
-    return Response(stream_with_context(generate()), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*"})
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
+                 "Access-Control-Allow-Origin": "*"},
+    )
