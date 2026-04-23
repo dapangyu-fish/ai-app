@@ -382,13 +382,10 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
         try:
             event = json.loads(line)
             if event.get("type") == "assistant":
-                for block in event.get("content", []):
+                msg = event.get("message", {})
+                for block in msg.get("content", []):
                     if block.get("type") == "text" and block.get("text"):
                         yield f'data: {json.dumps({"content": block["text"]}, ensure_ascii=False)}\n\n'
-            elif event.get("type") == "result":
-                result_text = event.get("result", "")
-                if result_text:
-                    yield f'data: {json.dumps({"content": result_text}, ensure_ascii=False)}\n\n'
         except json.JSONDecodeError:
             if line:
                 yield f'data: {json.dumps({"content": line}, ensure_ascii=False)}\n\n'
