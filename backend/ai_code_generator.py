@@ -351,7 +351,12 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
 
     # 通过 stdin 传递用户提示词（避免超长 CLI 参数）
     if user_prompt:
-        proc.stdin.write(user_prompt.encode("utf-8"))
+        prompt_bytes = user_prompt.encode("utf-8")
+        print(f"[{tag}] Piping user_prompt via stdin ({len(prompt_bytes)} bytes)")
+        print(f"[{tag}] Prompt preview: {user_prompt[:500]}...")
+        proc.stdin.write(prompt_bytes)
+    else:
+        print(f"[{tag}] WARNING: user_prompt is empty, nothing piped to stdin!")
     proc.stdin.close()
 
 
