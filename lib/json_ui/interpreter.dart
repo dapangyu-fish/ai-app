@@ -18,6 +18,7 @@ import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
+import 'drift_database.dart';
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -26,6 +27,7 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _variables;
   late Map<String, dynamic> _functions;
   String _currentScreenId = '';
+  String _appId = 'default';
 
   final List<Map<String, dynamic>> _loopContextStack = [];
   final List<Map<String, dynamic>> _paramsStack = [];
@@ -260,6 +262,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   void loadConfig(Map<String, dynamic> config) {
     _config = config;
+
+    // 提取 appid，用于 Drift 数据库隔离
+    _appId = config['appid']?.toString() ?? config['meta']?['name']?.toString() ?? 'default';
 
     final global = config['global'] as Map<String, dynamic>? ?? {};
     _variables =
@@ -941,6 +946,143 @@ class JsonInterpreter extends ChangeNotifier {
           return false;
         }
 
+      // ── Drift 数据库 ──
+      case '@db_create_table':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final columns = resolvedArgs['columns'];
+          if (table == null || columns is! List) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final colList = columns.map((c) => Map<String, String>.from(
+            (c as Map).map((k, v) => MapEntry(k.toString(), v.toString()))
+          )).toList();
+          await db.ensureTable(table, colList);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_create_table error: $e');
+          return false;
+        }
+
+      case '@db_insert':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final data = resolvedArgs['data'];
+          if (table == null || data is! Map) return -1;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          return await db.insertRow(table, Map<String, dynamic>.from(data));
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_insert error: $e');
+          return -1;
+        }
+
+      case '@db_query':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          if (table == null) return <Map<String, dynamic>>[];
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final where = resolvedArgs['where']?.toString();
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          final orderBy = resolvedArgs['orderBy']?.toString();
+          final limit = resolvedArgs['limit'] != null ? _toInt(resolvedArgs['limit']!) : null;
+          final offset = resolvedArgs['offset'] != null ? _toInt(resolvedArgs['offset']!) : null;
+          return await db.queryRows(table,
+            where: where,
+            whereArgs: whereArgs,
+            orderBy: orderBy,
+            limit: limit,
+            offset: offset,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_query error: $e');
+          return <Map<String, dynamic>>[];
+        }
+
+      case '@db_update':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final data = resolvedArgs['data'];
+          final where = resolvedArgs['where']?.toString();
+          if (table == null || data is! Map || where == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.updateRows(table, Map<String, dynamic>.from(data),
+            where: where,
+            whereArgs: whereArgs,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_update error: $e');
+          return 0;
+        }
+
+      case '@db_delete':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final where = resolvedArgs['where']?.toString();
+          if (table == null || where == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.deleteRows(table, where: where, whereArgs: whereArgs);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_delete error: $e');
+          return 0;
+        }
+
+      case '@db_count':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          if (table == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final where = resolvedArgs['where']?.toString();
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.countRows(table, where: where, whereArgs: whereArgs);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_count error: $e');
+          return 0;
+        }
+
+      case '@db_kv_set':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          final value = resolvedArgs['value'];
+          if (key == null) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          await db.kvSet(key, value);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_set error: $e');
+          return false;
+        }
+
+      case '@db_kv_get':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          if (key == null) return null;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          return await db.kvGet(key);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_get error: $e');
+          return null;
+        }
+
+      case '@db_kv_delete':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          if (key == null) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          await db.kvDelete(key);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_delete error: $e');
+          return false;
+        }
 
       // ── 随机数 ──
       case '@random':
