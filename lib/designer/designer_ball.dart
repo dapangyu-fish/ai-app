@@ -600,6 +600,18 @@ class _DesignerBallState extends State<DesignerBall>
           _scrollToBottom();
           return;
         }
+        if (event.thinking != null) {
+          // 思考过程 → 更新最后一条消息显示思考状态
+          setState(() {
+            _isThinking = false;
+            final preview = event.thinking!.length > 100
+                ? '${event.thinking!.substring(0, 100)}...'
+                : event.thinking!;
+            _messages.last = ChatMessage(role: 'assistant', content: '💭 $preview');
+          });
+          _scrollToBottom();
+          return;
+        }
         if (event.content != null) {
           setState(() {
             _isThinking = false;

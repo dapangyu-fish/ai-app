@@ -356,7 +356,6 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             except: pass
         return
 
-
     # 实时读取 stdout，逐行解析 stream-json 格式并推送 SSE
     for raw_line in iter(proc.stdout.readline, b''):
         line = raw_line.decode("utf-8", errors="replace").strip()
@@ -364,14 +363,34 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             continue
         try:
             event = json.loads(line)
-            if event.get("type") == "assistant":
+            evt_type = event.get("type")
+
+            if evt_type == "assistant":
                 msg = event.get("message", {})
                 for block in msg.get("content", []):
-                    if block.get("type") == "text" and block.get("text"):
+                    block_type = block.get("type")
+                    if block_type == "thinking" and block.get("thinking"):
+                        # 思考过程 → 推给前端显示
+                        yield f'data: {json.dumps({"thinking": block["thinking"]}, ensure_ascii=False)}\n\n'
+                    elif block_type == "text" and block.get("text"):
+                        # 正式文本 → 推给前端
                         yield f'data: {json.dumps({"content": block["text"]}, ensure_ascii=False)}\n\n'
+
+            elif evt_type == "result":
+                # 最终结果
+                result_text = event.get("result", "")
+                if result_text:
+                    yield f'data: {json.dumps({"content": result_text}, ensure_ascii=False)}\n\n'
+                duration = event.get("duration_ms", 0)
+                num_turns = event.get("num_turns", 0)
+                is_error = event.get("is_error", False)
+                print(f"[{tag}] Result: turns={num_turns}, duration={duration}ms, error={is_error}")
+                if is_error:
+                    yield f'data: {json.dumps({"error": f"Claude CLI 执行出错: {result_text[:200]}"}, ensure_ascii=False)}\n\n'
+                    yield f'data: {json.dumps({"generating_json": False}, ensure_ascii=False)}\n\n'
+
         except json.JSONDecodeError:
-            if line:
-                yield f'data: {json.dumps({"content": line}, ensure_ascii=False)}\n\n'
+            pass
 
     proc.wait()
     stderr_output = proc.stderr.read().decode("utf-8", errors="replace")

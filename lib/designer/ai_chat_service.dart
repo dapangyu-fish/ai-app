@@ -7,12 +7,13 @@ import '../auth/auth_service.dart';
 /// AI 对话事件
 class ChatEvent {
   final String? content;      // 增量文本
+  final String? thinking;     // 思考过程
   final Map<String, dynamic>? jsonApp;  // 检测到的 JSON-APP
   final Map<String, dynamic>? quota;    // 配额信息
   final String? error;
   final bool isGeneratingJson; // 正在生成 JSON
 
-  ChatEvent({this.content, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false});
+  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false});
 }
 
 /// AI 供应商信息
@@ -196,6 +197,15 @@ class AiChatService {
           // 错误
           if (data.containsKey('error')) {
             yield ChatEvent(error: data['error'] as String);
+            continue;
+          }
+
+          // 思考过程
+          if (data.containsKey('thinking')) {
+            final thinking = data['thinking'] as String? ?? '';
+            if (thinking.isNotEmpty) {
+              yield ChatEvent(thinking: thinking);
+            }
             continue;
           }
 
