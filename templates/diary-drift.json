@@ -3,7 +3,7 @@
   "appid": "diary_drift_app_001",
   "meta": {
     "name": "diary-drift",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "app",
     "description": "使用 Drift/SQLite 持久化存储的日记应用 — 支持心情标签、增删改查",
     "author": "AI Designer",

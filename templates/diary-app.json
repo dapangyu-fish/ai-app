@@ -3,7 +3,7 @@
   "appid": "d1ary4pp1234567890abcdef1234567890",
   "meta": {
     "name": "diary-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "app",
     "description": "一个简洁实用的日记应用 — 支持新建、编辑、删除日记，数据持久化到本地文件",
     "author": "AI Designer",

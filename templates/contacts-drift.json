@@ -3,7 +3,7 @@
   "appid": "contacts_drift_app_002",
   "meta": {
     "name": "contacts-drift",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "app",
     "description": "使用 Drift/SQLite 持久化存储的通讯录应用 — 与日记 APP 完全隔离的独立数据库",
     "author": "AI Designer",

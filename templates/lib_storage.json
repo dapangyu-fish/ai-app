@@ -2,7 +2,7 @@
   "dsl": "3.3",
   "meta": {
     "name": "lib_storage",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "library",
     "description": "本地文件持久化组件库 — 提供 JSON 文件的增删改查、追加、列表等完整 CRUD 操作",
     "author": "AI Designer",
@@ -30,9 +30,11 @@
       "_count": 0
     },
     "functions": {
-
       "saveData": {
-        "params": ["path", "data"],
+        "params": [
+          "path",
+          "data"
+        ],
         "description": "将任意数据保存为 JSON 文件。path 是相对路径如 'diary/config.json'",
         "logic": [
           {
@@ -43,12 +45,19 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "loadData": {
-        "params": ["path", "defaultValue", "bind"],
+        "params": [
+          "path",
+          "defaultValue",
+          "bind"
+        ],
         "description": "从 JSON 文件读取数据，文件不存在时返回 defaultValue",
         "logic": [
           {
@@ -68,9 +77,11 @@
           }
         ]
       },
-
       "appendItem": {
-        "params": ["path", "item"],
+        "params": [
+          "path",
+          "item"
+        ],
         "description": "向 JSON 数组文件追加一条记录",
         "logic": [
           {
@@ -81,12 +92,19 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "removeItem": {
-        "params": ["path", "field", "value"],
+        "params": [
+          "path",
+          "field",
+          "value"
+        ],
         "description": "从 JSON 数组文件中按字段匹配删除一条记录",
         "logic": [
           {
@@ -98,12 +116,20 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "updateItem": {
-        "params": ["path", "field", "value", "updates"],
+        "params": [
+          "path",
+          "field",
+          "value",
+          "updates"
+        ],
         "description": "从 JSON 数组文件中按字段匹配更新一条记录",
         "logic": [
           {
@@ -116,17 +142,25 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "fileExists": {
-        "params": ["path", "bind"],
+        "params": [
+          "path",
+          "bind"
+        ],
         "description": "检查文件是否存在",
         "logic": [
           {
             "call": "@file_exists",
-            "args": { "path": "{{ params.path }}" },
+            "args": {
+              "path": "{{ params.path }}"
+            },
             "assign": "global._result"
           },
           {
@@ -138,27 +172,38 @@
           }
         ]
       },
-
       "deleteFile": {
-        "params": ["path"],
+        "params": [
+          "path"
+        ],
         "description": "删除一个文件",
         "logic": [
           {
             "call": "@file_delete",
-            "args": { "path": "{{ params.path }}" },
+            "args": {
+              "path": "{{ params.path }}"
+            },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "listFiles": {
-        "params": ["path", "bind"],
+        "params": [
+          "path",
+          "bind"
+        ],
         "description": "列出目录下的所有文件名",
         "logic": [
           {
             "call": "@file_list",
-            "args": { "path": "{{ params.path }}" },
+            "args": {
+              "path": "{{ params.path }}"
+            },
             "assign": "global._result"
           },
           {
@@ -170,9 +215,11 @@
           }
         ]
       },
-
       "saveEntry": {
-        "params": ["collection", "entry"],
+        "params": [
+          "collection",
+          "entry"
+        ],
         "description": "向指定集合追加一条带时间戳的记录",
         "logic": [
           {
@@ -188,12 +235,18 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "loadEntries": {
-        "params": ["collection", "bind"],
+        "params": [
+          "collection",
+          "bind"
+        ],
         "description": "加载集合中的所有记录",
         "logic": [
           {
@@ -213,9 +266,12 @@
           }
         ]
       },
-
       "deleteEntry": {
-        "params": ["collection", "field", "value"],
+        "params": [
+          "collection",
+          "field",
+          "value"
+        ],
         "description": "按字段匹配删除集合中的一条记录",
         "logic": [
           {
@@ -227,12 +283,20 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "updateEntry": {
-        "params": ["collection", "field", "value", "updates"],
+        "params": [
+          "collection",
+          "field",
+          "value",
+          "updates"
+        ],
         "description": "按字段匹配更新集合中的一条记录",
         "logic": [
           {
@@ -245,12 +309,18 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "countEntries": {
-        "params": ["collection", "bind"],
+        "params": [
+          "collection",
+          "bind"
+        ],
         "description": "获取集合中的记录数量",
         "logic": [
           {
@@ -263,7 +333,9 @@
           },
           {
             "call": "@list_length",
-            "args": { "value": "{{ global._entries }}" },
+            "args": {
+              "value": "{{ global._entries }}"
+            },
             "assign": "global._count"
           },
           {
@@ -275,9 +347,10 @@
           }
         ]
       },
-
       "clearEntries": {
-        "params": ["collection"],
+        "params": [
+          "collection"
+        ],
         "description": "清空集合中的所有记录",
         "logic": [
           {
@@ -288,7 +361,11 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       }
     }

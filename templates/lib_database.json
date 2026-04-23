@@ -2,7 +2,7 @@
   "dsl": "3.3",
   "meta": {
     "name": "lib_database",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "library",
     "description": "Drift 数据库组件库 — 基于 SQLite 的持久化存储，每个 APP 自动隔离数据库空间",
     "author": "AI Designer",
@@ -31,9 +31,11 @@
       "_count": 0
     },
     "functions": {
-
       "createTable": {
-        "params": ["table", "columns"],
+        "params": [
+          "table",
+          "columns"
+        ],
         "description": "创建数据表（如果不存在）。columns 是列定义数组，每项为 {name, type, primary}",
         "logic": [
           {
@@ -44,12 +46,18 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "insert": {
-        "params": ["table", "data"],
+        "params": [
+          "table",
+          "data"
+        ],
         "description": "向表中插入一条记录。data 是一个 Map",
         "logic": [
           {
@@ -60,12 +68,22 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "query": {
-        "params": ["table", "where", "whereArgs", "orderBy", "limit", "bind"],
+        "params": [
+          "table",
+          "where",
+          "whereArgs",
+          "orderBy",
+          "limit",
+          "bind"
+        ],
         "description": "查询表中的记录，结果绑定到 bind 指定的变量",
         "logic": [
           {
@@ -88,9 +106,13 @@
           }
         ]
       },
-
       "queryOne": {
-        "params": ["table", "where", "whereArgs", "bind"],
+        "params": [
+          "table",
+          "where",
+          "whereArgs",
+          "bind"
+        ],
         "description": "查询单条记录",
         "logic": [
           {
@@ -106,7 +128,16 @@
           {
             "call": "@if",
             "args": {
-              "cond": { ">": [{ "list_length": { "var": "global._rows" } }, 0] },
+              "cond": {
+                ">": [
+                  {
+                    "list_length": {
+                      "var": "global._rows"
+                    }
+                  },
+                  0
+                ]
+              },
               "then": [
                 {
                   "call": "@set",
@@ -129,9 +160,12 @@
           }
         ]
       },
-
       "queryAll": {
-        "params": ["table", "orderBy", "bind"],
+        "params": [
+          "table",
+          "orderBy",
+          "bind"
+        ],
         "description": "查询表中所有记录",
         "logic": [
           {
@@ -151,9 +185,13 @@
           }
         ]
       },
-
       "update": {
-        "params": ["table", "data", "where", "whereArgs"],
+        "params": [
+          "table",
+          "data",
+          "where",
+          "whereArgs"
+        ],
         "description": "更新表中符合条件的记录",
         "logic": [
           {
@@ -166,12 +204,19 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "delete": {
-        "params": ["table", "where", "whereArgs"],
+        "params": [
+          "table",
+          "where",
+          "whereArgs"
+        ],
         "description": "删除表中符合条件的记录",
         "logic": [
           {
@@ -183,12 +228,17 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "deleteAll": {
-        "params": ["table"],
+        "params": [
+          "table"
+        ],
         "description": "清空表中所有记录",
         "logic": [
           {
@@ -199,12 +249,20 @@
             },
             "assign": "global._result"
           },
-          { "expression": { "var": "global._result" } }
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
         ]
       },
-
       "count": {
-        "params": ["table", "where", "whereArgs", "bind"],
+        "params": [
+          "table",
+          "where",
+          "whereArgs",
+          "bind"
+        ],
         "description": "统计表中符合条件的记录数量",
         "logic": [
           {
@@ -225,9 +283,11 @@
           }
         ]
       },
-
       "kvSet": {
-        "params": ["key", "value"],
+        "params": [
+          "key",
+          "value"
+        ],
         "description": "键值存储 - 设置",
         "logic": [
           {
@@ -239,14 +299,18 @@
           }
         ]
       },
-
       "kvGet": {
-        "params": ["key", "bind"],
+        "params": [
+          "key",
+          "bind"
+        ],
         "description": "键值存储 - 获取",
         "logic": [
           {
             "call": "@db_kv_get",
-            "args": { "key": "{{ params.key }}" },
+            "args": {
+              "key": "{{ params.key }}"
+            },
             "assign": "global._result"
           },
           {
@@ -258,20 +322,26 @@
           }
         ]
       },
-
       "kvDelete": {
-        "params": ["key"],
+        "params": [
+          "key"
+        ],
         "description": "键值存储 - 删除",
         "logic": [
           {
             "call": "@db_kv_delete",
-            "args": { "key": "{{ params.key }}" }
+            "args": {
+              "key": "{{ params.key }}"
+            }
           }
         ]
       },
-
       "upsert": {
-        "params": ["table", "data", "keyField"],
+        "params": [
+          "table",
+          "data",
+          "keyField"
+        ],
         "description": "插入或更新：根据 keyField 判断是否已存在",
         "logic": [
           {
@@ -279,14 +349,23 @@
             "args": {
               "table": "{{ params.table }}",
               "where": "\"{{ params.keyField }}\" = ?",
-              "whereArgs": ["{{ params.data[params.keyField] }}"]
+              "whereArgs": [
+                "{{ params.data[params.keyField] }}"
+              ]
             },
             "assign": "global._count"
           },
           {
             "call": "@if",
             "args": {
-              "cond": { ">": [{ "var": "global._count" }, 0] },
+              "cond": {
+                ">": [
+                  {
+                    "var": "global._count"
+                  },
+                  0
+                ]
+              },
               "then": [
                 {
                   "call": "@db_update",
@@ -294,7 +373,9 @@
                     "table": "{{ params.table }}",
                     "data": "{{ params.data }}",
                     "where": "\"{{ params.keyField }}\" = ?",
-                    "whereArgs": ["{{ params.data[params.keyField] }}"]
+                    "whereArgs": [
+                      "{{ params.data[params.keyField] }}"
+                    ]
                   }
                 }
               ],
@@ -311,7 +392,6 @@
           }
         ]
       },
-
       "initDiary": {
         "params": [],
         "description": "初始化日记表结构",
@@ -321,19 +401,40 @@
             "args": {
               "table": "diary",
               "columns": [
-                { "name": "id", "type": "TEXT", "primary": "true" },
-                { "name": "title", "type": "TEXT" },
-                { "name": "content", "type": "TEXT" },
-                { "name": "timestamp", "type": "INTEGER" },
-                { "name": "date", "type": "TEXT" },
-                { "name": "mood", "type": "TEXT" },
-                { "name": "tags", "type": "TEXT" }
+                {
+                  "name": "id",
+                  "type": "TEXT",
+                  "primary": "true"
+                },
+                {
+                  "name": "title",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "content",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "timestamp",
+                  "type": "INTEGER"
+                },
+                {
+                  "name": "date",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "mood",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "tags",
+                  "type": "TEXT"
+                }
               ]
             }
           }
         ]
       },
-
       "initContacts": {
         "params": [],
         "description": "初始化通讯录表结构",
@@ -343,13 +444,35 @@
             "args": {
               "table": "contacts",
               "columns": [
-                { "name": "id", "type": "TEXT", "primary": "true" },
-                { "name": "name", "type": "TEXT" },
-                { "name": "phone", "type": "TEXT" },
-                { "name": "email", "type": "TEXT" },
-                { "name": "company", "type": "TEXT" },
-                { "name": "notes", "type": "TEXT" },
-                { "name": "created_at", "type": "INTEGER" }
+                {
+                  "name": "id",
+                  "type": "TEXT",
+                  "primary": "true"
+                },
+                {
+                  "name": "name",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "phone",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "email",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "company",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "notes",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "created_at",
+                  "type": "INTEGER"
+                }
               ]
             }
           }
