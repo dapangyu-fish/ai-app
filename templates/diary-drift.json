@@ -94,6 +94,24 @@
         "params": [],
         "logic": [
           {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global.currentTimestamp"
+          },
+          {
+            "call": "@date_format",
+            "args": {
+              "timestamp": "{{ global.currentTimestamp }}",
+              "format": "YYYY-MM-DD HH:mm"
+            },
+            "assign": "global.currentDate"
+          },
+          {
+            "call": "@uuid",
+            "args": {},
+            "assign": "global.editingId"
+          },
+          {
             "call": "@if",
             "args": {
               "condition": {
@@ -113,24 +131,6 @@
                 }
               ],
               "else": [
-                {
-                  "call": "@timestamp",
-                  "args": {},
-                  "assign": "global.currentTimestamp"
-                },
-                {
-                  "call": "@date_format",
-                  "args": {
-                    "timestamp": "{{ global.currentTimestamp }}",
-                    "format": "YYYY-MM-DD HH:mm"
-                  },
-                  "assign": "global.currentDate"
-                },
-                {
-                  "call": "@uuid",
-                  "args": {},
-                  "assign": "global.editingId"
-                },
                 {
                   "call": "@db_insert",
                   "args": {

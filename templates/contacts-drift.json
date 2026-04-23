@@ -101,9 +101,19 @@
         "params": [],
         "logic": [
           {
+            "call": "@uuid",
+            "args": {},
+            "assign": "global.editId"
+          },
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._ts"
+          },
+          {
             "call": "@if",
             "args": {
-              "cond": {
+              "condition": {
                 "or": [
                   {
                     "===": [
@@ -132,16 +142,6 @@
                 }
               ],
               "else": [
-                {
-                  "call": "@uuid",
-                  "args": {},
-                  "assign": "global.editId"
-                },
-                {
-                  "call": "@timestamp",
-                  "args": {},
-                  "assign": "global._ts"
-                },
                 {
                   "call": "@db_insert",
                   "args": {
@@ -306,7 +306,7 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
+              "condition": {
                 "===": [
                   {
                     "var": "global.editName"
@@ -407,7 +407,7 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
+              "condition": {
                 "===": [
                   {
                     "var": "global._confirmResult"
@@ -542,6 +542,7 @@
             "emptyText": "还没有联系人，点击「添加联系人」开始吧 📱",
             "item_template": {
               "type": "container",
+              "layout": "column",
               "margin": 6,
               "marginLeft": 12,
               "marginRight": 12,
@@ -549,6 +550,7 @@
               "color": "#FFFFFF",
               "borderRadius": 12,
               "shadow": 2,
+              "crossAxisAlignment": "stretch",
               "onTap": {
                 "type": "call",
                 "call": "@global.viewDetail",
