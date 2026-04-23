@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 
 /// 登录 / 注册页面
@@ -116,6 +117,11 @@ class _AuthPageState extends State<AuthPage> {
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  Future<void> _saveLastEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_last_email', email);
   }
 
   @override
