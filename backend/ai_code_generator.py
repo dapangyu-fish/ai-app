@@ -298,6 +298,7 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
     for k, v in cli_env.items():
         env[k] = v
     env.pop("ANTHROPIC_API_KEY", None)
+    env["IS_SANDBOX"] = "1"  # 允许 root 下使用 --dangerously-skip-permissions
 
     # 将 system_prompt 写到临时文件，避免超长命令行参数
     sys_prompt_file = None
@@ -307,11 +308,11 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             f.write(system_prompt)
 
     cmd = [
-        "is_sandbox=1",
         CLAUDE_BIN, "-p",
         "--model", cli_model,
         "--output-format", "stream-json",
         "--verbose",
+        "--dangerously-skip-permissions",
         "--no-session-persistence",
     ]
     if sys_prompt_file:
