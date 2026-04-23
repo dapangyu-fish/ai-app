@@ -517,6 +517,15 @@ def publish():
     if not name or not version:
         return jsonify({"error": "meta.name 和 meta.version 不能为空"}), 400
 
+    appid = json_content.get('appid', '').strip()
+    if not appid:
+        return jsonify({"error": "appid 不能为空"}), 400
+    
+    # 验证 appid 是否为标准 UUID 格式 (含连字符或不含)
+    uuid_pattern = re.compile(r'^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$')
+    if not uuid_pattern.match(appid):
+        return jsonify({"error": "appid 格式必须是统一的 UUID 格式"}), 400
+
     # 验证包名格式
     valid, error_msg = _validate_package_name(name)
     if not valid:
@@ -565,12 +574,10 @@ def publish():
     if name in index['packages']:
         existing = index['packages'][name]
         if version in existing['versions']:
-            if not force_update:
-                return jsonify({
-                    "error": f"版本 {version} 已存在",
-                    "existing_versions": existing['versions']
-                }), 409
-            # force_update=true，允许覆盖
+            return jsonify({
+                "error": f"版本 {version} 已存在，版本号不能重复",
+                "existing_versions": existing['versions']
+            }), 409
 
     # 构造存储路径
     path = name  # 如 common-ui 或 mycompany/frontend/ui-kit

@@ -23,18 +23,29 @@
     },
     "functions": {
       "loadUserInfo": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
           {
             "call": "@get_user_info",
-            "args": { "bind": "{{ params.bind }}" }
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
           }
         ]
       },
       "getUserAvatar": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_user_info", "args": { "bind": "global._info" } },
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
           {
             "call": "@set",
             "args": {
@@ -45,9 +56,16 @@
         ]
       },
       "getUserEmail": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_user_info", "args": { "bind": "global._info" } },
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
           {
             "call": "@set",
             "args": {
@@ -58,9 +76,16 @@
         ]
       },
       "getUserName": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_user_info", "args": { "bind": "global._info" } },
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
           {
             "call": "@set",
             "args": {
@@ -71,19 +96,35 @@
         ]
       },
       "getAuthToken": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@get_auth_token", "args": { "bind": "{{ params.bind }}" } }
+          {
+            "call": "@get_auth_token",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
         ]
       },
       "checkLogin": {
-        "params": ["bind"],
+        "params": [
+          "bind"
+        ],
         "logic": [
-          { "call": "@is_logged_in", "args": { "bind": "{{ params.bind }}" } }
+          {
+            "call": "@is_logged_in",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
         ]
       },
       "updateAvatar": {
-        "params": ["imagePath"],
+        "params": [
+          "imagePath"
+        ],
         "logic": [
           {
             "call": "@file_to_base64",
@@ -112,7 +153,9 @@
         ]
       },
       "updateName": {
-        "params": ["newName"],
+        "params": [
+          "newName"
+        ],
         "logic": [
           {
             "call": "@update_profile",
@@ -131,5 +174,6 @@
   "steps": [],
   "ui": {
     "screens": []
-  }
+  },
+  "appid": "98936e32-c7d8-4e8b-9d8d-4d45697b157f"
 }
