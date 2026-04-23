@@ -367,15 +367,6 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
-  /// 如果当前正在运行 JSON-APP，把完整 JSON 注入为对话上下文
-  Future<void> _injectCurrentAppContext() async {
-    final config = widget.getCurrentConfig?.call();
-    if (config != null && _chatService.messages.isEmpty) {
-      await _chatService.setAppContext(config);
-      debugPrint('[DesignerBall] Injected current JSON-APP as context');
-    }
-  }
-
   void _onProviderChanged(String providerId) {
     AiChatService.setProvider(providerId);
     setState(() {});
@@ -386,8 +377,6 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 进入对话模式的重震动反馈
     HapticFeedback.heavyImpact();
-
-    await _injectCurrentAppContext();
 
     // 后台拉取供应商列表（不阻塞进入对话模式）
     AiChatService.fetchProviders().then((_) {
@@ -573,6 +562,10 @@ class _DesignerBallState extends State<DesignerBall>
 
     if (text.isEmpty) return;
 
+    _sendTextToAi(text);
+  }
+
+  void _sendTextToAi(String text) {
     _cancelCurrentStream();
 
     setState(() {
@@ -598,6 +591,21 @@ class _DesignerBallState extends State<DesignerBall>
             _messages.last = ChatMessage(role: 'assistant', content: event.error!);
           });
           _scrollToBottom();
+          return;
+        }
+        if (event.requestAction != null) {
+          if (event.requestAction == 'upload_current_app') {
+            setState(() {
+              _isThinking = false;
+              // 替换当前等待消息为按钮消息
+              _messages.last = ChatMessage(
+                role: 'system',
+                content: 'AI 需要获取当前应用的代码配置以进行修改：',
+                action: 'UPLOAD_CURRENT_APP',
+              );
+            });
+            _scrollToBottom();
+          }
           return;
         }
         if (event.thinking != null) {
@@ -643,6 +651,44 @@ class _DesignerBallState extends State<DesignerBall>
         });
       },
     );
+  }
+
+  Future<void> _handleUploadCurrentApp() async {
+    final config = widget.getCurrentConfig?.call();
+    if (config == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前没有运行的应用配置')),
+      );
+      return;
+    }
+
+    setState(() {
+      // 移除 UPLOAD 按钮那条消息
+      _messages.removeLast();
+      _messages.add(ChatMessage(role: 'system', content: '正在上传当前应用配置...'));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    try {
+      await _chatService.setAppContext(config);
+      setState(() {
+        _isThinking = false;
+        _messages.removeLast();
+        _messages.add(ChatMessage(role: 'system', content: '✅ 应用配置已上传成功。'));
+      });
+      _scrollToBottom();
+      
+      // 自动发送一条消息继续流程
+      _sendTextToAi('当前应用的代码配置已上传，请查阅并继续完成我的要求。');
+    } catch (e) {
+      setState(() {
+        _isThinking = false;
+        _messages.removeLast();
+        _messages.add(ChatMessage(role: 'system', content: '❌ 上传失败: $e'));
+      });
+      _scrollToBottom();
+    }
   }
 
   void _cancelEditMode() {
@@ -1146,6 +1192,7 @@ class _DesignerBallState extends State<DesignerBall>
             onClear: _clearAndCloseChatMode,
             scrollController: _scrollController,
             onProviderChanged: _onProviderChanged,
+            onUploadCurrentApp: _handleUploadCurrentApp,
             onRunJsonApp: (jsonConfig) {
               _clearAndCloseChatMode();
               widget.onRunJsonApp?.call(jsonConfig);

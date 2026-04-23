@@ -12,8 +12,9 @@ class ChatEvent {
   final Map<String, dynamic>? quota;    // 配额信息
   final String? error;
   final bool isGeneratingJson; // 正在生成 JSON
+  final String? requestAction; // 比如 "upload_current_app"
 
-  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false});
+  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction});
 }
 
 /// AI 供应商信息
@@ -157,6 +158,12 @@ class AiChatService {
             // 生成结束（失败时后端会发 generating_json: false）
             if (data.containsKey('generating_json') && data['generating_json'] == false) {
               // 不需要额外处理，后续的 error 事件会重置状态
+              continue;
+            }
+
+            // 动作请求 (比如上传当前 app)
+            if (data.containsKey('request_action')) {
+              yield ChatEvent(requestAction: data['request_action'] as String);
               continue;
             }
 

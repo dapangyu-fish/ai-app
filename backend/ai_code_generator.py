@@ -111,6 +111,14 @@ AGENT_TOOLS = [
             },
             "required": ["prompt"]
         }
+    },
+    {
+        "name": "request_current_app",
+        "description": "当用户想要修改、修复或扩展当前正在运行的应用，但上下文中没有当前应用的链接时，调用此工具要求客户端上传当前应用配置。调用后，系统会向用户显示上传按钮。",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
     }
 ]
 
@@ -178,40 +186,6 @@ def _execute_agent_tool(name, inputs):
             return f"Error: {e}"
 
     return f"Unknown tool: {name}"
-
-
-def _resolve_json_urls(content):
-    """将消息中的 [json_app_url]...[/json_app_url] 标签替换为实际 JSON 内容。
-    客户端会先将大 JSON 上传到 MinIO，消息里只放下载链接。
-    后端在发给 AI 之前把链接解析成真正的 JSON 文本。
-    """
-    if not isinstance(content, str) or "[json_app_url]" not in content:
-        return content
-
-    import requests as _req
-
-    def _fetch_and_replace(match):
-        url = match.group(1).strip()
-        try:
-            resp = _req.get(url, timeout=15)
-            if resp.status_code == 200:
-                # 验证是合法 JSON
-                json.loads(resp.text)
-                print(f"[Agent] Resolved JSON URL: {len(resp.text)} chars")
-                return f"```json\n{resp.text}\n```"
-            else:
-                print(f"[Agent] JSON URL fetch failed: HTTP {resp.status_code}")
-                return f"(JSON 下载失败: HTTP {resp.status_code})"
-        except Exception as e:
-            print(f"[Agent] JSON URL fetch error: {e}")
-            return f"(JSON 下载异常: {e})"
-
-    return re.sub(
-        r'\[json_app_url\](.*?)\[/json_app_url\]',
-        _fetch_and_replace,
-        content,
-        flags=re.DOTALL,
-    )
 
 
 def _get_provider(provider_id=None):
@@ -552,7 +526,7 @@ def chat():
     for m in messages:
         if m["role"] == "system":
             continue
-        content = _resolve_json_urls(m["content"])
+        content = m["content"]
         agent_messages.append({"role": m["role"], "content": content})
 
     system_prompt = _load_chat_agent_prompt()
@@ -598,6 +572,13 @@ def chat():
 
                 # 检查是否有 trigger_generate 调用
                 gen_call = next((tc for tc in tool_calls if tc.name == 'trigger_generate'), None)
+                req_call = next((tc for tc in tool_calls if tc.name == 'request_current_app'), None)
+
+                if req_call:
+                    print("[Agent] request_current_app called.")
+                    yield f'data: {json.dumps({"request_action": "upload_current_app"}, ensure_ascii=False)}\n\n'
+                    break  # 直接结束对话，等待用户点击按钮上传
+
                 if gen_call:
                     gen_prompt = gen_call.input.get('prompt', '')
                     print(f"[Agent] trigger_generate called, prompt={gen_prompt[:100]}...")
