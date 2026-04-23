@@ -2,11 +2,12 @@
   "dsl": "3.3",
   "appid": "d1ary4pp1234567890abcdef1234567890",
   "meta": {
-    "name": "日记本",
+    "name": "diary-app",
     "version": "1.0.0",
     "type": "app",
     "description": "一个简洁实用的日记应用 — 支持新建、编辑、删除日记，数据持久化到本地文件",
-    "author": "AI Designer"
+    "author": "AI Designer",
+    "display_name": "日记本"
   },
   "global": {
     "variables": {
@@ -24,7 +25,6 @@
       "_confirmResult": false
     },
     "functions": {
-
       "loadDiary": {
         "params": [],
         "logic": [
@@ -38,21 +38,34 @@
           },
           {
             "call": "@list_length",
-            "args": { "value": "{{ global.entries }}" },
+            "args": {
+              "value": "{{ global.entries }}"
+            },
             "assign": "global.entryCount"
           }
         ]
       },
-
       "createEntry": {
         "params": [],
         "logic": [
           {
             "call": "@if",
             "args": {
-              "cond": { "===": [{ "var": "global.currentTitle" }, ""] },
+              "cond": {
+                "===": [
+                  {
+                    "var": "global.currentTitle"
+                  },
+                  ""
+                ]
+              },
               "then": [
-                { "call": "@show_toast", "args": { "message": "请填写标题" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "请填写标题"
+                  }
+                }
               ],
               "else": [
                 {
@@ -88,23 +101,43 @@
                 },
                 {
                   "call": "@set",
-                  "args": { "var": "global.currentTitle", "value": "" }
+                  "args": {
+                    "var": "global.currentTitle",
+                    "value": ""
+                  }
                 },
                 {
                   "call": "@set",
-                  "args": { "var": "global.currentContent", "value": "" }
+                  "args": {
+                    "var": "global.currentContent",
+                    "value": ""
+                  }
                 },
-                { "call": "@show_toast", "args": { "message": "📝 日记已保存" } },
-                { "call": "@global.loadDiary", "args": {} },
-                { "call": "@navigate", "args": { "screen": "home" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "📝 日记已保存"
+                  }
+                },
+                {
+                  "call": "@global.loadDiary",
+                  "args": {}
+                },
+                {
+                  "call": "@navigate",
+                  "args": {
+                    "screen": "home"
+                  }
+                }
               ]
             }
           }
         ]
       },
-
       "deleteEntry": {
-        "params": ["id"],
+        "params": [
+          "id"
+        ],
         "logic": [
           {
             "call": "@file_remove_json_item",
@@ -114,30 +147,75 @@
               "value": "{{ params.id }}"
             }
           },
-          { "call": "@show_toast", "args": { "message": "🗑️ 已删除" } },
-          { "call": "@global.loadDiary", "args": {} }
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "🗑️ 已删除"
+            }
+          },
+          {
+            "call": "@global.loadDiary",
+            "args": {}
+          }
         ]
       },
-
       "startEdit": {
-        "params": ["id", "title", "content"],
+        "params": [
+          "id",
+          "title",
+          "content"
+        ],
         "logic": [
-          { "call": "@set", "args": { "var": "global.editingId", "value": "{{ params.id }}" } },
-          { "call": "@set", "args": { "var": "global.editTitle", "value": "{{ params.title }}" } },
-          { "call": "@set", "args": { "var": "global.editContent", "value": "{{ params.content }}" } },
-          { "call": "@navigate", "args": { "screen": "edit" } }
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editingId",
+              "value": "{{ params.id }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editTitle",
+              "value": "{{ params.title }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editContent",
+              "value": "{{ params.content }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "edit"
+            }
+          }
         ]
       },
-
       "saveEdit": {
         "params": [],
         "logic": [
           {
             "call": "@if",
             "args": {
-              "cond": { "===": [{ "var": "global.editTitle" }, ""] },
+              "cond": {
+                "===": [
+                  {
+                    "var": "global.editTitle"
+                  },
+                  ""
+                ]
+              },
               "then": [
-                { "call": "@show_toast", "args": { "message": "标题不能为空" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "标题不能为空"
+                  }
+                }
               ],
               "else": [
                 {
@@ -167,17 +245,34 @@
                     }
                   }
                 },
-                { "call": "@show_toast", "args": { "message": "✅ 修改已保存" } },
-                { "call": "@global.loadDiary", "args": {} },
-                { "call": "@navigate", "args": { "screen": "home" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "✅ 修改已保存"
+                  }
+                },
+                {
+                  "call": "@global.loadDiary",
+                  "args": {}
+                },
+                {
+                  "call": "@navigate",
+                  "args": {
+                    "screen": "home"
+                  }
+                }
               ]
             }
           }
         ]
       },
-
       "viewDetail": {
-        "params": ["id", "title", "content", "date"],
+        "params": [
+          "id",
+          "title",
+          "content",
+          "date"
+        ],
         "logic": [
           {
             "call": "@set",
@@ -191,10 +286,14 @@
               }
             }
           },
-          { "call": "@navigate", "args": { "screen": "detail" } }
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "detail"
+            }
+          }
         ]
       },
-
       "confirmClear": {
         "params": [],
         "logic": [
@@ -209,7 +308,14 @@
           {
             "call": "@if",
             "args": {
-              "cond": { "===": [{ "var": "global._confirmResult" }, true] },
+              "cond": {
+                "===": [
+                  {
+                    "var": "global._confirmResult"
+                  },
+                  true
+                ]
+              },
               "then": [
                 {
                   "call": "@file_write_json",
@@ -218,8 +324,16 @@
                     "data": []
                   }
                 },
-                { "call": "@global.loadDiary", "args": {} },
-                { "call": "@show_toast", "args": { "message": "已清空所有日记" } }
+                {
+                  "call": "@global.loadDiary",
+                  "args": {}
+                },
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "已清空所有日记"
+                  }
+                }
               ]
             }
           }
@@ -227,18 +341,18 @@
       }
     }
   },
-
   "steps": [
     {
       "call": "@print",
-      "args": { "value": "📖 日记本 APP 启动" }
+      "args": {
+        "value": "📖 日记本 APP 启动"
+      }
     },
     {
       "call": "@global.loadDiary",
       "args": {}
     }
   ],
-
   "ui": {
     "screens": [
       {
@@ -264,7 +378,10 @@
                   "color": "#FFF8E7"
                 }
               },
-              { "type": "spacer", "height": 4 },
+              {
+                "type": "spacer",
+                "height": 4
+              },
               {
                 "type": "text",
                 "value": "共 {{ global.entryCount }} 篇日记",
@@ -275,7 +392,6 @@
               }
             ]
           },
-
           {
             "type": "container",
             "layout": "row",
@@ -285,7 +401,10 @@
                 "type": "button",
                 "label": "✏️ 写日记",
                 "variant": "filled",
-                "position": { "type": "flex", "flex": 1 },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
                 "action": {
                   "type": "navigate",
                   "screen": "new_entry"
@@ -296,12 +415,18 @@
                   "borderRadius": 10
                 }
               },
-              { "type": "spacer", "width": 8 },
+              {
+                "type": "spacer",
+                "width": 8
+              },
               {
                 "type": "button",
                 "label": "🗑️ 清空",
                 "variant": "outlined",
-                "position": { "type": "flex", "flex": 1 },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
                 "action": {
                   "type": "call",
                   "call": "@global.confirmClear"
@@ -312,11 +437,12 @@
               }
             ]
           },
-
           {
             "type": "list",
             "source": "{{ global.entries }}",
-            "position": { "type": "relative" },
+            "position": {
+              "type": "relative"
+            },
             "emptyText": "还没有日记，点击上方「写日记」开始吧 ✨",
             "item_template": {
               "type": "container",
@@ -345,7 +471,10 @@
                     {
                       "type": "text",
                       "value": "{{ loop.item.title }}",
-                      "position": { "type": "flex", "flex": 1 },
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
                       "style": {
                         "fontSize": 17,
                         "fontWeight": "bold",
@@ -362,7 +491,10 @@
                     }
                   ]
                 },
-                { "type": "spacer", "height": 6 },
+                {
+                  "type": "spacer",
+                  "height": 6
+                },
                 {
                   "type": "text",
                   "value": "{{ loop.item.content }}",
@@ -373,12 +505,22 @@
                     "height": 1.5
                   }
                 },
-                { "type": "spacer", "height": 10 },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
                 {
                   "type": "container",
                   "layout": "row",
                   "children": [
-                    { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
+                    {
+                      "type": "spacer",
+                      "width": 1,
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    },
                     {
                       "type": "button",
                       "label": "编辑",
@@ -420,7 +562,6 @@
           }
         ]
       },
-
       {
         "id": "new_entry",
         "title": "✏️ 写日记",
@@ -436,10 +577,22 @@
                 "type": "button",
                 "label": "← 返回",
                 "variant": "text",
-                "action": { "type": "navigate", "screen": "home" },
-                "style": { "textColor": "#7B6544" }
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                },
+                "style": {
+                  "textColor": "#7B6544"
+                }
               },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
               {
                 "type": "text",
                 "value": "新建日记",
@@ -449,17 +602,37 @@
                   "color": "#3E3228"
                 }
               },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
-              { "type": "spacer", "width": 60 }
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 60
+              }
             ]
           },
-          { "type": "spacer", "height": 20 },
+          {
+            "type": "spacer",
+            "height": 20
+          },
           {
             "type": "text",
             "value": "标题",
-            "style": { "fontSize": 14, "fontWeight": "bold", "color": "#6B5E4F" }
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#6B5E4F"
+            }
           },
-          { "type": "spacer", "height": 6 },
+          {
+            "type": "spacer",
+            "height": 6
+          },
           {
             "type": "input",
             "placeholder": "今天发生了什么...",
@@ -469,13 +642,23 @@
               "fontSize": 16
             }
           },
-          { "type": "spacer", "height": 16 },
+          {
+            "type": "spacer",
+            "height": 16
+          },
           {
             "type": "text",
             "value": "内容",
-            "style": { "fontSize": 14, "fontWeight": "bold", "color": "#6B5E4F" }
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#6B5E4F"
+            }
           },
-          { "type": "spacer", "height": 6 },
+          {
+            "type": "spacer",
+            "height": 6
+          },
           {
             "type": "input",
             "placeholder": "写下你的想法、感受和故事...",
@@ -487,7 +670,10 @@
               "height": 200
             }
           },
-          { "type": "spacer", "height": 24 },
+          {
+            "type": "spacer",
+            "height": 24
+          },
           {
             "type": "button",
             "label": "💾 保存日记",
@@ -505,7 +691,6 @@
           }
         ]
       },
-
       {
         "id": "detail",
         "title": "日记详情",
@@ -527,10 +712,22 @@
                     "type": "button",
                     "label": "← 返回",
                     "variant": "text",
-                    "action": { "type": "navigate", "screen": "home" },
-                    "style": { "textColor": "#FFF8E7" }
+                    "action": {
+                      "type": "navigate",
+                      "screen": "home"
+                    },
+                    "style": {
+                      "textColor": "#FFF8E7"
+                    }
                   },
-                  { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
+                  {
+                    "type": "spacer",
+                    "width": 1,
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
                   {
                     "type": "button",
                     "label": "✏️ 编辑",
@@ -544,11 +741,16 @@
                         "content": "{{ global.viewEntry.content }}"
                       }
                     },
-                    "style": { "textColor": "#D4C5A9" }
+                    "style": {
+                      "textColor": "#D4C5A9"
+                    }
                   }
                 ]
               },
-              { "type": "spacer", "height": 12 },
+              {
+                "type": "spacer",
+                "height": 12
+              },
               {
                 "type": "text",
                 "value": "{{ global.viewEntry.title }}",
@@ -558,7 +760,10 @@
                   "color": "#FFF8E7"
                 }
               },
-              { "type": "spacer", "height": 6 },
+              {
+                "type": "spacer",
+                "height": 6
+              },
               {
                 "type": "text",
                 "value": "🕐 {{ global.viewEntry.date }}",
@@ -586,7 +791,6 @@
           }
         ]
       },
-
       {
         "id": "edit",
         "title": "编辑日记",
@@ -602,10 +806,22 @@
                 "type": "button",
                 "label": "← 取消",
                 "variant": "text",
-                "action": { "type": "navigate", "screen": "home" },
-                "style": { "textColor": "#7B6544" }
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                },
+                "style": {
+                  "textColor": "#7B6544"
+                }
               },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
               {
                 "type": "text",
                 "value": "编辑日记",
@@ -615,17 +831,37 @@
                   "color": "#3E3228"
                 }
               },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
-              { "type": "spacer", "width": 60 }
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 60
+              }
             ]
           },
-          { "type": "spacer", "height": 20 },
+          {
+            "type": "spacer",
+            "height": 20
+          },
           {
             "type": "text",
             "value": "标题",
-            "style": { "fontSize": 14, "fontWeight": "bold", "color": "#6B5E4F" }
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#6B5E4F"
+            }
           },
-          { "type": "spacer", "height": 6 },
+          {
+            "type": "spacer",
+            "height": 6
+          },
           {
             "type": "input",
             "placeholder": "标题",
@@ -635,13 +871,23 @@
               "fontSize": 16
             }
           },
-          { "type": "spacer", "height": 16 },
+          {
+            "type": "spacer",
+            "height": 16
+          },
           {
             "type": "text",
             "value": "内容",
-            "style": { "fontSize": 14, "fontWeight": "bold", "color": "#6B5E4F" }
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#6B5E4F"
+            }
           },
-          { "type": "spacer", "height": 6 },
+          {
+            "type": "spacer",
+            "height": 6
+          },
           {
             "type": "input",
             "placeholder": "编辑日记内容...",
@@ -653,7 +899,10 @@
               "height": 200
             }
           },
-          { "type": "spacer", "height": 24 },
+          {
+            "type": "spacer",
+            "height": 24
+          },
           {
             "type": "button",
             "label": "💾 保存修改",

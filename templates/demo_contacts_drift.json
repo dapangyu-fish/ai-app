@@ -2,11 +2,12 @@
   "dsl": "3.3",
   "appid": "contacts_drift_app_002",
   "meta": {
-    "name": "通讯录(Drift版)",
+    "name": "contacts-drift",
     "version": "1.0.0",
     "type": "app",
     "description": "使用 Drift/SQLite 持久化存储的通讯录应用 — 与日记 APP 完全隔离的独立数据库",
-    "author": "AI Designer"
+    "author": "AI Designer",
+    "display_name": "通讯录(Drift版)"
   },
   "global": {
     "variables": {
@@ -28,7 +29,6 @@
       "_confirmResult": false
     },
     "functions": {
-
       "initDB": {
         "params": [],
         "logic": [
@@ -37,20 +37,46 @@
             "args": {
               "table": "contacts",
               "columns": [
-                { "name": "id", "type": "TEXT", "primary": "true" },
-                { "name": "name", "type": "TEXT" },
-                { "name": "phone", "type": "TEXT" },
-                { "name": "email", "type": "TEXT" },
-                { "name": "company", "type": "TEXT" },
-                { "name": "notes", "type": "TEXT" },
-                { "name": "created_at", "type": "INTEGER" }
+                {
+                  "name": "id",
+                  "type": "TEXT",
+                  "primary": "true"
+                },
+                {
+                  "name": "name",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "phone",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "email",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "company",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "notes",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "created_at",
+                  "type": "INTEGER"
+                }
               ]
             }
           },
-          { "call": "@print", "args": { "value": "📇 通讯录数据库已初始化 (appid: contacts_drift_app_002)" } }
+          {
+            "call": "@print",
+            "args": {
+              "value": "📇 通讯录数据库已初始化 (appid: contacts_drift_app_002)"
+            }
+          }
         ]
       },
-
       "loadContacts": {
         "params": [],
         "logic": [
@@ -64,32 +90,56 @@
           },
           {
             "call": "@db_count",
-            "args": { "table": "contacts" },
+            "args": {
+              "table": "contacts"
+            },
             "assign": "global.contactCount"
           }
         ]
       },
-
       "addContact": {
         "params": [],
         "logic": [
           {
             "call": "@if",
             "args": {
-              "cond": { "or": [
-                { "===": [{ "var": "global.newName" }, ""] },
-                { "===": [{ "var": "global.newPhone" }, ""] }
-              ]},
+              "cond": {
+                "or": [
+                  {
+                    "===": [
+                      {
+                        "var": "global.newName"
+                      },
+                      ""
+                    ]
+                  },
+                  {
+                    "===": [
+                      {
+                        "var": "global.newPhone"
+                      },
+                      ""
+                    ]
+                  }
+                ]
+              },
               "then": [
-                { "call": "@show_toast", "args": { "message": "姓名和电话不能为空" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "姓名和电话不能为空"
+                  }
+                }
               ],
               "else": [
                 {
-                  "call": "@uuid", "args": {},
+                  "call": "@uuid",
+                  "args": {},
                   "assign": "global.editId"
                 },
                 {
-                  "call": "@timestamp", "args": {},
+                  "call": "@timestamp",
+                  "args": {},
                   "assign": "global._ts"
                 },
                 {
@@ -107,58 +157,170 @@
                     }
                   }
                 },
-                { "call": "@set", "args": { "var": "global.newName", "value": "" } },
-                { "call": "@set", "args": { "var": "global.newPhone", "value": "" } },
-                { "call": "@set", "args": { "var": "global.newEmail", "value": "" } },
-                { "call": "@set", "args": { "var": "global.newCompany", "value": "" } },
-                { "call": "@set", "args": { "var": "global.newNotes", "value": "" } },
-                { "call": "@show_toast", "args": { "message": "✅ 联系人已添加" } },
-                { "call": "@global.loadContacts", "args": {} },
-                { "call": "@navigate", "args": { "screen": "home" } }
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newName",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newPhone",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newEmail",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newCompany",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newNotes",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "✅ 联系人已添加"
+                  }
+                },
+                {
+                  "call": "@global.loadContacts",
+                  "args": {}
+                },
+                {
+                  "call": "@navigate",
+                  "args": {
+                    "screen": "home"
+                  }
+                }
               ]
             }
           }
         ]
       },
-
       "deleteContact": {
-        "params": ["id"],
+        "params": [
+          "id"
+        ],
         "logic": [
           {
             "call": "@db_delete",
             "args": {
               "table": "contacts",
               "where": "id = ?",
-              "whereArgs": ["{{ params.id }}"]
+              "whereArgs": [
+                "{{ params.id }}"
+              ]
             }
           },
-          { "call": "@show_toast", "args": { "message": "🗑️ 联系人已删除" } },
-          { "call": "@global.loadContacts", "args": {} }
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "🗑️ 联系人已删除"
+            }
+          },
+          {
+            "call": "@global.loadContacts",
+            "args": {}
+          }
         ]
       },
-
       "startEdit": {
-        "params": ["id", "name", "phone", "email", "company", "notes"],
+        "params": [
+          "id",
+          "name",
+          "phone",
+          "email",
+          "company",
+          "notes"
+        ],
         "logic": [
-          { "call": "@set", "args": { "var": "global.editId", "value": "{{ params.id }}" } },
-          { "call": "@set", "args": { "var": "global.editName", "value": "{{ params.name }}" } },
-          { "call": "@set", "args": { "var": "global.editPhone", "value": "{{ params.phone }}" } },
-          { "call": "@set", "args": { "var": "global.editEmail", "value": "{{ params.email }}" } },
-          { "call": "@set", "args": { "var": "global.editCompany", "value": "{{ params.company }}" } },
-          { "call": "@set", "args": { "var": "global.editNotes", "value": "{{ params.notes }}" } },
-          { "call": "@navigate", "args": { "screen": "edit" } }
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editId",
+              "value": "{{ params.id }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editName",
+              "value": "{{ params.name }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editPhone",
+              "value": "{{ params.phone }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editEmail",
+              "value": "{{ params.email }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editCompany",
+              "value": "{{ params.company }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editNotes",
+              "value": "{{ params.notes }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "edit"
+            }
+          }
         ]
       },
-
       "saveEdit": {
         "params": [],
         "logic": [
           {
             "call": "@if",
             "args": {
-              "cond": { "===": [{ "var": "global.editName" }, ""] },
+              "cond": {
+                "===": [
+                  {
+                    "var": "global.editName"
+                  },
+                  ""
+                ]
+              },
               "then": [
-                { "call": "@show_toast", "args": { "message": "姓名不能为空" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "姓名不能为空"
+                  }
+                }
               ],
               "else": [
                 {
@@ -173,20 +335,41 @@
                       "notes": "{{ global.editNotes }}"
                     },
                     "where": "id = ?",
-                    "whereArgs": ["{{ global.editId }}"]
+                    "whereArgs": [
+                      "{{ global.editId }}"
+                    ]
                   }
                 },
-                { "call": "@show_toast", "args": { "message": "✅ 联系人已更新" } },
-                { "call": "@global.loadContacts", "args": {} },
-                { "call": "@navigate", "args": { "screen": "home" } }
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "✅ 联系人已更新"
+                  }
+                },
+                {
+                  "call": "@global.loadContacts",
+                  "args": {}
+                },
+                {
+                  "call": "@navigate",
+                  "args": {
+                    "screen": "home"
+                  }
+                }
               ]
             }
           }
         ]
       },
-
       "viewDetail": {
-        "params": ["id", "name", "phone", "email", "company", "notes"],
+        "params": [
+          "id",
+          "name",
+          "phone",
+          "email",
+          "company",
+          "notes"
+        ],
         "logic": [
           {
             "call": "@set",
@@ -202,26 +385,54 @@
               }
             }
           },
-          { "call": "@navigate", "args": { "screen": "detail" } }
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "detail"
+            }
+          }
         ]
       },
-
       "confirmClear": {
         "params": [],
         "logic": [
           {
             "call": "@show_dialog",
-            "args": { "title": "确认清空", "message": "确定要删除所有联系人吗？" },
+            "args": {
+              "title": "确认清空",
+              "message": "确定要删除所有联系人吗？"
+            },
             "assign": "global._confirmResult"
           },
           {
             "call": "@if",
             "args": {
-              "cond": { "===": [{ "var": "global._confirmResult" }, true] },
+              "cond": {
+                "===": [
+                  {
+                    "var": "global._confirmResult"
+                  },
+                  true
+                ]
+              },
               "then": [
-                { "call": "@db_delete", "args": { "table": "contacts", "where": "1=1" } },
-                { "call": "@global.loadContacts", "args": {} },
-                { "call": "@show_toast", "args": { "message": "已清空所有联系人" } }
+                {
+                  "call": "@db_delete",
+                  "args": {
+                    "table": "contacts",
+                    "where": "1=1"
+                  }
+                },
+                {
+                  "call": "@global.loadContacts",
+                  "args": {}
+                },
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "已清空所有联系人"
+                  }
+                }
               ]
             }
           }
@@ -229,12 +440,16 @@
       }
     }
   },
-
   "steps": [
-    { "call": "@global.initDB", "args": {} },
-    { "call": "@global.loadContacts", "args": {} }
+    {
+      "call": "@global.initDB",
+      "args": {}
+    },
+    {
+      "call": "@global.loadContacts",
+      "args": {}
+    }
   ],
-
   "ui": {
     "screens": [
       {
@@ -246,74 +461,178 @@
         "children": [
           {
             "type": "container",
-            "padding": 20, "paddingTop": 44,
+            "padding": 20,
+            "paddingTop": 44,
             "color": "#2C3E50",
             "children": [
-              { "type": "text", "value": "📇 通讯录", "style": { "fontSize": 26, "fontWeight": "bold", "color": "#ECF0F1" } },
-              { "type": "spacer", "height": 4 },
-              { "type": "text", "value": "共 {{ global.contactCount }} 位联系人 · Drift/SQLite 驱动", "style": { "fontSize": 13, "color": "#BDC3C7" } }
+              {
+                "type": "text",
+                "value": "📇 通讯录",
+                "style": {
+                  "fontSize": 26,
+                  "fontWeight": "bold",
+                  "color": "#ECF0F1"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "共 {{ global.contactCount }} 位联系人 · Drift/SQLite 驱动",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#BDC3C7"
+                }
+              }
             ]
           },
           {
-            "type": "container", "layout": "row", "padding": 12,
+            "type": "container",
+            "layout": "row",
+            "padding": 12,
             "children": [
               {
-                "type": "button", "label": "➕ 添加联系人", "variant": "filled",
-                "position": { "type": "flex", "flex": 1 },
-                "action": { "type": "navigate", "screen": "add" },
-                "style": { "backgroundColor": "#2980B9", "textColor": "#FFFFFF", "borderRadius": 10 }
+                "type": "button",
+                "label": "➕ 添加联系人",
+                "variant": "filled",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "action": {
+                  "type": "navigate",
+                  "screen": "add"
+                },
+                "style": {
+                  "backgroundColor": "#2980B9",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 10
+                }
               },
-              { "type": "spacer", "width": 8 },
               {
-                "type": "button", "label": "🗑️ 清空", "variant": "outlined",
-                "position": { "type": "flex", "flex": 1 },
-                "action": { "type": "call", "call": "@global.confirmClear" },
-                "style": { "borderRadius": 10 }
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "button",
+                "label": "🗑️ 清空",
+                "variant": "outlined",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "action": {
+                  "type": "call",
+                  "call": "@global.confirmClear"
+                },
+                "style": {
+                  "borderRadius": 10
+                }
               }
             ]
           },
           {
             "type": "list",
             "source": "{{ global.contacts }}",
-            "position": { "type": "relative" },
+            "position": {
+              "type": "relative"
+            },
             "emptyText": "还没有联系人，点击「添加联系人」开始吧 📱",
             "item_template": {
               "type": "container",
-              "margin": 6, "marginLeft": 12, "marginRight": 12,
-              "padding": 16, "color": "#FFFFFF", "borderRadius": 12, "shadow": 2,
+              "margin": 6,
+              "marginLeft": 12,
+              "marginRight": 12,
+              "padding": 16,
+              "color": "#FFFFFF",
+              "borderRadius": 12,
+              "shadow": 2,
               "onTap": {
-                "type": "call", "call": "@global.viewDetail",
+                "type": "call",
+                "call": "@global.viewDetail",
                 "args": {
-                  "id": "{{ loop.item.id }}", "name": "{{ loop.item.name }}",
-                  "phone": "{{ loop.item.phone }}", "email": "{{ loop.item.email }}",
-                  "company": "{{ loop.item.company }}", "notes": "{{ loop.item.notes }}"
+                  "id": "{{ loop.item.id }}",
+                  "name": "{{ loop.item.name }}",
+                  "phone": "{{ loop.item.phone }}",
+                  "email": "{{ loop.item.email }}",
+                  "company": "{{ loop.item.company }}",
+                  "notes": "{{ loop.item.notes }}"
                 }
               },
               "children": [
                 {
-                  "type": "container", "layout": "row",
+                  "type": "container",
+                  "layout": "row",
                   "children": [
                     {
-                      "type": "container", "padding": 10,
-                      "color": "#3498DB", "borderRadius": 50, "width": 44, "height": 44,
+                      "type": "container",
+                      "padding": 10,
+                      "color": "#3498DB",
+                      "borderRadius": 50,
+                      "width": 44,
+                      "height": 44,
                       "children": [
-                        { "type": "text", "value": "👤", "style": { "fontSize": 20, "textAlign": "center" } }
+                        {
+                          "type": "text",
+                          "value": "👤",
+                          "style": {
+                            "fontSize": 20,
+                            "textAlign": "center"
+                          }
+                        }
                       ]
                     },
-                    { "type": "spacer", "width": 12 },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
                     {
                       "type": "container",
-                      "position": { "type": "flex", "flex": 1 },
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
                       "children": [
-                        { "type": "text", "value": "{{ loop.item.name }}", "style": { "fontSize": 17, "fontWeight": "bold", "color": "#2C3E50" } },
-                        { "type": "spacer", "height": 3 },
-                        { "type": "text", "value": "📱 {{ loop.item.phone }}", "style": { "fontSize": 14, "color": "#7F8C8D" } }
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.name }}",
+                          "style": {
+                            "fontSize": 17,
+                            "fontWeight": "bold",
+                            "color": "#2C3E50"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "📱 {{ loop.item.phone }}",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#7F8C8D"
+                          }
+                        }
                       ]
                     },
                     {
-                      "type": "button", "label": "删除", "variant": "text",
-                      "action": { "type": "call", "call": "@global.deleteContact", "args": { "id": "{{ loop.item.id }}" } },
-                      "style": { "textColor": "#E74C3C", "fontSize": 13 }
+                      "type": "button",
+                      "label": "删除",
+                      "variant": "text",
+                      "action": {
+                        "type": "call",
+                        "call": "@global.deleteContact",
+                        "args": {
+                          "id": "{{ loop.item.id }}"
+                        }
+                      },
+                      "style": {
+                        "textColor": "#E74C3C",
+                        "fontSize": 13
+                      }
                     }
                   ]
                 }
@@ -322,7 +641,6 @@
           }
         ]
       },
-
       {
         "id": "add",
         "title": "➕ 添加联系人",
@@ -331,40 +649,209 @@
         "backgroundColor": "#EEF2F7",
         "children": [
           {
-            "type": "container", "layout": "row",
+            "type": "container",
+            "layout": "row",
             "children": [
-              { "type": "button", "label": "← 返回", "variant": "text", "action": { "type": "navigate", "screen": "home" }, "style": { "textColor": "#2980B9" } },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
-              { "type": "text", "value": "添加联系人", "style": { "fontSize": 20, "fontWeight": "bold", "color": "#2C3E50" } },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
-              { "type": "spacer", "width": 60 }
+              {
+                "type": "button",
+                "label": "← 返回",
+                "variant": "text",
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                },
+                "style": {
+                  "textColor": "#2980B9"
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "text",
+                "value": "添加联系人",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "color": "#2C3E50"
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 60
+              }
             ]
           },
-          { "type": "spacer", "height": 16 },
-          { "type": "text", "value": "姓名 *", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "请输入姓名", "bind": "global.newName", "prefixIcon": "person", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "电话 *", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "请输入电话号码", "bind": "global.newPhone", "prefixIcon": "phone", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "邮箱", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "请输入邮箱", "bind": "global.newEmail", "prefixIcon": "email", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "公司", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "请输入公司名称", "bind": "global.newCompany", "prefixIcon": "business", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "备注", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "备注信息...", "bind": "global.newNotes", "maxLines": 3, "style": { "borderRadius": 10, "fontSize": 15, "height": 80 } },
-          { "type": "spacer", "height": 20 },
-          { "type": "button", "label": "💾 保存联系人", "variant": "filled", "action": { "type": "call", "call": "@global.addContact" }, "style": { "backgroundColor": "#2980B9", "textColor": "#FFFFFF", "borderRadius": 12, "fontSize": 16 } }
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "text",
+            "value": "姓名 *",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入姓名",
+            "bind": "global.newName",
+            "prefixIcon": "person",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "电话 *",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入电话号码",
+            "bind": "global.newPhone",
+            "prefixIcon": "phone",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "邮箱",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入邮箱",
+            "bind": "global.newEmail",
+            "prefixIcon": "email",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "公司",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入公司名称",
+            "bind": "global.newCompany",
+            "prefixIcon": "business",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "备注",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "备注信息...",
+            "bind": "global.newNotes",
+            "maxLines": 3,
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 15,
+              "height": 80
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 20
+          },
+          {
+            "type": "button",
+            "label": "💾 保存联系人",
+            "variant": "filled",
+            "action": {
+              "type": "call",
+              "call": "@global.addContact"
+            },
+            "style": {
+              "backgroundColor": "#2980B9",
+              "textColor": "#FFFFFF",
+              "borderRadius": 12,
+              "fontSize": 16
+            }
+          }
         ]
       },
-
       {
         "id": "detail",
         "title": "联系人详情",
@@ -373,49 +860,180 @@
         "backgroundColor": "#EEF2F7",
         "children": [
           {
-            "type": "container", "padding": 20, "paddingTop": 44, "color": "#2C3E50",
+            "type": "container",
+            "padding": 20,
+            "paddingTop": 44,
+            "color": "#2C3E50",
             "children": [
               {
-                "type": "container", "layout": "row",
+                "type": "container",
+                "layout": "row",
                 "children": [
-                  { "type": "button", "label": "← 返回", "variant": "text", "action": { "type": "navigate", "screen": "home" }, "style": { "textColor": "#ECF0F1" } },
-                  { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
-                  { "type": "button", "label": "✏️ 编辑", "variant": "text",
-                    "action": { "type": "call", "call": "@global.startEdit",
-                      "args": { "id": "{{ global.viewContact.id }}", "name": "{{ global.viewContact.name }}", "phone": "{{ global.viewContact.phone }}", "email": "{{ global.viewContact.email }}", "company": "{{ global.viewContact.company }}", "notes": "{{ global.viewContact.notes }}" } },
-                    "style": { "textColor": "#BDC3C7" } }
+                  {
+                    "type": "button",
+                    "label": "← 返回",
+                    "variant": "text",
+                    "action": {
+                      "type": "navigate",
+                      "screen": "home"
+                    },
+                    "style": {
+                      "textColor": "#ECF0F1"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 1,
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "✏️ 编辑",
+                    "variant": "text",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.startEdit",
+                      "args": {
+                        "id": "{{ global.viewContact.id }}",
+                        "name": "{{ global.viewContact.name }}",
+                        "phone": "{{ global.viewContact.phone }}",
+                        "email": "{{ global.viewContact.email }}",
+                        "company": "{{ global.viewContact.company }}",
+                        "notes": "{{ global.viewContact.notes }}"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#BDC3C7"
+                    }
+                  }
                 ]
               },
-              { "type": "spacer", "height": 16 },
-              { "type": "text", "value": "👤", "style": { "fontSize": 48, "textAlign": "center" } },
-              { "type": "spacer", "height": 8 },
-              { "type": "text", "value": "{{ global.viewContact.name }}", "style": { "fontSize": 24, "fontWeight": "bold", "color": "#ECF0F1", "textAlign": "center" } }
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "👤",
+                "style": {
+                  "fontSize": 48,
+                  "textAlign": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "{{ global.viewContact.name }}",
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold",
+                  "color": "#ECF0F1",
+                  "textAlign": "center"
+                }
+              }
             ]
           },
           {
-            "type": "container", "padding": 20,
+            "type": "container",
+            "padding": 20,
             "children": [
               {
-                "type": "container", "padding": 16, "color": "#FFFFFF", "borderRadius": 12, "shadow": 1,
+                "type": "container",
+                "padding": 16,
+                "color": "#FFFFFF",
+                "borderRadius": 12,
+                "shadow": 1,
                 "children": [
-                  { "type": "text", "value": "📱 电话", "style": { "fontSize": 12, "color": "#7F8C8D" } },
-                  { "type": "text", "value": "{{ global.viewContact.phone }}", "style": { "fontSize": 18, "fontWeight": "bold", "color": "#2C3E50" } },
-                  { "type": "spacer", "height": 16 },
-                  { "type": "text", "value": "📧 邮箱", "style": { "fontSize": 12, "color": "#7F8C8D" } },
-                  { "type": "text", "value": "{{ global.viewContact.email }}", "style": { "fontSize": 16, "color": "#2C3E50" } },
-                  { "type": "spacer", "height": 16 },
-                  { "type": "text", "value": "🏢 公司", "style": { "fontSize": 12, "color": "#7F8C8D" } },
-                  { "type": "text", "value": "{{ global.viewContact.company }}", "style": { "fontSize": 16, "color": "#2C3E50" } },
-                  { "type": "spacer", "height": 16 },
-                  { "type": "text", "value": "📝 备注", "style": { "fontSize": 12, "color": "#7F8C8D" } },
-                  { "type": "text", "value": "{{ global.viewContact.notes }}", "style": { "fontSize": 16, "color": "#2C3E50", "height": 1.6 } }
+                  {
+                    "type": "text",
+                    "value": "📱 电话",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#7F8C8D"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.viewContact.phone }}",
+                    "style": {
+                      "fontSize": 18,
+                      "fontWeight": "bold",
+                      "color": "#2C3E50"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 16
+                  },
+                  {
+                    "type": "text",
+                    "value": "📧 邮箱",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#7F8C8D"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.viewContact.email }}",
+                    "style": {
+                      "fontSize": 16,
+                      "color": "#2C3E50"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 16
+                  },
+                  {
+                    "type": "text",
+                    "value": "🏢 公司",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#7F8C8D"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.viewContact.company }}",
+                    "style": {
+                      "fontSize": 16,
+                      "color": "#2C3E50"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 16
+                  },
+                  {
+                    "type": "text",
+                    "value": "📝 备注",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#7F8C8D"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.viewContact.notes }}",
+                    "style": {
+                      "fontSize": 16,
+                      "color": "#2C3E50",
+                      "height": 1.6
+                    }
+                  }
                 ]
               }
             ]
           }
         ]
       },
-
       {
         "id": "edit",
         "title": "编辑联系人",
@@ -424,37 +1042,203 @@
         "backgroundColor": "#EEF2F7",
         "children": [
           {
-            "type": "container", "layout": "row",
+            "type": "container",
+            "layout": "row",
             "children": [
-              { "type": "button", "label": "← 取消", "variant": "text", "action": { "type": "navigate", "screen": "home" }, "style": { "textColor": "#2980B9" } },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
-              { "type": "text", "value": "编辑联系人", "style": { "fontSize": 20, "fontWeight": "bold", "color": "#2C3E50" } },
-              { "type": "spacer", "width": 1, "position": { "type": "flex", "flex": 1 } },
-              { "type": "spacer", "width": 60 }
+              {
+                "type": "button",
+                "label": "← 取消",
+                "variant": "text",
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                },
+                "style": {
+                  "textColor": "#2980B9"
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "text",
+                "value": "编辑联系人",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "color": "#2C3E50"
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 1,
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 60
+              }
             ]
           },
-          { "type": "spacer", "height": 16 },
-          { "type": "text", "value": "姓名", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "姓名", "bind": "global.editName", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "电话", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "电话", "bind": "global.editPhone", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "邮箱", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "邮箱", "bind": "global.editEmail", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "公司", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "公司", "bind": "global.editCompany", "style": { "borderRadius": 10, "fontSize": 16 } },
-          { "type": "spacer", "height": 12 },
-          { "type": "text", "value": "备注", "style": { "fontSize": 14, "fontWeight": "bold", "color": "#2C3E50" } },
-          { "type": "spacer", "height": 6 },
-          { "type": "input", "placeholder": "备注...", "bind": "global.editNotes", "maxLines": 3, "style": { "borderRadius": 10, "fontSize": 15, "height": 80 } },
-          { "type": "spacer", "height": 20 },
-          { "type": "button", "label": "💾 保存修改", "variant": "filled", "action": { "type": "call", "call": "@global.saveEdit" }, "style": { "backgroundColor": "#2980B9", "textColor": "#FFFFFF", "borderRadius": 12, "fontSize": 16 } }
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "text",
+            "value": "姓名",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "姓名",
+            "bind": "global.editName",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "电话",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "电话",
+            "bind": "global.editPhone",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "邮箱",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "邮箱",
+            "bind": "global.editEmail",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "公司",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "公司",
+            "bind": "global.editCompany",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "备注",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#2C3E50"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "备注...",
+            "bind": "global.editNotes",
+            "maxLines": 3,
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 15,
+              "height": 80
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 20
+          },
+          {
+            "type": "button",
+            "label": "💾 保存修改",
+            "variant": "filled",
+            "action": {
+              "type": "call",
+              "call": "@global.saveEdit"
+            },
+            "style": {
+              "backgroundColor": "#2980B9",
+              "textColor": "#FFFFFF",
+              "borderRadius": 12,
+              "fontSize": 16
+            }
+          }
         ]
       }
     ]
