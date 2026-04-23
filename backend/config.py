@@ -119,6 +119,7 @@ TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
 DSL_SPEC_PATH = os.path.join(PROJECT_ROOT, "JSON-DSL.md")
 PROMPTS_DIR = os.path.join(BASE_DIR, "prompts")
 GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
+CHAT_AGENT_PROMPT_PATH = os.path.join(PROMPTS_DIR, "chat_agent_prompt.md")
 
 # Agent 配置
 AGENT_MAX_ITERATIONS = 8

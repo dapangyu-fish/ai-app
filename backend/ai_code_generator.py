@@ -12,7 +12,7 @@ import anthropic
 from flask import request, jsonify, Response, stream_with_context
 from config import (
     AI_PROVIDERS, DEFAULT_PROVIDER,
-    DSL_SPEC_PATH, PROJECT_ROOT, GENERATE_PROMPT_PATH,
+    DSL_SPEC_PATH, PROJECT_ROOT, GENERATE_PROMPT_PATH, CHAT_AGENT_PROMPT_PATH,
     AGENT_MAX_ITERATIONS, ROLE_QUOTAS
 )
 from database import db_query, get_quota_info, increment_quota
@@ -26,6 +26,16 @@ def _load_dsl_spec():
             return f.read()
     except Exception:
         return ""
+
+
+def _load_chat_agent_prompt():
+    """加载 Chat Agent 系统提示词"""
+    try:
+        with open(CHAT_AGENT_PROMPT_PATH, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        print(f"[Chat] Failed to load chat_agent_prompt.md: {e}")
+        return "你是一个 JSON-DSL 应用设计师助手，负责澄清需求。对话极度简洁，不输出 JSON。"
 
 
 def _load_registry_summary():
@@ -47,14 +57,8 @@ def _load_registry_summary():
         return ""
 
 
-AGENT_SYSTEM = """你是 JSON-DSL 应用设计师助手。用户通过语音与你交流，你负责澄清需求、确认细节。
-
-## 工作模式
-- 你只负责对话，**不负责生成 JSON**。当你充分理解用户需求后，告知用户"好的，正在为你生成..."即可，后端会自动触发代码生成。
-- 对话回复极度简洁（用户在手机上看字幕）。
-- 如果用户的需求不明确，主动追问（例如：主题色？核心功能？）。
-- 不要在对话中输出任何 JSON 代码或代码块。
-"""
+# AGENT_SYSTEM 从文件加载，支持热更新（见 backend/prompts/chat_agent_prompt.md）
+AGENT_SYSTEM = None  # 延迟加载，首次使用时初始化
 
 
 AGENT_TOOLS = [
@@ -540,7 +544,7 @@ def chat():
         content = _resolve_json_urls(m["content"])
         agent_messages.append({"role": m["role"], "content": content})
 
-    system_prompt = AGENT_SYSTEM
+    system_prompt = _load_chat_agent_prompt()
     registry = _load_registry_summary()
     if registry:
         system_prompt += f"\n## 已注册的 APP 和组件\n{registry}"
