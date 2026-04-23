@@ -565,17 +565,17 @@ class _DesignerBallState extends State<DesignerBall>
     _sendTextToAi(text);
   }
 
-  void _sendTextToAi(String displayText, {String? hiddenText}) {
+  void _sendTextToAi(String text) {
     _cancelCurrentStream();
 
     setState(() {
-      _messages.add(ChatMessage(role: 'user', content: displayText));
+      _messages.add(ChatMessage(role: 'user', content: text));
       _messages.add(ChatMessage(role: 'assistant', content: ''));
       _isThinking = true;
     });
     _scrollToBottom();
 
-    _streamSub = _chatService.sendStream(hiddenText ?? displayText).listen(
+    _streamSub = _chatService.sendStream(text).listen(
       (event) {
         if (event.isGeneratingJson) {
           setState(() {
@@ -677,11 +677,8 @@ class _DesignerBallState extends State<DesignerBall>
         _messages.removeLast();
         _messages.add(ChatMessage(role: 'system', content: '✅ 应用配置已上传成功。'));
       });
-      // 自动发送一条消息继续流程，并附加上传的代码配置内容作为隐藏上下文
-      _sendTextToAi(
-        '当前应用的代码配置已上传，请查阅并继续完成我的要求。',
-        hiddenText: '$appContextString\n\n请查阅以上代码配置并继续完成我的要求。',
-      );
+      // 自动发送一条消息继续流程，并把链接明确显示在对话框中
+      _sendTextToAi('$appContextString\n\n请查阅以上代码配置并继续完成我的要求。');
     } catch (e) {
       setState(() {
         _isThinking = false;
