@@ -270,7 +270,7 @@ def _load_generate_prompt():
         return ""
 
 
-def _build_user_prompt(user_prompt, current_app, crash_log, output_path):
+def _build_user_prompt(user_prompt, current_app=None, crash_log=None):
     """构建用户提示词，拼接当前 APP、崩溃日志和用户需求"""
     parts = []
     if current_app:
@@ -280,7 +280,6 @@ def _build_user_prompt(user_prompt, current_app, crash_log, output_path):
         parts.append(f"## 崩溃日志\n{crash_log}")
     if user_prompt:
         parts.append(f"## 用户需求\n{user_prompt}")
-    parts.append(f"\n请将最终生成的完整 JSON-APP 保存到文件: {output_path}")
     return "\n\n".join(parts)
 
 
@@ -307,17 +306,24 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
         with open(sys_prompt_file, "w", encoding="utf-8") as f:
             f.write(system_prompt)
 
-    cmd = [
-        CLAUDE_BIN, "-p",
-        "--model", cli_model,
-        "--output-format", "stream-json",
-        "--verbose",
-        "--dangerously-skip-permissions",
-        "--no-session-persistence",
-    ]
+    # 拼接完整提示词：基础提示词(从文件读) + 用户需求 + 输出路径
+    # 格式: claude -p "$(cat /tmp/sys.txt) 用户需求... json文件放在/tmp/xxx.json"
+    prompt_parts = []
     if sys_prompt_file:
-        # 用 shell 读文件内容作为参数
-        cmd.extend(["--system-prompt", f"$(cat {sys_prompt_file})"])
+        prompt_parts.append(f"$(cat {sys_prompt_file})")
+    if user_prompt:
+        prompt_parts.append(user_prompt)
+    prompt_parts.append(f"\n请将最终生成的完整 JSON-APP 保存到文件: {output_path}")
+    full_prompt = "\n\n".join(prompt_parts)
+
+    cmd_str = (
+        f'{CLAUDE_BIN}'
+        f' --dangerously-skip-permissions'
+        f' --no-session-persistence'
+        f' --output-format stream-json'
+        f' --verbose'
+        f' -p "{full_prompt}"'
+    )
 
     auth_token = cli_env.get("ANTHROPIC_AUTH_TOKEN", "")
     masked = f"{auth_token[:4]}***{auth_token[-4:]}" if len(auth_token) > 8 else "***"
@@ -328,14 +334,14 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
     print(f"  - Auth Token: {masked}")
     print(f"  - CWD: {PROJECT_ROOT}")
     print(f"  - Output: {output_path}")
-    print(f"  - Cmd: {' '.join(cmd[:6])}...\n")
+    print(f"  - User prompt preview: {user_prompt[:300] if user_prompt else '(empty)'}...")
+    print(f"  - Cmd: {cmd_str[:200]}...\n")
 
     try:
         proc = subprocess.Popen(
-            " ".join(f'"{c}"' if ' ' in c or '$' in c else c for c in cmd),
+            cmd_str,
             shell=True,
             cwd=PROJECT_ROOT,
-            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
@@ -349,16 +355,6 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             try: os.remove(sys_prompt_file)
             except: pass
         return
-
-    # 通过 stdin 传递用户提示词（避免超长 CLI 参数）
-    if user_prompt:
-        prompt_bytes = user_prompt.encode("utf-8")
-        print(f"[{tag}] Piping user_prompt via stdin ({len(prompt_bytes)} bytes)")
-        print(f"[{tag}] Prompt preview: {user_prompt[:500]}...")
-        proc.stdin.write(prompt_bytes)
-    else:
-        print(f"[{tag}] WARNING: user_prompt is empty, nothing piped to stdin!")
-    proc.stdin.close()
 
 
     # 实时读取 stdout，逐行解析 stream-json 格式并推送 SSE
@@ -478,7 +474,7 @@ def generate_app():
 
     output_path = os.path.join("/tmp", f"ai-gen-{uuid.uuid4().hex}.json")
     system_prompt = _load_generate_prompt()
-    full_prompt = _build_user_prompt(user_prompt, current_app, crash_log, output_path)
+    full_prompt = _build_user_prompt(user_prompt, current_app, crash_log)
 
     increment_quota(user_id)
     new_remaining = remaining - 1
@@ -594,7 +590,7 @@ def chat():
                     if provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
                         output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
                         cli_system = _load_generate_prompt()
-                        cli_prompt = _build_user_prompt(gen_prompt, current_app, None, output_path)
+                        cli_prompt = _build_user_prompt(gen_prompt, current_app)
                         yield from _run_claude_cli(cli_system, cli_prompt, provider, output_path, tag="Chat-CLI")
                     else:
                         yield f'data: {json.dumps({"error": "供应商未配置 CLI 环境变量"}, ensure_ascii=False)}\n\n'
@@ -666,7 +662,6 @@ def fix_app():
         "请修复这个崩溃的 JSON-APP，确保修复后可以正常运行。",
         json_config,
         crash_log,
-        output_path,
     )
 
     def generate():
