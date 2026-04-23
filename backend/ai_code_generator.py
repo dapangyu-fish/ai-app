@@ -288,6 +288,7 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
     """运行 Claude CLI 并 yield SSE 事件字符串。
 
     通过 stdin 传递 user_prompt（避免超长 CLI 参数），
+    system_prompt 写入临时文件避免 ARG_MAX 限制。
     实时解析 stream-json 输出，最后将生成的 JSON 文件上传到 MinIO。
     """
     cli_env = provider.get("cli_env", {})
@@ -298,6 +299,13 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
         env[k] = v
     env.pop("ANTHROPIC_API_KEY", None)
 
+    # 将 system_prompt 写到临时文件，避免超长命令行参数
+    sys_prompt_file = None
+    if system_prompt:
+        sys_prompt_file = os.path.join("/tmp", f"ai-sys-{uuid.uuid4().hex}.txt")
+        with open(sys_prompt_file, "w", encoding="utf-8") as f:
+            f.write(system_prompt)
+
     cmd = [
         CLAUDE_BIN, "-p",
         "--model", cli_model,
@@ -306,8 +314,9 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
         "--dangerously-skip-permissions",
         "--no-session-persistence",
     ]
-    if system_prompt:
-        cmd.extend(["--system-prompt", system_prompt])
+    if sys_prompt_file:
+        # 用 shell 读文件内容作为参数
+        cmd.extend(["--system-prompt", f"$(cat {sys_prompt_file})"])
 
     auth_token = cli_env.get("ANTHROPIC_AUTH_TOKEN", "")
     masked = f"{auth_token[:4]}***{auth_token[-4:]}" if len(auth_token) > 8 else "***"
@@ -317,22 +326,34 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
     print(f"  - Base URL: {cli_env.get('ANTHROPIC_BASE_URL')}")
     print(f"  - Auth Token: {masked}")
     print(f"  - CWD: {PROJECT_ROOT}")
-    print(f"  - Output: {output_path}\n")
+    print(f"  - Output: {output_path}")
+    print(f"  - Cmd: {' '.join(cmd[:6])}...\n")
 
-    proc = subprocess.Popen(
-        cmd,
-        cwd=PROJECT_ROOT,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
-        bufsize=1,
-    )
+    try:
+        proc = subprocess.Popen(
+            " ".join(f'"{c}"' if ' ' in c or '$' in c else c for c in cmd),
+            shell=True,
+            cwd=PROJECT_ROOT,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            bufsize=1,
+        )
+    except Exception as e:
+        print(f"[{tag}] Failed to start Claude CLI: {e}")
+        yield f'data: {json.dumps({"error": f"无法启动 Claude CLI: {e}"}, ensure_ascii=False)}\n\n'
+        yield f'data: {json.dumps({"generating_json": False}, ensure_ascii=False)}\n\n'
+        if sys_prompt_file:
+            try: os.remove(sys_prompt_file)
+            except: pass
+        return
 
     # 通过 stdin 传递用户提示词（避免超长 CLI 参数）
     if user_prompt:
         proc.stdin.write(user_prompt.encode("utf-8"))
     proc.stdin.close()
+
 
     # 实时读取 stdout，逐行解析 stream-json 格式并推送 SSE
     for raw_line in iter(proc.stdout.readline, b''):
@@ -352,10 +373,21 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
 
     proc.wait()
     stderr_output = proc.stderr.read().decode("utf-8", errors="replace")
+
     if proc.returncode != 0:
         print(f"[{tag}] CLI exited with code {proc.returncode}")
         if stderr_output:
-            print(f"[{tag}] stderr: {stderr_output[:500]}")
+            print(f"[{tag}] stderr: {stderr_output[:2000]}")
+        # 把 stderr 关键信息推给前端，方便诊断
+        err_msg = f"Claude CLI 异常退出 (code {proc.returncode})"
+        if stderr_output:
+            # 取 stderr 最后几行作为错误信息
+            err_lines = [l.strip() for l in stderr_output.strip().splitlines() if l.strip()]
+            if err_lines:
+                err_msg += f": {err_lines[-1][:200]}"
+        yield f'data: {json.dumps({"error": err_msg}, ensure_ascii=False)}\n\n'
+        yield f'data: {json.dumps({"generating_json": False}, ensure_ascii=False)}\n\n'
+        return
 
     # 检查输出文件并上传到 MinIO
     output_filename = os.path.basename(output_path)
@@ -385,6 +417,8 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
                 yield f'data: {json.dumps({"has_json": True, "json_app": app_json}, ensure_ascii=False)}\n\n'
         except Exception as e:
             print(f"[{tag}] JSON read/upload failed: {e}")
+            yield f'data: {json.dumps({"error": f"JSON 处理失败: {e}"}, ensure_ascii=False)}\n\n'
+            yield f'data: {json.dumps({"generating_json": False}, ensure_ascii=False)}\n\n'
         finally:
             try:
                 os.remove(output_path)
@@ -392,7 +426,22 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
                 pass
     else:
         print(f"[{tag}] Output file not found: {output_path}")
-        yield f'data: {json.dumps({"content": "\n\n⚠️ Claude 未生成 JSON 文件，请检查提示词或重试。"}, ensure_ascii=False)}\n\n'
+        if stderr_output:
+            print(f"[{tag}] stderr: {stderr_output[:2000]}")
+        err_detail = ""
+        if stderr_output:
+            err_lines = [l.strip() for l in stderr_output.strip().splitlines() if l.strip()]
+            if err_lines:
+                err_detail = f" ({err_lines[-1][:200]})"
+        yield f'data: {json.dumps({"error": f"Claude 未生成 JSON 文件，请重试{err_detail}"}, ensure_ascii=False)}\n\n'
+        yield f'data: {json.dumps({"generating_json": False}, ensure_ascii=False)}\n\n'
+
+    # 清理 system prompt 临时文件
+    if sys_prompt_file:
+        try:
+            os.remove(sys_prompt_file)
+        except Exception:
+            pass
 
 
 @require_auth
