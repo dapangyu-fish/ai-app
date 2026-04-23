@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
@@ -780,6 +781,167 @@ class JsonInterpreter extends ChangeNotifier {
         await prefs.clear();
         return null;
 
+      // ── 文件持久化 ──
+      // 所有文件操作都基于应用文档目录（getApplicationDocumentsDirectory），
+      // path 参数是相对路径，如 "diary/entries.json"
+      case '@file_write_json':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final data = resolvedArgs['data'];
+          if (relPath == null || data == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          await file.parent.create(recursive: true);
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_write_json error: $e');
+          return false;
+        }
+
+      case '@file_read_json':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return null;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return resolvedArgs['default'];
+          final content = await file.readAsString();
+          return json.decode(content);
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_read_json error: $e');
+          return resolvedArgs['default'];
+        }
+
+      case '@file_exists':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          return await file.exists();
+        } catch (e) {
+          return false;
+        }
+
+      case '@file_delete':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (await file.exists()) {
+            await file.delete();
+            return true;
+          }
+          return false;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_delete error: $e');
+          return false;
+        }
+
+      case '@file_list':
+        try {
+          final relDir = resolvedArgs['path']?.toString() ?? '';
+          final dir = await _getAppDocDir();
+          final targetDir = Directory('${dir.path}/$relDir');
+          if (!await targetDir.exists()) return <String>[];
+          final entities = await targetDir.list().toList();
+          return entities
+              .whereType<File>()
+              .map((f) => f.path.split('/').last)
+              .toList();
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_list error: $e');
+          return <String>[];
+        }
+
+      case '@file_append_json':
+        // 追加一条记录到 JSON 数组文件（原子性：读→追加→写）
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final item = resolvedArgs['item'];
+          if (relPath == null || item == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          List<dynamic> list = [];
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            final decoded = json.decode(content);
+            if (decoded is List) list = decoded;
+          }
+          list.add(item);
+          await file.parent.create(recursive: true);
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(list);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_append_json error: $e');
+          return false;
+        }
+
+      case '@file_remove_json_item':
+        // 从 JSON 数组文件中按字段匹配删除一条记录
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final matchField = resolvedArgs['field']?.toString();
+          final matchValue = resolvedArgs['value'];
+          if (relPath == null || matchField == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return false;
+          final content = await file.readAsString();
+          final decoded = json.decode(content);
+          if (decoded is! List) return false;
+          final newList = decoded.where((item) {
+            if (item is Map) {
+              return item[matchField]?.toString() != matchValue?.toString();
+            }
+            return true;
+          }).toList();
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(newList);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_remove_json_item error: $e');
+          return false;
+        }
+
+      case '@file_update_json_item':
+        // 从 JSON 数组文件中按字段匹配更新一条记录
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final matchField = resolvedArgs['field']?.toString();
+          final matchValue = resolvedArgs['value'];
+          final updates = resolvedArgs['updates'];
+          if (relPath == null || matchField == null || updates is! Map) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return false;
+          final content = await file.readAsString();
+          final decoded = json.decode(content);
+          if (decoded is! List) return false;
+          bool found = false;
+          for (int i = 0; i < decoded.length; i++) {
+            if (decoded[i] is Map && decoded[i][matchField]?.toString() == matchValue?.toString()) {
+              for (final entry in updates.entries) {
+                decoded[i][entry.key] = entry.value;
+              }
+              found = true;
+              break;
+            }
+          }
+          if (!found) return false;
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(decoded);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_update_json_item error: $e');
+          return false;
+        }
+
+
       // ── 随机数 ──
       case '@random':
         final min = _toInt(resolvedArgs['min'] ?? 0);
@@ -1359,6 +1521,14 @@ class JsonInterpreter extends ChangeNotifier {
       debugPrint('[JSON DSL] json_encode 失败: $e');
       return '';
     }
+  }
+
+  // ============ 文件持久化辅助 ============
+
+  Directory? _appDocDirCache;
+  Future<Directory> _getAppDocDir() async {
+    _appDocDirCache ??= await getApplicationDocumentsDirectory();
+    return _appDocDirCache!;
   }
 
   // ============ UI 反馈 ============

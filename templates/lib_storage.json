@@ -1,0 +1,300 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "lib_storage",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "本地文件持久化组件库 — 提供 JSON 文件的增删改查、追加、列表等完整 CRUD 操作",
+    "author": "AI Designer",
+    "exports": [
+      "saveData",
+      "loadData",
+      "appendItem",
+      "removeItem",
+      "updateItem",
+      "fileExists",
+      "deleteFile",
+      "listFiles",
+      "saveEntry",
+      "loadEntries",
+      "deleteEntry",
+      "updateEntry",
+      "countEntries",
+      "clearEntries"
+    ]
+  },
+  "global": {
+    "variables": {
+      "_result": null,
+      "_entries": [],
+      "_count": 0
+    },
+    "functions": {
+
+      "saveData": {
+        "params": ["path", "data"],
+        "description": "将任意数据保存为 JSON 文件。path 是相对路径如 'diary/config.json'",
+        "logic": [
+          {
+            "call": "@file_write_json",
+            "args": {
+              "path": "{{ params.path }}",
+              "data": "{{ params.data }}"
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "loadData": {
+        "params": ["path", "defaultValue", "bind"],
+        "description": "从 JSON 文件读取数据，文件不存在时返回 defaultValue",
+        "logic": [
+          {
+            "call": "@file_read_json",
+            "args": {
+              "path": "{{ params.path }}",
+              "default": "{{ params.defaultValue }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._result }}"
+            }
+          }
+        ]
+      },
+
+      "appendItem": {
+        "params": ["path", "item"],
+        "description": "向 JSON 数组文件追加一条记录",
+        "logic": [
+          {
+            "call": "@file_append_json",
+            "args": {
+              "path": "{{ params.path }}",
+              "item": "{{ params.item }}"
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "removeItem": {
+        "params": ["path", "field", "value"],
+        "description": "从 JSON 数组文件中按字段匹配删除一条记录",
+        "logic": [
+          {
+            "call": "@file_remove_json_item",
+            "args": {
+              "path": "{{ params.path }}",
+              "field": "{{ params.field }}",
+              "value": "{{ params.value }}"
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "updateItem": {
+        "params": ["path", "field", "value", "updates"],
+        "description": "从 JSON 数组文件中按字段匹配更新一条记录",
+        "logic": [
+          {
+            "call": "@file_update_json_item",
+            "args": {
+              "path": "{{ params.path }}",
+              "field": "{{ params.field }}",
+              "value": "{{ params.value }}",
+              "updates": "{{ params.updates }}"
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "fileExists": {
+        "params": ["path", "bind"],
+        "description": "检查文件是否存在",
+        "logic": [
+          {
+            "call": "@file_exists",
+            "args": { "path": "{{ params.path }}" },
+            "assign": "global._result"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._result }}"
+            }
+          }
+        ]
+      },
+
+      "deleteFile": {
+        "params": ["path"],
+        "description": "删除一个文件",
+        "logic": [
+          {
+            "call": "@file_delete",
+            "args": { "path": "{{ params.path }}" },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "listFiles": {
+        "params": ["path", "bind"],
+        "description": "列出目录下的所有文件名",
+        "logic": [
+          {
+            "call": "@file_list",
+            "args": { "path": "{{ params.path }}" },
+            "assign": "global._result"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._result }}"
+            }
+          }
+        ]
+      },
+
+      "saveEntry": {
+        "params": ["collection", "entry"],
+        "description": "向指定集合追加一条带时间戳的记录",
+        "logic": [
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._ts"
+          },
+          {
+            "call": "@file_append_json",
+            "args": {
+              "path": "{{ params.collection }}",
+              "item": "{{ params.entry }}"
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "loadEntries": {
+        "params": ["collection", "bind"],
+        "description": "加载集合中的所有记录",
+        "logic": [
+          {
+            "call": "@file_read_json",
+            "args": {
+              "path": "{{ params.collection }}",
+              "default": []
+            },
+            "assign": "global._entries"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._entries }}"
+            }
+          }
+        ]
+      },
+
+      "deleteEntry": {
+        "params": ["collection", "field", "value"],
+        "description": "按字段匹配删除集合中的一条记录",
+        "logic": [
+          {
+            "call": "@file_remove_json_item",
+            "args": {
+              "path": "{{ params.collection }}",
+              "field": "{{ params.field }}",
+              "value": "{{ params.value }}"
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "updateEntry": {
+        "params": ["collection", "field", "value", "updates"],
+        "description": "按字段匹配更新集合中的一条记录",
+        "logic": [
+          {
+            "call": "@file_update_json_item",
+            "args": {
+              "path": "{{ params.collection }}",
+              "field": "{{ params.field }}",
+              "value": "{{ params.value }}",
+              "updates": "{{ params.updates }}"
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      },
+
+      "countEntries": {
+        "params": ["collection", "bind"],
+        "description": "获取集合中的记录数量",
+        "logic": [
+          {
+            "call": "@file_read_json",
+            "args": {
+              "path": "{{ params.collection }}",
+              "default": []
+            },
+            "assign": "global._entries"
+          },
+          {
+            "call": "@list_length",
+            "args": { "value": "{{ global._entries }}" },
+            "assign": "global._count"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._count }}"
+            }
+          }
+        ]
+      },
+
+      "clearEntries": {
+        "params": ["collection"],
+        "description": "清空集合中的所有记录",
+        "logic": [
+          {
+            "call": "@file_write_json",
+            "args": {
+              "path": "{{ params.collection }}",
+              "data": []
+            },
+            "assign": "global._result"
+          },
+          { "expression": { "var": "global._result" } }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  }
+}
