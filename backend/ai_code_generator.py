@@ -437,51 +437,13 @@ def generate_app():
 
 
 # ---------------------------------------------------------------------------
-#  意图检测 — 判断最后一条用户消息是否要求生成/修复 JSON-APP
-# ---------------------------------------------------------------------------
-
-_GENERATE_KEYWORDS = [
-    "生成", "创建", "做一个", "做个", "帮我做", "帮我写", "开发",
-    "generate", "create", "build", "make",
-]
-_FIX_KEYWORDS = [
-    "修复", "修改", "改一下", "改成", "更新", "优化", "加上", "删掉", "去掉",
-    "fix", "update", "modify", "change", "remove", "add",
-]
-
-
-def _detect_generate_intent(messages):
-    """从最后一条用户消息检测是否有生成/修复 APP 的意图。
-    返回 (is_generate: bool, last_user_text: str)
-    """
-    last_user_text = ""
-    for m in reversed(messages):
-        if m.get("role") == "user":
-            content = m.get("content", "")
-            if isinstance(content, str):
-                last_user_text = content
-            break
-
-    if not last_user_text:
-        return False, ""
-
-    lower = last_user_text.lower()
-    for kw in _GENERATE_KEYWORDS + _FIX_KEYWORDS:
-        if kw in lower:
-            return True, last_user_text
-
-    return False, last_user_text
-
-
-# ---------------------------------------------------------------------------
-#  Chat — 对话澄清需求，生成/修复由 Claude CLI 完成
+#  Chat — 纯对话澄清需求（不做 JSON 生成）
 # ---------------------------------------------------------------------------
 
 @require_auth
 def chat():
-    """SSE 流式 AI 对话。
-    - 纯聊天：轻量 SDK Agent 澄清需求。
-    - 检测到生成/修复意图：直接拼提示词，调 Claude CLI 完成 JSON 生成。
+    """SSE 流式 AI 对话 — 纯对话模式，只负责澄清需求。
+    JSON 生成由客户端主动调 /api/ai/generate 端点触发。
     """
     user_id = request.supabase_user.get("id")
     role = request.user_role
@@ -500,40 +462,6 @@ def chat():
 
     provider_id = body.get("provider")
     provider = _get_provider(provider_id)
-    current_app = body.get("current_app")  # 客户端传来的当前 JSON（用于修改场景）
-
-    increment_quota(user_id)
-    new_remaining = remaining - 1
-
-    is_generate, last_user_text = _detect_generate_intent(messages)
-
-    # ── 路径 A：生成/修复 — 直接调 Claude CLI ──
-    if is_generate and provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
-        output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
-        # 构建一体化提示词：基础提示词 + 当前 APP + 用户需求 + 保存路径
-        system_prompt = _load_generate_prompt()
-        full_prompt = _build_user_prompt(last_user_text, current_app, None, output_path)
-
-        def generate_via_cli():
-            try:
-                yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
-                yield from _run_claude_cli(system_prompt, full_prompt, provider, output_path, tag="Chat-CLI")
-                yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
-                yield "data: [DONE]\n\n"
-            except Exception as e:
-                print(f"[Chat-CLI] Error: {e}")
-                import traceback; traceback.print_exc()
-                yield f'data: {json.dumps({"error": str(e)})}\n\n'
-                yield "data: [DONE]\n\n"
-
-        return Response(
-            stream_with_context(generate_via_cli()),
-            mimetype="text/event-stream",
-            headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
-                     "Access-Control-Allow-Origin": "*"},
-        )
-
-    # ── 路径 B：纯对话 — 轻量 SDK Agent ──
     agent_client = _get_agent_client(provider_id)
     agent_model = _get_agent_model(provider_id)
 
@@ -549,7 +477,10 @@ def chat():
     if registry:
         system_prompt += f"\n## 已注册的 APP 和组件\n{registry}"
 
-    def generate_via_sdk():
+    increment_quota(user_id)
+    new_remaining = remaining - 1
+
+    def generate():
         msgs = list(agent_messages)
         try:
             for iteration in range(AGENT_MAX_ITERATIONS):
@@ -612,7 +543,7 @@ def chat():
             yield "data: [DONE]\n\n"
 
     return Response(
-        stream_with_context(generate_via_sdk()),
+        stream_with_context(generate()),
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
                  "Access-Control-Allow-Origin": "*"},
