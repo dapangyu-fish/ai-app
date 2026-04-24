@@ -3,7 +3,7 @@
   "appid": "b5f7171d-aacc-4358-b8b0-4a8ad27143b7",
   "meta": {
     "name": "diary-app",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "type": "app",
     "description": "一个简洁实用的日记应用 — 支持新建、编辑、删除日记，数据持久化到本地文件",
     "author": "AI Designer",
@@ -22,7 +22,9 @@
       "editContent": "",
       "viewEntry": null,
       "_result": null,
-      "_confirmResult": false
+      "_confirmResult": false,
+      "currentMood": "😊",
+      "editMood": "😊"
     },
     "functions": {
       "loadDiary": {
@@ -95,7 +97,8 @@
                       "title": "{{ global.currentTitle }}",
                       "content": "{{ global.currentContent }}",
                       "timestamp": "{{ global.currentTimestamp }}",
-                      "date": "{{ global.currentDate }}"
+                      "date": "{{ global.currentDate }}",
+                      "mood": "{{ global.currentMood }}"
                     }
                   }
                 },
@@ -111,6 +114,13 @@
                   "args": {
                     "var": "global.currentContent",
                     "value": ""
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.currentMood",
+                    "value": "😊"
                   }
                 },
                 {
@@ -157,7 +167,8 @@
         "params": [
           "id",
           "title",
-          "content"
+          "content",
+          "mood"
         ],
         "logic": [
           {
@@ -179,6 +190,13 @@
             "args": {
               "var": "global.editContent",
               "value": "{{ params.content }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editMood",
+              "value": "{{ params.mood }}"
             }
           },
           {
@@ -235,7 +253,8 @@
                       "title": "{{ global.editTitle }}",
                       "content": "{{ global.editContent }}",
                       "timestamp": "{{ global.currentTimestamp }}",
-                      "date": "{{ global.currentDate }}"
+                      "date": "{{ global.currentDate }}",
+                      "mood": "{{ global.editMood }}"
                     }
                   }
                 },
@@ -363,6 +382,32 @@
             "children": [
               {
                 "type": "text",
+                "value": "今天的心情",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "bold",
+                  "color": "#6B5E4F"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "input",
+                "placeholder": "选择心情: 😊 😢 😡 🤔 🎉 ❤️",
+                "bind": "global.currentMood",
+                "style": {
+                  "borderRadius": 10,
+                  "fontSize": 16
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "text",
                 "value": "标题",
                 "style": {
                   "fontSize": 14,
@@ -385,7 +430,7 @@
               },
               {
                 "type": "spacer",
-                "height": 16
+                "height": 12
               },
               {
                 "type": "text",
@@ -402,18 +447,18 @@
               },
               {
                 "type": "input",
-                "placeholder": "写下你的想法、感受和故事...",
+                "placeholder": "写下你的想法...",
                 "bind": "global.currentContent",
                 "maxLines": 10,
                 "style": {
                   "borderRadius": 10,
                   "fontSize": 15,
-                  "height": 200
+                  "height": 180
                 }
               },
               {
                 "type": "spacer",
-                "height": 24
+                "height": 20
               },
               {
                 "type": "button",
@@ -444,7 +489,6 @@
                 "padding": 20,
                 "paddingTop": 44,
                 "color": "#5D4E37",
-                "borderRadius": 0,
                 "children": [
                   {
                     "type": "text",
@@ -461,9 +505,9 @@
                   },
                   {
                     "type": "text",
-                    "value": "共 {{ global.entryCount }} 篇日记",
+                    "value": "共 {{ global.entryCount }} 篇 · Drift/SQLite 驱动",
                     "style": {
-                      "fontSize": 14,
+                      "fontSize": 13,
                       "color": "#D4C5A9"
                     }
                   }
@@ -498,7 +542,7 @@
                 "position": {
                   "type": "relative"
                 },
-                "emptyText": "还没有日记，点击上方「写日记」开始吧 ✨",
+                "emptyText": "还没有日记，点击「写日记」开始吧 ✨",
                 "item_template": {
                   "type": "container",
                   "layout": "column",
@@ -517,7 +561,8 @@
                       "id": "{{ loop.item.id }}",
                       "title": "{{ loop.item.title }}",
                       "content": "{{ loop.item.content }}",
-                      "date": "{{ loop.item.date }}"
+                      "date": "{{ loop.item.date }}",
+                      "mood": "{{ loop.item.mood }}"
                     }
                   },
                   "children": [
@@ -527,7 +572,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "{{ loop.item.title }}",
+                          "value": "{{ loop.item.mood }} {{ loop.item.title }}",
                           "position": {
                             "type": "flex",
                             "flex": 1
@@ -564,7 +609,7 @@
                     },
                     {
                       "type": "spacer",
-                      "height": 10
+                      "height": 8
                     },
                     {
                       "type": "container",
@@ -588,7 +633,8 @@
                             "args": {
                               "id": "{{ loop.item.id }}",
                               "title": "{{ loop.item.title }}",
-                              "content": "{{ loop.item.content }}"
+                              "content": "{{ loop.item.content }}",
+                              "mood": "{{ loop.item.mood }}"
                             }
                           },
                           "style": {
@@ -668,7 +714,8 @@
                       "args": {
                         "id": "{{ global.viewEntry.id }}",
                         "title": "{{ global.viewEntry.title }}",
-                        "content": "{{ global.viewEntry.content }}"
+                        "content": "{{ global.viewEntry.content }}",
+                        "mood": "{{ global.viewEntry.mood }}"
                       }
                     },
                     "style": {
@@ -683,7 +730,7 @@
               },
               {
                 "type": "text",
-                "value": "{{ global.viewEntry.title }}",
+                "value": "{{ global.viewEntry.mood }} {{ global.viewEntry.title }}",
                 "style": {
                   "fontSize": 24,
                   "fontWeight": "bold",
@@ -777,7 +824,33 @@
           },
           {
             "type": "spacer",
-            "height": 20
+            "height": 16
+          },
+          {
+            "type": "text",
+            "value": "心情",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "color": "#6B5E4F"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 6
+          },
+          {
+            "type": "input",
+            "placeholder": "心情",
+            "bind": "global.editMood",
+            "style": {
+              "borderRadius": 10,
+              "fontSize": 16
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
           },
           {
             "type": "text",
@@ -803,7 +876,7 @@
           },
           {
             "type": "spacer",
-            "height": 16
+            "height": 12
           },
           {
             "type": "text",
@@ -820,18 +893,18 @@
           },
           {
             "type": "input",
-            "placeholder": "编辑日记内容...",
+            "placeholder": "编辑内容...",
             "bind": "global.editContent",
             "maxLines": 10,
             "style": {
               "borderRadius": 10,
               "fontSize": 15,
-              "height": 200
+              "height": 180
             }
           },
           {
             "type": "spacer",
-            "height": 24
+            "height": 20
           },
           {
             "type": "button",
