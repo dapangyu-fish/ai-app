@@ -3,7 +3,7 @@
   "appid": "d75c3cbe-ee81-47f5-b2c0-61f186af1d88",
   "meta": {
     "name": "contacts-drift",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "app",
     "description": "通讯录(Drift版)",
     "author": "AI Designer",
@@ -34,7 +34,7 @@
         "params": [],
         "logic": [
           {
-            "call": "@db_create_table",
+            "call": "@lib_database.createTable",
             "args": {
               "table": "contacts",
               "columns": [
@@ -76,7 +76,7 @@
         "params": [],
         "logic": [
           {
-            "call": "@db_query",
+            "call": "@lib_database.query",
             "args": {
               "table": "contacts",
               "orderBy": "name ASC"
@@ -84,7 +84,7 @@
             "assign": "global.contacts"
           },
           {
-            "call": "@db_count",
+            "call": "@lib_database.count",
             "args": {
               "table": "contacts"
             },
@@ -138,7 +138,7 @@
               ],
               "else": [
                 {
-                  "call": "@db_insert",
+                  "call": "@lib_database.insert",
                   "args": {
                     "table": "contacts",
                     "data": {
@@ -214,7 +214,7 @@
         ],
         "logic": [
           {
-            "call": "@db_delete",
+            "call": "@lib_database.delete",
             "args": {
               "table": "contacts",
               "where": "id = ?",
@@ -319,7 +319,7 @@
               ],
               "else": [
                 {
-                  "call": "@db_update",
+                  "call": "@lib_database.update",
                   "args": {
                     "table": "contacts",
                     "data": {
@@ -412,7 +412,7 @@
               },
               "then": [
                 {
-                  "call": "@db_delete",
+                  "call": "@lib_database.delete",
                   "args": {
                     "table": "contacts",
                     "where": "1=1"
@@ -1239,5 +1239,11 @@
         ]
       }
     ]
-  }
+  },
+  "dependencies": [
+    {
+      "name": "lib_database",
+      "version": "^1.0.0"
+    }
+  ]
 }

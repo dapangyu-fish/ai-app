@@ -107,16 +107,8 @@ def register():
         msg = data.get("msg") or data.get("error_description") or data.get("message") or str(data)
         return jsonify({"error": msg}), resp.status_code
 
-    # Supabase 可能直接返回 User 对象（如果需要验证邮箱），或返回 Session 对象
-    if "access_token" in data:
-        user = data.get("user", {})
-    else:
-        user = data
-
+    user = data.get("user", {})
     needs_confirm = user.get("email_confirmed_at") is None
-    # 有些响应中 verified 在 user_metadata 里
-    if needs_confirm and user.get("user_metadata", {}).get("email_verified") is True:
-        needs_confirm = False
 
     result = {
         "message": "注册成功，请查收验证邮件" if needs_confirm else "注册成功",

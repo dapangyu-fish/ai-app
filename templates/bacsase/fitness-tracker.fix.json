@@ -1,0 +1,2165 @@
+{
+  "dsl": "3.3",
+  "appid": "fitness-tracker-001",
+  "meta": {
+    "name": "fitness-tracker",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "运动记录App - 记录运动、查看历史、统计进展",
+    "author": "AI Designer",
+    "display_name": "运动记录"
+  },
+  "global": {
+    "variables": {
+      "todayWorkouts": [],
+      "allWorkouts": [],
+      "weeklyStats": {
+        "totalMinutes": 0,
+        "totalCalories": 0,
+        "workoutCount": 0
+      },
+      "monthlyStats": {
+        "totalMinutes": 0,
+        "totalCalories": 0,
+        "workoutCount": 0
+      },
+      "currentWorkout": {
+        "type": "",
+        "duration": 0,
+        "distance": 0,
+        "calories": 0,
+        "startTime": 0
+      },
+      "isRecording": false,
+      "selectedType": "running",
+      "inputDuration": 30,
+      "inputDistance": 0,
+      "inputCalories": 200,
+      "_temp": null,
+      "_confirmDelete": false,
+      "workoutToDelete": null
+    },
+    "functions": {
+      "loadTodayWorkouts": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@storage_get",
+            "args": {
+              "key": "workouts"
+            },
+            "assign": "global.allWorkouts"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "===": [
+                  {
+                    "var": "global.allWorkouts"
+                  },
+                  null
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.allWorkouts",
+                    "value": []
+                  }
+                }
+              ],
+              "else": []
+            }
+          },
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._todayStart"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global._todayStart"
+                },
+                86400000
+              ]
+            },
+            "assign": "global._todayEnd"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.todayWorkouts",
+              "value": {
+                "filter": [
+                  "{{ global.allWorkouts }}",
+                  {
+                    ">": [
+                      {
+                        "var": "loop.item.timestamp"
+                      },
+                      "{{ global._todayEnd }}"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "saveWorkout": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global.currentWorkout.startTime"
+          },
+          {
+            "call": "@uuid",
+            "args": {},
+            "assign": "global.currentWorkout.id"
+          },
+          {
+            "call": "@date_format",
+            "args": {
+              "timestamp": "{{ global.currentWorkout.startTime }}",
+              "format": "YYYY-MM-DD HH:mm"
+            },
+            "assign": "global.currentWorkout.date"
+          },
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.allWorkouts",
+              "item": {
+                "id": "{{ global.currentWorkout.id }}",
+                "type": "{{ global.selectedType }}",
+                "duration": "{{ global.inputDuration }}",
+                "distance": "{{ global.inputDistance }}",
+                "calories": "{{ global.inputCalories }}",
+                "timestamp": "{{ global.currentWorkout.startTime }}",
+                "date": "{{ global.currentWorkout.date }}"
+              }
+            }
+          },
+          {
+            "call": "@storage_set",
+            "args": {
+              "key": "workouts",
+              "value": "{{ global.allWorkouts }}"
+            }
+          },
+          {
+            "call": "@global.loadTodayWorkouts",
+            "args": {}
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "✅ 运动记录已保存"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "===": [
+                  {
+                    "var": "global.isRecording"
+                  },
+                  true
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.isRecording",
+                    "value": false
+                  }
+                },
+                {
+                  "call": "@navigate",
+                  "args": {
+                    "screen": "home"
+                  }
+                }
+              ],
+              "else": []
+            }
+          }
+        ]
+      },
+      "deleteWorkout": {
+        "params": [
+          "id"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.allWorkouts",
+              "value": {
+                "filter": [
+                  "{{ global.allWorkouts }}",
+                  {
+                    "!=": [
+                      {
+                        "var": "loop.item.id"
+                      },
+                      "{{ params.id }}"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@storage_set",
+            "args": {
+              "key": "workouts",
+              "value": "{{ global.allWorkouts }}"
+            }
+          },
+          {
+            "call": "@global.loadTodayWorkouts",
+            "args": {}
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "🗑️ 已删除"
+            }
+          }
+        ]
+      },
+      "confirmDelete": {
+        "params": [
+          "id"
+        ],
+        "logic": [
+          {
+            "call": "@show_dialog",
+            "args": {
+              "title": "确认删除",
+              "message": "确定要删除这条运动记录吗？"
+            },
+            "assign": "global._confirmDelete"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "===": [
+                  {
+                    "var": "global._confirmDelete"
+                  },
+                  true
+                ]
+              },
+              "then": [
+                {
+                  "call": "@global.deleteWorkout",
+                  "args": {
+                    "id": "{{ params.id }}"
+                  }
+                }
+              ],
+              "else": []
+            }
+          }
+        ]
+      },
+      "loadWeeklyStats": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._weekStart"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global._weekStart"
+                },
+                604800000
+              ]
+            },
+            "assign": "global._weekEnd"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._weekWorkouts",
+              "value": {
+                "filter": [
+                  "{{ global.allWorkouts }}",
+                  {
+                    ">": [
+                      {
+                        "var": "loop.item.timestamp"
+                      },
+                      "{{ global._weekEnd }}"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "expression": {
+              "reduce": [
+                "{{ global._weekWorkouts }}",
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "var": "current.duration"
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            "assign": "global.weeklyStats.totalMinutes"
+          },
+          {
+            "expression": {
+              "reduce": [
+                "{{ global._weekWorkouts }}",
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "var": "current.calories"
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            "assign": "global.weeklyStats.totalCalories"
+          },
+          {
+            "call": "@list_length",
+            "args": {
+              "value": "{{ global._weekWorkouts }}"
+            },
+            "assign": "global.weeklyStats.workoutCount"
+          }
+        ]
+      },
+      "loadMonthlyStats": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._monthStart"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global._monthStart"
+                },
+                2592000000
+              ]
+            },
+            "assign": "global._monthEnd"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._monthWorkouts",
+              "value": {
+                "filter": [
+                  "{{ global.allWorkouts }}",
+                  {
+                    ">": [
+                      {
+                        "var": "loop.item.timestamp"
+                      },
+                      "{{ global._monthEnd }}"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "expression": {
+              "reduce": [
+                "{{ global._monthWorkouts }}",
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "var": "current.duration"
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            "assign": "global.monthlyStats.totalMinutes"
+          },
+          {
+            "expression": {
+              "reduce": [
+                "{{ global._monthWorkouts }}",
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "var": "current.calories"
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            "assign": "global.monthlyStats.totalCalories"
+          },
+          {
+            "call": "@list_length",
+            "args": {
+              "value": "{{ global._monthWorkouts }}"
+            },
+            "assign": "global.monthlyStats.workoutCount"
+          }
+        ]
+      },
+      "loadAllStats": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@global.loadTodayWorkouts",
+            "args": {}
+          },
+          {
+            "call": "@global.loadWeeklyStats",
+            "args": {}
+          },
+          {
+            "call": "@global.loadMonthlyStats",
+            "args": {}
+          }
+        ]
+      },
+      "startRecording": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.isRecording",
+              "value": true
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "record"
+            }
+          }
+        ]
+      },
+      "getTypeIcon": {
+        "params": [
+          "type"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "===": [
+                  "{{ params.type }}",
+                  "running"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._result",
+                    "value": "directions_run"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "===": [
+                        "{{ params.type }}",
+                        "cycling"
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._result",
+                          "value": "directions_bike"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "===": [
+                              "{{ params.type }}",
+                              "swimming"
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global._result",
+                                "value": "pool"
+                              }
+                            }
+                          ],
+                          "else": [
+                            {
+                              "call": "@if",
+                              "args": {
+                                "condition": {
+                                  "===": [
+                                    "{{ params.type }}",
+                                    "gym"
+                                  ]
+                                },
+                                "then": [
+                                  {
+                                    "call": "@set",
+                                    "args": {
+                                      "var": "global._result",
+                                      "value": "fitness_center"
+                                    }
+                                  }
+                                ],
+                                "else": [
+                                  {
+                                    "call": "@if",
+                                    "args": {
+                                      "condition": {
+                                        "===": [
+                                          "{{ params.type }}",
+                                          "yoga"
+                                        ]
+                                      },
+                                      "then": [
+                                        {
+                                          "call": "@set",
+                                          "args": {
+                                            "var": "global._result",
+                                            "value": "self_improvement"
+                                          }
+                                        }
+                                      ],
+                                      "else": [
+                                        {
+                                          "call": "@set",
+                                          "args": {
+                                            "var": "global._result",
+                                            "value": "sports"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "getTypeName": {
+        "params": [
+          "type"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "===": [
+                  "{{ params.type }}",
+                  "running"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._result",
+                    "value": "跑步"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "===": [
+                        "{{ params.type }}",
+                        "cycling"
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._result",
+                          "value": "骑行"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "===": [
+                              "{{ params.type }}",
+                              "swimming"
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global._result",
+                                "value": "游泳"
+                              }
+                            }
+                          ],
+                          "else": [
+                            {
+                              "call": "@if",
+                              "args": {
+                                "condition": {
+                                  "===": [
+                                    "{{ params.type }}",
+                                    "gym"
+                                  ]
+                                },
+                                "then": [
+                                  {
+                                    "call": "@set",
+                                    "args": {
+                                      "var": "global._result",
+                                      "value": "健身"
+                                    }
+                                  }
+                                ],
+                                "else": [
+                                  {
+                                    "call": "@if",
+                                    "args": {
+                                      "condition": {
+                                        "===": [
+                                          "{{ params.type }}",
+                                          "yoga"
+                                        ]
+                                      },
+                                      "then": [
+                                        {
+                                          "call": "@set",
+                                          "args": {
+                                            "var": "global._result",
+                                            "value": "瑜伽"
+                                          }
+                                        }
+                                      ],
+                                      "else": [
+                                        {
+                                          "call": "@set",
+                                          "args": {
+                                            "var": "global._result",
+                                            "value": "其他"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "selectWorkoutType": {
+        "params": [
+          "type"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.selectedType",
+              "value": "{{ params.type }}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": {
+        "value": "🏃 运动记录App启动"
+      }
+    },
+    {
+      "call": "@global.loadAllStats",
+      "args": {}
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "运动记录",
+        "layout": "column",
+        "padding": 0,
+        "tabs": [
+          {
+            "label": "主页",
+            "icon": "home",
+            "title": "🏃 运动记录",
+            "padding": 0,
+            "backgroundColor": "#F5F7FA",
+            "children": [
+              {
+                "type": "container",
+                "color": "#4CAF50",
+                "padding": 24,
+                "paddingTop": 48,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "今日运动",
+                    "style": {
+                      "fontSize": 16,
+                      "color": "#E8F5E9"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 8
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ list_length(global.todayWorkouts) }}",
+                        "style": {
+                          "fontSize": 48,
+                          "fontWeight": "bold",
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "  次",
+                        "style": {
+                          "fontSize": 18,
+                          "color": "#C8E6C9",
+                          "paddingV": 20
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "layout": "column"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "margin": 16,
+                "padding": 20,
+                "color": "#FFFFFF",
+                "borderRadius": 16,
+                "shadow": 2,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "本周概览",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#333333"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 16
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "container",
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        },
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ global.weeklyStats.totalMinutes }}",
+                            "style": {
+                              "fontSize": 28,
+                              "fontWeight": "bold",
+                              "color": "#4CAF50",
+                              "textAlign": "center"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "分钟",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#999999",
+                              "textAlign": "center"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        },
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ global.weeklyStats.totalCalories }}",
+                            "style": {
+                              "fontSize": 28,
+                              "fontWeight": "bold",
+                              "color": "#FF9800",
+                              "textAlign": "center"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "千卡",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#999999",
+                              "textAlign": "center"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        },
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ global.weeklyStats.workoutCount }}",
+                            "style": {
+                              "fontSize": 28,
+                              "fontWeight": "bold",
+                              "color": "#2196F3",
+                              "textAlign": "center"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "次运动",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#999999",
+                              "textAlign": "center"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "layout": "column"
+              },
+              {
+                "type": "spacer",
+                "height": 24
+              },
+              {
+                "type": "button",
+                "label": "🏃 开始运动",
+                "variant": "filled",
+                "action": {
+                  "type": "call",
+                  "call": "@global.startRecording"
+                },
+                "style": {
+                  "backgroundColor": "#4CAF50",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 28,
+                  "fontSize": 18,
+                  "paddingV": 16,
+                  "marginH": 16
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 24
+              },
+              {
+                "type": "text",
+                "value": "今日运动记录",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold",
+                  "color": "#333333",
+                  "marginH": 16
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "list",
+                "source": "{{ global.todayWorkouts }}",
+                "position": {
+                  "type": "relative"
+                },
+                "emptyText": "今天还没有运动记录，点击上方开始运动吧 💪",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "margin": 8,
+                  "marginLeft": 16,
+                  "marginRight": 16,
+                  "padding": 16,
+                  "color": "#FFFFFF",
+                  "borderRadius": 12,
+                  "shadow": 1,
+                  "children": [
+                    {
+                      "type": "container",
+                      "width": 50,
+                      "height": 50,
+                      "color": "#E8F5E9",
+                      "borderRadius": 25,
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "🏃",
+                          "style": {
+                            "fontSize": 20,
+                            "textAlign": "center"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "container",
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.type }}",
+                          "style": {
+                            "fontSize": 16,
+                            "fontWeight": "bold",
+                            "color": "#333333"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.duration }}分钟 | {{ loop.item.calories }}千卡",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#666666"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.date }}",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#999999"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "label": "记录",
+            "icon": "add",
+            "title": "记录运动",
+            "padding": 20,
+            "backgroundColor": "#F5F7FA",
+            "children": [
+              {
+                "type": "spacer",
+                "height": 20
+              },
+              {
+                "type": "text",
+                "value": "选择运动类型",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold",
+                  "color": "#333333"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4,
+                    "padding": 16,
+                    "color": "#FFFFFF",
+                    "borderRadius": 12,
+                    "border": {
+                      "color": "#E0E0E0",
+                      "width": 1
+                    },
+                    "onTap": {
+                      "type": "call",
+                      "call": "@global.selectWorkoutType",
+                      "args": {
+                        "type": "running"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🏃",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "跑步",
+                        "style": {
+                          "fontSize": 14,
+                          "textAlign": "center",
+                          "color": "#333333"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4,
+                    "padding": 16,
+                    "color": "#FFFFFF",
+                    "borderRadius": 12,
+                    "border": {
+                      "color": "#E0E0E0",
+                      "width": 1
+                    },
+                    "onTap": {
+                      "type": "call",
+                      "call": "@global.selectWorkoutType",
+                      "args": {
+                        "type": "cycling"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🚴",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "骑行",
+                        "style": {
+                          "fontSize": 14,
+                          "textAlign": "center",
+                          "color": "#333333"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4,
+                    "padding": 16,
+                    "color": "#FFFFFF",
+                    "borderRadius": 12,
+                    "border": {
+                      "color": "#E0E0E0",
+                      "width": 1
+                    },
+                    "onTap": {
+                      "type": "call",
+                      "call": "@global.selectWorkoutType",
+                      "args": {
+                        "type": "swimming"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🏊",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "游泳",
+                        "style": {
+                          "fontSize": 14,
+                          "textAlign": "center",
+                          "color": "#333333"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4,
+                    "padding": 16,
+                    "color": "#FFFFFF",
+                    "borderRadius": 12,
+                    "border": {
+                      "color": "#E0E0E0",
+                      "width": 1
+                    },
+                    "onTap": {
+                      "type": "call",
+                      "call": "@global.selectWorkoutType",
+                      "args": {
+                        "type": "gym"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🏋️",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "健身",
+                        "style": {
+                          "fontSize": 14,
+                          "textAlign": "center",
+                          "color": "#333333"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4,
+                    "padding": 16,
+                    "color": "#FFFFFF",
+                    "borderRadius": 12,
+                    "border": {
+                      "color": "#E0E0E0",
+                      "width": 1
+                    },
+                    "onTap": {
+                      "type": "call",
+                      "call": "@global.selectWorkoutType",
+                      "args": {
+                        "type": "yoga"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🧘",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "瑜伽",
+                        "style": {
+                          "fontSize": 14,
+                          "textAlign": "center",
+                          "color": "#333333"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4,
+                    "padding": 16,
+                    "color": "#FFFFFF",
+                    "borderRadius": 12,
+                    "border": {
+                      "color": "#E0E0E0",
+                      "width": 1
+                    },
+                    "onTap": {
+                      "type": "call",
+                      "call": "@global.selectWorkoutType",
+                      "args": {
+                        "type": "other"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "⚽",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "其他",
+                        "style": {
+                          "fontSize": 14,
+                          "textAlign": "center",
+                          "color": "#333333"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 32
+              },
+              {
+                "type": "text",
+                "value": "运动数据",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold",
+                  "color": "#333333"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "padding": 16,
+                "color": "#FFFFFF",
+                "borderRadius": 12,
+                "shadow": 1,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "时长 (分钟)",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#666666"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 8
+                  },
+                  {
+                    "type": "input",
+                    "placeholder": "输入运动时长",
+                    "bind": "global.inputDuration",
+                    "keyboardType": "number",
+                    "style": {
+                      "borderRadius": 8,
+                      "fontSize": 18
+                    }
+                  }
+                ],
+                "layout": "column"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "padding": 16,
+                "color": "#FFFFFF",
+                "borderRadius": 12,
+                "shadow": 1,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "距离 (公里，可选)",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#666666"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 8
+                  },
+                  {
+                    "type": "input",
+                    "placeholder": "输入运动距离",
+                    "bind": "global.inputDistance",
+                    "keyboardType": "number",
+                    "style": {
+                      "borderRadius": 8,
+                      "fontSize": 18
+                    }
+                  }
+                ],
+                "layout": "column"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "padding": 16,
+                "color": "#FFFFFF",
+                "borderRadius": 12,
+                "shadow": 1,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "消耗卡路里",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#666666"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 8
+                  },
+                  {
+                    "type": "input",
+                    "placeholder": "输入消耗卡路里",
+                    "bind": "global.inputCalories",
+                    "keyboardType": "number",
+                    "style": {
+                      "borderRadius": 8,
+                      "fontSize": 18
+                    }
+                  }
+                ],
+                "layout": "column"
+              },
+              {
+                "type": "spacer",
+                "height": 32
+              },
+              {
+                "type": "button",
+                "label": "💾 保存记录",
+                "variant": "filled",
+                "action": {
+                  "type": "call",
+                  "call": "@global.saveWorkout"
+                },
+                "style": {
+                  "backgroundColor": "#4CAF50",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 28,
+                  "fontSize": 18,
+                  "paddingV": 16
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 100
+              }
+            ]
+          },
+          {
+            "label": "历史",
+            "icon": "history",
+            "title": "运动历史",
+            "padding": 0,
+            "backgroundColor": "#F5F7FA",
+            "children": [
+              {
+                "type": "container",
+                "color": "#2196F3",
+                "padding": 24,
+                "paddingTop": 48,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "📋 运动历史",
+                    "style": {
+                      "fontSize": 26,
+                      "fontWeight": "bold",
+                      "color": "#FFFFFF"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 4
+                  },
+                  {
+                    "type": "text",
+                    "value": "共 {{ list_length(global.allWorkouts) }} 条记录",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#BBDEFB"
+                    }
+                  }
+                ],
+                "layout": "column"
+              },
+              {
+                "type": "list",
+                "source": "{{ global.allWorkouts }}",
+                "position": {
+                  "type": "relative"
+                },
+                "emptyText": "还没有运动记录，开始记录你的第一条运动吧 🏃",
+                "item_template": {
+                  "type": "container",
+                  "layout": "column",
+                  "margin": 12,
+                  "marginLeft": 16,
+                  "marginRight": 16,
+                  "padding": 16,
+                  "color": "#FFFFFF",
+                  "borderRadius": 12,
+                  "shadow": 1,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "container",
+                          "width": 48,
+                          "height": 48,
+                          "color": "#E3F2FD",
+                          "borderRadius": 24,
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "🏃",
+                              "style": {
+                                "fontSize": 22,
+                                "textAlign": "center"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 12
+                        },
+                        {
+                          "type": "container",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          },
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.type }}",
+                              "style": {
+                                "fontSize": 18,
+                                "fontWeight": "bold",
+                                "color": "#333333"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "height": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.date }}",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#999999"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "container",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          },
+                          "padding": 12,
+                          "color": "#FFF8E1",
+                          "borderRadius": 8,
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "⏱️",
+                              "style": {
+                                "fontSize": 16,
+                                "textAlign": "center"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.duration }}",
+                              "style": {
+                                "fontSize": 20,
+                                "fontWeight": "bold",
+                                "color": "#FF9800",
+                                "textAlign": "center"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "分钟",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#FFB74D",
+                                "textAlign": "center"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "container",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          },
+                          "padding": 12,
+                          "color": "#FCE4EC",
+                          "borderRadius": 8,
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "🔥",
+                              "style": {
+                                "fontSize": 16,
+                                "textAlign": "center"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.calories }}",
+                              "style": {
+                                "fontSize": 20,
+                                "fontWeight": "bold",
+                                "color": "#E91E63",
+                                "textAlign": "center"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "千卡",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#F06292",
+                                "textAlign": "center"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "container",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          },
+                          "padding": 12,
+                          "color": "#E8F5E9",
+                          "borderRadius": 8,
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "📏",
+                              "style": {
+                                "fontSize": 16,
+                                "textAlign": "center"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.distance }}",
+                              "style": {
+                                "fontSize": 20,
+                                "fontWeight": "bold",
+                                "color": "#4CAF50",
+                                "textAlign": "center"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "公里",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#81C784",
+                                "textAlign": "center"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "spacer",
+                          "width": 1,
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        },
+                        {
+                          "type": "button",
+                          "label": "🗑️ 删除",
+                          "variant": "text",
+                          "action": {
+                            "type": "call",
+                            "call": "@global.confirmDelete",
+                            "args": {
+                              "id": "{{ loop.item.id }}"
+                            }
+                          },
+                          "style": {
+                            "textColor": "#F44336",
+                            "fontSize": 13
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 100
+              }
+            ]
+          },
+          {
+            "label": "统计",
+            "icon": "bar_chart",
+            "title": "运动统计",
+            "padding": 20,
+            "backgroundColor": "#F5F7FA",
+            "children": [
+              {
+                "type": "spacer",
+                "height": 20
+              },
+              {
+                "type": "text",
+                "value": "📊 本周统计",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "color": "#333333"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "padding": 20,
+                    "color": "#E8F5E9",
+                    "borderRadius": 16,
+                    "margin": 4,
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "⏱️",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.weeklyStats.totalMinutes }}",
+                        "style": {
+                          "fontSize": 32,
+                          "fontWeight": "bold",
+                          "color": "#4CAF50",
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "分钟",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#66BB6A",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "padding": 20,
+                    "color": "#FFF3E0",
+                    "borderRadius": 16,
+                    "margin": 4,
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🔥",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.weeklyStats.totalCalories }}",
+                        "style": {
+                          "fontSize": 32,
+                          "fontWeight": "bold",
+                          "color": "#FF9800",
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "千卡",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFB74D",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "padding": 20,
+                    "color": "#E3F2FD",
+                    "borderRadius": 16,
+                    "margin": 4,
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🏃",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.weeklyStats.workoutCount }}",
+                        "style": {
+                          "fontSize": 32,
+                          "fontWeight": "bold",
+                          "color": "#2196F3",
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "次运动",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#64B5F6",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 32
+              },
+              {
+                "type": "text",
+                "value": "📅 本月统计",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "color": "#333333"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "padding": 20,
+                    "color": "#E8F5E9",
+                    "borderRadius": 16,
+                    "margin": 4,
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "⏱️",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.monthlyStats.totalMinutes }}",
+                        "style": {
+                          "fontSize": 32,
+                          "fontWeight": "bold",
+                          "color": "#4CAF50",
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "分钟",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#66BB6A",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "padding": 20,
+                    "color": "#FFF3E0",
+                    "borderRadius": 16,
+                    "margin": 4,
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🔥",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.monthlyStats.totalCalories }}",
+                        "style": {
+                          "fontSize": 32,
+                          "fontWeight": "bold",
+                          "color": "#FF9800",
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "千卡",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFB74D",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "padding": 20,
+                    "color": "#E3F2FD",
+                    "borderRadius": 16,
+                    "margin": 4,
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "🏃",
+                        "style": {
+                          "fontSize": 28,
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.monthlyStats.workoutCount }}",
+                        "style": {
+                          "fontSize": 32,
+                          "fontWeight": "bold",
+                          "color": "#2196F3",
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "次运动",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#64B5F6",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 100
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

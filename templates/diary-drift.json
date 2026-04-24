@@ -3,7 +3,7 @@
   "appid": "62df00c2-9f75-48fc-91b6-446328b5a4c0",
   "meta": {
     "name": "diary-drift",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "type": "app",
     "description": "使用 Drift/SQLite 持久化存储的日记应用 — 支持心情标签、增删改查",
     "author": "AI Designer",
@@ -30,7 +30,7 @@
         "params": [],
         "logic": [
           {
-            "call": "@db_create_table",
+            "call": "@lib_database.createTable",
             "args": {
               "table": "diary",
               "columns": [
@@ -74,7 +74,7 @@
         "params": [],
         "logic": [
           {
-            "call": "@db_query",
+            "call": "@lib_database.query",
             "args": {
               "table": "diary",
               "orderBy": "timestamp DESC"
@@ -82,7 +82,7 @@
             "assign": "global.entries"
           },
           {
-            "call": "@db_count",
+            "call": "@lib_database.count",
             "args": {
               "table": "diary"
             },
@@ -132,7 +132,7 @@
               ],
               "else": [
                 {
-                  "call": "@db_insert",
+                  "call": "@lib_database.insert",
                   "args": {
                     "table": "diary",
                     "data": {
@@ -187,7 +187,7 @@
         ],
         "logic": [
           {
-            "call": "@db_delete",
+            "call": "@lib_database.delete",
             "args": {
               "table": "diary",
               "where": "id = ?",
@@ -289,7 +289,7 @@
                   "assign": "global.currentDate"
                 },
                 {
-                  "call": "@db_update",
+                  "call": "@lib_database.update",
                   "args": {
                     "table": "diary",
                     "data": {
@@ -380,7 +380,7 @@
               },
               "then": [
                 {
-                  "call": "@db_delete",
+                  "call": "@lib_database.delete",
                   "args": {
                     "table": "diary",
                     "where": "1=1"
@@ -971,5 +971,11 @@
         ]
       }
     ]
-  }
+  },
+  "dependencies": [
+    {
+      "name": "lib_database",
+      "version": "^1.0.0"
+    }
+  ]
 }

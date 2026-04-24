@@ -2,7 +2,7 @@
   "dsl": "3.3",
   "meta": {
     "name": "lib_database",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "library",
     "description": "Drift 数据库组件库 — 基于 SQLite 的持久化存储，每个 APP 自动隔离数据库空间",
     "author": "AI Designer",
@@ -81,8 +81,7 @@
           "where",
           "whereArgs",
           "orderBy",
-          "limit",
-          "bind"
+          "limit"
         ],
         "description": "查询表中的记录，结果绑定到 bind 指定的变量",
         "logic": [
@@ -98,10 +97,8 @@
             "assign": "global._rows"
           },
           {
-            "call": "@set",
-            "args": {
-              "var": "{{ params.bind }}",
-              "value": "{{ global._rows }}"
+            "expression": {
+              "var": "global._rows"
             }
           }
         ]
@@ -110,8 +107,7 @@
         "params": [
           "table",
           "where",
-          "whereArgs",
-          "bind"
+          "whereArgs"
         ],
         "description": "查询单条记录",
         "logic": [
@@ -128,7 +124,19 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
+              "then": [
+                {
+                  "expression": {
+                    "var": "global._rows.0"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "expression": null
+                }
+              ],
+              "condition": {
                 ">": [
                   {
                     "list_length": {
@@ -137,25 +145,7 @@
                   },
                   0
                 ]
-              },
-              "then": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "{{ params.bind }}",
-                    "value": "{{ global._rows.0 }}"
-                  }
-                }
-              ],
-              "else": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "{{ params.bind }}",
-                    "value": null
-                  }
-                }
-              ]
+              }
             }
           }
         ]
@@ -163,8 +153,7 @@
       "queryAll": {
         "params": [
           "table",
-          "orderBy",
-          "bind"
+          "orderBy"
         ],
         "description": "查询表中所有记录",
         "logic": [
@@ -177,10 +166,8 @@
             "assign": "global._rows"
           },
           {
-            "call": "@set",
-            "args": {
-              "var": "{{ params.bind }}",
-              "value": "{{ global._rows }}"
+            "expression": {
+              "var": "global._rows"
             }
           }
         ]
@@ -260,8 +247,7 @@
         "params": [
           "table",
           "where",
-          "whereArgs",
-          "bind"
+          "whereArgs"
         ],
         "description": "统计表中符合条件的记录数量",
         "logic": [
@@ -275,10 +261,8 @@
             "assign": "global._count"
           },
           {
-            "call": "@set",
-            "args": {
-              "var": "{{ params.bind }}",
-              "value": "{{ global._count }}"
+            "expression": {
+              "var": "global._count"
             }
           }
         ]
@@ -301,8 +285,7 @@
       },
       "kvGet": {
         "params": [
-          "key",
-          "bind"
+          "key"
         ],
         "description": "键值存储 - 获取",
         "logic": [
@@ -314,10 +297,8 @@
             "assign": "global._result"
           },
           {
-            "call": "@set",
-            "args": {
-              "var": "{{ params.bind }}",
-              "value": "{{ global._result }}"
+            "expression": {
+              "var": "global._result"
             }
           }
         ]
@@ -358,14 +339,6 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
-                ">": [
-                  {
-                    "var": "global._count"
-                  },
-                  0
-                ]
-              },
               "then": [
                 {
                   "call": "@db_update",
@@ -387,7 +360,15 @@
                     "data": "{{ params.data }}"
                   }
                 }
-              ]
+              ],
+              "condition": {
+                ">": [
+                  {
+                    "var": "global._count"
+                  },
+                  0
+                ]
+              }
             }
           }
         ]
