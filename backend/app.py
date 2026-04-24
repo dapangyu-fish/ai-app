@@ -11,6 +11,7 @@ from flask_sock import Sock
 from config import PORT
 import auth
 import ai_code_generator as chat
+import claude_chat
 import store
 
 
@@ -32,7 +33,7 @@ def create_app():
     app.add_url_rule("/api/auth/quota", methods=["GET"], view_func=auth.get_quota)
 
     # 注册 Chat 路由
-    app.add_url_rule("/chat", methods=["POST"], view_func=chat.chat)
+    app.add_url_rule("/chat", methods=["POST"], view_func=claude_chat.chat)
     app.add_url_rule("/api/ai/generate", methods=["POST"], view_func=chat.generate_app)
     app.add_url_rule("/api/ai/fix-app", methods=["POST"], view_func=chat.fix_app)
     app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=chat.list_providers)
