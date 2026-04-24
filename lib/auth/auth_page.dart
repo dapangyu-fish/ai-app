@@ -647,6 +647,40 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 12),
             Text(user?['email'] ?? '',
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+            const SizedBox(height: 8),
+            // User Role Badge
+            Builder(builder: (context) {
+              final role = user?['role']?.toString() ?? 'user';
+              String roleText = '普通用户';
+              Color roleColor = cs.surfaceContainerHighest;
+              Color roleTextColor = cs.onSurfaceVariant;
+              
+              if (role == 'admin') {
+                roleText = '管理员';
+                roleColor = cs.primaryContainer;
+                roleTextColor = cs.onPrimaryContainer;
+              } else if (role == 'pro') {
+                roleText = '高级用户';
+                roleColor = cs.tertiaryContainer;
+                roleTextColor = cs.onTertiaryContainer;
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: roleColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  roleText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: roleTextColor,
+                  ),
+                ),
+              );
+            }),
             const SizedBox(height: 36),
 
             // Username
