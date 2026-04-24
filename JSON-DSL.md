@@ -936,3 +936,18 @@ templates/                         # JSON DSL 示例配置
   ]
 }
 ```
+
+---
+
+## 8. 避坑指南与反面教材 (Anti-Patterns)
+
+> **⚠️ 必读：** 关于开发中极易触发的“白屏崩溃”和“逻辑静默失败”等问题，请务必阅读配套文件：
+> **[templates/bacsase/anti_patterns_and_pitfalls.md](./templates/bacsase/anti_patterns_and_pitfalls.md)**
+
+几个核心原则：
+1. **依赖声明 `dependencies` 必须是字典 (Map)**，绝对不能写成数组 (List)。
+2. **样式属性不能写 JSONLogic Map**：`color`, `border` 等属性只接受字符串/数字，不能传 `{"if": ...}`。
+3. **列表 `source` 不写 Map**：列表数据源只支持字符串插值 `{{ global.xxx }}`。
+4. **`layout` 必须显式声明**：用 `container` 时，如果想上下排布，必须写明 `"layout": "column"`。
+5. **`@if` 关键字必须是 `condition`**：不要错写成 `cond`。
+6. **组件优先**：优先使用组件（如 `common-ui`），数据存储优先依赖 `lib_database` 而不是直接调用底层 `@db_xxx` API。
