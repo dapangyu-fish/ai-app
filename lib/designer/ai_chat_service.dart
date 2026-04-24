@@ -95,9 +95,17 @@ class AiChatService {
   /// 初始化/加载 session（app 启动时调用）
   Future<void> loadSession() async {
     final prefs = await SharedPreferences.getInstance();
-    _sessionId = prefs.getString(_sessionKey) ?? _generateSessionId();
-    _sessionUsed = prefs.getBool(_sessionUsedKey) ?? false;
+    String? cachedId = prefs.getString(_sessionKey);
+    // 验证缓存的 UUID 长度是否合法 (36字符)
+    if (cachedId == null || cachedId.length != 36) {
+      _sessionId = _generateSessionId();
+      _sessionUsed = false;
+    } else {
+      _sessionId = cachedId;
+      _sessionUsed = prefs.getBool(_sessionUsedKey) ?? false;
+    }
     await prefs.setString(_sessionKey, _sessionId);
+    await prefs.setBool(_sessionUsedKey, _sessionUsed);
   }
 
   /// 重置 session（用户点击清除按钮）
