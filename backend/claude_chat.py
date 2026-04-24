@@ -106,7 +106,12 @@ def chat():
         proc = run_cli(is_resume=True)
         first_line = proc.stdout.readline()
         
-        proc.poll()
+        # 如果第一行为空，说明 CLI 没有任何正常输出就结束了，我们需要等待它退出才能拿到正确的 returncode
+        if not first_line:
+            proc.wait()
+        else:
+            proc.poll()
+            
         if proc.returncode is not None and proc.returncode != 0:
             stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
             # 判断是否为会话不存在错误
