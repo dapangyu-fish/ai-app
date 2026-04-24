@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 聊天模块 - AI 对话和 JSON App 生成
+统一使用 Claude CLI 处理所有对话和代码生成请求。
 """
 
 import json
@@ -8,12 +9,11 @@ import os
 import re
 import uuid
 import subprocess
-import anthropic
 from flask import request, jsonify, Response, stream_with_context
 from config import (
     AI_PROVIDERS, DEFAULT_PROVIDER,
-    DSL_SPEC_PATH, PROJECT_ROOT, GENERATE_PROMPT_PATH, CHAT_AGENT_PROMPT_PATH,
-    AGENT_MAX_ITERATIONS, ROLE_QUOTAS, CLAUDE_BIN
+    DSL_SPEC_PATH, PROJECT_ROOT, GENERATE_PROMPT_PATH,
+    ROLE_QUOTAS, CLAUDE_BIN
 )
 from database import db_query, get_quota_info, increment_quota
 from auth import require_auth
@@ -26,16 +26,6 @@ def _load_dsl_spec():
             return f.read()
     except Exception:
         return ""
-
-
-def _load_chat_agent_prompt():
-    """加载 Chat Agent 系统提示词"""
-    try:
-        with open(CHAT_AGENT_PROMPT_PATH, "r", encoding="utf-8") as f:
-            return f.read()
-    except Exception as e:
-        print(f"[Chat] Failed to load chat_agent_prompt.md: {e}")
-        return "你是一个 JSON-DSL 应用设计师助手，负责澄清需求。对话极度简洁，不输出 JSON。"
 
 
 def _load_registry_summary():
@@ -57,165 +47,36 @@ def _load_registry_summary():
         return ""
 
 
-# AGENT_SYSTEM 从文件加载，支持热更新（见 backend/prompts/chat_agent_prompt.md）
-AGENT_SYSTEM = None  # 延迟加载，首次使用时初始化
+# ---------------------------------------------------------------------------
+#  用于判断用户是否需要上传当前 APP 的关键词
+# ---------------------------------------------------------------------------
 
-
-AGENT_TOOLS = [
-    {
-        "name": "read_file",
-        "description": "读取项目文件。常用: JSON-DSL.md (完整DSL规范), lib/json_ui/interpreter.dart (解释器+内置函数), lib/json_ui/widget_builder.dart (组件注册表), lib/json_ui/widgets/ (各组件实现)",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "从项目根目录的相对路径"}
-            },
-            "required": ["path"]
-        }
-    },
-    {
-        "name": "search_code",
-        "description": "在项目代码中搜索关键词，返回匹配的行和文件路径",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "pattern": {"type": "string", "description": "搜索关键词或正则"},
-                "glob": {"type": "string", "description": "文件过滤，如 *.dart *.md"}
-            },
-            "required": ["pattern"]
-        }
-    },
-    {
-        "name": "list_builtin_functions",
-        "description": "列出 JSON-DSL 框架所有可用的 @内置函数",
-        "input_schema": {
-            "type": "object",
-            "properties": {}
-        }
-    },
-    {
-        "name": "list_templates",
-        "description": "列出 templates/ 目录下所有模板 APP 文件及其简介。生成 JSON-APP 前应先查看，选一个相似的用 read_file 读取作为参考",
-        "input_schema": {
-            "type": "object",
-            "properties": {}
-        }
-    },
-    {
-        "name": "trigger_generate",
-        "description": "当用户需求已经足够清晰时，调用此工具触发 Claude CLI 来生成或修改 JSON-APP。prompt 参数是对需求的完整总结（包含所有用户提到的功能、样式等细节）。调用后系统会自动启动代码生成流程。",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "prompt": {"type": "string", "description": "对用户需求的完整总结，作为生成 JSON-APP 的输入"}
-            },
-            "required": ["prompt"]
-        }
-    },
-    {
-        "name": "request_current_app",
-        "description": "当用户想要修改、修复或扩展当前正在运行的应用，但上下文中没有当前应用的链接时，调用此工具要求客户端上传当前应用配置。调用后，系统会向用户显示上传按钮。",
-        "input_schema": {
-            "type": "object",
-            "properties": {}
-        }
-    }
+_MODIFY_KEYWORDS = [
+    "修改", "修复", "修一下", "改一下", "改改", "调整", "优化",
+    "加一个", "添加", "增加", "删除", "删掉", "去掉", "移除",
+    "换成", "改成", "变成", "替换", "更新", "升级",
+    "bug", "崩溃", "白屏", "报错", "出错", "不工作", "不显示",
+    "当前", "这个app", "这个应用", "现在的",
+    "fix", "modify", "change", "update", "remove", "add",
 ]
 
 
-def _execute_agent_tool(name, inputs):
-    """执行 Agent 工具调用"""
-    if name == "read_file":
-        path = os.path.join(PROJECT_ROOT, inputs["path"])
-        real = os.path.realpath(path)
-        if not real.startswith(PROJECT_ROOT):
-            return "Access denied: path outside project"
-        try:
-            with open(path, 'r') as f:
-                content = f.read()
-            if len(content) > 15000:
-                content = content[:15000] + "\n\n... (truncated)"
-            return content
-        except FileNotFoundError:
-            return f"File not found: {inputs['path']}"
-        except Exception as e:
-            return f"Error: {e}"
-
-    elif name == "search_code":
-        import subprocess
-        pattern = inputs["pattern"]
-        glob_pat = inputs.get("glob", "*.dart")
-        try:
-            result = subprocess.run(
-                ["grep", "-rn", "--include", glob_pat, pattern, PROJECT_ROOT],
-                capture_output=True, text=True, timeout=10
-            )
-            output = result.stdout[:8000] if result.stdout else "No matches found"
-            return output
-        except Exception as e:
-            return f"Search error: {e}"
-
-    elif name == "list_builtin_functions":
-        path = os.path.join(PROJECT_ROOT, "lib/json_ui/interpreter.dart")
-        try:
-            with open(path, 'r') as f:
-                content = f.read()
-            funcs = sorted(set(re.findall(r"'(@\w+)'", content)))
-            return "可用的内置函数:\n" + "\n".join(funcs)
-        except Exception as e:
-            return f"Error: {e}"
-
-    elif name == "list_templates":
-        tpl_dir = os.path.join(PROJECT_ROOT, "templates")
-        try:
-            files = sorted(f for f in os.listdir(tpl_dir) if f.endswith('.json'))
-            result = []
-            for f in files:
-                path = os.path.join(tpl_dir, f)
-                try:
-                    with open(path, 'r', encoding='utf-8') as fh:
-                        data = json.load(fh)
-                    meta = data.get("meta", {})
-                    name_str = meta.get("name", f)
-                    desc = meta.get("description", "")
-                    result.append(f"- {f}: {name_str} — {desc}")
-                except Exception:
-                    result.append(f"- {f}: (parse error)")
-            return "可参考的模板 APP:\n" + "\n".join(result) + "\n\n用 read_file('templates/xxx.json') 读取完整内容作为参考"
-        except Exception as e:
-            return f"Error: {e}"
-
-    return f"Unknown tool: {name}"
+def _needs_current_app(messages):
+    """判断用户的最新消息是否暗示要修改当前 APP。
+    只检查最后一条 user 消息。"""
+    last_user_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            last_user_msg = m.get("content", "").lower()
+            break
+    if not last_user_msg:
+        return False
+    return any(kw in last_user_msg for kw in _MODIFY_KEYWORDS)
 
 
 def _get_provider(provider_id=None):
     pid = provider_id or DEFAULT_PROVIDER
     return AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
-
-
-def _get_agent_client(provider_id=None):
-    provider = _get_provider(provider_id)
-    api_key = provider.get("api_key", "")
-    masked_key = f"{api_key[:4]}***{api_key[-4:]}" if len(api_key) > 8 else "***"
-    print(f"\n[AI_SERVER] Initiating Agent Client:")
-    print(f"  - Provider ID: {provider.get('id')}")
-    print(f"  - Base URL: {provider.get('base_url')}")
-    print(f"  - API Key: {masked_key}")
-    print(f"  - Agent Model: {provider.get('agent_model', provider.get('models', {}).get('default'))}\n")
-
-    # 强制清理环境变量中的残留 token，防止 anthropic SDK 错误地发送 Authorization: Bearer 头
-    if "ANTHROPIC_AUTH_TOKEN" in os.environ:
-        os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
-
-    return anthropic.Anthropic(
-        base_url=provider["base_url"],
-        api_key=provider["api_key"],
-    )
-
-
-def _get_agent_model(provider_id=None):
-    provider = _get_provider(provider_id)
-    return provider.get("agent_model", provider["models"]["default"])
 
 
 def list_providers():
@@ -492,14 +353,14 @@ def generate_app():
 
 
 # ---------------------------------------------------------------------------
-#  Chat — 对话 + Agent 触发生成
+#  Chat — 统一 Claude CLI 对话
 # ---------------------------------------------------------------------------
 
 @require_auth
 def chat():
     """SSE 流式 AI 对话。
-    轻量 SDK Agent 负责澄清需求。当 Agent 判断需求已清晰时，
-    它会调用 trigger_generate 工具，后端自动切换到 Claude CLI 生成 JSON-APP。
+    所有用户消息直接通过 Claude CLI 处理，不再使用轻量 SDK Agent。
+    如果用户需要修改当前 APP 但未提供，先返回 request_action 让前端上传。
     """
     user_id = request.supabase_user.get("id")
     role = request.user_role
@@ -519,111 +380,68 @@ def chat():
     provider_id = body.get("provider")
     provider = _get_provider(provider_id)
     current_app = body.get("current_app")  # 客户端传来的当前 JSON
-    agent_client = _get_agent_client(provider_id)
-    agent_model = _get_agent_model(provider_id)
 
-    agent_messages = []
+    if not provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
+        return jsonify({"error": f"供应商 {provider['name']} 未配置 CLI 环境变量"}), 500
+
+    # 过滤掉 system 消息，只保留 user/assistant
+    user_messages = []
     for m in messages:
         if m["role"] == "system":
             continue
-        content = m["content"]
-        agent_messages.append({"role": m["role"], "content": content})
+        user_messages.append({"role": m["role"], "content": m["content"]})
 
-    system_prompt = _load_chat_agent_prompt()
-    registry = _load_registry_summary()
-    if registry:
-        system_prompt += f"\n## 已注册的 APP 和组件\n{registry}"
+    # 前置检查：如果用户想修改当前 APP 但没有传 current_app，先要求上传
+    if not current_app and _needs_current_app(user_messages):
+        # 检查对话历史中是否已经包含了 APP 配置（用户之前已上传过）
+        has_app_in_history = any(
+            "json_app_url" in m.get("content", "") or "当前正在运行的 JSON-APP" in m.get("content", "")
+            for m in user_messages
+        )
+        if not has_app_in_history:
+            def request_upload():
+                yield f'data: {json.dumps({"content": "好的，请先上传当前应用配置，我来帮你处理。"}, ensure_ascii=False)}\n\n'
+                yield f'data: {json.dumps({"request_action": "upload_current_app"}, ensure_ascii=False)}\n\n'
+                yield "data: [DONE]\n\n"
+            return Response(
+                stream_with_context(request_upload()),
+                mimetype="text/event-stream",
+                headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
+                         "Access-Control-Allow-Origin": "*"},
+            )
+
+    # 构建完整的用户提示词（包含对话历史）
+    history_parts = []
+    for m in user_messages[:-1]:
+        role_label = "用户" if m["role"] == "user" else "助手"
+        history_parts.append(f"[{role_label}] {m['content']}")
+
+    last_msg = user_messages[-1]["content"] if user_messages else ""
+
+    if history_parts:
+        combined_prompt = f"## 之前的对话历史\n" + "\n\n".join(history_parts) + f"\n\n## 用户的最新需求\n{last_msg}"
+    else:
+        combined_prompt = last_msg
 
     increment_quota(user_id)
     new_remaining = remaining - 1
 
     def generate():
-        msgs = list(agent_messages)
         try:
-            for iteration in range(AGENT_MAX_ITERATIONS):
-                print(f"[Agent] Iteration {iteration + 1}, messages={len(msgs)}")
-                call_kwargs = {
-                    "model": agent_model,
-                    "max_tokens": 2048,
-                    "system": system_prompt,
-                    "messages": msgs,
-                    "tools": AGENT_TOOLS,
-                }
-                if provider.get("extra_body"):
-                    call_kwargs["extra_body"] = provider["extra_body"]
+            # 通知前端进入生成模式
+            yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
 
-                response = None
-                try:
-                    with agent_client.messages.stream(**call_kwargs) as stream:
-                        for text in stream.text_stream:
-                            yield f'data: {json.dumps({"content": text}, ensure_ascii=False)}\n\n'
-                        response = stream.get_final_message()
-                except Exception as e:
-                    print(f"[Agent] Stream failed ({e}), falling back to non-stream")
-                    response = agent_client.messages.create(**call_kwargs)
-                    for block in response.content:
-                        if block.type == 'text' and block.text:
-                            yield f'data: {json.dumps({"content": block.text}, ensure_ascii=False)}\n\n'
+            output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
+            cli_system = _load_generate_prompt()
+            cli_prompt = _build_user_prompt(combined_prompt, current_app)
 
-                tool_calls = [b for b in response.content if b.type == 'tool_use']
-                if not tool_calls:
-                    print(f"[Agent] Done after {iteration + 1} iterations")
-                    break
-
-                # 检查是否有 trigger_generate 调用
-                gen_call = next((tc for tc in tool_calls if tc.name == 'trigger_generate'), None)
-                req_call = next((tc for tc in tool_calls if tc.name == 'request_current_app'), None)
-
-                if req_call:
-                    print("[Agent] request_current_app called.")
-                    yield f'data: {json.dumps({"request_action": "upload_current_app"}, ensure_ascii=False)}\n\n'
-                    break  # 直接结束对话，等待用户点击按钮上传
-
-                if gen_call:
-                    gen_prompt = gen_call.input.get('prompt', '')
-                    print(f"[Agent] trigger_generate called, prompt={gen_prompt[:100]}...")
-
-                    # 通知前端开始生成
-                    yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
-
-                    # 启动 Claude CLI
-                    if provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
-                        output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
-                        cli_system = _load_generate_prompt()
-                        cli_prompt = _build_user_prompt(gen_prompt, current_app)
-                        yield from _run_claude_cli(cli_system, cli_prompt, provider, output_path, tag="Chat-CLI")
-                    else:
-                        yield f'data: {json.dumps({"error": "供应商未配置 CLI 环境变量"}, ensure_ascii=False)}\n\n'
-                    break  # 生成完毕，结束对话循环
-
-                # 处理普通工具调用
-                assistant_content = []
-                for block in response.content:
-                    if block.type == 'text':
-                        assistant_content.append({"type": "text", "text": block.text})
-                    elif block.type == 'tool_use':
-                        assistant_content.append({
-                            "type": "tool_use", "id": block.id,
-                            "name": block.name, "input": block.input,
-                        })
-                msgs.append({"role": "assistant", "content": assistant_content})
-
-                tool_results = []
-                for tc in tool_calls:
-                    if tc.name == 'trigger_generate':
-                        continue  # 已处理
-                    result = _execute_agent_tool(tc.name, tc.input)
-                    print(f"[Agent] Tool {tc.name}: {len(result)} chars")
-                    tool_results.append({
-                        "type": "tool_result", "tool_use_id": tc.id, "content": result,
-                    })
-                msgs.append({"role": "user", "content": tool_results})
+            yield from _run_claude_cli(cli_system, cli_prompt, provider, output_path, tag="Chat-CLI")
 
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
             yield "data: [DONE]\n\n"
 
         except Exception as e:
-            print(f"[Agent] Error: {e}")
+            print(f"[Chat] Error: {e}")
             import traceback; traceback.print_exc()
             yield f'data: {json.dumps({"error": str(e)})}\n\n'
             yield "data: [DONE]\n\n"

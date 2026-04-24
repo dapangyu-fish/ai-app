@@ -114,7 +114,7 @@ class AiChatService {
       });
 
       var response = await client.send(request).timeout(
-        const Duration(seconds: 120),
+        const Duration(seconds: 300),
       );
 
       if (response.statusCode == 401 && AuthService.token != null) {
@@ -131,7 +131,7 @@ class AiChatService {
             'provider': _selectedProvider,
           });
           response = await client.send(retryRequest).timeout(
-            const Duration(seconds: 120),
+            const Duration(seconds: 300),
           );
         } catch (_) {
           // 刷新失败，保持原 401 response，后续逻辑会处理
