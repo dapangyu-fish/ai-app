@@ -307,6 +307,20 @@ class AiChatService {
           }
         } catch (_) {}
       }
+
+      // 流结束后，如果累积的文本包含 JSON 块，则提取并应用
+      final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
+      final match = jsonBlockRegex.firstMatch(accumulated);
+      if (match != null) {
+        try {
+          final jsonStr = match.group(1)!;
+          final parsedApp = json.decode(jsonStr) as Map<String, dynamic>;
+          yield ChatEvent(jsonApp: parsedApp);
+        } catch (e) {
+          // JSON 解析失败则忽略
+        }
+      }
+
     } on http.ClientException {
       // abort() 触发
     } catch (e) {
