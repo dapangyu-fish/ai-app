@@ -379,6 +379,28 @@ def get_package(name):
     })
 
 
+@app.route('/my-namespaces', methods=['GET'])
+@require_auth
+def my_namespaces():
+    """
+    获取当前用户拥有的所有命名空间
+    GET /my-namespaces
+    """
+    user = request.supabase_user
+    user_id = user.get('id')
+
+    index = _load_index()
+    result = []
+    for ns_name, ns_info in index.get('namespaces', {}).items():
+        if ns_info.get('owner_id') == user_id:
+            result.append({
+                "name": ns_name,
+                "created_at": ns_info.get('created_at', '')
+            })
+
+    return jsonify({"namespaces": result})
+
+
 @app.route('/namespace/check', methods=['GET'])
 def check_namespace():
     """
@@ -488,16 +510,20 @@ def create_namespace():
 @require_auth
 def publish():
     """
-    发布包到 Registry
+    发布包到 Registry（v2 — 弹窗驱动）
     POST /publish
     Body: {
-      "json_content": {...},  # 完整的 JSON-DSL 配置
-      "force_update": false   # 是否强制更新
+      "json_content": {...},      // 完整 JSON-DSL 内容
+      "namespace": "mycompany",   // 用户选择的命名空间（admin 官方包可为空）
+      "name": "my-cool-app",      // 用户确认的包名
+      "appid": "08ad186c-...",    // 用户确认的 UUID
+      "version": "1.0.0",         // 用户确认的版本号
+      "description": "...",       // 描述
+      "type": "app"               // app 或 library
     }
     """
     body = request.get_json(silent=True) or {}
     json_content = body.get('json_content')
-    force_update = body.get('force_update', False)
 
     if not json_content:
         return jsonify({"error": "缺少 json_content"}), 400
@@ -508,83 +534,118 @@ def publish():
         except Exception:
             return jsonify({"error": "无效的 JSON"}), 400
 
-    # 解析包信息
-    meta = json_content.get('meta', {})
-    name = meta.get('name', '').strip()
-    version = meta.get('version', '').strip()
-    package_type = meta.get('type', 'library')
+    # ── 从请求体顶层获取用户确认的 meta 信息 ──
+    namespace = body.get('namespace', '').strip()
+    pkg_name = body.get('name', '').strip()
+    appid = body.get('appid', '').strip()
+    version = body.get('version', '').strip()
+    description = body.get('description', '').strip()
+    package_type = body.get('type', 'app').strip()
 
-    if not name or not version:
-        return jsonify({"error": "meta.name 和 meta.version 不能为空"}), 400
+    # 兼容旧客户端：如果顶层没传，就从 json_content 里取
+    if not pkg_name:
+        pkg_name = json_content.get('meta', {}).get('name', '').strip()
+    if not version:
+        version = json_content.get('meta', {}).get('version', '').strip()
+    if not appid:
+        appid = json_content.get('appid', '').strip()
+    if not description:
+        description = json_content.get('meta', {}).get('description', '').strip()
 
-    appid = json_content.get('appid', '').strip()
+    # ── 基础格式校验 ──
+    if not pkg_name:
+        return jsonify({"error": "包名不能为空"}), 400
+    if not version:
+        return jsonify({"error": "版本号不能为空"}), 400
     if not appid:
         return jsonify({"error": "appid 不能为空"}), 400
-    
-    # 验证 appid 是否为标准 UUID 格式 (含连字符或不含)
-    uuid_pattern = re.compile(r'^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$')
+
+    uuid_pattern = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
     if not uuid_pattern.match(appid):
-        return jsonify({"error": "appid 格式必须是统一的 UUID 格式"}), 400
+        return jsonify({"error": "appid 格式必须是标准 UUID（带连字符）"}), 400
 
-    # 验证包名格式
-    valid, error_msg = _validate_package_name(name)
-    if not valid:
-        return jsonify({"error": error_msg}), 400
-
-    # 验证版本号格式
     if not _validate_version(version):
         return jsonify({"error": "版本号格式不正确（必须是 x.y.z 格式）"}), 400
 
-    # 权限检查
+    # ── 确定完整包名 (full_name) ──
     user = request.supabase_user
     user_id = user.get('id')
     user_role = request.user_role
 
-    slash_count = name.count('/')
-
-    # 官方包（无 /）只有 admin 可以发布
-    if slash_count == 0:
-        if user_role != 'admin':
-            return jsonify({"error": "只有管理员可以发布官方包（无命名空间的包）"}), 403
+    if namespace:
+        # 用户包：full_name = namespace/pkg_name
+        full_name = f"{namespace}/{pkg_name}"
     else:
-        # 用户包，检查命名空间所有权
-        index = _load_index()
+        # 官方包（无命名空间）
+        if user_role != 'admin':
+            return jsonify({"error": "普通用户必须选择命名空间"}), 403
+        full_name = pkg_name
 
-        # 提取一级或二级命名空间
-        parts = name.split('/')
-        if slash_count == 1:
-            namespace = parts[0]
-        else:  # slash_count == 2
-            namespace = f"{parts[0]}/{parts[1]}"
+    # 验证 full_name 格式
+    valid, error_msg = _validate_package_name(full_name)
+    if not valid:
+        return jsonify({"error": error_msg}), 400
 
-        # 检查命名空间是否存在且属于该用户
-        if namespace not in index['namespaces']:
-            return jsonify({
-                "error": f"命名空间 '{namespace}' 不存在，请先调用 /namespace/create 创建"
-            }), 403
-
-        ns_info = index['namespaces'][namespace]
-        if ns_info['owner_id'] != user_id:
-            return jsonify({"error": f"命名空间 '{namespace}' 不属于你"}), 403
-
-    # 加载索引
+    # ── 命名空间权限校验 ──
     index = _load_index()
 
-    # 检查包是否已存在
-    if name in index['packages']:
-        existing = index['packages'][name]
-        if version in existing['versions']:
+    if namespace:
+        if namespace not in index.get('namespaces', {}):
+            return jsonify({"error": f"命名空间 '{namespace}' 不存在，请先创建"}), 403
+        ns_info = index['namespaces'][namespace]
+        if ns_info.get('owner_id') != user_id:
+            return jsonify({"error": f"命名空间 '{namespace}' 不属于你"}), 403
+
+    # ── ★ UUID 交叉检测 ──
+    for existing_name, existing_pkg in index.get('packages', {}).items():
+        existing_appid = existing_pkg.get('appid', '')
+        if existing_appid == appid:
+            if existing_name == full_name:
+                # 情况 B：同一个包，同一个 appid → 更新操作
+                break
+            else:
+                # 情况 A：appid 被其他包占用 → 拦截
+                return jsonify({
+                    "error": "UUID 已被其他包使用，请点击「随机生成」获取新的 UUID",
+                    "uuid_conflict": True,
+                    "conflicting_package": existing_name
+                }), 409
+
+    # ── 版本号校验 ──
+    if full_name in index.get('packages', {}):
+        existing_pkg = index['packages'][full_name]
+        existing_versions = existing_pkg.get('versions', [])
+
+        if version in existing_versions:
             return jsonify({
                 "error": f"版本 {version} 已存在，版本号不能重复",
-                "existing_versions": existing['versions']
+                "existing_versions": existing_versions
             }), 409
 
-    # 构造存储路径
-    path = name  # 如 common-ui 或 mycompany/frontend/ui-kit
-    filename = f"{name.split('/')[-1]}-{version}.json"
+        # 检查版本号是否递增
+        latest = existing_pkg.get('latest', '0.0.0')
+        def _parse_ver(v):
+            return tuple(int(p) for p in v.split('.'))
+        if _parse_ver(version) <= _parse_ver(latest):
+            return jsonify({
+                "error": f"版本号必须大于当前最新版本 {latest}",
+                "latest_version": latest
+            }), 409
+
+    # ── 将用户确认的 meta 写回 json_content ──
+    if 'meta' not in json_content:
+        json_content['meta'] = {}
+    json_content['meta']['name'] = full_name
+    json_content['meta']['version'] = version
+    json_content['meta']['description'] = description
+    json_content['meta']['type'] = package_type
+    json_content['appid'] = appid
+
+    # ── 上传到 MinIO ──
+    path = full_name
+    filename = f"{full_name.split('/')[-1]}-{version}.json"
     oss_key = f"{path}/{filename}"
 
-    # 上传到 MinIO
     try:
         data_bytes = json.dumps(json_content, ensure_ascii=False, indent=2).encode('utf-8')
         minio_client.put_object(
@@ -597,33 +658,35 @@ def publish():
     except Exception as e:
         return jsonify({"error": f"上传失败: {str(e)}"}), 502
 
-    # 更新索引
-    if name not in index['packages']:
-        index['packages'][name] = {
+    # ── 更新索引 ──
+    slash_count = full_name.count('/')
+    if full_name not in index['packages']:
+        index['packages'][full_name] = {
             "type": "official" if slash_count == 0 else "user",
             "latest": version,
             "versions": [version],
             "path": path,
             "author_id": user_id,
+            "appid": appid,
             "created_at": datetime.utcnow().isoformat() + "Z"
         }
     else:
-        pkg = index['packages'][name]
+        pkg = index['packages'][full_name]
         if version not in pkg['versions']:
             pkg['versions'].append(version)
-        # 更新 latest（选择最新版本）
         pkg['versions'].sort(key=lambda v: tuple(int(p) for p in v.split('.')), reverse=True)
         pkg['latest'] = pkg['versions'][0]
+        pkg['appid'] = appid  # 更新 appid（允许用户改 name 但保持 appid）
 
-    # 保存索引
     _save_index(index)
 
     download_url = f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{oss_key}"
 
     return jsonify({
         "message": "发布成功",
-        "name": name,
+        "name": full_name,
         "version": version,
+        "appid": appid,
         "download_url": download_url
     })
 

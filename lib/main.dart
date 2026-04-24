@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1348,159 +1349,17 @@ class _MyAppsPageState extends State<_MyAppsPage> {
     );
   }
 
-  Future<String?> _showVersionDialog({
-    required String existingName,
-    required String existingVersion,
-    required String suggestedVersion,
-  }) {
-    final controller = TextEditingController(text: suggestedVersion);
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          title: const Text('更新确认'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: Theme.of(ctx).textTheme.bodyMedium,
-                  children: [
-                    TextSpan(text: existingName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const TextSpan(text: ' 已存在于市场'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text('当前版本: v$existingVersion', style: TextStyle(color: cs.onSurfaceVariant)),
-              const SizedBox(height: 12),
-              const Text('这将是一个更新操作，请确认新版本号:'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: '版本号',
-                  prefixIcon: const Icon(Icons.tag),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(null),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-              child: const Text('确认更新'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _uploadToMarket(SavedApp app) async {
     if (_uploading) return;
-    setState(() => _uploading = true);
 
-    try {
-      // 使用新的 Registry 服务发布接口
-      final resp = await http.post(
-        Uri.parse('https://registry.dapangyu.work/publish'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${AuthService.token}',
-        },
-        body: json.encode({'json_content': app.config}),
-      ).timeout(const Duration(seconds: 30));
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _PublishDialog(config: app.config),
+    );
 
-      debugPrint('[Upload] status=${resp.statusCode}, body=${resp.body.length > 200 ? resp.body.substring(0, 200) : resp.body}');
-
-      Map<String, dynamic> data;
-      try {
-        data = json.decode(resp.body) as Map<String, dynamic>;
-      } catch (_) {
-        _showSnackBar('服务器返回异常 (${resp.statusCode}): ${resp.body.length > 100 ? resp.body.substring(0, 100) : resp.body}');
-        return;
-      }
-
-      // Registry 返回 409 表示版本已存在
-      if (resp.statusCode == 409) {
-        final existingVersions = data['existing_versions'] as List<dynamic>?;
-        final currentVersion = (app.config['meta'] as Map<String, dynamic>?)?['version'] as String? ?? '1.0.0';
-
-        // 计算建议的新版本号
-        String suggestedVersion = currentVersion;
-        if (existingVersions != null && existingVersions.isNotEmpty) {
-          final versions = existingVersions.map((v) => v.toString()).toList();
-          versions.sort((a, b) {
-            final aParts = a.split('.').map(int.parse).toList();
-            final bParts = b.split('.').map(int.parse).toList();
-            for (var i = 0; i < 3; i++) {
-              if (aParts[i] != bParts[i]) return bParts[i].compareTo(aParts[i]);
-            }
-            return 0;
-          });
-          final latestParts = versions[0].split('.').map(int.parse).toList();
-          suggestedVersion = '${latestParts[0]}.${latestParts[1]}.${latestParts[2] + 1}';
-        }
-
-        if (!mounted) return;
-        final confirmedVersion = await _showVersionDialog(
-          existingName: app.name,
-          existingVersion: existingVersions?.isNotEmpty == true ? existingVersions!.first.toString() : currentVersion,
-          suggestedVersion: suggestedVersion,
-        );
-
-        if (confirmedVersion == null || confirmedVersion.isEmpty) {
-          _showSnackBar('已取消上传');
-          return;
-        }
-
-        // 更新版本号并重新发布
-        final updatedConfig = Map<String, dynamic>.from(app.config);
-        final meta = Map<String, dynamic>.from(updatedConfig['meta'] ?? {});
-        meta['version'] = confirmedVersion;
-        updatedConfig['meta'] = meta;
-
-        final resp2 = await http.post(
-          Uri.parse('https://registry.dapangyu.work/publish'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${AuthService.token}',
-          },
-          body: json.encode({
-            'json_content': updatedConfig,
-            'force_update': true,
-          }),
-        ).timeout(const Duration(seconds: 30));
-
-        Map<String, dynamic> data2;
-        try {
-          data2 = json.decode(resp2.body) as Map<String, dynamic>;
-        } catch (_) {
-          _showSnackBar('服务器返回异常 (${resp2.statusCode})');
-          return;
-        }
-
-        if (resp2.statusCode == 200) {
-          _showSnackBar('更新成功: ${app.name} v$confirmedVersion');
-        } else {
-          _showSnackBar('更新失败: ${data2['error'] ?? '未知错误'}');
-        }
-      } else if (resp.statusCode == 200) {
-        _showSnackBar('发布成功: ${app.name}');
-      } else {
-        _showSnackBar('发布失败: ${data['error'] ?? '未知错误'}');
-      }
-    } catch (e) {
-      _showSnackBar('上传失败: ${e.toString().replaceFirst("Exception: ", "")}');
-    } finally {
-      if (mounted) setState(() => _uploading = false);
+    if (result == true) {
+      _showSnackBar('发布成功 🎉');
     }
   }
 
@@ -1600,6 +1459,416 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                       ),
                   ],
                 ),
+    );
+  }
+}
+
+// ============================================================
+// 发布弹窗
+// ============================================================
+
+String _generateUuidV4() {
+  final rng = Random.secure();
+  final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+  String hex(int b) => b.toRadixString(16).padLeft(2, '0');
+  final s = bytes.map(hex).join();
+  return '${s.substring(0, 8)}-${s.substring(8, 12)}-${s.substring(12, 16)}-${s.substring(16, 20)}-${s.substring(20)}';
+}
+
+bool _isValidUuid(String s) {
+  return RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(s);
+}
+
+class _PublishDialog extends StatefulWidget {
+  final Map<String, dynamic> config;
+  const _PublishDialog({required this.config});
+
+  @override
+  State<_PublishDialog> createState() => _PublishDialogState();
+}
+
+class _PublishDialogState extends State<_PublishDialog> {
+  final _registryUrl = 'https://registry.dapangyu.work';
+
+  List<Map<String, dynamic>>? _namespaces;
+  String? _selectedNamespace;
+  bool _loadingNs = true;
+  bool _publishing = false;
+  String? _error;
+
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _appidCtrl;
+  late final TextEditingController _descCtrl;
+  late final TextEditingController _versionCtrl;
+  String _type = 'app';
+
+  bool get _isAdmin => AuthService.currentUser?['role'] == 'admin';
+
+  @override
+  void initState() {
+    super.initState();
+    final meta = widget.config['meta'] as Map<String, dynamic>? ?? {};
+    final rawAppid = widget.config['appid']?.toString() ?? '';
+
+    _nameCtrl = TextEditingController(text: meta['name']?.toString() ?? '');
+    _appidCtrl = TextEditingController(text: _isValidUuid(rawAppid) ? rawAppid : '');
+    _descCtrl = TextEditingController(text: meta['description']?.toString() ?? '');
+    _versionCtrl = TextEditingController(text: meta['version']?.toString() ?? '1.0.0');
+    _type = meta['type']?.toString() ?? 'app';
+
+    _fetchNamespaces();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _appidCtrl.dispose();
+    _descCtrl.dispose();
+    _versionCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchNamespaces() async {
+    setState(() => _loadingNs = true);
+    try {
+      final resp = await http.get(
+        Uri.parse('$_registryUrl/my-namespaces'),
+        headers: {'Authorization': 'Bearer ${AuthService.token}'},
+      ).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        final list = (data['namespaces'] as List<dynamic>)
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+        if (mounted) {
+          setState(() {
+            _namespaces = list;
+            _loadingNs = false;
+            if (list.isNotEmpty && _selectedNamespace == null) {
+              _selectedNamespace = list.first['name'] as String;
+            }
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loadingNs = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingNs = false);
+    }
+  }
+
+  Future<void> _createNamespace() async {
+    final ctrl = TextEditingController();
+    final nsName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('创建命名空间'),
+        content: TextField(
+          controller: ctrl,
+          decoration: InputDecoration(
+            labelText: '空间名称',
+            hintText: '小写字母、数字、- 和 _',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+    if (nsName == null || nsName.isEmpty) return;
+
+    try {
+      final resp = await http.post(
+        Uri.parse('$_registryUrl/namespace/create'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${AuthService.token}',
+        },
+        body: json.encode({'namespace': nsName}),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) {
+        await _fetchNamespaces();
+        if (mounted) setState(() => _selectedNamespace = nsName);
+      } else {
+        if (mounted) setState(() => _error = data['error']?.toString() ?? '创建失败');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = '网络错误: $e');
+    }
+  }
+
+  Future<void> _doPublish() async {
+    // 前端校验
+    final name = _nameCtrl.text.trim();
+    final appid = _appidCtrl.text.trim();
+    final version = _versionCtrl.text.trim();
+    final desc = _descCtrl.text.trim();
+
+    if (name.isEmpty) {
+      setState(() => _error = '包名不能为空');
+      return;
+    }
+    if (!_isValidUuid(appid)) {
+      setState(() => _error = 'AppID 必须是有效的 UUID 格式');
+      return;
+    }
+    if (!RegExp(r'^\d+\.\d+\.\d+$').hasMatch(version)) {
+      setState(() => _error = '版本号必须是 x.y.z 格式');
+      return;
+    }
+    if (!_isAdmin && (_selectedNamespace == null || _selectedNamespace!.isEmpty)) {
+      setState(() => _error = '请选择命名空间或创建一个新空间');
+      return;
+    }
+
+    setState(() {
+      _publishing = true;
+      _error = null;
+    });
+
+    try {
+      final resp = await http.post(
+        Uri.parse('$_registryUrl/publish'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${AuthService.token}',
+        },
+        body: json.encode({
+          'json_content': widget.config,
+          'namespace': _isAdmin && (_selectedNamespace == null || _selectedNamespace == '_official_')
+              ? ''
+              : _selectedNamespace ?? '',
+          'name': name,
+          'appid': appid,
+          'version': version,
+          'description': desc,
+          'type': _type,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+
+      if (resp.statusCode == 200) {
+        if (mounted) Navigator.of(context).pop(true);
+        return;
+      }
+
+      // UUID 冲突
+      if (resp.statusCode == 409 && data['uuid_conflict'] == true) {
+        final pkg = data['conflicting_package']?.toString() ?? '';
+        if (mounted) {
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('UUID 冲突'),
+              content: Text('该 UUID 已被包 "$pkg" 使用。\n请点击「随机生成 🎲」获取新的 UUID 后重试。'),
+              actions: [
+                FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('知道了')),
+              ],
+            ),
+          );
+          setState(() => _publishing = false);
+        }
+        return;
+      }
+
+      // 其他错误
+      if (mounted) {
+        setState(() {
+          _error = data['error']?.toString() ?? '发布失败 (${resp.statusCode})';
+          _publishing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = '网络错误: $e';
+          _publishing = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Expanded(child: Text('发布到市场')),
+          TextButton.icon(
+            onPressed: _createNamespace,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('创建空间'),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 400,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_error != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(_error!, style: TextStyle(color: cs.onErrorContainer, fontSize: 13)),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // 命名空间 + 名字（一行两列）
+              Row(
+                children: [
+                  // 命名空间选择器
+                  Expanded(
+                    child: _loadingNs
+                        ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                        : DropdownButtonFormField<String>(
+                            value: _selectedNamespace,
+                            decoration: InputDecoration(
+                              labelText: '项目空间',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            ),
+                            isExpanded: true,
+                            items: [
+                              if (_isAdmin)
+                                const DropdownMenuItem(
+                                  value: '_official_',
+                                  child: Text('(官方/无空间)', style: TextStyle(fontStyle: FontStyle.italic)),
+                                ),
+                              ...(_namespaces ?? []).map((ns) {
+                                final n = ns['name'] as String;
+                                return DropdownMenuItem(value: n, child: Text(n));
+                              }),
+                            ],
+                            onChanged: (v) => setState(() => _selectedNamespace = v),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  // 包名
+                  Expanded(
+                    child: TextField(
+                      controller: _nameCtrl,
+                      decoration: InputDecoration(
+                        labelText: '包名',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // AppID + 随机生成按钮
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _appidCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'AppID (UUID)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                      style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () {
+                      setState(() => _appidCtrl.text = _generateUuidV4());
+                    },
+                    icon: const Icon(Icons.casino, size: 18),
+                    label: const Text('随机生成'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // 描述
+              TextField(
+                controller: _descCtrl,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: '描述',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 版本号 + 类型（一行两列）
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _versionCtrl,
+                      decoration: InputDecoration(
+                        labelText: '版本号',
+                        hintText: '1.0.0',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _type,
+                      decoration: InputDecoration(
+                        labelText: '类型',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'app', child: Text('App')),
+                        DropdownMenuItem(value: 'library', child: Text('Library')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _type = v);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _publishing ? null : () => Navigator.of(context).pop(false),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _publishing ? null : _doPublish,
+          child: _publishing
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('发布'),
+        ),
+      ],
     );
   }
 }
