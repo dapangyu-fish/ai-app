@@ -123,6 +123,8 @@ class _DesignerBallState extends State<DesignerBall>
     _sherpaAsr.loadConfig().then((_) {
       setState(() {});
     });
+    // 加载 AI 对话 session
+    _chatService.loadSession();
   }
 
   /// 切换强制离线模式
@@ -1110,7 +1112,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _clearAndCloseChatMode() {
     _closeChatMode();
     _messages.clear();
-    _chatService.clear();
+    _chatService.clear(); // resetSession is async but fire-and-forget is fine here
   }
 
   void _scrollToBottom() {

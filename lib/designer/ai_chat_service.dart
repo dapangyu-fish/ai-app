@@ -47,6 +47,8 @@ class AiProvider {
 class AiChatService {
   static const String _baseUrl = 'https://app-backend.dapangyu.work';
   static const String _providerKey = 'ai_provider';
+  static const String _sessionKey = 'ai_session_id';
+  static const String _sessionUsedKey = 'ai_session_used';
 
   static String _selectedProvider = 'deepseek';
   static List<AiProvider> _providers = [];
@@ -81,12 +83,37 @@ class AiChatService {
     return _providers;
   }
 
-  final List<Map<String, String>> _messages = [];
+  // ── Session 管理 ──
+  String _sessionId = '';
+  bool _sessionUsed = false;  // 该 session 是否已发过消息（用于判断 is_new_session）
 
   http.Client? _activeClient;
 
-  List<Map<String, String>> get messages =>
-      _messages.where((m) => m['role'] != 'system').toList();
+  String get sessionId => _sessionId;
+
+  /// 初始化/加载 session（app 启动时调用）
+  Future<void> loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    _sessionId = prefs.getString(_sessionKey) ?? _generateSessionId();
+    _sessionUsed = prefs.getBool(_sessionUsedKey) ?? false;
+    await prefs.setString(_sessionKey, _sessionId);
+  }
+
+  /// 重置 session（用户点击清除按钮）
+  Future<void> resetSession() async {
+    abort();
+    _sessionId = _generateSessionId();
+    _sessionUsed = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionKey, _sessionId);
+    await prefs.setBool(_sessionUsedKey, false);
+  }
+
+  String _generateSessionId() {
+    // 生成 UUID v4 格式
+    final r = DateTime.now().microsecondsSinceEpoch;
+    return '${r.toRadixString(16)}-${(r ~/ 1000).toRadixString(16)}-4${(r % 0xfff).toRadixString(16)}-${(0x8 + (r % 4)).toRadixString(16)}${((r ~/ 100) % 0xfff).toRadixString(16)}-${r.toRadixString(16).padLeft(12, '0')}';
+  }
 
   void abort() {
     _activeClient?.close();
@@ -94,23 +121,26 @@ class AiChatService {
   }
 
   /// 发送用户消息，返回 Stream<ChatEvent>
+  /// 只发送最新消息 + session_id，CLI session 自动维护对话历史
   Stream<ChatEvent> sendStream(String userMessage) async* {
     abort();
-    _messages.add({'role': 'user', 'content': userMessage});
 
     final client = http.Client();
     _activeClient = client;
 
+    final isNew = !_sessionUsed;
+
     try {
       final request = http.Request('POST', Uri.parse('$_baseUrl/chat'));
       request.headers['Content-Type'] = 'application/json';
-      // 带上 auth token
       final token = AuthService.token;
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
       request.body = json.encode({
-        'messages': _messages,
+        'messages': [{'role': 'user', 'content': userMessage}],
+        'session_id': _sessionId,
+        'is_new_session': isNew,
         'provider': _selectedProvider,
       });
 
@@ -128,7 +158,9 @@ class AiChatService {
             retryRequest.headers['Authorization'] = 'Bearer $newToken';
           }
           retryRequest.body = json.encode({
-            'messages': _messages,
+            'messages': [{'role': 'user', 'content': userMessage}],
+            'session_id': _sessionId,
+            'is_new_session': isNew,
             'provider': _selectedProvider,
           });
           response = await client.send(retryRequest).timeout(
@@ -153,15 +185,21 @@ class AiChatService {
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        _messages.removeLast();
         yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
         return;
+      }
+
+      // 标记 session 已使用
+      if (!_sessionUsed) {
+        _sessionUsed = true;
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setBool(_sessionUsedKey, true);
+        });
       }
 
       String accumulated = '';
 
       // 用 LineSplitter 保证跨 TCP chunk 的行完整性
-      // （has_json 事件包含完整 JSON-APP，可能几 KB，单行会被拆到多个 chunk）
       await for (final line in response.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter())) {
@@ -180,7 +218,6 @@ class AiChatService {
             }
             // 生成结束（失败时后端会发 generating_json: false）
             if (data.containsKey('generating_json') && data['generating_json'] == false) {
-              // 不需要额外处理，后续的 error 事件会重置状态
               continue;
             }
 
@@ -254,16 +291,9 @@ class AiChatService {
           }
         } catch (_) {}
       }
-
-      if (accumulated.isNotEmpty) {
-        _messages.add({'role': 'assistant', 'content': accumulated});
-      } else {
-        _messages.removeLast();
-      }
     } on http.ClientException {
       // abort() 触发
     } catch (e) {
-      _messages.removeLast();
       yield ChatEvent(error: '网络错误: $e');
     } finally {
       if (_activeClient == client) _activeClient = null;
@@ -272,9 +302,7 @@ class AiChatService {
   }
 
   void commitPartial(String partialContent) {
-    if (partialContent.isNotEmpty) {
-      _messages.add({'role': 'assistant', 'content': partialContent});
-    }
+    // Session 模式下不需要手动管理消息历史，CLI session 自动维护
   }
 
   /// 上传当前运行的 JSON-APP，返回包含链接的文本。
@@ -456,8 +484,8 @@ class AiChatService {
     }
   }
 
-  void clear() {
+  Future<void> clear() async {
     abort();
-    _messages.clear();
+    await resetSession();
   }
 }

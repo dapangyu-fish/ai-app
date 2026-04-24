@@ -148,12 +148,12 @@ def _tool_status_message(tool_name, tool_input):
         return f"正在使用工具 {tool_name}..."
 
 
-def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"):
+def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI", session_id=None):
     """运行 Claude CLI 并 yield SSE 事件字符串。
 
-    通过 stdin 传递 user_prompt（避免超长 CLI 参数），
     system_prompt 写入临时文件避免 ARG_MAX 限制。
     实时解析 stream-json 输出，最后将生成的 JSON 文件上传到 MinIO。
+    当 session_id 不为空时，使用 --session-id 实现多轮对话持久化。
     """
     cli_env = provider.get("cli_env", {})
     cli_model = provider.get("cli_model", provider["models"]["default"])
@@ -171,20 +171,25 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
         with open(sys_prompt_file, "w", encoding="utf-8") as f:
             f.write(system_prompt)
 
-    # 拼接完整提示词：基础提示词(从文件读) + 用户需求 + 输出路径
-    # 格式: claude -p "$(cat /tmp/sys.txt) 用户需求... json文件放在/tmp/xxx.json"
+    # 拼接完整提示词
     prompt_parts = []
     if sys_prompt_file:
         prompt_parts.append(f"$(cat {sys_prompt_file})")
     if user_prompt:
         prompt_parts.append(user_prompt)
-    prompt_parts.append(f"\n请将最终生成的完整 JSON-APP 保存到文件: {output_path}")
+    prompt_parts.append(f"\n如果需要生成或修改 JSON-APP，请保存到文件: {output_path}")
     full_prompt = "\n\n".join(prompt_parts)
+
+    # 有 session_id 时使用会话持久化，否则一次性执行
+    if session_id:
+        session_flag = f' --session-id {session_id}'
+    else:
+        session_flag = ' --no-session-persistence'
 
     cmd_str = (
         f'{CLAUDE_BIN}'
+        f'{session_flag}'
         f' --dangerously-skip-permissions'
-        f' --no-session-persistence'
         f' --output-format stream-json'
         f' --verbose'
         f' -p "{full_prompt}"'
@@ -426,11 +431,12 @@ def _is_crash_report(messages):
 
 @require_auth
 def chat():
-    """SSE 流式 AI 对话。
-    所有用户消息通过 Claude CLI 处理。
-    第一轮对话：只输出方案摘要，不生成代码。
-    后续对话（含确认）：正常执行代码生成。
-    崩溃报告：跳过上传检查，直接修复。
+    """SSE 流式 AI 对话（基于 Claude CLI Session）。
+
+    客户端发送 session_id 实现真正的多轮对话：
+    - is_new_session=true: 首轮对话，带系统提示词，CLI 创建新 session
+    - is_new_session=false: 后续对话，不带系统提示词，CLI 恢复已有 session
+    对话历史由 CLI session 自动维护，服务端只需传最新一条消息。
     """
     user_id = request.supabase_user.get("id")
     role = request.user_role
@@ -449,56 +455,44 @@ def chat():
 
     provider_id = body.get("provider")
     provider = _get_provider(provider_id)
-    current_app = body.get("current_app")  # 客户端传来的当前 JSON
+    current_app = body.get("current_app")
+    session_id = body.get("session_id")         # 客户端生成的会话 ID
+    is_new_session = body.get("is_new_session", session_id is None)  # 是否为新会话
 
     if not provider.get("cli_env", {}).get("ANTHROPIC_AUTH_TOKEN"):
         return jsonify({"error": f"供应商 {provider['name']} 未配置 CLI 环境变量"}), 500
 
-    # 过滤掉 system 消息，只保留 user/assistant
-    user_messages = []
-    for m in messages:
-        if m["role"] == "system":
-            continue
-        user_messages.append({"role": m["role"], "content": m["content"]})
+    # 取最新一条 user 消息（session 模式下只需最新消息）
+    last_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            last_msg = m.get("content", "")
+            break
+    if not last_msg:
+        return jsonify({"error": "no user message found"}), 400
 
-    # 前置检查：如果用户想修改当前 APP 但没有传 current_app，先要求上传
-    # ★ 崩溃报告跳过此检查（崩溃修复场景下客户端不会提示上传）
-    if not current_app and _needs_current_app(user_messages) and not _is_crash_report(user_messages):
-        # 检查对话历史中是否已经包含了 APP 配置（用户之前已上传过）
-        has_app_in_history = any(
-            "json_app_url" in m.get("content", "") or "当前正在运行的 JSON-APP" in m.get("content", "")
-            for m in user_messages
+    # 崩溃报告检测（仅检查最新消息）
+    user_messages = [{"role": "user", "content": last_msg}]
+    is_crash = _is_crash_report(user_messages)
+
+    # 前置检查：修改场景要求上传当前 APP（崩溃报告跳过）
+    if not current_app and _needs_current_app(user_messages) and not is_crash:
+        def request_upload():
+            yield f'data: {json.dumps({"content": "好的，请先上传当前应用配置，我来帮你处理。"}, ensure_ascii=False)}\n\n'
+            yield f'data: {json.dumps({"request_action": "upload_current_app"}, ensure_ascii=False)}\n\n'
+            yield "data: [DONE]\n\n"
+        return Response(
+            stream_with_context(request_upload()),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
+                     "Access-Control-Allow-Origin": "*"},
         )
-        if not has_app_in_history:
-            def request_upload():
-                yield f'data: {json.dumps({"content": "好的，请先上传当前应用配置，我来帮你处理。"}, ensure_ascii=False)}\n\n'
-                yield f'data: {json.dumps({"request_action": "upload_current_app"}, ensure_ascii=False)}\n\n'
-                yield "data: [DONE]\n\n"
-            return Response(
-                stream_with_context(request_upload()),
-                mimetype="text/event-stream",
-                headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
-                         "Access-Control-Allow-Origin": "*"},
-            )
 
-    # 构建完整的用户提示词（包含对话历史）
-    history_parts = []
-    for m in user_messages[:-1]:
-        role_label = "用户" if m["role"] == "user" else "助手"
-        history_parts.append(f"[{role_label}] {m['content']}")
+    # 构建用户提示词（只含最新消息 + 可选的 current_app 上下文）
+    user_prompt = _build_user_prompt(last_msg, current_app)
 
-    last_msg = user_messages[-1]["content"] if user_messages else ""
-
-    if history_parts:
-        combined_prompt = f"## 之前的对话历史\n" + "\n\n".join(history_parts) + f"\n\n## 用户的最新需求\n{last_msg}"
-    else:
-        combined_prompt = last_msg
-
-    # ★ 判断是否为首轮对话（无历史 = 用户第一句话）
-    is_first_turn = len(history_parts) == 0 and not _is_crash_report(user_messages)
-    # 如果有 current_app，说明是修改/修复场景，不需要讨论
-    if current_app:
-        is_first_turn = False
+    # 新会话带系统提示词，恢复会话不带（session 已有上下文）
+    system_prompt = _load_generate_prompt() if is_new_session else ""
 
     increment_quota(user_id)
     new_remaining = remaining - 1
@@ -506,12 +500,10 @@ def chat():
     def generate():
         try:
             output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
-            cli_system = _load_generate_prompt()
-            cli_prompt = _build_user_prompt(combined_prompt, current_app)
 
-            if is_first_turn:
-                # ★ 首轮对话：追加指令，强制 CLI 只输出方案、不写文件
-                cli_prompt += (
+            if is_new_session and not is_crash and not current_app:
+                # 新会话首轮：追加讨论指令
+                user_prompt_final = user_prompt + (
                     "\n\n---\n"
                     "【系统指令】这是用户发来的第一条消息，你还没有和用户确认过方案。\n"
                     "请严格遵守「先讨论，后动手」规则：\n"
@@ -519,13 +511,15 @@ def chat():
                     "2. 结尾询问用户是否确认\n"
                     "3. 绝对不要阅读源码、不要生成 JSON、不要写入任何文件！\n"
                 )
-                # 首轮不发 generating_json，前端不显示生成状态
                 yield f'data: {json.dumps({"status": "thinking", "message": "正在分析需求..."}, ensure_ascii=False)}\n\n'
             else:
-                # 非首轮：通知前端进入生成模式
+                user_prompt_final = user_prompt
                 yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
 
-            yield from _run_claude_cli(cli_system, cli_prompt, provider, output_path, tag="Chat-CLI")
+            yield from _run_claude_cli(
+                system_prompt, user_prompt_final, provider, output_path,
+                tag="Chat-CLI", session_id=session_id,
+            )
 
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
             yield "data: [DONE]\n\n"
