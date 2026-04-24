@@ -74,6 +74,7 @@ def chat():
             CLAUDE_BIN,
             "--dangerously-skip-permissions",
             "--output-format", "stream-json",
+            "--verbose",
             "-p", last_msg
         ]
         
@@ -95,6 +96,7 @@ def chat():
             cwd=PROJECT_ROOT,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,
             env=env,
             bufsize=1
         )
