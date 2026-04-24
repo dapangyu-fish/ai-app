@@ -396,14 +396,41 @@ def generate_app():
 
 
 # ---------------------------------------------------------------------------
+#  崩溃报告检测
+# ---------------------------------------------------------------------------
+
+_CRASH_INDICATORS = [
+    "exception was thrown", "stack trace", "崩溃日志",
+    "renderobject", "renderflex", "type cast",
+    "is not a subtype of type", "error_", "I/flutter",
+    "another exception", "dart:core", "package:flutter",
+]
+
+
+def _is_crash_report(messages):
+    """判断最后一条 user 消息是否是崩溃报告/日志（而非修改请求）。"""
+    last_user_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            last_user_msg = m.get("content", "").lower()
+            break
+    if not last_user_msg:
+        return False
+    # 崩溃报告通常包含多行堆栈或框架日志特征
+    return sum(1 for ind in _CRASH_INDICATORS if ind in last_user_msg) >= 2
+
+
+# ---------------------------------------------------------------------------
 #  Chat — 统一 Claude CLI 对话
 # ---------------------------------------------------------------------------
 
 @require_auth
 def chat():
     """SSE 流式 AI 对话。
-    所有用户消息直接通过 Claude CLI 处理，不再使用轻量 SDK Agent。
-    如果用户需要修改当前 APP 但未提供，先返回 request_action 让前端上传。
+    所有用户消息通过 Claude CLI 处理。
+    第一轮对话：只输出方案摘要，不生成代码。
+    后续对话（含确认）：正常执行代码生成。
+    崩溃报告：跳过上传检查，直接修复。
     """
     user_id = request.supabase_user.get("id")
     role = request.user_role
@@ -435,7 +462,8 @@ def chat():
         user_messages.append({"role": m["role"], "content": m["content"]})
 
     # 前置检查：如果用户想修改当前 APP 但没有传 current_app，先要求上传
-    if not current_app and _needs_current_app(user_messages):
+    # ★ 崩溃报告跳过此检查（崩溃修复场景下客户端不会提示上传）
+    if not current_app and _needs_current_app(user_messages) and not _is_crash_report(user_messages):
         # 检查对话历史中是否已经包含了 APP 配置（用户之前已上传过）
         has_app_in_history = any(
             "json_app_url" in m.get("content", "") or "当前正在运行的 JSON-APP" in m.get("content", "")
@@ -466,17 +494,36 @@ def chat():
     else:
         combined_prompt = last_msg
 
+    # ★ 判断是否为首轮对话（无历史 = 用户第一句话）
+    is_first_turn = len(history_parts) == 0 and not _is_crash_report(user_messages)
+    # 如果有 current_app，说明是修改/修复场景，不需要讨论
+    if current_app:
+        is_first_turn = False
+
     increment_quota(user_id)
     new_remaining = remaining - 1
 
     def generate():
         try:
-            # 通知前端进入生成模式
-            yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
-
             output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
             cli_system = _load_generate_prompt()
             cli_prompt = _build_user_prompt(combined_prompt, current_app)
+
+            if is_first_turn:
+                # ★ 首轮对话：追加指令，强制 CLI 只输出方案、不写文件
+                cli_prompt += (
+                    "\n\n---\n"
+                    "【系统指令】这是用户发来的第一条消息，你还没有和用户确认过方案。\n"
+                    "请严格遵守「先讨论，后动手」规则：\n"
+                    "1. 用 200 字以内简洁描述你的理解和方案（功能、页面数、交互要点）\n"
+                    "2. 结尾询问用户是否确认\n"
+                    "3. 绝对不要阅读源码、不要生成 JSON、不要写入任何文件！\n"
+                )
+                # 首轮不发 generating_json，前端不显示生成状态
+                yield f'data: {json.dumps({"status": "thinking", "message": "正在分析需求..."}, ensure_ascii=False)}\n\n'
+            else:
+                # 非首轮：通知前端进入生成模式
+                yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
 
             yield from _run_claude_cli(cli_system, cli_prompt, provider, output_path, tag="Chat-CLI")
 

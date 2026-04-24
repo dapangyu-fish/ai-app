@@ -539,6 +539,7 @@ class _DesignerBallState extends State<DesignerBall>
     final shouldUseSherpa = _useSherpaAsr;
     String finalText = _liveTranscript?.trim() ?? '';
     _editTextController.text = finalText;
+    _accumulatedTranscript = ''; // 清空累积文本，防止下次录音叠加旧内容
 
     if (shouldUseSherpa) {
       _sherpaAsr.stopListening();
