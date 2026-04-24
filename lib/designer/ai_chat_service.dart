@@ -321,6 +321,23 @@ class AiChatService {
         }
       }
 
+      // 如果 Claude 输出了 [json_app_url]，则自动下载并应用
+      final urlRegex = RegExp(r'\[json_app_url\](.*?)\[/json_app_url\]');
+      final urlMatch = urlRegex.firstMatch(accumulated);
+      if (urlMatch != null) {
+        try {
+          final url = urlMatch.group(1)!;
+          final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+          if (getResp.statusCode == 200) {
+            final jsonBody = utf8.decode(getResp.bodyBytes);
+            final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+            yield ChatEvent(jsonApp: parsedApp);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
     } on http.ClientException {
       // abort() 触发
     } catch (e) {
