@@ -148,7 +148,7 @@ def _tool_status_message(tool_name, tool_input):
         return f"正在使用工具 {tool_name}..."
 
 
-def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI", session_id=None, is_new_session=True):
+def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI", session_id=None, is_new_session=True, expect_json=True):
     """运行 Claude CLI 并 yield SSE 事件字符串。
 
     system_prompt 写入临时文件避免 ARG_MAX 限制。
@@ -296,6 +296,10 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
         return
 
     # 检查输出文件并上传到 MinIO
+    if not expect_json:
+        # 预期不生成 JSON（比如首轮讨论），直接结束即可
+        return
+
     output_filename = os.path.basename(output_path)
     if os.path.exists(output_path):
         yield f'data: {json.dumps({"status": "uploading", "message": "正在上传生成结果..."}, ensure_ascii=False)}\n\n'
@@ -505,7 +509,8 @@ def chat():
             output_path = os.path.join("/tmp", f"ai-chat-gen-{uuid.uuid4().hex}.json")
 
             if is_new_session and not is_crash and not current_app:
-                # 新会话首轮：追加讨论指令
+                # 新会话首轮：追加讨论指令，预期不生成 JSON
+                expect_json = False
                 user_prompt_final = user_prompt + (
                     "\n\n---\n"
                     "【系统指令】这是用户发来的第一条消息，你还没有和用户确认过方案。\n"
@@ -516,12 +521,13 @@ def chat():
                 )
                 yield f'data: {json.dumps({"status": "thinking", "message": "正在分析需求..."}, ensure_ascii=False)}\n\n'
             else:
+                expect_json = True
                 user_prompt_final = user_prompt
                 yield f'data: {json.dumps({"generating_json": True}, ensure_ascii=False)}\n\n'
 
             yield from _run_claude_cli(
                 system_prompt, user_prompt_final, provider, output_path,
-                tag="Chat-CLI", session_id=session_id, is_new_session=is_new_session
+                tag="Chat-CLI", session_id=session_id, is_new_session=is_new_session, expect_json=expect_json
             )
 
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
