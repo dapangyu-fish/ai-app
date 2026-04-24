@@ -74,6 +74,7 @@ def chat():
             CLAUDE_BIN,
             "--dangerously-skip-permissions",
             "--output-format", "stream-json",
+            "--include-partial-messages",
             "--verbose",
             "-p", last_msg
         ]
@@ -162,27 +163,37 @@ def chat():
                 
                 if evt_type == "system":
                     yield f'data: {json.dumps({"status": "init", "message": "AI 引擎已启动"}, ensure_ascii=False)}\n\n'
+                
+                elif evt_type == "stream_event":
+                    # 处理实时的 delta 增量流
+                    ev = event.get("event", {})
+                    delta = ev.get("delta", {})
                     
+                    if ev.get("type") == "content_block_delta" and delta.get("type") == "text_delta":
+                        text_chunk = delta.get("text", "")
+                        if text_chunk:
+                            yield f'data: {json.dumps({"content": text_chunk}, ensure_ascii=False)}\n\n'
+                            
+                    elif ev.get("type") == "content_block_delta" and delta.get("type") == "thinking_delta":
+                        think_chunk = delta.get("thinking", "")
+                        if think_chunk:
+                            yield f'data: {json.dumps({"thinking": think_chunk}, ensure_ascii=False)}\n\n'
+                            
                 elif evt_type == "assistant":
+                    # 处理整体状态和工具调用
                     msg = event.get("message", {})
                     for block in msg.get("content", []):
                         btype = block.get("type")
-                        if btype == "thinking" and block.get("thinking"):
-                            yield f'data: {json.dumps({"thinking": block["thinking"]}, ensure_ascii=False)}\n\n'
-                            yield f'data: {json.dumps({"status": "thinking", "message": "正在思考..."}, ensure_ascii=False)}\n\n'
-                        elif btype == "text" and block.get("text"):
-                            yield f'data: {json.dumps({"content": block["text"]}, ensure_ascii=False)}\n\n'
-                        elif btype == "tool_use":
+                        if btype == "tool_use":
                             tool_name = block.get("name", "")
                             tool_input = block.get("input", {})
                             status_msg = _tool_status_message(tool_name, tool_input)
                             yield f'data: {json.dumps({"status": tool_name.lower(), "message": status_msg}, ensure_ascii=False)}\n\n'
                             
                 elif evt_type == "result":
-                    res = event.get("result", "")
-                    if res:
-                        yield f'data: {json.dumps({"content": res}, ensure_ascii=False)}\n\n'
                     if event.get("is_error"):
+                        # 如果有报错才使用 result，正常结束不需要再把完整内容抛出，避免双份叠加
+                        res = event.get("result", "")
                         yield f'data: {json.dumps({"error": f"生成中断: {res}"}, ensure_ascii=False)}\n\n'
             except json.JSONDecodeError:
                 pass
