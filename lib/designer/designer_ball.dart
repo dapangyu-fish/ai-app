@@ -911,7 +911,10 @@ class _DesignerBallState extends State<DesignerBall>
       if (!ok) {
         setState(() {
           _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: '离线语音识别启动失败'));
+          _messages.add(ChatMessage(
+            role: 'assistant',
+            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+          ));
         });
         _pulseController.stop();
       }

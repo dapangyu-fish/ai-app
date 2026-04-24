@@ -413,6 +413,14 @@ class SherpaAsrService {
       _onlineStream = _onlineRecognizer!.createStream();
     }
 
+    // 主动检查并请求麦克风权限（离线模式下不会经过 SpeechToText.initialize，
+    // 必须在此处手动申请，否则首次安装时直接崩溃）
+    final hasPerm = await _recorder.hasPermission();
+    if (!hasPerm) {
+      debugPrint('[SherpaASR] 麦克风权限未授予，录音中止');
+      return false;
+    }
+
     try {
       final audioStream = await _recorder.startStream(
         const RecordConfig(
