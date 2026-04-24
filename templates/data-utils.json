@@ -3,7 +3,7 @@
   "appid": "db8894c7-9c8f-4f17-aa70-6e4f528c0e61",
   "meta": {
     "name": "data-utils",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "library",
     "description": "数据处理工具库 — 随机数/UUID/时间日期/字符串处理/数组操作",
     "author": "AI Designer",
@@ -810,10 +810,7 @@
       }
     }
   },
-  "dependencies": [
-    {
-      "name": "lib_database",
-      "version": "^1.0.0"
-    }
-  ]
+  "dependencies": {
+    "lib_database": "^1.0.0"
+  }
 }

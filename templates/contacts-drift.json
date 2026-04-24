@@ -3,7 +3,7 @@
   "appid": "d75c3cbe-ee81-47f5-b2c0-61f186af1d88",
   "meta": {
     "name": "contacts-drift",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "type": "app",
     "description": "通讯录(Drift版)",
     "author": "AI Designer",
@@ -1240,10 +1240,7 @@
       }
     ]
   },
-  "dependencies": [
-    {
-      "name": "lib_database",
-      "version": "^1.0.0"
-    }
-  ]
+  "dependencies": {
+    "lib_database": "^1.0.0"
+  }
 }
