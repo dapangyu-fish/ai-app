@@ -18,6 +18,7 @@ class ChatOverlay extends StatelessWidget {
   final bool isListening;
   final bool isThinking;
   final bool isGeneratingJson;
+  final String generatingStatusMessage;
   final VoidCallback onClose;
   final VoidCallback? onClear;
   final ScrollController scrollController;
@@ -32,6 +33,7 @@ class ChatOverlay extends StatelessWidget {
     required this.isListening,
     required this.isThinking,
     this.isGeneratingJson = false,
+    this.generatingStatusMessage = '正在生成代码...',
     required this.onClose,
     required this.scrollController,
     this.liveTranscript,
@@ -347,12 +349,15 @@ class ChatOverlay extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              '正在生成并上传代码...',
-              style: TextStyle(
-                color: Colors.purpleAccent.shade100,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                generatingStatusMessage,
+                style: TextStyle(
+                  color: Colors.purpleAccent.shade100,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

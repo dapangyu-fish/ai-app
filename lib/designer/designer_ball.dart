@@ -59,6 +59,7 @@ class _DesignerBallState extends State<DesignerBall>
   bool _isListening = false;
   bool _isThinking = false;
   bool _isGeneratingJson = false;
+  String _generatingStatusMessage = '正在生成代码...'; // 动态状态文案
   String? _liveTranscript;
   String _accumulatedTranscript = ''; // 累积的已确认文本（用于多段识别）
 
@@ -582,14 +583,22 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
+            _generatingStatusMessage = '正在启动 AI 引擎...';
           });
           _scrollToBottom();
+          return;
+        }
+        if (event.statusMessage != null) {
+          setState(() {
+            _generatingStatusMessage = event.statusMessage!;
+          });
           return;
         }
         if (event.error != null && event.content == null) {
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
+            _generatingStatusMessage = '正在生成代码...';
             _messages.last = ChatMessage(role: 'assistant', content: event.error!);
           });
           _scrollToBottom();
@@ -633,6 +642,7 @@ class _DesignerBallState extends State<DesignerBall>
           _lastGeneratedJson = event.jsonApp;
           setState(() {
             _isGeneratingJson = false;
+            _generatingStatusMessage = '正在生成代码...';
             _messages.add(ChatMessage(
               role: 'system',
               content: '🚀 JSON-APP 已生成，点击试运行',
@@ -649,6 +659,7 @@ class _DesignerBallState extends State<DesignerBall>
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
+          _generatingStatusMessage = '正在生成代码...';
           _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
         });
       },
@@ -1218,6 +1229,7 @@ class _DesignerBallState extends State<DesignerBall>
             isListening: _isListening,
             isThinking: _isThinking,
             isGeneratingJson: _isGeneratingJson,
+            generatingStatusMessage: _generatingStatusMessage,
             liveTranscript:
                 (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
             onClose: _closeChatMode,

@@ -118,6 +118,36 @@ def _build_user_prompt(user_prompt, current_app=None, crash_log=None):
     return "\n\n".join(parts)
 
 
+def _tool_status_message(tool_name, tool_input):
+    """将 Claude CLI 的工具调用映射为人类可读的状态描述。"""
+    if tool_name == "Read":
+        file_path = tool_input.get("file_path", "")
+        short = os.path.basename(file_path) if file_path else "文件"
+        return f"正在阅读 {short}..."
+    elif tool_name == "Write":
+        file_path = tool_input.get("file_path", "")
+        short = os.path.basename(file_path) if file_path else "文件"
+        return f"正在写入 {short}..."
+    elif tool_name in ("Grep", "Glob"):
+        pattern = tool_input.get("pattern", tool_input.get("regex", ""))
+        return f"正在搜索代码 {pattern[:30]}..." if pattern else "正在搜索代码..."
+    elif tool_name == "Bash":
+        cmd = tool_input.get("command", "")
+        return f"正在执行命令..." if cmd else "正在运行脚本..."
+    elif tool_name == "Edit":
+        file_path = tool_input.get("file_path", "")
+        short = os.path.basename(file_path) if file_path else "文件"
+        return f"正在编辑 {short}..."
+    elif tool_name == "WebFetch":
+        return "正在获取网页内容..."
+    elif tool_name == "WebSearch":
+        return "正在搜索网络..."
+    elif tool_name in ("Task", "TodoWrite"):
+        return "正在规划任务..."
+    else:
+        return f"正在使用工具 {tool_name}..."
+
+
 def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"):
     """运行 Claude CLI 并 yield SSE 事件字符串。
 
@@ -200,16 +230,28 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             event = json.loads(line)
             evt_type = event.get("type")
 
-            if evt_type == "assistant":
+            if evt_type == "system":
+                # CLI 初始化完成
+                yield f'data: {json.dumps({"status": "init", "message": "AI 引擎启动完毕"}, ensure_ascii=False)}\n\n'
+
+            elif evt_type == "assistant":
                 msg = event.get("message", {})
                 for block in msg.get("content", []):
                     block_type = block.get("type")
                     if block_type == "thinking" and block.get("thinking"):
                         # 思考过程 → 推给前端显示
                         yield f'data: {json.dumps({"thinking": block["thinking"]}, ensure_ascii=False)}\n\n'
+                        yield f'data: {json.dumps({"status": "thinking", "message": "正在思考..."}, ensure_ascii=False)}\n\n'
                     elif block_type == "text" and block.get("text"):
                         # 正式文本 → 推给前端
                         yield f'data: {json.dumps({"content": block["text"]}, ensure_ascii=False)}\n\n'
+                    elif block_type == "tool_use":
+                        # 工具调用 → 推送状态描述
+                        tool_name = block.get("name", "")
+                        tool_input = block.get("input", {})
+                        status_msg = _tool_status_message(tool_name, tool_input)
+                        if status_msg:
+                            yield f'data: {json.dumps({"status": tool_name.lower(), "message": status_msg}, ensure_ascii=False)}\n\n'
 
             elif evt_type == "result":
                 # 最终结果
@@ -248,6 +290,7 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
     # 检查输出文件并上传到 MinIO
     output_filename = os.path.basename(output_path)
     if os.path.exists(output_path):
+        yield f'data: {json.dumps({"status": "uploading", "message": "正在上传生成结果..."}, ensure_ascii=False)}\n\n'
         try:
             with open(output_path, "r", encoding="utf-8") as f:
                 app_json = json.load(f)

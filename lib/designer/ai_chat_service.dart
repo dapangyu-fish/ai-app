@@ -14,8 +14,9 @@ class ChatEvent {
   final bool isGeneratingJson; // 正在生成 JSON
   final String? requestAction; // 比如 "upload_current_app"
   final String? failedJsonUrl; // 下载失败的 JSON URL
+  final String? statusMessage; // 动态状态文案（思考中/阅读文件/写入代码/上传...）
 
-  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl});
+  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage});
 }
 
 /// AI 供应商信息
@@ -186,6 +187,13 @@ class AiChatService {
             // 动作请求 (比如上传当前 app)
             if (data.containsKey('request_action')) {
               yield ChatEvent(requestAction: data['request_action'] as String);
+              continue;
+            }
+
+            // 动态状态更新（思考中/阅读文件/写入代码/上传等）
+            if (data.containsKey('status')) {
+              final msg = data['message'] as String? ?? '';
+              yield ChatEvent(statusMessage: msg);
               continue;
             }
 
