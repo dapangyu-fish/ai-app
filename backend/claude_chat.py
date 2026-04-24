@@ -104,30 +104,42 @@ def chat():
     def generate():
         # 先尝试作为老会话恢复
         proc = run_cli(is_resume=True)
-        first_line = proc.stdout.readline()
         
-        # 如果第一行为空，说明 CLI 没有任何正常输出就结束了，我们需要等待它退出才能拿到正确的 returncode
-        if not first_line:
-            proc.wait()
-        else:
-            proc.poll()
+        initial_lines = []
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            initial_lines.append(line)
+            line_str = line.decode("utf-8", errors="replace").strip()
+            if line_str:
+                break
+                
+        # 此时可能进程已经退出（如发生错误），给它 0.1s 彻底清理以获取准确的 returncode
+        try:
+            proc.wait(timeout=0.1)
+        except subprocess.TimeoutExpired:
+            pass
             
         if proc.returncode is not None and proc.returncode != 0:
             stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
-            # 判断是否为会话不存在错误
-            if "No conversation found" in stderr_text or "requires a valid session ID" in stderr_text:
-                #  fallback: 创建新会话
+            stdout_text = b"".join(initial_lines).decode("utf-8", errors="replace") + proc.stdout.read().decode("utf-8", errors="replace")
+            full_err = stderr_text + "\n" + stdout_text
+            
+            if "No conversation found" in full_err or "requires a valid session ID" in full_err:
+                # fallback: 创建新会话
                 proc = run_cli(is_resume=False)
-                first_line = proc.stdout.readline()
+                initial_lines = []
             else:
                 yield f'data: {json.dumps({"error": f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"}, ensure_ascii=False)}\n\n'
                 yield "data: [DONE]\n\n"
                 return
 
-        def process_stream(process, initial_line):
+        def process_stream(process, buffered_lines):
+            for line in buffered_lines:
+                yield from _parse_line(line)
+            
             lines_iter = iter(process.stdout.readline, b'')
-            if initial_line:
-                yield from _parse_line(initial_line)
             for line in lines_iter:
                 yield from _parse_line(line)
             
@@ -175,7 +187,7 @@ def chat():
             except json.JSONDecodeError:
                 pass
 
-        yield from process_stream(proc, first_line)
+        yield from process_stream(proc, initial_lines)
 
     return Response(
         stream_with_context(generate()),
