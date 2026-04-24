@@ -148,12 +148,12 @@ def _tool_status_message(tool_name, tool_input):
         return f"正在使用工具 {tool_name}..."
 
 
-def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI", session_id=None):
+def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI", session_id=None, is_new_session=True):
     """运行 Claude CLI 并 yield SSE 事件字符串。
 
     system_prompt 写入临时文件避免 ARG_MAX 限制。
     实时解析 stream-json 输出，最后将生成的 JSON 文件上传到 MinIO。
-    当 session_id 不为空时，使用 --session-id 实现多轮对话持久化。
+    当 session_id 不为空时，使用 --session-id 或 -r 实现多轮对话持久化。
     """
     cli_env = provider.get("cli_env", {})
     cli_model = provider.get("cli_model", provider["models"]["default"])
@@ -182,7 +182,10 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
 
     # 有 session_id 时使用会话持久化，否则一次性执行
     if session_id:
-        session_flag = f' --session-id {session_id}'
+        if is_new_session:
+            session_flag = f' --session-id {session_id}'
+        else:
+            session_flag = f' -r {session_id}'
     else:
         session_flag = ' --no-session-persistence'
 
@@ -518,7 +521,7 @@ def chat():
 
             yield from _run_claude_cli(
                 system_prompt, user_prompt_final, provider, output_path,
-                tag="Chat-CLI", session_id=session_id,
+                tag="Chat-CLI", session_id=session_id, is_new_session=is_new_session
             )
 
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'

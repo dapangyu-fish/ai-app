@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
@@ -110,9 +111,16 @@ class AiChatService {
   }
 
   String _generateSessionId() {
-    // 生成 UUID v4 格式
-    final r = DateTime.now().microsecondsSinceEpoch;
-    return '${r.toRadixString(16)}-${(r ~/ 1000).toRadixString(16)}-4${(r % 0xfff).toRadixString(16)}-${(0x8 + (r % 4)).toRadixString(16)}${((r ~/ 100) % 0xfff).toRadixString(16)}-${r.toRadixString(16).padLeft(12, '0')}';
+    final random = Random();
+    final hexDigits = '0123456789abcdef';
+    
+    String generateHex(int length) {
+      return List.generate(length, (_) => hexDigits[random.nextInt(16)]).join('');
+    }
+    
+    // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8, 9, a, b)
+    final y = hexDigits[random.nextInt(4) + 8];
+    return '${generateHex(8)}-${generateHex(4)}-4${generateHex(3)}-$y${generateHex(3)}-${generateHex(12)}';
   }
 
   void abort() {
