@@ -304,6 +304,25 @@ class AiChatService {
           if (content.isNotEmpty) {
             accumulated += content;
             yield ChatEvent(content: accumulated);
+
+            // 实时检测 [json_app_url] 标记
+            final urlRegex = RegExp(r'\[json_app_url\](.*?)\[/json_app_url\]');
+            final urlMatch = urlRegex.firstMatch(accumulated);
+            if (urlMatch != null) {
+              try {
+                final url = urlMatch.group(1)!;
+                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+                if (getResp.statusCode == 200) {
+                  final jsonBody = utf8.decode(getResp.bodyBytes);
+                  final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+                  yield ChatEvent(jsonApp: parsedApp);
+                } else {
+                  yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+                }
+              } catch (e) {
+                // 下载失败，继续接收后续内容
+              }
+            }
           }
         } catch (_) {}
       }
@@ -318,23 +337,6 @@ class AiChatService {
           yield ChatEvent(jsonApp: parsedApp);
         } catch (e) {
           // JSON 解析失败则忽略
-        }
-      }
-
-      // 如果 Claude 输出了 [json_app_url]，则自动下载并应用
-      final urlRegex = RegExp(r'\[json_app_url\](.*?)\[/json_app_url\]');
-      final urlMatch = urlRegex.firstMatch(accumulated);
-      if (urlMatch != null) {
-        try {
-          final url = urlMatch.group(1)!;
-          final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
-          if (getResp.statusCode == 200) {
-            final jsonBody = utf8.decode(getResp.bodyBytes);
-            final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
-            yield ChatEvent(jsonApp: parsedApp);
-          }
-        } catch (e) {
-          // ignore
         }
       }
 

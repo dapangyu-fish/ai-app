@@ -6,6 +6,7 @@ JSON DSL Backend - Flask App
 启动: python backend/app.py
 """
 
+import logging
 from flask import Flask
 from flask_sock import Sock
 from config import PORT
@@ -13,6 +14,13 @@ import auth
 import ai_code_generator as chat
 import claude_chat
 import store
+
+# 配置日志
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 
 def create_app():
@@ -53,9 +61,11 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    print(f"🚀 JSON DSL Backend on http://0.0.0.0:{PORT}")
-    print("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
-    print("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
-    print("   Fix:   POST /api/ai/fix-app (crash repair)")
-    print("   Store: /api/store/{apps,components,publish,delete}")
-    app.run(host="0.0.0.0", port=PORT, debug=False)
+    logger = logging.getLogger(__name__)
+    logger.info(f"🚀 JSON DSL Backend on http://0.0.0.0:{PORT}")
+    logger.info("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
+    logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
+    logger.info("   Fix:   POST /api/ai/fix-app (crash repair)")
+    logger.info("   Store: /api/store/{apps,components,publish,delete}")
+    logger.info("   Debug mode: ENABLED")
+    app.run(host="0.0.0.0", port=PORT, debug=True)
