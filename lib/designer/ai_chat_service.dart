@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
@@ -140,6 +141,9 @@ class AiChatService {
   /// 只发送最新消息 + session_id，CLI session 自动维护对话历史
   Stream<ChatEvent> sendStream(String userMessage) async* {
     abort();
+
+    debugPrint('[AI_CHAT] 发送消息: ${userMessage.length > 50 ? userMessage.substring(0, 50) + "..." : userMessage}');
+    debugPrint('[AI_CHAT] Session ID: $_sessionId');
 
     final client = http.Client();
     _activeClient = client;
@@ -309,18 +313,27 @@ class AiChatService {
             final urlRegex = RegExp(r'\[json_app_url\](.*?)\[/json_app_url\]');
             final urlMatch = urlRegex.firstMatch(accumulated);
             if (urlMatch != null) {
+              final url = urlMatch.group(1)!;
+              debugPrint('[AI_CHAT] 检测到 JSON URL: $url');
+
               try {
-                final url = urlMatch.group(1)!;
+                debugPrint('[AI_CHAT] 开始下载 JSON...');
                 final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+                debugPrint('[AI_CHAT] 下载响应: ${getResp.statusCode}');
+
                 if (getResp.statusCode == 200) {
                   final jsonBody = utf8.decode(getResp.bodyBytes);
+                  debugPrint('[AI_CHAT] JSON 下载成功，大小: ${jsonBody.length} bytes');
                   final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
                   yield ChatEvent(jsonApp: parsedApp);
                 } else {
-                  yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+                  debugPrint('[AI_CHAT] 下载失败: HTTP ${getResp.statusCode}');
+                  debugPrint('[AI_CHAT] 响应头: ${getResp.headers}');
+                  yield ChatEvent(failedJsonUrl: url, error: 'HTTP ${getResp.statusCode}');
                 }
               } catch (e) {
-                // 下载失败，继续接收后续内容
+                debugPrint('[AI_CHAT] 下载异常: $e');
+                yield ChatEvent(failedJsonUrl: url, error: e.toString());
               }
             }
           }
