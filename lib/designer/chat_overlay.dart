@@ -12,7 +12,7 @@ class ChatMessage {
 }
 
 /// 纯字幕式覆层 — 半透明浮在屏幕底部，带窗口框和标题栏。
-class ChatOverlay extends StatelessWidget {
+class ChatOverlay extends StatefulWidget {
   final List<ChatMessage> messages;
   final String? liveTranscript;
   final bool isListening;
@@ -45,22 +45,29 @@ class ChatOverlay extends StatelessWidget {
   });
 
   @override
+  State<ChatOverlay> createState() => _ChatOverlayState();
+}
+
+class _ChatOverlayState extends State<ChatOverlay> {
+  double _offsetY = 0.0; // 窗口垂直偏移量
+
+  @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.of(context).size;
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     final visibleMessages =
-        messages.where((m) => m.content.isNotEmpty).toList();
-    final hasLive = liveTranscript != null && liveTranscript!.isNotEmpty;
+        widget.messages.where((m) => m.content.isNotEmpty).toList();
+    final hasLive = widget.liveTranscript != null && widget.liveTranscript!.isNotEmpty;
 
-    if (visibleMessages.isEmpty && !hasLive && !isThinking && !isGeneratingJson) {
+    if (visibleMessages.isEmpty && !hasLive && !widget.isThinking && !widget.isGeneratingJson) {
       return const SizedBox.shrink();
     }
 
     return Positioned(
       left: 12,
       right: 12,
-      bottom: bottomPadding + 80,
+      bottom: bottomPadding + 80 + _offsetY,
       child: Container(
         constraints: BoxConstraints(maxHeight: screen.height * 0.4),
         decoration: BoxDecoration(
@@ -105,19 +112,47 @@ class ChatOverlay extends StatelessWidget {
                     _ProviderChip(
                       providers: AiChatService.providers,
                       selectedId: AiChatService.selectedProvider,
-                      onChanged: onProviderChanged,
+                      onChanged: widget.onProviderChanged,
                     ),
                   ],
-                  const Spacer(),
-                  if (onClear != null && visibleMessages.isNotEmpty)
+                  // 可拖动区域
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onPanUpdate: (details) {
+                        setState(() {
+                          // 向上拖动时 dy 为负，增加 offsetY（窗口上移）
+                          // 向下拖动时 dy 为正，减少 offsetY（窗口下移）
+                          _offsetY -= details.delta.dy;
+
+                          // 限制拖动范围：不能超出屏幕
+                          final maxOffset = screen.height - bottomPadding - 200; // 至少保留200px在屏幕内
+                          final minOffset = -80.0; // 不能低于初始位置
+                          _offsetY = _offsetY.clamp(minOffset, maxOffset);
+                        });
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        child: Container(
+                          width: 30,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.onClear != null && visibleMessages.isNotEmpty)
                     _TitleBarButton(
                       icon: Icons.delete_outline,
-                      onTap: onClear!,
+                      onTap: widget.onClear!,
                     ),
                   const SizedBox(width: 4),
                   _TitleBarButton(
                     icon: Icons.close,
-                    onTap: onClose,
+                    onTap: widget.onClose,
                   ),
                 ],
               ),
@@ -127,27 +162,27 @@ class ChatOverlay extends StatelessWidget {
               child: ScrollConfiguration(
                 behavior: _NoGlowBehavior(),
                 child: ListView.builder(
-                  controller: scrollController,
+                  controller: widget.scrollController,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shrinkWrap: true,
                   itemCount: visibleMessages.length +
                       (hasLive ? 1 : 0) +
-                      (isThinking ? 1 : 0) +
-                      (isGeneratingJson ? 1 : 0),
+                      (widget.isThinking ? 1 : 0) +
+                      (widget.isGeneratingJson ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (hasLive && index == visibleMessages.length) {
-                      return _buildLine('you', liveTranscript!, live: true);
+                      return _buildLine('you', widget.liveTranscript!, live: true);
                     }
-                    if (isThinking && index == visibleMessages.length + (hasLive ? 1 : 0)) {
+                    if (widget.isThinking && index == visibleMessages.length + (hasLive ? 1 : 0)) {
                       return _buildThinkingLine();
                     }
-                    if (isGeneratingJson && index == visibleMessages.length + (hasLive ? 1 : 0) + (isThinking ? 1 : 0)) {
+                    if (widget.isGeneratingJson && index == visibleMessages.length + (hasLive ? 1 : 0) + (widget.isThinking ? 1 : 0)) {
                       return _buildGeneratingLine();
                     }
                     final msg = visibleMessages[index];
                     if (msg.action == 'UPLOAD_CURRENT_APP') {
-                      return _buildActionLine(msg.content, '上传当前应用配置', onUploadCurrentApp);
+                      return _buildActionLine(msg.content, '上传当前应用配置', widget.onUploadCurrentApp);
                     }
                     if (msg.failedJsonUrl != null) {
                       return _buildRetryLine(msg.content, msg.failedJsonUrl!);
@@ -213,7 +248,7 @@ class ChatOverlay extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
-        onTap: () => onRunJsonApp?.call(jsonApp),
+        onTap: () => widget.onRunJsonApp?.call(jsonApp),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
@@ -248,7 +283,7 @@ class ChatOverlay extends StatelessWidget {
         children: [
           if (content.isNotEmpty) _buildLine('assistant', content),
           GestureDetector(
-            onTap: () => onRetryDownload?.call(url),
+            onTap: () => widget.onRetryDownload?.call(url),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -351,7 +386,7 @@ class ChatOverlay extends StatelessWidget {
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                generatingStatusMessage,
+                widget.generatingStatusMessage,
                 style: TextStyle(
                   color: Colors.purpleAccent.shade100,
                   fontSize: 13,
