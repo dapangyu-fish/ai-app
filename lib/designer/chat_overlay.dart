@@ -453,9 +453,10 @@ class _ProviderChip extends StatelessWidget {
         .firstOrNull;
     final label = current?.name ?? selectedId;
 
-    return GestureDetector(
-      onTap: () => _showMenu(context),
-      child: Container(
+    return Builder(
+      builder: (builderContext) => GestureDetector(
+        onTap: () => _showMenu(builderContext),
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.12),
@@ -485,7 +486,7 @@ class _ProviderChip extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 
   void _showMenu(BuildContext context) {
