@@ -1032,48 +1032,6 @@ class _DesignerBallState extends State<DesignerBall>
     // 启动 AI 处理
     _sendTextToAi(text, skipUserMessage: true);
   }
-      (event) {
-        if (event.error != null && event.content == null) {
-          // 纯错误（如配额超限）
-          setState(() {
-            _isThinking = false;
-            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
-          });
-          _scrollToBottom();
-          return;
-        }
-        if (event.content != null) {
-          setState(() {
-            _isThinking = false;
-            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
-          });
-          _scrollToBottom();
-        }
-        if (event.jsonApp != null) {
-          debugPrint('[DesignerBall] AI generated JSON-APP!');
-          _lastGeneratedJson = event.jsonApp;
-          setState(() {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: '🚀 JSON-APP 已生成，点击试运行',
-              jsonApp: event.jsonApp,
-            ));
-          });
-          _scrollToBottom();
-        }
-        if (event.quota != null) {
-          _lastQuota = event.quota;
-        }
-      },
-      onError: (e) {
-        debugPrint('[DesignerBall] AI stream error: $e');
-        setState(() {
-          _isThinking = false;
-          _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
-        });
-      },
-    );
-  }
 
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
   void _cancelCurrentStream() {
