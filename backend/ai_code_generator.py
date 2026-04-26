@@ -315,6 +315,9 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             put_url = _minio_presigned_put(bucket, output_filename)
             get_url = _minio_presigned_get(bucket, output_filename)
 
+            print(f"[{tag}] PUT URL: {put_url}")
+            print(f"[{tag}] GET URL: {get_url}")
+
             upload_resp = _req.put(
                 put_url,
                 data=json.dumps(app_json, ensure_ascii=False).encode("utf-8"),

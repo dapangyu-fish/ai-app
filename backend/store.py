@@ -48,7 +48,9 @@ def _minio_presigned_get(bucket, key, expires_hours=1):
     from datetime import timedelta
     if not _minio_client.bucket_exists(bucket):
         _minio_client.make_bucket(bucket)
-    return _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
+    url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
+    print(f"[MinIO] Generated presigned GET URL: {url}")
+    return url
 
 
 @require_auth
