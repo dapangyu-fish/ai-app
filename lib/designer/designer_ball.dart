@@ -805,8 +805,14 @@ class _DesignerBallState extends State<DesignerBall>
               ? currentText
               : '$_accumulatedTranscript $currentText';
 
-          setState(() => _liveTranscript = fullText);
-          _scrollToBottom();
+          // 优化：只在文本真正变化时才更新 UI
+          if (_liveTranscript != fullText) {
+            setState(() => _liveTranscript = fullText);
+            // 优化：减少滚动频率，只在 finalResult 时滚动
+            if (result.finalResult) {
+              _scrollToBottom();
+            }
+          }
 
           // 场景2修复：收到 finalResult=true 时，原生引擎会自动停止
           // 如果用户还在按住球，重新启动监听以继续录音
