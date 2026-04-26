@@ -22,9 +22,10 @@ def main():
 
     bucket = "ai-chat-temp"
     key = f"{uuid.uuid4().hex}.json"
-    
+
     url = _minio_upload(bucket, key, data)
-    print(url)
+    # 输出 URL，使用 <<URL>> 标记包裹，避免 shell 截断
+    print(f"<<URL>>{url}<</URL>>")
 
 if __name__ == "__main__":
     main()
