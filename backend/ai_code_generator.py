@@ -309,22 +309,15 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             print(f"[{tag}] JSON file found, keys: {list(app_json.keys())}")
 
             import requests as _req
-            from store import _minio_presigned_put, _minio_presigned_get
+            from store import _minio_upload
 
             bucket = "ai-chat-temp"
-            put_url = _minio_presigned_put(bucket, output_filename)
-            get_url = _minio_presigned_get(bucket, output_filename)
+            # 直接上传并获取公开 URL（不使用预签名）
+            get_url = _minio_upload(bucket, output_filename, app_json)
 
-            print(f"[{tag}] PUT URL: {put_url}")
-            print(f"[{tag}] GET URL: {get_url}")
+            print(f"[{tag}] Uploaded to MinIO: {get_url}")
 
-            upload_resp = _req.put(
-                put_url,
-                data=json.dumps(app_json, ensure_ascii=False).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-            )
-
-            if upload_resp.status_code == 200:
+            if get_url:
                 yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
                 print(f"[{tag}] MinIO upload success: {get_url}")
             else:
