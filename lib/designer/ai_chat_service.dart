@@ -341,48 +341,50 @@ class AiChatService {
           if (content.isNotEmpty) {
             accumulated += content;
             yield ChatEvent(content: accumulated);
-
-            // 实时检测 [json_app_url] 标记
-            final urlRegex = RegExp(r'\[json_app_url\]([^\]]+)\[/json_app_url\]');
-            final urlMatch = urlRegex.firstMatch(accumulated);
-            if (urlMatch != null) {
-              final url = urlMatch.group(1)!;
-              debugPrint('[AI_CHAT] 检测到 JSON URL: $url');
-
-              try {
-                debugPrint('[AI_CHAT] 开始下载 JSON...');
-                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
-                debugPrint('[AI_CHAT] 下载响应: ${getResp.statusCode}');
-
-                if (getResp.statusCode == 200) {
-                  final jsonBody = utf8.decode(getResp.bodyBytes);
-                  debugPrint('[AI_CHAT] JSON 下载成功，大小: ${jsonBody.length} bytes');
-                  final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
-                  yield ChatEvent(jsonApp: parsedApp);
-                } else {
-                  debugPrint('[AI_CHAT] 下载失败: HTTP ${getResp.statusCode}');
-                  debugPrint('[AI_CHAT] 响应头: ${getResp.headers}');
-                  yield ChatEvent(failedJsonUrl: url, error: 'HTTP ${getResp.statusCode}');
-                }
-              } catch (e) {
-                debugPrint('[AI_CHAT] 下载异常: $e');
-                yield ChatEvent(failedJsonUrl: url, error: e.toString());
-              }
-            }
-
-            // 实时检测 [request_action]xxx[/request_action] 标记
-            final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
-            final actionMatch = actionRegex.firstMatch(accumulated);
-            if (actionMatch != null) {
-              final action = actionMatch.group(1)!;
-              debugPrint('[AI_CHAT] 检测到请求动作: $action');
-              yield ChatEvent(requestAction: action);
-            }
+            // 注意：标签指令（[json_app_url]、[request_action]）的解析移到流结束后统一处理
           }
         } catch (_) {}
       }
 
-      // 流结束后，如果累积的文本包含 JSON 块，则提取并应用
+      // 流结束后，统一解析标签指令（避免流式传输过程中重复解析）
+
+      // 1. 检测 [json_app_url] 标记并下载
+      final urlRegex = RegExp(r'\[json_app_url\]([^\]]+)\[/json_app_url\]');
+      final urlMatch = urlRegex.firstMatch(accumulated);
+      if (urlMatch != null) {
+        final url = urlMatch.group(1)!;
+        debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
+
+        try {
+          debugPrint('[AI_CHAT] 开始下载 JSON...');
+          final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+          debugPrint('[AI_CHAT] 下载响应: ${getResp.statusCode}');
+
+          if (getResp.statusCode == 200) {
+            final jsonBody = utf8.decode(getResp.bodyBytes);
+            debugPrint('[AI_CHAT] JSON 下载成功，大小: ${jsonBody.length} bytes');
+            final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+            yield ChatEvent(jsonApp: parsedApp);
+          } else {
+            debugPrint('[AI_CHAT] 下载失败: HTTP ${getResp.statusCode}');
+            yield ChatEvent(failedJsonUrl: url, error: 'HTTP ${getResp.statusCode}');
+          }
+        } catch (e) {
+          debugPrint('[AI_CHAT] 下载异常: $e');
+          yield ChatEvent(failedJsonUrl: url, error: e.toString());
+        }
+      }
+
+      // 2. 检测 [request_action] 标记
+      final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
+      final actionMatch = actionRegex.firstMatch(accumulated);
+      if (actionMatch != null) {
+        final action = actionMatch.group(1)!;
+        debugPrint('[AI_CHAT] 流结束，检测到请求动作: $action');
+        yield ChatEvent(requestAction: action);
+      }
+
+      // 3. 如果累积的文本包含 JSON 块，则提取并应用
       final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
       final match = jsonBlockRegex.firstMatch(accumulated);
       if (match != null) {
