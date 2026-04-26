@@ -125,6 +125,29 @@ class _DesignerBallState extends State<DesignerBall>
     });
     // 加载 AI 对话 session
     _chatService.loadSession();
+
+    // 提前初始化原生语音识别（参照测试应用的成功实践）
+    _initNativeSpeech();
+  }
+
+  /// 在 initState 时就初始化原生语音识别，避免按住时才初始化导致的延迟和时序问题
+  Future<void> _initNativeSpeech() async {
+    try {
+      _speech = stt.SpeechToText();
+      _speechInited = await _speech!.initialize(
+        onError: (error) {
+          debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
+          if (error.errorMsg == 'error_network') {
+            _handleNetworkError();
+          }
+        },
+        onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
+      );
+      debugPrint('[DesignerBall] Native speech initialized in initState: $_speechInited');
+    } catch (e) {
+      debugPrint('[DesignerBall] Native speech init failed: $e');
+      _speechInited = false;
+    }
   }
 
   /// 切换强制离线模式
@@ -394,36 +417,12 @@ class _DesignerBallState extends State<DesignerBall>
 
     debugPrint('[DesignerBall] 初始状态: forceOffline=$_useSherpaAsr, speechInited=$_speechInited');
 
+    // 检查原生语音识别是否已初始化（已在 initState 中完成）
     if (!_speechInited && !_useSherpaAsr) {
-      try {
-        _speech ??= stt.SpeechToText();
-        _speechInited = await _speech!.initialize(
-          onError: (error) {
-            debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
-            if (error.errorMsg == 'error_network') {
-              _handleNetworkError();
-            }
-          },
-          onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
-        );
-        debugPrint('[DesignerBall] Native speech init: $_speechInited');
-      } catch (e) {
-        debugPrint('[DesignerBall] Native speech failed: $e');
-        _speechInited = false;
-      }
-
-      // 手已离开 → 中止
-      if (!_pointerDown) {
-        debugPrint('[DesignerBall] Pointer lifted during speech init, aborting');
-        return;
-      }
-
-      if (!_speechInited) {
-        setState(() {
-          _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中开启"强制离线模式"'));
-        });
-        return;
-      }
+      setState(() {
+        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中开启"强制离线模式"'));
+      });
+      return;
     }
 
     final shouldUseSherpa = _useSherpaAsr;
