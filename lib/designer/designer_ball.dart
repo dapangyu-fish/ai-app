@@ -647,8 +647,14 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.content != null) {
           setState(() {
             _isThinking = false;
-            // 始终更新最后一条 assistant 消息（累积内容）
-            if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+            // 如果最后一条是思考消息，则追加新消息；否则更新最后一条
+            if (_messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                _messages.last.content.startsWith('💭')) {
+              // 思考过程后的内容，追加新消息
+              _messages.add(ChatMessage(role: 'assistant', content: event.content!));
+            } else if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+              // 普通内容，更新最后一条消息
               _messages.last = ChatMessage(role: 'assistant', content: event.content!);
             }
           });
