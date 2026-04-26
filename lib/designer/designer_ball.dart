@@ -571,15 +571,17 @@ class _DesignerBallState extends State<DesignerBall>
     _sendTextToAi(text);
   }
 
-  void _sendTextToAi(String text) {
+  void _sendTextToAi(String text, {bool skipUserMessage = false}) {
     _cancelCurrentStream();
 
-    setState(() {
-      _messages.add(ChatMessage(role: 'user', content: text));
-      _messages.add(ChatMessage(role: 'assistant', content: ''));
-      _isThinking = true;
-    });
-    _scrollToBottom();
+    if (!skipUserMessage) {
+      setState(() {
+        _messages.add(ChatMessage(role: 'user', content: text));
+        _messages.add(ChatMessage(role: 'assistant', content: ''));
+        _isThinking = true;
+      });
+      _scrollToBottom();
+    }
 
     // 用于累积流式事件中的指令
     Map<String, dynamic>? _pendingJsonApp;
@@ -992,10 +994,12 @@ class _DesignerBallState extends State<DesignerBall>
         _liveTranscript = finalText;
       }
     } else {
-      try { _speech?.stop(); } catch (e) {
+      try { await _speech?.stop(); } catch (e) {
         debugPrint('[DesignerBall] speech.stop error: $e');
       }
     }
+
+    // 重要：先完全重置语音相关状态，让 iOS 释放麦克风资源
     _pulseController.stop();
     _pulseController.reset();
 
@@ -1009,10 +1013,7 @@ class _DesignerBallState extends State<DesignerBall>
       return;
     }
 
-    // 中断上一条还在进行的流
-    _cancelCurrentStream();
-
-    // 原子 setState：清掉 transcript + 加用户消息 + 空 assistant 占位
+    // 先原子更新 UI，彻底退出录音态
     setState(() {
       _isListening = false;
       _liveTranscript = null;
@@ -1022,7 +1023,15 @@ class _DesignerBallState extends State<DesignerBall>
     });
     _scrollToBottom();
 
-    _streamSub = _chatService.sendStream(text).listen(
+    // 关键优化：给 iOS 一点时间释放语音识别资源，再启动 AI 请求
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // 中断上一条还在进行的流
+    _cancelCurrentStream();
+
+    // 启动 AI 处理
+    _sendTextToAi(text, skipUserMessage: true);
+  }
       (event) {
         if (event.error != null && event.content == null) {
           // 纯错误（如配额超限）
