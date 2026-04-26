@@ -223,6 +223,8 @@ class AiChatService {
 
       String accumulated = '';
       String accumulatedThinking = ''; // 累积思考过程
+      int contentEventCount = 0;  // 内容事件计数
+      int thinkingEventCount = 0;  // 思考事件计数
 
       // 用 LineSplitter 保证跨 TCP chunk 的行完整性
       await for (final line in response.stream
@@ -230,14 +232,16 @@ class AiChatService {
           .transform(const LineSplitter())) {
         final trimmed = line.trim();
 
-        // 记录原始 SSE 行
-        if (trimmed.isNotEmpty) {
+        // 只记录非内容事件的 SSE 行
+        if (trimmed.isNotEmpty && !trimmed.contains('"content"') && !trimmed.contains('"thinking"')) {
           debugPrint('[AI_CHAT] <<< SSE: ${trimmed.length > 200 ? trimmed.substring(0, 200) + "..." : trimmed}');
         }
 
         if (trimmed.isEmpty) continue;
         if (trimmed == 'data: [DONE]') {
           debugPrint('[AI_CHAT] <<< SSE 流结束');
+          debugPrint('[AI_CHAT] 总计: 内容事件 $contentEventCount 次, 思考事件 $thinkingEventCount 次');
+          debugPrint('[AI_CHAT] 累积文本长度: ${accumulated.length}, 思考长度: ${accumulatedThinking.length}');
           continue;
         }
         if (!trimmed.startsWith('data: ')) continue;
@@ -246,8 +250,10 @@ class AiChatService {
           try {
             final data = json.decode(dataStr) as Map<String, dynamic>;
 
-            // 记录解析后的数据
-            debugPrint('[AI_CHAT] >>> 解析事件: ${data.keys.join(", ")}');
+            // 只记录非内容/思考事件的解析结果
+            if (!data.containsKey('content') && !data.containsKey('thinking')) {
+              debugPrint('[AI_CHAT] >>> 解析事件: ${data.keys.join(", ")}');
+            }
 
             if (data.containsKey('generating_json') && data['generating_json'] == true) {
               yield ChatEvent(isGeneratingJson: true);
