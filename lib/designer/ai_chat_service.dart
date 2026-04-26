@@ -142,17 +142,17 @@ class AiChatService {
   Stream<ChatEvent> sendStream(String userMessage) async* {
     abort();
 
+    final client = http.Client();
+    _activeClient = client;
+
+    final isNew = !_sessionUsed;
+
     debugPrint('[AI_CHAT] ========== 发送消息 ==========');
     debugPrint('[AI_CHAT] 消息内容: $userMessage');
     debugPrint('[AI_CHAT] Session ID: $_sessionId');
     debugPrint('[AI_CHAT] Provider: $_selectedProvider');
     debugPrint('[AI_CHAT] Is New Session: $isNew');
     debugPrint('[AI_CHAT] ====================================');
-
-    final client = http.Client();
-    _activeClient = client;
-
-    final isNew = !_sessionUsed;
 
     try {
       final request = http.Request('POST', Uri.parse('$_baseUrl/chat'));
