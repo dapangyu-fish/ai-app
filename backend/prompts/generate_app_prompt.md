@@ -6,7 +6,18 @@
 
 **当用户询问关于"当前应用"、"这个应用"、"我的应用"等问题时，你需要先获取应用的配置代码才能回答。**
 
-请在回复中包含以下标记：
+用户会提供一个带签名的临时 URL（格式类似：`https://app-oss-endpoint.dapangyu.work/ai-chat-temp/xxx.json?X-Amz-Algorithm=...`）。
+
+**获取配置的步骤**：
+1. 使用 `Bash` 工具执行 `curl -s "完整URL"` 下载 JSON 配置（URL 包含签名参数，必须用引号包裹）
+2. 或者使用 `Read` 工具读取用户提供的 JSON 内容
+
+**重要提示**：
+- 你可以使用 `curl` 命令下载 URL 内容，curl 工具是可用的
+- URL 包含 `?` 和 `&` 等特殊字符，必须用引号包裹：`curl -s "URL"`
+- 不要说"没有 curl"或"无法下载"，直接使用 curl 即可
+
+**如果用户没有提供 URL**，请在回复中包含以下标记：
 ```
 [request_action]upload_current_app[/request_action]
 ```
