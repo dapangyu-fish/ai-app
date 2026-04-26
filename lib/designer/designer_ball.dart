@@ -581,6 +581,12 @@ class _DesignerBallState extends State<DesignerBall>
     });
     _scrollToBottom();
 
+    // 用于累积流式事件中的指令
+    Map<String, dynamic>? _pendingJsonApp;
+    String? _pendingRequestAction;
+    String? _pendingFailedJsonUrl;
+    String? _pendingFailedJsonError;
+
     _streamSub = _chatService.sendStream(text).listen(
       (event) {
         if (event.isGeneratingJson) {
@@ -607,21 +613,23 @@ class _DesignerBallState extends State<DesignerBall>
           _scrollToBottom();
           return;
         }
+
+        // 累积指令，不立即处理
         if (event.requestAction != null) {
-          if (event.requestAction == 'upload_current_app') {
-            setState(() {
-              _isThinking = false;
-              // 替换当前等待消息为按钮消息
-              _messages.last = ChatMessage(
-                role: 'system',
-                content: 'AI 需要获取当前应用的代码配置以进行修改：',
-                action: 'UPLOAD_CURRENT_APP',
-              );
-            });
-            _scrollToBottom();
-          }
+          _pendingRequestAction = event.requestAction;
           return;
         }
+        if (event.jsonApp != null) {
+          _pendingJsonApp = event.jsonApp;
+          _lastGeneratedJson = event.jsonApp;
+          return;
+        }
+        if (event.failedJsonUrl != null) {
+          _pendingFailedJsonUrl = event.failedJsonUrl;
+          _pendingFailedJsonError = event.error;
+          return;
+        }
+
         if (event.thinking != null) {
           // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
           setState(() {
@@ -646,20 +654,6 @@ class _DesignerBallState extends State<DesignerBall>
           });
           _scrollToBottom();
         }
-        if (event.jsonApp != null) {
-          _lastGeneratedJson = event.jsonApp;
-          setState(() {
-            _isGeneratingJson = false;
-            _generatingStatusMessage = '正在生成代码...';
-            // 保留 AI 的原始输出文本，只添加运行按钮
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: '🚀 点击试运行',
-              jsonApp: event.jsonApp,
-            ));
-          });
-          _scrollToBottom();
-        }
         if (event.quota != null) {
           _lastQuota = event.quota;
         }
@@ -671,6 +665,39 @@ class _DesignerBallState extends State<DesignerBall>
           _generatingStatusMessage = '正在生成代码...';
           _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
         });
+      },
+      onDone: () {
+        // SSE 流结束后，统一处理累积的指令
+        setState(() {
+          _isGeneratingJson = false;
+          _generatingStatusMessage = '正在生成代码...';
+
+          // 处理请求上传当前应用
+          if (_pendingRequestAction == 'upload_current_app') {
+            _messages.last = ChatMessage(
+              role: 'system',
+              content: 'AI 需要获取当前应用的代码配置以进行修改：',
+              action: 'UPLOAD_CURRENT_APP',
+            );
+          }
+          // 处理 JSON 下载失败
+          else if (_pendingFailedJsonUrl != null) {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '下载 JSON 失败',
+              failedJsonUrl: _pendingFailedJsonUrl,
+            ));
+          }
+          // 处理 JSON 应用生成成功
+          else if (_pendingJsonApp != null) {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '🚀 点击试运行',
+              jsonApp: _pendingJsonApp,
+            ));
+          }
+        });
+        _scrollToBottom();
       },
     );
   }
