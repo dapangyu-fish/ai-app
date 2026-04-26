@@ -599,8 +599,11 @@ class _DesignerBallState extends State<DesignerBall>
         }
         if (event.statusMessage != null) {
           setState(() {
+            // 有工具动作时直接在浮层里显示，避免看起来像卡住
+            _isGeneratingJson = true;
             _generatingStatusMessage = event.statusMessage!;
           });
+          _scrollToBottom();
           return;
         }
         if (event.error != null && event.content == null) {
@@ -634,6 +637,7 @@ class _DesignerBallState extends State<DesignerBall>
           // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
           setState(() {
             _isThinking = false;
+            _isGeneratingJson = false;
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 (_messages.last.content.isEmpty || _messages.last.content.startsWith('💭'))) {
@@ -647,6 +651,7 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.content != null) {
           setState(() {
             _isThinking = false;
+            _isGeneratingJson = false;
             // 如果最后一条是思考消息，则追加新消息；否则更新最后一条
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
