@@ -794,10 +794,18 @@ class _DesignerBallState extends State<DesignerBall>
     if (_speech == null) return;
     try {
       debugPrint('[DesignerBall] listen 参数: listenFor=60s, pauseFor=60s');
+      debugPrint('[DesignerBall] 当前语言: zh_CN');
+      debugPrint('[DesignerBall] partialResults: true');
+
       _speech!.listen(
         onResult: (result) {
           _nativeSpeechReceivedCallback = true;
-          debugPrint('[DesignerBall] 收到识别结果: ${result.recognizedWords}, finalResult=${result.finalResult}');
+          debugPrint('[DesignerBall] ========== 收到识别结果 ==========');
+          debugPrint('[DesignerBall] recognizedWords: ${result.recognizedWords}');
+          debugPrint('[DesignerBall] finalResult: ${result.finalResult}');
+          debugPrint('[DesignerBall] confidence: ${result.confidence}');
+          debugPrint('[DesignerBall] hasConfidenceRating: ${result.hasConfidenceRating}');
+          debugPrint('[DesignerBall] =====================================');
 
           // 拼接累积文本和当前识别结果
           final currentText = result.recognizedWords;
@@ -807,6 +815,7 @@ class _DesignerBallState extends State<DesignerBall>
 
           // 优化：只在文本真正变化时才更新 UI
           if (_liveTranscript != fullText) {
+            debugPrint('[DesignerBall] 更新文本: $_liveTranscript -> $fullText');
             setState(() => _liveTranscript = fullText);
             // 优化：减少滚动频率，只在 finalResult 时滚动
             if (result.finalResult) {
@@ -827,6 +836,12 @@ class _DesignerBallState extends State<DesignerBall>
             });
           }
         },
+        onSoundLevelChange: (level) {
+          // 添加音量监听，确认麦克风有输入
+          if (level > 0) {
+            debugPrint('[DesignerBall] 音量: $level (麦克风有输入)');
+          }
+        },
         localeId: 'zh_CN',
         listenFor: const Duration(seconds: 60),
         pauseFor: const Duration(seconds: 60),
@@ -837,6 +852,7 @@ class _DesignerBallState extends State<DesignerBall>
         ),
       );
       debugPrint('[DesignerBall] listen 调用完成，等待用户说话');
+      debugPrint('[DesignerBall] 如果没有音量输出，说明麦克风没有输入');
     } catch (e) {
       debugPrint('[DesignerBall] Native listen error: $e');
       setState(() {
