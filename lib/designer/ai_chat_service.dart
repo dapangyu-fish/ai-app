@@ -311,8 +311,8 @@ class AiChatService {
             accumulated += content;
             yield ChatEvent(content: accumulated);
 
-            // 实时检测 [json_app_url] 标记
-            final urlRegex = RegExp(r'\[json_app_url\](.*?)\[/json_app_url\]');
+            // 实时检测 [json_app_url] 标记（使用非贪婪匹配，但排除 ] 字符）
+            final urlRegex = RegExp(r'\[json_app_url\]([^\]]+)\[/json_app_url\]');
             final urlMatch = urlRegex.firstMatch(accumulated);
             if (urlMatch != null) {
               final url = urlMatch.group(1)!;
