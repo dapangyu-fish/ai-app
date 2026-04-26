@@ -672,13 +672,13 @@ class _DesignerBallState extends State<DesignerBall>
           _isGeneratingJson = false;
           _generatingStatusMessage = '正在生成代码...';
 
-          // 处理请求上传当前应用
+          // 处理请求上传当前应用（追加新消息，不替换）
           if (_pendingRequestAction == 'upload_current_app') {
-            _messages.last = ChatMessage(
+            _messages.add(ChatMessage(
               role: 'system',
               content: 'AI 需要获取当前应用的代码配置以进行修改：',
               action: 'UPLOAD_CURRENT_APP',
-            );
+            ));
           }
           // 处理 JSON 下载失败
           else if (_pendingFailedJsonUrl != null) {
