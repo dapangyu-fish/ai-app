@@ -646,9 +646,10 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _isGeneratingJson = false;
             _generatingStatusMessage = '正在生成代码...';
+            // 保留 AI 的原始输出文本，只添加运行按钮
             _messages.add(ChatMessage(
               role: 'system',
-              content: '🚀 JSON-APP 已生成，点击试运行',
+              content: '🚀 点击试运行',
               jsonApp: event.jsonApp,
             ));
           });
