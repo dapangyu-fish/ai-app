@@ -241,7 +241,16 @@ class AiChatService {
         if (trimmed == 'data: [DONE]') {
           debugPrint('[AI_CHAT] <<< SSE 流结束');
           debugPrint('[AI_CHAT] 总计: 内容事件 $contentEventCount 次, 思考事件 $thinkingEventCount 次');
-          debugPrint('[AI_CHAT] 累积文本长度: ${accumulated.length}, 思考长度: ${accumulatedThinking.length}');
+          if (accumulated.isNotEmpty) {
+            debugPrint('[AI_CHAT] === 完整回复内容 ===');
+            debugPrint('[AI_CHAT] $accumulated');
+            debugPrint('[AI_CHAT] === 回复结束 (${accumulated.length} 字符) ===');
+          }
+          if (accumulatedThinking.isNotEmpty) {
+            debugPrint('[AI_CHAT] === 完整思考过程 ===');
+            debugPrint('[AI_CHAT] $accumulatedThinking');
+            debugPrint('[AI_CHAT] === 思考结束 (${accumulatedThinking.length} 字符) ===');
+          }
           continue;
         }
         if (!trimmed.startsWith('data: ')) continue;
