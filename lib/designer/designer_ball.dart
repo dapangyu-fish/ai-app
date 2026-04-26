@@ -623,15 +623,21 @@ class _DesignerBallState extends State<DesignerBall>
           return;
         }
         if (event.thinking != null) {
-          // 思考过程 → 追加到聊天记录，不覆盖
+          // 思考过程 → 追加为独立消息（完整保留）
           setState(() {
             _isThinking = false;
-            // 如果最后一条消息是空的 assistant 消息，则更新它；否则追加新消息
+            // 如果最后一条消息是空的 assistant 消息，则更新它
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 _messages.last.content.isEmpty) {
               _messages.last = ChatMessage(role: 'assistant', content: '💭 ${event.thinking!}');
+            } else if (_messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                _messages.last.content.startsWith('💭')) {
+              // 如果最后一条是思考消息，则更新它（累积思考内容）
+              _messages.last = ChatMessage(role: 'assistant', content: '💭 ${event.thinking!}');
             } else {
+              // 否则追加新的思考消息
               _messages.add(ChatMessage(role: 'assistant', content: '💭 ${event.thinking!}'));
             }
           });
@@ -641,12 +647,11 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.content != null) {
           setState(() {
             _isThinking = false;
-            // 如果最后一条消息是空的或只有思考内容的 assistant 消息，则更新它；否则追加
-            if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant' &&
-                (_messages.last.content.isEmpty || _messages.last.content.startsWith('💭'))) {
+            // 始终更新最后一条 assistant 消息（累积内容）
+            if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
               _messages.last = ChatMessage(role: 'assistant', content: event.content!);
             } else {
+              // 如果最后一条不是 assistant 消息，则追加新消息
               _messages.add(ChatMessage(role: 'assistant', content: event.content!));
             }
           });
