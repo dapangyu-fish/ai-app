@@ -6,13 +6,12 @@
 
 当你生成了新的或修改好的 JSON-APP 代码后，你**必须**执行以下步骤：
 1. 使用工具把生成的 JSON 代码写入到临时文件（如 `/tmp/app.json`）。
-2. 使用 `Bash` 工具执行 `python backend/upload_file.py /tmp/app.json`。该命令会输出一个 URL（格式：`<<URL>>完整URL<</URL>>`）。
-3. **重要**：从输出中提取 `<<URL>>` 和 `<</URL>>` 之间的完整 URL，放入 `[json_app_url]URL[/json_app_url]` 标签中。
+2. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh /tmp/app.json 1`。该命令会输出一个带签名的 URL（有效期1小时）。
+3. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
 4. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
 
 **注意事项**：
 - URL 包含签名参数（如 `?X-Amz-Algorithm=...&X-Amz-Signature=...`），必须完整复制，不能截断！
-- 必须提取 `<<URL>>` 和 `<</URL>>` 之间的完整内容，包括所有 `?` 和 `&` 字符。
 - 这是用户唯一能接收到应用配置的方式，绝对不能漏掉这个标签！
 - 不要在聊天框直接输出大段的 JSON 文本。
 
