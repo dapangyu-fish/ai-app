@@ -402,17 +402,6 @@ class _DesignerBallState extends State<DesignerBall>
             debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
             if (error.errorMsg == 'error_network') {
               _handleNetworkError();
-            } else if (error.errorMsg == 'error_speech_timeout') {
-              // 场景1修复：原生平台超时（用户长时间不说话）
-              // 如果用户还在按住球，重新启动监听
-              if (_isListening && _pointerDown && !_useSherpaAsr) {
-                debugPrint('[DesignerBall] 原生平台超时，重新启动监听');
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  if (_isListening && _pointerDown && !_useSherpaAsr) {
-                    _startNativeSpeech();
-                  }
-                });
-              }
             }
           },
           onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
@@ -790,41 +779,22 @@ class _DesignerBallState extends State<DesignerBall>
     });
   }
 
-  /// 原生语音识别 (Apple/Google)
+  /// 原生语音识别 (Apple/Google) — 参照 speech_to_text 官方 demo 的最小实现，
+  /// 不做任何 finalResult 自动重启，避免反复申请/释放麦克风。
   void _startNativeSpeech() {
     if (_speech == null) return;
     try {
-
       _speech!.listen(
         onResult: (result) {
           _nativeSpeechReceivedCallback = true;
-
-          // 拼接累积文本和当前识别结果
-          final currentText = result.recognizedWords;
-          final fullText = _accumulatedTranscript.isEmpty
-              ? currentText
-              : '$_accumulatedTranscript $currentText';
-
-          // 优化：只在文本真正变化时才更新 UI
-          if (_liveTranscript != fullText) {
-            setState(() => _liveTranscript = fullText);
-          }
-
-          // 场景2修复：收到 finalResult=true 时，原生引擎会自动停止
-          // 如果用户还在按住球，重新启动监听以继续录音
-          if (result.finalResult && _isListening && _pointerDown) {
-            // 保存已确认的文本
-            _accumulatedTranscript = fullText;
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (_isListening && _pointerDown && !_useSherpaAsr) {
-                _startNativeSpeech();
-              }
-            });
+          final text = result.recognizedWords;
+          if (_liveTranscript != text) {
+            setState(() => _liveTranscript = text);
           }
         },
         localeId: 'zh_CN',
-        listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 60),
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 5),
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
           cancelOnError: false,
