@@ -142,8 +142,12 @@ class AiChatService {
   Stream<ChatEvent> sendStream(String userMessage) async* {
     abort();
 
-    debugPrint('[AI_CHAT] 发送消息: ${userMessage.length > 50 ? userMessage.substring(0, 50) + "..." : userMessage}');
+    debugPrint('[AI_CHAT] ========== 发送消息 ==========');
+    debugPrint('[AI_CHAT] 消息内容: $userMessage');
     debugPrint('[AI_CHAT] Session ID: $_sessionId');
+    debugPrint('[AI_CHAT] Provider: $_selectedProvider');
+    debugPrint('[AI_CHAT] Is New Session: $isNew');
+    debugPrint('[AI_CHAT] ====================================');
 
     final client = http.Client();
     _activeClient = client;
@@ -225,13 +229,25 @@ class AiChatService {
           .transform(utf8.decoder)
           .transform(const LineSplitter())) {
         final trimmed = line.trim();
+
+        // 记录原始 SSE 行
+        if (trimmed.isNotEmpty) {
+          debugPrint('[AI_CHAT] <<< SSE: ${trimmed.length > 200 ? trimmed.substring(0, 200) + "..." : trimmed}');
+        }
+
         if (trimmed.isEmpty) continue;
-        if (trimmed == 'data: [DONE]') continue;
+        if (trimmed == 'data: [DONE]') {
+          debugPrint('[AI_CHAT] <<< SSE 流结束');
+          continue;
+        }
         if (!trimmed.startsWith('data: ')) continue;
 
           final dataStr = trimmed.substring(6);
           try {
             final data = json.decode(dataStr) as Map<String, dynamic>;
+
+            // 记录解析后的数据
+            debugPrint('[AI_CHAT] >>> 解析事件: ${data.keys.join(", ")}');
 
             if (data.containsKey('generating_json') && data['generating_json'] == true) {
               yield ChatEvent(isGeneratingJson: true);
