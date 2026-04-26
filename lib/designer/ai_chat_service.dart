@@ -311,7 +311,7 @@ class AiChatService {
             accumulated += content;
             yield ChatEvent(content: accumulated);
 
-            // 实时检测 [json_app_url] 标记（使用非贪婪匹配，但排除 ] 字符）
+            // 实时检测 [json_app_url] 标记
             final urlRegex = RegExp(r'\[json_app_url\]([^\]]+)\[/json_app_url\]');
             final urlMatch = urlRegex.firstMatch(accumulated);
             if (urlMatch != null) {
@@ -337,6 +337,15 @@ class AiChatService {
                 debugPrint('[AI_CHAT] 下载异常: $e');
                 yield ChatEvent(failedJsonUrl: url, error: e.toString());
               }
+            }
+
+            // 实时检测 [request_action]xxx[/request_action] 标记
+            final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
+            final actionMatch = actionRegex.firstMatch(accumulated);
+            if (actionMatch != null) {
+              final action = actionMatch.group(1)!;
+              debugPrint('[AI_CHAT] 检测到请求动作: $action');
+              yield ChatEvent(requestAction: action);
             }
           }
         } catch (_) {}
