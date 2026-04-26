@@ -1251,8 +1251,14 @@ class _DesignerBallState extends State<DesignerBall>
             onUploadCurrentApp: _handleUploadCurrentApp,
             onRetryDownload: _handleRetryDownload,
             onRunJsonApp: (jsonConfig) {
-              _clearAndCloseChatMode();
+              // 先调用外部回调，再清空聊天
               widget.onRunJsonApp?.call(jsonConfig);
+              // 延迟清空，避免 UI 重建冲突
+              Future.microtask(() {
+                if (mounted) {
+                  _clearAndCloseChatMode();
+                }
+              });
             },
           ),
 
