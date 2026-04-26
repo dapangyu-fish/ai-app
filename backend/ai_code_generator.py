@@ -309,17 +309,27 @@ def _run_claude_cli(system_prompt, user_prompt, provider, output_path, tag="CLI"
             print(f"[{tag}] JSON file found, keys: {list(app_json.keys())}")
 
             import requests as _req
-            from store import _minio_upload
+            from store import _minio_presigned_put, _minio_presigned_get
 
             bucket = "ai-chat-temp"
-            # 直接上传并获取公开 URL（不使用预签名）
-            get_url = _minio_upload(bucket, output_filename, app_json)
+            # 生成预签名 PUT URL 用于上传
+            put_url = _minio_presigned_put(bucket, output_filename, expires_hours=1)
+            # 生成预签名 GET URL 用于下载（1小时有效期）
+            get_url = _minio_presigned_get(bucket, output_filename, expires_hours=1)
 
-            print(f"[{tag}] Uploaded to MinIO: {get_url}")
+            print(f"[{tag}] PUT URL: {put_url}")
+            print(f"[{tag}] GET URL (1h expiry): {get_url}")
 
-            if get_url:
+            # 使用预签名 PUT URL 上传
+            upload_resp = _req.put(
+                put_url,
+                data=json.dumps(app_json, ensure_ascii=False).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+
+            if upload_resp.status_code == 200:
                 yield f'data: {json.dumps({"has_json": True, "json_url": get_url}, ensure_ascii=False)}\n\n'
-                print(f"[{tag}] MinIO upload success: {get_url}")
+                print(f"[{tag}] MinIO upload success, presigned GET URL: {get_url}")
             else:
                 yield f'data: {json.dumps({"has_json": True, "json_app": app_json}, ensure_ascii=False)}\n\n'
         except Exception as e:
