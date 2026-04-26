@@ -218,6 +218,7 @@ class AiChatService {
       }
 
       String accumulated = '';
+      String accumulatedThinking = ''; // 累积思考过程
 
       // 用 LineSplitter 保证跨 TCP chunk 的行完整性
       await for (final line in response.stream
@@ -294,11 +295,12 @@ class AiChatService {
             continue;
           }
 
-          // 思考过程
+          // 思考过程（增量累积）
           if (data.containsKey('thinking')) {
             final thinking = data['thinking'] as String? ?? '';
             if (thinking.isNotEmpty) {
-              yield ChatEvent(thinking: thinking);
+              accumulatedThinking += thinking;
+              yield ChatEvent(thinking: accumulatedThinking);
             }
             continue;
           }
