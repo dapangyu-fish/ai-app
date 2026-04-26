@@ -407,12 +407,13 @@ class AiChatService {
       final token = AuthService.token;
       // 1. 获取预签名上传 / 下载 URL
       debugPrint('[AI_CHAT] 请求预签名 URL...');
+      debugPrint('[AI_CHAT] 请求地址: $_baseUrl/api/ai/upload_url');
       final urlResp = await http
           .get(
             Uri.parse('$_baseUrl/api/ai/upload_url'),
             headers: token != null ? {'Authorization': 'Bearer $token'} : null,
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 30));  // 增加超时时间到 30 秒
 
       debugPrint('[AI_CHAT] 预签名 URL 响应: ${urlResp.statusCode}');
 
