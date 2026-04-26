@@ -22,7 +22,7 @@ _minio_client = Minio(
 
 
 def _minio_upload(bucket, key, data, content_type="application/json"):
-    """上传文件到 MinIO（使用 Python SDK）"""
+    """上传文件到 MinIO（使用 Python SDK），返回预签名 URL（1小时有效期）"""
     if isinstance(data, dict):
         data = json.dumps(data, ensure_ascii=False, indent=2)
     data_bytes = data.encode("utf-8") if isinstance(data, str) else data
@@ -34,7 +34,11 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
         bucket, key, io.BytesIO(data_bytes), len(data_bytes),
         content_type=content_type,
     )
-    return f"{MINIO_PUBLIC_URL}/{bucket}/{key}"
+
+    # 返回预签名 GET URL（1小时有效期）而不是公开 URL
+    from datetime import timedelta
+    presigned_url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=1))
+    return presigned_url
 
 
 def _minio_presigned_put(bucket, key, expires_hours=1):
