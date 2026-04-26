@@ -401,8 +401,12 @@ class AiChatService {
     String contextContent;
 
     try {
+      debugPrint('[AI_CHAT] ========== 上传当前应用配置 ==========');
+      debugPrint('[AI_CHAT] JSON 大小: ${jsonStr.length} bytes');
+
       final token = AuthService.token;
       // 1. 获取预签名上传 / 下载 URL
+      debugPrint('[AI_CHAT] 请求预签名 URL...');
       final urlResp = await http
           .get(
             Uri.parse('$_baseUrl/api/ai/upload_url'),
@@ -410,12 +414,18 @@ class AiChatService {
           )
           .timeout(const Duration(seconds: 10));
 
+      debugPrint('[AI_CHAT] 预签名 URL 响应: ${urlResp.statusCode}');
+
       if (urlResp.statusCode == 200) {
         final urlData = json.decode(urlResp.body) as Map<String, dynamic>;
         final putUrl = urlData['put_url'] as String;
         final getUrl = urlData['get_url'] as String;
 
+        debugPrint('[AI_CHAT] PUT URL: ${putUrl.substring(0, 100)}...');
+        debugPrint('[AI_CHAT] GET URL: ${getUrl.substring(0, 100)}...');
+
         // 2. PUT 上传 JSON 到 MinIO
+        debugPrint('[AI_CHAT] 开始上传到 MinIO...');
         final uploadResp = await http
             .put(
               Uri.parse(putUrl),
@@ -424,25 +434,35 @@ class AiChatService {
             )
             .timeout(const Duration(seconds: 15));
 
+        debugPrint('[AI_CHAT] MinIO 上传响应: ${uploadResp.statusCode}');
+
         if (uploadResp.statusCode == 200) {
           // 成功 → 只放链接
+          debugPrint('[AI_CHAT] ✅ 上传成功，使用 URL 链接');
           contextContent =
               '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），'
               '后续对话请基于这个配置进行修改或分析：\n\n'
               '[json_app_url]$getUrl[/json_app_url]';
         } else {
+          debugPrint('[AI_CHAT] ❌ MinIO 上传失败: ${uploadResp.statusCode}');
+          debugPrint('[AI_CHAT] 响应体: ${uploadResp.body}');
           throw Exception('MinIO PUT failed: ${uploadResp.statusCode}');
         }
       } else {
+        debugPrint('[AI_CHAT] ❌ 获取预签名 URL 失败: ${urlResp.statusCode}');
+        debugPrint('[AI_CHAT] 响应体: ${urlResp.body}');
         throw Exception('upload_url API failed: ${urlResp.statusCode}');
       }
     } catch (e) {
       // 回退：直接内联 JSON
+      debugPrint('[AI_CHAT] ⚠️ 上传失败，回退到内联 JSON');
+      debugPrint('[AI_CHAT] 错误: $e');
       contextContent =
           '以下是我当前正在运行的 JSON-APP 完整配置，'
           '后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```';
     }
 
+    debugPrint('[AI_CHAT] ==========================================');
     return contextContent;
   }
 
