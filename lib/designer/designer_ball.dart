@@ -790,22 +790,12 @@ class _DesignerBallState extends State<DesignerBall>
 
   /// 原生语音识别 (Apple/Google)
   void _startNativeSpeech() {
-    debugPrint('[DesignerBall] 启动原生语音识别 (Apple/Google Speech)');
     if (_speech == null) return;
     try {
-      debugPrint('[DesignerBall] listen 参数: listenFor=60s, pauseFor=60s');
-      debugPrint('[DesignerBall] 当前语言: zh_CN');
-      debugPrint('[DesignerBall] partialResults: true');
 
       _speech!.listen(
         onResult: (result) {
           _nativeSpeechReceivedCallback = true;
-          debugPrint('[DesignerBall] ========== 收到识别结果 ==========');
-          debugPrint('[DesignerBall] recognizedWords: ${result.recognizedWords}');
-          debugPrint('[DesignerBall] finalResult: ${result.finalResult}');
-          debugPrint('[DesignerBall] confidence: ${result.confidence}');
-          debugPrint('[DesignerBall] hasConfidenceRating: ${result.hasConfidenceRating}');
-          debugPrint('[DesignerBall] =====================================');
 
           // 拼接累积文本和当前识别结果
           final currentText = result.recognizedWords;
@@ -815,18 +805,12 @@ class _DesignerBallState extends State<DesignerBall>
 
           // 优化：只在文本真正变化时才更新 UI
           if (_liveTranscript != fullText) {
-            debugPrint('[DesignerBall] 更新文本: $_liveTranscript -> $fullText');
             setState(() => _liveTranscript = fullText);
-            // 优化：减少滚动频率，只在 finalResult 时滚动
-            if (result.finalResult) {
-              _scrollToBottom();
-            }
           }
 
           // 场景2修复：收到 finalResult=true 时，原生引擎会自动停止
           // 如果用户还在按住球，重新启动监听以继续录音
           if (result.finalResult && _isListening && _pointerDown) {
-            debugPrint('[DesignerBall] 收到 finalResult，保存已识别文本并重新启动监听');
             // 保存已确认的文本
             _accumulatedTranscript = fullText;
             Future.delayed(const Duration(milliseconds: 100), () {
@@ -834,12 +818,6 @@ class _DesignerBallState extends State<DesignerBall>
                 _startNativeSpeech();
               }
             });
-          }
-        },
-        onSoundLevelChange: (level) {
-          // 添加音量监听，确认麦克风有输入
-          if (level > 0) {
-            debugPrint('[DesignerBall] 音量: $level (麦克风有输入)');
           }
         },
         localeId: 'zh_CN',
@@ -851,8 +829,6 @@ class _DesignerBallState extends State<DesignerBall>
           partialResults: true,
         ),
       );
-      debugPrint('[DesignerBall] listen 调用完成，等待用户说话');
-      debugPrint('[DesignerBall] 如果没有音量输出，说明麦克风没有输入');
     } catch (e) {
       debugPrint('[DesignerBall] Native listen error: $e');
       setState(() {
@@ -972,8 +948,10 @@ class _DesignerBallState extends State<DesignerBall>
       }
 
       _sherpaAsr.onResult = (text) {
-        setState(() => _liveTranscript = text);
-        _scrollToBottom();
+        // 优化：只在文本变化时更新 UI，减少不必要的重建
+        if (_liveTranscript != text) {
+          setState(() => _liveTranscript = text);
+        }
       };
 
       final ok = await _sherpaAsr.startListening();
