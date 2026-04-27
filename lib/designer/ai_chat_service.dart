@@ -23,14 +23,6 @@ class ChatEvent {
   ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage, this.pendingJsonUrl});
 }
 
-/// 清除显示文本中的标签（不暴露给用户看到）
-String _cleanDisplayContent(String text) {
-  return text
-      .replaceAll(RegExp(r'\[json_app_url\][^\[]*\[/json_app_url\]'), '')
-      .replaceAll(RegExp(r'\[request_action\][^\[]*\[/request_action\]'), '')
-      .trim();
-}
-
 /// AI 供应商信息
 class AiProvider {
   final String id;
@@ -316,8 +308,8 @@ class AiChatService {
               final finalText = data['final_content'] as String? ?? '';
               if (finalText.isNotEmpty) {
                 debugPrint('[AI_CHAT] 收到最终完整内容，长度: ${finalText.length}');
-                accumulated = finalText;  // 保留原始内容用于后续标签解析
-                yield ChatEvent(content: _cleanDisplayContent(accumulated));
+                accumulated = finalText;
+                yield ChatEvent(content: accumulated);
               }
               continue;
             }
@@ -387,8 +379,7 @@ class AiChatService {
           final content = data['content'] as String? ?? '';
           if (content.isNotEmpty) {
             accumulated += content;
-            yield ChatEvent(content: _cleanDisplayContent(accumulated));
-            // 注意：标签指令（[json_app_url]、[request_action]）的解析移到流结束后统一处理
+            yield ChatEvent(content: accumulated);
           }
         } catch (_) {}
       }
