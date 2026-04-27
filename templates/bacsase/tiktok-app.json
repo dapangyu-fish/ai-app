@@ -8,16 +8,21 @@
     "description": "TikTok 短视频 — 全屏沉浸式短视频，发现精彩，记录美好生活",
     "icon_url": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop"
   },
+  "dependencies": {
+    "lib_user": "^1.2.0"
+  },
   "global": {
     "variables": {
       "currentTab": "home",
       "likedIds": [],
-      "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop",
+      "userInfo": null,
+      "userName": "TikTok User",
+      "userAvatar": "",
       "lastPhoto": "",
       "videos": [
         {
           "id": "1",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
           "cover": "https://images.unsplash.com/photo-1570488344395-ff5ed6f0c7f4?w=400&h=700&fit=crop",
           "title": "烈焰狂奔 - 速度与激情",
           "author": "极限运动达人",
@@ -30,7 +35,7 @@
         },
         {
           "id": "2",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
           "cover": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=700&fit=crop",
           "title": "夏日海岛逃离计划",
           "author": "旅行日记",
@@ -43,7 +48,7 @@
         },
         {
           "id": "3",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
           "cover": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400&h=700&fit=crop",
           "title": "搞笑日常合集",
           "author": "快乐源泉",
@@ -56,7 +61,7 @@
         },
         {
           "id": "4",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
           "cover": "https://images.unsplash.com/photo-1471474052703-2ce85dd255c0?w=400&h=700&fit=crop",
           "title": "公路旅行vlog",
           "author": "车轮上的家",
@@ -69,7 +74,7 @@
         },
         {
           "id": "5",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
           "cover": "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400&h=700&fit=crop",
           "title": "烹饪翻车现场",
           "author": "厨房小白",
@@ -82,7 +87,7 @@
         },
         {
           "id": "6",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
           "cover": "https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=400&h=700&fit=crop",
           "title": "城市夜跑打卡",
           "author": "跑步小达人",
@@ -130,8 +135,25 @@
         "params": [],
         "return": "None",
         "logic": [
-          { "call": "@pick_image", "args": { "bind": "$.global.avatarUrl" } },
+          { "call": "@pick_image", "args": { "bind": "$.global._tempAvatar" } },
+          { "call": "@lib_user.updateAvatar", "args": { "imagePath": "{{ global._tempAvatar }}" } },
+          { "call": "@lib_user.getUserAvatar", "args": { "bind": "$.global.userAvatar" } },
           { "call": "@show_toast", "args": { "message": "头像已更新 ✨" } }
+        ]
+      },
+      "editProfile": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          { "call": "@prompt", "args": { "title": "修改用户名", "message": "请输入新的用户名", "bind": "$.global._newName" } },
+          { "call": "@if", "args": {
+            "condition": { "!=": [{ "var": "$.global._newName" }, ""] },
+            "then": [
+              { "call": "@lib_user.updateName", "args": { "newName": "{{ global._newName }}" } },
+              { "call": "@lib_user.getUserName", "args": { "bind": "$.global.userName" } },
+              { "call": "@show_toast", "args": { "message": "用户名已更新 ✨" } }
+            ]
+          }}
         ]
       },
       "openCamera": {
@@ -145,7 +167,10 @@
     }
   },
   "steps": [
-    { "call": "@print", "args": { "value": "TikTok v3 启动成功！" } }
+    { "call": "@print", "args": { "value": "TikTok v3 启动成功！" } },
+    { "call": "@lib_user.loadUserInfo", "args": { "bind": "$.global.userInfo" } },
+    { "call": "@lib_user.getUserName", "args": { "bind": "$.global.userName" } },
+    { "call": "@lib_user.getUserAvatar", "args": { "bind": "$.global.userAvatar" } }
   ],
   "ui": {
     "screens": [
@@ -426,7 +451,7 @@
               },
               {
                 "type": "text",
-                "value": "TikTok User",
+                "value": "{{ global.userName }}",
                 "style": { "fontSize": 18, "fontWeight": "bold", "color": "#FFFFFF" },
                 "position": { "type": "flex", "flex": 1 }
               },
@@ -455,7 +480,7 @@
                     "children": [
                       {
                         "type": "image",
-                        "url": "{{ global.avatarUrl }}",
+                        "url": "{{ global.userAvatar }}",
                         "width": 88,
                         "height": 88,
                         "borderRadius": 44
@@ -470,12 +495,12 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "TikTok User",
+                        "value": "{{ global.userName }}",
                         "style": { "fontSize": 20, "fontWeight": "bold", "color": "#FFFFFF" }
                       },
                       {
                         "type": "text",
-                        "value": "@tiktok_user",
+                        "value": "@{{ global.userName }}",
                         "style": { "fontSize": 14, "color": "#888888" }
                       },
                       {
@@ -556,7 +581,7 @@
                     "variant": "outlined",
                     "style": { "textColor": "#FFFFFF", "borderRadius": 20, "fontSize": 14 },
                     "position": { "type": "flex", "flex": 1 },
-                    "action": { "call": "@show_toast", "args": { "message": "编辑功能开发中 ✏️" } }
+                    "action": { "call": "@global.editProfile", "args": {} }
                   },
                   { "type": "spacer", "width": 12 },
                   {
