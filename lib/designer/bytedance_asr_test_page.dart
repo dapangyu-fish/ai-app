@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'bytedance_asr_service.dart';
+import '../config/app_config.dart';
 
 /// 豆包ASR测试页面
 class ByteDanceAsrTestPage extends StatefulWidget {
@@ -68,8 +69,8 @@ class _ByteDanceAsrTestPageState extends State<ByteDanceAsrTestPage> {
       return;
     }
 
-    // 连接到后端服务器（使用与AI服务相同的地址）
-    const serverUrl = 'https://app-backend.dapangyu.work';
+    // 使用统一配置管理的后端地址
+    final serverUrl = AppConfig.bytedanceAsrUrl;
     final success = await _asrService.connect(serverUrl, token);
 
     if (!success) {

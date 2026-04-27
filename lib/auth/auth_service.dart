@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 /// 后端鉴权服务 — 所有请求通过 Flask 后端代理到 Supabase
 class AuthService {
-  static const String _baseUrl = 'https://app-backend.dapangyu.work';
+  // 使用统一配置管理的后端地址
+  static String get _baseUrl => AppConfig.backendUrl;
   static const String _tokenKey = 'auth_access_token';
   static const String _refreshKey = 'auth_refresh_token';
   static const String _userKey = 'auth_user';
@@ -26,7 +28,8 @@ class AuthService {
     if (u['avatar_url'] is String) {
       String url = u['avatar_url'];
       if (url.contains('127.0.0.1')) {
-        url = url.replaceAll(RegExp(r'http://127\.0\.0\.1:\d+'), 'https://app-auth.dapangyu.work');
+        // 使用统一配置管理的Supabase地址
+        url = url.replaceAll(RegExp(r'http://127\.0\.0\.1:\d+'), AppConfig.supabaseUrl);
       }
       u['avatar_url'] = url;
     }

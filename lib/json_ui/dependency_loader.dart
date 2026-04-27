@@ -5,14 +5,16 @@ import 'package:flutter/material.dart';
 import 'http_client.dart';
 import 'semver.dart';
 import 'cache_manager.dart';
+import '../config/app_config.dart';
 
 /// Registry 配置
 class RegistryConfig {
-  static const String defaultRegistry = 'https://registry.dapangyu.work';
+  // 使用统一配置管理的Registry地址
+  static String get defaultRegistry => AppConfig.registryUrl;
 
   // 支持多源（未来扩展）
-  static const Map<String, String> registries = {
-    'default': 'https://registry.dapangyu.work',
+  static Map<String, String> get registries => {
+    'default': AppConfig.registryUrl,
     'local': 'http://localhost:3254',
   };
 

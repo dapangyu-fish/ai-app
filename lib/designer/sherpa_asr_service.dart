@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class AsrModelInfo {
   final String id;
@@ -31,7 +32,7 @@ class SherpaAsrService {
   static SherpaAsrService get instance => _instance ??= SherpaAsrService._();
   SherpaAsrService._();
 
-  static const _ossBase = 'https://app-oss-endpoint.dapangyu.work/models';
+  static String get _ossBase => AppConfig.ossModelsBaseUrl;
   static const _modelKey = 'asr_model_id';
 
   static const List<AsrModelInfo> availableModels = [

@@ -9,6 +9,7 @@ import 'chat_overlay.dart';
 import 'sherpa_asr_service.dart';
 import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
+import '../config/app_config.dart';
 
 /// 语音识别方式枚举
 enum AsrMode {
@@ -174,8 +175,9 @@ class _DesignerBallState extends State<DesignerBall>
         return;
       }
 
-      // 连接到后端服务器（使用与AI服务相同的地址）
-      const serverUrl = 'https://app-backend.dapangyu.work';
+      // 使用统一配置管理的后端地址
+      final serverUrl = AppConfig.bytedanceAsrUrl;
+      debugPrint('[DesignerBall] Connecting to ByteDance ASR at: $serverUrl');
       final success = await _bytedanceAsr.connect(serverUrl, token);
 
       if (success) {

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
+import '../config/app_config.dart';
 
 /// AI 对话事件
 class ChatEvent {
@@ -47,7 +48,8 @@ class AiProvider {
 
 /// 管理对话历史并与后端 AI 服务通信（SSE 流式，支持中断）
 class AiChatService {
-  static const String _baseUrl = 'https://app-backend.dapangyu.work';
+  // 使用统一配置管理的后端地址
+  static String get _baseUrl => AppConfig.backendUrl;
   static const String _providerKey = 'ai_provider';
   static const String _sessionKey = 'ai_session_id';
   static const String _sessionUsedKey = 'ai_session_used';
