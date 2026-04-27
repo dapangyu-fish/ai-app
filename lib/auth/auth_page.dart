@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 
 /// 登录 / 注册页面
@@ -24,6 +25,20 @@ class _AuthPageState extends State<AuthPage> {
   String? _error;
   String? _info;
   bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastEmail();
+  }
+
+  Future<void> _loadLastEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastEmail = prefs.getString('auth_last_email');
+    if (lastEmail != null && mounted) {
+      _emailCtrl.text = lastEmail;
+    }
+  }
 
   @override
   void dispose() {
@@ -55,6 +70,7 @@ class _AuthPageState extends State<AuthPage> {
     try {
       if (_isLogin) {
         await AuthService.signIn(email: email, password: password);
+        await _saveLastEmail(email);
         widget.onAuthSuccess();
       } else {
         final result = await AuthService.register(
@@ -75,6 +91,7 @@ class _AuthPageState extends State<AuthPage> {
             ),
           );
         } else {
+          await _saveLastEmail(email);
           widget.onAuthSuccess();
         }
       }
@@ -86,7 +103,10 @@ class _AuthPageState extends State<AuthPage> {
             MaterialPageRoute(
               builder: (_) => OtpVerifyPage(
                 email: _emailCtrl.text.trim(),
-                onVerified: widget.onAuthSuccess,
+                onVerified: () async {
+                  await _saveLastEmail(_emailCtrl.text.trim());
+                  widget.onAuthSuccess();
+                },
               ),
             ),
           );
@@ -97,6 +117,11 @@ class _AuthPageState extends State<AuthPage> {
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  Future<void> _saveLastEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_last_email', email);
   }
 
   @override
@@ -622,6 +647,40 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 12),
             Text(user?['email'] ?? '',
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+            const SizedBox(height: 8),
+            // User Role Badge
+            Builder(builder: (context) {
+              final role = user?['role']?.toString() ?? 'user';
+              String roleText = '普通用户';
+              Color roleColor = cs.surfaceContainerHighest;
+              Color roleTextColor = cs.onSurfaceVariant;
+              
+              if (role == 'admin') {
+                roleText = '管理员';
+                roleColor = cs.primaryContainer;
+                roleTextColor = cs.onPrimaryContainer;
+              } else if (role == 'pro') {
+                roleText = '高级用户';
+                roleColor = cs.tertiaryContainer;
+                roleTextColor = cs.onTertiaryContainer;
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: roleColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  roleText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: roleTextColor,
+                  ),
+                ),
+              );
+            }),
             const SizedBox(height: 36),
 
             // Username

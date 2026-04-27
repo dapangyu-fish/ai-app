@@ -51,7 +51,6 @@
     "type": "app",
     "description": "应用描述",
     "author": "作者",
-    "icon_url": "https://example.com/icon.png",
     "exports": []
   },
   "dependencies": {
@@ -73,34 +72,8 @@
 | `meta.name` | 是 | 模块唯一标识（包名） |
 | `meta.version` | 是 | 模块版本号（semver: `MAJOR.MINOR.PATCH`） |
 | `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
-| `meta.icon_url` | 否 | 应用/组件的图标图片 URL，可为空 |
 | `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
-| `dependencies` | 否 | 依赖声明，支持简化格式（推荐）和完整格式 |
-
-#### 依赖声明格式
-
-**简化格式（推荐）**：
-```json
-"dependencies": {
-  "common-ui": "^1.0.0",
-  "data-utils": "~1.2.0",
-  "mycompany/frontend/ui-kit": ">=1.0.0"
-}
-```
-
-框架会自动通过 Registry 服务（`https://registry.dapangyu.work`）解析依赖的下载 URL。
-
-**完整格式（兼容旧版）**：
-```json
-"dependencies": {
-  "common-ui": {
-    "url": "https://app-oss-endpoint.dapangyu.work/json-component/common-ui/common-ui-1.0.0.json",
-    "version": "^1.0.0"
-  }
-}
-```
-
-如果提供了 `url` 字段，框架会直接使用该 URL，不通过 Registry 解析。
+| `dependencies` | 否 | 依赖声明，key 为依赖别名，value 含 `url` 和 `version` 约束 |
 
 #### 模块类型
 
@@ -120,24 +93,6 @@
 | `">=1.0.0"` | 最低版本 |
 | `">=1.0.0 <2.0.0"` | 范围约束 |
 | `"*"` | 任意版本 |
-
-#### 命名空间规则
-
-| 类型 | 格式 | 示例 | 权限 |
-|------|------|------|------|
-| 官方包 | 无 `/` | `common-ui`, `data-utils` | 只有 admin 可发布 |
-| 用户包（一级） | `namespace/app` | `mycompany/app-name` | 命名空间所有者 |
-| 用户包（二级） | `namespace/sub/app` | `mycompany/frontend/ui-kit` | 命名空间所有者 |
-
-**首次发布用户包时**，需要先创建命名空间：
-```bash
-POST https://registry.dapangyu.work/namespace/create
-Authorization: Bearer <token>
-{
-  "namespace": "mycompany",
-  "sub_namespace": "frontend"  # 可选
-}
-```
 
 #### 跨模块引用规则
 
@@ -233,9 +188,6 @@ Authorization: Bearer <token>
 | `@set` | `{ "var": "$.global.xxx", "value": ... }` | 设置变量（value 支持 JsonLogic 表达式） |
 | `@navigate` | `{ "screen": "screenId" }` | 页面跳转 |
 | `@delay` | `{ "ms": 1000 }` | 延迟指定毫秒 |
-| `@get_app_config` | `{ "bind": "global.config" }` | 获取当前正在运行的完整 JSON App 配置并绑定到变量，返回该对象 |
-| `@apply_app_config` | `{ "config": {expr} }` | 修改内存中当前 App 的配置并重载渲染（不保存到文件） |
-| `@save_app_config` | `{ "config": {expr} }` | 将配置持久化保存到本地设备，参数为空则保存当前内存中的最新配置 |
 
 ### 4.2 控制流
 
@@ -350,131 +302,6 @@ Authorization: Bearer <token>
 |------|------|------|
 | `@show_toast` | `{ "message": "保存成功" }` | 底部 SnackBar 提示 |
 | `@show_dialog` | `{ "title": "确认", "message": "确定删除？" }` | 弹窗，返回 `true`/`false` |
-| `@take_photo` | `{ "bind": "global.photo" }` | 调用摄像头拍照，返回图片路径并绑定到变量 |
-| `@pick_image` | `{ "bind": "global.photo" }` | 打开相册选择图片，返回图片路径并绑定到变量 |
-
-**@take_photo / @pick_image 参数**：
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `bind` | `string` | — | 将图片路径绑定到指定变量 |
-| `max_width` | `number` | `1920` | 最大宽度（像素） |
-| `max_height` | `number` | `1920` | 最大高度（像素） |
-| `quality` | `number` | `85` | 图片质量（1-100） |
-
-> `@take_photo` 在摄像头不可用时自动 fallback 到相册选择。
-
-### 4.9 随机数
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `@random` | `{ "min": 1, "max": 100 }` | `int` | 随机整数 [min, max] |
-| `@random_float` | `{ "min": 0.0, "max": 1.0 }` | `double` | 随机浮点数 [min, max) |
-| `@random_bool` | — | `bool` | 随机布尔值 |
-| `@random_chars` | `{ "length": 8, "charset": "alphanumeric" }` | `String` | 随机字符序列 |
-| `@uuid` | — | `String` | 生成 UUID v4 |
-| `@random_pick` | `{ "list": {expr} }` | `dynamic` | 从数组中随机取一个元素 |
-
-**@random_chars 的 charset 选项**：
-
-| charset | 字符集 |
-|---------|--------|
-| `numeric` | `0-9` |
-| `alpha` | `a-z A-Z` |
-| `upper` | `A-Z` |
-| `lower` | `a-z` |
-| `hex` | `0-9 a-f` |
-| `alphanumeric`（默认） | `0-9 a-z A-Z` |
-
-**示例**：
-```json
-{ "call": "@random", "args": { "min": 1, "max": 6 }, "assign": "global.dice" }
-{ "call": "@random_chars", "args": { "length": 6, "charset": "numeric" }, "assign": "global.code" }
-{ "call": "@uuid", "args": {}, "assign": "global.id" }
-```
-
-### 4.10 时间日期
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `@timestamp` | — | `int` | 当前毫秒时间戳 |
-| `@date_format` | `{ "timestamp": 1713523200000, "format": "YYYY-MM-DD HH:mm:ss" }` | `String` | 格式化时间戳 |
-
-**format 占位符**：`YYYY` 年、`MM` 月、`DD` 日、`HH` 时、`mm` 分、`ss` 秒
-
-**示例**：
-```json
-{ "call": "@timestamp", "args": {}, "assign": "global.now" }
-{ "call": "@date_format", "args": { "format": "YYYY-MM-DD" }, "assign": "global.today" }
-```
-
-### 4.11 字符串扩展
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `@str_repeat` | `{ "value": "ab", "count": 3 }` | `"ababab"` | 重复字符串 |
-| `@str_reverse` | `{ "value": "hello" }` | `"olleh"` | 反转字符串 |
-| `@str_pad` | `{ "value": "5", "length": 4, "pad": "0", "direction": "left" }` | `"0005"` | 字符串补位 |
-| `@str_join` | `{ "list": ["a","b"], "separator": "," }` | `"a,b"` | 数组连接为字符串 |
-| `@str_capitalize` | `{ "value": "hello" }` | `"Hello"` | 首字母大写 |
-| `@str_count` | `{ "value": "hello", "search": "l" }` | `2` | 统计子串出现次数 |
-| `@str_index_of` | `{ "value": "hello", "search": "l" }` | `2` | 首次出现位置 |
-| `@str_last_index_of` | `{ "value": "hello", "search": "l" }` | `3` | 最后出现位置 |
-| `@str_between` | `{ "value": "<b>hi</b>", "start": "<b>", "end": "</b>" }` | `"hi"` | 提取两标记间文本 |
-| `@str_mask` | `{ "value": "13812345678", "start": 3, "end": 7, "mask": "*" }` | `"138****5678"` | 字符串脱敏 |
-
-**@str_pad 的 direction**：`left`（左补位）/ `right`（右补位，默认）
-
-### 4.12 数组扩展
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `@list_shuffle` | `{ "var": "global.list" }` | `List` | 随机打乱数组（原地修改） |
-| `@list_sample` | `{ "var": "global.list", "count": 3 }` | `List` | 随机取 N 个元素（不修改原数组） |
-| `@list_unique` | `{ "var": "global.list" }` | `List` | 数组去重（原地修改） |
-| `@list_flatten` | `{ "var": "global.list", "depth": 1 }` | `List` | 数组扁平化（原地修改） |
-| `@list_sort` | `{ "var": "global.list", "key": "age", "desc": true }` | `List` | 排序（原地修改） |
-| `@list_reverse` | `{ "var": "global.list" }` | `List` | 反转数组（原地修改） |
-| `@list_slice` | `{ "var": "global.list", "start": 1, "end": 4 }` | `List` | 切片（原地修改） |
-
-### 4.13 本地存储
-
-| 函数 | 参数 | 说明 |
-|------|------|------|
-| `@storage_set` | `{ "key": "userName", "value": "张三" }` | 写入本地存储 |
-| `@storage_get` | `{ "key": "userName" }` | 读取本地存储 |
-| `@storage_remove` | `{ "key": "userName" }` | 删除指定 key |
-| `@storage_clear` | — | 清空所有本地存储 |
-
-### 4.14 用户信息
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `@get_user_info` | `{ "bind": "global.user" }` | `Map?` | 获取当前登录用户信息并写入 bind 变量，未登录返回 null |
-| `@get_auth_token` | `{ "bind": "global.token" }` | `String?` | 获取当前 access token 并写入 bind 变量，未登录返回 null |
-| `@is_logged_in` | `{ "bind": "global.logged" }` | `bool` | 检查登录状态并写入 bind 变量 |
-| `@logout` | — | `null` | 登出当前用户 |
-| `@refresh_user` | — | `Map?` | 从后端重新获取最新用户信息，失败返回 null |
-| `@update_profile` | `{ "username": "新名称", "avatar_url": "https://..." }` | `Map` | 更新用户名或头像 URL，失败返回含 error 字段 |
-| `@upload_avatar` | `{ "base64": "..." }` | `String?` | 上传 base64 头像，返回头像 URL，失败返回 null |
-
-**@get_user_info 返回字段**：
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | `String` | 用户唯一 ID |
-| `email` | `String` | 邮箱 |
-| `username` | `String` | 用户名 |
-| `avatar_url` | `String?` | 头像 URL |
-| `role` | `String?` | 用户角色 |
-
-**示例**：
-```json
-{ "call": "@get_user_info", "args": { "bind": "global.user" } }
-{ "call": "@get_auth_token", "args": { "bind": "global.token" } }
-{ "call": "@is_logged_in", "args": { "bind": "global.is_logged" } }
-{ "call": "@update_profile", "args": { "username": "{{ global.new_name }}" }, "assign": "global.result" }
-```
 
 ---
 
@@ -708,11 +535,6 @@ Authorization: Bearer <token>
 }
 ```
 
-**layout**：`row`（默认）/ `column`
-
-> **注意**：container 的默认 layout 是 `row`（横排），不是 `column`。如果需要子元素竖排显示，必须显式指定 `"layout": "column"`。
-```
-
 ### 6.8 action 与双向绑定
 
 **action 格式**：
@@ -807,109 +629,5 @@ templates/                         # JSON DSL 示例配置
 ├── test_collector.json            # 文本收藏夹 app
 ├── demo_5pages.json               # 5 页记事本 app
 ├── demo_media.json                # 图片+视频 demo
-├── demo_video_browser.json        # 视频浏览器 app（HTTP API + 列表 + 播放）
-├── demo_super_app.json            # Super App（Tab 导航 + 本地存储）
-├── demo_with_deps.json            # 依赖引用 demo（引用 common-ui）
-├── xiaohongshu-demo.json          # 小红书风格 demo
-├── lib_common_ui.json             # 通用 UI 函数库（toast/confirm/格式化）
-└── lib_data_utils.json            # 数据处理工具库（随机/UUID/时间/字符串/数组）
-```
-
----
-
-## 8. 官方组件库
-
-### 8.1 data-utils — 数据处理工具库
-
-**模块名**：`data-utils`
-**版本**：`1.0.0`
-**类型**：`library`
-**依赖声明**：
-```json
-"dependencies": {
-  "data-utils": {
-    "url": "https://app-backend.dapangyu.work/download/lib_data_utils.json",
-    "version": "^1.0.0"
-  }
-}
-```
-
-#### 随机数函数
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `randomInt` | `min`, `max` | `int` | 随机整数 [min, max] |
-| `randomFloat` | `min`, `max` | `double` | 随机浮点数 [min, max) |
-| `randomBool` | — | `bool` | 随机布尔值 |
-| `randomChars` | `length`, `charset` | `String` | 随机字符序列 |
-| `randomCode` | `length` | `String` | 随机数字验证码 |
-| `randomHex` | `length` | `String` | 随机十六进制字符串 |
-| `uuid` | — | `String` | 生成 UUID v4 |
-| `randomPick` | `list` | `dynamic` | 从数组中随机取一个元素 |
-
-#### 时间日期函数
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `timestamp` | — | `int` | 当前毫秒时间戳 |
-| `dateFormat` | `timestamp`, `format` | `String` | 格式化时间戳 |
-| `nowFormatted` | `format` | `String` | 当前时间格式化 |
-
-#### 字符串处理函数
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `strRepeat` | `value`, `count` | `String` | 重复字符串 |
-| `strReverse` | `value` | `String` | 反转字符串 |
-| `strPadLeft` | `value`, `length`, `pad` | `String` | 左补位 |
-| `strPadRight` | `value`, `length`, `pad` | `String` | 右补位 |
-| `strJoin` | `list`, `separator` | `String` | 数组连接为字符串 |
-| `strCapitalize` | `value` | `String` | 首字母大写 |
-| `strCount` | `value`, `search` | `int` | 统计子串出现次数 |
-| `strIndexOf` | `value`, `search` | `int` | 首次出现位置 |
-| `strLastIndexOf` | `value`, `search` | `int` | 最后出现位置 |
-| `strBetween` | `value`, `start`, `end` | `String` | 提取两标记间文本 |
-| `strMask` | `value`, `start`, `end`, `mask` | `String` | 自定义脱敏 |
-| `strMaskPhone` | `phone` | `String` | 手机号脱敏 `138****5678` |
-| `strMaskEmail` | `email` | `String` | 邮箱脱敏 `z***@example.com` |
-| `strMaskCard` | `cardNo` | `String` | 银行卡号脱敏 |
-
-#### 数组处理函数
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `listShuffle` | `var` | `List` | 随机打乱数组 |
-| `listSample` | `var`, `count` | `List` | 随机取 N 个元素 |
-| `listUnique` | `var` | `List` | 数组去重 |
-| `listFlatten` | `var`, `depth` | `List` | 数组扁平化 |
-| `listSort` | `var`, `key`, `desc` | `List` | 排序（key 为对象属性名，desc 为是否降序） |
-| `listReverse` | `var` | `List` | 反转数组 |
-| `listSlice` | `var`, `start`, `end` | `List` | 切片 |
-
-#### 组合工具函数
-
-| 函数 | 参数 | 返回值 | 说明 |
-|------|------|--------|------|
-| `generateId` | `prefix` | `String` | 生成带前缀的唯一 ID（时间戳+随机数） |
-| `generateOrderNo` | — | `String` | 生成订单号 `ORD20260419123456789012` |
-
-#### 使用示例
-
-```json
-{
-  "dependencies": {
-    "data-utils": {
-      "url": "https://app-backend.dapangyu.work/download/lib_data_utils.json",
-      "version": "^1.0.0"
-    }
-  },
-  "steps": [
-    { "call": "@data-utils.randomInt", "args": { "min": 1, "max": 100 }, "assign": "global.luckyNumber" },
-    { "call": "@data-utils.uuid", "args": {}, "assign": "global.sessionId" },
-    { "call": "@data-utils.randomCode", "args": { "length": 6 }, "assign": "global.verifyCode" },
-    { "call": "@data-utils.nowFormatted", "args": { "format": "YYYY-MM-DD HH:mm:ss" }, "assign": "global.currentTime" },
-    { "call": "@data-utils.strMaskPhone", "args": { "phone": "13812345678" }, "assign": "global.maskedPhone" },
-    { "call": "@data-utils.generateOrderNo", "args": {}, "assign": "global.orderNo" }
-  ]
-}
+└── demo_video_browser.json        # 视频浏览器 app（HTTP API + 列表 + 播放）
 ```

@@ -1,0 +1,469 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "lib_database",
+    "version": "1.0.2",
+    "type": "library",
+    "description": "Drift 数据库组件库 — 基于 SQLite 的持久化存储，每个 APP 自动隔离数据库空间",
+    "author": "AI Designer",
+    "exports": [
+      "createTable",
+      "insert",
+      "query",
+      "queryOne",
+      "update",
+      "delete",
+      "count",
+      "kvSet",
+      "kvGet",
+      "kvDelete",
+      "upsert",
+      "queryAll",
+      "deleteAll",
+      "initDiary",
+      "initContacts"
+    ]
+  },
+  "global": {
+    "variables": {
+      "_result": null,
+      "_rows": [],
+      "_count": 0
+    },
+    "functions": {
+      "createTable": {
+        "params": [
+          "table",
+          "columns"
+        ],
+        "description": "创建数据表（如果不存在）。columns 是列定义数组，每项为 {name, type, primary}",
+        "logic": [
+          {
+            "call": "@db_create_table",
+            "args": {
+              "table": "{{ params.table }}",
+              "columns": "{{ params.columns }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "insert": {
+        "params": [
+          "table",
+          "data"
+        ],
+        "description": "向表中插入一条记录。data 是一个 Map",
+        "logic": [
+          {
+            "call": "@db_insert",
+            "args": {
+              "table": "{{ params.table }}",
+              "data": "{{ params.data }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "query": {
+        "params": [
+          "table",
+          "where",
+          "whereArgs",
+          "orderBy",
+          "limit"
+        ],
+        "description": "查询表中的记录，结果绑定到 bind 指定的变量",
+        "logic": [
+          {
+            "call": "@db_query",
+            "args": {
+              "table": "{{ params.table }}",
+              "where": "{{ params.where }}",
+              "whereArgs": "{{ params.whereArgs }}",
+              "orderBy": "{{ params.orderBy }}",
+              "limit": "{{ params.limit }}"
+            },
+            "assign": "global._rows"
+          },
+          {
+            "expression": {
+              "var": "global._rows"
+            }
+          }
+        ]
+      },
+      "queryOne": {
+        "params": [
+          "table",
+          "where",
+          "whereArgs"
+        ],
+        "description": "查询单条记录",
+        "logic": [
+          {
+            "call": "@db_query",
+            "args": {
+              "table": "{{ params.table }}",
+              "where": "{{ params.where }}",
+              "whereArgs": "{{ params.whereArgs }}",
+              "limit": 1
+            },
+            "assign": "global._rows"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "expression": {
+                    "var": "global._rows.0"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "expression": null
+                }
+              ],
+              "condition": {
+                ">": [
+                  {
+                    "list_length": {
+                      "var": "global._rows"
+                    }
+                  },
+                  0
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "queryAll": {
+        "params": [
+          "table",
+          "orderBy"
+        ],
+        "description": "查询表中所有记录",
+        "logic": [
+          {
+            "call": "@db_query",
+            "args": {
+              "table": "{{ params.table }}",
+              "orderBy": "{{ params.orderBy }}"
+            },
+            "assign": "global._rows"
+          },
+          {
+            "expression": {
+              "var": "global._rows"
+            }
+          }
+        ]
+      },
+      "update": {
+        "params": [
+          "table",
+          "data",
+          "where",
+          "whereArgs"
+        ],
+        "description": "更新表中符合条件的记录",
+        "logic": [
+          {
+            "call": "@db_update",
+            "args": {
+              "table": "{{ params.table }}",
+              "data": "{{ params.data }}",
+              "where": "{{ params.where }}",
+              "whereArgs": "{{ params.whereArgs }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "params": [
+          "table",
+          "where",
+          "whereArgs"
+        ],
+        "description": "删除表中符合条件的记录",
+        "logic": [
+          {
+            "call": "@db_delete",
+            "args": {
+              "table": "{{ params.table }}",
+              "where": "{{ params.where }}",
+              "whereArgs": "{{ params.whereArgs }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "deleteAll": {
+        "params": [
+          "table"
+        ],
+        "description": "清空表中所有记录",
+        "logic": [
+          {
+            "call": "@db_delete",
+            "args": {
+              "table": "{{ params.table }}",
+              "where": "1=1"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "count": {
+        "params": [
+          "table",
+          "where",
+          "whereArgs"
+        ],
+        "description": "统计表中符合条件的记录数量",
+        "logic": [
+          {
+            "call": "@db_count",
+            "args": {
+              "table": "{{ params.table }}",
+              "where": "{{ params.where }}",
+              "whereArgs": "{{ params.whereArgs }}"
+            },
+            "assign": "global._count"
+          },
+          {
+            "expression": {
+              "var": "global._count"
+            }
+          }
+        ]
+      },
+      "kvSet": {
+        "params": [
+          "key",
+          "value"
+        ],
+        "description": "键值存储 - 设置",
+        "logic": [
+          {
+            "call": "@db_kv_set",
+            "args": {
+              "key": "{{ params.key }}",
+              "value": "{{ params.value }}"
+            }
+          }
+        ]
+      },
+      "kvGet": {
+        "params": [
+          "key"
+        ],
+        "description": "键值存储 - 获取",
+        "logic": [
+          {
+            "call": "@db_kv_get",
+            "args": {
+              "key": "{{ params.key }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "kvDelete": {
+        "params": [
+          "key"
+        ],
+        "description": "键值存储 - 删除",
+        "logic": [
+          {
+            "call": "@db_kv_delete",
+            "args": {
+              "key": "{{ params.key }}"
+            }
+          }
+        ]
+      },
+      "upsert": {
+        "params": [
+          "table",
+          "data",
+          "keyField"
+        ],
+        "description": "插入或更新：根据 keyField 判断是否已存在",
+        "logic": [
+          {
+            "call": "@db_count",
+            "args": {
+              "table": "{{ params.table }}",
+              "where": "\"{{ params.keyField }}\" = ?",
+              "whereArgs": [
+                "{{ params.data[params.keyField] }}"
+              ]
+            },
+            "assign": "global._count"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@db_update",
+                  "args": {
+                    "table": "{{ params.table }}",
+                    "data": "{{ params.data }}",
+                    "where": "\"{{ params.keyField }}\" = ?",
+                    "whereArgs": [
+                      "{{ params.data[params.keyField] }}"
+                    ]
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@db_insert",
+                  "args": {
+                    "table": "{{ params.table }}",
+                    "data": "{{ params.data }}"
+                  }
+                }
+              ],
+              "condition": {
+                ">": [
+                  {
+                    "var": "global._count"
+                  },
+                  0
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "initDiary": {
+        "params": [],
+        "description": "初始化日记表结构",
+        "logic": [
+          {
+            "call": "@db_create_table",
+            "args": {
+              "table": "diary",
+              "columns": [
+                {
+                  "name": "id",
+                  "type": "TEXT",
+                  "primary": "true"
+                },
+                {
+                  "name": "title",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "content",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "timestamp",
+                  "type": "INTEGER"
+                },
+                {
+                  "name": "date",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "mood",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "tags",
+                  "type": "TEXT"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "initContacts": {
+        "params": [],
+        "description": "初始化通讯录表结构",
+        "logic": [
+          {
+            "call": "@db_create_table",
+            "args": {
+              "table": "contacts",
+              "columns": [
+                {
+                  "name": "id",
+                  "type": "TEXT",
+                  "primary": "true"
+                },
+                {
+                  "name": "name",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "phone",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "email",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "company",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "notes",
+                  "type": "TEXT"
+                },
+                {
+                  "name": "created_at",
+                  "type": "INTEGER"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  },
+  "appid": "37ad4b86-31a7-4c25-a228-471859440071"
+}

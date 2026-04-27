@@ -30,6 +30,15 @@ AI_PROVIDERS = {
             "default": "deepseek-chat",
         },
         "agent_model": "deepseek-chat",
+        "cli_env": {
+            "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": DEEPSEEK_KEY,
+            "ANTHROPIC_MODEL": "deepseek-chat",
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-chat",
+            "API_TIMEOUT_MS": "600000",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        },
+        "cli_model": "deepseek-chat",
     },
     "glm": {
         "id": "glm",
@@ -46,6 +55,40 @@ AI_PROVIDERS = {
             "reasoning": os.environ.get("GLM_ANTHROPIC_REASONING_MODEL", "glm-5.1"),
         },
         "agent_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
+        "cli_env": {
+            "ANTHROPIC_BASE_URL": os.environ.get("GLM_ANTHROPIC_BASE_URL", "http://14.103.26.181"),
+            "ANTHROPIC_AUTH_TOKEN": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", "sk-FUsE9Q3QaEjHo7qnad7ffBINpQHkkETW16K8OXl26SHfRUfN"),
+            "ANTHROPIC_MODEL": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": os.environ.get("GLM_ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
+            "API_TIMEOUT_MS": "600000",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        },
+        "cli_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
+    },
+    "cc": {
+        "id": "cc",
+        "name": "CC-4.7",
+        "description": "CC Anthropic API Proxy",
+        "type": "anthropic",
+        "base_url": os.environ.get("CC_ANTHROPIC_BASE_URL", "https://cc-vibe.com"),
+        "api_key": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", "sk-68900ea64051c89cbba31fa0a3f4198fdaffd8272c3d6b2ce3acf82bd098e6a5"),
+        "models": {
+            "default": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
+            "opus": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
+        },
+        "agent_model": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
+        "extra_body": {
+            "skipDangerousModePermissionPrompt": True
+        },
+        "cli_env": {
+            "ANTHROPIC_BASE_URL": os.environ.get("CC_ANTHROPIC_BASE_URL", "https://cc-vibe.com"),
+            "ANTHROPIC_AUTH_TOKEN": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", "sk-68900ea64051c89cbba31fa0a3f4198fdaffd8272c3d6b2ce3acf82bd098e6a5"),
+            "ANTHROPIC_MODEL": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
+            "API_TIMEOUT_MS": "600000",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        },
+        "cli_model": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
     },
 }
 
@@ -71,12 +114,15 @@ PORT = int(os.environ.get("PORT", "5566"))
 
 # 路径配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.realpath(os.path.join(BASE_DIR, ".."))
+PROJECT_ROOT = os.environ.get("SERVER_PROJECT_PATH", os.path.realpath(os.path.join(BASE_DIR, "..")))
 TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
 DSL_SPEC_PATH = os.path.join(PROJECT_ROOT, "JSON-DSL.md")
+PROMPTS_DIR = os.path.join(BASE_DIR, "prompts")
+GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
 
-# Agent 配置
-AGENT_MAX_ITERATIONS = 8
+# Claude CLI 路径（可通过环境变量覆盖）
+CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "/root/.nvm/versions/node/v22.22.2/bin/claude")
+
 
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}

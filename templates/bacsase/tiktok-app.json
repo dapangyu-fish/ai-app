@@ -1,0 +1,975 @@
+{
+  "dsl": "3.3",
+  "appid": "tiktok-v3-001",
+  "meta": {
+    "name": "tiktok-v3",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "TikTok 短视频 — 全屏沉浸式短视频，发现精彩，记录美好生活",
+    "icon_url": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop"
+  },
+  "dependencies": {
+    "lib_user": "^1.2.0",
+    "common-ui": "^1.0.0"
+  },
+  "global": {
+    "variables": {
+      "currentTab": "home",
+      "likedIds": [],
+      "userInfo": null,
+      "userName": "TikTok User",
+      "avatarUrl": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&h=300&fit=crop",
+      "isLoggedIn": false,
+      "lastPhoto": "",
+      "videos": [
+        {
+          "id": "1",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+          "cover": "https://images.unsplash.com/photo-1570488344395-ff5ed6f0c7f4?w=400&h=700&fit=crop",
+          "title": "烈焰狂奔 - 速度与激情",
+          "author": "极限运动达人",
+          "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+          "likes": 128000,
+          "comments": 3456,
+          "shares": 892,
+          "description": "感受速度的魅力！今天的极限运动挑战🔥",
+          "music": "Original Sound - 极限运动达人"
+        },
+        {
+          "id": "2",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+          "cover": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=700&fit=crop",
+          "title": "夏日海岛逃离计划",
+          "author": "旅行日记",
+          "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+          "likes": 89200,
+          "comments": 2105,
+          "shares": 567,
+          "description": "夏天就要去海边🌊 超美海岛推荐！",
+          "music": "Ocean Waves - 旅行日记"
+        },
+        {
+          "id": "3",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+          "cover": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400&h=700&fit=crop",
+          "title": "搞笑日常合集",
+          "author": "快乐源泉",
+          "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
+          "likes": 256000,
+          "comments": 6789,
+          "shares": 2341,
+          "description": "每天都要开开心心的！搞笑合集来啦😄",
+          "music": "Laugh Track - 快乐源泉"
+        },
+        {
+          "id": "4",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+          "cover": "https://images.unsplash.com/photo-1471474052703-2ce85dd255c0?w=400&h=700&fit=crop",
+          "title": "公路旅行vlog",
+          "author": "车轮上的家",
+          "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
+          "likes": 67500,
+          "comments": 1567,
+          "shares": 423,
+          "description": "一路向西，穿越荒漠和草原🏜️",
+          "music": "Road Trip - 车轮上的家"
+        },
+        {
+          "id": "5",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+          "cover": "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400&h=700&fit=crop",
+          "title": "烹饪翻车现场",
+          "author": "厨房小白",
+          "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
+          "likes": 345000,
+          "comments": 12345,
+          "shares": 5678,
+          "description": "每一个大厨都是从翻车开始的😂",
+          "music": "Kitchen Chaos - 厨房小白"
+        },
+        {
+          "id": "6",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+          "cover": "https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=400&h=700&fit=crop",
+          "title": "城市夜跑打卡",
+          "author": "跑步小达人",
+          "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100&h=100&fit=crop",
+          "likes": 43100,
+          "comments": 987,
+          "shares": 234,
+          "description": "夜跑打卡第30天！养成习惯其实没那么难✨",
+          "music": "Night Run - 跑步小达人"
+        }
+      ],
+      "comments": [
+        { "user": "风一样的男子", "text": "太帅了！我也想去体验一下！", "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=60&h=60&fit=crop", "time": "2小时前", "likes": 128 },
+        { "user": "运动达人小张", "text": "这个赛道在哪里？求地址！", "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop", "time": "1小时前", "likes": 56 },
+        { "user": "周末去哪玩", "text": "太酷了，收藏了！", "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=60&h=60&fit=crop", "time": "30分钟前", "likes": 34 },
+        { "user": "摄影师小李", "text": "画面拍得真好，用的什么设备？", "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop", "time": "15分钟前", "likes": 89 },
+        { "user": "极限爱好者", "text": "这个速度感太棒了！", "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop", "time": "5分钟前", "likes": 215 }
+      ],
+      "following": 128,
+      "followers": 6800,
+      "totalLikes": 928000
+    },
+    "functions": {
+      "toggleLike": {
+        "params": ["id"],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "in": [{ "var": "params.id" }, { "var": "$.global.likedIds" }] },
+              "then": [
+                { "call": "@set", "args": { "var": "$.global.likedIds", "value": { "filter": [{ "var": "$.global.likedIds" }, { "!=": [{ "var": "" }, { "var": "params.id" }] }] } } },
+                { "call": "@show_toast", "args": { "message": "已取消点赞" } }
+              ],
+              "else": [
+                { "call": "@set", "args": { "var": "$.global.likedIds", "value": { "merge": [{ "var": "$.global.likedIds" }, [{ "var": "params.id" }]] } } },
+                { "call": "@show_toast", "args": { "message": "已点赞 ❤️" } }
+              ]
+            }
+          }
+        ]
+      },
+      "loadUserData": {
+        "params": [],
+        "logic": [
+          { "call": "@lib_user.checkLogin", "args": { "bind": "global.isLoggedIn" } },
+          { "call": "@print", "args": { "value": "登录状态: {{ global.isLoggedIn }}" } },
+          { "call": "@if", "args": {
+            "condition": { "var": "global.isLoggedIn" },
+            "then": [
+              { "call": "@lib_user.loadUserInfo", "args": { "bind": "global.userInfo" } },
+              { "call": "@lib_user.getUserName", "args": { "bind": "global.userName" } },
+              { "call": "@lib_user.getUserAvatar", "args": { "bind": "global.avatarUrl" } },
+              { "call": "@print", "args": { "value": "用户名: {{ global.userName }}" } },
+              { "call": "@print", "args": { "value": "头像URL: {{ global.avatarUrl }}" } }
+            ],
+            "else": [
+              { "call": "@print", "args": { "value": "用户未登录，使用默认头像" } }
+            ]
+          }}
+        ]
+      },
+      "changeAvatar": {
+        "params": [],
+        "logic": [
+          { "call": "@common-ui.pickImage", "args": { "bind": "global._tempAvatar" } },
+          { "call": "@if", "args": {
+            "condition": { "!!": [{ "var": "global._tempAvatar" }] },
+            "then": [
+              { "call": "@lib_user.updateAvatar", "args": { "imagePath": "{{ global._tempAvatar }}" } },
+              { "call": "@global.loadUserData", "args": {} },
+              { "call": "@common-ui.showSuccess", "args": { "message": "头像已更新 ✨" } }
+            ]
+          }}
+        ]
+      },
+      "editProfile": {
+        "params": [],
+        "logic": [
+          { "call": "@show_input_dialog", "args": { "title": "修改用户名", "hint": "请输入新的用户名", "defaultValue": "{{ global.userName }}", "bind": "global._newName" } },
+          { "call": "@if", "args": {
+            "condition": { "!!": [{ "var": "global._newName" }] },
+            "then": [
+              { "call": "@lib_user.updateName", "args": { "newName": "{{ global._newName }}" } },
+              { "call": "@global.loadUserData", "args": {} },
+              { "call": "@common-ui.showSuccess", "args": { "message": "用户名已更新 ✨" } }
+            ]
+          }}
+        ]
+      },
+      "openCamera": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          { "call": "@take_photo", "args": { "bind": "$.global.lastPhoto" } },
+          { "call": "@show_toast", "args": { "message": "已拍摄 📸" } }
+        ]
+      }
+    }
+  },
+  "steps": [
+    { "call": "@print", "args": { "value": "TikTok v3 启动成功！" } },
+    { "call": "@global.loadUserData", "args": {} }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "TikTok",
+        "appBar": false,
+        "layout": "column",
+        "padding": 0,
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 12,
+            "color": "#000000",
+            "children": [
+              {
+                "type": "text",
+                "value": "TikTok",
+                "style": { "fontSize": 24, "fontWeight": "bold", "color": "#FFFFFF" },
+                "position": { "type": "flex", "flex": 1 }
+              },
+              {
+                "type": "button",
+                "label": "",
+                "icon": "live_tv",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 20 },
+                "action": { "call": "@show_toast", "args": { "message": "直播功能开发中 📺" } }
+              },
+              { "type": "spacer", "width": 8 },
+              {
+                "type": "button",
+                "label": "",
+                "icon": "search",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 20 },
+                "action": { "call": "@show_toast", "args": { "message": "搜索功能开发中 🔍" } }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 12,
+            "color": "#000000",
+            "children": [
+              {
+                "type": "button",
+                "label": "关注",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 16, "fontWeight": "bold", "paddingH": 16, "paddingV": 8 },
+                "action": { "call": "@show_toast", "args": { "message": "关注页开发中" } }
+              },
+              {
+                "type": "button",
+                "label": "推荐",
+                "variant": "text",
+                "style": { "textColor": "#FF4444", "fontSize": 16, "fontWeight": "bold", "paddingH": 16, "paddingV": 8, "borderRadius": 20, "backgroundColor": "#222222" }
+              },
+              {
+                "type": "button",
+                "label": "附近",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 16, "paddingH": 16, "paddingV": 8 },
+                "action": { "call": "@show_toast", "args": { "message": "附近页开发中" } }
+              }
+            ]
+          },
+          {
+            "type": "list",
+            "source": "{{ global.videos }}",
+            "emptyText": "暂无视频推荐",
+            "item_template": {
+              "type": "container",
+              "layout": "column",
+              "color": "#000000",
+              "margin": 2,
+              "borderRadius": 0,
+              "children": [
+                {
+                  "type": "video",
+                  "url": "{{ loop.item.url }}",
+                  "autoplay": true,
+                  "looping": true,
+                  "aspectRatio": 0.56,
+                  "borderRadius": 0
+                },
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "padding": 10,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "position": { "type": "flex", "flex": 1 },
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "crossAxisAlignment": "center",
+                          "children": [
+                            {
+                              "type": "image",
+                              "url": "{{ loop.item.avatar }}",
+                              "width": 36,
+                              "height": 36,
+                              "borderRadius": 18
+                            },
+                            { "type": "spacer", "width": 8 },
+                            {
+                              "type": "text",
+                              "value": "@{{ loop.item.author }}",
+                              "style": { "fontSize": 14, "fontWeight": "bold", "color": "#FFFFFF" }
+                            },
+                            { "type": "spacer", "width": 8 },
+                            {
+                              "type": "button",
+                              "label": "关注",
+                              "variant": "outlined",
+                              "style": { "textColor": "#FF4444", "borderRadius": 12, "fontSize": 11, "paddingH": 10, "paddingV": 2 },
+                              "action": { "call": "@show_toast", "args": { "message": "已关注 @{{ loop.item.author }}" } }
+                            }
+                          ]
+                        },
+                        { "type": "spacer", "height": 6 },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.description }}",
+                          "style": { "fontSize": 13, "color": "#CCCCCC", "maxLines": 2, "overflow": "ellipsis" }
+                        },
+                        { "type": "spacer", "height": 4 },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "🎵 {{ loop.item.music }}",
+                              "style": { "fontSize": 12, "color": "#999999" }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    { "type": "spacer", "width": 8 },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "button",
+                          "label": "",
+                          "icon": "favorite",
+                          "variant": "text",
+                          "style": { "textColor": "#FF4444", "fontSize": 26, "paddingH": 8, "paddingV": 2 },
+                          "action": { "call": "@global.toggleLike", "args": { "id": "{{ loop.item.id }}" } }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.likes }}",
+                          "style": { "fontSize": 11, "color": "#FFFFFF", "textAlign": "center" }
+                        },
+                        { "type": "spacer", "height": 16 },
+                        {
+                          "type": "button",
+                          "label": "",
+                          "icon": "chat",
+                          "variant": "text",
+                          "style": { "textColor": "#FFFFFF", "fontSize": 24, "paddingH": 8, "paddingV": 2 },
+                          "action": { "type": "navigate", "screen": "detail" }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.comments }}",
+                          "style": { "fontSize": 11, "color": "#FFFFFF", "textAlign": "center" }
+                        },
+                        { "type": "spacer", "height": 16 },
+                        {
+                          "type": "button",
+                          "label": "",
+                          "icon": "share",
+                          "variant": "text",
+                          "style": { "textColor": "#FFFFFF", "fontSize": 24, "paddingH": 8, "paddingV": 2 },
+                          "action": { "call": "@show_toast", "args": { "message": "链接已复制 📋" } }
+                        },
+                        {
+                          "type": "text",
+                          "value": "分享",
+                          "style": { "fontSize": 11, "color": "#FFFFFF", "textAlign": "center" }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "color": "#000000",
+            "padding": 7,
+            "children": [
+              {
+                "type": "button",
+                "label": "首页",
+                "icon": "home",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "type": "navigate", "screen": "home" }
+              },
+              {
+                "type": "button",
+                "label": "发现",
+                "icon": "search",
+                "variant": "text",
+                "style": { "textColor": "#888888", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "call": "@show_toast", "args": { "message": "发现页开发中 🔍" } }
+              },
+              {
+                "type": "button",
+                "label": "",
+                "icon": "add",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 32, "paddingH": 16, "paddingV": 0 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "call": "@global.openCamera", "args": {} }
+              },
+              {
+                "type": "button",
+                "label": "消息",
+                "icon": "inbox",
+                "variant": "text",
+                "style": { "textColor": "#888888", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "call": "@show_toast", "args": { "message": "消息页开发中 💬" } }
+              },
+              {
+                "type": "button",
+                "label": "我",
+                "icon": "person",
+                "variant": "text",
+                "style": { "textColor": "#888888", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "type": "navigate", "screen": "profile" }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "profile",
+        "title": "个人主页",
+        "appBar": false,
+        "layout": "column",
+        "padding": 0,
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "color": "#000000",
+            "padding": 12,
+            "children": [
+              {
+                "type": "button",
+                "label": "",
+                "icon": "back",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF" },
+                "action": { "type": "navigate", "screen": "home" }
+              },
+              {
+                "type": "text",
+                "value": "{{ global.userName }}",
+                "style": { "fontSize": 18, "fontWeight": "bold", "color": "#FFFFFF" },
+                "position": { "type": "flex", "flex": 1 }
+              },
+              {
+                "type": "button",
+                "label": "",
+                "icon": "more_vert",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF" },
+                "action": { "call": "@show_toast", "args": { "message": "更多功能开发中" } }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 14,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "onTap": { "type": "call", "call": "@global.changeAvatar", "args": {} },
+                    "children": [
+                      {
+                        "type": "image",
+                        "url": "{{ global.avatarUrl }}",
+                        "width": 88,
+                        "height": 88,
+                        "borderRadius": 44
+                      }
+                    ]
+                  },
+                  { "type": "spacer", "width": 16 },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "position": { "type": "flex", "flex": 1 },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.userName }}",
+                        "style": { "fontSize": 20, "fontWeight": "bold", "color": "#FFFFFF" }
+                      },
+                      {
+                        "type": "text",
+                        "value": "@{{ global.userName }}",
+                        "style": { "fontSize": 14, "color": "#888888" }
+                      },
+                      {
+                        "type": "text",
+                        "value": "记录美好生活 ✨",
+                        "style": { "fontSize": 13, "color": "#AAAAAA" }
+                      }
+                    ]
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 16 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "position": { "type": "flex", "flex": 1 },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.following }}",
+                        "style": { "fontSize": 18, "fontWeight": "bold", "color": "#FFFFFF", "textAlign": "center" }
+                      },
+                      {
+                        "type": "text",
+                        "value": "关注",
+                        "style": { "fontSize": 13, "color": "#888888", "textAlign": "center" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "position": { "type": "flex", "flex": 1 },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.followers }}",
+                        "style": { "fontSize": 18, "fontWeight": "bold", "color": "#FFFFFF", "textAlign": "center" }
+                      },
+                      {
+                        "type": "text",
+                        "value": "粉丝",
+                        "style": { "fontSize": 13, "color": "#888888", "textAlign": "center" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "position": { "type": "flex", "flex": 1 },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.totalLikes }}",
+                        "style": { "fontSize": 18, "fontWeight": "bold", "color": "#FFFFFF", "textAlign": "center" }
+                      },
+                      {
+                        "type": "text",
+                        "value": "获赞",
+                        "style": { "fontSize": 13, "color": "#888888", "textAlign": "center" }
+                      }
+                    ]
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 16 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "编辑资料",
+                    "variant": "outlined",
+                    "style": { "textColor": "#FFFFFF", "borderRadius": 20, "fontSize": 14 },
+                    "position": { "type": "flex", "flex": 1 },
+                    "action": { "type": "call", "call": "@global.editProfile", "args": {} }
+                  },
+                  { "type": "spacer", "width": 12 },
+                  {
+                    "type": "button",
+                    "label": "分享主页",
+                    "variant": "outlined",
+                    "style": { "textColor": "#FFFFFF", "borderRadius": 20, "fontSize": 14 },
+                    "position": { "type": "flex", "flex": 1 },
+                    "action": { "call": "@show_toast", "args": { "message": "链接已复制 📋" } }
+                  }
+                ]
+              }
+            ]
+          },
+          { "type": "divider", "color": "#222222", "height": 1, "thickness": 1 },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 14,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "position": { "type": "flex", "flex": 1 },
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "position": { "type": "flex", "flex": 1 },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "作品",
+                        "style": { "fontSize": 15, "fontWeight": "bold", "color": "#FFFFFF", "textAlign": "center" }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "position": { "type": "flex", "flex": 1 },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "喜欢",
+                        "style": { "fontSize": 15, "color": "#666666", "textAlign": "center" }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          { "type": "divider", "color": "#222222", "height": 1, "thickness": 1 },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 40,
+            "children": [
+              {
+                "type": "text",
+                "value": "暂无发布视频",
+                "style": { "fontSize": 16, "fontWeight": "bold", "color": "#555555", "textAlign": "center" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "点击底部 + 拍摄你的第一个作品 📸",
+                "style": { "fontSize": 14, "color": "#444444", "textAlign": "center" }
+              }
+            ]
+          },
+          { "type": "divider", "color": "#222222", "height": 1, "thickness": 1 },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 14,
+            "children": [
+              {
+                "type": "text",
+                "value": "最近拍摄",
+                "style": { "fontSize": 15, "fontWeight": "bold", "color": "#FFFFFF" }
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "image_picker",
+                "bind": "$.global.lastPhoto",
+                "source": "camera",
+                "placeholder": "点击拍摄照片",
+                "width": 200,
+                "height": 200,
+                "borderRadius": 12
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "color": "#000000",
+            "padding": 7,
+            "children": [
+              {
+                "type": "button",
+                "label": "首页",
+                "icon": "home",
+                "variant": "text",
+                "style": { "textColor": "#888888", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "type": "navigate", "screen": "home" }
+              },
+              {
+                "type": "button",
+                "label": "发现",
+                "icon": "search",
+                "variant": "text",
+                "style": { "textColor": "#888888", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "call": "@show_toast", "args": { "message": "发现页开发中 🔍" } }
+              },
+              {
+                "type": "button",
+                "label": "",
+                "icon": "add",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 32, "paddingH": 16, "paddingV": 0 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "call": "@global.openCamera", "args": {} }
+              },
+              {
+                "type": "button",
+                "label": "消息",
+                "icon": "inbox",
+                "variant": "text",
+                "style": { "textColor": "#888888", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "call": "@show_toast", "args": { "message": "消息页开发中 💬" } }
+              },
+              {
+                "type": "button",
+                "label": "我",
+                "icon": "person",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF", "fontSize": 11, "paddingH": 4, "paddingV": 4 },
+                "position": { "type": "flex", "flex": 1 },
+                "action": { "type": "navigate", "screen": "profile" }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "detail",
+        "title": "评论",
+        "appBar": false,
+        "layout": "column",
+        "padding": 0,
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "color": "#000000",
+            "padding": 12,
+            "children": [
+              {
+                "type": "button",
+                "label": "",
+                "icon": "back",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF" },
+                "action": { "type": "navigate", "screen": "home" }
+              },
+              {
+                "type": "text",
+                "value": "评论",
+                "style": { "fontSize": 18, "fontWeight": "bold", "color": "#FFFFFF" },
+                "position": { "type": "flex", "flex": 1 }
+              },
+              {
+                "type": "button",
+                "label": "",
+                "icon": "more_vert",
+                "variant": "text",
+                "style": { "textColor": "#FFFFFF" }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "margin": 10,
+            "color": "#1A1A1A",
+            "padding": 12,
+            "borderRadius": 12,
+            "children": [
+              {
+                "type": "image",
+                "url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=60&h=60&fit=crop",
+                "width": 44,
+                "height": 44,
+                "borderRadius": 22
+              },
+              { "type": "spacer", "width": 12 },
+              {
+                "type": "container",
+                "layout": "column",
+                "position": { "type": "flex", "flex": 1 },
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "极限运动达人",
+                    "style": { "fontSize": 15, "fontWeight": "bold", "color": "#FFFFFF" }
+                  },
+                  {
+                    "type": "text",
+                    "value": "感受速度的魅力！今天的极限运动挑战🔥",
+                    "style": { "fontSize": 13, "color": "#CCCCCC", "maxLines": 3, "overflow": "ellipsis" }
+                  },
+                  { "type": "spacer", "height": 8 },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "button",
+                        "label": " 128K",
+                        "icon": "favorite",
+                        "variant": "text",
+                        "style": { "textColor": "#FF4444", "fontSize": 12, "paddingH": 4, "paddingV": 2 }
+                      },
+                      { "type": "spacer", "width": 16 },
+                      {
+                        "type": "button",
+                        "label": " 3456",
+                        "icon": "chat",
+                        "variant": "text",
+                        "style": { "textColor": "#FFFFFF", "fontSize": 12, "paddingH": 4, "paddingV": 2 }
+                      },
+                      { "type": "spacer", "width": 16 },
+                      {
+                        "type": "button",
+                        "label": " 892",
+                        "icon": "share",
+                        "variant": "text",
+                        "style": { "textColor": "#FFFFFF", "fontSize": 12, "paddingH": 4, "paddingV": 2 }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 10,
+            "children": [
+              {
+                "type": "text",
+                "value": "全部评论",
+                "style": { "fontSize": 16, "fontWeight": "bold", "color": "#FFFFFF" },
+                "position": { "type": "flex", "flex": 1 }
+              },
+              {
+                "type": "text",
+                "value": "最新",
+                "style": { "fontSize": 13, "color": "#888888" }
+              }
+            ]
+          },
+          {
+            "type": "list",
+            "source": "{{ global.comments }}",
+            "emptyText": "暂无评论",
+            "item_template": {
+              "type": "container",
+              "layout": "row",
+              "padding": 12,
+              "color": "#0A0A0A",
+              "margin": 7,
+              "borderRadius": 8,
+              "children": [
+                {
+                  "type": "image",
+                  "url": "{{ loop.item.avatar }}",
+                  "width": 36,
+                  "height": 36,
+                  "borderRadius": 18
+                },
+                { "type": "spacer", "width": 10 },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "position": { "type": "flex", "flex": 1 },
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.user }}",
+                          "style": { "fontSize": 13, "fontWeight": "bold", "color": "#FFFFFF" },
+                          "position": { "type": "flex", "flex": 1 }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.time }}",
+                          "style": { "fontSize": 11, "color": "#666666" }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.text }}",
+                      "style": { "fontSize": 14, "color": "#CCCCCC", "maxLines": 3, "overflow": "ellipsis" }
+                    },
+                    { "type": "spacer", "height": 4 },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "button",
+                          "label": " {{ loop.item.likes }}",
+                          "icon": "favorite",
+                          "variant": "text",
+                          "style": { "textColor": "#666666", "fontSize": 11, "paddingH": 2, "paddingV": 0 }
+                        },
+                        { "type": "spacer", "width": 16 },
+                        {
+                          "type": "text",
+                          "value": "回复",
+                          "style": { "fontSize": 12, "color": "#666666" }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "color": "#1A1A1A",
+            "padding": 10,
+            "children": [
+              {
+                "type": "text",
+                "value": "说点什么吧...",
+                "style": { "fontSize": 14, "color": "#555555" },
+                "position": { "type": "flex", "flex": 1 }
+              },
+              {
+                "type": "button",
+                "label": "发布",
+                "variant": "text",
+                "style": { "textColor": "#FF4444", "fontSize": 14, "fontWeight": "bold" },
+                "action": { "call": "@show_toast", "args": { "message": "评论功能开发中 💬" } }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -22,7 +22,7 @@ _minio_client = Minio(
 
 
 def _minio_upload(bucket, key, data, content_type="application/json"):
-    """上传文件到 MinIO（使用 Python SDK）"""
+    """上传文件到 MinIO（使用 Python SDK），返回预签名 URL（1小时有效期）"""
     if isinstance(data, dict):
         data = json.dumps(data, ensure_ascii=False, indent=2)
     data_bytes = data.encode("utf-8") if isinstance(data, str) else data
@@ -34,7 +34,47 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
         bucket, key, io.BytesIO(data_bytes), len(data_bytes),
         content_type=content_type,
     )
-    return f"{MINIO_PUBLIC_URL}/{bucket}/{key}"
+
+    # 返回预签名 GET URL（1小时有效期）而不是公开 URL
+    from datetime import timedelta
+    presigned_url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=1))
+    return presigned_url
+
+
+def _minio_presigned_put(bucket, key, expires_hours=1):
+    from datetime import timedelta
+    if not _minio_client.bucket_exists(bucket):
+        _minio_client.make_bucket(bucket)
+    return _minio_client.presigned_put_object(bucket, key, expires=timedelta(hours=expires_hours))
+
+
+def _minio_presigned_get(bucket, key, expires_hours=1):
+    from datetime import timedelta
+    if not _minio_client.bucket_exists(bucket):
+        _minio_client.make_bucket(bucket)
+    url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
+    print(f"[MinIO] Generated presigned GET URL: {url}")
+    return url
+
+
+@require_auth
+def get_ai_upload_url():
+    """获取前端临时上传大 JSON 的 PUT 链接"""
+    import uuid
+    filename = f"{uuid.uuid4().hex}.json"
+    bucket = "ai-chat-temp"
+    try:
+        put_url = _minio_presigned_put(bucket, filename)
+        # 前端将 PUT 上传到 put_url，并将此 get_url 发送给大模型用于下载
+        get_url = _minio_presigned_get(bucket, filename)
+        return jsonify({
+            "put_url": put_url,
+            "get_url": get_url,
+            "filename": filename
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 def _generate_appid():

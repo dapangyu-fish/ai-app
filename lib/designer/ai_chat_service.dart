@@ -1,17 +1,25 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
+import '../config/app_config.dart';
 
 /// AI 对话事件
 class ChatEvent {
   final String? content;      // 增量文本
+  final String? thinking;     // 思考过程
   final Map<String, dynamic>? jsonApp;  // 检测到的 JSON-APP
   final Map<String, dynamic>? quota;    // 配额信息
   final String? error;
+  final bool isGeneratingJson; // 正在生成 JSON
+  final String? requestAction; // 比如 "upload_current_app"
+  final String? failedJsonUrl; // 下载失败的 JSON URL
+  final String? statusMessage; // 动态状态文案（思考中/阅读文件/写入代码/上传...）
 
-  ChatEvent({this.content, this.jsonApp, this.quota, this.error});
+  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage});
 }
 
 /// AI 供应商信息
@@ -40,8 +48,11 @@ class AiProvider {
 
 /// 管理对话历史并与后端 AI 服务通信（SSE 流式，支持中断）
 class AiChatService {
-  static const String _baseUrl = 'https://app-backend.dapangyu.work';
+  // 使用统一配置管理的后端地址
+  static String get _baseUrl => AppConfig.backendUrl;
   static const String _providerKey = 'ai_provider';
+  static const String _sessionKey = 'ai_session_id';
+  static const String _sessionUsedKey = 'ai_session_used';
 
   static String _selectedProvider = 'deepseek';
   static List<AiProvider> _providers = [];
@@ -76,12 +87,52 @@ class AiChatService {
     return _providers;
   }
 
-  final List<Map<String, String>> _messages = [];
+  // ── Session 管理 ──
+  String _sessionId = '';
+  bool _sessionUsed = false;  // 该 session 是否已发过消息（用于判断 is_new_session）
 
   http.Client? _activeClient;
 
-  List<Map<String, String>> get messages =>
-      _messages.where((m) => m['role'] != 'system').toList();
+  String get sessionId => _sessionId;
+
+  /// 初始化/加载 session（app 启动时调用）
+  Future<void> loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? cachedId = prefs.getString(_sessionKey);
+    // 验证缓存的 UUID 长度是否合法 (36字符)
+    if (cachedId == null || cachedId.length != 36) {
+      _sessionId = _generateSessionId();
+      _sessionUsed = false;
+    } else {
+      _sessionId = cachedId;
+      _sessionUsed = prefs.getBool(_sessionUsedKey) ?? false;
+    }
+    await prefs.setString(_sessionKey, _sessionId);
+    await prefs.setBool(_sessionUsedKey, _sessionUsed);
+  }
+
+  /// 重置 session（用户点击清除按钮）
+  Future<void> resetSession() async {
+    abort();
+    _sessionId = _generateSessionId();
+    _sessionUsed = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionKey, _sessionId);
+    await prefs.setBool(_sessionUsedKey, false);
+  }
+
+  String _generateSessionId() {
+    final random = Random();
+    final hexDigits = '0123456789abcdef';
+    
+    String generateHex(int length) {
+      return List.generate(length, (_) => hexDigits[random.nextInt(16)]).join('');
+    }
+    
+    // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8, 9, a, b)
+    final y = hexDigits[random.nextInt(4) + 8];
+    return '${generateHex(8)}-${generateHex(4)}-4${generateHex(3)}-$y${generateHex(3)}-${generateHex(12)}';
+  }
 
   void abort() {
     _activeClient?.close();
@@ -89,28 +140,381 @@ class AiChatService {
   }
 
   /// 发送用户消息，返回 Stream<ChatEvent>
+  /// 只发送最新消息 + session_id，CLI session 自动维护对话历史
   Stream<ChatEvent> sendStream(String userMessage) async* {
     abort();
-    _messages.add({'role': 'user', 'content': userMessage});
 
     final client = http.Client();
     _activeClient = client;
 
+    final isNew = !_sessionUsed;
+
+    debugPrint('[AI_CHAT] ========== 发送消息 ==========');
+    debugPrint('[AI_CHAT] 消息内容: $userMessage');
+    debugPrint('[AI_CHAT] Session ID: $_sessionId');
+    debugPrint('[AI_CHAT] Provider: $_selectedProvider');
+    debugPrint('[AI_CHAT] Is New Session: $isNew');
+    debugPrint('[AI_CHAT] ====================================');
+
     try {
       final request = http.Request('POST', Uri.parse('$_baseUrl/chat'));
       request.headers['Content-Type'] = 'application/json';
-      // 带上 auth token
       final token = AuthService.token;
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
       request.body = json.encode({
-        'messages': _messages,
+        'messages': [{'role': 'user', 'content': userMessage}],
+        'session_id': _sessionId,
+        'is_new_session': isNew,
+        'provider': _selectedProvider,
+      });
+
+      var response = await client.send(request).timeout(
+        const Duration(seconds: 300),
+      );
+
+      if (response.statusCode == 401 && AuthService.token != null) {
+        try {
+          await AuthService.refreshSession();
+          final retryRequest = http.Request('POST', Uri.parse('$_baseUrl/chat'));
+          retryRequest.headers['Content-Type'] = 'application/json';
+          final newToken = AuthService.token;
+          if (newToken != null) {
+            retryRequest.headers['Authorization'] = 'Bearer $newToken';
+          }
+          retryRequest.body = json.encode({
+            'messages': [{'role': 'user', 'content': userMessage}],
+            'session_id': _sessionId,
+            'is_new_session': isNew,
+            'provider': _selectedProvider,
+          });
+          response = await client.send(retryRequest).timeout(
+            const Duration(seconds: 300),
+          );
+        } catch (_) {
+          // 刷新失败，保持原 401 response，后续逻辑会处理
+        }
+      }
+
+      if (response.statusCode == 429) {
+        final body = await response.stream.bytesToString();
+        final data = json.decode(body);
+        yield ChatEvent(error: data['error'] ?? '配额已用完', quota: data['quota']);
+        return;
+      }
+
+      if (response.statusCode == 401) {
+        yield ChatEvent(error: '请先登录');
+        return;
+      }
+
+      if (response.statusCode != 200) {
+        final body = await response.stream.bytesToString();
+        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
+        return;
+      }
+
+      // 标记 session 已使用
+      if (!_sessionUsed) {
+        _sessionUsed = true;
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setBool(_sessionUsedKey, true);
+        });
+      }
+
+      String accumulated = '';
+      String accumulatedThinking = ''; // 累积思考过程
+      int contentEventCount = 0;  // 内容事件计数
+      int thinkingEventCount = 0;  // 思考事件计数
+
+      // 用 LineSplitter 保证跨 TCP chunk 的行完整性
+      await for (final line in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        final trimmed = line.trim();
+
+        // 只记录非内容事件的 SSE 行
+        if (trimmed.isNotEmpty && !trimmed.contains('"content"') && !trimmed.contains('"thinking"')) {
+          debugPrint('[AI_CHAT] <<< SSE: ${trimmed.length > 200 ? trimmed.substring(0, 200) + "..." : trimmed}');
+        }
+
+        if (trimmed.isEmpty) continue;
+        if (trimmed == 'data: [DONE]') {
+          debugPrint('[AI_CHAT] <<< SSE 流结束');
+          debugPrint('[AI_CHAT] 总计: 内容事件 $contentEventCount 次, 思考事件 $thinkingEventCount 次');
+          if (accumulated.isNotEmpty) {
+            debugPrint('[AI_CHAT] === 完整回复内容 ===');
+            debugPrint('[AI_CHAT] $accumulated');
+            debugPrint('[AI_CHAT] === 回复结束 (${accumulated.length} 字符) ===');
+          }
+          if (accumulatedThinking.isNotEmpty) {
+            debugPrint('[AI_CHAT] === 完整思考过程 ===');
+            debugPrint('[AI_CHAT] $accumulatedThinking');
+            debugPrint('[AI_CHAT] === 思考结束 (${accumulatedThinking.length} 字符) ===');
+          }
+          continue;
+        }
+        if (!trimmed.startsWith('data: ')) continue;
+
+          final dataStr = trimmed.substring(6);
+          try {
+            final data = json.decode(dataStr) as Map<String, dynamic>;
+
+            // 只记录非内容/思考事件的解析结果
+            if (!data.containsKey('content') && !data.containsKey('thinking')) {
+              debugPrint('[AI_CHAT] >>> 解析事件: ${data.keys.join(", ")}');
+            }
+
+            if (data.containsKey('generating_json') && data['generating_json'] == true) {
+              yield ChatEvent(isGeneratingJson: true);
+              continue;
+            }
+            // 生成结束（失败时后端会发 generating_json: false）
+            if (data.containsKey('generating_json') && data['generating_json'] == false) {
+              continue;
+            }
+
+            // 动作请求 (比如上传当前 app)
+            if (data.containsKey('request_action')) {
+              yield ChatEvent(requestAction: data['request_action'] as String);
+              continue;
+            }
+
+            // 动态状态更新（思考中/阅读文件/写入代码/上传等）
+            if (data.containsKey('status')) {
+              final msg = data['message'] as String? ?? '';
+              yield ChatEvent(statusMessage: msg);
+              continue;
+            }
+
+          // JSON-APP 检测
+          if (data.containsKey('has_json') && data['has_json'] == true) {
+            Map<String, dynamic>? parsedApp;
+            if (data.containsKey('json_url') && data['json_url'] != null) {
+              final url = data['json_url'] as String;
+              try {
+                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+                if (getResp.statusCode == 200) {
+                  final jsonBody = utf8.decode(getResp.bodyBytes);
+                  parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+                } else {
+                  yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+                }
+              } catch (e) {
+                yield ChatEvent(failedJsonUrl: url, error: '下载 JSON 异常: $e');
+              }
+            } else {
+              parsedApp = data['json_app'] as Map<String, dynamic>?;
+            }
+            
+            if (parsedApp != null) {
+              yield ChatEvent(jsonApp: parsedApp);
+            }
+            continue;
+          }
+
+          // 配额信息
+          if (data.containsKey('quota')) {
+            yield ChatEvent(
+              quota: data['quota'] as Map<String, dynamic>?,
+            );
+            continue;
+          }
+
+          // 错误
+          if (data.containsKey('error')) {
+            yield ChatEvent(error: data['error'] as String);
+            continue;
+          }
+
+          // 思考过程（增量累积）
+          if (data.containsKey('thinking')) {
+            final thinking = data['thinking'] as String? ?? '';
+            if (thinking.isNotEmpty) {
+              accumulatedThinking += thinking;
+              yield ChatEvent(thinking: accumulatedThinking);
+            }
+            continue;
+          }
+
+          // 普通文本
+          final content = data['content'] as String? ?? '';
+          if (content.isNotEmpty) {
+            accumulated += content;
+            yield ChatEvent(content: accumulated);
+            // 注意：标签指令（[json_app_url]、[request_action]）的解析移到流结束后统一处理
+          }
+        } catch (_) {}
+      }
+
+      // 流结束后，统一解析标签指令（避免流式传输过程中重复解析）
+
+      // 1. 检测 [json_app_url] 标记并下载
+      final urlRegex = RegExp(r'\[json_app_url\]([^\]]+)\[/json_app_url\]');
+      final urlMatch = urlRegex.firstMatch(accumulated);
+      if (urlMatch != null) {
+        final url = urlMatch.group(1)!;
+        debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
+
+        try {
+          debugPrint('[AI_CHAT] 开始下载 JSON...');
+          final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+          debugPrint('[AI_CHAT] 下载响应: ${getResp.statusCode}');
+
+          if (getResp.statusCode == 200) {
+            final jsonBody = utf8.decode(getResp.bodyBytes);
+            debugPrint('[AI_CHAT] JSON 下载成功，大小: ${jsonBody.length} bytes');
+            final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+            yield ChatEvent(jsonApp: parsedApp);
+          } else {
+            debugPrint('[AI_CHAT] 下载失败: HTTP ${getResp.statusCode}');
+            yield ChatEvent(failedJsonUrl: url, error: 'HTTP ${getResp.statusCode}');
+          }
+        } catch (e) {
+          debugPrint('[AI_CHAT] 下载异常: $e');
+          yield ChatEvent(failedJsonUrl: url, error: e.toString());
+        }
+      }
+
+      // 2. 检测 [request_action] 标记
+      final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
+      final actionMatch = actionRegex.firstMatch(accumulated);
+      if (actionMatch != null) {
+        final action = actionMatch.group(1)!;
+        debugPrint('[AI_CHAT] 流结束，检测到请求动作: $action');
+        yield ChatEvent(requestAction: action);
+      }
+
+      // 3. 如果累积的文本包含 JSON 块，则提取并应用
+      final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
+      final match = jsonBlockRegex.firstMatch(accumulated);
+      if (match != null) {
+        try {
+          final jsonStr = match.group(1)!;
+          final parsedApp = json.decode(jsonStr) as Map<String, dynamic>;
+          yield ChatEvent(jsonApp: parsedApp);
+        } catch (e) {
+          // JSON 解析失败则忽略
+        }
+      }
+
+    } on http.ClientException {
+      // abort() 触发
+    } catch (e) {
+      yield ChatEvent(error: '网络错误: $e');
+    } finally {
+      if (_activeClient == client) _activeClient = null;
+      client.close();
+    }
+  }
+
+  void commitPartial(String partialContent) {
+    // Session 模式下不需要手动管理消息历史，CLI session 自动维护
+  }
+
+  /// 上传当前运行的 JSON-APP，返回包含链接的文本。
+  /// 优先通过预签名 URL 上传到 MinIO，仅在消息中携带链接；失败时回退到内联 JSON。
+  Future<String> uploadCurrentApp(Map<String, dynamic> jsonConfig) async {
+    final jsonStr = json.encode(jsonConfig);
+    String contextContent;
+
+    try {
+      debugPrint('[AI_CHAT] ========== 上传当前应用配置 ==========');
+      debugPrint('[AI_CHAT] JSON 大小: ${jsonStr.length} bytes');
+
+      final token = AuthService.token;
+      // 1. 获取预签名上传 / 下载 URL
+      debugPrint('[AI_CHAT] 请求预签名 URL...');
+      debugPrint('[AI_CHAT] 请求地址: $_baseUrl/api/ai/upload_url');
+      final urlResp = await http
+          .get(
+            Uri.parse('$_baseUrl/api/ai/upload_url'),
+            headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+          )
+          .timeout(const Duration(seconds: 30));  // 增加超时时间到 30 秒
+
+      debugPrint('[AI_CHAT] 预签名 URL 响应: ${urlResp.statusCode}');
+
+      if (urlResp.statusCode == 200) {
+        final urlData = json.decode(urlResp.body) as Map<String, dynamic>;
+        final putUrl = urlData['put_url'] as String;
+        final getUrl = urlData['get_url'] as String;
+
+        debugPrint('[AI_CHAT] PUT URL: ${putUrl.substring(0, 100)}...');
+        debugPrint('[AI_CHAT] GET URL: ${getUrl.substring(0, 100)}...');
+
+        // 2. PUT 上传 JSON 到 MinIO
+        debugPrint('[AI_CHAT] 开始上传到 MinIO...');
+        final uploadResp = await http
+            .put(
+              Uri.parse(putUrl),
+              headers: {'Content-Type': 'application/json'},
+              body: utf8.encode(jsonStr),
+            )
+            .timeout(const Duration(seconds: 15));
+
+        debugPrint('[AI_CHAT] MinIO 上传响应: ${uploadResp.statusCode}');
+
+        if (uploadResp.statusCode == 200) {
+          // 成功 → 只放链接
+          debugPrint('[AI_CHAT] ✅ 上传成功，使用 URL 链接');
+          contextContent =
+              '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），'
+              '后续对话请基于这个配置进行修改或分析：\n\n'
+              '[json_app_url]$getUrl[/json_app_url]';
+        } else {
+          debugPrint('[AI_CHAT] ❌ MinIO 上传失败: ${uploadResp.statusCode}');
+          debugPrint('[AI_CHAT] 响应体: ${uploadResp.body}');
+          throw Exception('MinIO PUT failed: ${uploadResp.statusCode}');
+        }
+      } else {
+        debugPrint('[AI_CHAT] ❌ 获取预签名 URL 失败: ${urlResp.statusCode}');
+        debugPrint('[AI_CHAT] 响应体: ${urlResp.body}');
+        throw Exception('upload_url API failed: ${urlResp.statusCode}');
+      }
+    } catch (e) {
+      // 回退：直接内联 JSON
+      debugPrint('[AI_CHAT] ⚠️ 上传失败，回退到内联 JSON');
+      debugPrint('[AI_CHAT] 错误: $e');
+      contextContent =
+          '以下是我当前正在运行的 JSON-APP 完整配置，'
+          '后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```';
+    }
+
+    debugPrint('[AI_CHAT] ==========================================');
+    return contextContent;
+  }
+
+  /// 使用 Claude CLI 生成/修改/修复 JSON-APP
+  /// [userPrompt] 用户的需求描述
+  /// [currentApp] 当前运行的 APP JSON（修改/修复场景）
+  /// [crashLog] 崩溃日志（修复场景）
+  Stream<ChatEvent> generateApp(String userPrompt, {
+    Map<String, dynamic>? currentApp,
+    String? crashLog,
+  }) async* {
+    abort();
+
+    final client = http.Client();
+    _activeClient = client;
+
+    try {
+      final request = http.Request('POST', Uri.parse('$_baseUrl/api/ai/generate'));
+      request.headers['Content-Type'] = 'application/json';
+      final token = AuthService.token;
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.body = json.encode({
+        'prompt': userPrompt,
+        if (currentApp != null) 'current_app': currentApp,
+        if (crashLog != null) 'crash_log': crashLog,
         'provider': _selectedProvider,
       });
 
       final response = await client.send(request).timeout(
-        const Duration(seconds: 120),
+        const Duration(seconds: 300), // Claude CLI 可能运行较久
       );
 
       if (response.statusCode == 429) {
@@ -127,15 +531,12 @@ class AiChatService {
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        _messages.removeLast();
         yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
         return;
       }
 
       String accumulated = '';
 
-      // 用 LineSplitter 保证跨 TCP chunk 的行完整性
-      // （has_json 事件包含完整 JSON-APP，可能几 KB，单行会被拆到多个 chunk）
       await for (final line in response.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter())) {
@@ -150,28 +551,40 @@ class AiChatService {
 
           // JSON-APP 检测
           if (data.containsKey('has_json') && data['has_json'] == true) {
-            yield ChatEvent(
-              jsonApp: data['json_app'] as Map<String, dynamic>?,
-            );
+            Map<String, dynamic>? parsedApp;
+            if (data.containsKey('json_url') && data['json_url'] != null) {
+              try {
+                final url = data['json_url'] as String;
+                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+                if (getResp.statusCode == 200) {
+                  final jsonBody = utf8.decode(getResp.bodyBytes);
+                  parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
+                }
+              } catch (e) {
+                yield ChatEvent(error: '下载 JSON 异常: $e');
+              }
+            } else {
+              parsedApp = data['json_app'] as Map<String, dynamic>?;
+            }
+            if (parsedApp != null) {
+              yield ChatEvent(jsonApp: parsedApp);
+            }
             continue;
           }
 
-          // 配额信息
+          // 配额
           if (data.containsKey('quota')) {
-            yield ChatEvent(
-              quota: data['quota'] as Map<String, dynamic>?,
-            );
+            yield ChatEvent(quota: data['quota'] as Map<String, dynamic>?);
             continue;
           }
 
           // 错误
           if (data.containsKey('error')) {
-            accumulated += data['error'] as String;
             yield ChatEvent(content: accumulated, error: data['error'] as String);
             continue;
           }
 
-          // 普通文本
+          // 普通文本（Claude CLI 的输出）
           final content = data['content'] as String? ?? '';
           if (content.isNotEmpty) {
             accumulated += content;
@@ -179,16 +592,9 @@ class AiChatService {
           }
         } catch (_) {}
       }
-
-      if (accumulated.isNotEmpty) {
-        _messages.add({'role': 'assistant', 'content': accumulated});
-      } else {
-        _messages.removeLast();
-      }
     } on http.ClientException {
-      // abort() 触发
+      // abort()
     } catch (e) {
-      _messages.removeLast();
       yield ChatEvent(error: '网络错误: $e');
     } finally {
       if (_activeClient == client) _activeClient = null;
@@ -196,27 +602,19 @@ class AiChatService {
     }
   }
 
-  void commitPartial(String partialContent) {
-    if (partialContent.isNotEmpty) {
-      _messages.add({'role': 'assistant', 'content': partialContent});
+  /// 重试下载 JSON
+  Future<Map<String, dynamic>> retryDownloadJson(String url) async {
+    final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+    if (getResp.statusCode == 200) {
+      final jsonBody = utf8.decode(getResp.bodyBytes);
+      return json.decode(jsonBody) as Map<String, dynamic>;
+    } else {
+      throw Exception('HTTP ${getResp.statusCode}');
     }
   }
 
-  /// 注入当前运行的 JSON-APP 作为对话上下文（放在消息列表最前面）
-  void setAppContext(Map<String, dynamic> jsonConfig) {
-    final jsonStr = json.encode(jsonConfig);
-    _messages.insert(0, {
-      'role': 'user',
-      'content': '以下是我当前正在运行的 JSON-APP 完整配置，后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```',
-    });
-    _messages.insert(1, {
-      'role': 'assistant',
-      'content': '好的，我已了解你当前运行的 JSON-APP。请告诉我你需要什么修改或帮助。',
-    });
-  }
-
-  void clear() {
+  Future<void> clear() async {
     abort();
-    _messages.clear();
+    await resetSession();
   }
 }

@@ -11,12 +11,14 @@ import 'package:flutter/material.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
+import 'drift_database.dart';
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -25,6 +27,7 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _variables;
   late Map<String, dynamic> _functions;
   String _currentScreenId = '';
+  String _appId = 'default';
 
   final List<Map<String, dynamic>> _loopContextStack = [];
   final List<Map<String, dynamic>> _paramsStack = [];
@@ -259,6 +262,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   void loadConfig(Map<String, dynamic> config) {
     _config = config;
+
+    // 提取 appid，用于 Drift 数据库隔离
+    _appId = config['appid']?.toString() ?? config['meta']?['name']?.toString() ?? 'default';
 
     final global = config['global'] as Map<String, dynamic>? ?? {};
     _variables =
@@ -589,17 +595,17 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 控制流 ──
       case '@if':
-        return await _builtinIf(resolvedArgs);
+        return await _builtinIf(args);
       case '@while':
-        return await _builtinWhile(resolvedArgs);
+        return await _builtinWhile(args);
       case '@for_each':
-        return await _builtinForEach(resolvedArgs);
+        return await _builtinForEach(args);
       case '@loop_by_num':
-        return await _builtinLoopByNum(resolvedArgs);
+        return await _builtinLoopByNum(args);
       case '@try_catch':
-        return await _builtinTryCatch(resolvedArgs);
+        return await _builtinTryCatch(args);
       case '@parallel':
-        return await _builtinParallel(resolvedArgs);
+        return await _builtinParallel(args);
       case '@delay':
         final ms =
             _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
@@ -779,6 +785,304 @@ class JsonInterpreter extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
         return null;
+
+      // ── 文件持久化 ──
+      // 所有文件操作都基于应用文档目录（getApplicationDocumentsDirectory），
+      // path 参数是相对路径，如 "diary/entries.json"
+      case '@file_write_json':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final data = resolvedArgs['data'];
+          if (relPath == null || data == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          await file.parent.create(recursive: true);
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_write_json error: $e');
+          return false;
+        }
+
+      case '@file_read_json':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return null;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return resolvedArgs['default'];
+          final content = await file.readAsString();
+          return json.decode(content);
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_read_json error: $e');
+          return resolvedArgs['default'];
+        }
+
+      case '@file_exists':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          return await file.exists();
+        } catch (e) {
+          return false;
+        }
+
+      case '@file_delete':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (await file.exists()) {
+            await file.delete();
+            return true;
+          }
+          return false;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_delete error: $e');
+          return false;
+        }
+
+      case '@file_list':
+        try {
+          final relDir = resolvedArgs['path']?.toString() ?? '';
+          final dir = await _getAppDocDir();
+          final targetDir = Directory('${dir.path}/$relDir');
+          if (!await targetDir.exists()) return <String>[];
+          final entities = await targetDir.list().toList();
+          return entities
+              .whereType<File>()
+              .map((f) => f.path.split('/').last)
+              .toList();
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_list error: $e');
+          return <String>[];
+        }
+
+      case '@file_append_json':
+        // 追加一条记录到 JSON 数组文件（原子性：读→追加→写）
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final item = resolvedArgs['item'];
+          if (relPath == null || item == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          List<dynamic> list = [];
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            final decoded = json.decode(content);
+            if (decoded is List) list = decoded;
+          }
+          list.add(item);
+          await file.parent.create(recursive: true);
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(list);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_append_json error: $e');
+          return false;
+        }
+
+      case '@file_remove_json_item':
+        // 从 JSON 数组文件中按字段匹配删除一条记录
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final matchField = resolvedArgs['field']?.toString();
+          final matchValue = resolvedArgs['value'];
+          if (relPath == null || matchField == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return false;
+          final content = await file.readAsString();
+          final decoded = json.decode(content);
+          if (decoded is! List) return false;
+          final newList = decoded.where((item) {
+            if (item is Map) {
+              return item[matchField]?.toString() != matchValue?.toString();
+            }
+            return true;
+          }).toList();
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(newList);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_remove_json_item error: $e');
+          return false;
+        }
+
+      case '@file_update_json_item':
+        // 从 JSON 数组文件中按字段匹配更新一条记录
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final matchField = resolvedArgs['field']?.toString();
+          final matchValue = resolvedArgs['value'];
+          final updates = resolvedArgs['updates'];
+          if (relPath == null || matchField == null || updates is! Map) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return false;
+          final content = await file.readAsString();
+          final decoded = json.decode(content);
+          if (decoded is! List) return false;
+          bool found = false;
+          for (int i = 0; i < decoded.length; i++) {
+            if (decoded[i] is Map && decoded[i][matchField]?.toString() == matchValue?.toString()) {
+              for (final entry in updates.entries) {
+                decoded[i][entry.key] = entry.value;
+              }
+              found = true;
+              break;
+            }
+          }
+          if (!found) return false;
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(decoded);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_update_json_item error: $e');
+          return false;
+        }
+
+      // ── Drift 数据库 ──
+      case '@db_create_table':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final columns = resolvedArgs['columns'];
+          if (table == null || columns is! List) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final colList = columns.map((c) => Map<String, String>.from(
+            (c as Map).map((k, v) => MapEntry(k.toString(), v.toString()))
+          )).toList();
+          await db.ensureTable(table, colList);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_create_table error: $e');
+          return false;
+        }
+
+      case '@db_insert':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final data = resolvedArgs['data'];
+          if (table == null || data is! Map) return -1;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          return await db.insertRow(table, Map<String, dynamic>.from(data));
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_insert error: $e');
+          return -1;
+        }
+
+      case '@db_query':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          if (table == null) return <Map<String, dynamic>>[];
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final where = resolvedArgs['where']?.toString();
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          final orderBy = resolvedArgs['orderBy']?.toString();
+          final limit = resolvedArgs['limit'] != null ? _toInt(resolvedArgs['limit']!) : null;
+          final offset = resolvedArgs['offset'] != null ? _toInt(resolvedArgs['offset']!) : null;
+          return await db.queryRows(table,
+            where: where,
+            whereArgs: whereArgs,
+            orderBy: orderBy,
+            limit: limit,
+            offset: offset,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_query error: $e');
+          return <Map<String, dynamic>>[];
+        }
+
+      case '@db_update':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final data = resolvedArgs['data'];
+          final where = resolvedArgs['where']?.toString();
+          if (table == null || data is! Map || where == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.updateRows(table, Map<String, dynamic>.from(data),
+            where: where,
+            whereArgs: whereArgs,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_update error: $e');
+          return 0;
+        }
+
+      case '@db_delete':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final where = resolvedArgs['where']?.toString();
+          if (table == null || where == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.deleteRows(table, where: where, whereArgs: whereArgs);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_delete error: $e');
+          return 0;
+        }
+
+      case '@db_count':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          if (table == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final where = resolvedArgs['where']?.toString();
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.countRows(table, where: where, whereArgs: whereArgs);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_count error: $e');
+          return 0;
+        }
+
+      case '@db_kv_set':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          final value = resolvedArgs['value'];
+          if (key == null) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          await db.kvSet(key, value);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_set error: $e');
+          return false;
+        }
+
+      case '@db_kv_get':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          if (key == null) return null;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          return await db.kvGet(key);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_get error: $e');
+          return null;
+        }
+
+      case '@db_kv_delete':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          if (key == null) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          await db.kvDelete(key);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_delete error: $e');
+          return false;
+        }
 
       // ── 随机数 ──
       case '@random':
@@ -1212,7 +1516,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> _builtinWhile(Map<String, dynamic> args) async {
     final condition = args['condition'];
     final body = args['body'] as List<dynamic>? ?? [];
-    final maxIterations = _toInt(args['max_iterations'] ?? 10000);
+    final maxIterations = _toInt(_resolveTemplatesInRule(args['max_iterations']) ?? 10000);
 
     int count = 0;
     while (_evaluateBool(condition) && count < maxIterations) {
@@ -1248,7 +1552,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<dynamic> _builtinLoopByNum(Map<String, dynamic> args) async {
-    final count = _toInt(args['count'] ?? 0);
+    final count = _toInt(_resolveTemplatesInRule(args['count']) ?? 0);
     final body = args['body'] as List<dynamic>? ?? [];
 
     for (var i = 0; i < count; i++) {
@@ -1268,7 +1572,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> _builtinTryCatch(Map<String, dynamic> args) async {
     final trySteps = args['try'] as List<dynamic>? ?? [];
     final catchSteps = args['catch'] as List<dynamic>? ?? [];
-    final errorVar = args['error_var'] as String?;
+    final errorVar = _resolveTemplatesInRule(args['error_var']) as String?;
 
     try {
       dynamic lastResult;
@@ -1361,6 +1665,14 @@ class JsonInterpreter extends ChangeNotifier {
     }
   }
 
+  // ============ 文件持久化辅助 ============
+
+  Directory? _appDocDirCache;
+  Future<Directory> _getAppDocDir() async {
+    _appDocDirCache ??= await getApplicationDocumentsDirectory();
+    return _appDocDirCache!;
+  }
+
   // ============ UI 反馈 ============
 
   void _showToast(String message) {
@@ -1406,33 +1718,14 @@ class JsonInterpreter extends ChangeNotifier {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
 
-    final controller = TextEditingController(text: defaultValue);
-    final result = await showDialog<String>(
+    return await showDialog<String>(
       context: ctx,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(null),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(controller.text),
-            child: const Text('确定'),
-          ),
-        ],
+      builder: (dialogCtx) => _TextInputDialog(
+        title: title,
+        hint: hint,
+        defaultValue: defaultValue,
       ),
     );
-    controller.dispose();
-    return result;
   }
 
   Future<String?> _pickOrTakeImage(
@@ -1527,20 +1820,28 @@ class JsonInterpreter extends ChangeNotifier {
 
   // ============ 参数解析 ============
 
+  dynamic _resolveValue(dynamic value) {
+    if (value is String) {
+      if (value.contains('{{') && value.contains('}}')) {
+        return resolveExpression(value);
+      }
+      return value;
+    } else if (value is List) {
+      return value.map((e) => _resolveValue(e)).toList();
+    } else if (value is Map<String, dynamic>) {
+      final resolvedMap = <String, dynamic>{};
+      value.forEach((k, v) {
+        resolvedMap[k] = _resolveValue(v);
+      });
+      return resolvedMap;
+    }
+    return value;
+  }
+
   Map<String, dynamic> _resolveArgs(Map<String, dynamic> args) {
     final resolved = <String, dynamic>{};
     for (final entry in args.entries) {
-      if (entry.value is String) {
-        final str = entry.value as String;
-        if (str.contains('{{') && str.contains('}}')) {
-          // resolveExpression: 整体 {{ path }} 返回原始类型，混合文本返回 String
-          resolved[entry.key] = resolveExpression(str);
-        } else {
-          resolved[entry.key] = str;
-        }
-      } else {
-        resolved[entry.key] = entry.value;
-      }
+      resolved[entry.key] = _resolveValue(entry.value);
     }
     return resolved;
   }
@@ -1631,5 +1932,61 @@ class JsonInterpreter extends ChangeNotifier {
     }
     _textControllers.clear();
     super.dispose();
+  }
+}
+
+class _TextInputDialog extends StatefulWidget {
+  final String title;
+  final String hint;
+  final String defaultValue;
+
+  const _TextInputDialog({
+    required this.title,
+    required this.hint,
+    required this.defaultValue,
+  });
+
+  @override
+  State<_TextInputDialog> createState() => _TextInputDialogState();
+}
+
+class _TextInputDialogState extends State<_TextInputDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.defaultValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('确定'),
+        ),
+      ],
+    );
   }
 }

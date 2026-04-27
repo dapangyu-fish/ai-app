@@ -1,0 +1,59 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 - 深灰色 -->
+  <rect width="1024" height="1024" rx="226" fill="#1a1a1a"/>
+
+  <!-- 渐变定义 -->
+  <defs>
+    <linearGradient id="handGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0f0f0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b0b0b0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 手势图形 - 类似触控/交互的概念 -->
+  <g transform="translate(512, 512)">
+    <!-- 手掌主体 -->
+    <ellipse cx="0" cy="80" rx="120" ry="140" fill="url(#handGrad)" opacity="0.95"/>
+
+    <!-- 大拇指 -->
+    <path d="M -120 40 Q -160 20 -180 -20 L -180 -80 Q -180 -120 -140 -120 Q -100 -120 -100 -80 L -100 0 Z"
+          fill="url(#handGrad)" opacity="0.95"/>
+
+    <!-- 食指 -->
+    <rect x="-60" y="-200" width="50" height="180" rx="25" fill="url(#handGrad)" opacity="0.95"/>
+
+    <!-- 中指 -->
+    <rect x="-5" y="-240" width="50" height="220" rx="25" fill="url(#handGrad)" opacity="0.95"/>
+
+    <!-- 无名指 -->
+    <rect x="50" y="-200" width="50" height="180" rx="25" fill="url(#handGrad)" opacity="0.95"/>
+
+    <!-- 小指 -->
+    <rect x="105" y="-160" width="45" height="140" rx="22" fill="url(#handGrad)" opacity="0.95"/>
+
+    <!-- 代码符号装饰 - 在手掌上 -->
+    <!-- JSON 大括号 - 左 -->
+    <path d="M -60 60 L -50 60 L -50 80 L -60 80 L -70 80 L -70 100 L -60 100 L -50 100 L -50 120 L -60 120"
+          stroke="#2a2a2a"
+          stroke-width="6"
+          stroke-linecap="round"
+          fill="none"
+          opacity="0.6"/>
+
+    <!-- JSON 大括号 - 右 -->
+    <path d="M 60 60 L 50 60 L 50 80 L 60 80 L 70 80 L 70 100 L 60 100 L 50 100 L 50 120 L 60 120"
+          stroke="#2a2a2a"
+          stroke-width="6"
+          stroke-linecap="round"
+          fill="none"
+          opacity="0.6"/>
+
+    <!-- 中间的点 -->
+    <circle cx="0" cy="90" r="5" fill="#2a2a2a" opacity="0.6"/>
+
+    <!-- 触控波纹效果 - 在食指尖端 -->
+    <circle cx="-35" cy="-200" r="30" stroke="#e0e0e0" stroke-width="3" fill="none" opacity="0.4"/>
+    <circle cx="-35" cy="-200" r="45" stroke="#d0d0d0" stroke-width="2" fill="none" opacity="0.3"/>
+    <circle cx="-35" cy="-200" r="60" stroke="#c0c0c0" stroke-width="1" fill="none" opacity="0.2"/>
+  </g>
+</svg>

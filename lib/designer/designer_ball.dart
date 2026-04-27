@@ -7,7 +7,16 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
 import 'sherpa_asr_service.dart';
+import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
+import '../config/app_config.dart';
+
+/// 语音识别方式枚举
+enum AsrMode {
+  online,    // 在线识别（speech_to_text）
+  offline,   // 离线识别（sherpa_onnx）
+  bytedance, // 豆包ASR
+}
 
 /// 悬浮设计师球 — iOS 风格丝滑拖拽 + 长按对话模式。
 /// 凌驾于所有页面之上，不影响 JSON APP。
@@ -53,11 +62,13 @@ class _DesignerBallState extends State<DesignerBall>
   Animation<double>? _animTop;
 
   // ── 长按对话 ──
-  static const Duration _longPressDuration = Duration(seconds: 2);
+  static const Duration _longPressDuration = Duration(milliseconds: 1500);
   Timer? _longPressTimer;
   bool _chatMode = false;
   bool _isListening = false;
   bool _isThinking = false;
+  bool _isGeneratingJson = false;
+  String _generatingStatusMessage = '正在生成代码...'; // 动态状态文案
   String? _liveTranscript;
   String _accumulatedTranscript = ''; // 累积的已确认文本（用于多段识别）
 
@@ -81,8 +92,9 @@ class _DesignerBallState extends State<DesignerBall>
   stt.SpeechToText? _speech;
   bool _speechInited = false;
   bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
-  bool get _useSherpaAsr => _sherpaAsr.forceOffline; // 现在从 SherpaService 读取状态
+  AsrMode _asrMode = AsrMode.online; // 当前语音识别方式
   final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
+  final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
@@ -118,9 +130,111 @@ class _DesignerBallState extends State<DesignerBall>
     // 注册崩溃分析回调
     DesignerBall.sendCrashReport = _handleCrashReport;
     // 加载配置
+    _loadAsrMode();
     _sherpaAsr.loadConfig().then((_) {
       setState(() {});
     });
+    // 加载 AI 对话 session
+    _chatService.loadSession();
+
+    // 提前初始化原生语音识别（参照测试应用的成功实践）
+    _initNativeSpeech();
+
+    // 初始化豆包ASR连接
+    _initBytedanceAsr();
+  }
+
+  /// 加载语音识别方式设置
+  Future<void> _loadAsrMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final asrModeStr = prefs.getString('asr_mode') ?? 'online';
+    AsrMode mode = AsrMode.online;
+    switch (asrModeStr) {
+      case 'offline':
+        mode = AsrMode.offline;
+        break;
+      case 'bytedance':
+        mode = AsrMode.bytedance;
+        break;
+      default:
+        mode = AsrMode.online;
+    }
+    setState(() {
+      _asrMode = mode;
+    });
+    debugPrint('[DesignerBall] Loaded ASR mode: $asrModeStr');
+  }
+
+  /// 初始化豆包ASR连接
+  Future<void> _initBytedanceAsr() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null || token.isEmpty) {
+        debugPrint('[DesignerBall] No access token, skip ByteDance ASR init');
+        return;
+      }
+
+      // 使用统一配置管理的后端地址
+      final serverUrl = AppConfig.bytedanceAsrUrl;
+      debugPrint('[DesignerBall] Connecting to ByteDance ASR at: $serverUrl');
+      final success = await _bytedanceAsr.connect(serverUrl, token);
+
+      if (success) {
+        debugPrint('[DesignerBall] ByteDance ASR connected');
+
+        // 设置回调
+        _bytedanceAsr.onResult = (text) {
+          if (mounted && _isListening) {
+            setState(() {
+              _liveTranscript = text;
+            });
+          }
+        };
+
+        _bytedanceAsr.onError = (error) {
+          debugPrint('[DesignerBall] ByteDance ASR error: $error');
+          if (mounted) {
+            setState(() {
+              _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR错误: $error'));
+            });
+          }
+        };
+
+        _bytedanceAsr.onQuotaUpdate = (quota) {
+          debugPrint('[DesignerBall] ByteDance ASR quota: $quota');
+          if (mounted) {
+            setState(() {
+              _lastQuota = quota;
+            });
+          }
+        };
+      } else {
+        debugPrint('[DesignerBall] ByteDance ASR connection failed');
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] ByteDance ASR init error: $e');
+    }
+  }
+
+  /// 在 initState 时就初始化原生语音识别，避免按住时才初始化导致的延迟和时序问题
+  Future<void> _initNativeSpeech() async {
+    try {
+      _speech = stt.SpeechToText();
+      _speechInited = await _speech!.initialize(
+        onError: (error) {
+          debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
+          if (error.errorMsg == 'error_network') {
+            _handleNetworkError();
+          }
+        },
+        onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
+      );
+      debugPrint('[DesignerBall] Native speech initialized in initState: $_speechInited');
+    } catch (e) {
+      debugPrint('[DesignerBall] Native speech init failed: $e');
+      _speechInited = false;
+    }
   }
 
   /// 切换强制离线模式
@@ -200,24 +314,30 @@ class _DesignerBallState extends State<DesignerBall>
       _movedEnough = false;
     });
 
-    if (_chatMode) {
-      // 对话模式 → 短延时后开始录音，移动了就当拖拽
-      _longPressTimer?.cancel();
-      _longPressTimer = Timer(const Duration(milliseconds: 300), () {
-        if (_pointerDown && !_movedEnough) {
-          _startListening();
+    // 开始长按倒计时，通过 Timer 手动驱动进度
+    final durationMs = _chatMode ? 1000 : _longPressDuration.inMilliseconds;
+    _longPressTimer?.cancel();
+    _countdownController.value = 0.0;
+    final startTime = DateTime.now();
+    _longPressTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      final elapsed = DateTime.now().difference(startTime);
+      final progress = elapsed.inMilliseconds / durationMs;
+      
+      if (mounted) {
+        _countdownController.value = progress.clamp(0.0, 1.0);
+      }
+      
+      if (progress >= 1.0) {
+        timer.cancel();
+        if (_pointerDown && !_movedEnough && mounted) {
+          if (_chatMode) {
+            _startListening();
+          } else {
+            _enterChatMode();
+          }
         }
-      });
-    } else {
-      // 开始长按倒计时（2 秒）
-      _longPressTimer?.cancel();
-      _countdownController.forward(from: 0);
-      _longPressTimer = Timer(_longPressDuration, () {
-        if (_pointerDown && !_movedEnough) {
-          _enterChatMode();
-        }
-      });
-    }
+      }
+    });
   }
 
   void _onPointerUp(PointerUpEvent event, Size screenSize) {
@@ -237,7 +357,7 @@ class _DesignerBallState extends State<DesignerBall>
         _stopListeningAndSend();
       }
       if (_recordStartPos != null) {
-        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _handleDragEnd(screenSize);
         _recordStartPos = null;
       }
       _dragCancelling = false;
@@ -248,7 +368,7 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  void _onPointerCancel(PointerCancelEvent event) {
+  void _onPointerCancel(PointerCancelEvent event, Size screenSize) {
     setState(() => _pointerDown = false);
     _longPressTimer?.cancel();
     GestureExclusionHelper.clearExclusionRects();
@@ -259,7 +379,7 @@ class _DesignerBallState extends State<DesignerBall>
       _movedEnough = false;
       _cancelRecording();
       if (_recordStartPos != null) {
-        _animateTo(_recordStartPos!.dx, _recordStartPos!.dy);
+        _handleDragEnd(screenSize);
         _recordStartPos = null;
       }
     }
@@ -366,15 +486,6 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
-  /// 如果当前正在运行 JSON-APP，把完整 JSON 注入为对话上下文
-  void _injectCurrentAppContext() {
-    final config = widget.getCurrentConfig?.call();
-    if (config != null && _chatService.messages.isEmpty) {
-      _chatService.setAppContext(config);
-      debugPrint('[DesignerBall] Injected current JSON-APP as context');
-    }
-  }
-
   void _onProviderChanged(String providerId) {
     AiChatService.setProvider(providerId);
     setState(() {});
@@ -386,62 +497,25 @@ class _DesignerBallState extends State<DesignerBall>
     // 进入对话模式的重震动反馈
     HapticFeedback.heavyImpact();
 
-    _injectCurrentAppContext();
-
     // 后台拉取供应商列表（不阻塞进入对话模式）
     AiChatService.fetchProviders().then((_) {
       if (mounted) setState(() {});
     });
 
-    debugPrint('[DesignerBall] 初始状态: forceOffline=$_useSherpaAsr, speechInited=$_speechInited');
+    debugPrint('[DesignerBall] 初始状态: asrMode=$_asrMode, speechInited=$_speechInited');
 
-    if (!_speechInited && !_useSherpaAsr) {
-      try {
-        _speech ??= stt.SpeechToText();
-        _speechInited = await _speech!.initialize(
-          onError: (error) {
-            debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
-            if (error.errorMsg == 'error_network') {
-              _handleNetworkError();
-            } else if (error.errorMsg == 'error_speech_timeout') {
-              // 场景1修复：原生平台超时（用户长时间不说话）
-              // 如果用户还在按住球，重新启动监听
-              if (_isListening && _pointerDown && !_useSherpaAsr) {
-                debugPrint('[DesignerBall] 原生平台超时，重新启动监听');
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  if (_isListening && _pointerDown && !_useSherpaAsr) {
-                    _startNativeSpeech();
-                  }
-                });
-              }
-            }
-          },
-          onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
-        );
-        debugPrint('[DesignerBall] Native speech init: $_speechInited');
-      } catch (e) {
-        debugPrint('[DesignerBall] Native speech failed: $e');
-        _speechInited = false;
-      }
-
-      // 手已离开 → 中止
-      if (!_pointerDown) {
-        debugPrint('[DesignerBall] Pointer lifted during speech init, aborting');
-        return;
-      }
-
-      if (!_speechInited) {
-        setState(() {
-          _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中开启"强制离线模式"'));
-        });
-        return;
-      }
+    // 检查原生语音识别是否已初始化（已在 initState 中完成）
+    if (!_speechInited && _asrMode == AsrMode.online) {
+      setState(() {
+        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中切换到离线模式或豆包ASR'));
+      });
+      return;
     }
 
-    final shouldUseSherpa = _useSherpaAsr;
-    debugPrint('[DesignerBall] 最终决策: ${shouldUseSherpa ? "离线模式(sherpa)" : "在线模式(native speech)"}');
+    debugPrint('[DesignerBall] 最终决策: ASR模式=${_asrMode.name}');
 
-    if (shouldUseSherpa) {
+    // 如果是离线模式，需要预加载模型
+    if (_asrMode == AsrMode.offline) {
       setState(() {
         _chatMode = true;
         _isThinking = true;
@@ -475,6 +549,14 @@ class _DesignerBallState extends State<DesignerBall>
       setState(() => _isThinking = false);
     }
 
+    // 如果是豆包ASR，检查连接状态
+    if (_asrMode == AsrMode.bytedance && !_bytedanceAsr.isConnected) {
+      setState(() {
+        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络或切换到其他识别方式'));
+      });
+      return;
+    }
+
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
     if (!_pointerDown) {
@@ -495,12 +577,17 @@ class _DesignerBallState extends State<DesignerBall>
     });
     _pulseController.repeat(reverse: true);
 
-    final shouldUseSherpa = _useSherpaAsr;
-    debugPrint('[DesignerBall] ASR决策: forceOffline=$_useSherpaAsr → ${shouldUseSherpa ? "离线(sherpa)" : "在线(native)"}');
-    if (shouldUseSherpa) {
-      _startSherpaAsr();
-    } else {
-      _startNativeSpeech();
+    debugPrint('[DesignerBall] ASR决策: asrMode=${_asrMode.name}');
+
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _startSherpaAsr();
+        break;
+      case AsrMode.bytedance:
+        _startBytedanceAsr();
+        break;
+      default:
+        _startNativeSpeech();
     }
   }
 
@@ -520,13 +607,19 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _cancelRecording() {
     debugPrint('[DesignerBall] Recording cancelled by drag');
-    final shouldUseSherpa = _useSherpaAsr;
-    if (shouldUseSherpa) {
-      _sherpaAsr.stopListening();
-      _sherpaAsr.onResult = null;
-    } else {
-      try { _speech?.stop(); } catch (_) {}
+
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _sherpaAsr.stopListening();
+        _sherpaAsr.onResult = null;
+        break;
+      case AsrMode.bytedance:
+        _bytedanceAsr.stopListening();
+        break;
+      default:
+        try { _speech?.stop(); } catch (_) {}
     }
+
     _pulseController.stop();
     _pulseController.reset();
     setState(() {
@@ -539,18 +632,20 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _enterEditMode() {
     debugPrint('[DesignerBall] Entering edit mode');
-    final shouldUseSherpa = _useSherpaAsr;
     String finalText = _liveTranscript?.trim() ?? '';
+    _editTextController.text = finalText;
+    _accumulatedTranscript = ''; // 清空累积文本，防止下次录音叠加旧内容
 
-    if (shouldUseSherpa) {
-      _sherpaAsr.stopListening().then((sherpaText) {
-        if (sherpaText.isNotEmpty) finalText = sherpaText;
-        _editTextController.text = finalText;
-      });
-      _sherpaAsr.onResult = null;
-    } else {
-      try { _speech?.stop(); } catch (_) {}
-      _editTextController.text = finalText;
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _sherpaAsr.stopListening();
+        _sherpaAsr.onResult = null;
+        break;
+      case AsrMode.bytedance:
+        _bytedanceAsr.stopListening();
+        break;
+      default:
+        try { _speech?.stop(); } catch (_) {}
     }
 
     _pulseController.stop();
@@ -561,7 +656,6 @@ class _DesignerBallState extends State<DesignerBall>
       _dragCancelling = false;
       _dragInEditZone = false;
       _editMode = true;
-      _editTextController.text = finalText;
     });
   }
 
@@ -572,21 +666,84 @@ class _DesignerBallState extends State<DesignerBall>
 
     if (text.isEmpty) return;
 
+    _sendTextToAi(text);
+  }
+
+  void _sendTextToAi(String text, {bool skipUserMessage = false}) {
     _cancelCurrentStream();
 
-    setState(() {
-      _messages.add(ChatMessage(role: 'user', content: text));
-      _messages.add(ChatMessage(role: 'assistant', content: ''));
-      _isThinking = true;
-    });
-    _scrollToBottom();
+    if (!skipUserMessage) {
+      setState(() {
+        _messages.add(ChatMessage(role: 'user', content: text));
+        _messages.add(ChatMessage(role: 'assistant', content: ''));
+        _isThinking = true;
+      });
+      _scrollToBottom();
+    }
+
+    // 用于累积流式事件中的指令
+    Map<String, dynamic>? _pendingJsonApp;
+    String? _pendingRequestAction;
+    String? _pendingFailedJsonUrl;
+    String? _pendingFailedJsonError;
 
     _streamSub = _chatService.sendStream(text).listen(
       (event) {
+        if (event.isGeneratingJson) {
+          setState(() {
+            _isGeneratingJson = true;
+            _generatingStatusMessage = '正在启动 AI 引擎...';
+          });
+          _scrollToBottom();
+          return;
+        }
+        if (event.statusMessage != null) {
+          setState(() {
+            // 有工具动作时直接在浮层里显示，避免看起来像卡住
+            _isGeneratingJson = true;
+            _generatingStatusMessage = event.statusMessage!;
+          });
+          _scrollToBottom();
+          return;
+        }
         if (event.error != null && event.content == null) {
           setState(() {
             _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = '正在生成代码...';
             _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+          });
+          _scrollToBottom();
+          return;
+        }
+
+        // 累积指令，不立即处理
+        if (event.requestAction != null) {
+          _pendingRequestAction = event.requestAction;
+          return;
+        }
+        if (event.jsonApp != null) {
+          _pendingJsonApp = event.jsonApp;
+          _lastGeneratedJson = event.jsonApp;
+          return;
+        }
+        if (event.failedJsonUrl != null) {
+          _pendingFailedJsonUrl = event.failedJsonUrl;
+          _pendingFailedJsonError = event.error;
+          return;
+        }
+
+        if (event.thinking != null) {
+          // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
+          setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            if (_messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                (_messages.last.content.isEmpty || _messages.last.content.startsWith('💭'))) {
+              // 更新最后一条消息为思考内容
+              _messages.last = ChatMessage(role: 'assistant', content: '💭 ${event.thinking!}');
+            }
           });
           _scrollToBottom();
           return;
@@ -594,18 +751,17 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.content != null) {
           setState(() {
             _isThinking = false;
-            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
-          });
-          _scrollToBottom();
-        }
-        if (event.jsonApp != null) {
-          _lastGeneratedJson = event.jsonApp;
-          setState(() {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: '🚀 JSON-APP 已生成，点击试运行',
-              jsonApp: event.jsonApp,
-            ));
+            _isGeneratingJson = false;
+            // 如果最后一条是思考消息，则追加新消息；否则更新最后一条
+            if (_messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                _messages.last.content.startsWith('💭')) {
+              // 思考过程后的内容，追加新消息
+              _messages.add(ChatMessage(role: 'assistant', content: event.content!));
+            } else if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+              // 普通内容，更新最后一条消息
+              _messages.last = ChatMessage(role: 'assistant', content: event.content!);
+            }
           });
           _scrollToBottom();
         }
@@ -616,10 +772,113 @@ class _DesignerBallState extends State<DesignerBall>
       onError: (e) {
         setState(() {
           _isThinking = false;
+          _isGeneratingJson = false;
+          _generatingStatusMessage = '正在生成代码...';
           _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
         });
       },
+      onDone: () {
+        // SSE 流结束后，统一处理累积的指令
+        setState(() {
+          _isGeneratingJson = false;
+          _generatingStatusMessage = '正在生成代码...';
+
+          // 处理请求上传当前应用（追加新消息，不替换）
+          if (_pendingRequestAction == 'upload_current_app') {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: 'AI 需要获取当前应用的代码配置以进行修改：',
+              action: 'UPLOAD_CURRENT_APP',
+            ));
+          }
+          // 处理 JSON 下载失败
+          else if (_pendingFailedJsonUrl != null) {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '下载 JSON 失败',
+              failedJsonUrl: _pendingFailedJsonUrl,
+            ));
+          }
+          // 处理 JSON 应用生成成功
+          else if (_pendingJsonApp != null) {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: '🚀 点击试运行',
+              jsonApp: _pendingJsonApp,
+            ));
+          }
+        });
+        _scrollToBottom();
+      },
     );
+  }
+
+  Future<void> _handleUploadCurrentApp() async {
+    final config = widget.getCurrentConfig?.call();
+    if (config == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前没有运行的应用配置')),
+      );
+      return;
+    }
+
+    setState(() {
+      // 移除 UPLOAD 按钮那条消息
+      _messages.removeLast();
+      _messages.add(ChatMessage(role: 'system', content: '正在上传当前应用配置...'));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final appContextString = await _chatService.uploadCurrentApp(config);
+      setState(() {
+        _isThinking = false;
+        _messages.removeLast();
+        _messages.add(ChatMessage(role: 'system', content: '✅ 应用配置已上传成功。'));
+      });
+      // 自动发送一条消息继续流程，并把链接明确显示在对话框中
+      _sendTextToAi('$appContextString\n\n请查阅以上代码配置并继续完成我的要求。');
+    } catch (e) {
+      setState(() {
+        _isThinking = false;
+        _messages.removeLast();
+        _messages.add(ChatMessage(role: 'system', content: '❌ 上传失败: $e'));
+      });
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _handleRetryDownload(String url) async {
+    setState(() {
+      _messages.removeLast(); // 移除重试按钮那条消息
+      _isGeneratingJson = true; // 显示骨架屏动画
+    });
+    _scrollToBottom();
+    
+    try {
+      final parsedApp = await _chatService.retryDownloadJson(url);
+      _lastGeneratedJson = parsedApp;
+      setState(() {
+        _isGeneratingJson = false;
+        _messages.add(ChatMessage(
+          role: 'system',
+          content: '🚀 JSON-APP 已成功下载，点击试运行',
+          jsonApp: parsedApp,
+        ));
+      });
+      _scrollToBottom();
+    } catch (e) {
+      setState(() {
+        _isGeneratingJson = false;
+        _messages.add(ChatMessage(
+          role: 'assistant',
+          content: '下载重试失败: $e',
+          failedJsonUrl: url,
+        ));
+      });
+      _scrollToBottom();
+    }
   }
 
   void _cancelEditMode() {
@@ -629,49 +888,28 @@ class _DesignerBallState extends State<DesignerBall>
     });
   }
 
-  /// 原生语音识别 (Apple/Google)
+  /// 原生语音识别 (Apple/Google) — 参照 speech_to_text 官方 demo 的最小实现，
+  /// 不做任何 finalResult 自动重启，避免反复申请/释放麦克风。
   void _startNativeSpeech() {
-    debugPrint('[DesignerBall] 启动原生语音识别 (Apple/Google Speech)');
     if (_speech == null) return;
     try {
-      debugPrint('[DesignerBall] listen 参数: listenFor=60s, pauseFor=60s');
       _speech!.listen(
         onResult: (result) {
           _nativeSpeechReceivedCallback = true;
-          debugPrint('[DesignerBall] 收到识别结果: ${result.recognizedWords}, finalResult=${result.finalResult}');
-
-          // 拼接累积文本和当前识别结果
-          final currentText = result.recognizedWords;
-          final fullText = _accumulatedTranscript.isEmpty
-              ? currentText
-              : '$_accumulatedTranscript $currentText';
-
-          setState(() => _liveTranscript = fullText);
-          _scrollToBottom();
-
-          // 场景2修复：收到 finalResult=true 时，原生引擎会自动停止
-          // 如果用户还在按住球，重新启动监听以继续录音
-          if (result.finalResult && _isListening && _pointerDown) {
-            debugPrint('[DesignerBall] 收到 finalResult，保存已识别文本并重新启动监听');
-            // 保存已确认的文本
-            _accumulatedTranscript = fullText;
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (_isListening && _pointerDown && !_useSherpaAsr) {
-                _startNativeSpeech();
-              }
-            });
+          final text = result.recognizedWords;
+          if (_liveTranscript != text) {
+            setState(() => _liveTranscript = text);
           }
         },
         localeId: 'zh_CN',
-        listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 60),
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 5),
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
           cancelOnError: false,
           partialResults: true,
         ),
       );
-      debugPrint('[DesignerBall] listen 调用完成，等待用户说话');
     } catch (e) {
       debugPrint('[DesignerBall] Native listen error: $e');
       setState(() {
@@ -791,15 +1029,20 @@ class _DesignerBallState extends State<DesignerBall>
       }
 
       _sherpaAsr.onResult = (text) {
-        setState(() => _liveTranscript = text);
-        _scrollToBottom();
+        // 优化：只在文本变化时更新 UI，减少不必要的重建
+        if (_liveTranscript != text) {
+          setState(() => _liveTranscript = text);
+        }
       };
 
       final ok = await _sherpaAsr.startListening();
       if (!ok) {
         setState(() {
           _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: '离线语音识别启动失败'));
+          _messages.add(ChatMessage(
+            role: 'assistant',
+            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+          ));
         });
         _pulseController.stop();
       }
@@ -818,22 +1061,66 @@ class _DesignerBallState extends State<DesignerBall>
     _sherpaAsr.onResult = null;
   }
 
+  /// 启动豆包ASR识别
+  Future<void> _startBytedanceAsr() async {
+    debugPrint('[DesignerBall] 启动豆包ASR识别');
+    try {
+      // 检查连接状态
+      if (!_bytedanceAsr.isConnected) {
+        debugPrint('[DesignerBall] ByteDance ASR not connected');
+        setState(() {
+          _isListening = false;
+          _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络'));
+        });
+        _pulseController.stop();
+        _pulseController.reset();
+        return;
+      }
+
+      // 开始识别
+      final ok = await _bytedanceAsr.startListening();
+      if (!ok) {
+        setState(() {
+          _isListening = false;
+          _messages.add(ChatMessage(
+            role: 'assistant',
+            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+          ));
+        });
+        _pulseController.stop();
+      }
+    } catch (e) {
+      debugPrint('[ByteDanceASR] Start error: $e');
+      setState(() {
+        _isListening = false;
+        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR启动失败: $e'));
+      });
+      _pulseController.stop();
+    }
+  }
+
   Future<void> _stopListeningAndSend() async {
     debugPrint('[DesignerBall] _stopListeningAndSend');
 
     // 停止语音识别
-    final shouldUseSherpa = _useSherpaAsr;
-    if (shouldUseSherpa) {
-      _sherpaAsr.onResult = null;
-      final finalText = await _sherpaAsr.stopListening();
-      if (finalText.isNotEmpty) {
-        _liveTranscript = finalText;
-      }
-    } else {
-      try { _speech?.stop(); } catch (e) {
-        debugPrint('[DesignerBall] speech.stop error: $e');
-      }
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _sherpaAsr.onResult = null;
+        final finalText = await _sherpaAsr.stopListening();
+        if (finalText.isNotEmpty) {
+          _liveTranscript = finalText;
+        }
+        break;
+      case AsrMode.bytedance:
+        await _bytedanceAsr.stopListening();
+        break;
+      default:
+        try { await _speech?.stop(); } catch (e) {
+          debugPrint('[DesignerBall] speech.stop error: $e');
+        }
     }
+
+    // 重要：先完全重置语音相关状态，让 iOS 释放麦克风资源
     _pulseController.stop();
     _pulseController.reset();
 
@@ -847,10 +1134,7 @@ class _DesignerBallState extends State<DesignerBall>
       return;
     }
 
-    // 中断上一条还在进行的流
-    _cancelCurrentStream();
-
-    // 原子 setState：清掉 transcript + 加用户消息 + 空 assistant 占位
+    // 先原子更新 UI，彻底退出录音态
     setState(() {
       _isListening = false;
       _liveTranscript = null;
@@ -860,48 +1144,14 @@ class _DesignerBallState extends State<DesignerBall>
     });
     _scrollToBottom();
 
-    _streamSub = _chatService.sendStream(text).listen(
-      (event) {
-        if (event.error != null && event.content == null) {
-          // 纯错误（如配额超限）
-          setState(() {
-            _isThinking = false;
-            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
-          });
-          _scrollToBottom();
-          return;
-        }
-        if (event.content != null) {
-          setState(() {
-            _isThinking = false;
-            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
-          });
-          _scrollToBottom();
-        }
-        if (event.jsonApp != null) {
-          debugPrint('[DesignerBall] AI generated JSON-APP!');
-          _lastGeneratedJson = event.jsonApp;
-          setState(() {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: '🚀 JSON-APP 已生成，点击试运行',
-              jsonApp: event.jsonApp,
-            ));
-          });
-          _scrollToBottom();
-        }
-        if (event.quota != null) {
-          _lastQuota = event.quota;
-        }
-      },
-      onError: (e) {
-        debugPrint('[DesignerBall] AI stream error: $e');
-        setState(() {
-          _isThinking = false;
-          _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
-        });
-      },
-    );
+    // 关键优化：给 iOS 一点时间释放语音识别资源，再启动 AI 请求
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // 中断上一条还在进行的流
+    _cancelCurrentStream();
+
+    // 启动 AI 处理
+    _sendTextToAi(text, skipUserMessage: true);
   }
 
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
@@ -994,7 +1244,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _clearAndCloseChatMode() {
     _closeChatMode();
     _messages.clear();
-    _chatService.clear();
+    _chatService.clear(); // resetSession is async but fire-and-forget is fine here
   }
 
   void _scrollToBottom() {
@@ -1116,15 +1366,25 @@ class _DesignerBallState extends State<DesignerBall>
             messages: _messages,
             isListening: _isListening,
             isThinking: _isThinking,
+            isGeneratingJson: _isGeneratingJson,
+            generatingStatusMessage: _generatingStatusMessage,
             liveTranscript:
                 (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
             onClose: _closeChatMode,
             onClear: _clearAndCloseChatMode,
             scrollController: _scrollController,
             onProviderChanged: _onProviderChanged,
+            onUploadCurrentApp: _handleUploadCurrentApp,
+            onRetryDownload: _handleRetryDownload,
             onRunJsonApp: (jsonConfig) {
-              _clearAndCloseChatMode();
+              // 先调用外部回调，再清空聊天
               widget.onRunJsonApp?.call(jsonConfig);
+              // 延迟清空，避免 UI 重建冲突
+              Future.microtask(() {
+                if (mounted) {
+                  _clearAndCloseChatMode();
+                }
+              });
             },
           ),
 
@@ -1220,7 +1480,7 @@ class _DesignerBallState extends State<DesignerBall>
             onPointerDown: _onPointerDown,
             onPointerMove: (e) => _onPointerMove(e, screenSize),
             onPointerUp: (e) => _onPointerUp(e, screenSize),
-            onPointerCancel: _onPointerCancel,
+            onPointerCancel: (e) => _onPointerCancel(e, screenSize),
             child: GestureDetector(
               onTap: () => _onTap(screenSize),
               onDoubleTap: _onDoubleTap,
@@ -1481,7 +1741,7 @@ class _DesignerBallState extends State<DesignerBall>
     }
 
     // 长按倒计时环形进度
-    if (_pointerDown && !_chatMode && !_movedEnough) {
+    if (_pointerDown && !_movedEnough && !_isListening) {
       ball = AnimatedBuilder(
         animation: _countdownController,
         builder: (context, child) {

@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 /// 后端鉴权服务 — 所有请求通过 Flask 后端代理到 Supabase
 class AuthService {
-  static const String _baseUrl = 'https://app-backend.dapangyu.work';
+  // 使用统一配置管理的后端地址
+  static String get _baseUrl => AppConfig.backendUrl;
   static const String _tokenKey = 'auth_access_token';
   static const String _refreshKey = 'auth_refresh_token';
   static const String _userKey = 'auth_user';
@@ -26,7 +28,8 @@ class AuthService {
     if (u['avatar_url'] is String) {
       String url = u['avatar_url'];
       if (url.contains('127.0.0.1')) {
-        url = url.replaceAll(RegExp(r'http://127\.0\.0\.1:\d+'), 'https://app-auth.dapangyu.work');
+        // 使用统一配置管理的Supabase地址
+        url = url.replaceAll(RegExp(r'http://127\.0\.0\.1:\d+'), AppConfig.supabaseUrl);
       }
       u['avatar_url'] = url;
     }
@@ -179,21 +182,28 @@ class AuthService {
   static Future<void> refreshSession() async {
     if (_refreshToken == null) throw Exception('无 refresh token');
 
-    final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/refresh'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'refresh_token': _refreshToken}),
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final resp = await http.post(
+        Uri.parse('$_baseUrl/api/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'refresh_token': _refreshToken}),
+      ).timeout(const Duration(seconds: 10));
 
-    final data = json.decode(resp.body);
-    if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '刷新失败');
+      final data = json.decode(resp.body);
+      if (resp.statusCode >= 400) {
+        // 明确被服务器拒绝（如过期/无效），清理本地状态
+        await _clearLocal();
+        throw Exception(data['error'] ?? '刷新失败');
+      }
+
+      _accessToken = data['access_token'];
+      _refreshToken = data['refresh_token'];
+      _user = data['user'];
+      await _saveLocal();
+    } catch (e) {
+      // 网络错误等保留本地状态，上抛异常
+      rethrow;
     }
-
-    _accessToken = data['access_token'];
-    _refreshToken = data['refresh_token'];
-    _user = data['user'];
-    await _saveLocal();
   }
 
   /// 登出
@@ -210,12 +220,29 @@ class AuthService {
     await _clearLocal();
   }
 
+  /// 带自动刷新 Token 的 HTTP 请求包装器
+  static Future<http.Response> _authRequest(
+    Future<http.Response> Function() requestFunc,
+  ) async {
+    var response = await requestFunc();
+    if (response.statusCode == 401 && _refreshToken != null) {
+      try {
+        await refreshSession();
+        // 刷新成功，重试请求
+        response = await requestFunc();
+      } catch (_) {
+        // 刷新失败，保持原响应，上层会抛出异常
+      }
+    }
+    return response;
+  }
+
   /// 获取最新用户信息
   static Future<Map<String, dynamic>> fetchUser() async {
-    final resp = await http.get(
+    final resp = await _authRequest(() => http.get(
       Uri.parse('$_baseUrl/api/auth/user'),
       headers: {'Authorization': 'Bearer $_accessToken'},
-    ).timeout(const Duration(seconds: 10));
+    ).timeout(const Duration(seconds: 10)));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -236,14 +263,14 @@ class AuthService {
     if (username != null) body['username'] = username;
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;
 
-    final resp = await http.put(
+    final resp = await _authRequest(() => http.put(
       Uri.parse('$_baseUrl/api/auth/user'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_accessToken',
       },
       body: json.encode(body),
-    ).timeout(const Duration(seconds: 10));
+    ).timeout(const Duration(seconds: 10)));
 
     if (resp.statusCode >= 400 && !resp.body.trimLeft().startsWith('{')) {
       throw Exception('服务器错误 (${resp.statusCode})');
@@ -260,14 +287,14 @@ class AuthService {
 
   /// 上传头像 (base64)
   static Future<String> uploadAvatar(String base64Data) async {
-    final resp = await http.post(
+    final resp = await _authRequest(() => http.post(
       Uri.parse('$_baseUrl/api/auth/avatar'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_accessToken',
       },
       body: json.encode({'avatar_base64': base64Data}),
-    ).timeout(const Duration(seconds: 15));
+    ).timeout(const Duration(seconds: 15)));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {

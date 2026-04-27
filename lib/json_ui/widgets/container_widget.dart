@@ -94,10 +94,21 @@ class JsonContainerWidget extends JsonBaseWidget {
       );
     }
 
-    return Padding(
+    Widget finalWidget = Padding(
       padding: EdgeInsets.all(margin),
       child: container,
     );
+
+    // 点击事件 (onTap)
+    final onTapDef = json['onTap'];
+    if (onTapDef != null) {
+      return GestureDetector(
+        onTap: () => interpreter.executeAction(onTapDef, context),
+        child: finalWidget,
+      );
+    }
+
+    return finalWidget;
   }
 
   /// 当容器有背景色时，自动为子控件设置对比文字颜色
