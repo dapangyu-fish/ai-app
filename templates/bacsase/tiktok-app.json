@@ -135,26 +135,24 @@
       },
       "loadUserData": {
         "params": [],
-        "return": "None",
         "logic": [
-          { "call": "@lib_user.checkLogin", "args": { "bind": "$.global.isLoggedIn" } },
+          { "call": "@lib_user.checkLogin", "args": { "bind": "global.isLoggedIn" } },
           { "call": "@if", "args": {
-            "condition": { "var": "$.global.isLoggedIn" },
+            "condition": { "var": "global.isLoggedIn" },
             "then": [
-              { "call": "@lib_user.loadUserInfo", "args": { "bind": "$.global.userInfo" } },
-              { "call": "@lib_user.getUserName", "args": { "bind": "$.global.userName" } },
-              { "call": "@lib_user.getUserAvatar", "args": { "bind": "$.global.avatarUrl" } }
+              { "call": "@lib_user.loadUserInfo", "args": { "bind": "global.userInfo" } },
+              { "call": "@lib_user.getUserName", "args": { "bind": "global.userName" } },
+              { "call": "@lib_user.getUserAvatar", "args": { "bind": "global.avatarUrl" } }
             ]
           }}
         ]
       },
       "changeAvatar": {
         "params": [],
-        "return": "None",
         "logic": [
-          { "call": "@common-ui.pickImage", "args": { "bind": "$.global._tempAvatar" } },
+          { "call": "@common-ui.pickImage", "args": { "bind": "global._tempAvatar" } },
           { "call": "@if", "args": {
-            "condition": { "!!": [{ "var": "$.global._tempAvatar" }] },
+            "condition": { "!!": [{ "var": "global._tempAvatar" }] },
             "then": [
               { "call": "@lib_user.updateAvatar", "args": { "imagePath": "{{ global._tempAvatar }}" } },
               { "call": "@global.loadUserData", "args": {} },
@@ -165,11 +163,10 @@
       },
       "editProfile": {
         "params": [],
-        "return": "None",
         "logic": [
-          { "call": "@show_input_dialog", "args": { "title": "修改用户名", "hint": "请输入新的用户名", "defaultValue": "{{ global.userName }}", "bind": "$.global._newName" } },
+          { "call": "@show_input_dialog", "args": { "title": "修改用户名", "hint": "请输入新的用户名", "defaultValue": "{{ global.userName }}", "bind": "global._newName" } },
           { "call": "@if", "args": {
-            "condition": { "!!": [{ "var": "$.global._newName" }] },
+            "condition": { "!!": [{ "var": "global._newName" }] },
             "then": [
               { "call": "@lib_user.updateName", "args": { "newName": "{{ global._newName }}" } },
               { "call": "@global.loadUserData", "args": {} },
