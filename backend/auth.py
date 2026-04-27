@@ -71,6 +71,34 @@ def require_auth(f):
     return decorated
 
 
+def require_auth_socketio(f):
+    """装饰器：SocketIO 事件要求用户登录"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # SocketIO 通过 request.args 传递 token
+        token = request.args.get("token", "")
+        if not token:
+            from flask_socketio import emit
+            emit('asr_error', {"error": "未提供认证 token"})
+            return
+
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers=_supabase_headers(token),
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            from flask_socketio import emit
+            emit('asr_error', {"error": "token 无效或已过期"})
+            return
+
+        request.supabase_user = resp.json()
+        request.supabase_token = token
+        request.user_role = _get_user_role(request.supabase_user)
+        return f(*args, **kwargs)
+    return decorated
+
+
 def require_role(*roles):
     """装饰器：要求特定角色"""
     def decorator(f):

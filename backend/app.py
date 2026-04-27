@@ -8,12 +8,13 @@ JSON DSL Backend - Flask App
 
 import logging
 from flask import Flask
-from flask_sock import Sock
+from flask_socketio import SocketIO
 from config import PORT
 import auth
 import ai_code_generator as chat
 import claude_chat
 import store
+from bytedance_asr_routes import register_asr_routes
 
 # 配置日志
 logging.basicConfig(
@@ -26,7 +27,10 @@ logging.basicConfig(
 def create_app():
     """创建 Flask 应用"""
     app = Flask(__name__)
-    sock = Sock(app)
+    app.config['SECRET_KEY'] = 'your-secret-key'
+
+    # 初始化 SocketIO
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
     # 注册 Auth 路由
     app.add_url_rule("/api/auth/register", methods=["POST"], view_func=auth.register)
@@ -54,10 +58,13 @@ def create_app():
     app.add_url_rule("/api/store/publish", methods=["POST"], view_func=store.store_publish)
     app.add_url_rule("/api/store/delete/<app_id>", methods=["DELETE"], view_func=store.store_delete)
 
-    return app
+    # 注册豆包ASR WebSocket路由
+    register_asr_routes(socketio)
+
+    return app, socketio
 
 
-app = create_app()
+app, socketio = create_app()
 
 
 if __name__ == "__main__":
@@ -67,5 +74,6 @@ if __name__ == "__main__":
     logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
     logger.info("   Fix:   POST /api/ai/fix-app (crash repair)")
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
+    logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
     logger.info("   Debug mode: ENABLED")
-    app.run(host="0.0.0.0", port=PORT, debug=True)
+    socketio.run(app, host="0.0.0.0", port=PORT, debug=True, allow_unsafe_werkzeug=True)
