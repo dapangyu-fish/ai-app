@@ -11,7 +11,7 @@ from flask import Flask
 from flask_socketio import SocketIO
 from config import PORT
 import auth
-import ai_code_generator as chat
+# import ai_code_generator as chat  # DEPRECATED: 已废弃，使用 claude_chat 替代
 import claude_chat
 import store
 from bytedance_asr_routes import register_asr_routes
@@ -46,9 +46,10 @@ def create_app():
 
     # 注册 Chat 路由
     app.add_url_rule("/chat", methods=["POST"], view_func=claude_chat.chat)
-    app.add_url_rule("/api/ai/generate", methods=["POST"], view_func=chat.generate_app)
-    app.add_url_rule("/api/ai/fix-app", methods=["POST"], view_func=chat.fix_app)
-    app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=chat.list_providers)
+    # DEPRECATED: 以下接口已废弃，使用 /chat 替代
+    # app.add_url_rule("/api/ai/generate", methods=["POST"], view_func=chat.generate_app)
+    # app.add_url_rule("/api/ai/fix-app", methods=["POST"], view_func=chat.fix_app)
+    app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=claude_chat.list_providers)
     app.add_url_rule("/api/ai/upload_url", methods=["GET"], view_func=store.get_ai_upload_url)
 
     # 注册 Store 路由
@@ -72,7 +73,6 @@ if __name__ == "__main__":
     logger.info(f"🚀 JSON DSL Backend on http://0.0.0.0:{PORT}")
     logger.info("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
     logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
-    logger.info("   Fix:   POST /api/ai/fix-app (crash repair)")
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
     logger.info("   Debug mode: ENABLED")

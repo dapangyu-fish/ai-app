@@ -14,6 +14,18 @@ def _get_provider(provider_id=None):
     pid = provider_id or DEFAULT_PROVIDER
     return AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
 
+def list_providers():
+    """获取所有可用的 AI 供应商列表"""
+    providers = []
+    for pid, cfg in AI_PROVIDERS.items():
+        providers.append({
+            "id": cfg["id"],
+            "name": cfg["name"],
+            "description": cfg.get("description", ""),
+            "default_model": cfg["models"]["default"],
+        })
+    return jsonify({"providers": providers})
+
 def _tool_status_message(tool_name, tool_input):
     if tool_name == "Read":
         file_path = tool_input.get("file_path", "")
