@@ -127,3 +127,84 @@ Another exception was thrown: type 'List<dynamic>' is not a subtype of type 'Map
   }
 }
 ```
+
+---
+
+## 5. 方向性内边距/外边距：不支持的 Map 格式
+
+### 🚨 崩溃日志表现
+```text
+Another exception was thrown: type '_Map<String, dynamic>' is not a subtype of type 'num?' in type cast
+```
+崩溃发生在 `JsonContainerWidget.build` 的 `padding` 或 `margin` 解析处（`container_widget.dart:17`），导致整个页面白屏。
+
+### 💔 反面教材分析
+在编写 UI 配置时，为了实现更精细的布局控制，容易"想当然"地使用方向性内边距/外边距（类似 CSS 的 `padding-left`, `padding-top` 等）：
+```json
+{
+  "type": "container",
+  "padding": { "left": 16, "right": 16, "top": 8, "bottom": 4 },
+  "children": [...]
+}
+```
+或者：
+```json
+{
+  "type": "container",
+  "margin": { "left": 12, "right": 12, "top": 2, "bottom": 2 },
+  "children": [...]
+}
+```
+
+**框架盲区**：
+在底层的 `container_widget.dart` 中，`padding` 和 `margin` 的解析是硬编码进行强转的：
+```dart
+final padding = (json['padding'] as num?)?.toDouble() ?? 0;
+final margin = (json['margin'] as num?)?.toDouble() ?? 0;
+```
+框架期望这些字段是**单个数字**（表示四个方向统一的内边距/外边距），而不是一个 Map 对象。当解析器遇到 `{ "left": 16, "right": 16, ... }`（一个 Map）并试图强转为 `num?` 时，就会立刻抛出类型转换异常，导致页面崩溃。
+
+**为什么会犯这个错误**：
+1. **CSS 思维惯性**：Web 开发中习惯了 `padding: 10px 20px 10px 20px` 或 `padding-left: 16px` 这样的语法
+2. **Flutter API 误导**：Flutter 本身支持 `EdgeInsets.only(left: x, right: y, top: z, bottom: w)`，让人以为 JSON DSL 也应该支持
+3. **AI 生成代码的"想当然"**：AI 在生成 JSON 时，为了实现更精细的布局，会自然地使用方向性内边距，但没有意识到框架的限制
+
+### ✅ 正确姿势 / 避坑指南
+* **只使用统一数值**：`padding` 和 `margin` 必须是单个数字，表示四个方向统一的内边距/外边距：
+```json
+{
+  "type": "container",
+  "padding": 12,
+  "margin": 8,
+  "children": [...]
+}
+```
+* **需要方向性控制时的替代方案**：
+  - 使用嵌套 `container` 来模拟不同方向的间距
+  - 使用 `spacer` 控件在特定方向上添加空白
+  - 等待框架升级支持方向性内边距（需要修改 `container_widget.dart`）
+* **非统一值的妥协处理**：如果原本设计需要 `{ "left": 16, "right": 16, "top": 8, "bottom": 4 }`，可以取平均值 `12` 作为统一内边距，虽然不完美但至少不会崩溃
+
+### 🔧 框架改进建议
+如果需要支持方向性内边距/外边距，需要修改 `lib/json_ui/widgets/container_widget.dart`：
+```dart
+// 当前实现（只支持统一数值）
+final padding = (json['padding'] as num?)?.toDouble() ?? 0;
+
+// 改进后的实现（支持统一数值和方向性 Map）
+EdgeInsets? padding;
+final paddingValue = json['padding'];
+if (paddingValue is num) {
+  padding = EdgeInsets.all(paddingValue.toDouble());
+} else if (paddingValue is Map<String, dynamic>) {
+  padding = EdgeInsets.only(
+    left: (paddingValue['left'] as num?)?.toDouble() ?? 0,
+    right: (paddingValue['right'] as num?)?.toDouble() ?? 0,
+    top: (paddingValue['top'] as num?)?.toDouble() ?? 0,
+    bottom: (paddingValue['bottom'] as num?)?.toDouble() ?? 0,
+  );
+}
+```
+但根据 CLAUDE.md 的"框架稳定性原则"，这类改动需要同步更新 JSON-DSL.md 文档，并确保向后兼容。
+
+---
