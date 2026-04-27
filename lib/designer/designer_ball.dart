@@ -553,11 +553,14 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 如果是豆包ASR，检查连接状态
     if (_asrMode == AsrMode.bytedance && !_bytedanceAsr.isConnected) {
+      debugPrint('[DesignerBall] 豆包ASR未连接，isConnected=${_bytedanceAsr.isConnected}');
       setState(() {
         _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络或切换到其他识别方式'));
       });
       return;
     }
+
+    debugPrint('[DesignerBall] 准备进入录音模式，_pointerDown=$_pointerDown');
 
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
@@ -565,6 +568,8 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] Pointer lifted before startListening, skipping');
       return;
     }
+
+    debugPrint('[DesignerBall] 调用 _startListening');
     _startListening();
   }
 
