@@ -333,7 +333,7 @@ def chat():
                         logger.debug(f"[EVENT #{line_num}] 未处理的 stream_event 类型: {ev_type}")
 
                 elif evt_type == "assistant":
-                    # 处理整体状态和工具调用
+                    # 处理整体状态、工具调用，以及 resume 模式下可能整块下发的文本
                     msg = event.get("message", {})
                     logger.debug(f"[EVENT #{line_num}] assistant 事件，content blocks: {len(msg.get('content', []))}")
                     for block in msg.get("content", []):
@@ -344,6 +344,17 @@ def chat():
                             logger.info(f"[EVENT #{line_num}] 工具调用: {tool_name}")
                             status_msg = _tool_status_message(tool_name, tool_input)
                             yield f'data: {json.dumps({"status": tool_name.lower(), "message": status_msg}, ensure_ascii=False)}\n\n'
+                        elif btype == "text":
+                            # resume 流里有时不发 stream_event 的 text_delta，而是直接整块 text 放在 assistant 事件
+                            text_value = block.get("text", "")
+                            if text_value:
+                                logger.info(f"[EVENT #{line_num}] assistant 文本块下发，长度: {len(text_value)}")
+                                yield f'data: {json.dumps({"final_content": text_value}, ensure_ascii=False)}\n\n'
+                        elif btype == "thinking":
+                            think_value = block.get("thinking", "")
+                            if think_value:
+                                logger.info(f"[EVENT #{line_num}] assistant 思考块下发，长度: {len(think_value)}")
+                                yield f'data: {json.dumps({"final_thinking": think_value}, ensure_ascii=False)}\n\n'
 
                 elif evt_type == "result":
                     logger.debug(f"[EVENT #{line_num}] result 事件，is_error: {event.get('is_error')}")

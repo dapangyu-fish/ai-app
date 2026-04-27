@@ -675,8 +675,12 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _enterEditMode() {
     debugPrint('[DesignerBall] Entering edit mode');
-    String finalText = _liveTranscript?.trim() ?? '';
-    _editTextController.text = finalText;
+    final finalText = _liveTranscript?.trim() ?? '';
+    _editTextController.value = TextEditingValue(
+      text: finalText,
+      selection: TextSelection.collapsed(offset: finalText.length),
+      composing: TextRange.empty,
+    );
     _accumulatedTranscript = ''; // 清空累积文本，防止下次录音叠加旧内容
 
     switch (_asrMode) {
@@ -1540,22 +1544,23 @@ class _DesignerBallState extends State<DesignerBall>
         if (_editMode)
           _buildEditOverlay(screenSize),
 
-        // 悬浮球 — 全部用 Listener 捕获原始 pointer 事件，消除手势竞技场延迟
-        Positioned(
-          left: _left,
-          top: _top,
-          child: Listener(
-            onPointerDown: _onPointerDown,
-            onPointerMove: (e) => _onPointerMove(e, screenSize),
-            onPointerUp: (e) => _onPointerUp(e, screenSize),
-            onPointerCancel: (e) => _onPointerCancel(e, screenSize),
-            child: GestureDetector(
-              onTap: () => _onTap(screenSize),
-              onDoubleTap: _onDoubleTap,
-              child: _buildBall(context),
+        // 悬浮球 — 编辑模式下隐藏，避免拦截输入框光标/删除事件
+        if (!_editMode)
+          Positioned(
+            left: _left,
+            top: _top,
+            child: Listener(
+              onPointerDown: _onPointerDown,
+              onPointerMove: (e) => _onPointerMove(e, screenSize),
+              onPointerUp: (e) => _onPointerUp(e, screenSize),
+              onPointerCancel: (e) => _onPointerCancel(e, screenSize),
+              child: GestureDetector(
+                onTap: () => _onTap(screenSize),
+                onDoubleTap: _onDoubleTap,
+                child: _buildBall(context),
+              ),
             ),
           ),
-        ),
       ],
     ),
     );
