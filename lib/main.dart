@@ -1748,6 +1748,38 @@ class _PublishDialogState extends State<_PublishDialog> {
     }
   }
 
+  Future<void> _inviteMember() async {
+    // 显示"开发中"提示
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('邀请成员'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.construction, size: 48, color: Colors.orange),
+            SizedBox(height: 16),
+            Text(
+              '此功能正在开发中',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '敬请期待！',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _doPublish() async {
     // 前端校验
     final name = _nameCtrl.text.trim();
@@ -1848,6 +1880,12 @@ class _PublishDialogState extends State<_PublishDialog> {
       title: Row(
         children: [
           const Expanded(child: Text('发布到市场')),
+          TextButton.icon(
+            onPressed: _inviteMember,
+            icon: const Icon(Icons.person_add, size: 18),
+            label: const Text('邀请成员'),
+          ),
+          const SizedBox(width: 8),
           TextButton.icon(
             onPressed: _createNamespace,
             icon: const Icon(Icons.add, size: 18),
