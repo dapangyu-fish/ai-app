@@ -389,6 +389,45 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
       if (!mounted) return;
 
+      // 弹出确认对话框：是否添加到"我的 APP"
+      final shouldSave = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('添加到我的 APP'),
+          content: const Text('是否将此应用添加到"我的 APP"列表？\n\n添加后可以方便地复用和发布到市场。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('否'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('是'),
+            ),
+          ],
+        ),
+      );
+
+      // 如果用户选择保存，则添加到"我的 APP"
+      if (shouldSave == true) {
+        try {
+          await AppStorage.instance.save(config);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('已添加到我的 APP')),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('保存失败: $e')),
+            );
+          }
+        }
+      }
+
+      if (!mounted) return;
+
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => JsonScreenView(fileName: _loadedFileName!),
