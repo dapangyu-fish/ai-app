@@ -32,6 +32,7 @@ from database import (
     add_namespace_member, remove_namespace_member, get_namespace_members,
     check_namespace_permission, update_namespace_member_role
 )
+from auth import find_user_by_email, find_user_by_phone
 
 BUCKET_APP = "json-app"
 BUCKET_COMPONENT = "json-component"
@@ -774,16 +775,19 @@ def add_member(namespace_id):
     添加命名空间成员（仅 owner 可操作）
     POST /namespace/{namespace_id}/members
     Body: {
-      "user_email": "user@example.com",
-      "role": "admin"  # owner 或 admin
+      "email": "user@example.com",  # 邮箱（二选一）
+      "phone": "+86 138xxxx",       # 手机号（二选一，预留）
+      "role": "admin"               # owner 或 admin
     }
     """
     body = request.get_json(silent=True) or {}
-    user_email = body.get('user_email', '').strip()
+    email = body.get('email', '').strip()
+    phone = body.get('phone', '').strip()
     role = body.get('role', 'admin').strip()
 
-    if not user_email:
-        return jsonify({"error": "缺少 user_email 参数"}), 400
+    # 必须提供邮箱或手机号之一
+    if not email and not phone:
+        return jsonify({"error": "必须提供邮箱或手机号"}), 400
 
     if role not in ('owner', 'admin'):
         return jsonify({"error": "角色必须是 owner 或 admin"}), 400
@@ -799,10 +803,30 @@ def add_member(namespace_id):
         if not is_owner:
             return jsonify({"error": "只有 owner 可以添加成员"}), 403
 
-        # TODO: 通过 user_email 查找 Supabase 用户 ID
-        # 这里需要调用 Supabase Admin API 来查找用户
-        # 暂时返回提示信息
-        return jsonify({"error": "功能开发中：需要实现通过邮箱查找用户 ID"}), 501
+        # 通过邮箱或手机号查找用户 ID
+        target_user_id = None
+        if email:
+            target_user_id = find_user_by_email(email)
+            if not target_user_id:
+                return jsonify({"error": f"未找到邮箱为 {email} 的用户"}), 404
+        elif phone:
+            target_user_id = find_user_by_phone(phone)
+            if not target_user_id:
+                return jsonify({"error": f"未找到手机号为 {phone} 的用户"}), 404
+
+        # 检查用户是否已经是成员
+        is_member = any(m['user_id'] == target_user_id for m in members)
+        if is_member:
+            return jsonify({"error": "该用户已经是成员"}), 409
+
+        # 添加成员
+        add_namespace_member(namespace_id, target_user_id, role, current_user_id)
+
+        return jsonify({
+            "message": "成员已添加",
+            "user_id": target_user_id,
+            "role": role
+        })
 
     except Exception as e:
         print(f"[Registry] Error adding member: {e}")

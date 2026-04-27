@@ -49,6 +49,76 @@ def _extract_user_info(user):
     }
 
 
+def find_user_by_email(email):
+    """
+    通过邮箱查找 Supabase 用户 ID
+    使用 Supabase Admin API
+
+    Returns:
+        user_id (str) 或 None
+    """
+    try:
+        # 使用 Supabase Admin API 列出用户
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/admin/users",
+            headers=_service_headers(),
+            timeout=10,
+        )
+
+        if resp.status_code != 200:
+            print(f"[Auth] Failed to fetch users: {resp.status_code}")
+            return None
+
+        data = resp.json()
+        users = data.get("users", [])
+
+        # 查找匹配的邮箱
+        for user in users:
+            if user.get("email", "").lower() == email.lower():
+                return user.get("id")
+
+        return None
+    except Exception as e:
+        print(f"[Auth] Error finding user by email: {e}")
+        return None
+
+
+def find_user_by_phone(phone):
+    """
+    通过手机号查找 Supabase 用户 ID
+    使用 Supabase Admin API
+
+    注意：目前 Supabase 还未启用手机号注册，此函数预留接口
+
+    Returns:
+        user_id (str) 或 None
+    """
+    try:
+        # 使用 Supabase Admin API 列出用户
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/admin/users",
+            headers=_service_headers(),
+            timeout=10,
+        )
+
+        if resp.status_code != 200:
+            print(f"[Auth] Failed to fetch users: {resp.status_code}")
+            return None
+
+        data = resp.json()
+        users = data.get("users", [])
+
+        # 查找匹配的手机号
+        for user in users:
+            if user.get("phone", "") == phone:
+                return user.get("id")
+
+        return None
+    except Exception as e:
+        print(f"[Auth] Error finding user by phone: {e}")
+        return None
+
+
 def require_auth(f):
     """装饰器：要求用户登录"""
     @wraps(f)
