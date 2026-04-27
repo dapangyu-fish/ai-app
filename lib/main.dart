@@ -852,12 +852,97 @@ class _MarketPageState extends State<_MarketPage> {
     );
   }
 
+  Future<void> _confirmDelete(BuildContext context, String packageName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认下架'),
+        content: Text('确定要永久删除包 "$packageName" 吗？\n\n此操作不可撤销，将删除所有版本。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await _deletePackage(context, packageName);
+    }
+  }
+
+  Future<void> _deletePackage(BuildContext context, String packageName) async {
+    final cs = Theme.of(context).colorScheme;
+
+    // 显示加载提示
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: cs.onSurface),
+                const SizedBox(height: 16),
+                const Text('正在删除...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final token = AuthService.token;
+      if (token == null) throw Exception('未登录');
+
+      final resp = await http.delete(
+        Uri.parse('https://registry.dapangyu.work/package/$packageName'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (context.mounted) Navigator.pop(context); // 关闭加载对话框
+
+      if (resp.statusCode == 200) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除成功')),
+          );
+          // 刷新列表
+          _fetchApps();
+        }
+      } else {
+        final data = json.decode(resp.body);
+        throw Exception(data['error'] ?? '删除失败');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // 关闭加载对话框
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除失败: $e')),
+        );
+      }
+    }
+  }
+
   Widget _buildAppCard(BuildContext context, Map<String, dynamic> app,
       ColorScheme cs) {
     final name = app['name'] as String? ?? '';
     final desc = app['description'] as String? ?? '';
     final version = app['version']?.toString() ?? '';
     final author = app['author'] as String? ?? '';
+
+    // 判断当前用户是否是管理员
+    final isAdmin = AuthService.currentUser?['role'] == 'admin';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -941,6 +1026,14 @@ class _MarketPageState extends State<_MarketPage> {
                 ),
               ),
               const SizedBox(width: 8),
+              // 如果是管理员，显示删除按钮
+              if (isAdmin)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  color: Colors.red,
+                  tooltip: '下架',
+                  onPressed: () => _confirmDelete(context, name),
+                ),
               Icon(Icons.download_outlined, color: cs.onSurfaceVariant),
             ],
           ),

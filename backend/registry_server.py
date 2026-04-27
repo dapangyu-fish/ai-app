@@ -506,6 +506,52 @@ def create_namespace():
     })
 
 
+@app.route('/package/<path:name>', methods=['DELETE'])
+@require_auth
+def delete_package(name):
+    """
+    删除包（仅管理员）
+    DELETE /package/common-ui
+    DELETE /package/mycompany/frontend/ui-kit
+    """
+    # 1. 权限检查：只有 admin 可以删除
+    if request.user_role != 'admin':
+        return jsonify({"error": "只有管理员可以删除包"}), 403
+
+    # 2. 加载索引，检查包是否存在
+    index = _load_index()
+    if name not in index['packages']:
+        return jsonify({"error": f"包 '{name}' 不存在"}), 404
+
+    package_info = index['packages'][name]
+
+    # 3. 从 MinIO 删除所有版本的文件
+    path = package_info['path']
+    deleted_files = []
+    for version in package_info['versions']:
+        filename = f"{name.split('/')[-1]}-{version}.json"
+        oss_key = f"{path}/{filename}"
+        try:
+            minio_client.remove_object(BUCKET_COMPONENT, oss_key)
+            deleted_files.append(oss_key)
+            print(f"[Registry] 已删除文件: {oss_key}")
+        except Exception as e:
+            print(f"[Registry] 删除文件失败: {oss_key}, {e}")
+
+    # 4. 从索引中删除包信息
+    del index['packages'][name]
+    _save_index(index)
+
+    print(f"[Registry] 包 '{name}' 已从索引中删除")
+
+    return jsonify({
+        "message": "包已永久删除",
+        "name": name,
+        "deleted_versions": package_info['versions'],
+        "deleted_files": deleted_files
+    })
+
+
 @app.route('/publish', methods=['POST'])
 @require_auth
 def publish():
