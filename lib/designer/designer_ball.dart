@@ -259,10 +259,12 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _initPosition(Size screenSize) {
-    if (!_positioned) {
+    // 安全检查：只有在屏幕尺寸有效时才初始化位置
+    if (!_positioned && screenSize.width > 0 && screenSize.height > 0) {
       _left = screenSize.width - _ballSize - 16;
       _top = screenSize.height * 0.65;
       _positioned = true;
+      debugPrint('[DesignerBall] Position initialized: left=$_left, top=$_top, screenSize=$screenSize');
     }
   }
 
