@@ -9,7 +9,8 @@
     "icon_url": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop"
   },
   "dependencies": {
-    "lib_user": "^1.2.0"
+    "lib_user": "^1.2.0",
+    "common-ui": "^1.0.0"
   },
   "global": {
     "variables": {
@@ -17,7 +18,8 @@
       "likedIds": [],
       "userInfo": null,
       "userName": "TikTok User",
-      "userAvatar": "",
+      "avatarUrl": "",
+      "isLoggedIn": false,
       "lastPhoto": "",
       "videos": [
         {
@@ -131,27 +133,47 @@
           }
         ]
       },
+      "loadUserData": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          { "call": "@lib_user.checkLogin", "args": { "bind": "$.global.isLoggedIn" } },
+          { "call": "@if", "args": {
+            "condition": { "var": "$.global.isLoggedIn" },
+            "then": [
+              { "call": "@lib_user.loadUserInfo", "args": { "bind": "$.global.userInfo" } },
+              { "call": "@lib_user.getUserName", "args": { "bind": "$.global.userName" } },
+              { "call": "@lib_user.getUserAvatar", "args": { "bind": "$.global.avatarUrl" } }
+            ]
+          }}
+        ]
+      },
       "changeAvatar": {
         "params": [],
         "return": "None",
         "logic": [
-          { "call": "@pick_image", "args": { "bind": "$.global._tempAvatar" } },
-          { "call": "@lib_user.updateAvatar", "args": { "imagePath": "{{ global._tempAvatar }}" } },
-          { "call": "@lib_user.getUserAvatar", "args": { "bind": "$.global.userAvatar" } },
-          { "call": "@show_toast", "args": { "message": "头像已更新 ✨" } }
+          { "call": "@common-ui.pickImage", "args": { "bind": "$.global._tempAvatar" } },
+          { "call": "@if", "args": {
+            "condition": { "!!": [{ "var": "$.global._tempAvatar" }] },
+            "then": [
+              { "call": "@lib_user.updateAvatar", "args": { "imagePath": "{{ global._tempAvatar }}" } },
+              { "call": "@global.loadUserData", "args": {} },
+              { "call": "@common-ui.showSuccess", "args": { "message": "头像已更新 ✨" } }
+            ]
+          }}
         ]
       },
       "editProfile": {
         "params": [],
         "return": "None",
         "logic": [
-          { "call": "@prompt", "args": { "title": "修改用户名", "message": "请输入新的用户名", "bind": "$.global._newName" } },
+          { "call": "@show_input_dialog", "args": { "title": "修改用户名", "hint": "请输入新的用户名", "defaultValue": "{{ global.userName }}", "bind": "$.global._newName" } },
           { "call": "@if", "args": {
-            "condition": { "!=": [{ "var": "$.global._newName" }, ""] },
+            "condition": { "!!": [{ "var": "$.global._newName" }] },
             "then": [
               { "call": "@lib_user.updateName", "args": { "newName": "{{ global._newName }}" } },
-              { "call": "@lib_user.getUserName", "args": { "bind": "$.global.userName" } },
-              { "call": "@show_toast", "args": { "message": "用户名已更新 ✨" } }
+              { "call": "@global.loadUserData", "args": {} },
+              { "call": "@common-ui.showSuccess", "args": { "message": "用户名已更新 ✨" } }
             ]
           }}
         ]
@@ -168,9 +190,7 @@
   },
   "steps": [
     { "call": "@print", "args": { "value": "TikTok v3 启动成功！" } },
-    { "call": "@lib_user.loadUserInfo", "args": { "bind": "$.global.userInfo" } },
-    { "call": "@lib_user.getUserName", "args": { "bind": "$.global.userName" } },
-    { "call": "@lib_user.getUserAvatar", "args": { "bind": "$.global.userAvatar" } }
+    { "call": "@global.loadUserData", "args": {} }
   ],
   "ui": {
     "screens": [
@@ -476,11 +496,11 @@
                 "children": [
                   {
                     "type": "container",
-                    "onTap": { "call": "@global.changeAvatar", "args": {} },
+                    "onTap": { "type": "call", "call": "@global.changeAvatar", "args": {} },
                     "children": [
                       {
                         "type": "image",
-                        "url": "{{ global.userAvatar }}",
+                        "url": "{{ global.avatarUrl }}",
                         "width": 88,
                         "height": 88,
                         "borderRadius": 44
@@ -581,7 +601,7 @@
                     "variant": "outlined",
                     "style": { "textColor": "#FFFFFF", "borderRadius": 20, "fontSize": 14 },
                     "position": { "type": "flex", "flex": 1 },
-                    "action": { "call": "@global.editProfile", "args": {} }
+                    "action": { "type": "call", "call": "@global.editProfile", "args": {} }
                   },
                   { "type": "spacer", "width": 12 },
                   {
