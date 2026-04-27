@@ -7,7 +7,15 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
 import 'sherpa_asr_service.dart';
+import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
+
+/// 语音识别方式枚举
+enum AsrMode {
+  online,    // 在线识别（speech_to_text）
+  offline,   // 离线识别（sherpa_onnx）
+  bytedance, // 豆包ASR
+}
 
 /// 悬浮设计师球 — iOS 风格丝滑拖拽 + 长按对话模式。
 /// 凌驾于所有页面之上，不影响 JSON APP。
@@ -83,8 +91,9 @@ class _DesignerBallState extends State<DesignerBall>
   stt.SpeechToText? _speech;
   bool _speechInited = false;
   bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
-  bool get _useSherpaAsr => _sherpaAsr.forceOffline; // 现在从 SherpaService 读取状态
+  AsrMode _asrMode = AsrMode.online; // 当前语音识别方式
   final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
+  final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
@@ -120,6 +129,7 @@ class _DesignerBallState extends State<DesignerBall>
     // 注册崩溃分析回调
     DesignerBall.sendCrashReport = _handleCrashReport;
     // 加载配置
+    _loadAsrMode();
     _sherpaAsr.loadConfig().then((_) {
       setState(() {});
     });
@@ -128,6 +138,81 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 提前初始化原生语音识别（参照测试应用的成功实践）
     _initNativeSpeech();
+
+    // 初始化豆包ASR连接
+    _initBytedanceAsr();
+  }
+
+  /// 加载语音识别方式设置
+  Future<void> _loadAsrMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final asrModeStr = prefs.getString('asr_mode') ?? 'online';
+    AsrMode mode = AsrMode.online;
+    switch (asrModeStr) {
+      case 'offline':
+        mode = AsrMode.offline;
+        break;
+      case 'bytedance':
+        mode = AsrMode.bytedance;
+        break;
+      default:
+        mode = AsrMode.online;
+    }
+    setState(() {
+      _asrMode = mode;
+    });
+    debugPrint('[DesignerBall] Loaded ASR mode: $asrModeStr');
+  }
+
+  /// 初始化豆包ASR连接
+  Future<void> _initBytedanceAsr() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null || token.isEmpty) {
+        debugPrint('[DesignerBall] No access token, skip ByteDance ASR init');
+        return;
+      }
+
+      // 连接到后端服务器
+      const serverUrl = 'http://192.168.111.181:5566'; // TODO: 从配置读取
+      final success = await _bytedanceAsr.connect(serverUrl, token);
+
+      if (success) {
+        debugPrint('[DesignerBall] ByteDance ASR connected');
+
+        // 设置回调
+        _bytedanceAsr.onResult = (text) {
+          if (mounted && _isListening) {
+            setState(() {
+              _liveTranscript = text;
+            });
+          }
+        };
+
+        _bytedanceAsr.onError = (error) {
+          debugPrint('[DesignerBall] ByteDance ASR error: $error');
+          if (mounted) {
+            setState(() {
+              _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR错误: $error'));
+            });
+          }
+        };
+
+        _bytedanceAsr.onQuotaUpdate = (quota) {
+          debugPrint('[DesignerBall] ByteDance ASR quota: $quota');
+          if (mounted) {
+            setState(() {
+              _lastQuota = quota;
+            });
+          }
+        };
+      } else {
+        debugPrint('[DesignerBall] ByteDance ASR connection failed');
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] ByteDance ASR init error: $e');
+    }
   }
 
   /// 在 initState 时就初始化原生语音识别，避免按住时才初始化导致的延迟和时序问题
@@ -415,20 +500,20 @@ class _DesignerBallState extends State<DesignerBall>
       if (mounted) setState(() {});
     });
 
-    debugPrint('[DesignerBall] 初始状态: forceOffline=$_useSherpaAsr, speechInited=$_speechInited');
+    debugPrint('[DesignerBall] 初始状态: asrMode=$_asrMode, speechInited=$_speechInited');
 
     // 检查原生语音识别是否已初始化（已在 initState 中完成）
-    if (!_speechInited && !_useSherpaAsr) {
+    if (!_speechInited && _asrMode == AsrMode.online) {
       setState(() {
-        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中开启"强制离线模式"'));
+        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中切换到离线模式或豆包ASR'));
       });
       return;
     }
 
-    final shouldUseSherpa = _useSherpaAsr;
-    debugPrint('[DesignerBall] 最终决策: ${shouldUseSherpa ? "离线模式(sherpa)" : "在线模式(native speech)"}');
+    debugPrint('[DesignerBall] 最终决策: ASR模式=${_asrMode.name}');
 
-    if (shouldUseSherpa) {
+    // 如果是离线模式，需要预加载模型
+    if (_asrMode == AsrMode.offline) {
       setState(() {
         _chatMode = true;
         _isThinking = true;
@@ -462,6 +547,14 @@ class _DesignerBallState extends State<DesignerBall>
       setState(() => _isThinking = false);
     }
 
+    // 如果是豆包ASR，检查连接状态
+    if (_asrMode == AsrMode.bytedance && !_bytedanceAsr.isConnected) {
+      setState(() {
+        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络或切换到其他识别方式'));
+      });
+      return;
+    }
+
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
     if (!_pointerDown) {
@@ -482,12 +575,17 @@ class _DesignerBallState extends State<DesignerBall>
     });
     _pulseController.repeat(reverse: true);
 
-    final shouldUseSherpa = _useSherpaAsr;
-    debugPrint('[DesignerBall] ASR决策: forceOffline=$_useSherpaAsr → ${shouldUseSherpa ? "离线(sherpa)" : "在线(native)"}');
-    if (shouldUseSherpa) {
-      _startSherpaAsr();
-    } else {
-      _startNativeSpeech();
+    debugPrint('[DesignerBall] ASR决策: asrMode=${_asrMode.name}');
+
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _startSherpaAsr();
+        break;
+      case AsrMode.bytedance:
+        _startBytedanceAsr();
+        break;
+      default:
+        _startNativeSpeech();
     }
   }
 
@@ -507,13 +605,19 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _cancelRecording() {
     debugPrint('[DesignerBall] Recording cancelled by drag');
-    final shouldUseSherpa = _useSherpaAsr;
-    if (shouldUseSherpa) {
-      _sherpaAsr.stopListening();
-      _sherpaAsr.onResult = null;
-    } else {
-      try { _speech?.stop(); } catch (_) {}
+
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _sherpaAsr.stopListening();
+        _sherpaAsr.onResult = null;
+        break;
+      case AsrMode.bytedance:
+        _bytedanceAsr.stopListening();
+        break;
+      default:
+        try { _speech?.stop(); } catch (_) {}
     }
+
     _pulseController.stop();
     _pulseController.reset();
     setState(() {
@@ -526,16 +630,20 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _enterEditMode() {
     debugPrint('[DesignerBall] Entering edit mode');
-    final shouldUseSherpa = _useSherpaAsr;
     String finalText = _liveTranscript?.trim() ?? '';
     _editTextController.text = finalText;
     _accumulatedTranscript = ''; // 清空累积文本，防止下次录音叠加旧内容
 
-    if (shouldUseSherpa) {
-      _sherpaAsr.stopListening();
-      _sherpaAsr.onResult = null;
-    } else {
-      try { _speech?.stop(); } catch (_) {}
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _sherpaAsr.stopListening();
+        _sherpaAsr.onResult = null;
+        break;
+      case AsrMode.bytedance:
+        _bytedanceAsr.stopListening();
+        break;
+      default:
+        try { _speech?.stop(); } catch (_) {}
     }
 
     _pulseController.stop();
@@ -951,21 +1059,63 @@ class _DesignerBallState extends State<DesignerBall>
     _sherpaAsr.onResult = null;
   }
 
+  /// 启动豆包ASR识别
+  Future<void> _startBytedanceAsr() async {
+    debugPrint('[DesignerBall] 启动豆包ASR识别');
+    try {
+      // 检查连接状态
+      if (!_bytedanceAsr.isConnected) {
+        debugPrint('[DesignerBall] ByteDance ASR not connected');
+        setState(() {
+          _isListening = false;
+          _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络'));
+        });
+        _pulseController.stop();
+        _pulseController.reset();
+        return;
+      }
+
+      // 开始识别
+      final ok = await _bytedanceAsr.startListening();
+      if (!ok) {
+        setState(() {
+          _isListening = false;
+          _messages.add(ChatMessage(
+            role: 'assistant',
+            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+          ));
+        });
+        _pulseController.stop();
+      }
+    } catch (e) {
+      debugPrint('[ByteDanceASR] Start error: $e');
+      setState(() {
+        _isListening = false;
+        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR启动失败: $e'));
+      });
+      _pulseController.stop();
+    }
+  }
+
   Future<void> _stopListeningAndSend() async {
     debugPrint('[DesignerBall] _stopListeningAndSend');
 
     // 停止语音识别
-    final shouldUseSherpa = _useSherpaAsr;
-    if (shouldUseSherpa) {
-      _sherpaAsr.onResult = null;
-      final finalText = await _sherpaAsr.stopListening();
-      if (finalText.isNotEmpty) {
-        _liveTranscript = finalText;
-      }
-    } else {
-      try { await _speech?.stop(); } catch (e) {
-        debugPrint('[DesignerBall] speech.stop error: $e');
-      }
+    switch (_asrMode) {
+      case AsrMode.offline:
+        _sherpaAsr.onResult = null;
+        final finalText = await _sherpaAsr.stopListening();
+        if (finalText.isNotEmpty) {
+          _liveTranscript = finalText;
+        }
+        break;
+      case AsrMode.bytedance:
+        await _bytedanceAsr.stopListening();
+        break;
+      default:
+        try { await _speech?.stop(); } catch (e) {
+          debugPrint('[DesignerBall] speech.stop error: $e');
+        }
     }
 
     // 重要：先完全重置语音相关状态，让 iOS 释放麦克风资源
