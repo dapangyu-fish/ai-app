@@ -174,8 +174,8 @@ class _DesignerBallState extends State<DesignerBall>
         return;
       }
 
-      // 连接到后端服务器
-      const serverUrl = 'http://192.168.111.181:5566'; // TODO: 从配置读取
+      // 连接到后端服务器（使用与AI服务相同的地址）
+      const serverUrl = 'https://app-backend.dapangyu.work';
       final success = await _bytedanceAsr.connect(serverUrl, token);
 
       if (success) {

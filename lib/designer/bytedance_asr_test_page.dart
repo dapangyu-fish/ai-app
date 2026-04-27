@@ -68,8 +68,8 @@ class _ByteDanceAsrTestPageState extends State<ByteDanceAsrTestPage> {
       return;
     }
 
-    // 连接到服务器（替换成你的服务器地址）
-    const serverUrl = 'http://192.168.111.181:5566';
+    // 连接到后端服务器（使用与AI服务相同的地址）
+    const serverUrl = 'https://app-backend.dapangyu.work';
     final success = await _asrService.connect(serverUrl, token);
 
     if (!success) {
