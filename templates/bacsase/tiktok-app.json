@@ -137,12 +137,18 @@
         "params": [],
         "logic": [
           { "call": "@lib_user.checkLogin", "args": { "bind": "global.isLoggedIn" } },
+          { "call": "@print", "args": { "value": "登录状态: {{ global.isLoggedIn }}" } },
           { "call": "@if", "args": {
             "condition": { "var": "global.isLoggedIn" },
             "then": [
               { "call": "@lib_user.loadUserInfo", "args": { "bind": "global.userInfo" } },
               { "call": "@lib_user.getUserName", "args": { "bind": "global.userName" } },
-              { "call": "@lib_user.getUserAvatar", "args": { "bind": "global.avatarUrl" } }
+              { "call": "@lib_user.getUserAvatar", "args": { "bind": "global.avatarUrl" } },
+              { "call": "@print", "args": { "value": "用户名: {{ global.userName }}" } },
+              { "call": "@print", "args": { "value": "头像URL: {{ global.avatarUrl }}" } }
+            ],
+            "else": [
+              { "call": "@print", "args": { "value": "用户未登录，使用默认头像" } }
             ]
           }}
         ]
