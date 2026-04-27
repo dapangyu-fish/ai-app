@@ -552,12 +552,48 @@ class _DesignerBallState extends State<DesignerBall>
     }
 
     // 如果是豆包ASR，检查连接状态
-    if (_asrMode == AsrMode.bytedance && !_bytedanceAsr.isConnected) {
-      debugPrint('[DesignerBall] 豆包ASR未连接，isConnected=${_bytedanceAsr.isConnected}');
-      setState(() {
-        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络或切换到其他识别方式'));
-      });
-      return;
+    if (_asrMode == AsrMode.bytedance) {
+      if (!_bytedanceAsr.isConnected) {
+        debugPrint('[DesignerBall] 豆包ASR未连接，等待连接...');
+        setState(() {
+          _chatMode = true;
+          _isThinking = true;
+          _liveTranscript = '正在连接豆包ASR...';
+        });
+
+        // 等待最多3秒让豆包ASR连接
+        int waitCount = 0;
+        while (!_bytedanceAsr.isConnected && waitCount < 30) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          waitCount++;
+
+          // 用户手已离开，中止等待
+          if (!_pointerDown) {
+            debugPrint('[DesignerBall] Pointer lifted during ByteDance ASR wait, aborting');
+            setState(() {
+              _isThinking = false;
+              _liveTranscript = null;
+            });
+            return;
+          }
+        }
+
+        setState(() {
+          _isThinking = false;
+          _liveTranscript = null;
+        });
+
+        // 等待超时，仍未连接
+        if (!_bytedanceAsr.isConnected) {
+          debugPrint('[DesignerBall] 豆包ASR连接超时，isConnected=${_bytedanceAsr.isConnected}');
+          setState(() {
+            _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR连接超时，请检查网络或切换到其他识别方式'));
+          });
+          return;
+        }
+
+        debugPrint('[DesignerBall] 豆包ASR连接成功');
+      }
     }
 
     debugPrint('[DesignerBall] 准备进入录音模式，_pointerDown=$_pointerDown');
