@@ -188,18 +188,58 @@ def chat():
                 return
 
         def process_stream(process, buffered_lines):
+            import time
+            import threading
+            from queue import Queue, Empty
+
             logger.info(f"[STREAM] 开始处理流式输出，缓冲行数: {len(buffered_lines)}")
             line_count = 0
+            last_data_time = time.time()
 
             for line in buffered_lines:
                 line_count += 1
                 yield from _parse_line(line, line_count)
+                last_data_time = time.time()
 
             logger.debug(f"[STREAM] 缓冲行处理完毕，开始实时读取...")
-            lines_iter = iter(process.stdout.readline, b'')
-            for line in lines_iter:
-                line_count += 1
-                yield from _parse_line(line, line_count)
+
+            # 使用队列 + 线程实现非阻塞读取（跨平台兼容）
+            line_queue = Queue()
+
+            def reader_thread():
+                try:
+                    for line in iter(process.stdout.readline, b''):
+                        if line:
+                            line_queue.put(('data', line))
+                    line_queue.put(('eof', None))
+                except Exception as e:
+                    line_queue.put(('error', str(e)))
+
+            reader = threading.Thread(target=reader_thread, daemon=True)
+            reader.start()
+
+            # 主循环：读取数据或发送心跳
+            while True:
+                try:
+                    # 尝试从队列获取数据，超时 10 秒
+                    msg_type, data = line_queue.get(timeout=10.0)
+
+                    if msg_type == 'eof':
+                        logger.debug(f"[STREAM] 读取线程结束")
+                        break
+                    elif msg_type == 'error':
+                        logger.error(f"[STREAM] 读取线程异常: {data}")
+                        break
+                    elif msg_type == 'data':
+                        line_count += 1
+                        yield from _parse_line(data, line_count)
+                        last_data_time = time.time()
+
+                except Empty:
+                    # 超时，发送心跳
+                    current_time = time.time()
+                    logger.debug(f"[STREAM] 发送心跳 (已 {int(current_time - last_data_time)}s 无数据)")
+                    yield ': heartbeat\n\n'  # SSE 注释格式的心跳
 
             logger.info(f"[STREAM] CLI 输出结束，共处理 {line_count} 行")
             process.wait()
@@ -230,19 +270,67 @@ def chat():
                 elif evt_type == "stream_event":
                     # 处理实时的 delta 增量流
                     ev = event.get("event", {})
-                    delta = ev.get("delta", {})
+                    ev_type = ev.get("type")
 
-                    if ev.get("type") == "content_block_delta" and delta.get("type") == "text_delta":
-                        text_chunk = delta.get("text", "")
-                        if text_chunk:
-                            logger.debug(f"[EVENT #{line_num}] text_delta: {text_chunk[:50]}...")
-                            yield f'data: {json.dumps({"content": text_chunk}, ensure_ascii=False)}\n\n'
+                    # 消息开始事件
+                    if ev_type == "message_start":
+                        logger.debug(f"[EVENT #{line_num}] message_start")
+                        yield f'data: {json.dumps({"event": "message_start"}, ensure_ascii=False)}\n\n'
 
-                    elif ev.get("type") == "content_block_delta" and delta.get("type") == "thinking_delta":
-                        think_chunk = delta.get("thinking", "")
-                        if think_chunk:
-                            logger.debug(f"[EVENT #{line_num}] thinking_delta: {think_chunk[:50]}...")
-                            yield f'data: {json.dumps({"thinking": think_chunk}, ensure_ascii=False)}\n\n'
+                    # 消息结束事件
+                    elif ev_type == "message_stop":
+                        logger.debug(f"[EVENT #{line_num}] message_stop")
+                        yield f'data: {json.dumps({"event": "message_stop"}, ensure_ascii=False)}\n\n'
+
+                    # 内容块开始事件（可能包含工具调用信息）
+                    elif ev_type == "content_block_start":
+                        content_block = ev.get("content_block", {})
+                        block_type = content_block.get("type")
+                        logger.debug(f"[EVENT #{line_num}] content_block_start: {block_type}")
+
+                        # 如果是工具调用开始，发送状态消息
+                        if block_type == "tool_use":
+                            tool_name = content_block.get("name", "")
+                            tool_input = content_block.get("input", {})
+                            if tool_name:
+                                logger.info(f"[EVENT #{line_num}] 工具调用开始: {tool_name}")
+                                status_msg = _tool_status_message(tool_name, tool_input)
+                                yield f'data: {json.dumps({"status": tool_name.lower(), "message": status_msg}, ensure_ascii=False)}\n\n'
+
+                    # 内容块增量事件
+                    elif ev_type == "content_block_delta":
+                        delta = ev.get("delta", {})
+                        delta_type = delta.get("type")
+
+                        if delta_type == "text_delta":
+                            text_chunk = delta.get("text", "")
+                            if text_chunk:
+                                logger.debug(f"[EVENT #{line_num}] text_delta: {text_chunk[:50]}...")
+                                yield f'data: {json.dumps({"content": text_chunk}, ensure_ascii=False)}\n\n'
+
+                        elif delta_type == "thinking_delta":
+                            think_chunk = delta.get("thinking", "")
+                            if think_chunk:
+                                logger.debug(f"[EVENT #{line_num}] thinking_delta: {think_chunk[:50]}...")
+                                yield f'data: {json.dumps({"thinking": think_chunk}, ensure_ascii=False)}\n\n'
+
+                        elif delta_type == "input_json_delta":
+                            # 工具输入的增量更新（通常不需要发给客户端）
+                            logger.debug(f"[EVENT #{line_num}] input_json_delta")
+
+                    # 内容块结束事件
+                    elif ev_type == "content_block_stop":
+                        logger.debug(f"[EVENT #{line_num}] content_block_stop")
+
+                    # 消息增量事件（元数据更新，如 stop_reason）
+                    elif ev_type == "message_delta":
+                        delta = ev.get("delta", {})
+                        stop_reason = delta.get("stop_reason")
+                        if stop_reason:
+                            logger.debug(f"[EVENT #{line_num}] message_delta: stop_reason={stop_reason}")
+
+                    else:
+                        logger.debug(f"[EVENT #{line_num}] 未处理的 stream_event 类型: {ev_type}")
 
                 elif evt_type == "assistant":
                     # 处理整体状态和工具调用
@@ -260,10 +348,24 @@ def chat():
                 elif evt_type == "result":
                     logger.debug(f"[EVENT #{line_num}] result 事件，is_error: {event.get('is_error')}")
                     if event.get("is_error"):
-                        # 如果有报错才使用 result，正常结束不需要再把完整内容抛出，避免双份叠加
+                        # 错误情况
                         res = event.get("result", "")
                         logger.error(f"[EVENT #{line_num}] 生成中断: {res[:200]}...")
                         yield f'data: {json.dumps({"error": f"生成中断: {res}"}, ensure_ascii=False)}\n\n'
+                    else:
+                        # 正常结束，发送完整的最终文本（用于替换之前的增量累积）
+                        msg = event.get("message", {})
+                        for block in msg.get("content", []):
+                            if block.get("type") == "text":
+                                final_text = block.get("text", "")
+                                if final_text:
+                                    logger.info(f"[EVENT #{line_num}] 发送最终完整文本，长度: {len(final_text)}")
+                                    yield f'data: {json.dumps({"final_content": final_text}, ensure_ascii=False)}\n\n'
+                            elif block.get("type") == "thinking":
+                                final_thinking = block.get("thinking", "")
+                                if final_thinking:
+                                    logger.info(f"[EVENT #{line_num}] 发送最终完整思考，长度: {len(final_thinking)}")
+                                    yield f'data: {json.dumps({"final_thinking": final_thinking}, ensure_ascii=False)}\n\n'
                 else:
                     logger.debug(f"[EVENT #{line_num}] 未处理的事件类型: {evt_type}")
             except json.JSONDecodeError as e:

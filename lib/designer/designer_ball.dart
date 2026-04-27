@@ -729,6 +729,7 @@ class _DesignerBallState extends State<DesignerBall>
     String? _pendingRequestAction;
     String? _pendingFailedJsonUrl;
     String? _pendingFailedJsonError;
+    String? _pendingJsonUrl;
 
     _streamSub = _chatService.sendStream(text).listen(
       (event) {
@@ -773,6 +774,10 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.failedJsonUrl != null) {
           _pendingFailedJsonUrl = event.failedJsonUrl;
           _pendingFailedJsonError = event.error;
+          return;
+        }
+        if (event.pendingJsonUrl != null) {
+          _pendingJsonUrl = event.pendingJsonUrl;
           return;
         }
 
@@ -834,11 +839,19 @@ class _DesignerBallState extends State<DesignerBall>
               action: 'UPLOAD_CURRENT_APP',
             ));
           }
+          // 处理待用户确认下载并运行
+          else if (_pendingJsonUrl != null) {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: 'JSON-APP 已生成，点击下载并运行：',
+              jsonUrl: _pendingJsonUrl,
+            ));
+          }
           // 处理 JSON 下载失败
           else if (_pendingFailedJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
-              content: '下载 JSON 失败',
+              content: _pendingFailedJsonError ?? '下载 JSON 失败',
               failedJsonUrl: _pendingFailedJsonUrl,
             ));
           }
@@ -898,7 +911,7 @@ class _DesignerBallState extends State<DesignerBall>
       _isGeneratingJson = true; // 显示骨架屏动画
     });
     _scrollToBottom();
-    
+
     try {
       final parsedApp = await _chatService.retryDownloadJson(url);
       _lastGeneratedJson = parsedApp;
@@ -922,6 +935,17 @@ class _DesignerBallState extends State<DesignerBall>
       });
       _scrollToBottom();
     }
+  }
+
+  Future<void> _handleDownloadAndRun(String url) async {
+    final parsedApp = await _chatService.retryDownloadJson(url);
+    _lastGeneratedJson = parsedApp;
+    widget.onRunJsonApp?.call(parsedApp);
+    Future.microtask(() {
+      if (mounted) {
+        _clearAndCloseChatMode();
+      }
+    });
   }
 
   void _cancelEditMode() {
@@ -1419,6 +1443,7 @@ class _DesignerBallState extends State<DesignerBall>
             onProviderChanged: _onProviderChanged,
             onUploadCurrentApp: _handleUploadCurrentApp,
             onRetryDownload: _handleRetryDownload,
+            onDownloadAndRun: _handleDownloadAndRun,
             onRunJsonApp: (jsonConfig) {
               // 先调用外部回调，再清空聊天
               widget.onRunJsonApp?.call(jsonConfig);

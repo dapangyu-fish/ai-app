@@ -8,7 +8,8 @@ class ChatMessage {
   final Map<String, dynamic>? jsonApp; // AI 生成的 JSON-APP
   final String? action; // 客户端动作，例如 'UPLOAD_CURRENT_APP'
   final String? failedJsonUrl; // 下载失败的 URL
-  ChatMessage({required this.role, required this.content, this.jsonApp, this.action, this.failedJsonUrl});
+  final String? jsonUrl; // 待用户点击下载并运行的 JSON URL
+  ChatMessage({required this.role, required this.content, this.jsonApp, this.action, this.failedJsonUrl, this.jsonUrl});
 }
 
 /// 纯字幕式覆层 — 半透明浮在屏幕底部，带窗口框和标题栏。
@@ -26,6 +27,7 @@ class ChatOverlay extends StatefulWidget {
   final void Function(String providerId)? onProviderChanged;
   final VoidCallback? onUploadCurrentApp;
   final void Function(String url)? onRetryDownload;
+  final Future<void> Function(String url)? onDownloadAndRun;
 
   const ChatOverlay({
     super.key,
@@ -42,6 +44,7 @@ class ChatOverlay extends StatefulWidget {
     this.onProviderChanged,
     this.onUploadCurrentApp,
     this.onRetryDownload,
+    this.onDownloadAndRun,
   });
 
   @override
@@ -186,6 +189,9 @@ class _ChatOverlayState extends State<ChatOverlay> {
                     }
                     if (msg.failedJsonUrl != null) {
                       return _buildRetryLine(msg.content, msg.failedJsonUrl!);
+                    }
+                    if (msg.jsonUrl != null) {
+                      return _buildDownloadLine(msg.content, msg.jsonUrl!);
                     }
                     if (msg.role == 'system' && msg.jsonApp != null) {
                       return _buildRunButton(msg.content, msg.jsonApp!);
@@ -343,6 +349,22 @@ class _ChatOverlayState extends State<ChatOverlay> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDownloadLine(String content, String url) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (content.isNotEmpty) _buildLine('AI', content),
+          _DownloadRunButton(
+            url: url,
+            onDownloadAndRun: widget.onDownloadAndRun,
           ),
         ],
       ),
@@ -521,6 +543,95 @@ class _ProviderChip extends StatelessWidget {
         onChanged?.call(value);
       }
     });
+  }
+}
+
+class _DownloadRunButton extends StatefulWidget {
+  final String url;
+  final Future<void> Function(String url)? onDownloadAndRun;
+
+  const _DownloadRunButton({
+    required this.url,
+    this.onDownloadAndRun,
+  });
+
+  @override
+  State<_DownloadRunButton> createState() => _DownloadRunButtonState();
+}
+
+class _DownloadRunButtonState extends State<_DownloadRunButton> {
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _handleTap() async {
+    if (_isLoading || widget.onDownloadAndRun == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    String? err;
+    try {
+      await widget.onDownloadAndRun!(widget.url);
+    } catch (e) {
+      err = e.toString();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _error = err;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buttonLabel = _isLoading
+        ? '下载中...'
+        : (_error == null ? '下载并运行' : '重试下载并运行');
+
+    return GestureDetector(
+      onTap: _handleTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: _error == null
+              ? Colors.green.withValues(alpha: 0.5)
+              : Colors.orange.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isLoading)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            else
+              Icon(
+                _error == null ? Icons.download : Icons.refresh,
+                color: Colors.white,
+                size: 18,
+              ),
+            const SizedBox(width: 6),
+            Text(
+              buttonLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
