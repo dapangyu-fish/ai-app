@@ -4,6 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'sherpa_asr_service.dart';
 import 'ai_chat_service.dart';
 
+// 语音识别方式枚举
+enum AsrMode {
+  online,    // 在线识别（speech_to_text）
+  offline,   // 离线识别（sherpa_onnx）
+  bytedance, // 豆包ASR
+}
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -14,7 +21,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
 
-  bool _forceOffline = false;
+  AsrMode _asrMode = AsrMode.online;
   String _selectedProvider = AiChatService.selectedProvider;
   List<AiProvider> _providers = AiChatService.providers;
   bool _loadingProviders = false;
@@ -35,8 +42,23 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // 读取语音识别方式
+    final asrModeStr = prefs.getString('asr_mode') ?? 'online';
+    AsrMode mode = AsrMode.online;
+    switch (asrModeStr) {
+      case 'offline':
+        mode = AsrMode.offline;
+        break;
+      case 'bytedance':
+        mode = AsrMode.bytedance;
+        break;
+      default:
+        mode = AsrMode.online;
+    }
+
     setState(() {
-      _forceOffline = prefs.getBool('force_offline_asr') ?? false;
+      _asrMode = mode;
       _selectedProvider = AiChatService.selectedProvider;
       _selectedModelId = prefs.getString('asr_model_id') ?? 'sensevoice';
     });
@@ -63,10 +85,25 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _toggleOffline(bool value) async {
-    await _sherpaAsr.setForceOffline(value);
+  Future<void> _selectAsrMode(AsrMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    String modeStr = 'online';
+    switch (mode) {
+      case AsrMode.offline:
+        modeStr = 'offline';
+        await _sherpaAsr.setForceOffline(true);
+        break;
+      case AsrMode.bytedance:
+        modeStr = 'bytedance';
+        await _sherpaAsr.setForceOffline(false);
+        break;
+      default:
+        modeStr = 'online';
+        await _sherpaAsr.setForceOffline(false);
+    }
+    await prefs.setString('asr_mode', modeStr);
     setState(() {
-      _forceOffline = value;
+      _asrMode = mode;
     });
   }
 
@@ -143,21 +180,14 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 24.0),
             _buildSectionTitle('语音识别', cs),
             const SizedBox(height: 8.0),
-            Card(
-              child: SwitchListTile(
-                secondary: Icon(Icons.mic_off, color: cs.onSurface),
-                title: const Text('强制使用离线语音'),
-                subtitle: const Text(
-                  '开启后，语音识别会优先使用本地模型，不依赖网络',
-                ),
-                value: _forceOffline,
-                onChanged: _toggleOffline,
-              ),
-            ),
+            _buildAsrModeSelector(cs),
             const SizedBox(height: 16.0),
-            _buildSectionTitle('语音模型', cs),
-            const SizedBox(height: 8.0),
-            _buildModelList(cs),
+            if (_asrMode == AsrMode.offline) ...[
+              _buildSectionTitle('语音模型', cs),
+              const SizedBox(height: 8.0),
+              _buildModelList(cs),
+              const SizedBox(height: 16.0),
+            ],
           ],
         ),
       ),
@@ -171,6 +201,56 @@ class _SettingsPageState extends State<SettingsPage> {
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: cs.onSurface,
+      ),
+    );
+  }
+
+  Widget _buildAsrModeSelector(ColorScheme cs) {
+    return Card(
+      child: Column(
+        children: [
+          RadioListTile<AsrMode>(
+            value: AsrMode.online,
+            groupValue: _asrMode,
+            onChanged: (value) {
+              if (value != null) _selectAsrMode(value);
+            },
+            title: const Text('在线识别'),
+            subtitle: const Text('使用 speech_to_text，需要网络连接'),
+            secondary: Icon(
+              Icons.cloud,
+              color: _asrMode == AsrMode.online ? cs.primary : cs.outline,
+            ),
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16, color: cs.outline.withValues(alpha: 0.2)),
+          RadioListTile<AsrMode>(
+            value: AsrMode.offline,
+            groupValue: _asrMode,
+            onChanged: (value) {
+              if (value != null) _selectAsrMode(value);
+            },
+            title: const Text('离线识别'),
+            subtitle: const Text('使用 sherpa_onnx 本地模型，无需网络'),
+            secondary: Icon(
+              Icons.offline_bolt,
+              color: _asrMode == AsrMode.offline ? cs.primary : cs.outline,
+            ),
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16, color: cs.outline.withValues(alpha: 0.2)),
+          RadioListTile<AsrMode>(
+            value: AsrMode.bytedance,
+            groupValue: _asrMode,
+            onChanged: (value) {
+              if (value != null) _selectAsrMode(value);
+            },
+            title: const Text('豆包 ASR'),
+            subtitle: const Text('字节跳动语音识别，需要网络和配额'),
+            secondary: Icon(
+              Icons.mic_external_on,
+              color: _asrMode == AsrMode.bytedance ? cs.primary : cs.outline,
+            ),
+          ),
+        ],
       ),
     );
   }
