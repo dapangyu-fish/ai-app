@@ -27,6 +27,11 @@ from config import (
     SUPABASE_URL, SUPABASE_ANON_KEY,
     MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_PUBLIC_URL, MINIO_SECURE
 )
+from database import (
+    create_namespace, get_namespace_by_name, get_user_namespaces,
+    add_namespace_member, remove_namespace_member, get_namespace_members,
+    check_namespace_permission, update_namespace_member_role
+)
 
 BUCKET_APP = "json-app"
 BUCKET_COMPONENT = "json-component"
@@ -124,20 +129,41 @@ def _save_index(index_data):
     )
 
 
+def _validate_namespace_name(name):
+    """
+    验证命名空间名称格式
+    - 只允许小写字母、数字、- 和 _
+    - 不能包含 / 和中文
+    - 必须以字母或数字开头
+    """
+    if not name:
+        return False, "命名空间名称不能为空"
+
+    # 检查是否包含斜杠
+    if '/' in name:
+        return False, "命名空间名称不能包含 /"
+
+    # 检查是否包含中文或其他非法字符
+    pattern = re.compile(r'^[a-z0-9][a-z0-9-_]*$')
+    if not pattern.match(name):
+        return False, "命名空间名称格式不正确（只能包含小写字母、数字、- 和 _，且必须以字母或数字开头）"
+
+    return True, ""
+
+
 def _validate_package_name(name):
     """
     验证包名格式
     - 官方包: common-ui, data-utils (无 /)
-    - 用户包: mycompany/app-name (一级 /)
-    - 用户包: mycompany/frontend/ui-kit (二级 /)
+    - 用户包: mycompany/app-name (只有一级 /)
     """
     if not name:
         return False, "包名不能为空"
 
-    # 检查斜杠数量
+    # 检查斜杠数量（只允许一级命名空间）
     slash_count = name.count('/')
-    if slash_count > 2:
-        return False, "包名最多支持两级命名空间（如 org/team/app）"
+    if slash_count > 1:
+        return False, "包名只支持一级命名空间（如 mycompany/app-name）"
 
     # 检查每个部分的格式
     parts = name.split('/')
@@ -383,30 +409,34 @@ def get_package(name):
 @require_auth
 def my_namespaces():
     """
-    获取当前用户拥有的所有命名空间
+    获取当前用户拥有的所有命名空间（从数据库读取）
     GET /my-namespaces
     """
     user = request.supabase_user
     user_id = user.get('id')
 
-    index = _load_index()
-    result = []
-    for ns_name, ns_info in index.get('namespaces', {}).items():
-        if ns_info.get('owner_id') == user_id:
+    try:
+        namespaces = get_user_namespaces(user_id)
+        result = []
+        for ns in namespaces:
             result.append({
-                "name": ns_name,
-                "created_at": ns_info.get('created_at', '')
+                "id": ns['id'],
+                "name": ns['name'],
+                "description": ns.get('description', ''),
+                "role": ns['role'],
+                "created_at": ns.get('created_at', '')
             })
-
-    return jsonify({"namespaces": result})
+        return jsonify({"namespaces": result})
+    except Exception as e:
+        print(f"[Registry] Error fetching namespaces: {e}")
+        return jsonify({"error": "获取命名空间失败"}), 500
 
 
 @app.route('/namespace/check', methods=['GET'])
 def check_namespace():
     """
-    检查命名空间是否可用
+    检查命名空间是否可用（从数据库检查）
     GET /namespace/check?name=mycompany
-    GET /namespace/check?name=mycompany/frontend
     """
     name = request.args.get('name', '').strip()
 
@@ -414,96 +444,73 @@ def check_namespace():
         return jsonify({"error": "缺少 name 参数"}), 400
 
     # 验证格式
-    slash_count = name.count('/')
-    if slash_count > 1:
-        return jsonify({"error": "命名空间最多支持一级（如 org/team）"}), 400
-
-    # 加载索引
-    index = _load_index()
+    valid, error_msg = _validate_namespace_name(name)
+    if not valid:
+        return jsonify({"error": error_msg}), 400
 
     # 检查是否已存在
-    exists = name in index['namespaces']
-
-    return jsonify({
-        "name": name,
-        "available": not exists,
-        "exists": exists
-    })
+    try:
+        existing = get_namespace_by_name(name)
+        exists = existing is not None
+        return jsonify({
+            "name": name,
+            "available": not exists,
+            "exists": exists
+        })
+    except Exception as e:
+        print(f"[Registry] Error checking namespace: {e}")
+        return jsonify({"error": "检查命名空间失败"}), 500
 
 
 @app.route('/namespace/create', methods=['POST'])
 @require_auth
-def create_namespace():
+def create_namespace_route():
     """
-    创建命名空间（首次发布时调用）
+    创建命名空间（写入数据库）
     POST /namespace/create
     Body: {
       "namespace": "mycompany",
-      "sub_namespace": "frontend"  # 可选
+      "description": "My Company"  # 可选
     }
     """
     body = request.get_json(silent=True) or {}
     namespace = body.get('namespace', '').strip()
-    sub_namespace = body.get('sub_namespace', '').strip()
+    description = body.get('description', '').strip()
 
     if not namespace:
         return jsonify({"error": "缺少 namespace 参数"}), 400
 
     # 验证格式
-    pattern = re.compile(r'^[a-z0-9][a-z0-9-_]*$')
-    if not pattern.match(namespace):
-        return jsonify({"error": "命名空间格式不正确（只能包含小写字母、数字、- 和 _）"}), 400
-
-    if sub_namespace and not pattern.match(sub_namespace):
-        return jsonify({"error": "子命名空间格式不正确"}), 400
-
-    # 加载索引
-    index = _load_index()
+    valid, error_msg = _validate_namespace_name(namespace)
+    if not valid:
+        return jsonify({"error": error_msg}), 400
 
     user = request.supabase_user
     user_id = user.get('id')
-    user_email = user.get('email', '')
 
-    # 检查一级命名空间
-    if namespace in index['namespaces']:
-        existing = index['namespaces'][namespace]
-        if existing['owner_id'] != user_id:
-            return jsonify({"error": f"命名空间 '{namespace}' 已被其他用户占用"}), 403
-    else:
-        # 创建一级命名空间
-        index['namespaces'][namespace] = {
-            "owner_id": user_id,
-            "owner_email": user_email,
-            "created_at": datetime.utcnow().isoformat() + "Z",
-            "sub_namespaces": []
-        }
+    try:
+        # 检查命名空间是否已存在
+        existing = get_namespace_by_name(namespace)
+        if existing:
+            return jsonify({"error": f"命名空间 '{namespace}' 已被占用"}), 403
 
-    # 检查二级命名空间
-    if sub_namespace:
-        full_namespace = f"{namespace}/{sub_namespace}"
-        if full_namespace in index['namespaces']:
-            existing = index['namespaces'][full_namespace]
-            if existing['owner_id'] != user_id:
-                return jsonify({"error": f"命名空间 '{full_namespace}' 已被其他用户占用"}), 403
-        else:
-            # 创建二级命名空间
-            index['namespaces'][full_namespace] = {
-                "owner_id": user_id,
-                "created_at": datetime.utcnow().isoformat() + "Z"
-            }
-            # 更新一级命名空间的子列表
-            if sub_namespace not in index['namespaces'][namespace]['sub_namespaces']:
-                index['namespaces'][namespace]['sub_namespaces'].append(sub_namespace)
+        # 创建命名空间
+        namespace_id = create_namespace(namespace, description, user_id)
+        if not namespace_id:
+            return jsonify({"error": "创建命名空间失败"}), 500
 
-    # 保存索引
-    _save_index(index)
+        # 添加创建者为 owner
+        add_namespace_member(namespace_id, user_id, 'owner', user_id)
 
-    result_namespace = f"{namespace}/{sub_namespace}" if sub_namespace else namespace
-    return jsonify({
-        "message": "命名空间创建成功",
-        "namespace": result_namespace,
-        "owner_id": user_id
-    })
+        return jsonify({
+            "message": "命名空间创建成功",
+            "id": namespace_id,
+            "namespace": namespace,
+            "owner_id": user_id
+        })
+    except Exception as e:
+        print(f"[Registry] Error creating namespace: {e}")
+        return jsonify({"error": "创建命名空间失败"}), 500
 
 
 @app.route('/package/<path:name>', methods=['DELETE'])
