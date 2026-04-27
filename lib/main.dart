@@ -979,6 +979,16 @@ class JsonScreenView extends ConsumerWidget {
     try {
       return _buildContent(context, ref);
     } catch (e, stack) {
+      // 打印完整的错误堆栈到 debug 日志
+      debugPrint('========================================');
+      debugPrint('[JSON-APP] 运行时崩溃');
+      debugPrint('文件: $fileName');
+      debugPrint('错误: $e');
+      debugPrint('========================================');
+      debugPrint('完整堆栈:');
+      debugPrint(stack.toString());
+      debugPrint('========================================');
+
       return _CrashPage(
         error: e.toString(),
         stackTrace: stack.toString(),
