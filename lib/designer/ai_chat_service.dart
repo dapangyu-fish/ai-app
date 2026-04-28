@@ -18,8 +18,9 @@ class ChatEvent {
   final String? requestAction; // 比如 "upload_current_app"
   final String? failedJsonUrl; // 下载失败的 JSON URL
   final String? statusMessage; // 动态状态文案（思考中/阅读文件/写入代码/上传...）
+  final String? pendingJsonUrl; // 待用户确认下载的 JSON URL（不自动下载）
 
-  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage});
+  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage, this.pendingJsonUrl});
 }
 
 /// AI 供应商信息
@@ -92,6 +93,7 @@ class AiChatService {
   bool _sessionUsed = false;  // 该 session 是否已发过消息（用于判断 is_new_session）
 
   http.Client? _activeClient;
+  bool _aborting = false;
 
   String get sessionId => _sessionId;
 
@@ -135,17 +137,39 @@ class AiChatService {
   }
 
   void abort() {
+    _aborting = true;
     _activeClient?.close();
     _activeClient = null;
   }
 
+  /// 检查后端对应 session 的 CLI 进程是否仍然存活
+  Future<bool> isSessionAlive() async {
+    if (_sessionId.isEmpty) return false;
+    try {
+      final token = AuthService.token;
+      final headers = <String, String>{};
+      if (token != null) headers['Authorization'] = 'Bearer $token';
+      final resp = await http
+          .get(
+            Uri.parse('$_baseUrl/api/ai/session_status?session_id=$_sessionId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 5));
+      if (resp.statusCode != 200) return false;
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      return data['alive'] == true;
+    } catch (e) {
+      debugPrint('[AI_CHAT] isSessionAlive error: $e');
+      return false;
+    }
+  }
+
   /// 发送用户消息，返回 Stream<ChatEvent>
   /// 只发送最新消息 + session_id，CLI session 自动维护对话历史
+  /// 支持自动重连：网络中断时自动重试
   Stream<ChatEvent> sendStream(String userMessage) async* {
     abort();
-
-    final client = http.Client();
-    _activeClient = client;
+    _aborting = false;
 
     final isNew = !_sessionUsed;
 
@@ -155,6 +179,21 @@ class AiChatService {
     debugPrint('[AI_CHAT] Provider: $_selectedProvider');
     debugPrint('[AI_CHAT] Is New Session: $isNew');
     debugPrint('[AI_CHAT] ====================================');
+
+    // 自动重连参数
+    const maxRetries = 3;
+    const retryDelay = Duration(seconds: 2);
+    int retryCount = 0;
+
+    while (retryCount <= maxRetries) {
+      if (retryCount > 0) {
+        debugPrint('[AI_CHAT] 第 $retryCount 次重连尝试...');
+        yield ChatEvent(statusMessage: '连接中断，正在重连... ($retryCount/$maxRetries)');
+        await Future.delayed(retryDelay);
+      }
+
+      final client = http.Client();
+      _activeClient = client;
 
     try {
       final request = http.Request('POST', Uri.parse('$_baseUrl/chat'));
@@ -262,7 +301,8 @@ class AiChatService {
             final data = json.decode(dataStr) as Map<String, dynamic>;
 
             // 只记录非内容/思考事件的解析结果
-            if (!data.containsKey('content') && !data.containsKey('thinking')) {
+            if (!data.containsKey('content') && !data.containsKey('thinking') &&
+                !data.containsKey('final_content') && !data.containsKey('final_thinking')) {
               debugPrint('[AI_CHAT] >>> 解析事件: ${data.keys.join(", ")}');
             }
 
@@ -285,6 +325,60 @@ class AiChatService {
             if (data.containsKey('status')) {
               final msg = data['message'] as String? ?? '';
               yield ChatEvent(statusMessage: msg);
+              continue;
+            }
+
+            // 最终完整内容（用于替换之前的增量累积，修正误差）
+            // 仅在确定下发了完整结果时才覆盖：长度不应小于已累积的内容
+            if (data.containsKey('final_content')) {
+              final finalText = data['final_content'] as String? ?? '';
+              if (finalText.isNotEmpty) {
+                debugPrint('[AI_CHAT] 收到最终完整内容，长度: ${finalText.length}');
+                if (finalText.length >= accumulated.length) {
+                  accumulated = finalText;
+                  yield ChatEvent(content: accumulated);
+                } else {
+                  debugPrint('[AI_CHAT] final_content 比当前累积还短，已忽略以避免字幕回退');
+                }
+              }
+              continue;
+            }
+
+            // assistant_content：resume 流里整块下发的文本，作为追加，不覆盖
+            if (data.containsKey('assistant_content')) {
+              final chunk = data['assistant_content'] as String? ?? '';
+              if (chunk.isNotEmpty) {
+                debugPrint('[AI_CHAT] 收到 assistant 文本块，长度: ${chunk.length}');
+                if (!accumulated.contains(chunk)) {
+                  accumulated += chunk;
+                }
+                yield ChatEvent(content: accumulated);
+              }
+              continue;
+            }
+
+            // 最终完整思考（用于替换之前的增量累积）
+            if (data.containsKey('final_thinking')) {
+              final finalThinking = data['final_thinking'] as String? ?? '';
+              if (finalThinking.isNotEmpty) {
+                debugPrint('[AI_CHAT] 收到最终完整思考，长度: ${finalThinking.length}');
+                if (finalThinking.length >= accumulatedThinking.length) {
+                  accumulatedThinking = finalThinking;
+                  yield ChatEvent(thinking: accumulatedThinking);
+                }
+              }
+              continue;
+            }
+
+            // assistant_thinking：resume 流里的整块思考
+            if (data.containsKey('assistant_thinking')) {
+              final chunk = data['assistant_thinking'] as String? ?? '';
+              if (chunk.isNotEmpty) {
+                if (!accumulatedThinking.contains(chunk)) {
+                  accumulatedThinking += chunk;
+                }
+                yield ChatEvent(thinking: accumulatedThinking);
+              }
               continue;
             }
 
@@ -343,38 +437,19 @@ class AiChatService {
           if (content.isNotEmpty) {
             accumulated += content;
             yield ChatEvent(content: accumulated);
-            // 注意：标签指令（[json_app_url]、[request_action]）的解析移到流结束后统一处理
           }
         } catch (_) {}
       }
 
       // 流结束后，统一解析标签指令（避免流式传输过程中重复解析）
 
-      // 1. 检测 [json_app_url] 标记并下载
+      // 1. 检测 [json_app_url] 标记 → 不自动下载，仅通知 UI 显示按钮
       final urlRegex = RegExp(r'\[json_app_url\]([^\]]+)\[/json_app_url\]');
       final urlMatch = urlRegex.firstMatch(accumulated);
       if (urlMatch != null) {
         final url = urlMatch.group(1)!;
-        debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
-
-        try {
-          debugPrint('[AI_CHAT] 开始下载 JSON...');
-          final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
-          debugPrint('[AI_CHAT] 下载响应: ${getResp.statusCode}');
-
-          if (getResp.statusCode == 200) {
-            final jsonBody = utf8.decode(getResp.bodyBytes);
-            debugPrint('[AI_CHAT] JSON 下载成功，大小: ${jsonBody.length} bytes');
-            final parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
-            yield ChatEvent(jsonApp: parsedApp);
-          } else {
-            debugPrint('[AI_CHAT] 下载失败: HTTP ${getResp.statusCode}');
-            yield ChatEvent(failedJsonUrl: url, error: 'HTTP ${getResp.statusCode}');
-          }
-        } catch (e) {
-          debugPrint('[AI_CHAT] 下载异常: $e');
-          yield ChatEvent(failedJsonUrl: url, error: e.toString());
-        }
+        debugPrint('[AI_CHAT] 流结束，检测到 JSON URL，等待用户确认下载: $url');
+        yield ChatEvent(pendingJsonUrl: url);
       }
 
       // 2. 检测 [request_action] 标记
@@ -389,7 +464,7 @@ class AiChatService {
       // 3. 如果累积的文本包含 JSON 块，则提取并应用
       final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
       final match = jsonBlockRegex.firstMatch(accumulated);
-      if (match != null) {
+      if (match != null && urlMatch == null) {  // 有 URL 时不再重复处理
         try {
           final jsonStr = match.group(1)!;
           final parsedApp = json.decode(jsonStr) as Map<String, dynamic>;
@@ -399,14 +474,37 @@ class AiChatService {
         }
       }
 
-    } on http.ClientException {
-      // abort() 触发
+      // 流正常结束，跳出重连循环
+      debugPrint('[AI_CHAT] 流正常结束');
+      return;
+
+    } on http.ClientException catch (e) {
+      debugPrint('[AI_CHAT] ClientException: $e');
+      if (_aborting) {
+        // 只有显式 abort() 才认为是用户主动中止
+        debugPrint('[AI_CHAT] 用户主动中止，不重连');
+        return;
+      }
+      retryCount++;
+      if (retryCount > maxRetries) {
+        yield ChatEvent(error: '连接失败，已达到最大重试次数: $e');
+        return;
+      }
+      yield ChatEvent(statusMessage: '网络波动，正在自动重试... ($retryCount/$maxRetries)');
+      // 继续重连循环
     } catch (e) {
-      yield ChatEvent(error: '网络错误: $e');
+      debugPrint('[AI_CHAT] 未知错误: $e');
+      retryCount++;
+      if (retryCount > maxRetries) {
+        yield ChatEvent(error: '网络错误: $e');
+        return;
+      }
+      // 继续重连循环
     } finally {
       if (_activeClient == client) _activeClient = null;
       client.close();
     }
+    }  // while 循环结束
   }
 
   void commitPartial(String partialContent) {

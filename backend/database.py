@@ -90,3 +90,101 @@ def increment_quota(user_id):
            DO UPDATE SET used_count = chat_quotas.used_count + 1""",
         [user_id, today]
     )
+
+
+# ═══════════════════════════════════════════════════════════
+# 命名空间权限管理
+# ═══════════════════════════════════════════════════════════
+
+def create_namespace(name, description, created_by):
+    """创建命名空间"""
+    db_execute(
+        """INSERT INTO namespaces (name, description, created_by)
+           VALUES (%s, %s, %s)""",
+        [name, description, created_by]
+    )
+    # 获取刚创建的命名空间 ID
+    row = db_query(
+        "SELECT id FROM namespaces WHERE name = %s",
+        [name],
+        fetch_one=True
+    )
+    return row['id'] if row else None
+
+
+def get_namespace_by_name(name):
+    """根据名称获取命名空间"""
+    return db_query(
+        "SELECT * FROM namespaces WHERE name = %s",
+        [name],
+        fetch_one=True
+    )
+
+
+def get_user_namespaces(user_id):
+    """获取用户拥有权限的所有命名空间"""
+    return db_query(
+        """SELECT n.id, n.name, n.description, n.created_at, nm.role
+           FROM namespaces n
+           JOIN namespace_members nm ON n.id = nm.namespace_id
+           WHERE nm.user_id = %s
+           ORDER BY n.created_at DESC""",
+        [user_id],
+        fetch_all=True
+    )
+
+
+def add_namespace_member(namespace_id, user_id, role, invited_by):
+    """添加命名空间成员"""
+    db_execute(
+        """INSERT INTO namespace_members (namespace_id, user_id, role, invited_by)
+           VALUES (%s, %s, %s, %s)
+           ON CONFLICT (namespace_id, user_id)
+           DO UPDATE SET role = EXCLUDED.role""",
+        [namespace_id, user_id, role, invited_by]
+    )
+
+
+def remove_namespace_member(namespace_id, user_id):
+    """移除命名空间成员"""
+    db_execute(
+        "DELETE FROM namespace_members WHERE namespace_id = %s AND user_id = %s",
+        [namespace_id, user_id]
+    )
+
+
+def get_namespace_members(namespace_id):
+    """获取命名空间的所有成员"""
+    return db_query(
+        """SELECT user_id, role, joined_at, invited_by
+           FROM namespace_members
+           WHERE namespace_id = %s
+           ORDER BY joined_at ASC""",
+        [namespace_id],
+        fetch_all=True
+    )
+
+
+def check_namespace_permission(namespace_name, user_id):
+    """检查用户是否有命名空间的发布权限（owner 或 admin）"""
+    row = db_query(
+        """SELECT nm.role
+           FROM namespaces n
+           JOIN namespace_members nm ON n.id = nm.namespace_id
+           WHERE n.name = %s AND nm.user_id = %s""",
+        [namespace_name, user_id],
+        fetch_one=True
+    )
+    if not row:
+        return False, None
+    return True, row['role']
+
+
+def update_namespace_member_role(namespace_id, user_id, new_role):
+    """更新命名空间成员的角色"""
+    db_execute(
+        """UPDATE namespace_members
+           SET role = %s
+           WHERE namespace_id = %s AND user_id = %s""",
+        [new_role, namespace_id, user_id]
+    )

@@ -1,4 +1,4 @@
-package com.dapangyu.fish.myapp
+package dapangyu.fish.myapp
 
 import android.graphics.Rect
 import android.os.Build

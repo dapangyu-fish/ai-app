@@ -10,6 +10,7 @@ import 'sherpa_asr_service.dart';
 import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
+import '../main.dart' show JsonDslApp;
 
 /// 语音识别方式枚举
 enum AsrMode {
@@ -79,8 +80,9 @@ class _DesignerBallState extends State<DesignerBall>
   static const double _cancelBottomZoneHeight = 120.0;
 
   // ── 编辑模式 ──
+  // 编辑窗用 showModalBottomSheet 渲染在独立 Navigator route 中，
+  // 与 DesignerBall 的 setState 完全隔离。_editMode 仅用于隐藏悬浮球。
   bool _editMode = false;
-  final TextEditingController _editTextController = TextEditingController();
 
   // ── 脉冲动画（录音中） ──
   late AnimationController _pulseController;
@@ -97,6 +99,9 @@ class _DesignerBallState extends State<DesignerBall>
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
+  Timer? _sessionHeartbeatTimer;
+  DateTime? _lastAiEventAt;
+  bool _streamDone = false;
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
   Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
   final List<ChatMessage> _messages = [];
@@ -185,7 +190,8 @@ class _DesignerBallState extends State<DesignerBall>
 
         // 设置回调
         _bytedanceAsr.onResult = (text) {
-          if (mounted && _isListening) {
+          // 编辑模式下，所有迟到的 ASR 结果一律丢弃
+          if (mounted && _isListening && !_editMode) {
             setState(() {
               _liveTranscript = text;
             });
@@ -252,17 +258,18 @@ class _DesignerBallState extends State<DesignerBall>
     _animController.dispose();
     _pulseController.dispose();
     _countdownController.dispose();
-    _editTextController.dispose();
     _speech?.stop();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _initPosition(Size screenSize) {
-    if (!_positioned) {
+    // 安全检查：只有在屏幕尺寸有效时才初始化位置
+    if (!_positioned && screenSize.width > 0 && screenSize.height > 0) {
       _left = screenSize.width - _ballSize - 16;
       _top = screenSize.height * 0.65;
       _positioned = true;
+      debugPrint('[DesignerBall] Position initialized: left=$_left, top=$_top, screenSize=$screenSize');
     }
   }
 
@@ -550,12 +557,51 @@ class _DesignerBallState extends State<DesignerBall>
     }
 
     // 如果是豆包ASR，检查连接状态
-    if (_asrMode == AsrMode.bytedance && !_bytedanceAsr.isConnected) {
-      setState(() {
-        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络或切换到其他识别方式'));
-      });
-      return;
+    if (_asrMode == AsrMode.bytedance) {
+      if (!_bytedanceAsr.isConnected) {
+        debugPrint('[DesignerBall] 豆包ASR未连接，等待连接...');
+        setState(() {
+          _chatMode = true;
+          _isThinking = true;
+          _liveTranscript = '正在连接豆包ASR...';
+        });
+
+        // 等待最多3秒让豆包ASR连接
+        int waitCount = 0;
+        while (!_bytedanceAsr.isConnected && waitCount < 30) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          waitCount++;
+
+          // 用户手已离开，中止等待
+          if (!_pointerDown) {
+            debugPrint('[DesignerBall] Pointer lifted during ByteDance ASR wait, aborting');
+            setState(() {
+              _isThinking = false;
+              _liveTranscript = null;
+            });
+            return;
+          }
+        }
+
+        setState(() {
+          _isThinking = false;
+          _liveTranscript = null;
+        });
+
+        // 等待超时，仍未连接
+        if (!_bytedanceAsr.isConnected) {
+          debugPrint('[DesignerBall] 豆包ASR连接超时，isConnected=${_bytedanceAsr.isConnected}');
+          setState(() {
+            _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR连接超时，请检查网络或切换到其他识别方式'));
+          });
+          return;
+        }
+
+        debugPrint('[DesignerBall] 豆包ASR连接成功');
+      }
     }
+
+    debugPrint('[DesignerBall] 准备进入录音模式，_pointerDown=$_pointerDown');
 
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
@@ -563,6 +609,8 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] Pointer lifted before startListening, skipping');
       return;
     }
+
+    debugPrint('[DesignerBall] 调用 _startListening');
     _startListening();
   }
 
@@ -630,23 +678,19 @@ class _DesignerBallState extends State<DesignerBall>
     });
   }
 
-  void _enterEditMode() {
+  Future<void> _enterEditMode() async {
     debugPrint('[DesignerBall] Entering edit mode');
-    String finalText = _liveTranscript?.trim() ?? '';
-    _editTextController.text = finalText;
+    final initialText = _liveTranscript?.trim() ?? '';
     _accumulatedTranscript = ''; // 清空累积文本，防止下次录音叠加旧内容
 
-    switch (_asrMode) {
-      case AsrMode.offline:
-        _sherpaAsr.stopListening();
-        _sherpaAsr.onResult = null;
-        break;
-      case AsrMode.bytedance:
-        _bytedanceAsr.stopListening();
-        break;
-      default:
-        try { _speech?.stop(); } catch (_) {}
-    }
+    // 编辑模式 = 最高权限：彻底切断所有语音源（停录音 + 清回调）。
+    _sherpaAsr.stopListening();
+    _sherpaAsr.onResult = null;
+    _sherpaAsr.onStatusChange = null;
+    _bytedanceAsr.stopListening();
+    // 注意：_bytedanceAsr.onResult 不在此处清空（在 _initBytedanceAsr 中一次性注册），
+    // 改在回调内用 _editMode 守卫拦截。
+    try { _speech?.stop(); } catch (_) {}
 
     _pulseController.stop();
     _pulseController.reset();
@@ -655,22 +699,41 @@ class _DesignerBallState extends State<DesignerBall>
       _liveTranscript = null;
       _dragCancelling = false;
       _dragInEditZone = false;
-      _editMode = true;
+      _editMode = true; // 仅用于隐藏悬浮球
     });
-  }
 
-  void _sendEditedText() {
-    final text = _editTextController.text.trim();
+    // 关键：用 showModalBottomSheet 把 TextField 推进独立的 Navigator route。
+    // 它在自己的 Overlay 子树里渲染，与 DesignerBall 的 setState 完全隔离 ——
+    // 父级 rebuild 多少次都不会触达 sheet 的 State，TextEditingController 不会被
+    // 重置，IME 状态稳定。这是 Flutter 处理"文本编辑弹层"的标配做法。
+    //
+    // 注意：DesignerBall 是包在 MaterialApp 外面的（builder: (_, child) => DesignerBall(child: child)），
+    // 它自己的 context 找不到 Navigator。需要通过 MaterialApp 的 navigatorKey 拿到下方的 Navigator context。
+    final navContext = JsonDslApp.navigatorKey.currentContext;
+    if (navContext == null) {
+      debugPrint('[DesignerBall] No navigator context, abort edit mode');
+      if (mounted) setState(() => _editMode = false);
+      return;
+    }
+    final result = await showModalBottomSheet<String>(
+      context: navContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      builder: (sheetContext) => _EditSheet(initialText: initialText),
+    );
+
+    if (!mounted) return;
     setState(() => _editMode = false);
-    _editTextController.clear();
 
-    if (text.isEmpty) return;
-
-    _sendTextToAi(text);
+    if (result != null && result.trim().isNotEmpty) {
+      _sendTextToAi(result.trim());
+    }
   }
 
   void _sendTextToAi(String text, {bool skipUserMessage = false}) {
     _cancelCurrentStream();
+    _startSessionHeartbeat();
 
     if (!skipUserMessage) {
       setState(() {
@@ -686,9 +749,11 @@ class _DesignerBallState extends State<DesignerBall>
     String? _pendingRequestAction;
     String? _pendingFailedJsonUrl;
     String? _pendingFailedJsonError;
+    String? _pendingJsonUrl;
 
     _streamSub = _chatService.sendStream(text).listen(
       (event) {
+        _markAiEvent();
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
@@ -732,6 +797,10 @@ class _DesignerBallState extends State<DesignerBall>
           _pendingFailedJsonError = event.error;
           return;
         }
+        if (event.pendingJsonUrl != null) {
+          _pendingJsonUrl = event.pendingJsonUrl;
+          return;
+        }
 
         if (event.thinking != null) {
           // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
@@ -770,6 +839,9 @@ class _DesignerBallState extends State<DesignerBall>
         }
       },
       onError: (e) {
+        _streamDone = true;
+        _sessionHeartbeatTimer?.cancel();
+        _sessionHeartbeatTimer = null;
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
@@ -778,6 +850,9 @@ class _DesignerBallState extends State<DesignerBall>
         });
       },
       onDone: () {
+        _streamDone = true;
+        _sessionHeartbeatTimer?.cancel();
+        _sessionHeartbeatTimer = null;
         // SSE 流结束后，统一处理累积的指令
         setState(() {
           _isGeneratingJson = false;
@@ -791,11 +866,19 @@ class _DesignerBallState extends State<DesignerBall>
               action: 'UPLOAD_CURRENT_APP',
             ));
           }
+          // 处理待用户确认下载并运行
+          else if (_pendingJsonUrl != null) {
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: 'JSON-APP 已生成，点击下载并运行：',
+              jsonUrl: _pendingJsonUrl,
+            ));
+          }
           // 处理 JSON 下载失败
           else if (_pendingFailedJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
-              content: '下载 JSON 失败',
+              content: _pendingFailedJsonError ?? '下载 JSON 失败',
               failedJsonUrl: _pendingFailedJsonUrl,
             ));
           }
@@ -855,7 +938,7 @@ class _DesignerBallState extends State<DesignerBall>
       _isGeneratingJson = true; // 显示骨架屏动画
     });
     _scrollToBottom();
-    
+
     try {
       final parsedApp = await _chatService.retryDownloadJson(url);
       _lastGeneratedJson = parsedApp;
@@ -881,10 +964,14 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  void _cancelEditMode() {
-    setState(() {
-      _editMode = false;
-      _editTextController.clear();
+  Future<void> _handleDownloadAndRun(String url) async {
+    final parsedApp = await _chatService.retryDownloadJson(url);
+    _lastGeneratedJson = parsedApp;
+    widget.onRunJsonApp?.call(parsedApp);
+    Future.microtask(() {
+      if (mounted) {
+        _clearAndCloseChatMode();
+      }
     });
   }
 
@@ -895,6 +982,8 @@ class _DesignerBallState extends State<DesignerBall>
     try {
       _speech!.listen(
         onResult: (result) {
+          // 编辑模式下，stop() 后迟到的 final 结果一律丢弃
+          if (!_isListening || _editMode) return;
           _nativeSpeechReceivedCallback = true;
           final text = result.recognizedWords;
           if (_liveTranscript != text) {
@@ -1029,6 +1118,8 @@ class _DesignerBallState extends State<DesignerBall>
       }
 
       _sherpaAsr.onResult = (text) {
+        // 编辑模式下，迟到的 ASR 结果一律丢弃
+        if (!_isListening || _editMode) return;
         // 优化：只在文本变化时更新 UI，减少不必要的重建
         if (_liveTranscript != text) {
           setState(() => _liveTranscript = text);
@@ -1154,8 +1245,53 @@ class _DesignerBallState extends State<DesignerBall>
     _sendTextToAi(text, skipUserMessage: true);
   }
 
+  /// 标记最近一次 AI 事件时间，配合心跳判断是否真的卡住
+  void _markAiEvent() {
+    _lastAiEventAt = DateTime.now();
+  }
+
+  /// 启动一个 5 秒心跳，定期问后端 session 是否还活着
+  void _startSessionHeartbeat() {
+    _sessionHeartbeatTimer?.cancel();
+    _lastAiEventAt = DateTime.now();
+    _streamDone = false;
+    _sessionHeartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!mounted || _streamDone) return;
+      final last = _lastAiEventAt;
+      if (last == null) return;
+      final silentFor = DateTime.now().difference(last).inSeconds;
+      if (silentFor < 5) return;
+      final alive = await _chatService.isSessionAlive();
+      if (!mounted || _streamDone) return;
+      if (!alive) {
+        debugPrint('[DesignerBall] Session process not alive, stop waiting');
+        _sessionHeartbeatTimer?.cancel();
+        _sessionHeartbeatTimer = null;
+        setState(() {
+          _isThinking = false;
+          _isGeneratingJson = false;
+          _generatingStatusMessage = '正在生成代码...';
+          if (_messages.isNotEmpty &&
+              _messages.last.role == 'assistant' &&
+              _messages.last.content.isEmpty) {
+            _messages.last = ChatMessage(role: 'assistant', content: 'AI 会话已中断，请重试');
+          }
+        });
+      } else if (silentFor >= 10 && mounted) {
+        setState(() {
+          _isGeneratingJson = true;
+          _generatingStatusMessage = 'AI 正在处理...';
+        });
+      }
+    });
+  }
+
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
   void _cancelCurrentStream() {
+    _sessionHeartbeatTimer?.cancel();
+    _sessionHeartbeatTimer = null;
+    _lastAiEventAt = null;
+    _streamDone = true;
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -1360,8 +1496,10 @@ class _DesignerBallState extends State<DesignerBall>
       children: [
         widget.child,
 
-        // 字幕覆层
-        if (_chatMode)
+        // 字幕覆层 — 编辑模式下隐藏，避免半透明字幕叠在编辑 sheet 上方
+        // （DesignerBall 包在 Navigator 外面，sheet 在 widget.child 内的 Overlay 里，
+        // 自然位于 ChatOverlay 之下；进入编辑模式时摘掉字幕，sheet 才能完整可见）
+        if (_chatMode && !_editMode)
           ChatOverlay(
             messages: _messages,
             isListening: _isListening,
@@ -1376,6 +1514,7 @@ class _DesignerBallState extends State<DesignerBall>
             onProviderChanged: _onProviderChanged,
             onUploadCurrentApp: _handleUploadCurrentApp,
             onRetryDownload: _handleRetryDownload,
+            onDownloadAndRun: _handleDownloadAndRun,
             onRunJsonApp: (jsonConfig) {
               // 先调用外部回调，再清空聊天
               widget.onRunJsonApp?.call(jsonConfig);
@@ -1468,174 +1607,30 @@ class _DesignerBallState extends State<DesignerBall>
             ),
           ),
 
-        // 编辑模式覆层
-        if (_editMode)
-          _buildEditOverlay(screenSize),
+        // 编辑窗在 showModalBottomSheet 里渲染，不在此处构建。
 
-        // 悬浮球 — 全部用 Listener 捕获原始 pointer 事件，消除手势竞技场延迟
-        Positioned(
-          left: _left,
-          top: _top,
-          child: Listener(
-            onPointerDown: _onPointerDown,
-            onPointerMove: (e) => _onPointerMove(e, screenSize),
-            onPointerUp: (e) => _onPointerUp(e, screenSize),
-            onPointerCancel: (e) => _onPointerCancel(e, screenSize),
-            child: GestureDetector(
-              onTap: () => _onTap(screenSize),
-              onDoubleTap: _onDoubleTap,
-              child: _buildBall(context),
+        // 悬浮球 — 编辑模式下隐藏，避免拦截输入框光标/删除事件
+        if (!_editMode)
+          Positioned(
+            left: _left,
+            top: _top,
+            child: Listener(
+              onPointerDown: _onPointerDown,
+              onPointerMove: (e) => _onPointerMove(e, screenSize),
+              onPointerUp: (e) => _onPointerUp(e, screenSize),
+              onPointerCancel: (e) => _onPointerCancel(e, screenSize),
+              child: GestureDetector(
+                onTap: () => _onTap(screenSize),
+                onDoubleTap: _onDoubleTap,
+                child: _buildBall(context),
+              ),
             ),
           ),
-        ),
       ],
     ),
     );
   }
 
-  Widget _buildEditOverlay(Size screenSize) {
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
-    final bottomOffset = keyboardHeight > 0 ? keyboardHeight + 8 : bottomPadding + 80;
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: bottomOffset,
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          height: screenSize.height * 0.35,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Colors.blue.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          clipBehavior: Clip.hardEdge,
-          child: Column(
-            children: [
-              // 标题栏
-              Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_note,
-                        color: Colors.white.withValues(alpha: 0.5), size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      '编辑消息',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: _cancelEditMode,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(Icons.close,
-                            color: Colors.white60, size: 18),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 编辑区域
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-                  child: TextField(
-                    controller: _editTextController,
-                    autofocus: true,
-                    maxLines: null,
-                    expands: true,
-                    textAlignVertical: TextAlignVertical.top,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      height: 1.6,
-                    ),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '编辑你的消息...',
-                      hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // 底部操作栏
-              Container(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _cancelEditMode,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '取消',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: _sendEditedText,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.purple,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.send, color: Colors.white, size: 18),
-                            SizedBox(width: 6),
-                            Text(
-                              '发送',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildBall(BuildContext context) {
     final double opacity = _hidden ? 0.6 : 1.0;
@@ -1839,3 +1834,189 @@ class _CountdownRingPainter extends CustomPainter {
 }
 
 enum _HideEdge { none, left, right, top, bottom }
+
+// ════════════════════════════════════════════════════════
+// 编辑窗 — 用 showModalBottomSheet 渲染在独立 Navigator route
+//
+// 设计原则（用户原话："文本编辑模式下，编辑窗口就是最高权限"）：
+//   - sheet 在 Overlay 子树里渲染，与 DesignerBall widget 树物理隔离
+//   - 父级 setState 不会触达 sheet 内部，TextEditingController 不会被重置
+//   - sheet pop 时返回 String（发送）或 null（取消）
+// ════════════════════════════════════════════════════════
+
+class _EditSheet extends StatefulWidget {
+  final String initialText;
+
+  const _EditSheet({required this.initialText});
+
+  @override
+  State<_EditSheet> createState() => _EditSheetState();
+}
+
+class _EditSheetState extends State<_EditSheet> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+    _controller.selection = TextSelection.collapsed(offset: widget.initialText.length);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    Navigator.of(context).pop(_controller.text);
+  }
+
+  void _cancel() {
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 与 ChatOverlay 保持一致：永远深色，不跟随系统主题，避免出现"白底白字"或主题穿透问题
+    const bgColor = Color(0xFF1C1C1E);
+    const textColor = Colors.white;
+    final panelColor = Colors.white.withValues(alpha: 0.08);
+    final hintColor = Colors.white.withValues(alpha: 0.3);
+    final borderColor = Colors.white.withValues(alpha: 0.1);
+    final secondaryTextColor = Colors.white.withValues(alpha: 0.7);
+    final iconColor = Colors.white.withValues(alpha: 0.6);
+
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      // 让 sheet 跟随键盘上推
+      padding: EdgeInsets.only(bottom: keyboardHeight),
+      child: SafeArea(
+        top: false,
+        child: Material(
+          color: bgColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 标题栏
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: borderColor)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_note,
+                        color: Colors.white.withValues(alpha: 0.5), size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      '编辑消息',
+                      style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _cancel,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(Icons.close, color: iconColor, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 编辑区
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 120, maxHeight: 240),
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    autofocus: true,
+                    maxLines: null,
+                    minLines: 4,
+                    textAlignVertical: TextAlignVertical.top,
+                    cursorColor: Colors.white,
+                    style: const TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      height: 1.6,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '编辑你的消息...',
+                      hintStyle: TextStyle(color: hintColor, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ),
+              // 底部操作栏
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: _cancel,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: panelColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '取消',
+                          style: TextStyle(
+                            color: secondaryTextColor,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _send,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.purple,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.send, color: Colors.white, size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              '发送',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

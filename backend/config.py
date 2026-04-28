@@ -27,18 +27,18 @@ AI_PROVIDERS = {
         "base_url": "https://api.deepseek.com/anthropic",
         "api_key": DEEPSEEK_KEY,
         "models": {
-            "default": "deepseek-chat",
+            "default": "deepseek-v4-pro",
         },
-        "agent_model": "deepseek-chat",
+        "agent_model": "deepseek-v4-pro",
         "cli_env": {
             "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
             "ANTHROPIC_AUTH_TOKEN": DEEPSEEK_KEY,
-            "ANTHROPIC_MODEL": "deepseek-chat",
-            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-chat",
+            "ANTHROPIC_MODEL": "deepseek-v4-pro",
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-pro",
             "API_TIMEOUT_MS": "600000",
             "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
         },
-        "cli_model": "deepseek-chat",
+        "cli_model": "deepseek-v4-pro",
     },
     "glm": {
         "id": "glm",

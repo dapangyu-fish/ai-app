@@ -44,6 +44,10 @@ class JsonInterpreter extends ChangeNotifier {
   void Function(String screenId)? onNavigate;
   BuildContext? globalContext;
 
+  // ============ Toast 重叠显示管理 ============
+  final List<OverlayEntry> _activeToasts = [];
+  static const int _maxOverlappingToasts = 20;
+
   // ============ Getters ============
 
   List<dynamic> get screens =>
@@ -1677,15 +1681,52 @@ class JsonInterpreter extends ChangeNotifier {
 
   void _showToast(String message) {
     final ctx = globalContext;
-    if (ctx != null && ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    if (ctx == null || !ctx.mounted) return;
+
+    // 超过 20 个立即清空所有旧的
+    if (_activeToasts.length >= _maxOverlappingToasts) {
+      for (final entry in _activeToasts) {
+        entry.remove();
+      }
+      _activeToasts.clear();
     }
+
+    final overlay = Overlay.of(ctx);
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 80.0 + (_activeToasts.length * 60.0), // 每个 toast 向上偏移 60px
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+    _activeToasts.add(entry);
+
+    // 2 秒后自动移除
+    Future.delayed(const Duration(seconds: 2), () {
+      if (entry.mounted) {
+        entry.remove();
+        _activeToasts.remove(entry);
+      }
+    });
   }
 
   Future<bool> _showAlertDialog(String title, String message) async {

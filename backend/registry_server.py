@@ -27,6 +27,12 @@ from config import (
     SUPABASE_URL, SUPABASE_ANON_KEY,
     MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_PUBLIC_URL, MINIO_SECURE
 )
+from database import (
+    create_namespace, get_namespace_by_name, get_user_namespaces,
+    add_namespace_member, remove_namespace_member, get_namespace_members,
+    check_namespace_permission, update_namespace_member_role
+)
+from auth import find_user_by_email, find_user_by_phone
 
 BUCKET_APP = "json-app"
 BUCKET_COMPONENT = "json-component"
@@ -124,20 +130,41 @@ def _save_index(index_data):
     )
 
 
+def _validate_namespace_name(name):
+    """
+    验证命名空间名称格式
+    - 只允许小写字母、数字、- 和 _
+    - 不能包含 / 和中文
+    - 必须以字母或数字开头
+    """
+    if not name:
+        return False, "命名空间名称不能为空"
+
+    # 检查是否包含斜杠
+    if '/' in name:
+        return False, "命名空间名称不能包含 /"
+
+    # 检查是否包含中文或其他非法字符
+    pattern = re.compile(r'^[a-z0-9][a-z0-9-_]*$')
+    if not pattern.match(name):
+        return False, "命名空间名称格式不正确（只能包含小写字母、数字、- 和 _，且必须以字母或数字开头）"
+
+    return True, ""
+
+
 def _validate_package_name(name):
     """
     验证包名格式
     - 官方包: common-ui, data-utils (无 /)
-    - 用户包: mycompany/app-name (一级 /)
-    - 用户包: mycompany/frontend/ui-kit (二级 /)
+    - 用户包: mycompany/app-name (只有一级 /)
     """
     if not name:
         return False, "包名不能为空"
 
-    # 检查斜杠数量
+    # 检查斜杠数量（只允许一级命名空间）
     slash_count = name.count('/')
-    if slash_count > 2:
-        return False, "包名最多支持两级命名空间（如 org/team/app）"
+    if slash_count > 1:
+        return False, "包名只支持一级命名空间（如 mycompany/app-name）"
 
     # 检查每个部分的格式
     parts = name.split('/')
@@ -383,30 +410,34 @@ def get_package(name):
 @require_auth
 def my_namespaces():
     """
-    获取当前用户拥有的所有命名空间
+    获取当前用户拥有的所有命名空间（从数据库读取）
     GET /my-namespaces
     """
     user = request.supabase_user
     user_id = user.get('id')
 
-    index = _load_index()
-    result = []
-    for ns_name, ns_info in index.get('namespaces', {}).items():
-        if ns_info.get('owner_id') == user_id:
+    try:
+        namespaces = get_user_namespaces(user_id)
+        result = []
+        for ns in namespaces:
             result.append({
-                "name": ns_name,
-                "created_at": ns_info.get('created_at', '')
+                "id": ns['id'],
+                "name": ns['name'],
+                "description": ns.get('description', ''),
+                "role": ns['role'],
+                "created_at": ns.get('created_at', '')
             })
-
-    return jsonify({"namespaces": result})
+        return jsonify({"namespaces": result})
+    except Exception as e:
+        print(f"[Registry] Error fetching namespaces: {e}")
+        return jsonify({"error": "获取命名空间失败"}), 500
 
 
 @app.route('/namespace/check', methods=['GET'])
 def check_namespace():
     """
-    检查命名空间是否可用
+    检查命名空间是否可用（从数据库检查）
     GET /namespace/check?name=mycompany
-    GET /namespace/check?name=mycompany/frontend
     """
     name = request.args.get('name', '').strip()
 
@@ -414,96 +445,73 @@ def check_namespace():
         return jsonify({"error": "缺少 name 参数"}), 400
 
     # 验证格式
-    slash_count = name.count('/')
-    if slash_count > 1:
-        return jsonify({"error": "命名空间最多支持一级（如 org/team）"}), 400
-
-    # 加载索引
-    index = _load_index()
+    valid, error_msg = _validate_namespace_name(name)
+    if not valid:
+        return jsonify({"error": error_msg}), 400
 
     # 检查是否已存在
-    exists = name in index['namespaces']
-
-    return jsonify({
-        "name": name,
-        "available": not exists,
-        "exists": exists
-    })
+    try:
+        existing = get_namespace_by_name(name)
+        exists = existing is not None
+        return jsonify({
+            "name": name,
+            "available": not exists,
+            "exists": exists
+        })
+    except Exception as e:
+        print(f"[Registry] Error checking namespace: {e}")
+        return jsonify({"error": "检查命名空间失败"}), 500
 
 
 @app.route('/namespace/create', methods=['POST'])
 @require_auth
-def create_namespace():
+def create_namespace_route():
     """
-    创建命名空间（首次发布时调用）
+    创建命名空间（写入数据库）
     POST /namespace/create
     Body: {
       "namespace": "mycompany",
-      "sub_namespace": "frontend"  # 可选
+      "description": "My Company"  # 可选
     }
     """
     body = request.get_json(silent=True) or {}
     namespace = body.get('namespace', '').strip()
-    sub_namespace = body.get('sub_namespace', '').strip()
+    description = body.get('description', '').strip()
 
     if not namespace:
         return jsonify({"error": "缺少 namespace 参数"}), 400
 
     # 验证格式
-    pattern = re.compile(r'^[a-z0-9][a-z0-9-_]*$')
-    if not pattern.match(namespace):
-        return jsonify({"error": "命名空间格式不正确（只能包含小写字母、数字、- 和 _）"}), 400
-
-    if sub_namespace and not pattern.match(sub_namespace):
-        return jsonify({"error": "子命名空间格式不正确"}), 400
-
-    # 加载索引
-    index = _load_index()
+    valid, error_msg = _validate_namespace_name(namespace)
+    if not valid:
+        return jsonify({"error": error_msg}), 400
 
     user = request.supabase_user
     user_id = user.get('id')
-    user_email = user.get('email', '')
 
-    # 检查一级命名空间
-    if namespace in index['namespaces']:
-        existing = index['namespaces'][namespace]
-        if existing['owner_id'] != user_id:
-            return jsonify({"error": f"命名空间 '{namespace}' 已被其他用户占用"}), 403
-    else:
-        # 创建一级命名空间
-        index['namespaces'][namespace] = {
-            "owner_id": user_id,
-            "owner_email": user_email,
-            "created_at": datetime.utcnow().isoformat() + "Z",
-            "sub_namespaces": []
-        }
+    try:
+        # 检查命名空间是否已存在
+        existing = get_namespace_by_name(namespace)
+        if existing:
+            return jsonify({"error": f"命名空间 '{namespace}' 已被占用"}), 403
 
-    # 检查二级命名空间
-    if sub_namespace:
-        full_namespace = f"{namespace}/{sub_namespace}"
-        if full_namespace in index['namespaces']:
-            existing = index['namespaces'][full_namespace]
-            if existing['owner_id'] != user_id:
-                return jsonify({"error": f"命名空间 '{full_namespace}' 已被其他用户占用"}), 403
-        else:
-            # 创建二级命名空间
-            index['namespaces'][full_namespace] = {
-                "owner_id": user_id,
-                "created_at": datetime.utcnow().isoformat() + "Z"
-            }
-            # 更新一级命名空间的子列表
-            if sub_namespace not in index['namespaces'][namespace]['sub_namespaces']:
-                index['namespaces'][namespace]['sub_namespaces'].append(sub_namespace)
+        # 创建命名空间
+        namespace_id = create_namespace(namespace, description, user_id)
+        if not namespace_id:
+            return jsonify({"error": "创建命名空间失败"}), 500
 
-    # 保存索引
-    _save_index(index)
+        # 添加创建者为 owner
+        add_namespace_member(namespace_id, user_id, 'owner', user_id)
 
-    result_namespace = f"{namespace}/{sub_namespace}" if sub_namespace else namespace
-    return jsonify({
-        "message": "命名空间创建成功",
-        "namespace": result_namespace,
-        "owner_id": user_id
-    })
+        return jsonify({
+            "message": "命名空间创建成功",
+            "id": namespace_id,
+            "namespace": namespace,
+            "owner_id": user_id
+        })
+    except Exception as e:
+        print(f"[Registry] Error creating namespace: {e}")
+        return jsonify({"error": "创建命名空间失败"}), 500
 
 
 @app.route('/package/<path:name>', methods=['DELETE'])
@@ -586,7 +594,7 @@ def publish():
     appid = body.get('appid', '').strip()
     version = body.get('version', '').strip()
     description = body.get('description', '').strip()
-    package_type = body.get('type', 'app').strip()
+    package_type = body.get('type', '').strip()
 
     # 兼容旧客户端：如果顶层没传，就从 json_content 里取
     if not pkg_name:
@@ -597,6 +605,8 @@ def publish():
         appid = json_content.get('appid', '').strip()
     if not description:
         description = json_content.get('meta', {}).get('description', '').strip()
+    if not package_type:
+        package_type = json_content.get('meta', {}).get('type', 'app').strip()
 
     # ── 基础格式校验 ──
     if not pkg_name:
@@ -632,15 +642,19 @@ def publish():
     if not valid:
         return jsonify({"error": error_msg}), 400
 
-    # ── 命名空间权限校验 ──
-    index = _load_index()
-
+    # ── 命名空间权限校验（从数据库检查）──
     if namespace:
-        if namespace not in index.get('namespaces', {}):
-            return jsonify({"error": f"命名空间 '{namespace}' 不存在，请先创建"}), 403
-        ns_info = index['namespaces'][namespace]
-        if ns_info.get('owner_id') != user_id:
-            return jsonify({"error": f"命名空间 '{namespace}' 不属于你"}), 403
+        try:
+            has_permission, role = check_namespace_permission(namespace, user_id)
+            if not has_permission:
+                return jsonify({"error": f"命名空间 '{namespace}' 不存在或你没有发布权限"}), 403
+            print(f"[Registry] User {user_id} has {role} permission for namespace {namespace}")
+        except Exception as e:
+            print(f"[Registry] Error checking namespace permission: {e}")
+            return jsonify({"error": "权限检查失败"}), 500
+
+    # 加载索引（用于包信息管理）
+    index = _load_index()
 
     # ── ★ UUID 交叉检测 ──
     for existing_name, existing_pkg in index.get('packages', {}).items():
@@ -735,6 +749,155 @@ def publish():
         "appid": appid,
         "download_url": download_url
     })
+
+
+# ═══════════════════════════════════════════════════════════
+# 命名空间成员管理 API
+# ═══════════════════════════════════════════════════════════
+
+@app.route('/namespace/<namespace_id>/members', methods=['GET'])
+@require_auth
+def get_members(namespace_id):
+    """
+    获取命名空间的所有成员
+    GET /namespace/{namespace_id}/members
+    """
+    try:
+        members = get_namespace_members(namespace_id)
+        return jsonify({"members": members})
+    except Exception as e:
+        print(f"[Registry] Error fetching members: {e}")
+        return jsonify({"error": "获取成员列表失败"}), 500
+
+
+@app.route('/namespace/<namespace_id>/members', methods=['POST'])
+@require_auth
+def add_member(namespace_id):
+    """
+    添加命名空间成员（仅 owner 可操作）
+    POST /namespace/{namespace_id}/members
+    Body: {
+      "email": "user@example.com",  # 邮箱（二选一）
+      "phone": "+86 138xxxx",       # 手机号（二选一，预留）
+      "role": "admin"               # owner 或 admin
+    }
+    """
+    body = request.get_json(silent=True) or {}
+    email = body.get('email', '').strip()
+    phone = body.get('phone', '').strip()
+    role = body.get('role', 'admin').strip()
+
+    # 必须提供邮箱或手机号之一
+    if not email and not phone:
+        return jsonify({"error": "必须提供邮箱或手机号"}), 400
+
+    if role not in ('owner', 'admin'):
+        return jsonify({"error": "角色必须是 owner 或 admin"}), 400
+
+    user = request.supabase_user
+    current_user_id = user.get('id')
+
+    try:
+        # 检查当前用户是否是 owner
+        members = get_namespace_members(namespace_id)
+        is_owner = any(m['user_id'] == current_user_id and m['role'] == 'owner' for m in members)
+
+        if not is_owner:
+            return jsonify({"error": "只有 owner 可以添加成员"}), 403
+
+        # 通过邮箱或手机号查找用户 ID
+        target_user_id = None
+        if email:
+            target_user_id = find_user_by_email(email)
+            if not target_user_id:
+                return jsonify({"error": f"未找到邮箱为 {email} 的用户"}), 404
+        elif phone:
+            target_user_id = find_user_by_phone(phone)
+            if not target_user_id:
+                return jsonify({"error": f"未找到手机号为 {phone} 的用户"}), 404
+
+        # 检查用户是否已经是成员
+        is_member = any(m['user_id'] == target_user_id for m in members)
+        if is_member:
+            return jsonify({"error": "该用户已经是成员"}), 409
+
+        # 添加成员
+        add_namespace_member(namespace_id, target_user_id, role, current_user_id)
+
+        return jsonify({
+            "message": "成员已添加",
+            "user_id": target_user_id,
+            "role": role
+        })
+
+    except Exception as e:
+        print(f"[Registry] Error adding member: {e}")
+        return jsonify({"error": "添加成员失败"}), 500
+
+
+@app.route('/namespace/<namespace_id>/members/<user_id>', methods=['DELETE'])
+@require_auth
+def remove_member(namespace_id, user_id):
+    """
+    移除命名空间成员（仅 owner 可操作）
+    DELETE /namespace/{namespace_id}/members/{user_id}
+    """
+    current_user = request.supabase_user
+    current_user_id = current_user.get('id')
+
+    try:
+        # 检查当前用户是否是 owner
+        members = get_namespace_members(namespace_id)
+        is_owner = any(m['user_id'] == current_user_id and m['role'] == 'owner' for m in members)
+
+        if not is_owner:
+            return jsonify({"error": "只有 owner 可以移除成员"}), 403
+
+        # 不能移除自己
+        if user_id == current_user_id:
+            return jsonify({"error": "不能移除自己"}), 400
+
+        remove_namespace_member(namespace_id, user_id)
+        return jsonify({"message": "成员已移除"})
+
+    except Exception as e:
+        print(f"[Registry] Error removing member: {e}")
+        return jsonify({"error": "移除成员失败"}), 500
+
+
+@app.route('/namespace/<namespace_id>/members/<user_id>', methods=['PUT'])
+@require_auth
+def update_member_role(namespace_id, user_id):
+    """
+    更新命名空间成员角色（仅 owner 可操作）
+    PUT /namespace/{namespace_id}/members/{user_id}
+    Body: {
+      "role": "admin"  # owner 或 admin
+    }
+    """
+    body = request.get_json(silent=True) or {}
+    new_role = body.get('role', '').strip()
+
+    if new_role not in ('owner', 'admin'):
+        return jsonify({"error": "角色必须是 owner 或 admin"}), 400
+
+    current_user = request.supabase_user
+    current_user_id = current_user.get('id')
+
+    try:
+        # 检查当前用户是否是 owner
+        members = get_namespace_members(namespace_id)
+        is_owner = any(m['user_id'] == current_user_id and m['role'] == 'owner' for m in members)
+
+        if not is_owner:
+            return jsonify({"error": "只有 owner 可以更新成员角色"}), 403
+
+        update_namespace_member_role(namespace_id, user_id, new_role)
+        return jsonify({"message": "角色已更新", "role": new_role})
+
+    except Exception as e:
+        print(f"[Registry] Error updating member role: {e}")
+        return jsonify({"error": "更新角色失败"}), 500
 
 
 # ═══════════════════════════════════════════════════════════

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../designer/app_storage.dart';
 import 'auth_service.dart';
 
 /// 登录 / 注册页面
@@ -126,6 +127,7 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('auth');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -381,6 +383,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('otp_verify');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -575,6 +578,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('profile');
     final user = AuthService.currentUser;
     String avatarUrl = user?['avatar_url'] as String? ?? '';
     if (avatarUrl.isNotEmpty && avatarUrl.startsWith('http')) {

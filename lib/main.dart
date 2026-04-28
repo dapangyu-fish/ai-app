@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -311,6 +312,7 @@ class _AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('auth_gate');
     return ValueListenableBuilder<bool>(
       valueListenable: AuthService.authNotifier,
       builder: (context, loggedIn, _) {
@@ -386,6 +388,45 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       _loadedFileName = result.files.single.name;
 
       setState(() => _loading = false);
+
+      if (!mounted) return;
+
+      // 弹出确认对话框：是否添加到"我的 APP"
+      final shouldSave = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('添加到我的 APP'),
+          content: const Text('是否将此应用添加到"我的 APP"列表？\n\n添加后可以方便地复用和发布到市场。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('否'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('是'),
+            ),
+          ],
+        ),
+      );
+
+      // 如果用户选择保存，则添加到"我的 APP"
+      if (shouldSave == true) {
+        try {
+          await AppStorage.instance.save(config);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('已添加到我的 APP')),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('保存失败: $e')),
+            );
+          }
+        }
+      }
 
       if (!mounted) return;
 
@@ -530,6 +571,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('home');
     final cs = Theme.of(context).colorScheme;
     final username = AuthService.currentUser?['username'] ??
         AuthService.currentUser?['email']?.toString().split('@').first ??
@@ -767,6 +809,7 @@ class _MarketPageState extends State<_MarketPage> {
   List<Map<String, dynamic>> _apps = [];
   bool _loading = true;
   String? _error;
+  int _selectedTabIndex = 0; // 0: App, 1: Library
 
   @override
   void initState() {
@@ -781,9 +824,10 @@ class _MarketPageState extends State<_MarketPage> {
     });
 
     try {
-      // 从 Registry 服务获取应用列表（只获取 type=app 的包）
+      // 根据当前选中的 Tab 获取对应类型的包
+      final type = _selectedTabIndex == 0 ? 'app' : 'library';
       final resp = await http
-          .get(Uri.parse('https://registry.dapangyu.work/packages?type=app'))
+          .get(Uri.parse('https://registry.dapangyu.work/packages?type=$type'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
@@ -806,8 +850,18 @@ class _MarketPageState extends State<_MarketPage> {
     }
   }
 
+  void _onTabChanged(int index) {
+    if (_selectedTabIndex != index) {
+      setState(() {
+        _selectedTabIndex = index;
+      });
+      _fetchApps();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('market');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -820,6 +874,66 @@ class _MarketPageState extends State<_MarketPage> {
             onPressed: _fetchApps,
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: cs.surface,
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _onTabChanged(0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _selectedTabIndex == 0 ? cs.primary : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'App',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: _selectedTabIndex == 0 ? FontWeight.w600 : FontWeight.normal,
+                          color: _selectedTabIndex == 0 ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _onTabChanged(1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _selectedTabIndex == 1 ? cs.primary : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Library',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: _selectedTabIndex == 1 ? FontWeight.w600 : FontWeight.normal,
+                          color: _selectedTabIndex == 1 ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: cs.onSurface))
@@ -1093,6 +1207,10 @@ class JsonScreenView extends ConsumerWidget {
   Widget _buildContent(BuildContext context, WidgetRef ref) {
     final interpreter = ref.watch(interpreterProvider);
     final currentScreenId = interpreter.currentScreenId;
+    CurrentPageState.instance.setJsonAppPage(
+      screenId: currentScreenId,
+      appName: interpreter.appName,
+    );
 
     // 注入 globalContext 用于 toast / dialog
     interpreter.globalContext = context;
@@ -1207,6 +1325,7 @@ class _CrashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('crash');
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -1259,11 +1378,31 @@ class _CrashPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: FilledButton.icon(
+                    onPressed: () async {
+                      final fullText = '$fileName 运行崩溃\n\n错误:\n$error\n\n堆栈:\n$stackTrace';
+                      await Clipboard.setData(ClipboardData(text: fullText));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('崩溃信息已复制')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy_all),
+                    label: const Text('复制'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
                     onPressed: () {
                       // 把崩溃信息发给 AI 分析（JSON 配置由 DesignerBall 自动注入上下文）
                       final crashMsg = 'JSON-APP 运行崩溃，请分析原因并输出修复后的完整 JSON：\n\n'
                           '## 错误\n$error\n\n'
-                          '## 堆栈\n${stackTrace.length > 500 ? stackTrace.substring(0, 500) : stackTrace}';
+                          '## 堆栈\n$stackTrace';
                       Navigator.of(context).pop();
                       // 通过 DesignerBall 发起 AI 对话
                       DesignerBall.sendCrashReport?.call(crashMsg);
@@ -1468,6 +1607,7 @@ class _MyAppsPageState extends State<_MyAppsPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('my_apps');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -1709,6 +1849,38 @@ class _PublishDialogState extends State<_PublishDialog> {
     }
   }
 
+  Future<void> _inviteMember() async {
+    // 显示"开发中"提示
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('邀请成员'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.construction, size: 48, color: Colors.orange),
+            SizedBox(height: 16),
+            Text(
+              '此功能正在开发中',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '敬请期待！',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _doPublish() async {
     // 前端校验
     final name = _nameCtrl.text.trim();
@@ -1809,6 +1981,12 @@ class _PublishDialogState extends State<_PublishDialog> {
       title: Row(
         children: [
           const Expanded(child: Text('发布到市场')),
+          TextButton.icon(
+            onPressed: _inviteMember,
+            icon: const Icon(Icons.person_add, size: 18),
+            label: const Text('邀请成员'),
+          ),
+          const SizedBox(width: 8),
           TextButton.icon(
             onPressed: _createNamespace,
             icon: const Icon(Icons.add, size: 18),

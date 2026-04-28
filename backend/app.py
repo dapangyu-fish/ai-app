@@ -46,6 +46,7 @@ def create_app():
 
     # 注册 Chat 路由
     app.add_url_rule("/chat", methods=["POST"], view_func=claude_chat.chat)
+    app.add_url_rule("/api/ai/session_status", methods=["GET"], view_func=claude_chat.session_status)
     # DEPRECATED: 以下接口已废弃，使用 /chat 替代
     # app.add_url_rule("/api/ai/generate", methods=["POST"], view_func=chat.generate_app)
     # app.add_url_rule("/api/ai/fix-app", methods=["POST"], view_func=chat.fix_app)
