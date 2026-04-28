@@ -741,6 +741,7 @@ class _DesignerBallState extends State<DesignerBall>
 
     _streamSub = _chatService.sendStream(text).listen(
       (event) {
+        _markAiEvent();
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
@@ -826,6 +827,9 @@ class _DesignerBallState extends State<DesignerBall>
         }
       },
       onError: (e) {
+        _streamDone = true;
+        _sessionHeartbeatTimer?.cancel();
+        _sessionHeartbeatTimer = null;
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
@@ -834,6 +838,9 @@ class _DesignerBallState extends State<DesignerBall>
         });
       },
       onDone: () {
+        _streamDone = true;
+        _sessionHeartbeatTimer?.cancel();
+        _sessionHeartbeatTimer = null;
         // SSE 流结束后，统一处理累积的指令
         setState(() {
           _isGeneratingJson = false;
@@ -1229,8 +1236,53 @@ class _DesignerBallState extends State<DesignerBall>
     _sendTextToAi(text, skipUserMessage: true);
   }
 
+  /// 标记最近一次 AI 事件时间，配合心跳判断是否真的卡住
+  void _markAiEvent() {
+    _lastAiEventAt = DateTime.now();
+  }
+
+  /// 启动一个 5 秒心跳，定期问后端 session 是否还活着
+  void _startSessionHeartbeat() {
+    _sessionHeartbeatTimer?.cancel();
+    _lastAiEventAt = DateTime.now();
+    _streamDone = false;
+    _sessionHeartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!mounted || _streamDone) return;
+      final last = _lastAiEventAt;
+      if (last == null) return;
+      final silentFor = DateTime.now().difference(last).inSeconds;
+      if (silentFor < 5) return;
+      final alive = await _chatService.isSessionAlive();
+      if (!mounted || _streamDone) return;
+      if (!alive) {
+        debugPrint('[DesignerBall] Session process not alive, stop waiting');
+        _sessionHeartbeatTimer?.cancel();
+        _sessionHeartbeatTimer = null;
+        setState(() {
+          _isThinking = false;
+          _isGeneratingJson = false;
+          _generatingStatusMessage = '正在生成代码...';
+          if (_messages.isNotEmpty &&
+              _messages.last.role == 'assistant' &&
+              _messages.last.content.isEmpty) {
+            _messages.last = ChatMessage(role: 'assistant', content: 'AI 会话已中断，请重试');
+          }
+        });
+      } else if (silentFor >= 10 && mounted) {
+        setState(() {
+          _isGeneratingJson = true;
+          _generatingStatusMessage = 'AI 正在处理...';
+        });
+      }
+    });
+  }
+
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
   void _cancelCurrentStream() {
+    _sessionHeartbeatTimer?.cancel();
+    _sessionHeartbeatTimer = null;
+    _lastAiEventAt = null;
+    _streamDone = true;
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -1574,6 +1626,13 @@ class _DesignerBallState extends State<DesignerBall>
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     final bottomOffset = keyboardHeight > 0 ? keyboardHeight + 8 : bottomPadding + 80;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? Colors.black.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.96);
+    final panelColor = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05);
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final hintColor = isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.35);
+    final iconColor = isDark ? Colors.white60 : Colors.black54;
+    final borderColor = isDark ? Colors.blue.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.22);
     return Positioned(
       left: 12,
       right: 12,
@@ -1583,10 +1642,10 @@ class _DesignerBallState extends State<DesignerBall>
         child: Container(
           height: screenSize.height * 0.35,
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.9),
+            color: bgColor,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: Colors.blue.withValues(alpha: 0.3),
+              color: borderColor,
               width: 1,
             ),
           ),
@@ -1598,22 +1657,24 @@ class _DesignerBallState extends State<DesignerBall>
                 height: 40,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: panelColor,
                   border: Border(
                     bottom: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.08),
                     ),
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.edit_note,
-                        color: Colors.white.withValues(alpha: 0.5), size: 18),
+                        color: isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.45), size: 18),
                     const SizedBox(width: 6),
                     Text(
                       '编辑消息',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.7),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1624,7 +1685,7 @@ class _DesignerBallState extends State<DesignerBall>
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         child: Icon(Icons.close,
-                            color: Colors.white60, size: 18),
+                            color: iconColor, size: 18),
                       ),
                     ),
                   ],
@@ -1640,8 +1701,8 @@ class _DesignerBallState extends State<DesignerBall>
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 16,
                       height: 1.6,
                     ),
@@ -1649,7 +1710,7 @@ class _DesignerBallState extends State<DesignerBall>
                       border: InputBorder.none,
                       hintText: '编辑你的消息...',
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: hintColor,
                         fontSize: 16,
                       ),
                     ),
@@ -1666,13 +1727,13 @@ class _DesignerBallState extends State<DesignerBall>
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: panelColor,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '取消',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.7),
                             fontSize: 15,
                           ),
                         ),

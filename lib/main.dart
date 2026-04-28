@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -1298,11 +1299,31 @@ class _CrashPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: FilledButton.icon(
+                    onPressed: () async {
+                      final fullText = '$fileName 运行崩溃\n\n错误:\n$error\n\n堆栈:\n$stackTrace';
+                      await Clipboard.setData(ClipboardData(text: fullText));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('崩溃信息已复制')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy_all),
+                    label: const Text('复制'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
                     onPressed: () {
                       // 把崩溃信息发给 AI 分析（JSON 配置由 DesignerBall 自动注入上下文）
                       final crashMsg = 'JSON-APP 运行崩溃，请分析原因并输出修复后的完整 JSON：\n\n'
                           '## 错误\n$error\n\n'
-                          '## 堆栈\n${stackTrace.length > 500 ? stackTrace.substring(0, 500) : stackTrace}';
+                          '## 堆栈\n$stackTrace';
                       Navigator.of(context).pop();
                       // 通过 DesignerBall 发起 AI 对话
                       DesignerBall.sendCrashReport?.call(crashMsg);
