@@ -809,6 +809,7 @@ class _MarketPageState extends State<_MarketPage> {
   List<Map<String, dynamic>> _apps = [];
   bool _loading = true;
   String? _error;
+  int _selectedTabIndex = 0; // 0: App, 1: Library
 
   @override
   void initState() {
@@ -823,9 +824,10 @@ class _MarketPageState extends State<_MarketPage> {
     });
 
     try {
-      // 从 Registry 服务获取应用列表（只获取 type=app 的包）
+      // 根据当前选中的 Tab 获取对应类型的包
+      final type = _selectedTabIndex == 0 ? 'app' : 'library';
       final resp = await http
-          .get(Uri.parse('https://registry.dapangyu.work/packages?type=app'))
+          .get(Uri.parse('https://registry.dapangyu.work/packages?type=$type'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
@@ -848,6 +850,15 @@ class _MarketPageState extends State<_MarketPage> {
     }
   }
 
+  void _onTabChanged(int index) {
+    if (_selectedTabIndex != index) {
+      setState(() {
+        _selectedTabIndex = index;
+      });
+      _fetchApps();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('market');
@@ -863,6 +874,66 @@ class _MarketPageState extends State<_MarketPage> {
             onPressed: _fetchApps,
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: cs.surface,
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _onTabChanged(0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _selectedTabIndex == 0 ? cs.primary : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'App',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: _selectedTabIndex == 0 ? FontWeight.w600 : FontWeight.normal,
+                          color: _selectedTabIndex == 0 ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _onTabChanged(1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _selectedTabIndex == 1 ? cs.primary : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Library',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: _selectedTabIndex == 1 ? FontWeight.w600 : FontWeight.normal,
+                          color: _selectedTabIndex == 1 ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: cs.onSurface))
