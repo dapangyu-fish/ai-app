@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import logging
+import threading
 from flask import request, jsonify, Response, stream_with_context
 from config import AI_PROVIDERS, DEFAULT_PROVIDER, PROJECT_ROOT, GENERATE_PROMPT_PATH, CLAUDE_BIN
 from auth import require_auth
@@ -9,6 +10,28 @@ from database import get_quota_info, increment_quota
 from config import ROLE_QUOTAS
 
 logger = logging.getLogger(__name__)
+_session_procs = {}
+_session_procs_lock = threading.Lock()
+
+
+def _register_session_proc(session_id, proc):
+    with _session_procs_lock:
+        _session_procs[session_id] = proc
+
+
+def _clear_session_proc(session_id, proc=None):
+    with _session_procs_lock:
+        current = _session_procs.get(session_id)
+        if proc is None or current is proc:
+            _session_procs.pop(session_id, None)
+
+
+def _is_session_proc_alive(session_id):
+    with _session_procs_lock:
+        proc = _session_procs.get(session_id)
+    if proc is None:
+        return False
+    return proc.poll() is None
 
 def _get_provider(provider_id=None):
     pid = provider_id or DEFAULT_PROVIDER
@@ -25,6 +48,15 @@ def list_providers():
             "default_model": cfg["models"]["default"],
         })
     return jsonify({"providers": providers})
+
+
+@require_auth
+def session_status():
+    session_id = request.args.get("session_id", "")
+    if not session_id:
+        return jsonify({"error": "session_id 是必需的"}), 400
+    alive = _is_session_proc_alive(session_id)
+    return jsonify({"session_id": session_id, "alive": alive})
 
 def _tool_status_message(tool_name, tool_input):
     if tool_name == "Read":
@@ -144,6 +176,7 @@ def chat():
         # 先尝试作为老会话恢复
         logger.info(f"[STREAM] 开始生成流式响应")
         proc = run_cli(is_resume=True)
+        _register_session_proc(session_id, proc)
         logger.debug(f"[STREAM] CLI 进程已启动，PID: {proc.pid}")
 
         initial_lines = []
@@ -179,6 +212,7 @@ def chat():
                 # fallback: 创建新会话
                 logger.info(f"[STREAM] 会话不存在，fallback 到创建新会话")
                 proc = run_cli(is_resume=False)
+                _register_session_proc(session_id, proc)
                 logger.debug(f"[STREAM] 新 CLI 进程已启动，PID: {proc.pid}")
                 initial_lines = []
             else:
@@ -254,6 +288,8 @@ def chat():
             logger.info(f"[STREAM] 发送配额信息和结束标记")
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
             yield "data: [DONE]\n\n"
+            _clear_session_proc(session_id, process)
+
 
         def _parse_line(raw_line, line_num=0):
             line_str = raw_line.decode("utf-8", errors="replace").strip()
@@ -349,12 +385,12 @@ def chat():
                             text_value = block.get("text", "")
                             if text_value:
                                 logger.info(f"[EVENT #{line_num}] assistant 文本块下发，长度: {len(text_value)}")
-                                yield f'data: {json.dumps({"final_content": text_value}, ensure_ascii=False)}\n\n'
+                                yield f'data: {json.dumps({"assistant_content": text_value}, ensure_ascii=False)}\n\n'
                         elif btype == "thinking":
                             think_value = block.get("thinking", "")
                             if think_value:
                                 logger.info(f"[EVENT #{line_num}] assistant 思考块下发，长度: {len(think_value)}")
-                                yield f'data: {json.dumps({"final_thinking": think_value}, ensure_ascii=False)}\n\n'
+                                yield f'data: {json.dumps({"assistant_thinking": think_value}, ensure_ascii=False)}\n\n'
 
                 elif evt_type == "result":
                     logger.debug(f"[EVENT #{line_num}] result 事件，is_error: {event.get('is_error')}")

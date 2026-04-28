@@ -97,6 +97,9 @@ class _DesignerBallState extends State<DesignerBall>
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
+  Timer? _sessionHeartbeatTimer;
+  DateTime? _lastAiEventAt;
+  bool _streamDone = false;
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
   Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
   final List<ChatMessage> _messages = [];
@@ -718,6 +721,7 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _sendTextToAi(String text, {bool skipUserMessage = false}) {
     _cancelCurrentStream();
+    _startSessionHeartbeat();
 
     if (!skipUserMessage) {
       setState(() {

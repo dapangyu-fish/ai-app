@@ -140,6 +140,28 @@ class AiChatService {
     _activeClient = null;
   }
 
+  /// 检查后端对应 session 的 CLI 进程是否仍然存活
+  Future<bool> isSessionAlive() async {
+    if (_sessionId.isEmpty) return false;
+    try {
+      final token = AuthService.token;
+      final headers = <String, String>{};
+      if (token != null) headers['Authorization'] = 'Bearer $token';
+      final resp = await http
+          .get(
+            Uri.parse('$_baseUrl/api/ai/session_status?session_id=$_sessionId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 5));
+      if (resp.statusCode != 200) return false;
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      return data['alive'] == true;
+    } catch (e) {
+      debugPrint('[AI_CHAT] isSessionAlive error: $e');
+      return false;
+    }
+  }
+
   /// 发送用户消息，返回 Stream<ChatEvent>
   /// 只发送最新消息 + session_id，CLI session 自动维护对话历史
   /// 支持自动重连：网络中断时自动重试
@@ -304,11 +326,29 @@ class AiChatService {
             }
 
             // 最终完整内容（用于替换之前的增量累积，修正误差）
+            // 仅在确定下发了完整结果时才覆盖：长度不应小于已累积的内容
             if (data.containsKey('final_content')) {
               final finalText = data['final_content'] as String? ?? '';
               if (finalText.isNotEmpty) {
                 debugPrint('[AI_CHAT] 收到最终完整内容，长度: ${finalText.length}');
-                accumulated = finalText;
+                if (finalText.length >= accumulated.length) {
+                  accumulated = finalText;
+                  yield ChatEvent(content: accumulated);
+                } else {
+                  debugPrint('[AI_CHAT] final_content 比当前累积还短，已忽略以避免字幕回退');
+                }
+              }
+              continue;
+            }
+
+            // assistant_content：resume 流里整块下发的文本，作为追加，不覆盖
+            if (data.containsKey('assistant_content')) {
+              final chunk = data['assistant_content'] as String? ?? '';
+              if (chunk.isNotEmpty) {
+                debugPrint('[AI_CHAT] 收到 assistant 文本块，长度: ${chunk.length}');
+                if (!accumulated.contains(chunk)) {
+                  accumulated += chunk;
+                }
                 yield ChatEvent(content: accumulated);
               }
               continue;
@@ -319,7 +359,21 @@ class AiChatService {
               final finalThinking = data['final_thinking'] as String? ?? '';
               if (finalThinking.isNotEmpty) {
                 debugPrint('[AI_CHAT] 收到最终完整思考，长度: ${finalThinking.length}');
-                accumulatedThinking = finalThinking;  // 直接替换累积的思考
+                if (finalThinking.length >= accumulatedThinking.length) {
+                  accumulatedThinking = finalThinking;
+                  yield ChatEvent(thinking: accumulatedThinking);
+                }
+              }
+              continue;
+            }
+
+            // assistant_thinking：resume 流里的整块思考
+            if (data.containsKey('assistant_thinking')) {
+              final chunk = data['assistant_thinking'] as String? ?? '';
+              if (chunk.isNotEmpty) {
+                if (!accumulatedThinking.contains(chunk)) {
+                  accumulatedThinking += chunk;
+                }
                 yield ChatEvent(thinking: accumulatedThinking);
               }
               continue;
