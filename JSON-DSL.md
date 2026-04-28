@@ -440,6 +440,11 @@
 | `switch` | `Switch` | `bind` | `label`, `action` |
 | `image_picker` | `ImagePicker` | `bind` | `source`(gallery/camera), `placeholder`, `width`, `height`, `borderRadius` |
 | `video` | `Chewie` + `VideoPlayer` | `url` | `autoplay`, `looping`, `aspectRatio`, `borderRadius` |
+| `icon` | `Icon` | `name` | `size`, `color` |
+| `card` | `Card` | `children` | `layout`, `padding`, `margin`, `elevation`, `borderRadius`, `color`, `onTap`, `crossAxisAlignment`, `mainAxisAlignment` |
+| `checkbox` | `Checkbox` | `bind` | `label`, `action`, `disabled`, `color` |
+| `expanded` | `Expanded` | `child` | `flex` |
+| `loading` | `CircularProgressIndicator` / `LinearProgressIndicator` | — | `kind`(circular/linear), `size`, `color`, `value`, `strokeWidth`, `label` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -555,7 +560,103 @@
 
 **双向绑定**：`"bind": "global.xxx"` 使 input / switch 的值与变量实时同步。
 
-### 6.9 ref 控件 — 引用依赖模板
+### 6.9 icon 控件 — 图标
+
+```json
+{
+  "type": "icon",
+  "name": "favorite",
+  "size": 32,
+  "color": "#E91E63"
+}
+```
+
+**name** 必须是 `IconRegistry` 中定义的名称（home / search / add / delete / edit / save / send / settings / person / star / favorite / check / close / email 等 100+ 个）。未识别的名称会显示 `help_outline` 占位。
+
+### 6.10 card 控件 — 卡片容器
+
+```json
+{
+  "type": "card",
+  "layout": "column",
+  "elevation": 4,
+  "borderRadius": 16,
+  "padding": 20,
+  "margin": 12,
+  "color": "#FFFFFF",
+  "onTap": { "type": "navigate", "screen": "detail" },
+  "children": [
+    { "type": "text", "value": "标题" },
+    { "type": "text", "value": "副标题" }
+  ]
+}
+```
+
+`Card` 与 `container` 的区别：默认带阴影 + 圆角 + 自动剪裁，更适合内容卡片场景。`onTap` 自带波纹效果。
+
+### 6.11 checkbox 控件 — 复选框
+
+```json
+{
+  "type": "checkbox",
+  "bind": "global.agreed",
+  "label": "我已阅读并同意用户协议",
+  "action": { "type": "call", "call": "@global.onAgreeChange" },
+  "disabled": false,
+  "color": "#6C5CE7"
+}
+```
+
+与 `switch` 用法相同，区别在表现形式（方框 vs 滑动开关）。
+
+### 6.12 expanded 控件 — 弹性占位
+
+```json
+{
+  "type": "container",
+  "layout": "row",
+  "children": [
+    { "type": "icon", "name": "search" },
+    {
+      "type": "expanded",
+      "flex": 1,
+      "child": { "type": "input", "placeholder": "搜索…", "bind": "global.q" }
+    },
+    { "type": "button", "label": "搜索" }
+  ]
+}
+```
+
+只能用在 `Row` / `Column` 内部。等价于在子控件上设 `position.type=flex`，但写法更直观。
+
+### 6.13 loading 控件 — 加载指示器
+
+```json
+{
+  "type": "loading",
+  "kind": "circular",
+  "size": 48,
+  "color": "#6C5CE7",
+  "strokeWidth": 4,
+  "label": "正在加载…"
+}
+```
+
+```json
+{
+  "type": "loading",
+  "kind": "linear",
+  "value": 0.65,
+  "color": "#00B894",
+  "size": 200
+}
+```
+
+- `kind`：`circular`（默认，圆形）/ `linear`（横条）
+- `value`：0~1 之间，**不传 = 不确定进度**（无限旋转），传了 = 确定进度
+- `label`：可选文字，仅 `circular` 时显示在下方
+
+### 6.14 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -618,6 +719,11 @@ lib/
         ├── ref_widget.dart        # Ref 控件（引用依赖模板）
         ├── spacer_widget.dart     # Spacer 控件
         ├── switch_widget.dart     # Switch 控件
+        ├── icon_widget.dart       # Icon 控件
+        ├── card_widget.dart       # Card 控件
+        ├── checkbox_widget.dart   # Checkbox 控件
+        ├── expanded_widget.dart   # Expanded 控件
+        ├── loading_widget.dart    # Loading 控件
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射

@@ -2,8 +2,8 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：13 个 Widget
-- ❌ 待实现：约 40 个常见 Widget
+- ✅ 已实现：18 个 Widget（第一批新增 5 个：icon / card / checkbox / expanded / loading）
+- ❌ 待实现：约 35 个常见 Widget
 
 ---
 
@@ -13,7 +13,7 @@
 
 这些是最常用的 Widget，实现后可以覆盖 90% 的应用场景。
 
-#### 1. checkbox - 复选框
+#### 1. ✅ checkbox - 复选框（已实现）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
@@ -27,21 +27,21 @@
 - **用途**: 表单必备，选项选择
 - **Flutter Widget**: `DropdownButton`
 
-#### 3. card - 卡片
+#### 3. ✅ card - 卡片（已实现）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: UI 展示必备，内容容器
 - **Flutter Widget**: `Card`
 
-#### 4. icon - 图标
+#### 4. ✅ icon - 图标（已实现）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: UI 装饰必备，按钮图标
 - **Flutter Widget**: `Icon`
 
-#### 5. expanded - 弹性布局
+#### 5. ✅ expanded - 弹性布局（已实现）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
@@ -76,7 +76,7 @@
 - **用途**: 交互反馈必备，确认操作
 - **Flutter Widget**: `AlertDialog` / `Dialog`
 
-#### 10. loading - 加载指示器
+#### 10. ✅ loading - 加载指示器（已实现）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
@@ -499,6 +499,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 ## 📅 更新日志
 
 - 2026-04-27: 创建待办清单，列出 42 个待实现的 Widget
+- 2026-04-28: 第一批实现 5 个高优先级 Widget — icon / card / checkbox / expanded / loading；同步发布 demo 应用 `widgets-showcase` 和 common-ui 1.1.0 的辅助函数
 - 待更新...
 
 ---

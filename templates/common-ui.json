@@ -3,17 +3,20 @@
   "appid": "08ad186c-773e-430b-b8d0-7e828eeb00af",
   "meta": {
     "name": "common-ui",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "type": "library",
-    "description": "通用 UI 函数库 — 提供 toast / confirm / 格式化等工具函数",
+    "description": "通用 UI 函数库 — toast / confirm / 数值格式化 / 进度计算",
     "author": "demo",
     "exports": [
       "showSuccess",
       "showError",
+      "showInfo",
       "confirm",
       "formatSize",
       "takePhoto",
-      "pickImage"
+      "pickImage",
+      "progress",
+      "percent"
     ]
   },
   "global": {
@@ -103,6 +106,61 @@
             "args": {
               "bind": "{{ params.bind }}",
               "quality": 85
+            }
+          }
+        ]
+      },
+      "showInfo": {
+        "params": [
+          "message"
+        ],
+        "description": "信息提示 toast（蓝色 ℹ️ 前缀）",
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "ℹ️ {{ params.message }}"
+            }
+          }
+        ]
+      },
+      "progress": {
+        "params": [
+          "current",
+          "total"
+        ],
+        "description": "返回 current/total 的比例（0~1，可直接喂给 loading widget 的 value 字段）。total 为 0 时返回 0。",
+        "logic": [
+          {
+            "expression": {
+              "if": [
+                { ">": [{ "var": "params.total" }, 0] },
+                { "/": [{ "var": "params.current" }, { "var": "params.total" }] },
+                0
+              ]
+            }
+          }
+        ]
+      },
+      "percent": {
+        "params": [
+          "current",
+          "total"
+        ],
+        "description": "返回 current/total 的百分比整数（0~100）。total 为 0 时返回 0。",
+        "logic": [
+          {
+            "expression": {
+              "if": [
+                { ">": [{ "var": "params.total" }, 0] },
+                {
+                  "*": [
+                    { "/": [{ "var": "params.current" }, { "var": "params.total" }] },
+                    100
+                  ]
+                },
+                0
+              ]
             }
           }
         ]

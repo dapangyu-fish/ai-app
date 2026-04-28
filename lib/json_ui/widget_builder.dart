@@ -14,6 +14,11 @@ import 'widgets/spacer_widget.dart';
 import 'widgets/switch_widget.dart';
 import 'widgets/video_widget.dart';
 import 'widgets/ref_widget.dart';
+import 'widgets/icon_widget.dart';
+import 'widgets/card_widget.dart';
+import 'widgets/checkbox_widget.dart';
+import 'widgets/expanded_widget.dart';
+import 'widgets/loading_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -30,6 +35,11 @@ class JsonWidgetBuilder {
     'switch': JsonSwitchWidget(),
     'video': JsonVideoWidget(),
     'ref': JsonRefWidget(),
+    'icon': JsonIconWidget(),
+    'card': JsonCardWidget(),
+    'checkbox': JsonCheckboxWidget(),
+    'expanded': JsonExpandedWidget(),
+    'loading': JsonLoadingWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
