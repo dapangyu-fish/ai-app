@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_storage.dart';
 import 'sherpa_asr_service.dart';
 import 'ai_chat_service.dart';
 
@@ -163,6 +164,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('settings');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(

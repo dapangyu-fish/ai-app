@@ -13,6 +13,45 @@ logger = logging.getLogger(__name__)
 _session_procs = {}
 _session_procs_lock = threading.Lock()
 
+_CLI_LOG_DIR = os.environ.get("CLAUDE_CLI_LOG_DIR", "/mnt/storage00/log")
+_cli_log_lock = threading.Lock()
+_cli_log_warned = False
+
+
+def _append_cli_log(session_id, kind, line):
+    """把 Claude CLI 的原始输出按 session 追加到 JSONL 文件，便于排查问题。
+
+    kind: stdout / stderr / meta，原样写入。
+    line: bytes 或 str；不会做任何裁剪、格式化，最大化保留原始数据。
+    """
+    global _cli_log_warned
+    if not session_id:
+        return
+    try:
+        if isinstance(line, bytes):
+            text = line.decode("utf-8", errors="replace")
+        else:
+            text = str(line)
+        if not text.endswith("\n"):
+            text += "\n"
+        with _cli_log_lock:
+            os.makedirs(_CLI_LOG_DIR, exist_ok=True)
+            path = os.path.join(_CLI_LOG_DIR, f"{session_id}.jsonl")
+            with open(path, "a", encoding="utf-8") as f:
+                if kind == "stdout":
+                    f.write(text)
+                else:
+                    # 非 stdout（meta / stderr）包一层，便于识别
+                    wrapper = json.dumps(
+                        {"_log_kind": kind, "data": text.rstrip("\n")},
+                        ensure_ascii=False,
+                    )
+                    f.write(wrapper + "\n")
+    except Exception as e:
+        if not _cli_log_warned:
+            _cli_log_warned = True
+            logger.warning(f"[CLI_LOG] 写入 CLI 日志失败（仅提示一次）: {e}")
+
 
 def _register_session_proc(session_id, proc):
     with _session_procs_lock:
@@ -161,6 +200,15 @@ def chat():
         logger.debug(f"[CLI] 工作目录: {PROJECT_ROOT}")
         logger.debug(f"[CLI] 环境变量: IS_SANDBOX=1, ANTHROPIC_BASE_URL={env.get('ANTHROPIC_BASE_URL', 'N/A')}")
 
+        _append_cli_log(session_id, "meta", json.dumps({
+            "event": "cli_start",
+            "is_resume": is_resume,
+            "session_id": session_id,
+            "provider": provider.get("id"),
+            "cmd_preview": cmd[:6],
+            "cmd_arg_count": len(cmd),
+        }, ensure_ascii=False))
+
         return subprocess.Popen(
             cmd,
             cwd=PROJECT_ROOT,
@@ -186,6 +234,7 @@ def chat():
                 logger.debug(f"[STREAM] 读取到空行，退出等待")
                 break
             initial_lines.append(line)
+            _append_cli_log(session_id, "stdout", line)
             line_str = line.decode("utf-8", errors="replace").strip()
             if line_str:
                 logger.debug(f"[STREAM] 收到首行输出: {line_str[:100]}...")
@@ -206,6 +255,12 @@ def chat():
             logger.warning(f"[STREAM] CLI 进程异常退出，returncode: {proc.returncode}")
             logger.debug(f"[STREAM] stderr: {stderr_text[:500]}...")
             logger.debug(f"[STREAM] stdout: {stdout_text[:500]}...")
+
+            _append_cli_log(session_id, "stderr", stderr_text)
+            _append_cli_log(session_id, "meta", json.dumps({
+                "event": "cli_exit_nonzero",
+                "returncode": proc.returncode,
+            }, ensure_ascii=False))
 
             if "No conversation found" in full_err or "requires a valid session ID" in full_err:
                 # fallback: 创建新会话
@@ -243,6 +298,7 @@ def chat():
                 try:
                     for line in iter(process.stdout.readline, b''):
                         if line:
+                            _append_cli_log(session_id, "stdout", line)
                             line_queue.put(('data', line))
                     line_queue.put(('eof', None))
                 except Exception as e:
@@ -282,11 +338,17 @@ def chat():
                 err = process.stderr.read().decode("utf-8", errors="replace")
                 if err:
                     logger.error(f"[STREAM] CLI 异常退出: {err}")
+                    _append_cli_log(session_id, "stderr", err)
                     yield f'data: {json.dumps({"error": f"Claude CLI 异常退出: {err}"}, ensure_ascii=False)}\n\n'
 
             logger.info(f"[STREAM] 发送配额信息和结束标记")
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
             yield "data: [DONE]\n\n"
+            _append_cli_log(session_id, "meta", json.dumps({
+                "event": "stream_done",
+                "returncode": process.returncode,
+                "lines": line_count,
+            }, ensure_ascii=False))
             _clear_session_proc(session_id, process)
 
 

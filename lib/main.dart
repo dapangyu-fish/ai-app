@@ -312,6 +312,7 @@ class _AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('auth_gate');
     return ValueListenableBuilder<bool>(
       valueListenable: AuthService.authNotifier,
       builder: (context, loggedIn, _) {
@@ -570,6 +571,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('home');
     final cs = Theme.of(context).colorScheme;
     final username = AuthService.currentUser?['username'] ??
         AuthService.currentUser?['email']?.toString().split('@').first ??
@@ -848,6 +850,7 @@ class _MarketPageState extends State<_MarketPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('market');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -1133,6 +1136,10 @@ class JsonScreenView extends ConsumerWidget {
   Widget _buildContent(BuildContext context, WidgetRef ref) {
     final interpreter = ref.watch(interpreterProvider);
     final currentScreenId = interpreter.currentScreenId;
+    CurrentPageState.instance.setJsonAppPage(
+      screenId: currentScreenId,
+      appName: interpreter.appName,
+    );
 
     // 注入 globalContext 用于 toast / dialog
     interpreter.globalContext = context;
@@ -1247,6 +1254,7 @@ class _CrashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('crash');
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -1528,6 +1536,7 @@ class _MyAppsPageState extends State<_MyAppsPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('my_apps');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
