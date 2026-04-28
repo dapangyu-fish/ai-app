@@ -1496,8 +1496,10 @@ class _DesignerBallState extends State<DesignerBall>
       children: [
         widget.child,
 
-        // 字幕覆层
-        if (_chatMode)
+        // 字幕覆层 — 编辑模式下隐藏，避免半透明字幕叠在编辑 sheet 上方
+        // （DesignerBall 包在 Navigator 外面，sheet 在 widget.child 内的 Overlay 里，
+        // 自然位于 ChatOverlay 之下；进入编辑模式时摘掉字幕，sheet 才能完整可见）
+        if (_chatMode && !_editMode)
           ChatOverlay(
             messages: _messages,
             isListening: _isListening,
