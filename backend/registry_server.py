@@ -594,7 +594,7 @@ def publish():
     appid = body.get('appid', '').strip()
     version = body.get('version', '').strip()
     description = body.get('description', '').strip()
-    package_type = body.get('type', 'app').strip()
+    package_type = body.get('type', '').strip()
 
     # 兼容旧客户端：如果顶层没传，就从 json_content 里取
     if not pkg_name:
@@ -605,6 +605,8 @@ def publish():
         appid = json_content.get('appid', '').strip()
     if not description:
         description = json_content.get('meta', {}).get('description', '').strip()
+    if not package_type:
+        package_type = json_content.get('meta', {}).get('type', 'app').strip()
 
     # ── 基础格式校验 ──
     if not pkg_name:
