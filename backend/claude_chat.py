@@ -133,13 +133,17 @@ def chat():
     logger.info(f"[CHAT] 配额已扣除，剩余: {new_remaining}")
 
     def run_cli(is_resume=True):
+        sys_prompt = ""
+        with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
+            sys_prompt = f.read()
+                    
         cmd = [
             CLAUDE_BIN,
             "--dangerously-skip-permissions",
             "--output-format", "stream-json",
             "--include-partial-messages",
             "--verbose",
-            "-p", last_msg
+            "-p", f"本轮用户的请求: ‘’‘{last_msg}’‘’，请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户"
         ]
 
         if is_resume:
@@ -148,15 +152,10 @@ def chat():
         else:
             cmd.extend(["--session-id", session_id])
             logger.info(f"[CLI] 创建新会话: {session_id}")
-            try:
-                with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
-                    sys_prompt = f.read()
-                if sys_prompt:
-                    # 将系统提示词作为一个长参数传递（需要 CLI 支持 --append-system-prompt）
-                    cmd.extend(["--append-system-prompt", sys_prompt])
-                    logger.debug(f"[CLI] 已添加系统提示词，长度: {len(sys_prompt)}")
-            except Exception as e:
-                logger.warning(f"[CLI] 无法加载系统提示词: {e}")
+            if sys_prompt:
+                # 将系统提示词作为一个长参数传递（需要 CLI 支持 --append-system-prompt）
+                cmd.extend(["--append-system-prompt", sys_prompt])
+                logger.debug(f"[CLI] 已添加系统提示词，长度: {len(sys_prompt)}")
 
         logger.info(f"[CLI] 执行命令: {' '.join(cmd[:6])}... (共 {len(cmd)} 个参数)")
         logger.debug(f"[CLI] 工作目录: {PROJECT_ROOT}")
