@@ -93,6 +93,7 @@ class AiChatService {
   bool _sessionUsed = false;  // 该 session 是否已发过消息（用于判断 is_new_session）
 
   http.Client? _activeClient;
+  bool _aborting = false;
 
   String get sessionId => _sessionId;
 
@@ -136,6 +137,7 @@ class AiChatService {
   }
 
   void abort() {
+    _aborting = true;
     _activeClient?.close();
     _activeClient = null;
   }
@@ -167,6 +169,7 @@ class AiChatService {
   /// 支持自动重连：网络中断时自动重试
   Stream<ChatEvent> sendStream(String userMessage) async* {
     abort();
+    _aborting = false;
 
     final isNew = !_sessionUsed;
 
@@ -476,18 +479,18 @@ class AiChatService {
       return;
 
     } on http.ClientException catch (e) {
-      // abort() 触发或网络中断
       debugPrint('[AI_CHAT] ClientException: $e');
-      if (_activeClient != client) {
-        // 用户主动中止，不重连
+      if (_aborting) {
+        // 只有显式 abort() 才认为是用户主动中止
         debugPrint('[AI_CHAT] 用户主动中止，不重连');
         return;
       }
       retryCount++;
       if (retryCount > maxRetries) {
-        yield ChatEvent(error: '连接失败，已达到最大重试次数');
+        yield ChatEvent(error: '连接失败，已达到最大重试次数: $e');
         return;
       }
+      yield ChatEvent(statusMessage: '网络波动，正在自动重试... ($retryCount/$maxRetries)');
       // 继续重连循环
     } catch (e) {
       debugPrint('[AI_CHAT] 未知错误: $e');
