@@ -1880,24 +1880,26 @@ class _EditSheetState extends State<_EditSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // 与 ChatOverlay 保持一致：永远深色，不跟随系统主题，避免出现"白底白字"或主题穿透问题
+    const bgColor = Color(0xFF1C1C1E);
+    const textColor = Colors.white;
+    final panelColor = Colors.white.withValues(alpha: 0.08);
+    final hintColor = Colors.white.withValues(alpha: 0.3);
+    final borderColor = Colors.white.withValues(alpha: 0.1);
+    final secondaryTextColor = Colors.white.withValues(alpha: 0.7);
+    final iconColor = Colors.white.withValues(alpha: 0.6);
+
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
-    final panelColor = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05);
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final hintColor = isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.35);
-    final iconColor = isDark ? Colors.white60 : Colors.black54;
 
     return Padding(
       // 让 sheet 跟随键盘上推
       padding: EdgeInsets.only(bottom: keyboardHeight),
       child: SafeArea(
         top: false,
-        child: Container(
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
+        child: Material(
+          color: bgColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          clipBehavior: Clip.antiAlias,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1906,28 +1908,17 @@ class _EditSheetState extends State<_EditSheet> {
                 height: 44,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Colors.black.withValues(alpha: 0.08),
-                    ),
-                  ),
+                  border: Border(bottom: BorderSide(color: borderColor)),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.edit_note,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : Colors.black.withValues(alpha: 0.45),
-                        size: 18),
+                        color: Colors.white.withValues(alpha: 0.5), size: 18),
                     const SizedBox(width: 6),
                     Text(
                       '编辑消息',
                       style: TextStyle(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.7)
-                            : Colors.black.withValues(alpha: 0.7),
+                        color: secondaryTextColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1955,7 +1946,12 @@ class _EditSheetState extends State<_EditSheet> {
                     maxLines: null,
                     minLines: 4,
                     textAlignVertical: TextAlignVertical.top,
-                    style: TextStyle(color: textColor, fontSize: 16, height: 1.6),
+                    cursorColor: Colors.white,
+                    style: const TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      height: 1.6,
+                    ),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: '编辑你的消息...',
@@ -1980,9 +1976,7 @@ class _EditSheetState extends State<_EditSheet> {
                         child: Text(
                           '取消',
                           style: TextStyle(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : Colors.black.withValues(alpha: 0.7),
+                            color: secondaryTextColor,
                             fontSize: 15,
                           ),
                         ),
