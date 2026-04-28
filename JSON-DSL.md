@@ -452,6 +452,11 @@
 | `radio` | `Radio` 组 | `bind`, `options` | `layout`(column/row), `disabled`, `color`, `action` |
 | `wrap` | `Wrap` | `children` | `spacing`, `runSpacing`, `direction`, `alignment`, `runAlignment`, `crossAlignment` |
 | `grid` | `GridView.builder` | `source`, `item_template` | `crossAxisCount`, `spacing`, `crossAxisSpacing`, `mainAxisSpacing`, `childAspectRatio`, `padding`, `shrinkWrap`, `emptyText` |
+| `padding` | `Padding` | `child` | `padding`, `paddingH`, `paddingV`, `paddingTop/Bottom/Left/Right` |
+| `center` | `Center` | `child` | `widthFactor`, `heightFactor` |
+| `align` | `Align` | `child` | `alignment`(topLeft/center/bottomRight 等), `widthFactor`, `heightFactor` |
+| `flexible` | `Flexible` | `child` | `flex`, `fit`(loose/tight) |
+| `stack` | `Stack` | `children` | `alignment`, `fit`(loose/expand), `clipBehavior` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -758,7 +763,69 @@
 - `spacing` 一次设置横纵两个方向；也可分别用 `crossAxisSpacing`、`mainAxisSpacing`
 - `shrinkWrap`：放进 ScrollView/Column 内时设 `true`，避免高度无限或冲突；独占整屏时留 `false`（默认走 Expanded）
 
-### 6.18 ref 控件 — 引用依赖模板
+### 6.18 padding 控件 — 内边距
+
+```json
+{ "type": "padding", "padding": 16, "child": { ... } }
+{ "type": "padding", "paddingH": 24, "paddingV": 8, "child": { ... } }
+{ "type": "padding", "paddingTop": 12, "paddingBottom": 4, "child": { ... } }
+```
+
+`padding` 一次设置四个方向；`paddingH`/`paddingV` 横纵分组；`paddingTop`/`Bottom`/`Left`/`Right` 单独设置。优先级：单边 > 横纵 > all。
+
+### 6.19 center 控件 — 居中
+
+```json
+{ "type": "center", "child": { "type": "text", "value": "居中文字" } }
+```
+
+可选 `widthFactor` / `heightFactor`（子项宽/高的倍数）。
+
+### 6.20 align 控件 — 对齐
+
+```json
+{
+  "type": "align",
+  "alignment": "bottomRight",
+  "child": { "type": "icon", "name": "favorite" }
+}
+```
+
+`alignment`：`topLeft` / `topCenter` / `topRight` / `centerLeft` / `center` / `centerRight` / `bottomLeft` / `bottomCenter` / `bottomRight`。
+
+### 6.21 flexible 控件 — 灵活占位
+
+```json
+{
+  "type": "flexible",
+  "flex": 2,
+  "fit": "loose",
+  "child": { "type": "text", "value": "可大可小" }
+}
+```
+
+与 `expanded` 的区别：`fit=loose`（默认）允许子项小于剩余空间；`fit=tight` 强制填满（等价 `Expanded`）。
+
+### 6.22 stack 控件 — 堆叠布局
+
+```json
+{
+  "type": "stack",
+  "children": [
+    { "type": "image", "url": "...", "width": 200, "height": 200 },
+    {
+      "type": "icon",
+      "name": "favorite",
+      "color": "#FF5252",
+      "position": { "type": "absolute", "top": 8, "right": 8 }
+    }
+  ]
+}
+```
+
+子项默认按 `alignment`（默认 `topStart`）排列；要精确定位，给子项加 `position.type=absolute` + `top`/`left`/`bottom`/`right`（已有的位置系统直接复用）。
+
+### 6.23 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -830,6 +897,11 @@ lib/
         ├── radio_widget.dart      # Radio 单选组
         ├── wrap_widget.dart       # Wrap 自动换行
         ├── grid_widget.dart       # Grid 网格
+        ├── padding_widget.dart    # Padding 内边距
+        ├── center_widget.dart     # Center 居中
+        ├── align_widget.dart      # Align 对齐
+        ├── flexible_widget.dart   # Flexible 灵活占位
+        ├── stack_widget.dart      # Stack 堆叠
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射
