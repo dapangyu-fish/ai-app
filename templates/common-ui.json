@@ -3,9 +3,9 @@
   "appid": "08ad186c-773e-430b-b8d0-7e828eeb00af",
   "meta": {
     "name": "common-ui",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "type": "library",
-    "description": "通用 UI 函数库 — toast / confirm / 数值格式化 / 进度计算",
+    "description": "通用 UI 函数库 — toast / confirm / 自定义对话框 / 数值格式化 / 进度计算",
     "author": "demo",
     "exports": [
       "showSuccess",
@@ -16,7 +16,9 @@
       "takePhoto",
       "pickImage",
       "progress",
-      "percent"
+      "percent",
+      "confirmDelete",
+      "choose"
     ]
   },
   "global": {
@@ -161,6 +163,43 @@
                 },
                 0
               ]
+            }
+          }
+        ]
+      },
+      "confirmDelete": {
+        "params": [
+          "itemName"
+        ],
+        "description": "标准的危险删除确认弹窗。点删除返回 'delete'，取消/关闭返回 null。",
+        "logic": [
+          {
+            "call": "@show_choice_dialog",
+            "args": {
+              "title": "确认删除",
+              "message": "确定要删除「{{ params.itemName }}」吗？此操作不可撤销。",
+              "buttons": [
+                { "label": "取消", "value": null, "style": "text" },
+                { "label": "删除", "value": "delete", "style": "danger" }
+              ]
+            }
+          }
+        ]
+      },
+      "choose": {
+        "params": [
+          "title",
+          "message",
+          "buttons"
+        ],
+        "description": "通用多选项弹窗，直接转发到 @show_choice_dialog，返回被点按钮的 value。",
+        "logic": [
+          {
+            "call": "@show_choice_dialog",
+            "args": {
+              "title": "{{ params.title }}",
+              "message": "{{ params.message }}",
+              "buttons": "{{ params.buttons }}"
             }
           }
         ]

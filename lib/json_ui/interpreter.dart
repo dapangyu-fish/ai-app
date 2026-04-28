@@ -701,6 +701,19 @@ class JsonInterpreter extends ChangeNotifier {
           }
         }
         return null;
+      case '@list_remove':
+        final listPath = resolvedArgs['var'] as String?;
+        final value = _evaluateExpression(resolvedArgs['value']);
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final newList = List<dynamic>.from(current)
+              ..removeWhere((e) => e == value);
+            setVariable(listPath, newList);
+            return newList;
+          }
+        }
+        return null;
       case '@list_insert':
         final listPath = resolvedArgs['var'] as String?;
         final index = _toInt(resolvedArgs['index'] ?? 0);
@@ -750,6 +763,21 @@ class JsonInterpreter extends ChangeNotifier {
           setVariable(bindPath, result);
         }
         return result;
+
+      case '@show_choice_dialog':
+        // 自定义按钮对话框
+        // args: { title, message, buttons: [{label, value, style?}], dismissible? }
+        // 返回值：被点击按钮的 value（dismiss 关闭返回 null）
+        final choiceTitle = resolvedArgs['title']?.toString() ?? '';
+        final choiceMessage = resolvedArgs['message']?.toString() ?? '';
+        final rawButtons = resolvedArgs['buttons'];
+        final dismissible = resolvedArgs['dismissible'] != false;
+        return await _showChoiceDialog(
+          choiceTitle,
+          choiceMessage,
+          rawButtons is List ? rawButtons : const [],
+          dismissible: dismissible,
+        );
 
       // ── 本地存储 ──
       case '@storage_set':
@@ -1753,6 +1781,66 @@ class JsonInterpreter extends ChangeNotifier {
       ),
     );
     return result ?? false;
+  }
+
+  /// 自定义按钮对话框 — 返回被点击按钮的 value（关闭返回 null）
+  /// buttons 项格式：{ label: String, value: dynamic, style?: 'primary'/'danger'/'text' }
+  Future<dynamic> _showChoiceDialog(
+    String title,
+    String message,
+    List<dynamic> buttons, {
+    bool dismissible = true,
+  }) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+
+    return await showDialog<dynamic>(
+      context: ctx,
+      barrierDismissible: dismissible,
+      builder: (dialogCtx) {
+        final actions = <Widget>[];
+        for (final btn in buttons) {
+          if (btn is! Map) continue;
+          final label = btn['label']?.toString() ?? '';
+          final value = btn['value'];
+          final style = btn['style']?.toString() ?? 'text';
+
+          Widget button;
+          switch (style) {
+            case 'primary':
+              button = FilledButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+              break;
+            case 'danger':
+              button = FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(dialogCtx).colorScheme.error,
+                  foregroundColor: Theme.of(dialogCtx).colorScheme.onError,
+                ),
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+              break;
+            case 'text':
+            default:
+              button = TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+          }
+          actions.add(button);
+        }
+        return AlertDialog(
+          title: title.isEmpty ? null : Text(title),
+          content: message.isEmpty
+              ? null
+              : SingleChildScrollView(child: SelectableText(message)),
+          actions: actions,
+        );
+      },
+    );
   }
 
   Future<String?> _showTextInputDialog(String title, String hint, String defaultValue) async {

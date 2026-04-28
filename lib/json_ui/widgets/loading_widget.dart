@@ -14,7 +14,9 @@ class JsonLoadingWidget extends JsonBaseWidget {
   ) {
     final kind = json['kind']?.toString() ?? 'circular';
     final size = (json['size'] as num?)?.toDouble();
-    final color = _parseColor(json['color']?.toString());
+    final rawColor = json['color']?.toString();
+    final color = _parseColor(
+        rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
     final strokeWidth = (json['strokeWidth'] as num?)?.toDouble() ?? 4;
     final label = json['label']?.toString();
 

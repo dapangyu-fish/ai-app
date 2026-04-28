@@ -18,8 +18,17 @@ class JsonCardWidget extends JsonBaseWidget {
     final margin = (json['margin'] as num?)?.toDouble() ?? 8;
     final elevation = (json['elevation'] as num?)?.toDouble() ?? 2;
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 12;
-    final color = _parseColor(json['color']?.toString());
-    final onTap = json['onTap'];
+    final rawColor = json['color']?.toString();
+    final color = _parseColor(
+        rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
+
+    // build 阶段预解析 onTap 中的 {{ }} 模板
+    // —— grid/list item 在循环上下文中构建，点击发生时 loop 上下文已 pop，
+    //    必须在此把 {{ loop.item }} / {{ loop.index }} 烘焙进 action
+    final rawOnTap = json['onTap'];
+    final onTap = rawOnTap is Map<String, dynamic>
+        ? _resolveActionAtBuildTime(rawOnTap, interpreter)
+        : rawOnTap;
 
     final childWidgets = children
         .whereType<Map<String, dynamic>>()
@@ -101,6 +110,24 @@ class JsonCardWidget extends JsonBaseWidget {
     }
 
     return card;
+  }
+
+  Map<String, dynamic> _resolveActionAtBuildTime(
+    Map<String, dynamic> action,
+    JsonInterpreter interpreter,
+  ) {
+    final resolved = <String, dynamic>{};
+    for (final entry in action.entries) {
+      final value = entry.value;
+      if (value is String && value.contains('{{') && value.contains('}}')) {
+        resolved[entry.key] = interpreter.resolveTemplate(value);
+      } else if (value is Map<String, dynamic>) {
+        resolved[entry.key] = _resolveActionAtBuildTime(value, interpreter);
+      } else {
+        resolved[entry.key] = value;
+      }
+    }
+    return resolved;
   }
 
   Color? _parseColor(String? colorStr) {
