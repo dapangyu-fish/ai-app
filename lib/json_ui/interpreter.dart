@@ -44,6 +44,13 @@ class JsonInterpreter extends ChangeNotifier {
   void Function(String screenId)? onNavigate;
   BuildContext? globalContext;
 
+  // ============ Toast 防抖与去重 ============
+  String? _lastToastMessage;
+  DateTime? _lastToastTime;
+  static const Duration _toastDebounce = Duration(milliseconds: 500);
+  int _activeToastCount = 0;
+  static const int _maxToastQueue = 3;
+
   // ============ Getters ============
 
   List<dynamic> get screens =>
@@ -1677,15 +1684,39 @@ class JsonInterpreter extends ChangeNotifier {
 
   void _showToast(String message) {
     final ctx = globalContext;
-    if (ctx != null && ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    if (ctx == null || !ctx.mounted) return;
+
+    final now = DateTime.now();
+
+    // 去重：如果和上一条消息相同且在防抖时间内，直接忽略
+    if (_lastToastMessage == message &&
+        _lastToastTime != null &&
+        now.difference(_lastToastTime!) < _toastDebounce) {
+      return;
     }
+
+    // 限流：如果当前队列已满，清空所有旧的 toast
+    if (_activeToastCount >= _maxToastQueue) {
+      ScaffoldMessenger.of(ctx).clearSnackBars();
+      _activeToastCount = 0;
+    }
+
+    _lastToastMessage = message;
+    _lastToastTime = now;
+    _activeToastCount++;
+
+    ScaffoldMessenger.of(ctx)
+        .showSnackBar(
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        )
+        .closed
+        .then((_) {
+      _activeToastCount = (_activeToastCount - 1).clamp(0, _maxToastQueue);
+    });
   }
 
   Future<bool> _showAlertDialog(String title, String message) async {
