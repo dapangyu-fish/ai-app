@@ -412,8 +412,9 @@ def chat():
                                 yield f'data: {json.dumps({"thinking": think_chunk}, ensure_ascii=False)}\n\n'
 
                         elif delta_type == "input_json_delta":
-                            # 工具输入的增量更新（通常不需要发给客户端）
+                            # 工具输入参数的增量构造 — 发送状态提示让客户端知道 AI 正在准备工具调用
                             logger.debug(f"[EVENT #{line_num}] input_json_delta")
+                            yield f'data: {json.dumps({"status": "tool_preparing", "message": "AI 正在构造工具参数..."}, ensure_ascii=False)}\n\n'
 
                     # 内容块结束事件
                     elif ev_type == "content_block_stop":
