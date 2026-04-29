@@ -827,6 +827,12 @@ class JsonInterpreter extends ChangeNotifier {
         // 返回值：HH:mm 字符串（取消返回 null）
         return await _showTimePickerImperative(resolvedArgs);
 
+      case '@show_bottom_sheet':
+        // 底部弹窗
+        // args: { content: { ...widget... }, isDismissible?, enableDrag?, backgroundColor? }
+        // 返回值：弹窗里 close action 透传的值（关闭返回 null）
+        return await _showBottomSheet(resolvedArgs);
+
       // ── 本地存储 ──
       case '@storage_set':
         final key = resolvedArgs['key']?.toString();
@@ -2003,6 +2009,34 @@ class JsonInterpreter extends ChangeNotifier {
       setVariable(bindPath, s);
     }
     return s;
+  }
+
+  /// 命令式底部弹窗
+  Future<dynamic> _showBottomSheet(Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    final content = args['content'];
+    if (content is! Map<String, dynamic>) return null;
+    final isDismissible = args['isDismissible'] != false;
+    final enableDrag = args['enableDrag'] != false;
+    final bg = _parseColorHex(args['backgroundColor']?.toString());
+
+    return await showModalBottomSheet<dynamic>(
+      context: ctx,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
+      backgroundColor: bg,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: buildWidget(sheetCtx, content),
+        ),
+      ),
+    );
   }
 
   /// 解析 #RRGGBB / #AARRGGBB 颜色字符串

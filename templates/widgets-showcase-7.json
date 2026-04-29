@@ -1,0 +1,211 @@
+{
+  "dsl": "3.3",
+  "appid": "6fde2de8-648a-4d18-b1e5-41c2f6a3c061",
+  "meta": {
+    "name": "widgets-showcase-7",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "第七批 — tab_view / app_bar / drawer / bottom_sheet (含 screen.appBar / drawer 覆写演示)",
+    "author": "Claude"
+  },
+  "dependencies": {
+    "common-ui": "^1.2.0"
+  },
+  "global": {
+    "variables": {
+      "lastSheetChoice": "(尚未操作)"
+    },
+    "functions": {
+      "openSheet": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_bottom_sheet",
+            "args": {
+              "content": {
+                "type": "container",
+                "layout": "column",
+                "padding": 8,
+                "children": [
+                  { "type": "text", "value": "选择操作", "style": { "fontSize": 18, "fontWeight": "bold" } },
+                  { "type": "spacer", "height": 8 },
+                  { "type": "button", "label": "分享", "icon": "share", "variant": "text",
+                    "action": { "type": "call", "call": "@global.handleSheet", "args": { "choice": "share" } } },
+                  { "type": "button", "label": "保存", "icon": "save", "variant": "text",
+                    "action": { "type": "call", "call": "@global.handleSheet", "args": { "choice": "save" } } },
+                  { "type": "button", "label": "取消", "variant": "text",
+                    "action": { "type": "call", "call": "@global.handleSheet", "args": { "choice": "cancel" } } }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "handleSheet": {
+        "params": ["choice"],
+        "logic": [
+          {
+            "call": "@set",
+            "args": { "var": "global.lastSheetChoice", "value": "{{ params.choice }}" }
+          },
+          {
+            "call": "@common-ui.showInfo",
+            "args": { "message": "你选择：{{ params.choice }}" }
+          }
+        ]
+      },
+      "openSearch": {
+        "params": [],
+        "logic": [
+          { "call": "@common-ui.showInfo", "args": { "message": "搜索按钮被点击" } }
+        ]
+      },
+      "logout": {
+        "params": [],
+        "logic": [
+          { "call": "@common-ui.showInfo", "args": { "message": "退出登录" } }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "appBar": {
+          "title": "Showcase 7",
+          "centerTitle": true,
+          "backgroundColor": "#6C5CE7",
+          "color": "#FFFFFF",
+          "actions": [
+            { "icon": "search", "action": { "type": "call", "call": "@global.openSearch" } }
+          ]
+        },
+        "drawer": {
+          "header": {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              { "type": "avatar", "text": "User", "size": 48, "color": "#FFFFFF", "textColor": "#6C5CE7" },
+              { "type": "spacer", "height": 8 },
+              { "type": "text", "value": "示例用户", "style": { "fontSize": 16, "color": "#FFFFFF", "fontWeight": "bold" } }
+            ]
+          },
+          "items": [
+            { "icon": "home",     "label": "首页",  "action": { "type": "navigate", "screen": "home" } },
+            { "icon": "settings", "label": "设置",  "action": { "type": "navigate", "screen": "home" } },
+            { "icon": "logout",   "label": "退出",  "action": { "type": "call", "call": "@global.logout" } }
+          ]
+        },
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F4F6FB",
+        "scrollable": true,
+        "children": [
+          {
+            "type": "text",
+            "value": "👈 左上角按钮打开 Drawer，右上角是自定义 AppBar 的 actions",
+            "style": { "fontSize": 13, "color": "#666666", "paddingH": 12 }
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "1. tab_view — 内嵌标签页", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "tab_view",
+                "height": 220,
+                "color": "#6C5CE7",
+                "tabs": [
+                  {
+                    "label": "首页",
+                    "icon": "home",
+                    "content": {
+                      "type": "container",
+                      "padding": 16,
+                      "color": "#FFEAA7",
+                      "children": [
+                        { "type": "text", "value": "首页内容", "style": { "fontSize": 16 } }
+                      ]
+                    }
+                  },
+                  {
+                    "label": "消息",
+                    "icon": "message",
+                    "content": {
+                      "type": "container",
+                      "padding": 16,
+                      "color": "#FAB1A0",
+                      "children": [
+                        { "type": "text", "value": "消息内容", "style": { "fontSize": 16 } }
+                      ]
+                    }
+                  },
+                  {
+                    "label": "我的",
+                    "icon": "person",
+                    "content": {
+                      "type": "container",
+                      "padding": 16,
+                      "color": "#A29BFE",
+                      "children": [
+                        { "type": "text", "value": "我的内容", "style": { "fontSize": 16 } }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "2. @show_bottom_sheet — 命令式底部弹窗", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "button",
+                "label": "打开 Bottom Sheet",
+                "variant": "filled",
+                "icon": "expand",
+                "action": { "type": "call", "call": "@global.openSheet" }
+              },
+              { "type": "spacer", "height": 8 },
+              { "type": "text", "value": "上次选择：{{ global.lastSheetChoice }}", "style": { "fontSize": 13, "color": "#888888" } }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "3. app_bar — 独立 widget", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "text", "value": "嵌入 column 的 AppBar，与上方真正的 Scaffold AppBar 不冲突：", "style": { "fontSize": 12, "color": "#888888" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "app_bar",
+                "title": "嵌入的 AppBar",
+                "backgroundColor": "#00B894",
+                "color": "#FFFFFF",
+                "actions": [
+                  { "icon": "info", "action": { "type": "call", "call": "@common-ui.showInfo", "args": { "message": "info" } } }
+                ]
+              }
+            ]
+          },
+
+          { "type": "spacer", "height": 24 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    { "call": "@print", "args": { "value": "[widgets-showcase-7] booted" } }
+  ]
+}

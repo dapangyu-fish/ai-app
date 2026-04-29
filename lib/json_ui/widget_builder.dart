@@ -42,6 +42,8 @@ import 'widgets/gesture_detector_widget.dart';
 import 'widgets/dismissible_widget.dart';
 import 'widgets/draggable_widget.dart';
 import 'widgets/refresh_widget.dart';
+import 'widgets/tab_view_widget.dart';
+import 'widgets/app_bar_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -86,6 +88,8 @@ class JsonWidgetBuilder {
     'dismissible': JsonDismissibleWidget(),
     'draggable': JsonDraggableWidget(),
     'refresh': JsonRefreshWidget(),
+    'tab_view': JsonTabViewWidget(),
+    'app_bar': JsonAppBarWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

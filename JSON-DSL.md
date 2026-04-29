@@ -308,6 +308,7 @@
 | `@show_choice_dialog` | `{ "title": "保存修改？", "message": "...", "buttons": [{"label":"保存","value":"save","style":"primary"},{"label":"丢弃","value":"discard","style":"danger"},{"label":"取消","value":"cancel"}], "dismissible": true }` | 自定义按钮弹窗，返回被点按钮的 `value`（关闭返回 `null`）。`style`：`primary` / `danger` / `text`（默认） |
 | `@show_date_picker` | `{ "initial": "2026-04-28", "firstDate": "2020-01-01", "lastDate": "2030-12-31", "bind": "global.date" }` | 命令式日期选择器，返回 yyyy-MM-dd 字符串（取消返回 `null`） |
 | `@show_time_picker` | `{ "initial": "14:30", "bind": "global.time" }` | 命令式时间选择器，返回 HH:mm 字符串（取消返回 `null`） |
+| `@show_bottom_sheet` | `{ "content": { ...widget... }, "isDismissible": true, "enableDrag": true, "backgroundColor": "#FFFFFF" }` | 底部弹窗，content 是任意 widget 配置，弹窗内可通过自定义函数关闭并返回值 |
 
 ---
 
@@ -474,6 +475,8 @@
 | `dismissible` | `Dismissible` | `key`, `child` | `direction`, `onDismissed`, `confirmAction`, `background`, `secondaryBackground` |
 | `draggable` | `Draggable` | `child` | `feedback`, `data`, `axis`, `onDragStarted/Completed/Canceled` |
 | `refresh` | `RefreshIndicator` | `child`, `onRefresh` | `color`, `backgroundColor` |
+| `tab_view` | `TabBar` + `TabBarView` | `tabs` | `initialIndex`, `isScrollable`, `color`, `backgroundColor`, `height`, `onTabChange` |
+| `app_bar` | `AppBar` | — | `title`, `centerTitle`, `backgroundColor`, `color`, `elevation`, `leading`, `actions` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -1031,7 +1034,90 @@
 
 `child` 必须是可滚动 widget（list / grid / 内置 ScrollView）。已有 `list.onRefresh` 是同样语义，refresh 控件适合包非 list 的滚动内容。
 
-### 6.36 ref 控件 — 引用依赖模板
+### 6.36 tab_view — 内嵌标签页
+
+```json
+{
+  "type": "tab_view",
+  "height": 400,
+  "tabs": [
+    { "label": "首页", "icon": "home",     "content": { ...widget... } },
+    { "label": "消息", "icon": "message",  "content": { ...widget... } },
+    { "label": "我的", "icon": "person",   "content": { ...widget... } }
+  ]
+}
+```
+
+单 widget 同时管 TabBar 和 TabBarView，避免上下两层 widget 各自管理 controller 的麻烦。`height` 用于 TabBarView 高度（必须明确）。
+
+> 提示：如果你想要的是底部 tab + 多页面切换，screen 级别的 `tabs` 配置更合适（已支持，见下文）。
+
+### 6.37 app_bar 与 screen.appBar 配置
+
+**作为独立 widget 嵌入 column**：
+```json
+{
+  "type": "app_bar",
+  "title": "页面标题",
+  "actions": [{ "icon": "search", "action": {...} }]
+}
+```
+
+**作为 screen 的顶部栏（覆写默认 AppBar）**：
+```json
+{
+  "id": "home",
+  "appBar": {
+    "title": "{{ global.user.name }} 的主页",
+    "backgroundColor": "#6C5CE7",
+    "color": "#FFFFFF",
+    "actions": [
+      { "icon": "search", "action": { "type": "call", "call": "@global.openSearch" } },
+      { "icon": "more",   "action": { "type": "call", "call": "@global.openMenu" } }
+    ]
+  },
+  "children": [...]
+}
+```
+
+字段：`title` / `centerTitle` / `backgroundColor` / `color`(前景) / `elevation` / `leading: {icon, action}` / `actions: [{icon, action}]`。
+
+### 6.38 screen.drawer — 侧边栏（Scaffold 级别）
+
+```json
+{
+  "id": "home",
+  "drawer": {
+    "header": { "type": "text", "value": "{{ global.user.name }}", "style": { "fontSize": 20, "color": "#FFFFFF" } },
+    "items": [
+      { "icon": "home",     "label": "首页", "action": { "type": "navigate", "screen": "home" } },
+      { "icon": "settings", "label": "设置", "action": { "type": "navigate", "screen": "settings" } },
+      { "icon": "logout",   "label": "退出", "action": { "type": "call", "call": "@global.logout" } }
+    ]
+  },
+  "children": [...]
+}
+```
+
+drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏的 item 会先关闭 drawer 再触发 action。
+
+### 6.39 screen.tabs — 底部导航栏（已支持，等同 bottom_nav）
+
+```json
+{
+  "id": "home",
+  "title": "我的应用",
+  "tabs": [
+    { "label": "首页", "icon": "home",     "children": [...] },
+    { "label": "消息", "icon": "message",  "children": [...] },
+    { "label": "我的", "icon": "person",   "children": [...] }
+  ]
+}
+```
+
+每个 tab 有独立的 `children`，切换 tab 时 body 整个换。等价于其他框架的 BottomNavigationBar。
+
+### 6.40 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -1122,6 +1208,9 @@ lib/
         ├── dismissible_widget.dart # Dismissible 滑动删除
         ├── draggable_widget.dart  # Draggable 拖拽
         ├── refresh_widget.dart    # RefreshIndicator
+        ├── tab_view_widget.dart   # TabBar + TabBarView
+        ├── app_bar_widget.dart    # AppBar (含 buildAppBar 共享构建器)
+        ├── drawer_helper.dart     # buildDrawer (供 screen.drawer 使用)
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射
