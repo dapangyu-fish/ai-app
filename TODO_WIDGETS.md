@@ -2,7 +2,7 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：43 个 Widget + 6 个增强 action + 3 项 screen 级配置
+- ✅ 已实现：48 个 Widget + 6 个增强 action + 3 项 screen 级配置
   - 第一批：icon / card / checkbox / expanded / loading
   - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` + `@list_remove`
   - 第三批：padding / center / align / flexible / stack
@@ -10,7 +10,8 @@
   - 第五批：chip / badge / avatar / rich_text / progress
   - 第六批：inkwell / gesture_detector / dismissible / draggable / refresh
   - 第七批：tab_view / app_bar widget + `screen.appBar` / `screen.drawer` / `screen.tabs`(已存在) + `@show_bottom_sheet`
-- ❌ 待实现：5 个特殊 Widget（webview / map / chart / qr_code / camera，需新加包）
+  - 第八批：webview / qr_code / chart / map / camera（新加 5 个 Flutter 包）
+- 🎉 **TODO_WIDGETS.md 全部已实现**
 
 ---
 
@@ -307,41 +308,41 @@
 
 ## 🔧 特殊类 Widget
 
-### webview - 网页视图
+### ✅ webview - 网页视图（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 2 天
 - **用途**: 嵌入网页，H5 页面
-- **Flutter Package**: `webview_flutter`
+- **Flutter Package**: `webview_flutter` ^4.10.0
 
-### map - 地图
+### ✅ map - 地图（已实现，OpenStreetMap 免 key）
 - **使用频率**: ⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 3 天
 - **用途**: 位置展示，导航
-- **Flutter Package**: `google_maps_flutter` / `flutter_map`
+- **Flutter Package**: `flutter_map` ^7.0.2 + `latlong2` ^0.9.1
 
-### chart - 图表
+### ✅ chart - 图表（已实现 line / bar / pie）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 3 天
 - **用途**: 数据可视化，统计展示
-- **Flutter Package**: `fl_chart` / `charts_flutter`
+- **Flutter Package**: `fl_chart` ^0.69.0
 
-### qr_code - 二维码
+### ✅ qr_code - 二维码（已实现，仅生成；扫码可接 `mobile_scanner`）
 - **使用频率**: ⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 二维码生成，扫码
-- **Flutter Package**: `qr_flutter` / `mobile_scanner`
+- **Flutter Package**: `qr_flutter` ^4.1.0 + `mobile_scanner` ^5.2.3
 
-### camera - 相机
+### ✅ camera - 相机（已实现实时预览，需平台权限）
 - **使用频率**: ⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 2 天
 - **用途**: 拍照录像，实时预览
-- **Flutter Package**: `camera`
-- **备注**: 目前有 `image_picker`，可以扩展
+- **Flutter Package**: `camera` ^0.11.0
+- **平台权限**: Android 需 CAMERA permission；iOS 需 NSCameraUsageDescription
 
 ---
 
@@ -518,7 +519,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 - 2026-04-29: 第五批实现 5 个展示 Widget — chip / badge / avatar / rich_text / progress；demo 应用 `widgets-showcase-5`
 - 2026-04-29: 第六批实现 5 个交互 Widget — inkwell / gesture_detector / dismissible / draggable / refresh；新增 `executeActionWithResult` 公共方法支持 dismissible.confirmAction 取返回值；demo 应用 `widgets-showcase-6`
 - 2026-04-29: 第七批实现 2 个 widget + 3 项 screen 级配置 + 1 个 action — tab_view / app_bar widget + `screen.appBar` / `screen.drawer`(原已支持 `screen.tabs`) + `@show_bottom_sheet`；main.dart Scaffold 渲染向后兼容地支持 appBar/drawer 覆写；demo 应用 `widgets-showcase-7`
-- 待更新...
+- 2026-04-29: 第八批实现 5 个特殊 Widget — webview / qr_code / chart / map / camera。pubspec 新增 5 个包：webview_flutter / qr_flutter + mobile_scanner / fl_chart / flutter_map+latlong2 / camera。TODO_WIDGETS.md 全部完成 🎉
 
 ---
 

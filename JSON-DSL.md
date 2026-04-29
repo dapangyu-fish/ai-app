@@ -477,6 +477,11 @@
 | `refresh` | `RefreshIndicator` | `child`, `onRefresh` | `color`, `backgroundColor` |
 | `tab_view` | `TabBar` + `TabBarView` | `tabs` | `initialIndex`, `isScrollable`, `color`, `backgroundColor`, `height`, `onTabChange` |
 | `app_bar` | `AppBar` | — | `title`, `centerTitle`, `backgroundColor`, `color`, `elevation`, `leading`, `actions` |
+| `webview` | `WebViewWidget` (webview_flutter) | `url` | `height`, `javascriptEnabled` |
+| `qr_code` | `QrImageView` (qr_flutter) | `data` | `size`, `backgroundColor`, `color`, `errorCorrectionLevel`(L/M/Q/H) |
+| `chart` | `LineChart` / `BarChart` / `PieChart` (fl_chart) | `data` | `kind`(line/bar/pie), `height`, `width`, `color` |
+| `map` | `FlutterMap` (OSM, 无需 API key) | — | `latitude`, `longitude`, `zoom`, `markers`, `height`, `borderRadius` |
+| `camera` | `CameraPreview` (camera 包) | — | `lensDirection`(back/front), `resolution`(low/medium/high/veryHigh), `height` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -1117,7 +1122,64 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 每个 tab 有独立的 `children`，切换 tab 时 body 整个换。等价于其他框架的 BottomNavigationBar。
 
-### 6.40 ref 控件 — 引用依赖模板
+### 6.40 webview / qr_code / chart / map / camera —— 特殊控件
+
+#### webview
+```json
+{ "type": "webview", "url": "https://flutter.dev", "height": 500 }
+```
+基于 `webview_flutter`。Android 不需额外配置（自带 INTERNET 权限）；iOS 加载 http URL 需要在 Info.plist 配置 NSAppTransportSecurity。
+
+#### qr_code
+```json
+{ "type": "qr_code", "data": "https://example.com", "size": 200, "color": "#000000" }
+```
+仅生成。扫码功能后续可接 `mobile_scanner`。
+
+#### chart
+```json
+{
+  "type": "chart",
+  "kind": "line",
+  "height": 240,
+  "color": "#6C5CE7",
+  "data": [
+    {"x": 0, "y": 1}, {"x": 1, "y": 3}, {"x": 2, "y": 2},
+    {"x": 3, "y": 5}, {"x": 4, "y": 4}
+  ]
+}
+```
+- `kind=line`：data 是 `[{x, y}]` 或 `[number]`
+- `kind=bar`：data 是 `[{label, value}]`
+- `kind=pie`：data 是 `[{label, value, color?}]`
+
+#### map
+```json
+{
+  "type": "map",
+  "latitude": 39.9042,
+  "longitude": 116.4074,
+  "zoom": 12,
+  "height": 320,
+  "markers": [
+    { "latitude": 39.9042, "longitude": 116.4074, "label": "北京" },
+    { "latitude": 39.9700, "longitude": 116.3000 }
+  ]
+}
+```
+基于 OpenStreetMap，**无需 API key**。
+
+#### camera
+```json
+{ "type": "camera", "lensDirection": "back", "resolution": "medium", "height": 360 }
+```
+**需要平台权限**：
+- Android：`AndroidManifest.xml` 加 `<uses-permission android:name="android.permission.CAMERA"/>`
+- iOS：`Info.plist` 加 `NSCameraUsageDescription`
+
+只需"拍照存路径"用 `image_picker`（source=camera）更简单，本控件做实时预览。
+
+### 6.41 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -1211,6 +1273,11 @@ lib/
         ├── tab_view_widget.dart   # TabBar + TabBarView
         ├── app_bar_widget.dart    # AppBar (含 buildAppBar 共享构建器)
         ├── drawer_helper.dart     # buildDrawer (供 screen.drawer 使用)
+        ├── webview_widget.dart    # WebView 网页
+        ├── qr_code_widget.dart    # QR 二维码生成
+        ├── chart_widget.dart      # Chart line/bar/pie
+        ├── map_widget.dart        # Map (OSM)
+        ├── camera_widget.dart     # Camera 实时预览
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射
