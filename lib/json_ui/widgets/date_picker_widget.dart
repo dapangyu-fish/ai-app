@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'icon_registry.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonDatePickerWidget extends JsonBaseWidget {
@@ -17,7 +18,9 @@ class JsonDatePickerWidget extends JsonBaseWidget {
     final placeholder = json['placeholder']?.toString() ?? '请选择日期';
     final label = json['label']?.toString();
     final prefixIcon = json['prefixIcon']?.toString() ?? 'calendar';
-    final action = json['action'] as Map<String, dynamic>?;
+    final action =
+        resolveActionAtBuildTime(json['action'], interpreter)
+            as Map<String, dynamic>?;
     final disabled = json['disabled'] == true;
 
     final firstDate = _parseDate(json['firstDate']?.toString()) ??

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'icon_registry.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonDropdownWidget extends JsonBaseWidget {
@@ -17,7 +18,9 @@ class JsonDropdownWidget extends JsonBaseWidget {
     final disabled = json['disabled'] == true;
     final placeholder = json['placeholder']?.toString() ?? '请选择';
     final label = json['label']?.toString();
-    final action = json['action'] as Map<String, dynamic>?;
+    final action =
+        resolveActionAtBuildTime(json['action'], interpreter)
+            as Map<String, dynamic>?;
     final prefixIcon = json['prefixIcon']?.toString();
     final rawColor = json['color']?.toString();
     final color = _parseColor(
