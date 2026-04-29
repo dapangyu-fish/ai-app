@@ -32,6 +32,11 @@ import 'widgets/slider_widget.dart';
 import 'widgets/date_picker_widget.dart';
 import 'widgets/time_picker_widget.dart';
 import 'widgets/tooltip_widget.dart';
+import 'widgets/chip_widget.dart';
+import 'widgets/badge_widget.dart';
+import 'widgets/avatar_widget.dart';
+import 'widgets/rich_text_widget.dart';
+import 'widgets/progress_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -66,6 +71,11 @@ class JsonWidgetBuilder {
     'date_picker': JsonDatePickerWidget(),
     'time_picker': JsonTimePickerWidget(),
     'tooltip': JsonTooltipWidget(),
+    'chip': JsonChipWidget(),
+    'badge': JsonBadgeWidget(),
+    'avatar': JsonAvatarWidget(),
+    'rich_text': JsonRichTextWidget(),
+    'progress': JsonProgressWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
