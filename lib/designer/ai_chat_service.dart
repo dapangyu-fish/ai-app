@@ -512,76 +512,87 @@ class AiChatService {
   }
 
   /// 上传当前运行的 JSON-APP，返回包含链接的文本。
-  /// 优先通过预签名 URL 上传到 MinIO，仅在消息中携带链接；失败时回退到内联 JSON。
+  /// 通过预签名 URL 上传到 MinIO；失败时按指数退避重试 3 次，
+  /// 全部失败则向上抛出异常（由调用方决定如何提示用户重试）。
   Future<String> uploadCurrentApp(Map<String, dynamic> jsonConfig) async {
     final jsonStr = json.encode(jsonConfig);
-    String contextContent;
+    debugPrint('[AI_CHAT] ========== 上传当前应用配置 ==========');
+    debugPrint('[AI_CHAT] JSON 大小: ${jsonStr.length} bytes');
 
-    try {
-      debugPrint('[AI_CHAT] ========== 上传当前应用配置 ==========');
-      debugPrint('[AI_CHAT] JSON 大小: ${jsonStr.length} bytes');
+    const maxAttempts = 3;
+    Object? lastError;
 
-      final token = AuthService.token;
-      // 1. 获取预签名上传 / 下载 URL
-      debugPrint('[AI_CHAT] 请求预签名 URL...');
-      debugPrint('[AI_CHAT] 请求地址: $_baseUrl/api/ai/upload_url');
-      final urlResp = await http
-          .get(
-            Uri.parse('$_baseUrl/api/ai/upload_url'),
-            headers: token != null ? {'Authorization': 'Bearer $token'} : null,
-          )
-          .timeout(const Duration(seconds: 30));  // 增加超时时间到 30 秒
-
-      debugPrint('[AI_CHAT] 预签名 URL 响应: ${urlResp.statusCode}');
-
-      if (urlResp.statusCode == 200) {
-        final urlData = json.decode(urlResp.body) as Map<String, dynamic>;
-        final putUrl = urlData['put_url'] as String;
-        final getUrl = urlData['get_url'] as String;
-
-        debugPrint('[AI_CHAT] PUT URL: ${putUrl.substring(0, 100)}...');
-        debugPrint('[AI_CHAT] GET URL: ${getUrl.substring(0, 100)}...');
-
-        // 2. PUT 上传 JSON 到 MinIO
-        debugPrint('[AI_CHAT] 开始上传到 MinIO...');
-        final uploadResp = await http
-            .put(
-              Uri.parse(putUrl),
-              headers: {'Content-Type': 'application/json'},
-              body: utf8.encode(jsonStr),
-            )
-            .timeout(const Duration(seconds: 15));
-
-        debugPrint('[AI_CHAT] MinIO 上传响应: ${uploadResp.statusCode}');
-
-        if (uploadResp.statusCode == 200) {
-          // 成功 → 只放链接
-          debugPrint('[AI_CHAT] ✅ 上传成功，使用 URL 链接');
-          contextContent =
-              '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），'
-              '后续对话请基于这个配置进行修改或分析：\n\n'
-              '[json_app_url]$getUrl[/json_app_url]';
-        } else {
-          debugPrint('[AI_CHAT] ❌ MinIO 上传失败: ${uploadResp.statusCode}');
-          debugPrint('[AI_CHAT] 响应体: ${uploadResp.body}');
-          throw Exception('MinIO PUT failed: ${uploadResp.statusCode}');
-        }
-      } else {
-        debugPrint('[AI_CHAT] ❌ 获取预签名 URL 失败: ${urlResp.statusCode}');
-        debugPrint('[AI_CHAT] 响应体: ${urlResp.body}');
-        throw Exception('upload_url API failed: ${urlResp.statusCode}');
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1) {
+        // 指数退避：1s, 2s（attempt=2 → 1s, attempt=3 → 2s）
+        final delay = Duration(seconds: 1 << (attempt - 2));
+        debugPrint(
+            '[AI_CHAT] 第 $attempt/$maxAttempts 次重试，等待 ${delay.inSeconds}s...');
+        await Future.delayed(delay);
       }
-    } catch (e) {
-      // 回退：直接内联 JSON
-      debugPrint('[AI_CHAT] ⚠️ 上传失败，回退到内联 JSON');
-      debugPrint('[AI_CHAT] 错误: $e');
-      contextContent =
-          '以下是我当前正在运行的 JSON-APP 完整配置，'
-          '后续对话请基于这个配置进行修改或分析：\n\n```json\n$jsonStr\n```';
+      try {
+        final result = await _uploadCurrentAppOnce(jsonStr);
+        debugPrint(
+            '[AI_CHAT] ✅ 上传成功（第 $attempt 次尝试）');
+        debugPrint('[AI_CHAT] ==========================================');
+        return result;
+      } catch (e) {
+        lastError = e;
+        debugPrint('[AI_CHAT] ❌ 第 $attempt/$maxAttempts 次尝试失败: $e');
+      }
     }
 
+    debugPrint(
+        '[AI_CHAT] ❌ 已重试 $maxAttempts 次仍失败，向上抛出（不再 fallback 到内联 JSON）');
     debugPrint('[AI_CHAT] ==========================================');
-    return contextContent;
+    throw Exception('上传失败（已重试 $maxAttempts 次）：$lastError');
+  }
+
+  /// 单次上传尝试（不带重试）。任何失败抛出 Exception 由 uploadCurrentApp 处理重试。
+  Future<String> _uploadCurrentAppOnce(String jsonStr) async {
+    final token = AuthService.token;
+
+    // 1. 获取预签名上传 / 下载 URL
+    debugPrint('[AI_CHAT] 请求预签名 URL: $_baseUrl/api/ai/upload_url');
+    final urlResp = await http
+        .get(
+          Uri.parse('$_baseUrl/api/ai/upload_url'),
+          headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+        )
+        .timeout(const Duration(seconds: 30));
+
+    debugPrint('[AI_CHAT] 预签名 URL 响应: ${urlResp.statusCode}');
+    if (urlResp.statusCode != 200) {
+      throw Exception(
+          'upload_url API failed: HTTP ${urlResp.statusCode} body=${urlResp.body}');
+    }
+
+    final urlData = json.decode(urlResp.body) as Map<String, dynamic>;
+    final putUrl = urlData['put_url'] as String?;
+    final getUrl = urlData['get_url'] as String?;
+    if (putUrl == null || getUrl == null) {
+      throw Exception('upload_url API 返回缺少 put_url/get_url 字段');
+    }
+
+    // 2. PUT 上传 JSON 到 MinIO
+    debugPrint('[AI_CHAT] 开始上传到 MinIO...');
+    final uploadResp = await http
+        .put(
+          Uri.parse(putUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: utf8.encode(jsonStr),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    debugPrint('[AI_CHAT] MinIO 上传响应: ${uploadResp.statusCode}');
+    if (uploadResp.statusCode != 200) {
+      throw Exception(
+          'MinIO PUT failed: HTTP ${uploadResp.statusCode} body=${uploadResp.body}');
+    }
+
+    return '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），'
+        '后续对话请基于这个配置进行修改或分析：\n\n'
+        '[json_app_url]$getUrl[/json_app_url]';
   }
 
   /// 使用 Claude CLI 生成/修改/修复 JSON-APP
