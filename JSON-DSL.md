@@ -302,9 +302,12 @@
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@show_toast` | `{ "message": "保存成功" }` | 底部 SnackBar 提示 |
+| `@show_snackbar` | `{ "message": "邮件已发送", "actionLabel": "撤销", "action": {...}, "durationMs": 4000, "backgroundColor": "#333333" }` | 增强 SnackBar，支持操作按钮回调 |
 | `@show_dialog` | `{ "title": "确认", "message": "确定删除？" }` | 弹窗，返回 `true`/`false` |
 | `@show_input_dialog` | `{ "title": "重命名", "hint": "请输入", "defaultValue": "", "bind": "global.name" }` | 文本输入弹窗，返回输入值（取消返回 `null`） |
 | `@show_choice_dialog` | `{ "title": "保存修改？", "message": "...", "buttons": [{"label":"保存","value":"save","style":"primary"},{"label":"丢弃","value":"discard","style":"danger"},{"label":"取消","value":"cancel"}], "dismissible": true }` | 自定义按钮弹窗，返回被点按钮的 `value`（关闭返回 `null`）。`style`：`primary` / `danger` / `text`（默认） |
+| `@show_date_picker` | `{ "initial": "2026-04-28", "firstDate": "2020-01-01", "lastDate": "2030-12-31", "bind": "global.date" }` | 命令式日期选择器，返回 yyyy-MM-dd 字符串（取消返回 `null`） |
+| `@show_time_picker` | `{ "initial": "14:30", "bind": "global.time" }` | 命令式时间选择器，返回 HH:mm 字符串（取消返回 `null`） |
 
 ---
 
@@ -457,6 +460,10 @@
 | `align` | `Align` | `child` | `alignment`(topLeft/center/bottomRight 等), `widthFactor`, `heightFactor` |
 | `flexible` | `Flexible` | `child` | `flex`, `fit`(loose/tight) |
 | `stack` | `Stack` | `children` | `alignment`, `fit`(loose/expand), `clipBehavior` |
+| `slider` | `Slider` | `bind` | `min`, `max`, `divisions`, `showLabel`, `color`, `disabled`, `action` |
+| `date_picker` | 触发 `showDatePicker` 的输入框 | `bind` | `placeholder`, `label`, `prefixIcon`, `firstDate`, `lastDate`, `disabled`, `action` |
+| `time_picker` | 触发 `showTimePicker` 的输入框 | `bind` | `placeholder`, `label`, `prefixIcon`, `disabled`, `action` |
+| `tooltip` | `Tooltip` | `message`, `child` | `preferBelow`, `waitDuration`, `showDuration` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -825,7 +832,59 @@
 
 子项默认按 `alignment`（默认 `topStart`）排列；要精确定位，给子项加 `position.type=absolute` + `top`/`left`/`bottom`/`right`（已有的位置系统直接复用）。
 
-### 6.23 ref 控件 — 引用依赖模板
+### 6.23 slider 控件 — 滑块
+
+```json
+{
+  "type": "slider",
+  "bind": "global.volume",
+  "min": 0,
+  "max": 100,
+  "divisions": 10,
+  "showLabel": true,
+  "color": "#6C5CE7"
+}
+```
+
+`divisions` 设置后值会按整数取整。
+
+### 6.24 date_picker / time_picker — 日期 / 时间选择器
+
+```json
+{
+  "type": "date_picker",
+  "bind": "global.birthday",
+  "label": "生日",
+  "prefixIcon": "calendar",
+  "firstDate": "1900-01-01",
+  "lastDate": "2030-12-31"
+}
+```
+
+```json
+{
+  "type": "time_picker",
+  "bind": "global.alarmTime",
+  "label": "闹钟时间",
+  "prefixIcon": "clock"
+}
+```
+
+`bind` 写回字符串：date 是 `yyyy-MM-dd`，time 是 `HH:mm`。也可以用命令式 `@show_date_picker` / `@show_time_picker` 在事件回调里弹出。
+
+### 6.25 tooltip 控件 — 工具提示
+
+```json
+{
+  "type": "tooltip",
+  "message": "点击查看详情",
+  "child": { "type": "icon", "name": "info" }
+}
+```
+
+长按或鼠标悬停 1 秒显示。
+
+### 6.26 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -902,6 +961,10 @@ lib/
         ├── align_widget.dart      # Align 对齐
         ├── flexible_widget.dart   # Flexible 灵活占位
         ├── stack_widget.dart      # Stack 堆叠
+        ├── slider_widget.dart     # Slider 滑块
+        ├── date_picker_widget.dart # DatePicker 日期
+        ├── time_picker_widget.dart # TimePicker 时间
+        ├── tooltip_widget.dart    # Tooltip 工具提示
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射

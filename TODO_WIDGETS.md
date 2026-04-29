@@ -2,11 +2,12 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：27 个 Widget + 2 个增强 action
+- ✅ 已实现：31 个 Widget + 5 个增强 action
   - 第一批：icon / card / checkbox / expanded / loading
   - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` + `@list_remove`
   - 第三批：padding / center / align / flexible / stack
-- ❌ 待实现：约 26 个常见 Widget
+  - 第四批：slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`
+- ❌ 待实现：约 22 个常见 Widget
 
 ---
 
@@ -99,26 +100,28 @@
 - **Flutter Widget**: `Radio`
 - **实现方式**: `bind` + `options` 数组，整组单选；比单个 Radio 在 JSON 里更实用
 
-### slider - 滑块
+### ✅ slider - 滑块（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 数值选择，音量调节
 - **Flutter Widget**: `Slider`
 
-### date_picker - 日期选择器
+### ✅ date_picker - 日期选择器（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
 - **用途**: 日期输入，预约场景
 - **Flutter Widget**: `showDatePicker`
+- **实现方式**: `date_picker` 输入框控件 + `@show_date_picker` 命令式 action
 
-### time_picker - 时间选择器
+### ✅ time_picker - 时间选择器（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
 - **用途**: 时间输入，闹钟设置
 - **Flutter Widget**: `showTimePicker`
+- **实现方式**: `time_picker` 输入框控件 + `@show_time_picker` 命令式 action
 
 ---
 
@@ -203,13 +206,13 @@
 - **用途**: 选项菜单，操作面板
 - **Flutter Widget**: `showModalBottomSheet`
 
-### snackbar - 提示条
+### ✅ snackbar - 提示条（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 轻量提示，操作反馈
 - **Flutter Widget**: `SnackBar`
-- **备注**: 目前有 `@show_toast`，可以扩展
+- **实现方式**: 新增 `@show_snackbar` action（带操作按钮 + 自定义时长 + 背景色）；保留 `@show_toast` 不变
 
 ### progress - 进度条
 - **使用频率**: ⭐⭐⭐⭐
@@ -218,7 +221,7 @@
 - **用途**: 进度展示，下载上传
 - **Flutter Widget**: `LinearProgressIndicator`
 
-### tooltip - 工具提示
+### ✅ tooltip - 工具提示（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
@@ -507,6 +510,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 - 2026-04-28: 第一批实现 5 个高优先级 Widget — icon / card / checkbox / expanded / loading；同步发布 demo 应用 `widgets-showcase` 和 common-ui 1.1.0 的辅助函数
 - 2026-04-28: 第二批实现 4 个 Widget + 1 个增强 action — dropdown / radio / wrap / grid + `@show_choice_dialog`；demo 应用 `widgets-showcase-2`，common-ui bump 到 1.2.0 并新增 `confirmDelete` 辅助函数
 - 2026-04-28: 第三批实现 5 个布局 Widget — padding / center / align / flexible / stack；demo 应用 `widgets-showcase-3`
+- 2026-04-28: 第四批实现 4 个表单/反馈 Widget + 3 个 action — slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`；demo 应用 `widgets-showcase-4`
 - 待更新...
 
 ---
