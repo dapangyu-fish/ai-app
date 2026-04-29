@@ -2,13 +2,14 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：36 个 Widget + 5 个增强 action
+- ✅ 已实现：41 个 Widget + 5 个增强 action
   - 第一批：icon / card / checkbox / expanded / loading
   - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` + `@list_remove`
   - 第三批：padding / center / align / flexible / stack
   - 第四批：slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`
   - 第五批：chip / badge / avatar / rich_text / progress
-- ❌ 待实现：约 17 个常见 Widget
+  - 第六批：inkwell / gesture_detector / dismissible / draggable / refresh
+- ❌ 待实现：约 12 个 Widget
 
 ---
 
@@ -265,35 +266,35 @@
 
 ## 🖱️ 交互类 Widget
 
-### gesture_detector - 手势检测
+### ✅ gesture_detector - 手势检测（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
 - **用途**: 自定义手势，点击长按
 - **Flutter Widget**: `GestureDetector`
 
-### inkwell - 水波纹点击效果
+### ✅ inkwell - 水波纹点击效果（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 点击反馈，Material 风格
 - **Flutter Widget**: `InkWell`
 
-### draggable - 可拖拽
+### ✅ draggable - 可拖拽（已实现 Draggable，DragTarget 后续批次补）
 - **使用频率**: ⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 2 天
 - **用途**: 拖拽排序，自定义交互
 - **Flutter Widget**: `Draggable` + `DragTarget`
 
-### dismissible - 滑动删除
+### ✅ dismissible - 滑动删除（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
 - **用途**: 列表项删除，滑动操作
 - **Flutter Widget**: `Dismissible`
 
-### refresh - 下拉刷新
+### ✅ refresh - 下拉刷新（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
@@ -513,6 +514,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 - 2026-04-28: 第三批实现 5 个布局 Widget — padding / center / align / flexible / stack；demo 应用 `widgets-showcase-3`
 - 2026-04-28: 第四批实现 4 个表单/反馈 Widget + 3 个 action — slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`；demo 应用 `widgets-showcase-4`
 - 2026-04-29: 第五批实现 5 个展示 Widget — chip / badge / avatar / rich_text / progress；demo 应用 `widgets-showcase-5`
+- 2026-04-29: 第六批实现 5 个交互 Widget — inkwell / gesture_detector / dismissible / draggable / refresh；新增 `executeActionWithResult` 公共方法支持 dismissible.confirmAction 取返回值；demo 应用 `widgets-showcase-6`
 - 待更新...
 
 ---

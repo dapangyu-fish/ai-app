@@ -37,6 +37,11 @@ import 'widgets/badge_widget.dart';
 import 'widgets/avatar_widget.dart';
 import 'widgets/rich_text_widget.dart';
 import 'widgets/progress_widget.dart';
+import 'widgets/inkwell_widget.dart';
+import 'widgets/gesture_detector_widget.dart';
+import 'widgets/dismissible_widget.dart';
+import 'widgets/draggable_widget.dart';
+import 'widgets/refresh_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -76,6 +81,11 @@ class JsonWidgetBuilder {
     'avatar': JsonAvatarWidget(),
     'rich_text': JsonRichTextWidget(),
     'progress': JsonProgressWidget(),
+    'inkwell': JsonInkWellWidget(),
+    'gesture_detector': JsonGestureDetectorWidget(),
+    'dismissible': JsonDismissibleWidget(),
+    'draggable': JsonDraggableWidget(),
+    'refresh': JsonRefreshWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

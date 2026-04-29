@@ -469,6 +469,11 @@
 | `avatar` | `CircleAvatar` | — | `url`, `text`(无图时取首字母), `size`, `color`, `textColor` |
 | `rich_text` | `Text.rich` | `spans` | `style`(默认), `textAlign` |
 | `progress` | `LinearProgressIndicator` | — | `value`, `color`, `backgroundColor`, `height`, `width`, `borderRadius` |
+| `inkwell` | `InkWell` (含 Material 包裹) | `child` | `onTap`, `onLongPress`, `onDoubleTap`, `borderRadius`, `splashColor` |
+| `gesture_detector` | `GestureDetector` | `child` | `onTap`, `onDoubleTap`, `onLongPress`, `onSwipeLeft/Right/Up/Down` |
+| `dismissible` | `Dismissible` | `key`, `child` | `direction`, `onDismissed`, `confirmAction`, `background`, `secondaryBackground` |
+| `draggable` | `Draggable` | `child` | `feedback`, `data`, `axis`, `onDragStarted/Completed/Canceled` |
+| `refresh` | `RefreshIndicator` | `child`, `onRefresh` | `color`, `backgroundColor` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -954,7 +959,79 @@
 
 与 `loading kind=linear` 重叠，但接口更简洁直接。
 
-### 6.31 ref 控件 — 引用依赖模板
+### 6.31 inkwell — 水波纹点击
+
+```json
+{
+  "type": "inkwell",
+  "borderRadius": 12,
+  "onTap": { "type": "call", "call": "@global.openDetail" },
+  "onLongPress": { "type": "call", "call": "@global.openMenu" },
+  "child": { "type": "container", ... }
+}
+```
+
+`Material` 已在内部包好；onTap / onLongPress / onDoubleTap 在 build 阶段预解析模板，可安全用于 list/grid 循环上下文。
+
+### 6.32 gesture_detector — 手势检测
+
+```json
+{
+  "type": "gesture_detector",
+  "onSwipeLeft": { "type": "call", "call": "@global.next" },
+  "onSwipeRight": { "type": "call", "call": "@global.prev" },
+  "child": { ... }
+}
+```
+
+不带水波纹但能识别滑动（基于 200 像素/秒阈值的 primaryVelocity）。
+
+### 6.33 dismissible — 滑动删除
+
+```json
+{
+  "type": "dismissible",
+  "key": "{{ loop.item.id }}",
+  "direction": "rightToLeft",
+  "confirmAction": { "type": "call", "call": "@common-ui.confirmDelete", "args": { "itemName": "{{ loop.item.name }}" } },
+  "onDismissed": { "type": "call", "call": "@global.removeAt", "args": { "i": "{{ loop.index }}" } },
+  "child": { ... }
+}
+```
+
+- `key` **必填**且需唯一，否则 Flutter 会抱怨重复 key
+- `confirmAction` 调用的函数返回 `true` 或非空字符串（如 `"delete"`）才会真正执行 onDismissed
+- `direction`：`leftToRight` / `rightToLeft` / `up` / `down` / `vertical` / `horizontal`(默认)
+- `background` / `secondaryBackground`：滑动时露出的背景，可以是 widget 配置（默认红色 + 删除图标）
+
+### 6.34 draggable — 可拖拽
+
+```json
+{
+  "type": "draggable",
+  "data": "{{ loop.item.id }}",
+  "axis": "vertical",
+  "feedback": { "type": "icon", "name": "drag_indicator" },
+  "onDragCompleted": { "type": "call", "call": "@global.onDrop" },
+  "child": { ... }
+}
+```
+
+通常与上层逻辑里的 DragTarget 配合（当前框架未单独暴露 DragTarget 控件，可在后续批次补）。
+
+### 6.35 refresh — 下拉刷新
+
+```json
+{
+  "type": "refresh",
+  "onRefresh": { "type": "call", "call": "@global.reload" },
+  "child": { "type": "list", "source": "...", "item_template": {...} }
+}
+```
+
+`child` 必须是可滚动 widget（list / grid / 内置 ScrollView）。已有 `list.onRefresh` 是同样语义，refresh 控件适合包非 list 的滚动内容。
+
+### 6.36 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -1040,6 +1117,11 @@ lib/
         ├── avatar_widget.dart     # Avatar 头像
         ├── rich_text_widget.dart  # RichText 多样式文本
         ├── progress_widget.dart   # Progress 进度条
+        ├── inkwell_widget.dart    # InkWell 水波纹
+        ├── gesture_detector_widget.dart # GestureDetector
+        ├── dismissible_widget.dart # Dismissible 滑动删除
+        ├── draggable_widget.dart  # Draggable 拖拽
+        ├── refresh_widget.dart    # RefreshIndicator
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射

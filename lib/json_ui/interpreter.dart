@@ -486,6 +486,25 @@ class JsonInterpreter extends ChangeNotifier {
     }
   }
 
+  /// 与 executeAction 相同，但返回函数调用的返回值
+  /// 主要供需要决策结果的回调使用（如 dismissible.confirmAction）
+  Future<dynamic> executeActionWithResult(
+      dynamic action, BuildContext context) async {
+    if (action is! Map<String, dynamic>) return null;
+    final type = action['type'] ?? 'call';
+    if (type == 'call') {
+      final callTarget = action['call'] as String?;
+      final args = action['args'] as Map<String, dynamic>?;
+      if (callTarget != null) {
+        return await _executeCall(callTarget, args ?? {});
+      }
+    } else if (type == 'navigate') {
+      final screenId = action['screen'] as String?;
+      if (screenId != null) navigateTo(screenId);
+    }
+    return null;
+  }
+
   void navigateTo(String screenId) {
     // 支持 depName:screenId 格式导航到依赖的页面
     if (screenId.contains(':')) {
