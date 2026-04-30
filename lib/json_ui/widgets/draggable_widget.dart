@@ -33,7 +33,8 @@ class JsonDraggableWidget extends JsonBaseWidget {
             child: Opacity(opacity: 0.7, child: child),
           );
 
-    final data = interpreter.resolveExpression(json['data']);
+    // Draggable<T extends Object> 不接受 dynamic / null，给个空字符串兜底
+    final Object data = interpreter.resolveExpression(json['data']) ?? '';
 
     final onStart = resolveActionAtBuildTime(json['onDragStarted'], interpreter)
         as Map<String, dynamic>?;
@@ -48,9 +49,11 @@ class JsonDraggableWidget extends JsonBaseWidget {
     Axis? axis;
     if (axisStr == 'horizontal') {
       axis = Axis.horizontal;
-    } else if (axisStr == 'vertical') axis = Axis.vertical;
+    } else if (axisStr == 'vertical') {
+      axis = Axis.vertical;
+    }
 
-    return Draggable<dynamic>(
+    return Draggable<Object>(
       data: data,
       axis: axis,
       feedback: feedback,
