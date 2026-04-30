@@ -44,6 +44,11 @@ import 'widgets/draggable_widget.dart';
 import 'widgets/refresh_widget.dart';
 import 'widgets/tab_view_widget.dart';
 import 'widgets/app_bar_widget.dart';
+import 'widgets/webview_widget.dart';
+import 'widgets/qr_code_widget.dart';
+import 'widgets/chart_widget.dart';
+import 'widgets/map_widget.dart';
+import 'widgets/camera_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -90,6 +95,11 @@ class JsonWidgetBuilder {
     'refresh': JsonRefreshWidget(),
     'tab_view': JsonTabViewWidget(),
     'app_bar': JsonAppBarWidget(),
+    'webview': JsonWebViewWidget(),
+    'qr_code': JsonQrCodeWidget(),
+    'chart': JsonChartWidget(),
+    'map': JsonMapWidget(),
+    'camera': JsonCameraWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

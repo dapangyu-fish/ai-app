@@ -2,6 +2,7 @@
 // 支持: bind, min, max, divisions, label, action, color, disabled
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonSliderWidget extends JsonBaseWidget {
@@ -16,7 +17,9 @@ class JsonSliderWidget extends JsonBaseWidget {
     final max = (json['max'] as num?)?.toDouble() ?? 100;
     final divisions = (json['divisions'] as num?)?.toInt();
     final showLabel = json['showLabel'] != false;
-    final action = json['action'] as Map<String, dynamic>?;
+    final action =
+        resolveActionAtBuildTime(json['action'], interpreter)
+            as Map<String, dynamic>?;
     final disabled = json['disabled'] == true;
     final rawColor = json['color']?.toString();
     final color = _parseColor(

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'icon_registry.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonTimePickerWidget extends JsonBaseWidget {
@@ -16,7 +17,9 @@ class JsonTimePickerWidget extends JsonBaseWidget {
     final placeholder = json['placeholder']?.toString() ?? '请选择时间';
     final label = json['label']?.toString();
     final prefixIcon = json['prefixIcon']?.toString() ?? 'clock';
-    final action = json['action'] as Map<String, dynamic>?;
+    final action =
+        resolveActionAtBuildTime(json['action'], interpreter)
+            as Map<String, dynamic>?;
     final disabled = json['disabled'] == true;
 
     String displayText = placeholder;

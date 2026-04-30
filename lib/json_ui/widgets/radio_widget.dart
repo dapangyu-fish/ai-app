@@ -3,6 +3,7 @@
 //       layout (column/row, 默认 column), disabled, color, action
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonRadioWidget extends JsonBaseWidget {
@@ -18,7 +19,9 @@ class JsonRadioWidget extends JsonBaseWidget {
     final rawColor = json['color']?.toString();
     final color = _parseColor(
         rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
-    final action = json['action'] as Map<String, dynamic>?;
+    final action =
+        resolveActionAtBuildTime(json['action'], interpreter)
+            as Map<String, dynamic>?;
 
     final rawOptions = interpreter.resolveExpression(json['options']);
     final options = <_RadioOption>[];

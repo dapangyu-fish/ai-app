@@ -3,6 +3,7 @@
 // 支持: child (必须是可滚动 widget), onRefresh, color, backgroundColor
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonRefreshWidget extends JsonBaseWidget {
@@ -20,7 +21,9 @@ class JsonRefreshWidget extends JsonBaseWidget {
       child = const SizedBox.shrink();
     }
 
-    final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
+    final onRefresh =
+        resolveActionAtBuildTime(json['onRefresh'], interpreter)
+            as Map<String, dynamic>?;
     final rawColor = json['color']?.toString();
     final color = _parseColor(
         rawColor != null ? interpreter.resolveTemplate(rawColor) : null);

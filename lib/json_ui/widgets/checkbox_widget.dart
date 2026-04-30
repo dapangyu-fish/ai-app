@@ -2,6 +2,7 @@
 // 支持: bind (绑定布尔变量), label, action, disabled, color
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonCheckboxWidget extends JsonBaseWidget {
@@ -13,7 +14,9 @@ class JsonCheckboxWidget extends JsonBaseWidget {
   ) {
     final bindPath = json['bind'] as String?;
     final label = json['label']?.toString();
-    final action = json['action'] as Map<String, dynamic>?;
+    final action =
+        resolveActionAtBuildTime(json['action'], interpreter)
+            as Map<String, dynamic>?;
     final disabled = json['disabled'] == true;
     final rawColor = json['color']?.toString();
     final color = _parseColor(

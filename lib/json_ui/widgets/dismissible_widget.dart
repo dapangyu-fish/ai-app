@@ -22,9 +22,9 @@ class JsonDismissibleWidget extends JsonBaseWidget {
 
     final direction = _parseDirection(json['direction']?.toString());
 
-    final onDismissed =
-        _resolve(json['onDismissed'], interpreter);
-    final confirmActionDef = json['confirmAction'];
+    final onDismissed = _resolve(json['onDismissed'], interpreter);
+    // confirmAction 同样需要预解析，以便在循环 item_template 里也能拿到 loop.* 上下文
+    final confirmActionDef = _resolve(json['confirmAction'], interpreter);
 
     Widget? bg = _buildBackground(context, json['background'], interpreter,
         defaultColor: Colors.red, defaultIcon: Icons.delete, alignLeft: true);

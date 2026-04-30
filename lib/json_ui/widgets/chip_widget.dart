@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'icon_registry.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonChipWidget extends JsonBaseWidget {
@@ -22,7 +23,9 @@ class JsonChipWidget extends JsonBaseWidget {
     final bindPath = json['bind'] as String?;
     final value = interpreter.resolveExpression(json['value']);
     final iconName = json['icon']?.toString();
-    final action = json['action'] as Map<String, dynamic>?;
+    final action =
+        resolveActionAtBuildTime(json['action'], interpreter)
+            as Map<String, dynamic>?;
     final rawColor = json['color']?.toString();
     final color = _parseColor(
         rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
