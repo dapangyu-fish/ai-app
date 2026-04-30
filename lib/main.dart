@@ -13,6 +13,8 @@ import 'json_ui/cache_manager.dart';
 import 'json_ui/semver.dart';
 import 'json_ui/widgets/screen_layout.dart';
 import 'json_ui/widgets/icon_registry.dart';
+import 'json_ui/widgets/app_bar_widget.dart' as appbar_helper;
+import 'json_ui/widgets/drawer_helper.dart' as drawer_helper;
 import 'designer/designer_ball.dart';
 import 'designer/settings_page.dart';
 import 'designer/ai_chat_service.dart';
@@ -1271,9 +1273,13 @@ class JsonScreenView extends ConsumerWidget {
       bgColor = Color(int.parse('FF$hex', radix: 16));
     }
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
+    // 自定义 appBar（screen.appBar Map 配置时启用）
+    final customAppBarConfig = screenConfig['appBar'];
+    PreferredSizeWidget appBar;
+    if (customAppBarConfig is Map<String, dynamic>) {
+      appBar = appbar_helper.buildAppBar(context, customAppBarConfig, interpreter);
+    } else {
+      appBar = AppBar(
         title: Text(screenConfig['title'] ?? interpreter.appName),
         centerTitle: true,
         leading: IconButton(
@@ -1287,7 +1293,20 @@ class JsonScreenView extends ConsumerWidget {
             }
           },
         ),
-      ),
+      );
+    }
+
+    // 可选 drawer（screen.drawer Map 配置时启用）
+    Widget? drawer;
+    final drawerConfig = screenConfig['drawer'];
+    if (drawerConfig is Map<String, dynamic>) {
+      drawer = drawer_helper.buildDrawer(context, drawerConfig, interpreter);
+    }
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: appBar,
+      drawer: drawer,
       body: SafeArea(
         child: hasListWidget
             ? Padding(

@@ -2,14 +2,15 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：41 个 Widget + 5 个增强 action
+- ✅ 已实现：43 个 Widget + 6 个增强 action + 3 项 screen 级配置
   - 第一批：icon / card / checkbox / expanded / loading
   - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` + `@list_remove`
   - 第三批：padding / center / align / flexible / stack
   - 第四批：slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`
   - 第五批：chip / badge / avatar / rich_text / progress
   - 第六批：inkwell / gesture_detector / dismissible / draggable / refresh
-- ❌ 待实现：约 12 个 Widget
+  - 第七批：tab_view / app_bar widget + `screen.appBar` / `screen.drawer` / `screen.tabs`(已存在) + `@show_bottom_sheet`
+- ❌ 待实现：5 个特殊 Widget（webview / map / chart / qr_code / camera，需新加包）
 
 ---
 
@@ -61,19 +62,21 @@
 - **用途**: 列表展示常用，图片墙
 - **Flutter Widget**: `GridView`
 
-#### 7. tab_bar - 标签栏
+#### 7. ✅ tab_bar - 标签栏（已实现，与 tab_view 合并为单 widget）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 2 天
 - **用途**: 多页面应用必备
 - **Flutter Widget**: `TabBar` + `TabBarView`
+- **实现方式**: `tab_view` widget 内置 DefaultTabController + TabBar + TabBarView
 
-#### 8. bottom_nav - 底部导航栏
+#### 8. ✅ bottom_nav - 底部导航栏（已通过 `screen.tabs` 配置支持）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 2 天
 - **用途**: 移动应用必备，主导航
 - **Flutter Widget**: `BottomNavigationBar`
+- **实现方式**: screen 顶层 `tabs: [...]` 配置自动渲染底部导航栏（早期已支持）
 
 #### 9. ✅ dialog - 对话框（已实现，作为 `@show_choice_dialog` action）
 - **使用频率**: ⭐⭐⭐⭐⭐
@@ -175,33 +178,32 @@
 
 ## 🧭 导航类 Widget
 
-### tab_view - 标签页内容
+### ✅ tab_view - 标签页内容（已实现，与 tab_bar 合并）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 2 天（与 tab_bar 一起实现）
 - **用途**: 标签页内容展示
 - **Flutter Widget**: `TabBarView`
 
-### drawer - 侧边栏
+### ✅ drawer - 侧边栏（已实现，screen.drawer 配置）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 复杂
 - **预计时间**: 2 天
 - **用途**: 主菜单，设置入口
 - **Flutter Widget**: `Drawer`
 
-### app_bar - 顶部栏
+### ✅ app_bar - 顶部栏（已实现，独立 widget + screen.appBar 覆写）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
 - **用途**: 页面标题，操作按钮
 - **Flutter Widget**: `AppBar`
-- **备注**: 目前 AppBar 是 Scaffold 的一部分，可以独立出来
 
 ---
 
 ## 💬 反馈类 Widget
 
-### bottom_sheet - 底部弹窗
+### ✅ bottom_sheet - 底部弹窗（已实现，作为 `@show_bottom_sheet` action）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
@@ -515,6 +517,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 - 2026-04-28: 第四批实现 4 个表单/反馈 Widget + 3 个 action — slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`；demo 应用 `widgets-showcase-4`
 - 2026-04-29: 第五批实现 5 个展示 Widget — chip / badge / avatar / rich_text / progress；demo 应用 `widgets-showcase-5`
 - 2026-04-29: 第六批实现 5 个交互 Widget — inkwell / gesture_detector / dismissible / draggable / refresh；新增 `executeActionWithResult` 公共方法支持 dismissible.confirmAction 取返回值；demo 应用 `widgets-showcase-6`
+- 2026-04-29: 第七批实现 2 个 widget + 3 项 screen 级配置 + 1 个 action — tab_view / app_bar widget + `screen.appBar` / `screen.drawer`(原已支持 `screen.tabs`) + `@show_bottom_sheet`；main.dart Scaffold 渲染向后兼容地支持 appBar/drawer 覆写；demo 应用 `widgets-showcase-7`
 - 待更新...
 
 ---
