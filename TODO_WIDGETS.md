@@ -2,8 +2,10 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：18 个 Widget（第一批新增 5 个：icon / card / checkbox / expanded / loading）
-- ❌ 待实现：约 35 个常见 Widget
+- ✅ 已实现：22 个 Widget + 1 个增强 action
+  - 第一批：icon / card / checkbox / expanded / loading
+  - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` action（满足 dialog 需求）
+- ❌ 待实现：约 31 个常见 Widget
 
 ---
 
@@ -20,7 +22,7 @@
 - **用途**: 表单必备，多选场景
 - **Flutter Widget**: `Checkbox`
 
-#### 2. dropdown - 下拉菜单
+#### 2. ✅ dropdown - 下拉菜单（已实现）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
@@ -48,7 +50,7 @@
 - **用途**: 布局必备，自适应宽度
 - **Flutter Widget**: `Expanded`
 
-#### 6. grid - 网格布局
+#### 6. ✅ grid - 网格布局（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
@@ -69,12 +71,13 @@
 - **用途**: 移动应用必备，主导航
 - **Flutter Widget**: `BottomNavigationBar`
 
-#### 9. dialog - 对话框
+#### 9. ✅ dialog - 对话框（已实现，作为 `@show_choice_dialog` action）
 - **使用频率**: ⭐⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
 - **用途**: 交互反馈必备，确认操作
 - **Flutter Widget**: `AlertDialog` / `Dialog`
+- **实现方式**: 命令式 action（不是渲染 widget），支持自定义按钮 + 返回被点按钮的 value
 
 #### 10. ✅ loading - 加载指示器（已实现）
 - **使用频率**: ⭐⭐⭐⭐⭐
@@ -87,12 +90,13 @@
 
 ## 📋 表单类 Widget
 
-### radio - 单选框
+### ✅ radio - 单选框（已实现，作为单选组）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 表单，单选场景
 - **Flutter Widget**: `Radio`
+- **实现方式**: `bind` + `options` 数组，整组单选；比单个 Radio 在 JSON 里更实用
 
 ### slider - 滑块
 - **使用频率**: ⭐⭐⭐
@@ -119,7 +123,7 @@
 
 ## 🎨 布局类 Widget
 
-### wrap - 自动换行布局
+### ✅ wrap - 自动换行布局（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
@@ -500,6 +504,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 
 - 2026-04-27: 创建待办清单，列出 42 个待实现的 Widget
 - 2026-04-28: 第一批实现 5 个高优先级 Widget — icon / card / checkbox / expanded / loading；同步发布 demo 应用 `widgets-showcase` 和 common-ui 1.1.0 的辅助函数
+- 2026-04-28: 第二批实现 4 个 Widget + 1 个增强 action — dropdown / radio / wrap / grid + `@show_choice_dialog`；demo 应用 `widgets-showcase-2`，common-ui bump 到 1.2.0 并新增 `confirmDelete` 辅助函数
 - 待更新...
 
 ---

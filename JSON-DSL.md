@@ -285,6 +285,7 @@
 | `@list_length` | `{ "value": {expr} }` | 返回数组长度 |
 | `@list_add` | `{ "var": "$.global.list", "item": "xxx" }` | 向数组末尾添加元素 |
 | `@list_remove_at` | `{ "var": "$.global.list", "index": 0 }` | 按索引删除 |
+| `@list_remove` | `{ "var": "$.global.list", "value": "xxx" }` | 按值删除（删除所有等于 value 的元素） |
 | `@list_insert` | `{ "var": "$.global.list", "index": 0, "item": "xxx" }` | 在指定位置插入 |
 | `@list_clear` | `{ "var": "$.global.list" }` | 清空数组 |
 
@@ -302,6 +303,8 @@
 |------|------|------|
 | `@show_toast` | `{ "message": "保存成功" }` | 底部 SnackBar 提示 |
 | `@show_dialog` | `{ "title": "确认", "message": "确定删除？" }` | 弹窗，返回 `true`/`false` |
+| `@show_input_dialog` | `{ "title": "重命名", "hint": "请输入", "defaultValue": "", "bind": "global.name" }` | 文本输入弹窗，返回输入值（取消返回 `null`） |
+| `@show_choice_dialog` | `{ "title": "保存修改？", "message": "...", "buttons": [{"label":"保存","value":"save","style":"primary"},{"label":"丢弃","value":"discard","style":"danger"},{"label":"取消","value":"cancel"}], "dismissible": true }` | 自定义按钮弹窗，返回被点按钮的 `value`（关闭返回 `null`）。`style`：`primary` / `danger` / `text`（默认） |
 
 ---
 
@@ -445,6 +448,10 @@
 | `checkbox` | `Checkbox` | `bind` | `label`, `action`, `disabled`, `color` |
 | `expanded` | `Expanded` | `child` | `flex` |
 | `loading` | `CircularProgressIndicator` / `LinearProgressIndicator` | — | `kind`(circular/linear), `size`, `color`, `value`, `strokeWidth`, `label` |
+| `dropdown` | `DropdownButtonFormField` | `bind`, `options` | `placeholder`, `label`, `disabled`, `prefixIcon`, `color`, `action` |
+| `radio` | `Radio` 组 | `bind`, `options` | `layout`(column/row), `disabled`, `color`, `action` |
+| `wrap` | `Wrap` | `children` | `spacing`, `runSpacing`, `direction`, `alignment`, `runAlignment`, `crossAlignment` |
+| `grid` | `GridView.builder` | `source`, `item_template` | `crossAxisCount`, `spacing`, `crossAxisSpacing`, `mainAxisSpacing`, `childAspectRatio`, `padding`, `shrinkWrap`, `emptyText` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -656,7 +663,102 @@
 - `value`：0~1 之间，**不传 = 不确定进度**（无限旋转），传了 = 确定进度
 - `label`：可选文字，仅 `circular` 时显示在下方
 
-### 6.14 ref 控件 — 引用依赖模板
+### 6.14 dropdown 控件 — 下拉选择
+
+```json
+{
+  "type": "dropdown",
+  "bind": "global.gender",
+  "label": "性别",
+  "placeholder": "请选择",
+  "prefixIcon": "person",
+  "options": [
+    { "label": "男", "value": "male" },
+    { "label": "女", "value": "female" },
+    { "label": "其他", "value": "other" }
+  ],
+  "action": { "type": "call", "call": "@global.onGenderChange" }
+}
+```
+
+`options` 支持两种格式：
+- `[{label, value}]` — 显示文本与绑定值不同
+- `["a", "b", "c"]` — 文本即值
+
+被选中时 `bind` 变量被赋值为对应的 `value`（保留原始类型，可以是 string/num/bool 等）。
+
+### 6.15 radio 控件 — 单选组
+
+```json
+{
+  "type": "radio",
+  "bind": "global.size",
+  "layout": "row",
+  "color": "#6C5CE7",
+  "options": [
+    { "label": "S", "value": "small" },
+    { "label": "M", "value": "medium" },
+    { "label": "L", "value": "large" }
+  ]
+}
+```
+
+整组单选按钮，`bind` 绑定当前选中的 value。`layout`：`column`（默认，一项一行）或 `row`（自动换行）。
+
+### 6.16 wrap 控件 — 自动换行
+
+```json
+{
+  "type": "wrap",
+  "spacing": 8,
+  "runSpacing": 8,
+  "alignment": "start",
+  "children": [
+    { "type": "button", "label": "标签 1", "variant": "outlined" },
+    { "type": "button", "label": "标签 2", "variant": "outlined" },
+    { "type": "button", "label": "标签 3", "variant": "outlined" }
+  ]
+}
+```
+
+子项排到一行放不下时自动换行，常用于标签云、筛选条、按钮组。
+
+- `spacing`：同行子项间距（默认 8）
+- `runSpacing`：行间距（默认 8）
+- `alignment`：`start` / `center` / `end` / `spaceBetween` / `spaceAround` / `spaceEvenly`
+- `direction`：`horizontal`（默认）/ `vertical`
+
+### 6.17 grid 控件 — 网格布局
+
+```json
+{
+  "type": "grid",
+  "source": "{{ global.products }}",
+  "crossAxisCount": 3,
+  "spacing": 12,
+  "childAspectRatio": 0.75,
+  "shrinkWrap": true,
+  "padding": 12,
+  "item_template": {
+    "type": "card",
+    "padding": 8,
+    "margin": 0,
+    "children": [
+      { "type": "image", "url": "{{ loop.item.image }}" },
+      { "type": "text", "value": "{{ loop.item.name }}" }
+    ]
+  }
+}
+```
+
+数据驱动的网格，渲染 `source` 数组的每一项 → `item_template`。在循环上下文里通过 `{{ loop.item }}` / `{{ loop.index }}` 访问当前项。
+
+- `crossAxisCount`：列数（默认 2）
+- `childAspectRatio`：子项宽高比（默认 1）
+- `spacing` 一次设置横纵两个方向；也可分别用 `crossAxisSpacing`、`mainAxisSpacing`
+- `shrinkWrap`：放进 ScrollView/Column 内时设 `true`，避免高度无限或冲突；独占整屏时留 `false`（默认走 Expanded）
+
+### 6.18 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -724,6 +826,10 @@ lib/
         ├── checkbox_widget.dart   # Checkbox 控件
         ├── expanded_widget.dart   # Expanded 控件
         ├── loading_widget.dart    # Loading 控件
+        ├── dropdown_widget.dart   # Dropdown 控件
+        ├── radio_widget.dart      # Radio 单选组
+        ├── wrap_widget.dart       # Wrap 自动换行
+        ├── grid_widget.dart       # Grid 网格
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射

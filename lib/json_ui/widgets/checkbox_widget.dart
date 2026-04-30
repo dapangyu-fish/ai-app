@@ -15,7 +15,9 @@ class JsonCheckboxWidget extends JsonBaseWidget {
     final label = json['label']?.toString();
     final action = json['action'] as Map<String, dynamic>?;
     final disabled = json['disabled'] == true;
-    final color = _parseColor(json['color']?.toString());
+    final rawColor = json['color']?.toString();
+    final color = _parseColor(
+        rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
 
     bool value = false;
     if (bindPath != null) {

@@ -1,0 +1,537 @@
+{
+  "dsl": "3.3",
+  "appid": "1e73cd82-2c5d-4a82-b4f7-ddae014629e2",
+  "meta": {
+    "name": "widgets-showcase-2",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "第二批 Widget 演示 — dropdown / radio / wrap / grid + @show_choice_dialog",
+    "author": "Claude"
+  },
+  "dependencies": {
+    "common-ui": "^1.2.0"
+  },
+  "global": {
+    "variables": {
+      "country": "CN",
+      "size": "M",
+      "tags": [],
+      "tagOptions": [
+        "Flutter",
+        "Dart",
+        "JSON-DSL",
+        "Server-Driven UI",
+        "Riverpod",
+        "Material 3",
+        "iOS",
+        "Android"
+      ],
+      "products": [
+        { "name": "苹果", "icon": "shopping_cart", "price": "5.0", "color": "#E74C3C" },
+        { "name": "香蕉", "icon": "shopping_cart", "price": "3.5", "color": "#F1C40F" },
+        { "name": "葡萄", "icon": "shopping_cart", "price": "12.0", "color": "#9B59B6" },
+        { "name": "橙子", "icon": "shopping_cart", "price": "6.0", "color": "#E67E22" },
+        { "name": "西瓜", "icon": "shopping_cart", "price": "20.0", "color": "#2ECC71" },
+        { "name": "草莓", "icon": "shopping_cart", "price": "25.0", "color": "#E91E63" }
+      ],
+      "lastChoice": "（尚未选择）"
+    },
+    "functions": {
+      "toggleTag": {
+        "params": ["tag"],
+        "description": "tags 数组里有则移除（@list_remove 按值删）、没有则追加（@list_add）",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "in": [
+                  { "var": "params.tag" },
+                  { "var": "global.tags" }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@list_remove",
+                  "args": {
+                    "var": "global.tags",
+                    "value": "{{ params.tag }}"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.tags",
+                    "item": "{{ params.tag }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "deleteProduct": {
+        "params": ["index", "name"],
+        "description": "走 common-ui.confirmDelete 的危险弹窗，确认后再 @list_remove_at",
+        "logic": [
+          {
+            "call": "@common-ui.confirmDelete",
+            "args": { "itemName": "{{ params.name }}" },
+            "assign": "global._deleteAns"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [{ "var": "global._deleteAns" }, "delete"]
+              },
+              "then": [
+                {
+                  "call": "@list_remove_at",
+                  "args": {
+                    "var": "global.products",
+                    "index": "{{ params.index }}"
+                  }
+                },
+                {
+                  "call": "@common-ui.showSuccess",
+                  "args": { "message": "已删除：{{ params.name }}" }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@common-ui.showInfo",
+                  "args": { "message": "已取消" }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "openSaveSheet": {
+        "params": [],
+        "description": "三个按钮的弹窗，演示 primary/danger/text 三种 style",
+        "logic": [
+          {
+            "call": "@show_choice_dialog",
+            "args": {
+              "title": "保存修改？",
+              "message": "你的改动尚未保存。",
+              "buttons": [
+                { "label": "取消", "value": "cancel", "style": "text" },
+                { "label": "丢弃", "value": "discard", "style": "danger" },
+                { "label": "保存", "value": "save", "style": "primary" }
+              ]
+            },
+            "assign": "global._choice"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.lastChoice",
+              "value": "{{ global._choice }}"
+            }
+          },
+          {
+            "call": "@common-ui.showInfo",
+            "args": { "message": "你选择了：{{ global._choice }}" }
+          }
+        ]
+      },
+      "onCountryChange": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@common-ui.showInfo",
+            "args": { "message": "国家切换为：{{ global.country }}" }
+          }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Widgets Showcase 2",
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F4F6FB",
+        "scrollable": true,
+        "children": [
+          {
+            "type": "text",
+            "value": "第二批 Widget 展示",
+            "style": {
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "color": "#1A1A1A",
+              "paddingH": 12,
+              "paddingV": 8
+            }
+          },
+          {
+            "type": "text",
+            "value": "新增：dropdown / radio / wrap / grid + @show_choice_dialog",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666",
+              "paddingH": 12
+            }
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "expand", "size": 22, "color": "#6C5CE7" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "1. Dropdown — 下拉选择",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "dropdown",
+                "bind": "global.country",
+                "label": "国家",
+                "placeholder": "请选择国家",
+                "prefixIcon": "globe",
+                "options": [
+                  { "label": "中国", "value": "CN" },
+                  { "label": "美国", "value": "US" },
+                  { "label": "日本", "value": "JP" },
+                  { "label": "英国", "value": "UK" },
+                  { "label": "法国", "value": "FR" }
+                ],
+                "action": { "type": "call", "call": "@global.onCountryChange" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "当前选中：{{ global.country }}",
+                "style": { "fontSize": 13, "color": "#666666" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "tune", "size": 22, "color": "#00B894" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "2. Radio — 单选组",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "尺寸（横向布局）",
+                "style": { "fontSize": 13, "color": "#666666" }
+              },
+              {
+                "type": "radio",
+                "bind": "global.size",
+                "layout": "row",
+                "color": "#6C5CE7",
+                "options": [
+                  { "label": "S 小号", "value": "S" },
+                  { "label": "M 中号", "value": "M" },
+                  { "label": "L 大号", "value": "L" },
+                  { "label": "XL 加大", "value": "XL" }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "当前选中：{{ global.size }}",
+                "style": { "fontSize": 13, "color": "#666666" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "tag", "size": 22, "color": "#E67E22" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "3. Wrap — 标签云",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "已选：{{ global.tags }}",
+                "style": { "fontSize": 13, "color": "#666666" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "Flutter",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "Flutter" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Dart",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "Dart" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "JSON-DSL",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "JSON-DSL" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Server-Driven UI",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "Server-Driven UI" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Riverpod",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "Riverpod" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Material 3",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "Material 3" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "iOS",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "iOS" }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Android",
+                    "variant": "outlined",
+                    "icon": "tag",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.toggleTag",
+                      "args": { "tag": "Android" }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "grid", "size": 22, "color": "#3498DB" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "4. Grid — 网格（含删除确认弹窗）",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "value": "点击商品卡片走 common-ui.confirmDelete 的危险弹窗",
+                "style": { "fontSize": 12, "color": "#888888" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "grid",
+                "source": "{{ global.products }}",
+                "crossAxisCount": 3,
+                "spacing": 10,
+                "childAspectRatio": 0.9,
+                "shrinkWrap": true,
+                "emptyText": "全部删完了 🎉",
+                "item_template": {
+                  "type": "card",
+                  "padding": 8,
+                  "margin": 0,
+                  "elevation": 1,
+                  "borderRadius": 12,
+                  "color": "{{ loop.item.color }}",
+                  "onTap": {
+                    "type": "call",
+                    "call": "@global.deleteProduct",
+                    "args": {
+                      "index": "{{ loop.index }}",
+                      "name": "{{ loop.item.name }}"
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "{{ loop.item.icon }}",
+                      "size": 28,
+                      "color": "#FFFFFF"
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.name }}",
+                      "style": {
+                        "fontSize": 14,
+                        "fontWeight": "bold",
+                        "color": "#FFFFFF",
+                        "textAlign": "center"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "¥{{ loop.item.price }}",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#FFFFFF",
+                        "textAlign": "center"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "info", "size": 22, "color": "#9B59B6" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "5. @show_choice_dialog — 自定义按钮弹窗",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "三种按钮 style：text / danger / primary",
+                "style": { "fontSize": 13, "color": "#666666" }
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "button",
+                "label": "保存修改？",
+                "variant": "filled",
+                "icon": "save",
+                "action": { "type": "call", "call": "@global.openSaveSheet" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "上次选择：{{ global.lastChoice }}",
+                "style": { "fontSize": 13, "color": "#888888" }
+              }
+            ]
+          },
+
+          { "type": "spacer", "height": 24 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": { "value": "[widgets-showcase-2] booted" }
+    }
+  ]
+}

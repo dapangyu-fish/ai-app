@@ -19,6 +19,10 @@ import 'widgets/card_widget.dart';
 import 'widgets/checkbox_widget.dart';
 import 'widgets/expanded_widget.dart';
 import 'widgets/loading_widget.dart';
+import 'widgets/dropdown_widget.dart';
+import 'widgets/radio_widget.dart';
+import 'widgets/wrap_widget.dart';
+import 'widgets/grid_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -40,6 +44,10 @@ class JsonWidgetBuilder {
     'checkbox': JsonCheckboxWidget(),
     'expanded': JsonExpandedWidget(),
     'loading': JsonLoadingWidget(),
+    'dropdown': JsonDropdownWidget(),
+    'radio': JsonRadioWidget(),
+    'wrap': JsonWrapWidget(),
+    'grid': JsonGridWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

@@ -12,9 +12,13 @@ class JsonIconWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    final name = json['name']?.toString();
+    final rawName = json['name']?.toString();
+    final name =
+        rawName != null ? interpreter.resolveTemplate(rawName) : null;
     final size = (json['size'] as num?)?.toDouble() ?? 24;
-    final colorStr = json['color']?.toString();
+    final rawColor = json['color']?.toString();
+    final colorStr =
+        rawColor != null ? interpreter.resolveTemplate(rawColor) : null;
 
     final iconData = name != null ? IconRegistry.get(name) : null;
 
