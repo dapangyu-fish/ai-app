@@ -1,6 +1,12 @@
 // Dropdown 控件
 // 支持: bind (绑定变量), options ([{label, value}] 或 ["a","b"]),
 //       placeholder, disabled, action, label, color, prefixIcon
+//
+// 实现要点：
+// 用 InputDecorator + DropdownButtonHideUnderline + DropdownButton<T>
+// 而不是 DropdownButtonFormField —— 后者只读 initialValue，
+// bind 变量后续被外部改写时不会反映到 UI（这是 Flutter FormField 的固有行为）。
+// DropdownButton 的 value 字段是响应式的，每次 build 都生效。
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'icon_registry.dart';
@@ -32,7 +38,8 @@ class JsonDropdownWidget extends JsonBaseWidget {
     if (rawOptions is List) {
       for (final item in rawOptions) {
         if (item is Map) {
-          final lab = item['label']?.toString() ?? item['value']?.toString() ?? '';
+          final lab =
+              item['label']?.toString() ?? item['value']?.toString() ?? '';
           final val = item['value'];
           options.add(_Option(label: lab, value: val));
         } else {
@@ -43,7 +50,7 @@ class JsonDropdownWidget extends JsonBaseWidget {
 
     final currentValue =
         bindPath != null ? interpreter.getVariable(bindPath) : null;
-    // 找出与当前值匹配的 option（按 == 比较，覆盖 String/num/bool）
+    // 找出与当前值匹配的 option（按 == 比较）
     _Option? selected;
     for (final opt in options) {
       if (opt.value == currentValue) {
@@ -52,43 +59,83 @@ class JsonDropdownWidget extends JsonBaseWidget {
       }
     }
 
-    final iconData = prefixIcon != null ? IconRegistry.get(prefixIcon) : null;
+    final iconData =
+        prefixIcon != null ? IconRegistry.get(prefixIcon) : null;
+    final resolvedLabel =
+        label != null ? interpreter.resolveTemplate(label) : null;
 
-    final dropdown = DropdownButtonFormField<_Option>(
-      initialValue: selected,
-      isExpanded: true,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+    // 即便 options 为空也不能直接 crash —— DropdownButton 要求 items 非空
+    // 否则用 InputDecorator 包一行说明文字
+    if (options.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12)),
+            prefixIcon: iconData != null ? Icon(iconData, color: color) : null,
+            labelText: resolvedLabel,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          child: Text(
+            placeholder,
+            style: TextStyle(
+              fontSize: 15,
+              color: Theme.of(context).hintColor,
+            ),
+          ),
         ),
-        prefixIcon: iconData != null ? Icon(iconData, color: color) : null,
-        hintText: placeholder,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        labelText: label != null ? interpreter.resolveTemplate(label) : null,
-      ),
-      items: options
-          .map((opt) => DropdownMenuItem<_Option>(
-                value: opt,
-                child: Text(opt.label),
-              ))
-          .toList(),
-      onChanged: disabled
-          ? null
-          : (newOpt) {
-              if (newOpt == null) return;
-              if (bindPath != null) {
-                interpreter.setVariable(bindPath, newOpt.value);
-              }
-              if (action != null) {
-                interpreter.executeAction(action, context);
-              }
-            },
-    );
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: dropdown,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12)),
+          prefixIcon: iconData != null ? Icon(iconData, color: color) : null,
+          labelText: resolvedLabel,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        // 关闭默认下划线，由 InputDecorator 的 border 提供边框
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<_Option>(
+            value: selected,
+            isExpanded: true,
+            isDense: true,
+            hint: Text(
+              placeholder,
+              style: TextStyle(
+                fontSize: 15,
+                color: Theme.of(context).hintColor,
+              ),
+            ),
+            items: options
+                .map((opt) => DropdownMenuItem<_Option>(
+                      value: opt,
+                      child: Text(
+                        opt.label,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ))
+                .toList(),
+            onChanged: disabled
+                ? null
+                : (newOpt) {
+                    if (newOpt == null) return;
+                    if (bindPath != null) {
+                      interpreter.setVariable(bindPath, newOpt.value);
+                    }
+                    if (action != null) {
+                      interpreter.executeAction(action, context);
+                    }
+                  },
+          ),
+        ),
+      ),
     );
   }
 
