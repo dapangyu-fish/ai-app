@@ -3,6 +3,7 @@
 // 支持: child, onTap, onLongPress, onDoubleTap, borderRadius, splashColor
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonInkWellWidget extends JsonBaseWidget {
@@ -20,11 +21,14 @@ class JsonInkWellWidget extends JsonBaseWidget {
       child = const SizedBox.shrink();
     }
 
-    final onTapDef = _resolveActionAtBuildTime(json['onTap'], interpreter);
+    final onTapDef = resolveActionAtBuildTime(json['onTap'], interpreter)
+        as Map<String, dynamic>?;
     final onLongPressDef =
-        _resolveActionAtBuildTime(json['onLongPress'], interpreter);
+        resolveActionAtBuildTime(json['onLongPress'], interpreter)
+            as Map<String, dynamic>?;
     final onDoubleTapDef =
-        _resolveActionAtBuildTime(json['onDoubleTap'], interpreter);
+        resolveActionAtBuildTime(json['onDoubleTap'], interpreter)
+            as Map<String, dynamic>?;
 
     final borderRadius = (json['borderRadius'] as num?)?.toDouble();
     final rawSplash = json['splashColor']?.toString();
@@ -50,23 +54,6 @@ class JsonInkWellWidget extends JsonBaseWidget {
         child: child,
       ),
     );
-  }
-
-  dynamic _resolveActionAtBuildTime(
-      dynamic action, JsonInterpreter interpreter) {
-    if (action is! Map<String, dynamic>) return action;
-    final resolved = <String, dynamic>{};
-    for (final entry in action.entries) {
-      final value = entry.value;
-      if (value is String && value.contains('{{') && value.contains('}}')) {
-        resolved[entry.key] = interpreter.resolveTemplate(value);
-      } else if (value is Map<String, dynamic>) {
-        resolved[entry.key] = _resolveActionAtBuildTime(value, interpreter);
-      } else {
-        resolved[entry.key] = value;
-      }
-    }
-    return resolved;
   }
 
   Color? _parseColor(String? colorStr) {

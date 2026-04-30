@@ -3,6 +3,7 @@
 //       color, onTap, crossAxisAlignment, mainAxisAlignment
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonCardWidget extends JsonBaseWidget {
@@ -27,8 +28,9 @@ class JsonCardWidget extends JsonBaseWidget {
     //    必须在此把 {{ loop.item }} / {{ loop.index }} 烘焙进 action
     final rawOnTap = json['onTap'];
     final onTap = rawOnTap is Map<String, dynamic>
-        ? _resolveActionAtBuildTime(rawOnTap, interpreter)
-        : rawOnTap;
+        ? resolveActionAtBuildTime(rawOnTap, interpreter)
+            as Map<String, dynamic>?
+        : null;
 
     final childWidgets = children
         .whereType<Map<String, dynamic>>()
@@ -110,24 +112,6 @@ class JsonCardWidget extends JsonBaseWidget {
     }
 
     return card;
-  }
-
-  Map<String, dynamic> _resolveActionAtBuildTime(
-    Map<String, dynamic> action,
-    JsonInterpreter interpreter,
-  ) {
-    final resolved = <String, dynamic>{};
-    for (final entry in action.entries) {
-      final value = entry.value;
-      if (value is String && value.contains('{{') && value.contains('}}')) {
-        resolved[entry.key] = interpreter.resolveTemplate(value);
-      } else if (value is Map<String, dynamic>) {
-        resolved[entry.key] = _resolveActionAtBuildTime(value, interpreter);
-      } else {
-        resolved[entry.key] = value;
-      }
-    }
-    return resolved;
   }
 
   Color? _parseColor(String? colorStr) {

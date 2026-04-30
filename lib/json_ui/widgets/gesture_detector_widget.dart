@@ -4,6 +4,7 @@
 //       onSwipeUp, onSwipeDown
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonGestureDetectorWidget extends JsonBaseWidget {
@@ -21,13 +22,20 @@ class JsonGestureDetectorWidget extends JsonBaseWidget {
       child = const SizedBox.shrink();
     }
 
-    dynamic onTap = _resolve(json['onTap'], interpreter);
-    dynamic onDouble = _resolve(json['onDoubleTap'], interpreter);
-    dynamic onLong = _resolve(json['onLongPress'], interpreter);
-    dynamic onSwipeLeft = _resolve(json['onSwipeLeft'], interpreter);
-    dynamic onSwipeRight = _resolve(json['onSwipeRight'], interpreter);
-    dynamic onSwipeUp = _resolve(json['onSwipeUp'], interpreter);
-    dynamic onSwipeDown = _resolve(json['onSwipeDown'], interpreter);
+    final onTap = resolveActionAtBuildTime(json['onTap'], interpreter)
+        as Map<String, dynamic>?;
+    final onDouble = resolveActionAtBuildTime(json['onDoubleTap'], interpreter)
+        as Map<String, dynamic>?;
+    final onLong = resolveActionAtBuildTime(json['onLongPress'], interpreter)
+        as Map<String, dynamic>?;
+    final onSwipeLeft = resolveActionAtBuildTime(json['onSwipeLeft'], interpreter)
+        as Map<String, dynamic>?;
+    final onSwipeRight = resolveActionAtBuildTime(json['onSwipeRight'], interpreter)
+        as Map<String, dynamic>?;
+    final onSwipeUp = resolveActionAtBuildTime(json['onSwipeUp'], interpreter)
+        as Map<String, dynamic>?;
+    final onSwipeDown = resolveActionAtBuildTime(json['onSwipeDown'], interpreter)
+        as Map<String, dynamic>?;
 
     return GestureDetector(
       onTap: onTap != null
@@ -63,21 +71,5 @@ class JsonGestureDetectorWidget extends JsonBaseWidget {
           : null,
       child: child,
     );
-  }
-
-  dynamic _resolve(dynamic action, JsonInterpreter interpreter) {
-    if (action is! Map<String, dynamic>) return action;
-    final resolved = <String, dynamic>{};
-    for (final entry in action.entries) {
-      final value = entry.value;
-      if (value is String && value.contains('{{') && value.contains('}}')) {
-        resolved[entry.key] = interpreter.resolveTemplate(value);
-      } else if (value is Map<String, dynamic>) {
-        resolved[entry.key] = _resolve(value, interpreter);
-      } else {
-        resolved[entry.key] = value;
-      }
-    }
-    return resolved;
   }
 }

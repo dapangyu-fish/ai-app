@@ -3,6 +3,7 @@
 //       fontSize, borderRadius, padding)、label 模板、action 预解析
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 import 'icon_registry.dart';
 
@@ -22,9 +23,10 @@ class JsonButtonWidget extends JsonBaseWidget {
     final iconName = json['icon']?.toString();
     final disabled = json['disabled'] == true;
 
-    // build 阶段预解析 action
+    // build 阶段预解析 action（用共享 helper —— 会递归 List）
     final resolvedAction = action != null
-        ? _resolveActionAtBuildTime(action, interpreter)
+        ? resolveActionAtBuildTime(action, interpreter)
+            as Map<String, dynamic>?
         : null;
 
     // 解析样式
@@ -113,24 +115,6 @@ class JsonButtonWidget extends JsonBaseWidget {
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
       child: button,
     );
-  }
-
-  Map<String, dynamic> _resolveActionAtBuildTime(
-    Map<String, dynamic> action,
-    JsonInterpreter interpreter,
-  ) {
-    final resolved = <String, dynamic>{};
-    for (final entry in action.entries) {
-      final value = entry.value;
-      if (value is String && value.contains('{{') && value.contains('}}')) {
-        resolved[entry.key] = interpreter.resolveTemplate(value);
-      } else if (value is Map<String, dynamic>) {
-        resolved[entry.key] = _resolveActionAtBuildTime(value, interpreter);
-      } else {
-        resolved[entry.key] = value;
-      }
-    }
-    return resolved;
   }
 
   Color? _parseColor(String? colorStr) {

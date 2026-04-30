@@ -5,6 +5,7 @@
 //       confirmAction (执行前调用，返回 truthy 才执行 onDismissed)
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonDismissibleWidget extends JsonBaseWidget {
@@ -22,9 +23,13 @@ class JsonDismissibleWidget extends JsonBaseWidget {
 
     final direction = _parseDirection(json['direction']?.toString());
 
-    final onDismissed = _resolve(json['onDismissed'], interpreter);
+    final onDismissed =
+        resolveActionAtBuildTime(json['onDismissed'], interpreter)
+            as Map<String, dynamic>?;
     // confirmAction 同样需要预解析，以便在循环 item_template 里也能拿到 loop.* 上下文
-    final confirmActionDef = _resolve(json['confirmAction'], interpreter);
+    final confirmActionDef =
+        resolveActionAtBuildTime(json['confirmAction'], interpreter)
+            as Map<String, dynamic>?;
 
     Widget? bg = _buildBackground(context, json['background'], interpreter,
         defaultColor: Colors.red, defaultIcon: Icons.delete, alignLeft: true);
@@ -102,21 +107,5 @@ class JsonDismissibleWidget extends JsonBaseWidget {
       default:
         return DismissDirection.horizontal;
     }
-  }
-
-  dynamic _resolve(dynamic action, JsonInterpreter interpreter) {
-    if (action is! Map<String, dynamic>) return action;
-    final resolved = <String, dynamic>{};
-    for (final entry in action.entries) {
-      final value = entry.value;
-      if (value is String && value.contains('{{') && value.contains('}}')) {
-        resolved[entry.key] = interpreter.resolveTemplate(value);
-      } else if (value is Map<String, dynamic>) {
-        resolved[entry.key] = _resolve(value, interpreter);
-      } else {
-        resolved[entry.key] = value;
-      }
-    }
-    return resolved;
   }
 }

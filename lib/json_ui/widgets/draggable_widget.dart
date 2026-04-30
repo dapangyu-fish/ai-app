@@ -4,6 +4,7 @@
 //       onDragCanceled, axis (horizontal/vertical, 默认两轴自由)
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonDraggableWidget extends JsonBaseWidget {
@@ -34,9 +35,14 @@ class JsonDraggableWidget extends JsonBaseWidget {
 
     final data = interpreter.resolveExpression(json['data']);
 
-    final onStart = _resolve(json['onDragStarted'], interpreter);
-    final onComplete = _resolve(json['onDragCompleted'], interpreter);
-    final onCancel = _resolve(json['onDragCanceled'], interpreter);
+    final onStart = resolveActionAtBuildTime(json['onDragStarted'], interpreter)
+        as Map<String, dynamic>?;
+    final onComplete =
+        resolveActionAtBuildTime(json['onDragCompleted'], interpreter)
+            as Map<String, dynamic>?;
+    final onCancel =
+        resolveActionAtBuildTime(json['onDragCanceled'], interpreter)
+            as Map<String, dynamic>?;
 
     final axisStr = json['axis']?.toString();
     Axis? axis;
@@ -60,21 +66,5 @@ class JsonDraggableWidget extends JsonBaseWidget {
           : null,
       child: child,
     );
-  }
-
-  dynamic _resolve(dynamic action, JsonInterpreter interpreter) {
-    if (action is! Map<String, dynamic>) return action;
-    final resolved = <String, dynamic>{};
-    for (final entry in action.entries) {
-      final value = entry.value;
-      if (value is String && value.contains('{{') && value.contains('}}')) {
-        resolved[entry.key] = interpreter.resolveTemplate(value);
-      } else if (value is Map<String, dynamic>) {
-        resolved[entry.key] = _resolve(value, interpreter);
-      } else {
-        resolved[entry.key] = value;
-      }
-    }
-    return resolved;
   }
 }
