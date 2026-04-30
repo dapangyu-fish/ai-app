@@ -2,10 +2,11 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：22 个 Widget + 1 个增强 action
+- ✅ 已实现：27 个 Widget + 2 个增强 action
   - 第一批：icon / card / checkbox / expanded / loading
-  - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` action（满足 dialog 需求）
-- ❌ 待实现：约 31 个常见 Widget
+  - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` + `@list_remove`
+  - 第三批：padding / center / align / flexible / stack
+- ❌ 待实现：约 26 个常见 Widget
 
 ---
 
@@ -130,35 +131,35 @@
 - **用途**: 标签云，自适应布局
 - **Flutter Widget**: `Wrap`
 
-### stack - 层叠布局
+### ✅ stack - 层叠布局（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
 - **用途**: 图片叠加，浮动按钮
 - **Flutter Widget**: `Stack` + `Positioned`
 
-### flexible - 灵活布局
+### ✅ flexible - 灵活布局（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 弹性布局，自适应
 - **Flutter Widget**: `Flexible`
 
-### padding - 内边距
+### ✅ padding - 内边距（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 布局调整，间距控制
 - **Flutter Widget**: `Padding`
 
-### center - 居中
+### ✅ center - 居中（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 内容居中，对齐
 - **Flutter Widget**: `Center`
 
-### align - 对齐
+### ✅ align - 对齐（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
@@ -505,6 +506,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 - 2026-04-27: 创建待办清单，列出 42 个待实现的 Widget
 - 2026-04-28: 第一批实现 5 个高优先级 Widget — icon / card / checkbox / expanded / loading；同步发布 demo 应用 `widgets-showcase` 和 common-ui 1.1.0 的辅助函数
 - 2026-04-28: 第二批实现 4 个 Widget + 1 个增强 action — dropdown / radio / wrap / grid + `@show_choice_dialog`；demo 应用 `widgets-showcase-2`，common-ui bump 到 1.2.0 并新增 `confirmDelete` 辅助函数
+- 2026-04-28: 第三批实现 5 个布局 Widget — padding / center / align / flexible / stack；demo 应用 `widgets-showcase-3`
 - 待更新...
 
 ---

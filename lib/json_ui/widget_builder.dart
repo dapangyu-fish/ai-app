@@ -23,6 +23,11 @@ import 'widgets/dropdown_widget.dart';
 import 'widgets/radio_widget.dart';
 import 'widgets/wrap_widget.dart';
 import 'widgets/grid_widget.dart';
+import 'widgets/padding_widget.dart';
+import 'widgets/center_widget.dart';
+import 'widgets/align_widget.dart';
+import 'widgets/flexible_widget.dart';
+import 'widgets/stack_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -48,6 +53,11 @@ class JsonWidgetBuilder {
     'radio': JsonRadioWidget(),
     'wrap': JsonWrapWidget(),
     'grid': JsonGridWidget(),
+    'padding': JsonPaddingWidget(),
+    'center': JsonCenterWidget(),
+    'align': JsonAlignWidget(),
+    'flexible': JsonFlexibleWidget(),
+    'stack': JsonStackWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
