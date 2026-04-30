@@ -1,0 +1,7456 @@
+{
+  "dsl": "3.3",
+  "appid": "regression-test-app-2026",
+  "meta": {
+    "name": "regression-test",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "JSON-DSL 框架回归测试套件，覆盖 main 既有 + batch 1-8 全部新功能",
+    "author": "regression-test"
+  },
+  "dependencies": {
+    "common-ui": "^1.0.0"
+  },
+  "global": {
+    "variables": {
+      "test_points": [
+        {
+          "category": "A. 基础",
+          "name": "text 控件",
+          "desc": "字体大小/颜色/粗细/对齐/模板插值",
+          "screen": "t_text"
+        },
+        {
+          "category": "A. 基础",
+          "name": "button 控件",
+          "desc": "filled / outlined / text 三种 variant + icon + disabled",
+          "screen": "t_button"
+        },
+        {
+          "category": "A. 基础",
+          "name": "input 控件",
+          "desc": "bind 实时同步 + placeholder",
+          "screen": "t_input"
+        },
+        {
+          "category": "A. 基础",
+          "name": "list 控件",
+          "desc": "source/item_template/empty/onRefresh/onLoadMore",
+          "screen": "t_list"
+        },
+        {
+          "category": "A. 基础",
+          "name": "container 控件",
+          "desc": "layout=row/column/stack + padding + bg",
+          "screen": "t_container"
+        },
+        {
+          "category": "A. 基础",
+          "name": "divider 控件",
+          "desc": "横向分隔线",
+          "screen": "t_divider"
+        },
+        {
+          "category": "A. 基础",
+          "name": "image 控件",
+          "desc": "网络/base64/错误回退",
+          "screen": "t_image"
+        },
+        {
+          "category": "A. 基础",
+          "name": "image_picker 控件",
+          "desc": "点击选图，bind 写入路径",
+          "screen": "t_image_picker"
+        },
+        {
+          "category": "A. 基础",
+          "name": "spacer 控件",
+          "desc": "Row 内推开间距",
+          "screen": "t_spacer"
+        },
+        {
+          "category": "A. 基础",
+          "name": "switch 控件",
+          "desc": "bind 布尔变量 + action",
+          "screen": "t_switch"
+        },
+        {
+          "category": "A. 基础",
+          "name": "video 控件",
+          "desc": "占位：本地无样例视频",
+          "screen": "t_video"
+        },
+        {
+          "category": "A. 基础",
+          "name": "ref 控件",
+          "desc": "占位：见自定义函数+依赖测试",
+          "screen": "t_ref"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "icon 控件",
+          "desc": "Material 图标 + 大小 + 颜色",
+          "screen": "t_icon"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "card 控件",
+          "desc": "elevation/borderRadius/onTap+水波纹",
+          "screen": "t_card"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "checkbox 控件",
+          "desc": "bind 布尔 + label + disabled",
+          "screen": "t_checkbox"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "expanded 控件",
+          "desc": "在 row 内填满剩余宽度",
+          "screen": "t_expanded"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "loading 控件",
+          "desc": "circular/linear + 确定/不确定进度",
+          "screen": "t_loading"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "dropdown 控件",
+          "desc": "对象 options / 字符串 options / bind",
+          "screen": "t_dropdown"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "radio 控件",
+          "desc": "单选组 column/row 两种 layout",
+          "screen": "t_radio"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "wrap 控件",
+          "desc": "标签云自动换行",
+          "screen": "t_wrap"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "grid 控件",
+          "desc": "shrinkWrap=true 嵌入页面",
+          "screen": "t_grid"
+        },
+        {
+          "category": "B. 新 基础",
+          "name": "progress 控件",
+          "desc": "线性进度条 0~1",
+          "screen": "t_progress"
+        },
+        {
+          "category": "C. 布局",
+          "name": "padding 控件",
+          "desc": "all/H/V/单边内边距",
+          "screen": "t_padding"
+        },
+        {
+          "category": "C. 布局",
+          "name": "center 控件",
+          "desc": "包子居中",
+          "screen": "t_center"
+        },
+        {
+          "category": "C. 布局",
+          "name": "align 控件",
+          "desc": "9 个方位",
+          "screen": "t_align"
+        },
+        {
+          "category": "C. 布局",
+          "name": "flexible 控件",
+          "desc": "fit=loose / fit=tight",
+          "screen": "t_flexible"
+        },
+        {
+          "category": "C. 布局",
+          "name": "stack 控件",
+          "desc": "absolute 子项",
+          "screen": "t_stack"
+        },
+        {
+          "category": "D. 表单/picker",
+          "name": "slider 控件",
+          "desc": "min/max/divisions + 颜色",
+          "screen": "t_slider"
+        },
+        {
+          "category": "D. 表单/picker",
+          "name": "date_picker 控件",
+          "desc": "点击弹日期选择器，写入 yyyy-MM-dd",
+          "screen": "t_date_picker"
+        },
+        {
+          "category": "D. 表单/picker",
+          "name": "time_picker 控件",
+          "desc": "点击弹时间选择器，写入 HH:mm",
+          "screen": "t_time_picker"
+        },
+        {
+          "category": "D. 表单/picker",
+          "name": "tooltip 控件",
+          "desc": "长按或悬停显示提示",
+          "screen": "t_tooltip"
+        },
+        {
+          "category": "E. 装饰",
+          "name": "chip 控件",
+          "desc": "chip / choice / filter 三种 variant",
+          "screen": "t_chip"
+        },
+        {
+          "category": "E. 装饰",
+          "name": "badge 控件",
+          "desc": "数字角标 + 文字角标 + 0 隐藏",
+          "screen": "t_badge"
+        },
+        {
+          "category": "E. 装饰",
+          "name": "avatar 控件",
+          "desc": "URL 图片 + 加载失败回退首字母",
+          "screen": "t_avatar"
+        },
+        {
+          "category": "E. 装饰",
+          "name": "rich_text 控件",
+          "desc": "多 span 不同样式拼接",
+          "screen": "t_rich_text"
+        },
+        {
+          "category": "E. 装饰",
+          "name": "inkwell 控件",
+          "desc": "onTap/onLongPress/onDoubleTap 水波纹",
+          "screen": "t_inkwell"
+        },
+        {
+          "category": "F. 手势",
+          "name": "gesture_detector 控件",
+          "desc": "swipe 4 方向",
+          "screen": "t_gesture"
+        },
+        {
+          "category": "F. 手势",
+          "name": "dismissible 控件",
+          "desc": "list item 滑动删除 + confirmAction",
+          "screen": "t_dismissible"
+        },
+        {
+          "category": "F. 手势",
+          "name": "draggable 控件",
+          "desc": "可拖拽（DragTarget 未实现，仅测视觉）",
+          "screen": "t_draggable"
+        },
+        {
+          "category": "F. 手势",
+          "name": "refresh 控件",
+          "desc": "下拉刷新（包裹滚动 child）",
+          "screen": "t_refresh"
+        },
+        {
+          "category": "G. 结构",
+          "name": "tab_view 控件",
+          "desc": "嵌入式 TabBar+TabBarView",
+          "screen": "t_tab_view"
+        },
+        {
+          "category": "G. 结构",
+          "name": "app_bar 独立 widget",
+          "desc": "嵌入 column 中的 AppBar（非 screen 顶部）",
+          "screen": "t_app_bar"
+        },
+        {
+          "category": "H. 重型/外部",
+          "name": "webview 控件",
+          "desc": "加载 example.com（需联网）",
+          "screen": "t_webview"
+        },
+        {
+          "category": "H. 重型/外部",
+          "name": "qr_code 控件",
+          "desc": "生成二维码",
+          "screen": "t_qr_code"
+        },
+        {
+          "category": "H. 重型/外部",
+          "name": "chart 控件",
+          "desc": "line / bar / pie 三种",
+          "screen": "t_chart"
+        },
+        {
+          "category": "H. 重型/外部",
+          "name": "map 控件",
+          "desc": "占位：OSM 地图（需联网/平台 tile 依赖）",
+          "screen": "t_map"
+        },
+        {
+          "category": "H. 重型/外部",
+          "name": "camera 控件",
+          "desc": "占位：实时预览（需相机权限 + 硬件）",
+          "screen": "t_camera"
+        },
+        {
+          "category": "I. screen 配置",
+          "name": "screen.layout=stack",
+          "desc": "屏幕根级用 Stack 布局 + position.absolute",
+          "screen": "t_screen_layout"
+        },
+        {
+          "category": "I. screen 配置",
+          "name": "screen.tabs",
+          "desc": "底部导航栏（_TabScreenView）",
+          "screen": "t_screen_tabs"
+        },
+        {
+          "category": "I. screen 配置",
+          "name": "screen.appBar",
+          "desc": "自定义顶部 AppBar（actions+leading）",
+          "screen": "t_screen_appbar"
+        },
+        {
+          "category": "I. screen 配置",
+          "name": "screen.drawer",
+          "desc": "侧边抽屉（hamburger 自动出现）",
+          "screen": "t_screen_drawer"
+        },
+        {
+          "category": "J. 模板/表达式",
+          "name": "{{ }} 模板插值",
+          "desc": "基本/嵌套路径/混合",
+          "screen": "t_template"
+        },
+        {
+          "category": "J. 模板/表达式",
+          "name": "jsonlogic 标准 op",
+          "desc": "==/+/var/if/and/or",
+          "screen": "t_jl_std"
+        },
+        {
+          "category": "J. 模板/表达式",
+          "name": "jsonlogic 自定义 op",
+          "desc": "str_*/length/at/slice/sort",
+          "screen": "t_jl_custom"
+        },
+        {
+          "category": "K. 控制流",
+          "name": "@if",
+          "desc": "条件分支",
+          "screen": "t_cf_if"
+        },
+        {
+          "category": "K. 控制流",
+          "name": "@while",
+          "desc": "循环至条件不满足（带 max_iterations）",
+          "screen": "t_cf_while"
+        },
+        {
+          "category": "K. 控制流",
+          "name": "@for_each",
+          "desc": "遍历数组（loop.item / loop.index）",
+          "screen": "t_cf_foreach"
+        },
+        {
+          "category": "K. 控制流",
+          "name": "@loop_by_num",
+          "desc": "循环 N 次",
+          "screen": "t_cf_loopbynum"
+        },
+        {
+          "category": "K. 控制流",
+          "name": "@try_catch",
+          "desc": "捕获 try 块异常",
+          "screen": "t_cf_try"
+        },
+        {
+          "category": "K. 控制流",
+          "name": "@parallel",
+          "desc": "并行执行多个 step",
+          "screen": "t_cf_parallel"
+        },
+        {
+          "category": "K. 控制流",
+          "name": "@delay",
+          "desc": "异步等待 ms",
+          "screen": "t_cf_delay"
+        },
+        {
+          "category": "L. 数据 actions",
+          "name": "@set",
+          "desc": "字符串/数字/表达式三种 value",
+          "screen": "t_data_set"
+        },
+        {
+          "category": "L. 数据 actions",
+          "name": "@http_get / @http_post",
+          "desc": "对接 httpbin.org（需联网）",
+          "screen": "t_data_http"
+        },
+        {
+          "category": "L. 数据 actions",
+          "name": "@json_decode / @json_encode",
+          "desc": "字符串 ↔ 对象",
+          "screen": "t_data_json"
+        },
+        {
+          "category": "L. 数据 actions",
+          "name": "@str_* 系列",
+          "desc": "8 个常用字符串 action",
+          "screen": "t_data_str"
+        },
+        {
+          "category": "L. 数据 actions",
+          "name": "@list_* 系列",
+          "desc": "add/remove/remove_at/insert/clear/sort",
+          "screen": "t_data_list_actions"
+        },
+        {
+          "category": "L. 数据 actions",
+          "name": "@random / @uuid",
+          "desc": "随机数/字符/UUID",
+          "screen": "t_data_random"
+        },
+        {
+          "category": "L. 数据 actions",
+          "name": "@timestamp / @date_format",
+          "desc": "时间戳与格式化",
+          "screen": "t_data_time"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_toast",
+          "desc": "底部 toast 提示",
+          "screen": "t_ui_toast"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_dialog",
+          "desc": "确认弹窗（true/false）",
+          "screen": "t_ui_dialog"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_input_dialog",
+          "desc": "文本输入弹窗",
+          "screen": "t_ui_input_dialog"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_choice_dialog ⭐",
+          "desc": "自定义按钮弹窗（保存/丢弃/取消）",
+          "screen": "t_ui_choice"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_snackbar ⭐",
+          "desc": "底部 SnackBar + 操作按钮",
+          "screen": "t_ui_snackbar"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_date_picker ⭐",
+          "desc": "命令式日期选择器",
+          "screen": "t_ui_date_picker_action"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_time_picker ⭐",
+          "desc": "命令式时间选择器",
+          "screen": "t_ui_time_picker_action"
+        },
+        {
+          "category": "M. UI actions",
+          "name": "@show_bottom_sheet ⭐",
+          "desc": "底部弹窗（content 是任意 widget）",
+          "screen": "t_ui_bottom_sheet"
+        },
+        {
+          "category": "N. 持久化",
+          "name": "@storage_* (SharedPreferences)",
+          "desc": "set/get/remove/clear",
+          "screen": "t_storage"
+        },
+        {
+          "category": "N. 持久化",
+          "name": "@file_* (App 文档目录)",
+          "desc": "write_json/read_json/exists/append",
+          "screen": "t_file"
+        },
+        {
+          "category": "N. 持久化",
+          "name": "@db_* (drift 数据库)",
+          "desc": "create_table/insert/query/update/delete + kv",
+          "screen": "t_db"
+        },
+        {
+          "category": "O. 函数/依赖",
+          "name": "@global.func",
+          "desc": "params + logic + 多步",
+          "screen": "t_func"
+        },
+        {
+          "category": "O. 函数/依赖",
+          "name": "@common-ui.func",
+          "desc": "调用依赖里的 showSuccess / confirm",
+          "screen": "t_dep"
+        },
+        {
+          "category": "P. 循环上下文",
+          "name": "loop.* 在 action 里（List 递归）",
+          "desc": "card.onTap 含 List 字段嵌 loop.* 模板",
+          "screen": "t_loop_action"
+        },
+        {
+          "category": "Q. 边界/错误",
+          "name": "空 list emptyText",
+          "desc": "source 为空时显示空状态",
+          "screen": "t_edge_empty"
+        },
+        {
+          "category": "Q. 边界/错误",
+          "name": "HTTP 失败被 try_catch 捕获",
+          "desc": "坏 URL 应进 catch 分支",
+          "screen": "t_edge_http_err"
+        },
+        {
+          "category": "Q. 边界/错误",
+          "name": "未知 widget / 未知 action",
+          "desc": "应有占位错误，不崩溃",
+          "screen": "t_edge_unknown"
+        }
+      ],
+      "t_text_count": 0,
+      "t_input_value": "",
+      "t_list_items": [
+        {
+          "id": 1,
+          "name": "苹果"
+        },
+        {
+          "id": 2,
+          "name": "香蕉"
+        },
+        {
+          "id": 3,
+          "name": "橙子"
+        },
+        {
+          "id": 4,
+          "name": "葡萄"
+        },
+        {
+          "id": 5,
+          "name": "西瓜"
+        }
+      ],
+      "t_picker_path": "",
+      "t_switch_on": false,
+      "t_checkbox_value": false,
+      "t_dropdown_value": "",
+      "t_radio_value": "M",
+      "t_loading_progress": 0.4,
+      "t_slider_value": 50,
+      "t_date_value": "",
+      "t_time_value": "",
+      "t_chip_choice": null,
+      "t_chip_filter": [
+        "frontend"
+      ],
+      "t_badge_count": 5,
+      "t_gesture_log": "",
+      "t_dismiss_items": [
+        {
+          "id": 1,
+          "text": "向左滑我删除"
+        },
+        {
+          "id": 2,
+          "text": "向左滑我删除"
+        },
+        {
+          "id": 3,
+          "text": "向左滑我删除"
+        }
+      ],
+      "t_refresh_count": 0,
+      "t_tab_change_count": 0,
+      "t_tpl_user": {
+        "name": "Alice",
+        "age": 30,
+        "addr": {
+          "city": "Beijing"
+        }
+      },
+      "t_jl_a": 7,
+      "t_jl_b": 3,
+      "t_jl_str": "Hello World",
+      "t_jl_list": [
+        3,
+        1,
+        4,
+        1,
+        5,
+        9,
+        2,
+        6
+      ],
+      "t_cf_n": 0,
+      "t_cf_log": "",
+      "t_data_set_str": "",
+      "t_data_set_num": 0,
+      "t_data_http_resp": "",
+      "t_data_json_str": "",
+      "t_data_str_result": "",
+      "t_data_list": [
+        3,
+        1,
+        4,
+        1,
+        5,
+        9,
+        2,
+        6
+      ],
+      "t_data_random": "",
+      "t_data_time": "",
+      "t_ui_dialog_result": "",
+      "t_ui_input_result": "",
+      "t_ui_choice_result": "",
+      "t_ui_date_result": "",
+      "t_ui_time_result": "",
+      "t_ui_sheet_result": "",
+      "t_storage_value": "",
+      "t_file_value": "",
+      "t_db_rows": [],
+      "t_func_result": "",
+      "t_dep_result": "",
+      "t_loop_clicked": "",
+      "t_loop_choice": "",
+      "t_loop_items": [
+        {
+          "id": "a",
+          "name": "苹果"
+        },
+        {
+          "id": "b",
+          "name": "香蕉"
+        },
+        {
+          "id": "c",
+          "name": "橙子"
+        }
+      ]
+    },
+    "functions": {
+      "t_cf_delay_run": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 1500
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "延迟 1500ms 后触发"
+            }
+          }
+        ]
+      },
+      "t_http_get_run": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@http_get",
+            "args": {
+              "url": "https://httpbin.org/get"
+            },
+            "assign": "global.t_http_resp_raw"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.t_data_http_resp",
+              "value": {
+                "str_substring": [
+                  {
+                    "json_encode": [
+                      {
+                        "var": "global.t_http_resp_raw"
+                      }
+                    ]
+                  },
+                  0,
+                  200
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "t_http_post_run": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@http_post",
+            "args": {
+              "url": "https://httpbin.org/post",
+              "body": {
+                "hello": "world",
+                "ts": "2026-04-30"
+              }
+            },
+            "assign": "global.t_http_resp_raw"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.t_data_http_resp",
+              "value": {
+                "str_substring": [
+                  {
+                    "json_encode": [
+                      {
+                        "var": "global.t_http_resp_raw"
+                      }
+                    ]
+                  },
+                  0,
+                  200
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "t_json_roundtrip": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@json_decode",
+            "args": {
+              "value": {
+                "var": "global.t_data_json_str"
+              }
+            },
+            "assign": "global.t_json_obj"
+          },
+          {
+            "call": "@json_encode",
+            "args": {
+              "value": {
+                "var": "global.t_json_obj"
+              }
+            },
+            "assign": "global.t_data_json_str"
+          }
+        ]
+      },
+      "t_time_now_fmt": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._ts_tmp"
+          },
+          {
+            "call": "@date_format",
+            "args": {
+              "timestamp": {
+                "var": "global._ts_tmp"
+              },
+              "format": "YYYY-MM-DD HH:mm:ss"
+            },
+            "assign": "global.t_data_time"
+          }
+        ]
+      },
+      "t_toast_5x": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "toast #1"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "toast #2"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "toast #3"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "toast #4"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "toast #5"
+            }
+          }
+        ]
+      },
+      "greet_with_double": {
+        "params": [
+          "name",
+          "n"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._double",
+              "value": {
+                "*": [
+                  {
+                    "var": "params.n"
+                  },
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.t_func_result",
+              "value": {
+                "cat": [
+                  "Hi ",
+                  {
+                    "var": "params.name"
+                  },
+                  ", double = ",
+                  {
+                    "var": "global._double"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "回归测试 — 总览",
+        "padding": 12,
+        "children": [
+          {
+            "type": "text",
+            "value": "📋 回归测试套件",
+            "style": {
+              "fontSize": 22,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "共 {{ str_template_total }} 个测试点。点击进入对应功能测试。配套手册见 templates/REGRESSION_TEST.md。",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "list",
+            "source": "{{ global.test_points }}",
+            "item_template": {
+              "type": "card",
+              "elevation": 2,
+              "borderRadius": 12,
+              "padding": 14,
+              "margin": 6,
+              "onTap": {
+                "type": "navigate",
+                "screen": "{{ loop.item.screen }}"
+              },
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "padding": 4,
+                      "color": "#E8F0FE",
+                      "borderRadius": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.category }}",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#1A73E8"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer"
+                    },
+                    {
+                      "type": "icon",
+                      "name": "chevron_right",
+                      "size": 20,
+                      "color": "#999999"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.name }}",
+                  "style": {
+                    "fontSize": 16,
+                    "fontWeight": "bold"
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.desc }}",
+                  "style": {
+                    "fontSize": 12,
+                    "color": "#666666"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_text",
+        "title": "text 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "text 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "展示 text 的常见用法",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "默认样式文字"
+          },
+          {
+            "type": "text",
+            "value": "fontSize=20 加粗",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "彩色 (#E91E63)",
+            "style": {
+              "color": "#E91E63"
+            }
+          },
+          {
+            "type": "text",
+            "value": "居中对齐",
+            "style": {
+              "fontSize": 16
+            },
+            "textAlign": "center"
+          },
+          {
+            "type": "text",
+            "value": "模板插值: count = {{ global.t_text_count }}"
+          },
+          {
+            "type": "button",
+            "label": "count +1",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_text_count",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.t_text_count"
+                    },
+                    1
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_button",
+        "title": "button 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "button 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "3 种 variant，含 icon 与 disabled",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "filled (默认)",
+            "action": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "filled 被点"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "outlined",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "outlined 被点"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "text variant",
+            "variant": "text",
+            "action": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "text 被点"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "带 icon",
+            "icon": "send",
+            "action": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "icon 按钮被点"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "disabled 按钮",
+            "disabled": true,
+            "action": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "❌ 不应触发"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "自定义颜色",
+            "icon": "favorite",
+            "style": {
+              "backgroundColor": "#E91E63",
+              "textColor": "#FFFFFF",
+              "borderRadius": 24,
+              "fontSize": 16
+            },
+            "action": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "自定义样式 OK"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_input",
+        "title": "input 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "input 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "bind 与外部变量双向同步；下方 text 应实时反映",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "input",
+            "placeholder": "请输入文字…",
+            "bind": "global.t_input_value"
+          },
+          {
+            "type": "text",
+            "value": "你输入的是: 「{{ global.t_input_value }}」",
+            "style": {
+              "fontSize": 14
+            }
+          },
+          {
+            "type": "button",
+            "label": "清空",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_input_value",
+                "value": ""
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_list",
+        "title": "list 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "list 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "✅ 应显示 5 项；下拉刷新会插入",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "切到空数据看 emptyText",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_list_items",
+                "value": []
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "重置 5 项",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_list_items",
+                "value": [
+                  {
+                    "id": 1,
+                    "name": "苹果"
+                  },
+                  {
+                    "id": 2,
+                    "name": "香蕉"
+                  },
+                  {
+                    "id": 3,
+                    "name": "橙子"
+                  },
+                  {
+                    "id": 4,
+                    "name": "葡萄"
+                  },
+                  {
+                    "id": 5,
+                    "name": "西瓜"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "list",
+            "source": "{{ global.t_list_items }}",
+            "emptyText": "数据为空（点上方按钮重置）",
+            "onRefresh": {
+              "type": "call",
+              "call": "@list_add",
+              "args": {
+                "var": "global.t_list_items",
+                "item": {
+                  "id": 99,
+                  "name": "刷新插入项"
+                }
+              }
+            },
+            "item_template": {
+              "type": "container",
+              "padding": 12,
+              "layout": "row",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "#{{ loop.index }}"
+                },
+                {
+                  "type": "spacer"
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.name }}",
+                  "style": {
+                    "fontSize": 16
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_container",
+        "title": "container 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "container 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "展示 row / column / stack 三种 layout",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "layout=row:"
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 12,
+            "color": "#E3F2FD",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "左"
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "text",
+                "value": "中"
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "text",
+                "value": "右"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "layout=column:"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 12,
+            "color": "#FFF3E0",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "第一行"
+              },
+              {
+                "type": "text",
+                "value": "第二行"
+              },
+              {
+                "type": "text",
+                "value": "第三行"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "layout=stack（应叠放）:"
+          },
+          {
+            "type": "container",
+            "layout": "stack",
+            "padding": 0,
+            "color": "#FCE4EC",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "container",
+                "padding": 24,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "底层文字"
+                  }
+                ]
+              },
+              {
+                "type": "icon",
+                "name": "favorite",
+                "color": "#E91E63",
+                "size": 32,
+                "position": {
+                  "type": "absolute",
+                  "top": 8,
+                  "right": 8
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_divider",
+        "title": "divider 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "divider 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "两段文字之间应有一条灰色横线",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "上方文字"
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "下方文字"
+          }
+        ]
+      },
+      {
+        "id": "t_image",
+        "title": "image 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "image 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "第一张应显示；第二张是无效 URL，应自动回退",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "网络图片 (httpbin.org PNG):"
+          },
+          {
+            "type": "image",
+            "url": "https://httpbin.org/image/png",
+            "width": 200,
+            "height": 100,
+            "borderRadius": 8
+          },
+          {
+            "type": "text",
+            "value": "无效 URL（应显示错误占位）:"
+          },
+          {
+            "type": "image",
+            "url": "https://invalid.example.invalid/nope.png",
+            "width": 200,
+            "height": 100,
+            "borderRadius": 8
+          }
+        ]
+      },
+      {
+        "id": "t_image_picker",
+        "title": "image_picker 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "image_picker 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点击下方虚框选图，选完显示路径与缩略图",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "image_picker",
+            "bind": "global.t_picker_path",
+            "placeholder": "点击选择图片",
+            "width": 200,
+            "height": 200,
+            "borderRadius": 12
+          },
+          {
+            "type": "text",
+            "value": "选中路径: {{ global.t_picker_path }}"
+          }
+        ]
+      },
+      {
+        "id": "t_spacer",
+        "title": "spacer 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "spacer 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "spacer 应把左右两段顶到两端",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 8,
+            "color": "#F5F5F5",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "← 左侧"
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "text",
+                "value": "右侧 →"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_switch",
+        "title": "switch 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "switch 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "拨动开关后下方文字应反映 true/false",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "switch",
+            "bind": "global.t_switch_on",
+            "label": "开关 A"
+          },
+          {
+            "type": "text",
+            "value": "当前: {{ global.t_switch_on }}"
+          }
+        ]
+      },
+      {
+        "id": "t_video",
+        "title": "video 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "container",
+            "padding": 16,
+            "color": "#FFF3CD",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "⚠️ 开发中 / 占位",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "video 控件需要一个稳定的视频源（http(s) URL 或本地文件）。本回归套件未内置样例视频；可临时填一个 https://*.mp4 直链 URL 测试，或参考 demo_video_browser.json。",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#856404"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_ref",
+        "title": "ref 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "container",
+            "padding": 16,
+            "color": "#FFF3CD",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "⚠️ 开发中 / 占位",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "ref 控件用于引用依赖模板。依赖功能在 O 类（自定义函数+依赖）已覆盖。本测试套件 dependencies 引了 common-ui，可在那里通过 ref 调用其 widget。",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#856404"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_icon",
+        "title": "icon 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "icon 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "应显示多个图标；未识别的回退为 help_outline",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "icon",
+                "name": "home"
+              },
+              {
+                "type": "icon",
+                "name": "search",
+                "color": "#1A73E8"
+              },
+              {
+                "type": "icon",
+                "name": "favorite",
+                "size": 32,
+                "color": "#E91E63"
+              },
+              {
+                "type": "icon",
+                "name": "settings",
+                "size": 40,
+                "color": "#9C27B0"
+              },
+              {
+                "type": "icon",
+                "name": "this_does_not_exist"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_card",
+        "title": "card 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "card 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点击下面卡片应有水波纹并 toast",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "card",
+            "elevation": 4,
+            "borderRadius": 16,
+            "padding": 16,
+            "onTap": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "卡片被点"
+              }
+            },
+            "children": [
+              {
+                "type": "text",
+                "value": "可点击卡片",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "elevation=4 圆角=16"
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "elevation": 0,
+            "color": "#F5F5F5",
+            "children": [
+              {
+                "type": "text",
+                "value": "扁平卡片（elevation=0）"
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "row",
+            "padding": 12,
+            "children": [
+              {
+                "type": "icon",
+                "name": "info",
+                "color": "#1A73E8"
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "text",
+                "value": "row 布局卡片"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_checkbox",
+        "title": "checkbox 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "checkbox 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "勾选后下方文字显示 true/false",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "checkbox",
+            "bind": "global.t_checkbox_value",
+            "label": "我同意（点 label 也能切）"
+          },
+          {
+            "type": "checkbox",
+            "label": "已禁用",
+            "disabled": true
+          },
+          {
+            "type": "text",
+            "value": "状态: {{ global.t_checkbox_value }}"
+          }
+        ]
+      },
+      {
+        "id": "t_expanded",
+        "title": "expanded 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "expanded 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "中间 input 应自动撑开占满剩余宽度",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 8,
+            "color": "#F5F5F5",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "icon",
+                "name": "search"
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "input",
+                  "placeholder": "搜索…",
+                  "bind": "global.t_input_value"
+                }
+              },
+              {
+                "type": "button",
+                "label": "搜索",
+                "variant": "text"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_loading",
+        "title": "loading 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "loading 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "第一个不确定（无限旋转），第二个确定（40%）",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "loading",
+            "kind": "circular",
+            "size": 40
+          },
+          {
+            "type": "loading",
+            "kind": "circular",
+            "size": 40,
+            "value": "{{ global.t_loading_progress }}",
+            "label": "已下载 40%"
+          },
+          {
+            "type": "loading",
+            "kind": "linear",
+            "size": 240
+          },
+          {
+            "type": "loading",
+            "kind": "linear",
+            "size": 240,
+            "value": "{{ global.t_loading_progress }}",
+            "color": "#00B894"
+          },
+          {
+            "type": "button",
+            "label": "进度 +0.1",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_loading_progress",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.t_loading_progress"
+                    },
+                    0.1
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_dropdown",
+        "title": "dropdown 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "dropdown 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "两种 options 格式都应能选择并写入 bind",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "dropdown",
+            "label": "性别（对象 options）",
+            "bind": "global.t_dropdown_value",
+            "prefixIcon": "person",
+            "options": [
+              {
+                "label": "男",
+                "value": "male"
+              },
+              {
+                "label": "女",
+                "value": "female"
+              },
+              {
+                "label": "其他",
+                "value": "other"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "选中: 「{{ global.t_dropdown_value }}」"
+          },
+          {
+            "type": "dropdown",
+            "label": "字符串 options",
+            "bind": "global.t_dropdown_value",
+            "options": [
+              "选项 A",
+              "选项 B",
+              "选项 C"
+            ]
+          },
+          {
+            "type": "button",
+            "label": "外部清空 bind（验证响应式）",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_dropdown_value",
+                "value": ""
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_radio",
+        "title": "radio 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "radio 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "选中应高亮并写入 bind",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "layout=column:"
+          },
+          {
+            "type": "radio",
+            "bind": "global.t_radio_value",
+            "options": [
+              {
+                "label": "S 小",
+                "value": "S"
+              },
+              {
+                "label": "M 中",
+                "value": "M"
+              },
+              {
+                "label": "L 大",
+                "value": "L"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "layout=row:"
+          },
+          {
+            "type": "radio",
+            "bind": "global.t_radio_value",
+            "layout": "row",
+            "color": "#E91E63",
+            "options": [
+              {
+                "label": "红",
+                "value": "red"
+              },
+              {
+                "label": "绿",
+                "value": "green"
+              },
+              {
+                "label": "蓝",
+                "value": "blue"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "当前: {{ global.t_radio_value }}"
+          }
+        ]
+      },
+      {
+        "id": "t_wrap",
+        "title": "wrap 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "wrap 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "窗口窄时按钮自动换行",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "wrap",
+            "spacing": 8,
+            "runSpacing": 8,
+            "children": [
+              {
+                "type": "button",
+                "label": "Flutter",
+                "variant": "outlined"
+              },
+              {
+                "type": "button",
+                "label": "Dart",
+                "variant": "outlined"
+              },
+              {
+                "type": "button",
+                "label": "JSON-DSL",
+                "variant": "outlined"
+              },
+              {
+                "type": "button",
+                "label": "Server-Driven UI",
+                "variant": "outlined"
+              },
+              {
+                "type": "button",
+                "label": "Material 3",
+                "variant": "outlined"
+              },
+              {
+                "type": "button",
+                "label": "RiverPod",
+                "variant": "outlined"
+              },
+              {
+                "type": "button",
+                "label": "Drift",
+                "variant": "outlined"
+              },
+              {
+                "type": "button",
+                "label": "Jsonlogic",
+                "variant": "outlined"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_grid",
+        "title": "grid 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "grid 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "3 列网格，9 个卡片；点击应 toast 当前 index",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "grid",
+            "source": [
+              {
+                "i": 0
+              },
+              {
+                "i": 1
+              },
+              {
+                "i": 2
+              },
+              {
+                "i": 3
+              },
+              {
+                "i": 4
+              },
+              {
+                "i": 5
+              },
+              {
+                "i": 6
+              },
+              {
+                "i": 7
+              },
+              {
+                "i": 8
+              }
+            ],
+            "crossAxisCount": 3,
+            "spacing": 8,
+            "shrinkWrap": true,
+            "childAspectRatio": 1.0,
+            "item_template": {
+              "type": "card",
+              "onTap": {
+                "type": "call",
+                "call": "@show_toast",
+                "args": {
+                  "message": "点了第 {{ loop.index }} 项"
+                }
+              },
+              "children": [
+                {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "#{{ loop.item.i }}",
+                    "style": {
+                      "fontSize": 24
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_progress",
+        "title": "progress 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "progress 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "拖拉下方按钮调整进度，进度条同步",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "progress",
+            "value": "{{ global.t_loading_progress }}",
+            "color": "#00B894",
+            "height": 8,
+            "borderRadius": 4
+          },
+          {
+            "type": "text",
+            "value": "进度: {{ global.t_loading_progress }}"
+          },
+          {
+            "type": "button",
+            "label": "重置 0",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_loading_progress",
+                "value": 0
+              }
+            }
+          },
+          {
+            "type": "progress",
+            "color": "#1A73E8"
+          },
+          {
+            "type": "text",
+            "value": "（上一个无 value，应不停滚动）"
+          }
+        ]
+      },
+      {
+        "id": "t_padding",
+        "title": "padding 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "padding 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "不同 padding 形式，下方文字应明显内陷",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "color": "#FFEBEE",
+            "children": [
+              {
+                "type": "padding",
+                "padding": 24,
+                "child": {
+                  "type": "text",
+                  "value": "padding=24 (all)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "color": "#E3F2FD",
+            "children": [
+              {
+                "type": "padding",
+                "paddingH": 32,
+                "paddingV": 8,
+                "child": {
+                  "type": "text",
+                  "value": "paddingH=32 paddingV=8"
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "color": "#FFF9C4",
+            "children": [
+              {
+                "type": "padding",
+                "paddingTop": 24,
+                "paddingBottom": 4,
+                "paddingLeft": 16,
+                "child": {
+                  "type": "text",
+                  "value": "单边自定"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_center",
+        "title": "center 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "center 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "container",
+            "color": "#E1BEE7",
+            "children": [
+              {
+                "type": "padding",
+                "padding": 12,
+                "child": {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "我居中"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_align",
+        "title": "align 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "align 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "下方容器内的 icon 应在右下角",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "color": "#FFF3E0",
+            "children": [
+              {
+                "type": "padding",
+                "padding": 0,
+                "child": {
+                  "type": "container",
+                  "padding": 32,
+                  "children": [
+                    {
+                      "type": "align",
+                      "alignment": "bottomRight",
+                      "child": {
+                        "type": "icon",
+                        "name": "favorite",
+                        "color": "#E91E63",
+                        "size": 32
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_flexible",
+        "title": "flexible 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "flexible 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "loose 时子项可比剩余空间小；tight 强制填满",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 8,
+            "color": "#F5F5F5",
+            "children": [
+              {
+                "type": "icon",
+                "name": "search"
+              },
+              {
+                "type": "flexible",
+                "fit": "loose",
+                "child": {
+                  "type": "text",
+                  "value": "fit=loose 短文字"
+                }
+              },
+              {
+                "type": "icon",
+                "name": "send"
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 8,
+            "color": "#F5F5F5",
+            "children": [
+              {
+                "type": "icon",
+                "name": "search"
+              },
+              {
+                "type": "flexible",
+                "fit": "tight",
+                "child": {
+                  "type": "container",
+                  "color": "#FFCDD2",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "fit=tight 撑满"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "icon",
+                "name": "send"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_stack",
+        "title": "stack 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "stack 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "底图 + 右上角红心 + 左下角蓝标",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "stack",
+            "alignment": "topStart",
+            "children": [
+              {
+                "type": "container",
+                "color": "#E0E0E0",
+                "children": [
+                  {
+                    "type": "padding",
+                    "padding": 60,
+                    "child": {
+                      "type": "text",
+                      "value": "底层 200×120"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "icon",
+                "name": "favorite",
+                "color": "#E91E63",
+                "size": 28,
+                "position": {
+                  "type": "absolute",
+                  "top": 8,
+                  "right": 8
+                }
+              },
+              {
+                "type": "icon",
+                "name": "info",
+                "color": "#1A73E8",
+                "size": 28,
+                "position": {
+                  "type": "absolute",
+                  "bottom": 8,
+                  "left": 8
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_slider",
+        "title": "slider 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "slider 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "拖动滑块，下方显示当前值",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "slider",
+            "bind": "global.t_slider_value",
+            "min": 0,
+            "max": 100,
+            "divisions": 10,
+            "color": "#1A73E8"
+          },
+          {
+            "type": "text",
+            "value": "当前值: {{ global.t_slider_value }}"
+          }
+        ]
+      },
+      {
+        "id": "t_date_picker",
+        "title": "date_picker 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "date_picker 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点输入框弹日期 picker，选完显示在 bind",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "date_picker",
+            "bind": "global.t_date_value",
+            "label": "选择日期",
+            "placeholder": "YYYY-MM-DD"
+          },
+          {
+            "type": "text",
+            "value": "选中: {{ global.t_date_value }}"
+          }
+        ]
+      },
+      {
+        "id": "t_time_picker",
+        "title": "time_picker 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "time_picker 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点输入框弹时间 picker",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "time_picker",
+            "bind": "global.t_time_value",
+            "label": "选择时间",
+            "placeholder": "HH:mm"
+          },
+          {
+            "type": "text",
+            "value": "选中: {{ global.t_time_value }}"
+          }
+        ]
+      },
+      {
+        "id": "t_tooltip",
+        "title": "tooltip 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "tooltip 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "长按下方 icon 应显示气泡提示",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "tooltip",
+            "message": "这是一个 tooltip 示例",
+            "child": {
+              "type": "icon",
+              "name": "info",
+              "size": 32,
+              "color": "#1A73E8"
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_chip",
+        "title": "chip 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "chip 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "三种 variant；choice 应能反复选中/取消",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "chip 普通（deletable）:"
+          },
+          {
+            "type": "wrap",
+            "spacing": 8,
+            "children": [
+              {
+                "type": "chip",
+                "label": "Flutter",
+                "icon": "tag",
+                "deletable": true,
+                "action": {
+                  "type": "call",
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "Flutter chip 删除被点"
+                  }
+                }
+              },
+              {
+                "type": "chip",
+                "label": "Dart",
+                "color": "#1A73E8"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "chip choice（点击切换 bind）:"
+          },
+          {
+            "type": "chip",
+            "label": "收藏（value=star）",
+            "variant": "choice",
+            "icon": "favorite",
+            "color": "#E91E63",
+            "bind": "global.t_chip_choice",
+            "value": "star"
+          },
+          {
+            "type": "text",
+            "value": "选中值: {{ global.t_chip_choice }}（取消应回到 null）"
+          },
+          {
+            "type": "text",
+            "value": "chip filter（多选 + bind 是 List）:"
+          },
+          {
+            "type": "wrap",
+            "spacing": 8,
+            "children": [
+              {
+                "type": "chip",
+                "label": "前端",
+                "variant": "filter",
+                "bind": "global.t_chip_filter",
+                "value": "frontend"
+              },
+              {
+                "type": "chip",
+                "label": "后端",
+                "variant": "filter",
+                "bind": "global.t_chip_filter",
+                "value": "backend"
+              },
+              {
+                "type": "chip",
+                "label": "DevOps",
+                "variant": "filter",
+                "bind": "global.t_chip_filter",
+                "value": "devops"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "filter 选中: {{ global.t_chip_filter }}"
+          }
+        ]
+      },
+      {
+        "id": "t_badge",
+        "title": "badge 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "badge 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "count=0 应隐藏；>99 应显示 99+",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "badge",
+                "count": "{{ global.t_badge_count }}",
+                "child": {
+                  "type": "icon",
+                  "name": "notification",
+                  "size": 32
+                }
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "badge",
+                "label": "NEW",
+                "color": "#E91E63",
+                "child": {
+                  "type": "icon",
+                  "name": "send",
+                  "size": 32
+                }
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "badge",
+                "count": 150,
+                "child": {
+                  "type": "icon",
+                  "name": "email",
+                  "size": 32
+                }
+              }
+            ]
+          },
+          {
+            "type": "button",
+            "label": "count = 0（应隐藏）",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_badge_count",
+                "value": 0
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "count +1",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_badge_count",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.t_badge_count"
+                    },
+                    1
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_avatar",
+        "title": "avatar 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "avatar 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "第 1/2 应显示头像；第 3 是无效 URL，应自动显示文字 fallback",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "avatar",
+                "url": "https://api.dicebear.com/9.x/avataaars/png?seed=alice",
+                "size": 56
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "avatar",
+                "text": "张三",
+                "size": 56
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "avatar",
+                "text": "Bob",
+                "size": 56,
+                "color": "#1A73E8"
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "avatar",
+                "url": "https://invalid.example.invalid/x.png",
+                "text": "失败回退",
+                "size": 56
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_rich_text",
+        "title": "rich_text 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "rich_text 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "rich_text",
+            "spans": [
+              {
+                "text": "总计 "
+              },
+              {
+                "text": "42",
+                "style": {
+                  "fontWeight": "bold",
+                  "color": "#E91E63",
+                  "fontSize": 18
+                }
+              },
+              {
+                "text": " 条结果，其中 "
+              },
+              {
+                "text": "8",
+                "style": {
+                  "fontWeight": "bold",
+                  "color": "#1A73E8"
+                }
+              },
+              {
+                "text": " 条未读"
+              }
+            ]
+          },
+          {
+            "type": "rich_text",
+            "style": {
+              "fontSize": 16
+            },
+            "spans": [
+              {
+                "text": "斜体 ",
+                "style": {
+                  "fontStyle": "italic"
+                }
+              },
+              {
+                "text": "下划线 ",
+                "style": {
+                  "decoration": "underline"
+                }
+              },
+              {
+                "text": "删除线 ",
+                "style": {
+                  "decoration": "lineThrough"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_inkwell",
+        "title": "inkwell 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "inkwell 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点 / 长按 / 双击 应分别触发不同 toast",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "inkwell",
+            "borderRadius": 12,
+            "onTap": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "tap"
+              }
+            },
+            "onLongPress": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "long press"
+              }
+            },
+            "onDoubleTap": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "double tap"
+              }
+            },
+            "child": {
+              "type": "container",
+              "padding": 24,
+              "color": "#E1BEE7",
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "点 / 长按 / 双击 我"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_gesture",
+        "title": "gesture_detector",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "gesture_detector 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "在大方块里向上下左右快速滑动",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "gesture_detector",
+            "onSwipeLeft": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_gesture_log",
+                "value": "← 左滑"
+              }
+            },
+            "onSwipeRight": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_gesture_log",
+                "value": "→ 右滑"
+              }
+            },
+            "onSwipeUp": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_gesture_log",
+                "value": "↑ 上滑"
+              }
+            },
+            "onSwipeDown": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_gesture_log",
+                "value": "↓ 下滑"
+              }
+            },
+            "child": {
+              "type": "container",
+              "padding": 60,
+              "color": "#FFCDD2",
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "在我身上快速滑动",
+                    "style": {
+                      "fontSize": 16
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "text",
+            "value": "上次手势: {{ global.t_gesture_log }}"
+          }
+        ]
+      },
+      {
+        "id": "t_dismissible",
+        "title": "dismissible 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "dismissible 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "向左滑动每一项应删除（未确认实现，showcase 行为）",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "list",
+            "source": "{{ global.t_dismiss_items }}",
+            "item_template": {
+              "type": "dismissible",
+              "key": "{{ loop.item.id }}",
+              "direction": "rightToLeft",
+              "onDismissed": {
+                "type": "call",
+                "call": "@list_remove_at",
+                "args": {
+                  "var": "global.t_dismiss_items",
+                  "index": "{{ loop.index }}"
+                }
+              },
+              "child": {
+                "type": "container",
+                "padding": 16,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "#{{ loop.item.id }} {{ loop.item.text }}"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "重置 3 项",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_dismiss_items",
+                "value": [
+                  {
+                    "id": 1,
+                    "text": "向左滑我删除"
+                  },
+                  {
+                    "id": 2,
+                    "text": "向左滑我删除"
+                  },
+                  {
+                    "id": 3,
+                    "text": "向左滑我删除"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_draggable",
+        "title": "draggable 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "draggable 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "按住下方方块拖动，应跟手；松开归位",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "draggable",
+            "data": "drag-payload",
+            "feedback": {
+              "type": "container",
+              "padding": 24,
+              "color": "#FFCC80",
+              "borderRadius": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "value": "拖拽中…"
+                }
+              ]
+            },
+            "child": {
+              "type": "container",
+              "padding": 24,
+              "color": "#FFE0B2",
+              "borderRadius": 8,
+              "children": [
+                {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "按住我拖动"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "text",
+            "value": "（DragTarget widget 框架未单独提供，仅验证拖拽视觉与回调）",
+            "style": {
+              "fontSize": 12,
+              "color": "#666666"
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_refresh",
+        "title": "refresh 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "refresh 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "下拉应触发 onRefresh，刷新次数 +1",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "刷新次数: {{ global.t_refresh_count }}"
+          },
+          {
+            "type": "refresh",
+            "onRefresh": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_refresh_count",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.t_refresh_count"
+                    },
+                    1
+                  ]
+                }
+              }
+            },
+            "child": {
+              "type": "list",
+              "source": [
+                {
+                  "x": 1
+                },
+                {
+                  "x": 2
+                },
+                {
+                  "x": 3
+                },
+                {
+                  "x": 4
+                },
+                {
+                  "x": 5
+                }
+              ],
+              "item_template": {
+                "type": "container",
+                "padding": 12,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Item {{ loop.index }}"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_tab_view",
+        "title": "tab_view 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "tab_view 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "3 个 tab，切换时 onTabChange 计数 +1",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "切换次数: {{ global.t_tab_change_count }}"
+          },
+          {
+            "type": "tab_view",
+            "height": 220,
+            "onTabChange": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_tab_change_count",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.t_tab_change_count"
+                    },
+                    1
+                  ]
+                }
+              }
+            },
+            "tabs": [
+              {
+                "label": "首页",
+                "icon": "home",
+                "content": {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "首页内容"
+                  }
+                }
+              },
+              {
+                "label": "消息",
+                "icon": "email",
+                "content": {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "消息内容"
+                  }
+                }
+              },
+              {
+                "label": "我的",
+                "icon": "person",
+                "content": {
+                  "type": "center",
+                  "child": {
+                    "type": "text",
+                    "value": "我的内容"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_app_bar",
+        "title": "app_bar 独立 widget",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "app_bar 独立 widget",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "下方蓝条是 app_bar widget；点 actions 图标 toast",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "app_bar",
+            "title": "示例 AppBar",
+            "backgroundColor": "#1A73E8",
+            "color": "#FFFFFF",
+            "actions": [
+              {
+                "icon": "search",
+                "action": {
+                  "type": "call",
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "search 被点"
+                  }
+                }
+              },
+              {
+                "icon": "more_vert",
+                "action": {
+                  "type": "call",
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "menu 被点"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "（屏幕顶部的 AppBar 是 screen 自带的，本 widget 是嵌入式的）"
+          }
+        ]
+      },
+      {
+        "id": "t_webview",
+        "title": "webview 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "webview 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "应加载 example.com 的官方测试页",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "webview",
+            "url": "https://example.com",
+            "height": 360
+          }
+        ]
+      },
+      {
+        "id": "t_qr_code",
+        "title": "qr_code 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "qr_code 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "应渲染清晰的二维码，扫码后内容是 URL",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "qr_code",
+            "data": "https://github.com/dapangyu-fish/ai-app",
+            "size": 220,
+            "color": "#000000"
+          },
+          {
+            "type": "text",
+            "value": "扫码内容: github 仓库链接"
+          }
+        ]
+      },
+      {
+        "id": "t_chart",
+        "title": "chart 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "chart 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "3 种 kind 应都正确渲染",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "line:"
+          },
+          {
+            "type": "chart",
+            "kind": "line",
+            "height": 180,
+            "color": "#1A73E8",
+            "data": [
+              {
+                "x": 0,
+                "y": 1
+              },
+              {
+                "x": 1,
+                "y": 3
+              },
+              {
+                "x": 2,
+                "y": 2
+              },
+              {
+                "x": 3,
+                "y": 5
+              },
+              {
+                "x": 4,
+                "y": 4
+              },
+              {
+                "x": 5,
+                "y": 6
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "bar:"
+          },
+          {
+            "type": "chart",
+            "kind": "bar",
+            "height": 180,
+            "color": "#00B894",
+            "data": [
+              {
+                "label": "Mon",
+                "value": 12
+              },
+              {
+                "label": "Tue",
+                "value": 18
+              },
+              {
+                "label": "Wed",
+                "value": 7
+              },
+              {
+                "label": "Thu",
+                "value": 22
+              },
+              {
+                "label": "Fri",
+                "value": 15
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "pie:"
+          },
+          {
+            "type": "chart",
+            "kind": "pie",
+            "height": 220,
+            "data": [
+              {
+                "label": "前端",
+                "value": 40
+              },
+              {
+                "label": "后端",
+                "value": 35
+              },
+              {
+                "label": "DevOps",
+                "value": 25
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_map",
+        "title": "map 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "container",
+            "padding": 16,
+            "color": "#FFF3CD",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "⚠️ 开发中 / 占位",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "map 基于 flutter_map + OpenStreetMap，需联网拉 tile，在不同平台/网络下行为差别大；本套件只列入口。如需测试，可手工在此 screen 加 {type:'map', latitude:39.9, longitude:116.4, zoom:13}。",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#856404"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_camera",
+        "title": "camera 控件",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "container",
+            "padding": 16,
+            "color": "#FFF3CD",
+            "borderRadius": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "⚠️ 开发中 / 占位",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "camera 控件需要 Android Manifest / iOS Info.plist 配置相机权限，且依赖物理摄像头。本套件只列入口。若设备已配置权限，可在此 screen 加 {type:'camera', height:300} 测试。",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#856404"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_screen_layout",
+        "title": "screen.layout=stack",
+        "layout": "stack",
+        "padding": 0,
+        "children": [
+          {
+            "type": "container",
+            "color": "#E8EAF6",
+            "children": [
+              {
+                "type": "padding",
+                "padding": 16,
+                "child": {
+                  "type": "text",
+                  "value": "screen.layout=stack 时，子项默认堆叠；可用 position.type=absolute 精确定位。"
+                }
+              }
+            ]
+          },
+          {
+            "type": "button",
+            "label": "← 返回",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            },
+            "position": {
+              "type": "absolute",
+              "top": 8,
+              "left": 8
+            }
+          },
+          {
+            "type": "container",
+            "color": "#1A73E8",
+            "borderRadius": 28,
+            "children": [
+              {
+                "type": "padding",
+                "padding": 16,
+                "child": {
+                  "type": "icon",
+                  "name": "add",
+                  "color": "#FFFFFF",
+                  "size": 24
+                }
+              }
+            ],
+            "position": {
+              "type": "absolute",
+              "bottom": 24,
+              "right": 24
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_screen_tabs",
+        "title": "screen.tabs",
+        "tabs": [
+          {
+            "label": "首页",
+            "icon": "home",
+            "children": [
+              {
+                "type": "button",
+                "label": "← 返回测试列表",
+                "variant": "text",
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
+              },
+              {
+                "type": "text",
+                "value": "Tab 1: 首页",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "底部导航栏的 3 个 tab，切换时 body 整个换",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#666666"
+                }
+              },
+              {
+                "type": "text",
+                "value": "首页内容"
+              }
+            ]
+          },
+          {
+            "label": "消息",
+            "icon": "email",
+            "children": [
+              {
+                "type": "button",
+                "label": "← 返回测试列表",
+                "variant": "text",
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
+              },
+              {
+                "type": "text",
+                "value": "Tab 2: 消息",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "消息内容"
+              },
+              {
+                "type": "list",
+                "source": [
+                  {
+                    "id": 1,
+                    "msg": "消息 1"
+                  },
+                  {
+                    "id": 2,
+                    "msg": "消息 2"
+                  }
+                ],
+                "item_template": {
+                  "type": "card",
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.msg }}"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "label": "我的",
+            "icon": "person",
+            "children": [
+              {
+                "type": "button",
+                "label": "← 返回测试列表",
+                "variant": "text",
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                }
+              },
+              {
+                "type": "text",
+                "value": "Tab 3: 我的",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "我的页面"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_screen_appbar",
+        "title": "screen.appBar 测试（应被覆写）",
+        "appBar": {
+          "title": "自定义 AppBar",
+          "centerTitle": true,
+          "backgroundColor": "#6C5CE7",
+          "color": "#FFFFFF",
+          "leading": {
+            "icon": "arrow_back",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          "actions": [
+            {
+              "icon": "search",
+              "action": {
+                "type": "call",
+                "call": "@show_toast",
+                "args": {
+                  "message": "search 被点"
+                }
+              }
+            },
+            {
+              "icon": "more_vert",
+              "action": {
+                "type": "call",
+                "call": "@show_toast",
+                "args": {
+                  "message": "menu 被点"
+                }
+              }
+            }
+          ]
+        },
+        "padding": 16,
+        "children": [
+          {
+            "type": "text",
+            "value": "screen.appBar",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "顶部应是紫色 AppBar，标题居中，右侧 2 个 icon 按钮",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "标题应是「自定义 AppBar」而不是默认的 screen.title。"
+          }
+        ]
+      },
+      {
+        "id": "t_screen_drawer",
+        "title": "screen.drawer 测试",
+        "appBar": {
+          "title": "drawer 测试 — 点左上角菜单"
+        },
+        "drawer": {
+          "header": {
+            "type": "container",
+            "padding": 16,
+            "color": "#6C5CE7",
+            "children": [
+              {
+                "type": "text",
+                "value": "侧边抽屉",
+                "style": {
+                  "fontSize": 22,
+                  "color": "#FFFFFF",
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "demo header",
+                "style": {
+                  "color": "#FFFFFF"
+                }
+              }
+            ]
+          },
+          "items": [
+            {
+              "icon": "home",
+              "label": "首页",
+              "action": {
+                "type": "call",
+                "call": "@show_toast",
+                "args": {
+                  "message": "首页 item 被点"
+                }
+              }
+            },
+            {
+              "icon": "settings",
+              "label": "设置",
+              "action": {
+                "type": "call",
+                "call": "@show_toast",
+                "args": {
+                  "message": "设置 item 被点"
+                }
+              }
+            },
+            {
+              "icon": "logout",
+              "label": "退出",
+              "action": {
+                "type": "navigate",
+                "screen": "home"
+              }
+            }
+          ]
+        },
+        "padding": 16,
+        "children": [
+          {
+            "type": "text",
+            "value": "screen.drawer",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点左上角 ☰ 图标或从左边缘滑动应弹出抽屉",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_template",
+        "title": "模板",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ }} 模板",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "展示不同写法的解析结果",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "纯插值: {{ global.t_tpl_user.name }}"
+          },
+          {
+            "type": "text",
+            "value": "嵌套路径: 城市={{ global.t_tpl_user.addr.city }}"
+          },
+          {
+            "type": "text",
+            "value": "数字插值: 年龄={{ global.t_tpl_user.age }} 岁"
+          },
+          {
+            "type": "text",
+            "value": "混合: {{ global.t_tpl_user.name }} 来自 {{ global.t_tpl_user.addr.city }}"
+          }
+        ]
+      },
+      {
+        "id": "t_jl_std",
+        "title": "jsonlogic 标准",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "jsonlogic 标准 op",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "a={{ global.t_jl_a }}, b={{ global.t_jl_b }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "a + b → set result",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.t_jl_a"
+                    },
+                    {
+                      "var": "global.t_jl_b"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "a > b ? '大' : '小'",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "if": [
+                    {
+                      ">": [
+                        {
+                          "var": "global.t_jl_a"
+                        },
+                        {
+                          "var": "global.t_jl_b"
+                        }
+                      ]
+                    },
+                    "大",
+                    "小"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "and/or 复合",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "and": [
+                    {
+                      ">": [
+                        {
+                          "var": "global.t_jl_a"
+                        },
+                        0
+                      ]
+                    },
+                    {
+                      "<": [
+                        {
+                          "var": "global.t_jl_b"
+                        },
+                        100
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_jl_result }}"
+          }
+        ]
+      },
+      {
+        "id": "t_jl_custom",
+        "title": "jsonlogic 自定义",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "自定义 op",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "str: '{{ global.t_jl_str }}', list: {{ global.t_jl_list }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "str_upper",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "str_upper": [
+                    {
+                      "var": "global.t_jl_str"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "str_len",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "str_len": [
+                    {
+                      "var": "global.t_jl_str"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "length(list)",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "length": [
+                    {
+                      "var": "global.t_jl_list"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "at(list, 2)",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "at": [
+                    {
+                      "var": "global.t_jl_list"
+                    },
+                    2
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "sort(list)",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "sort": [
+                    {
+                      "var": "global.t_jl_list"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "abs(-7)",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_jl_result",
+                "value": {
+                  "abs": [
+                    -7
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_jl_result }}"
+          }
+        ]
+      },
+      {
+        "id": "t_cf_if",
+        "title": "@if",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@if",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "n = {{ global.t_cf_n }}；点按钮根据 n>5 走不同分支",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "运行 @if",
+            "action": {
+              "type": "call",
+              "call": "@if",
+              "args": {
+                "condition": {
+                  ">": [
+                    {
+                      "var": "global.t_cf_n"
+                    },
+                    5
+                  ]
+                },
+                "then": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.t_cf_log",
+                      "value": "n > 5 走 then"
+                    }
+                  }
+                ],
+                "else": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.t_cf_log",
+                      "value": "n <= 5 走 else"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "n +3",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_cf_n",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.t_cf_n"
+                    },
+                    3
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "log: {{ global.t_cf_log }}"
+          }
+        ]
+      },
+      {
+        "id": "t_cf_while",
+        "title": "@while",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@while",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点按钮：在 n<10 时自加 1，循环退出后 log=最终 n",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "n=0 → while +1 直到 10",
+            "action": {
+              "type": "call",
+              "call": "@while",
+              "args": {
+                "condition": {
+                  "<": [
+                    {
+                      "var": "global.t_cf_n"
+                    },
+                    10
+                  ]
+                },
+                "max_iterations": 50,
+                "body": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.t_cf_n",
+                      "value": {
+                        "+": [
+                          {
+                            "var": "global.t_cf_n"
+                          },
+                          1
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "重置 n=0",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_cf_n",
+                "value": 0
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "n = {{ global.t_cf_n }}"
+          }
+        ]
+      },
+      {
+        "id": "t_cf_foreach",
+        "title": "@for_each",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@for_each",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "遍历 [10,20,30]，把每项追加到 log",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "运行 @for_each",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_cf_log",
+                "value": ""
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "再加 for_each",
+            "action": {
+              "type": "call",
+              "call": "@for_each",
+              "args": {
+                "source": [
+                  10,
+                  20,
+                  30
+                ],
+                "body": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.t_cf_log",
+                      "value": {
+                        "cat": [
+                          {
+                            "var": "global.t_cf_log"
+                          },
+                          " #",
+                          {
+                            "var": "loop.index"
+                          },
+                          ":",
+                          {
+                            "var": "loop.item"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "log: {{ global.t_cf_log }}"
+          }
+        ]
+      },
+      {
+        "id": "t_cf_loopbynum",
+        "title": "@loop_by_num",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@loop_by_num",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "loop 5 次 → 累加 n",
+            "action": {
+              "type": "call",
+              "call": "@loop_by_num",
+              "args": {
+                "count": 5,
+                "body": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.t_cf_n",
+                      "value": {
+                        "+": [
+                          {
+                            "var": "global.t_cf_n"
+                          },
+                          1
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "n = {{ global.t_cf_n }}（应每次 +5）"
+          },
+          {
+            "type": "button",
+            "label": "重置 n=0",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_cf_n",
+                "value": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_cf_try",
+        "title": "@try_catch",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@try_catch",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "try 里故意访问坏 URL，catch 块写入错误信息",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "运行 @try_catch",
+            "action": {
+              "type": "call",
+              "call": "@try_catch",
+              "args": {
+                "try": [
+                  {
+                    "call": "@http_get",
+                    "args": {
+                      "url": "https://invalid.example.invalid/x"
+                    }
+                  }
+                ],
+                "catch": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.t_cf_log",
+                      "value": {
+                        "cat": [
+                          "catch: ",
+                          {
+                            "var": "global.cf_err"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                "error_var": "global.cf_err"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "log: {{ global.t_cf_log }}"
+          },
+          {
+            "type": "text",
+            "value": "err: {{ global.cf_err }}"
+          }
+        ]
+      },
+      {
+        "id": "t_cf_parallel",
+        "title": "@parallel",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@parallel",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "3 个 @delay 并行（应总耗时 ≈ max 而非 sum）",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "运行 @parallel",
+            "action": {
+              "type": "call",
+              "call": "@parallel",
+              "args": {
+                "steps": [
+                  {
+                    "call": "@delay",
+                    "args": {
+                      "ms": 500
+                    }
+                  },
+                  {
+                    "call": "@delay",
+                    "args": {
+                      "ms": 800
+                    }
+                  },
+                  {
+                    "call": "@delay",
+                    "args": {
+                      "ms": 600
+                    }
+                  },
+                  {
+                    "call": "@show_toast",
+                    "args": {
+                      "message": "并行完成"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "点击后约 800ms 出 toast；如串行则约 1900ms+",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_cf_delay",
+        "title": "@delay",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@delay",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "delay 1500ms → toast",
+            "action": {
+              "type": "call",
+              "call": "@global.t_cf_delay_run",
+              "args": {}
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_data_set",
+        "title": "@set",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@set",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "@set 的 value 可以是字面量、模板、jsonlogic 表达式",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "set 字符串",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_data_set_str",
+                "value": "hello"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "set 数字",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_data_set_num",
+                "value": 42
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "set jsonlogic 表达式 (5+3)",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.t_data_set_num",
+                "value": {
+                  "+": [
+                    5,
+                    3
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "str: 「{{ global.t_data_set_str }}」"
+          },
+          {
+            "type": "text",
+            "value": "num: {{ global.t_data_set_num }}"
+          }
+        ]
+      },
+      {
+        "id": "t_data_http",
+        "title": "@http_*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@http_get / @http_post",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点按钮请求 httpbin.org，结果写到 resp",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "GET httpbin.org/get",
+            "action": {
+              "type": "call",
+              "call": "@global.t_http_get_run",
+              "args": {}
+            }
+          },
+          {
+            "type": "button",
+            "label": "POST httpbin.org/post",
+            "action": {
+              "type": "call",
+              "call": "@global.t_http_post_run",
+              "args": {}
+            }
+          },
+          {
+            "type": "text",
+            "value": "resp (前 200 字):"
+          },
+          {
+            "type": "text",
+            "value": "{{ global.t_data_http_resp }}",
+            "style": {
+              "fontSize": 11,
+              "color": "#666666"
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_data_json",
+        "title": "@json_*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@json_decode / @json_encode",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "encode {a:1, b:[2,3]}",
+            "action": {
+              "type": "call",
+              "call": "@json_encode",
+              "args": {
+                "value": {
+                  "a": 1,
+                  "b": [
+                    2,
+                    3
+                  ]
+                }
+              },
+              "assign": "global.t_data_json_str"
+            }
+          },
+          {
+            "type": "text",
+            "value": "encoded: {{ global.t_data_json_str }}"
+          },
+          {
+            "type": "button",
+            "label": "decode 上面的字符串再 encode",
+            "action": {
+              "type": "call",
+              "call": "@global.t_json_roundtrip",
+              "args": {}
+            }
+          },
+          {
+            "type": "text",
+            "value": "round-tripped: {{ global.t_data_json_str }}"
+          }
+        ]
+      },
+      {
+        "id": "t_data_str",
+        "title": "@str_*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@str_* 系列",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "结果写入下方",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "wrap",
+            "spacing": 8,
+            "children": [
+              {
+                "type": "button",
+                "label": "upper",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_upper",
+                  "args": {
+                    "value": "hello world"
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              },
+              {
+                "type": "button",
+                "label": "lower",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_lower",
+                  "args": {
+                    "value": "HELLO WORLD"
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              },
+              {
+                "type": "button",
+                "label": "trim",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_trim",
+                  "args": {
+                    "value": "   hi   "
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              },
+              {
+                "type": "button",
+                "label": "replace",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_replace",
+                  "args": {
+                    "value": "hello world",
+                    "from": "world",
+                    "to": "Flutter"
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              },
+              {
+                "type": "button",
+                "label": "repeat",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_repeat",
+                  "args": {
+                    "value": "ab",
+                    "count": 4
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              },
+              {
+                "type": "button",
+                "label": "pad left",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_pad",
+                  "args": {
+                    "value": "5",
+                    "length": 4,
+                    "pad": "0",
+                    "direction": "left"
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              },
+              {
+                "type": "button",
+                "label": "mask",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_mask",
+                  "args": {
+                    "value": "13800138000",
+                    "start": 3,
+                    "end": 7,
+                    "mask": "*"
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              },
+              {
+                "type": "button",
+                "label": "between",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@str_between",
+                  "args": {
+                    "value": "<title>Hi</title>",
+                    "start": "<title>",
+                    "end": "</title>"
+                  },
+                  "assign": "global.t_data_str_result"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "result: 「{{ global.t_data_str_result }}」"
+          }
+        ]
+      },
+      {
+        "id": "t_data_list_actions",
+        "title": "@list_*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@list_* 系列",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "list: {{ global.t_data_list }}"
+          },
+          {
+            "type": "wrap",
+            "spacing": 8,
+            "children": [
+              {
+                "type": "button",
+                "label": "add 99",
+                "action": {
+                  "type": "call",
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.t_data_list",
+                    "item": 99
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "remove_at 0",
+                "action": {
+                  "type": "call",
+                  "call": "@list_remove_at",
+                  "args": {
+                    "var": "global.t_data_list",
+                    "index": 0
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "remove value=1（新）",
+                "action": {
+                  "type": "call",
+                  "call": "@list_remove",
+                  "args": {
+                    "var": "global.t_data_list",
+                    "value": 1
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "insert at 2 → 'X'",
+                "action": {
+                  "type": "call",
+                  "call": "@list_insert",
+                  "args": {
+                    "var": "global.t_data_list",
+                    "index": 2,
+                    "item": "X"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "sort",
+                "action": {
+                  "type": "call",
+                  "call": "@list_sort",
+                  "args": {
+                    "var": "global.t_data_list"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "shuffle",
+                "action": {
+                  "type": "call",
+                  "call": "@list_shuffle",
+                  "args": {
+                    "var": "global.t_data_list"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "reverse",
+                "action": {
+                  "type": "call",
+                  "call": "@list_reverse",
+                  "args": {
+                    "var": "global.t_data_list"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "unique",
+                "action": {
+                  "type": "call",
+                  "call": "@list_unique",
+                  "args": {
+                    "var": "global.t_data_list"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "clear",
+                "action": {
+                  "type": "call",
+                  "call": "@list_clear",
+                  "args": {
+                    "var": "global.t_data_list"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "重置原列表",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@set",
+                  "args": {
+                    "var": "global.t_data_list",
+                    "value": [
+                      3,
+                      1,
+                      4,
+                      1,
+                      5,
+                      9,
+                      2,
+                      6
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "t_data_random",
+        "title": "@random / @uuid",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@random / @uuid",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "random 1-100",
+            "action": {
+              "type": "call",
+              "call": "@random",
+              "args": {
+                "min": 1,
+                "max": 100
+              },
+              "assign": "global.t_data_random"
+            }
+          },
+          {
+            "type": "button",
+            "label": "random_chars(8, alphanumeric)",
+            "action": {
+              "type": "call",
+              "call": "@random_chars",
+              "args": {
+                "length": 8,
+                "charset": "alphanumeric"
+              },
+              "assign": "global.t_data_random"
+            }
+          },
+          {
+            "type": "button",
+            "label": "random_chars(6, numeric)",
+            "action": {
+              "type": "call",
+              "call": "@random_chars",
+              "args": {
+                "length": 6,
+                "charset": "numeric"
+              },
+              "assign": "global.t_data_random"
+            }
+          },
+          {
+            "type": "button",
+            "label": "uuid",
+            "action": {
+              "type": "call",
+              "call": "@uuid",
+              "args": {},
+              "assign": "global.t_data_random"
+            }
+          },
+          {
+            "type": "button",
+            "label": "random_pick from [a,b,c]",
+            "action": {
+              "type": "call",
+              "call": "@random_pick",
+              "args": {
+                "list": [
+                  "a",
+                  "b",
+                  "c"
+                ]
+              },
+              "assign": "global.t_data_random"
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_data_random }}"
+          }
+        ]
+      },
+      {
+        "id": "t_data_time",
+        "title": "@timestamp / @date_format",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@timestamp / @date_format",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "timestamp",
+            "action": {
+              "type": "call",
+              "call": "@timestamp",
+              "args": {},
+              "assign": "global.t_data_time"
+            }
+          },
+          {
+            "type": "button",
+            "label": "format(now, YYYY-MM-DD HH:mm:ss)",
+            "action": {
+              "type": "call",
+              "call": "@global.t_time_now_fmt",
+              "args": {}
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_data_time }}"
+          }
+        ]
+      },
+      {
+        "id": "t_ui_toast",
+        "title": "@show_toast",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_toast",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点按钮应在底部出 toast，2 秒后自动消失",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "弹 toast",
+            "action": {
+              "type": "call",
+              "call": "@show_toast",
+              "args": {
+                "message": "Hello toast"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "连点 5 次（堆叠测试）",
+            "action": {
+              "type": "call",
+              "call": "@global.t_toast_5x",
+              "args": {}
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_ui_dialog",
+        "title": "@show_dialog",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_dialog",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点确定 → result=true；点取消 → false",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "弹 dialog",
+            "action": {
+              "type": "call",
+              "call": "@show_dialog",
+              "args": {
+                "title": "请确认",
+                "message": "你要继续吗？"
+              },
+              "assign": "global.t_ui_dialog_result"
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_ui_dialog_result }}"
+          }
+        ]
+      },
+      {
+        "id": "t_ui_input_dialog",
+        "title": "@show_input_dialog",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_input_dialog",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "弹输入框",
+            "action": {
+              "type": "call",
+              "call": "@show_input_dialog",
+              "args": {
+                "title": "请输入名字",
+                "hint": "比如 Alice",
+                "defaultValue": "guest",
+                "bind": "global.t_ui_input_result"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "输入: 「{{ global.t_ui_input_result }}」"
+          }
+        ]
+      },
+      {
+        "id": "t_ui_choice",
+        "title": "@show_choice_dialog",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_choice_dialog",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "3 个按钮，不同 style，返回被点的 value",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "弹 choice dialog",
+            "action": {
+              "type": "call",
+              "call": "@show_choice_dialog",
+              "args": {
+                "title": "你的选择是？",
+                "message": "请挑一个：",
+                "buttons": [
+                  {
+                    "label": "保存",
+                    "value": "save",
+                    "style": "primary"
+                  },
+                  {
+                    "label": "丢弃",
+                    "value": "discard",
+                    "style": "danger"
+                  },
+                  {
+                    "label": "取消",
+                    "value": "cancel"
+                  }
+                ],
+                "dismissible": true
+              },
+              "assign": "global.t_ui_choice_result"
+            }
+          },
+          {
+            "type": "text",
+            "value": "选择: 「{{ global.t_ui_choice_result }}」"
+          }
+        ]
+      },
+      {
+        "id": "t_ui_snackbar",
+        "title": "@show_snackbar",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_snackbar",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "带「撤销」按钮，点了应触发回调",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "弹 SnackBar",
+            "action": {
+              "type": "call",
+              "call": "@show_snackbar",
+              "args": {
+                "message": "邮件已删除",
+                "actionLabel": "撤销",
+                "action": {
+                  "type": "call",
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "已撤销"
+                  }
+                },
+                "durationMs": 4000,
+                "backgroundColor": "#333333"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_ui_date_picker_action",
+        "title": "@show_date_picker",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_date_picker",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "选日期",
+            "action": {
+              "type": "call",
+              "call": "@show_date_picker",
+              "args": {
+                "initial": "2026-01-01",
+                "firstDate": "2020-01-01",
+                "lastDate": "2030-12-31",
+                "bind": "global.t_ui_date_result"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "选中: {{ global.t_ui_date_result }}"
+          }
+        ]
+      },
+      {
+        "id": "t_ui_time_picker_action",
+        "title": "@show_time_picker",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_time_picker",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "选时间",
+            "action": {
+              "type": "call",
+              "call": "@show_time_picker",
+              "args": {
+                "initial": "10:30",
+                "bind": "global.t_ui_time_result"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "选中: {{ global.t_ui_time_result }}"
+          }
+        ]
+      },
+      {
+        "id": "t_ui_bottom_sheet",
+        "title": "@show_bottom_sheet",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@show_bottom_sheet",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "弹 bottom sheet",
+            "action": {
+              "type": "call",
+              "call": "@show_bottom_sheet",
+              "args": {
+                "isDismissible": true,
+                "enableDrag": true,
+                "content": {
+                  "type": "container",
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "🎉 这是底部弹窗",
+                      "style": {
+                        "fontSize": 20,
+                        "fontWeight": "bold"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "可以塞任意 widget"
+                    },
+                    {
+                      "type": "spacer"
+                    },
+                    {
+                      "type": "text",
+                      "value": "点空白处或下拉关闭",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#999"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_storage",
+        "title": "@storage_*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@storage_*",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "基于 SharedPreferences；杀进程后重启 get 应仍能读到",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "set 'demo_key' = 'hello-{{ now }}'",
+            "action": {
+              "type": "call",
+              "call": "@storage_set",
+              "args": {
+                "key": "regression_demo",
+                "value": "hello at {{ global.t_storage_value }}"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "get 'demo_key'",
+            "action": {
+              "type": "call",
+              "call": "@storage_get",
+              "args": {
+                "key": "regression_demo"
+              },
+              "assign": "global.t_storage_value"
+            }
+          },
+          {
+            "type": "button",
+            "label": "remove",
+            "action": {
+              "type": "call",
+              "call": "@storage_remove",
+              "args": {
+                "key": "regression_demo"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "value: 「{{ global.t_storage_value }}」"
+          }
+        ]
+      },
+      {
+        "id": "t_file",
+        "title": "@file_*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@file_*",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "文件路径为 App 文档目录下的相对路径",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "write_json regression/data.json",
+            "action": {
+              "type": "call",
+              "call": "@file_write_json",
+              "args": {
+                "path": "regression/data.json",
+                "data": {
+                  "name": "test",
+                  "ts": 12345
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "exists",
+            "action": {
+              "type": "call",
+              "call": "@file_exists",
+              "args": {
+                "path": "regression/data.json"
+              },
+              "assign": "global.t_file_value"
+            }
+          },
+          {
+            "type": "button",
+            "label": "read_json",
+            "action": {
+              "type": "call",
+              "call": "@file_read_json",
+              "args": {
+                "path": "regression/data.json"
+              },
+              "assign": "global.t_file_value"
+            }
+          },
+          {
+            "type": "button",
+            "label": "append item",
+            "action": {
+              "type": "call",
+              "call": "@file_append_json",
+              "args": {
+                "path": "regression/log.json",
+                "item": {
+                  "line": "log entry"
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "list dir",
+            "action": {
+              "type": "call",
+              "call": "@file_list",
+              "args": {
+                "path": "regression"
+              },
+              "assign": "global.t_file_value"
+            }
+          },
+          {
+            "type": "button",
+            "label": "delete data.json",
+            "action": {
+              "type": "call",
+              "call": "@file_delete",
+              "args": {
+                "path": "regression/data.json"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "value: {{ global.t_file_value }}"
+          }
+        ]
+      },
+      {
+        "id": "t_db",
+        "title": "@db_*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@db_*",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "基于 drift 的本地 SQLite；按 _appid 隔离",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "create_table users",
+            "action": {
+              "type": "call",
+              "call": "@db_create_table",
+              "args": {
+                "table": "users",
+                "columns": [
+                  {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": "1",
+                    "autoincrement": "1"
+                  },
+                  {
+                    "name": "name",
+                    "type": "TEXT",
+                    "nullable": "0"
+                  },
+                  {
+                    "name": "age",
+                    "type": "INTEGER",
+                    "nullable": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "insert Alice",
+            "action": {
+              "type": "call",
+              "call": "@db_insert",
+              "args": {
+                "table": "users",
+                "data": {
+                  "name": "Alice",
+                  "age": 30
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "insert Bob",
+            "action": {
+              "type": "call",
+              "call": "@db_insert",
+              "args": {
+                "table": "users",
+                "data": {
+                  "name": "Bob",
+                  "age": 25
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "query all",
+            "action": {
+              "type": "call",
+              "call": "@db_query",
+              "args": {
+                "table": "users",
+                "orderBy": "id ASC"
+              },
+              "assign": "global.t_db_rows"
+            }
+          },
+          {
+            "type": "button",
+            "label": "count",
+            "action": {
+              "type": "call",
+              "call": "@db_count",
+              "args": {
+                "table": "users"
+              },
+              "assign": "global.t_db_rows"
+            }
+          },
+          {
+            "type": "button",
+            "label": "update Alice age=31",
+            "action": {
+              "type": "call",
+              "call": "@db_update",
+              "args": {
+                "table": "users",
+                "data": {
+                  "age": 31
+                },
+                "where": "name = ?",
+                "whereArgs": [
+                  "Alice"
+                ]
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "delete Bob",
+            "action": {
+              "type": "call",
+              "call": "@db_delete",
+              "args": {
+                "table": "users",
+                "where": "name = ?",
+                "whereArgs": [
+                  "Bob"
+                ]
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "kv_set foo=bar",
+            "action": {
+              "type": "call",
+              "call": "@db_kv_set",
+              "args": {
+                "key": "foo",
+                "value": "bar"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "kv_get foo",
+            "action": {
+              "type": "call",
+              "call": "@db_kv_get",
+              "args": {
+                "key": "foo"
+              },
+              "assign": "global.t_db_rows"
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_db_rows }}"
+          }
+        ]
+      },
+      {
+        "id": "t_func",
+        "title": "@global.func",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@global.func",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "greet_with_double(name, n) — 内部多步赋值",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "调用 greet_with_double('Alice', 7)",
+            "action": {
+              "type": "call",
+              "call": "@global.greet_with_double",
+              "args": {
+                "name": "Alice",
+                "n": 7
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "调用 greet_with_double('Bob', 4)",
+            "action": {
+              "type": "call",
+              "call": "@global.greet_with_double",
+              "args": {
+                "name": "Bob",
+                "n": 4
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_func_result }}"
+          }
+        ]
+      },
+      {
+        "id": "t_dep",
+        "title": "@common-ui.*",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "@common-ui.*",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "依赖在 dependencies 里声明 common-ui ^1.0.0",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "button",
+            "label": "调用 @common-ui.showSuccess",
+            "action": {
+              "type": "call",
+              "call": "@common-ui.showSuccess",
+              "args": {
+                "message": "操作成功！"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "调用 @common-ui.confirm（返回 bool）",
+            "action": {
+              "type": "call",
+              "call": "@common-ui.confirm",
+              "args": {
+                "title": "请确认",
+                "message": "你确定要继续吗？"
+              },
+              "assign": "global.t_dep_result"
+            }
+          },
+          {
+            "type": "button",
+            "label": "调用 @common-ui.formatSize(1234567)",
+            "action": {
+              "type": "call",
+              "call": "@common-ui.formatSize",
+              "args": {
+                "bytes": 1234567
+              },
+              "assign": "global.t_dep_result"
+            }
+          },
+          {
+            "type": "text",
+            "value": "result: {{ global.t_dep_result }}"
+          }
+        ]
+      },
+      {
+        "id": "t_loop_action",
+        "title": "循环上下文 action",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "循环上下文 action",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "点列表项弹 choice_dialog，按钮 value 应是当前项 id（验证 List 内模板预解析）",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "list",
+            "source": "{{ global.t_loop_items }}",
+            "item_template": {
+              "type": "card",
+              "padding": 12,
+              "onTap": {
+                "type": "call",
+                "call": "@show_choice_dialog",
+                "args": {
+                  "title": "对 {{ loop.item.name }} 操作",
+                  "message": "你想做什么？",
+                  "buttons": [
+                    {
+                      "label": "查看详情",
+                      "value": "view-{{ loop.item.id }}",
+                      "style": "primary"
+                    },
+                    {
+                      "label": "删除 {{ loop.item.name }}",
+                      "value": "del-{{ loop.item.id }}",
+                      "style": "danger"
+                    },
+                    {
+                      "label": "取消",
+                      "value": "cancel"
+                    }
+                  ]
+                },
+                "assign": "global.t_loop_choice"
+              },
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.name }} (id={{ loop.item.id }})"
+                }
+              ]
+            }
+          },
+          {
+            "type": "text",
+            "value": "上次选择: 「{{ global.t_loop_choice }}」",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "✅ value 应是 view-a / del-b 等真实 id；❌ 若是 view-{{ ... }} 字面量则 List 递归没生效",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_edge_empty",
+        "title": "空 list",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "空 list",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "应显示空状态图 + 文字，而不是崩溃或白屏",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "list",
+            "source": [],
+            "emptyText": "🎉 暂无数据",
+            "item_template": {
+              "type": "text",
+              "value": "n/a"
+            }
+          }
+        ]
+      },
+      {
+        "id": "t_edge_http_err",
+        "title": "HTTP 失败",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "HTTP 失败 + try_catch",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "button",
+            "label": "请求坏 URL（应被 catch）",
+            "action": {
+              "type": "call",
+              "call": "@try_catch",
+              "args": {
+                "try": [
+                  {
+                    "call": "@http_get",
+                    "args": {
+                      "url": "https://invalid.example.invalid/x"
+                    }
+                  },
+                  {
+                    "call": "@show_toast",
+                    "args": {
+                      "message": "❌ 不应到达这里"
+                    }
+                  }
+                ],
+                "catch": [
+                  {
+                    "call": "@show_toast",
+                    "args": {
+                      "message": "✅ catch: {{ global.t_edge_err }}"
+                    }
+                  }
+                ],
+                "error_var": "global.t_edge_err"
+              }
+            }
+          },
+          {
+            "type": "text",
+            "value": "err: {{ global.t_edge_err }}"
+          }
+        ]
+      },
+      {
+        "id": "t_edge_unknown",
+        "title": "未知 widget / action",
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回测试列表",
+            "variant": "text",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "未知 widget / action",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "框架应渲染占位/打印警告，不应崩溃",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "下方是未知 widget type:"
+          },
+          {
+            "type": "this_widget_does_not_exist",
+            "value": "x"
+          },
+          {
+            "type": "text",
+            "value": "点下方按钮调用未知 action（仅 debugPrint，不报错）:"
+          },
+          {
+            "type": "button",
+            "label": "调用 @this_action_does_not_exist",
+            "action": {
+              "type": "call",
+              "call": "@this_action_does_not_exist",
+              "args": {}
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
