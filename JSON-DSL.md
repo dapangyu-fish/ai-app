@@ -464,6 +464,11 @@
 | `date_picker` | 触发 `showDatePicker` 的输入框 | `bind` | `placeholder`, `label`, `prefixIcon`, `firstDate`, `lastDate`, `disabled`, `action` |
 | `time_picker` | 触发 `showTimePicker` 的输入框 | `bind` | `placeholder`, `label`, `prefixIcon`, `disabled`, `action` |
 | `tooltip` | `Tooltip` | `message`, `child` | `preferBelow`, `waitDuration`, `showDuration` |
+| `chip` | `Chip` / `ChoiceChip` / `FilterChip` | `label` | `variant`(chip/choice/filter), `bind`, `value`, `icon`, `action`, `color`, `deletable` |
+| `badge` | `Badge` | `child` | `count`, `label`, `color`, `textColor`, `isLabelVisible` |
+| `avatar` | `CircleAvatar` | — | `url`, `text`(无图时取首字母), `size`, `color`, `textColor` |
+| `rich_text` | `Text.rich` | `spans` | `style`(默认), `textAlign` |
+| `progress` | `LinearProgressIndicator` | — | `value`, `color`, `backgroundColor`, `height`, `width`, `borderRadius` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -884,7 +889,72 @@
 
 长按或鼠标悬停 1 秒显示。
 
-### 6.26 ref 控件 — 引用依赖模板
+### 6.26 chip 控件 — 标签
+
+```json
+{ "type": "chip", "label": "Flutter", "icon": "tag", "deletable": true, "action": {...} }
+{ "type": "chip", "label": "已读", "variant": "choice", "bind": "global.isRead", "value": true }
+{ "type": "chip", "label": "前端", "variant": "filter", "bind": "global.tags", "value": "frontend" }
+```
+
+三种 variant：
+- `chip`（默认）：单纯展示，可设 `deletable=true` 出现 × 按钮（点击触发 `action`）
+- `choice`：单选，`bind` 通常是单一值；点击切换为 `value`
+- `filter`：多选，`bind` 是 List；点击切换 `value` 是否在列表中
+
+### 6.27 badge 控件 — 角标
+
+```json
+{
+  "type": "badge",
+  "count": "{{ global.unread }}",
+  "color": "#E74C3C",
+  "child": { "type": "icon", "name": "notification", "size": 28 }
+}
+```
+
+`count > 99` 自动显示 `99+`；`count = 0` 自动隐藏。也可以用 `label` 字段显示任意文字。
+
+### 6.28 avatar 控件 — 圆形头像
+
+```json
+{ "type": "avatar", "url": "{{ global.user.avatar }}", "size": 48 }
+{ "type": "avatar", "text": "张三", "size": 40, "color": "#6C5CE7" }
+```
+
+`url` 优先；为空时用 `text` 的首字母（中文取首字、英文大写首字母）。
+
+### 6.29 rich_text 控件 — 多样式文本
+
+```json
+{
+  "type": "rich_text",
+  "style": { "fontSize": 14 },
+  "spans": [
+    { "text": "总计 " },
+    { "text": "{{ global.count }}", "style": { "fontWeight": "bold", "color": "#E74C3C" } },
+    { "text": " 条结果" }
+  ]
+}
+```
+
+每个 span 是字符串或 `{ text, style }`；子 style 与默认 `style` 合并。
+
+### 6.30 progress 控件 — 线性进度条
+
+```json
+{
+  "type": "progress",
+  "value": "{{ global.ratio }}",
+  "color": "#00B894",
+  "height": 8,
+  "borderRadius": 4
+}
+```
+
+与 `loading kind=linear` 重叠，但接口更简洁直接。
+
+### 6.31 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -965,6 +1035,11 @@ lib/
         ├── date_picker_widget.dart # DatePicker 日期
         ├── time_picker_widget.dart # TimePicker 时间
         ├── tooltip_widget.dart    # Tooltip 工具提示
+        ├── chip_widget.dart       # Chip 标签
+        ├── badge_widget.dart      # Badge 角标
+        ├── avatar_widget.dart     # Avatar 头像
+        ├── rich_text_widget.dart  # RichText 多样式文本
+        ├── progress_widget.dart   # Progress 进度条
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射

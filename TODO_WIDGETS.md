@@ -2,12 +2,13 @@
 
 ## 📊 当前状态
 
-- ✅ 已实现：31 个 Widget + 5 个增强 action
+- ✅ 已实现：36 个 Widget + 5 个增强 action
   - 第一批：icon / card / checkbox / expanded / loading
   - 第二批：dropdown / radio / wrap / grid + `@show_choice_dialog` + `@list_remove`
   - 第三批：padding / center / align / flexible / stack
   - 第四批：slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`
-- ❌ 待实现：约 22 个常见 Widget
+  - 第五批：chip / badge / avatar / rich_text / progress
+- ❌ 待实现：约 17 个常见 Widget
 
 ---
 
@@ -214,7 +215,7 @@
 - **Flutter Widget**: `SnackBar`
 - **实现方式**: 新增 `@show_snackbar` action（带操作按钮 + 自定义时长 + 背景色）；保留 `@show_toast` 不变
 
-### progress - 进度条
+### ✅ progress - 进度条（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
@@ -232,28 +233,28 @@
 
 ## 🎭 展示类 Widget
 
-### chip - 标签/徽章
+### ✅ chip - 标签/徽章（已实现，三种 variant）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 标签展示，分类标记
 - **Flutter Widget**: `Chip` / `FilterChip` / `ChoiceChip`
 
-### badge - 角标
+### ✅ badge - 角标（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 消息提醒，数量标记
 - **Flutter Widget**: `Badge`
 
-### avatar - 头像
+### ✅ avatar - 头像（已实现）
 - **使用频率**: ⭐⭐⭐⭐
 - **实现难度**: 简单
 - **预计时间**: 0.5 天
 - **用途**: 用户头像，圆形图片
 - **Flutter Widget**: `CircleAvatar`
 
-### rich_text - 富文本
+### ✅ rich_text - 富文本（已实现）
 - **使用频率**: ⭐⭐⭐
 - **实现难度**: 中等
 - **预计时间**: 1 天
@@ -511,6 +512,7 @@ class JsonXxxWidget extends JsonBaseWidget {
 - 2026-04-28: 第二批实现 4 个 Widget + 1 个增强 action — dropdown / radio / wrap / grid + `@show_choice_dialog`；demo 应用 `widgets-showcase-2`，common-ui bump 到 1.2.0 并新增 `confirmDelete` 辅助函数
 - 2026-04-28: 第三批实现 5 个布局 Widget — padding / center / align / flexible / stack；demo 应用 `widgets-showcase-3`
 - 2026-04-28: 第四批实现 4 个表单/反馈 Widget + 3 个 action — slider / date_picker / time_picker / tooltip + `@show_snackbar` / `@show_date_picker` / `@show_time_picker`；demo 应用 `widgets-showcase-4`
+- 2026-04-29: 第五批实现 5 个展示 Widget — chip / badge / avatar / rich_text / progress；demo 应用 `widgets-showcase-5`
 - 待更新...
 
 ---
