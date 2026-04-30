@@ -1163,10 +1163,15 @@ class _MarketPageState extends State<_MarketPage> {
 // JSON 渲染页面
 // ============================================================
 
+// 检测子树里是否存在会返回 Expanded 的 widget（list、非 shrinkWrap 的 grid）。
+// 命中时屏幕级别要走 Column 而不是 SingleChildScrollView，否则 Expanded
+// 在 unbounded 高度里会抛 RenderFlex 异常。
 bool _containsListInChildren(List<dynamic> children) {
   for (final child in children) {
     if (child is Map<String, dynamic>) {
-      if (child['type'] == 'list') return true;
+      final type = child['type'];
+      if (type == 'list') return true;
+      if (type == 'grid' && child['shrinkWrap'] != true) return true;
       final subChildren = child['children'] as List<dynamic>?;
       if (subChildren != null && _containsListInChildren(subChildren)) {
         return true;

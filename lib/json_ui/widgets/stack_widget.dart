@@ -53,7 +53,6 @@ class JsonStackWidget extends JsonBaseWidget {
         return AlignmentDirectional.bottomEnd;
       case 'center':
         return AlignmentDirectional.center;
-      case 'topStart':
       default:
         return AlignmentDirectional.topStart;
     }

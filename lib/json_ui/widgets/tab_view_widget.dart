@@ -53,6 +53,9 @@ class JsonTabViewWidget extends JsonBaseWidget {
       }
     }
 
+    // 过滤后可能为空（rawTabs 全是 null 或非 Map）—— 否则下面 clamp(0, -1) 会抛
+    if (tabs.isEmpty) return const SizedBox.shrink();
+
     return _TabViewBody(
       tabs: tabs,
       contents: contents,

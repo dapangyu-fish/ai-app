@@ -54,7 +54,12 @@ class JsonChipWidget extends JsonBaseWidget {
           selectedColor: color?.withValues(alpha: 0.3),
           onSelected: (s) {
             if (bindPath != null) {
-              interpreter.setVariable(bindPath, value ?? s);
+              // value 模式：选中写 value，取消写 null（让 v == value 不再成立）
+              // 布尔模式：直接写 s
+              interpreter.setVariable(
+                bindPath,
+                value != null ? (s ? value : null) : s,
+              );
             }
             if (action != null) {
               interpreter.executeAction(action, context);

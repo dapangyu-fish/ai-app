@@ -24,26 +24,40 @@ class JsonAvatarWidget extends JsonBaseWidget {
         ? interpreter.resolveTemplate(rawTextColor)
         : null);
 
+    final initials = _initials(text);
+    final fallback = _buildText(
+      context,
+      initials,
+      size: size,
+      bgColor: bgColor,
+      textColor: textColor,
+    );
+
     if (url != null && url.isNotEmpty) {
-      return CircleAvatar(
-        radius: size / 2,
-        backgroundColor: bgColor,
-        backgroundImage: NetworkImage(url),
-        // 加载失败时回退到文字
-        onBackgroundImageError: (_, __) {},
-        child: null,
+      // 用 Image.network + errorBuilder 实现"加载失败回退到文字"
+      return ClipOval(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallback,
+          ),
+        ),
       );
     }
 
-    // 无图：显示文字（取首字母大写）
-    String initials = '?';
-    if (text != null && text.isNotEmpty) {
-      // 中文取首字，英文取首字母
-      initials = text.runes.first <= 0x7F
-          ? text[0].toUpperCase()
-          : String.fromCharCode(text.runes.first);
-    }
+    return fallback;
+  }
 
+  Widget _buildText(
+    BuildContext context,
+    String initials, {
+    required double size,
+    required Color? bgColor,
+    required Color? textColor,
+  }) {
     return CircleAvatar(
       radius: size / 2,
       backgroundColor: bgColor ?? Theme.of(context).colorScheme.primary,
@@ -56,6 +70,14 @@ class JsonAvatarWidget extends JsonBaseWidget {
         ),
       ),
     );
+  }
+
+  String _initials(String? text) {
+    if (text == null || text.isEmpty) return '?';
+    // 中文取首字，英文取首字母大写
+    return text.runes.first <= 0x7F
+        ? text[0].toUpperCase()
+        : String.fromCharCode(text.runes.first);
   }
 
   Color? _parseColor(String? colorStr) {
