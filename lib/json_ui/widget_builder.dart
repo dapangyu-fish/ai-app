@@ -28,6 +28,10 @@ import 'widgets/center_widget.dart';
 import 'widgets/align_widget.dart';
 import 'widgets/flexible_widget.dart';
 import 'widgets/stack_widget.dart';
+import 'widgets/slider_widget.dart';
+import 'widgets/date_picker_widget.dart';
+import 'widgets/time_picker_widget.dart';
+import 'widgets/tooltip_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -58,6 +62,10 @@ class JsonWidgetBuilder {
     'align': JsonAlignWidget(),
     'flexible': JsonFlexibleWidget(),
     'stack': JsonStackWidget(),
+    'slider': JsonSliderWidget(),
+    'date_picker': JsonDatePickerWidget(),
+    'time_picker': JsonTimePickerWidget(),
+    'tooltip': JsonTooltipWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

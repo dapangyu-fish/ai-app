@@ -779,6 +779,35 @@ class JsonInterpreter extends ChangeNotifier {
           dismissible: dismissible,
         );
 
+      case '@show_snackbar':
+        // 增强版 toast：带操作按钮的底部 SnackBar
+        // args: { message, actionLabel?, action?, durationMs?, backgroundColor? }
+        final snackMsg = resolvedArgs['message']?.toString() ?? '';
+        final actionLabel = resolvedArgs['actionLabel']?.toString();
+        final actionDef = resolvedArgs['action'];
+        final durationMs = (resolvedArgs['durationMs'] as num?)?.toInt() ?? 3000;
+        final bgColorStr = resolvedArgs['backgroundColor']?.toString();
+        _showSnackBar(
+          snackMsg,
+          actionLabel: actionLabel,
+          actionDef: actionDef,
+          durationMs: durationMs,
+          backgroundColor: _parseColorHex(bgColorStr),
+        );
+        return null;
+
+      case '@show_date_picker':
+        // 命令式日期选择器
+        // args: { initial?, firstDate?, lastDate?, bind? }
+        // 返回值：yyyy-MM-dd 字符串（取消返回 null）
+        return await _showDatePickerImperative(resolvedArgs);
+
+      case '@show_time_picker':
+        // 命令式时间选择器
+        // args: { initial?, bind? }
+        // 返回值：HH:mm 字符串（取消返回 null）
+        return await _showTimePickerImperative(resolvedArgs);
+
       // ── 本地存储 ──
       case '@storage_set':
         final key = resolvedArgs['key']?.toString();
@@ -1855,6 +1884,115 @@ class JsonInterpreter extends ChangeNotifier {
         defaultValue: defaultValue,
       ),
     );
+  }
+
+  /// 增强版 SnackBar — 支持操作按钮
+  void _showSnackBar(
+    String message, {
+    String? actionLabel,
+    dynamic actionDef,
+    int durationMs = 3000,
+    Color? backgroundColor,
+  }) {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    if (messenger == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(milliseconds: durationMs),
+        backgroundColor: backgroundColor,
+        action: (actionLabel != null && actionDef != null)
+            ? SnackBarAction(
+                label: actionLabel,
+                onPressed: () {
+                  if (ctx.mounted) {
+                    executeAction(actionDef, ctx);
+                  }
+                },
+              )
+            : null,
+      ),
+    );
+  }
+
+  /// 命令式日期选择器
+  Future<String?> _showDatePickerImperative(
+      Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    DateTime parseOr(String? s, DateTime fallback) {
+      if (s == null || s.isEmpty) return fallback;
+      try {
+        return DateTime.parse(s);
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    final now = DateTime.now();
+    final initial = parseOr(args['initial']?.toString(), now);
+    final firstDate = parseOr(args['firstDate']?.toString(),
+        DateTime(now.year - 50));
+    final lastDate = parseOr(args['lastDate']?.toString(),
+        DateTime(now.year + 50));
+    final bindPath = args['bind'] as String?;
+
+    final picked = await showDatePicker(
+      context: ctx,
+      initialDate: initial.isBefore(firstDate) ? firstDate : initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
+    if (picked == null) return null;
+    final m = picked.month.toString().padLeft(2, '0');
+    final d = picked.day.toString().padLeft(2, '0');
+    final s = '${picked.year}-$m-$d';
+    if (bindPath != null) {
+      setVariable(bindPath, s);
+    }
+    return s;
+  }
+
+  /// 命令式时间选择器
+  Future<String?> _showTimePickerImperative(
+      Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    TimeOfDay initial = TimeOfDay.now();
+    final initStr = args['initial']?.toString();
+    if (initStr != null && initStr.contains(':')) {
+      final parts = initStr.split(':');
+      final h = int.tryParse(parts[0]);
+      final mi = parts.length > 1 ? int.tryParse(parts[1]) : null;
+      if (h != null && mi != null && h >= 0 && h < 24 && mi >= 0 && mi < 60) {
+        initial = TimeOfDay(hour: h, minute: mi);
+      }
+    }
+    final bindPath = args['bind'] as String?;
+
+    final picked = await showTimePicker(
+      context: ctx,
+      initialTime: initial,
+    );
+    if (picked == null) return null;
+    final h = picked.hour.toString().padLeft(2, '0');
+    final m = picked.minute.toString().padLeft(2, '0');
+    final s = '$h:$m';
+    if (bindPath != null) {
+      setVariable(bindPath, s);
+    }
+    return s;
+  }
+
+  /// 解析 #RRGGBB / #AARRGGBB 颜色字符串
+  Color? _parseColorHex(String? colorStr) {
+    if (colorStr == null || !colorStr.startsWith('#')) return null;
+    final hex = colorStr.replaceFirst('#', '');
+    if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
+    if (hex.length == 8) return Color(int.parse(hex, radix: 16));
+    return null;
   }
 
   Future<String?> _pickOrTakeImage(
