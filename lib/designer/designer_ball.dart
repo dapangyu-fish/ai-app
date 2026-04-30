@@ -926,7 +926,13 @@ class _DesignerBallState extends State<DesignerBall>
       setState(() {
         _isThinking = false;
         _messages.removeLast();
-        _messages.add(ChatMessage(role: 'system', content: '❌ 上传失败: $e'));
+        // 失败时重新放出 UPLOAD 按钮，让用户可以再点一次
+        // ai_chat_service 内部已自动重试 3 次（指数退避），到这里说明确实有问题
+        _messages.add(ChatMessage(
+          role: 'system',
+          content: '❌ 上传失败：$e\n\n点击下方按钮可再次尝试。',
+          action: 'UPLOAD_CURRENT_APP',
+        ));
       });
       _scrollToBottom();
     }
