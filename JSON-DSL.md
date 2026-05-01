@@ -595,6 +595,20 @@
 "action": { "type": "navigate", "screen": "auth:loginPage" }
 ```
 
+或返回上一屏（弹出导航历史栈）：
+```json
+"action": { "type": "back" }
+```
+
+**导航历史与系统返回手势**：
+
+框架在 `JsonInterpreter` 内部维护一个导航历史栈：
+- 每次 `{type: "navigate", screen: X}` 把当前页推入栈，再切到 X；如果 X 已在栈中，则弹到那一帧（防止死循环增长）
+- `{type: "back"}` 从栈顶弹一帧，回到上一屏
+- iOS 边缘滑动 / Android 物理返回键 / AppBar 默认返回按钮 都会**优先**调 `navigateBack`；只有栈空（已在入口屏）才会真正弹出外层 Route 退出 JSON-APP
+
+这样任何 JSON-APP 都自动具备"返回上一屏"行为，无需特殊配置。
+
 **双向绑定**：`"bind": "global.xxx"` 使 input / switch 的值与变量实时同步。
 
 ### 6.9 icon 控件 — 图标

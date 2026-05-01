@@ -33,6 +33,11 @@ class JsonInterpreter extends ChangeNotifier {
   final List<Map<String, dynamic>> _paramsStack = [];
   final Map<String, TextEditingController> _textControllers = {};
 
+  /// 屏幕导航历史栈（不含当前页）。
+  /// PopScope / Android 物理返回键 / iOS 边缘滑动 都会调 navigateBack 弹出栈顶。
+  /// navigateTo 时把当前页推入；若目标已在栈中则弹到那一帧（防止历史无限增长）。
+  final List<String> _navigationHistory = [];
+
   /// jsonlogic 标准引擎 + 自定义操作符
   late Jsonlogic _jl;
 
@@ -277,6 +282,7 @@ class JsonInterpreter extends ChangeNotifier {
 
     _loopContextStack.clear();
     _paramsStack.clear();
+    _navigationHistory.clear();
     _depLoader.clear();
     for (final c in _textControllers.values) {
       c.dispose();
@@ -483,6 +489,14 @@ class JsonInterpreter extends ChangeNotifier {
           navigateTo(screenId);
         }
         break;
+      case 'back':
+        // 弹出导航历史回到上一屏；栈空则尝试 pop 外层 Route（退出 JSON-APP）
+        if (canNavigateBack) {
+          navigateBack();
+        } else if (context.mounted) {
+          Navigator.of(context).maybePop();
+        }
+        break;
     }
   }
 
@@ -526,8 +540,31 @@ class JsonInterpreter extends ChangeNotifier {
         }
       }
     }
+
+    // 维护导航历史栈：
+    // - 目标页已在历史中（用户在做"回退式跳转"，例如点 home 链接）
+    //   → 弹到那一帧，避免历史无限增长
+    // - 否则普通前进：把当前页推入历史
+    final lastIdx = _navigationHistory.lastIndexOf(screenId);
+    if (lastIdx >= 0) {
+      _navigationHistory.removeRange(lastIdx, _navigationHistory.length);
+    } else if (_currentScreenId.isNotEmpty && _currentScreenId != screenId) {
+      _navigationHistory.add(_currentScreenId);
+    }
+
     _currentScreenId = screenId;
     onNavigate?.call(screenId);
+    notifyListeners();
+  }
+
+  /// 是否能回退到上一屏（历史栈非空）
+  bool get canNavigateBack => _navigationHistory.isNotEmpty;
+
+  /// 弹出历史栈，回到上一屏。栈空时无操作（调用方应自行决定是否退出 app）。
+  void navigateBack() {
+    if (_navigationHistory.isEmpty) return;
+    _currentScreenId = _navigationHistory.removeLast();
+    onNavigate?.call(_currentScreenId);
     notifyListeners();
   }
 

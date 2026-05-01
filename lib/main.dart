@@ -1262,7 +1262,6 @@ class JsonScreenView extends ConsumerWidget {
     JsonInterpreter interpreter,
     List<dynamic> screens,
   ) {
-    final currentScreenId = interpreter.currentScreenId;
     final children = screenConfig['children'] as List<dynamic>? ?? [];
     final hasListWidget = _containsListInChildren(children);
 
@@ -1290,11 +1289,11 @@ class JsonScreenView extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (currentScreenId == (screens.first as Map)['id']) {
-              Navigator.of(context).pop();
+            // 优先回退到上一屏；历史栈空时退出整个 JSON-APP
+            if (interpreter.canNavigateBack) {
+              interpreter.navigateBack();
             } else {
-              interpreter
-                  .navigateTo((screens.first as Map<String, dynamic>)['id']);
+              Navigator.of(context).maybePop();
             }
           },
         ),
@@ -1308,11 +1307,18 @@ class JsonScreenView extends ConsumerWidget {
       drawer = drawer_helper.buildDrawer(context, drawerConfig, interpreter);
     }
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: appBar,
-      drawer: drawer,
-      body: SafeArea(
+    return PopScope(
+      // 历史栈非空时拦截系统返回手势（iOS edge swipe / Android 返回键）
+      canPop: !interpreter.canNavigateBack,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return; // 已被外层 Route pop（栈空时退出 JSON-APP）
+        interpreter.navigateBack();
+      },
+      child: Scaffold(
+        backgroundColor: bgColor,
+        appBar: appBar,
+        drawer: drawer,
+        body: SafeArea(
         child: hasListWidget
             ? Padding(
                 padding: EdgeInsets.all(
@@ -1326,6 +1332,7 @@ class JsonScreenView extends ConsumerWidget {
             : SingleChildScrollView(
                 child: buildScreenLayout(screenConfig, childWidgets),
               ),
+        ),
       ),
     );
   }
@@ -1551,28 +1558,42 @@ class _TabScreenViewState extends State<_TabScreenView> {
       }
     }
 
-    return Scaffold(
-      backgroundColor: tabBgColor ?? bgColor,
-      appBar: AppBar(
-        title: Text(currentTab['title']?.toString() ?? title),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+    final interpreter = widget.interpreter;
+    return PopScope(
+      canPop: !interpreter.canNavigateBack,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        interpreter.navigateBack();
+      },
+      child: Scaffold(
+        backgroundColor: tabBgColor ?? bgColor,
+        appBar: AppBar(
+          title: Text(currentTab['title']?.toString() ?? title),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (interpreter.canNavigateBack) {
+                interpreter.navigateBack();
+              } else {
+                Navigator.of(context).maybePop();
+              }
+            },
+          ),
         ),
-      ),
-      body: SafeArea(child: body),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-        },
-        destinations: navItems.map((item) {
-          return NavigationDestination(
-            icon: item.icon,
-            label: item.label ?? '',
-          );
-        }).toList(),
+        body: SafeArea(child: body),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() => _currentIndex = index);
+          },
+          destinations: navItems.map((item) {
+            return NavigationDestination(
+              icon: item.icon,
+              label: item.label ?? '',
+            );
+          }).toList(),
+        ),
       ),
     );
   }

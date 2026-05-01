@@ -3,7 +3,7 @@
   "appid": "5f993b2a-815b-4ff9-820a-e6dba721943d",
   "meta": {
     "name": "regression-test",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "type": "app",
     "description": "JSON-DSL 框架回归测试套件，覆盖 main 既有 + batch 1-8 全部新功能",
     "author": "regression-test"
@@ -954,8 +954,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1040,8 +1039,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1153,8 +1151,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1214,8 +1211,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1334,8 +1330,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1460,8 +1455,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1507,8 +1501,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1565,8 +1558,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1613,8 +1605,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1669,8 +1660,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1714,8 +1704,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1758,8 +1747,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1802,8 +1790,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1869,8 +1856,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -1962,8 +1948,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2012,8 +1997,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2074,8 +2058,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2154,8 +2137,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2237,8 +2219,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2323,8 +2304,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2406,8 +2386,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2500,8 +2479,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2568,8 +2546,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2649,8 +2626,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2694,8 +2670,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2756,8 +2731,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2846,8 +2820,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2924,8 +2897,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -2972,8 +2944,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3018,8 +2989,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3064,8 +3034,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3110,8 +3079,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3226,8 +3194,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3333,8 +3300,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3406,8 +3372,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3489,8 +3454,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3565,8 +3529,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3658,8 +3621,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3747,8 +3709,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3822,8 +3783,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -3910,8 +3870,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4004,8 +3963,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4072,8 +4030,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4113,8 +4070,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4159,8 +4115,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4286,8 +4241,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4330,8 +4284,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4388,8 +4341,7 @@
             "label": "← 返回",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             },
             "position": {
               "type": "absolute",
@@ -4434,8 +4386,7 @@
                 "label": "← 返回测试列表",
                 "variant": "text",
                 "action": {
-                  "type": "navigate",
-                  "screen": "home"
+                  "type": "back"
                 }
               },
               {
@@ -4469,8 +4420,7 @@
                 "label": "← 返回测试列表",
                 "variant": "text",
                 "action": {
-                  "type": "navigate",
-                  "screen": "home"
+                  "type": "back"
                 }
               },
               {
@@ -4519,8 +4469,7 @@
                 "label": "← 返回测试列表",
                 "variant": "text",
                 "action": {
-                  "type": "navigate",
-                  "screen": "home"
+                  "type": "back"
                 }
               },
               {
@@ -4550,8 +4499,7 @@
           "leading": {
             "icon": "arrow_back",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           "actions": [
@@ -4658,8 +4606,7 @@
               "icon": "logout",
               "label": "退出",
               "action": {
-                "type": "navigate",
-                "screen": "home"
+                "type": "back"
               }
             }
           ]
@@ -4687,8 +4634,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           }
         ]
@@ -4704,8 +4650,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4756,8 +4701,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -4875,8 +4819,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5022,8 +4965,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5118,8 +5060,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5206,8 +5147,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5296,8 +5236,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5368,8 +5307,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5447,8 +5385,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5527,8 +5464,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5564,8 +5500,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5649,8 +5584,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5715,8 +5649,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5778,8 +5711,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -5939,8 +5871,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6103,8 +6034,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6200,8 +6130,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6251,8 +6180,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6307,8 +6235,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6360,8 +6287,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6406,8 +6332,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6476,8 +6401,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6533,8 +6457,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6579,8 +6502,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6623,8 +6545,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6692,8 +6613,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6767,8 +6687,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -6883,8 +6802,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -7064,8 +6982,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -7128,8 +7045,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -7204,8 +7120,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -7295,8 +7210,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -7340,8 +7254,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
@@ -7405,8 +7318,7 @@
             "label": "← 返回测试列表",
             "variant": "text",
             "action": {
-              "type": "navigate",
-              "screen": "home"
+              "type": "back"
             }
           },
           {
