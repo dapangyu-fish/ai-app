@@ -1813,23 +1813,29 @@ class JsonInterpreter extends ChangeNotifier {
     final overlay = Overlay.of(ctx);
     late OverlayEntry entry;
 
+    // 所有 toast 都在同一位置（贴底 80），新进入的天然盖在旧的上面（z-order）。
+    // 视觉风格参考原生 Android Toast / 微信：紧凑、半透明深色、最大宽度封顶。
     entry = OverlayEntry(
       builder: (context) => Positioned(
-        bottom: 80.0 + (_activeToasts.length * 60.0), // 每个 toast 向上偏移 60px
-        left: 16,
-        right: 16,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              message,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              textAlign: TextAlign.center,
+        bottom: 80,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ),
