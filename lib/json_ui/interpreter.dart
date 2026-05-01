@@ -25,6 +25,7 @@ import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
 import 'drift_database.dart';
 import '../main.dart' show appThemeMode, appLifecycleEvent;
+import '../i18n/locale_controller.dart' show LocaleController;
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -325,8 +326,25 @@ class JsonInterpreter extends ChangeNotifier {
           (screens.first as Map<String, dynamic>)['id'] ?? 'home';
     }
 
+    // 单向同步：把当前框架 locale 一次性写到 global.locale。
+    // 之后两边各自演化——框架切语言不会回头改 app；app 调 @set_locale 不会影响框架。
+    // 只在 JSON-APP 没显式预设 locale 时才注入，保留 JSON 自己的优先级。
+    if (!_variables.containsKey('locale')) {
+      _variables['locale'] = _normalizeLocaleTag(
+          LocaleController.currentLocaleTag());
+    }
+
     // 注册生命周期 hook（resume/pause/...）
     _attachLifecycleListener();
+  }
+
+  /// 把 BCP 47 tag 简化成 JSON-APP 习惯用的语言代码（zh-CN → zh / en-US → en）。
+  /// JSON-APP 的 i18n 字典通常用 'zh' / 'en' 作 key，简化后命中率更高。
+  /// 如果 JSON-APP 想精细到 zh-TW / zh-HK，自己用完整 tag 也支持（_i18nLookup 会精确匹配）。
+  String _normalizeLocaleTag(String tag) {
+    final dash = tag.indexOf(RegExp(r'[-_]'));
+    if (dash < 0) return tag;
+    return tag.substring(0, dash);
   }
 
   Future<void> executeSteps() async {

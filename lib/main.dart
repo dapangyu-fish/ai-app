@@ -4,9 +4,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
+import 'i18n/framework_strings.dart';
+import 'i18n/locale_controller.dart';
+import 'i18n/language_switcher.dart';
+import 'i18n/meta_helper.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/widget_builder.dart';
 import 'json_ui/cache_manager.dart';
@@ -70,6 +75,9 @@ class _AppLifecycleObserver extends WidgetsBindingObserver {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
+  await LocaleController.loadFromPrefs();
 
   // 注册 app 生命周期监听（resume / pause / inactive / detached / hidden）
   WidgetsBinding.instance.addObserver(_AppLifecycleObserver());
@@ -137,17 +145,38 @@ class JsonDslApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: appThemeMode,
-      builder: (context, mode, _) => _buildApp(context, ref, mode),
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: appLocale,
+      builder: (context, locale, _) => ValueListenableBuilder<ThemeMode>(
+        valueListenable: appThemeMode,
+        builder: (context, mode, _) => _buildApp(context, ref, mode, locale),
+      ),
     );
   }
 
-  Widget _buildApp(BuildContext context, WidgetRef ref, ThemeMode mode) {
+  Widget _buildApp(
+      BuildContext context, WidgetRef ref, ThemeMode mode, Locale? locale) {
     return MaterialApp(
       title: 'MyApp',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
+      locale: locale, // null = 跟随系统
+      supportedLocales: T.supportedLocales,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      localeResolutionCallback: (deviceLocale, supported) {
+        // 用户没显式选 locale 时，按系统 locale 匹配；不在支持列表里就回退中文
+        if (locale != null) return locale;
+        if (deviceLocale != null) {
+          for (final s in supported) {
+            if (s.languageCode == deviceLocale.languageCode) return s;
+          }
+        }
+        return T.supportedLocales.first;
+      },
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
