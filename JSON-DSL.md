@@ -439,7 +439,7 @@
 | `text` | `Text` | `value` | `style` |
 | `button` | `FilledButton` / `OutlinedButton` / `TextButton` | `label` | `action`, `variant`, `icon`, `style`, `disabled` |
 | `input` | `TextField` | `placeholder` / `bind` | `maxLines`, `keyboardType`, `obscureText`, `prefix`, `suffix`, `prefixIcon`, `suffixIcon`, `label`, `style` |
-| `list` | `ListView.builder` | `source`, `item_template` | — |
+| `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留) |
 | `container` | `Container` | `children` | `layout`, `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
 | `divider` | `Divider` | — | `height`, `thickness`, `color`, `indent` |
 | `image` | `Image.network` | `url` | `fit`, `width`, `height`, `borderRadius` |
@@ -455,7 +455,7 @@
 | `dropdown` | `DropdownButtonFormField` | `bind`, `options` | `placeholder`, `label`, `disabled`, `prefixIcon`, `color`, `action` |
 | `radio` | `Radio` 组 | `bind`, `options` | `layout`(column/row), `disabled`, `color`, `action` |
 | `wrap` | `Wrap` | `children` | `spacing`, `runSpacing`, `direction`, `alignment`, `runAlignment`, `crossAlignment` |
-| `grid` | `GridView.builder` | `source`, `item_template` | `crossAxisCount`, `spacing`, `crossAxisSpacing`, `mainAxisSpacing`, `childAspectRatio`, `padding`, `shrinkWrap`, `emptyText` |
+| `grid` | `GridView.builder` | `source`, `item_template` | `crossAxisCount`, `spacing`, `crossAxisSpacing`, `mainAxisSpacing`, `childAspectRatio`, `padding`, `shrinkWrap`, `emptyText`, `key`(滚动位置保留) |
 | `padding` | `Padding` | `child` | `padding`, `paddingH`, `paddingV`, `paddingTop/Bottom/Left/Right` |
 | `center` | `Center` | `child` | `widthFactor`, `heightFactor` |
 | `align` | `Align` | `child` | `alignment`(topLeft/center/bottomRight 等), `widthFactor`, `heightFactor` |
@@ -801,6 +801,10 @@
 - `childAspectRatio`：子项宽高比（默认 1）
 - `spacing` 一次设置横纵两个方向；也可分别用 `crossAxisSpacing`、`mainAxisSpacing`
 - `shrinkWrap`：放进 ScrollView/Column 内时设 `true`，避免高度无限或冲突；独占整屏时留 `false`（默认走 Expanded）
+- `key`：跨屏导航时保留滚动位置。给 list / grid 设一个**全局唯一**的字符串键
+  （如 `"home_list"`），框架会用 `PageStorageKey` + Flutter 内置 `PageStorage`
+  自动存/取该列表的滚动 offset。从子页 `back` 回来后停在原来位置而不是回到顶部。
+  同一 JSON-APP 里不同的 list/grid 必须用不同的 key 否则会串。
 
 ### 6.18 padding 控件 — 内边距
 

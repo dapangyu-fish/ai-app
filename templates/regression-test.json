@@ -3,7 +3,7 @@
   "appid": "5f993b2a-815b-4ff9-820a-e6dba721943d",
   "meta": {
     "name": "regression-test",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "type": "app",
     "description": "JSON-DSL 框架回归测试套件，覆盖 main 既有 + batch 1-8 全部新功能",
     "author": "regression-test"
@@ -15,510 +15,595 @@
     "variables": {
       "test_points": [
         {
+          "n": "01",
           "category": "A. 基础",
           "name": "text 控件",
           "desc": "字体大小/颜色/粗细/对齐/模板插值",
           "screen": "t_text"
         },
         {
+          "n": "02",
           "category": "A. 基础",
           "name": "button 控件",
           "desc": "filled / outlined / text 三种 variant + icon + disabled",
           "screen": "t_button"
         },
         {
+          "n": "03",
           "category": "A. 基础",
           "name": "input 控件",
           "desc": "bind 实时同步 + placeholder",
           "screen": "t_input"
         },
         {
+          "n": "04",
           "category": "A. 基础",
           "name": "list 控件",
           "desc": "source/item_template/empty/onRefresh/onLoadMore",
           "screen": "t_list"
         },
         {
+          "n": "05",
           "category": "A. 基础",
           "name": "container 控件",
           "desc": "layout=row/column/stack + padding + bg",
           "screen": "t_container"
         },
         {
+          "n": "06",
           "category": "A. 基础",
           "name": "divider 控件",
           "desc": "横向分隔线",
           "screen": "t_divider"
         },
         {
+          "n": "07",
           "category": "A. 基础",
           "name": "image 控件",
           "desc": "网络/base64/错误回退",
           "screen": "t_image"
         },
         {
+          "n": "08",
           "category": "A. 基础",
           "name": "image_picker 控件",
           "desc": "点击选图，bind 写入路径",
           "screen": "t_image_picker"
         },
         {
+          "n": "09",
           "category": "A. 基础",
           "name": "spacer 控件",
           "desc": "Row 内推开间距",
           "screen": "t_spacer"
         },
         {
+          "n": "10",
           "category": "A. 基础",
           "name": "switch 控件",
           "desc": "bind 布尔变量 + action",
           "screen": "t_switch"
         },
         {
+          "n": "11",
           "category": "A. 基础",
           "name": "video 控件",
           "desc": "占位：本地无样例视频",
           "screen": "t_video"
         },
         {
+          "n": "12",
           "category": "A. 基础",
           "name": "ref 控件",
           "desc": "占位：见自定义函数+依赖测试",
           "screen": "t_ref"
         },
         {
+          "n": "13",
           "category": "B. 新 基础",
           "name": "icon 控件",
           "desc": "Material 图标 + 大小 + 颜色",
           "screen": "t_icon"
         },
         {
+          "n": "14",
           "category": "B. 新 基础",
           "name": "card 控件",
           "desc": "elevation/borderRadius/onTap+水波纹",
           "screen": "t_card"
         },
         {
+          "n": "15",
           "category": "B. 新 基础",
           "name": "checkbox 控件",
           "desc": "bind 布尔 + label + disabled",
           "screen": "t_checkbox"
         },
         {
+          "n": "16",
           "category": "B. 新 基础",
           "name": "expanded 控件",
           "desc": "在 row 内填满剩余宽度",
           "screen": "t_expanded"
         },
         {
+          "n": "17",
           "category": "B. 新 基础",
           "name": "loading 控件",
           "desc": "circular/linear + 确定/不确定进度",
           "screen": "t_loading"
         },
         {
+          "n": "18",
           "category": "B. 新 基础",
           "name": "dropdown 控件",
           "desc": "对象 options / 字符串 options / bind",
           "screen": "t_dropdown"
         },
         {
+          "n": "19",
           "category": "B. 新 基础",
           "name": "radio 控件",
           "desc": "单选组 column/row 两种 layout",
           "screen": "t_radio"
         },
         {
+          "n": "20",
           "category": "B. 新 基础",
           "name": "wrap 控件",
           "desc": "标签云自动换行",
           "screen": "t_wrap"
         },
         {
+          "n": "21",
           "category": "B. 新 基础",
           "name": "grid 控件",
           "desc": "shrinkWrap=true 嵌入页面",
           "screen": "t_grid"
         },
         {
+          "n": "22",
           "category": "B. 新 基础",
           "name": "progress 控件",
           "desc": "线性进度条 0~1",
           "screen": "t_progress"
         },
         {
+          "n": "23",
           "category": "C. 布局",
           "name": "padding 控件",
           "desc": "all/H/V/单边内边距",
           "screen": "t_padding"
         },
         {
+          "n": "24",
           "category": "C. 布局",
           "name": "center 控件",
           "desc": "包子居中",
           "screen": "t_center"
         },
         {
+          "n": "25",
           "category": "C. 布局",
           "name": "align 控件",
           "desc": "9 个方位",
           "screen": "t_align"
         },
         {
+          "n": "26",
           "category": "C. 布局",
           "name": "flexible 控件",
           "desc": "fit=loose / fit=tight",
           "screen": "t_flexible"
         },
         {
+          "n": "27",
           "category": "C. 布局",
           "name": "stack 控件",
           "desc": "absolute 子项",
           "screen": "t_stack"
         },
         {
+          "n": "28",
           "category": "D. 表单/picker",
           "name": "slider 控件",
           "desc": "min/max/divisions + 颜色",
           "screen": "t_slider"
         },
         {
+          "n": "29",
           "category": "D. 表单/picker",
           "name": "date_picker 控件",
           "desc": "点击弹日期选择器，写入 yyyy-MM-dd",
           "screen": "t_date_picker"
         },
         {
+          "n": "30",
           "category": "D. 表单/picker",
           "name": "time_picker 控件",
           "desc": "点击弹时间选择器，写入 HH:mm",
           "screen": "t_time_picker"
         },
         {
+          "n": "31",
           "category": "D. 表单/picker",
           "name": "tooltip 控件",
           "desc": "长按或悬停显示提示",
           "screen": "t_tooltip"
         },
         {
+          "n": "32",
           "category": "E. 装饰",
           "name": "chip 控件",
           "desc": "chip / choice / filter 三种 variant",
           "screen": "t_chip"
         },
         {
+          "n": "33",
           "category": "E. 装饰",
           "name": "badge 控件",
           "desc": "数字角标 + 文字角标 + 0 隐藏",
           "screen": "t_badge"
         },
         {
+          "n": "34",
           "category": "E. 装饰",
           "name": "avatar 控件",
           "desc": "URL 图片 + 加载失败回退首字母",
           "screen": "t_avatar"
         },
         {
+          "n": "35",
           "category": "E. 装饰",
           "name": "rich_text 控件",
           "desc": "多 span 不同样式拼接",
           "screen": "t_rich_text"
         },
         {
+          "n": "36",
           "category": "E. 装饰",
           "name": "inkwell 控件",
           "desc": "onTap/onLongPress/onDoubleTap 水波纹",
           "screen": "t_inkwell"
         },
         {
+          "n": "37",
           "category": "F. 手势",
           "name": "gesture_detector 控件",
           "desc": "swipe 4 方向",
           "screen": "t_gesture"
         },
         {
+          "n": "38",
           "category": "F. 手势",
           "name": "dismissible 控件",
           "desc": "list item 滑动删除 + confirmAction",
           "screen": "t_dismissible"
         },
         {
+          "n": "39",
           "category": "F. 手势",
           "name": "draggable 控件",
           "desc": "可拖拽（DragTarget 未实现，仅测视觉）",
           "screen": "t_draggable"
         },
         {
+          "n": "40",
           "category": "F. 手势",
           "name": "refresh 控件",
           "desc": "下拉刷新（包裹滚动 child）",
           "screen": "t_refresh"
         },
         {
+          "n": "41",
           "category": "G. 结构",
           "name": "tab_view 控件",
           "desc": "嵌入式 TabBar+TabBarView",
           "screen": "t_tab_view"
         },
         {
+          "n": "42",
           "category": "G. 结构",
           "name": "app_bar 独立 widget",
           "desc": "嵌入 column 中的 AppBar（非 screen 顶部）",
           "screen": "t_app_bar"
         },
         {
+          "n": "43",
           "category": "H. 重型/外部",
           "name": "webview 控件",
           "desc": "加载 example.com（需联网）",
           "screen": "t_webview"
         },
         {
+          "n": "44",
           "category": "H. 重型/外部",
           "name": "qr_code 控件",
           "desc": "生成二维码",
           "screen": "t_qr_code"
         },
         {
+          "n": "45",
           "category": "H. 重型/外部",
           "name": "chart 控件",
           "desc": "line / bar / pie 三种",
           "screen": "t_chart"
         },
         {
+          "n": "46",
           "category": "H. 重型/外部",
           "name": "map 控件",
           "desc": "占位：OSM 地图（需联网/平台 tile 依赖）",
           "screen": "t_map"
         },
         {
+          "n": "47",
           "category": "H. 重型/外部",
           "name": "camera 控件",
           "desc": "占位：实时预览（需相机权限 + 硬件）",
           "screen": "t_camera"
         },
         {
+          "n": "48",
           "category": "I. screen 配置",
           "name": "screen.layout=stack",
           "desc": "屏幕根级用 Stack 布局 + position.absolute",
           "screen": "t_screen_layout"
         },
         {
+          "n": "49",
           "category": "I. screen 配置",
           "name": "screen.tabs",
           "desc": "底部导航栏（_TabScreenView）",
           "screen": "t_screen_tabs"
         },
         {
+          "n": "50",
           "category": "I. screen 配置",
           "name": "screen.appBar",
           "desc": "自定义顶部 AppBar（actions+leading）",
           "screen": "t_screen_appbar"
         },
         {
+          "n": "51",
           "category": "I. screen 配置",
           "name": "screen.drawer",
           "desc": "侧边抽屉（hamburger 自动出现）",
           "screen": "t_screen_drawer"
         },
         {
+          "n": "52",
           "category": "J. 模板/表达式",
           "name": "{{ }} 模板插值",
           "desc": "基本/嵌套路径/混合",
           "screen": "t_template"
         },
         {
+          "n": "53",
           "category": "J. 模板/表达式",
           "name": "jsonlogic 标准 op",
           "desc": "==/+/var/if/and/or",
           "screen": "t_jl_std"
         },
         {
+          "n": "54",
           "category": "J. 模板/表达式",
           "name": "jsonlogic 自定义 op",
           "desc": "str_*/length/at/slice/sort",
           "screen": "t_jl_custom"
         },
         {
+          "n": "55",
           "category": "K. 控制流",
           "name": "@if",
           "desc": "条件分支",
           "screen": "t_cf_if"
         },
         {
+          "n": "56",
           "category": "K. 控制流",
           "name": "@while",
           "desc": "循环至条件不满足（带 max_iterations）",
           "screen": "t_cf_while"
         },
         {
+          "n": "57",
           "category": "K. 控制流",
           "name": "@for_each",
           "desc": "遍历数组（loop.item / loop.index）",
           "screen": "t_cf_foreach"
         },
         {
+          "n": "58",
           "category": "K. 控制流",
           "name": "@loop_by_num",
           "desc": "循环 N 次",
           "screen": "t_cf_loopbynum"
         },
         {
+          "n": "59",
           "category": "K. 控制流",
           "name": "@try_catch",
           "desc": "捕获 try 块异常",
           "screen": "t_cf_try"
         },
         {
+          "n": "60",
           "category": "K. 控制流",
           "name": "@parallel",
           "desc": "并行执行多个 step",
           "screen": "t_cf_parallel"
         },
         {
+          "n": "61",
           "category": "K. 控制流",
           "name": "@delay",
           "desc": "异步等待 ms",
           "screen": "t_cf_delay"
         },
         {
+          "n": "62",
           "category": "L. 数据 actions",
           "name": "@set",
           "desc": "字符串/数字/表达式三种 value",
           "screen": "t_data_set"
         },
         {
+          "n": "63",
           "category": "L. 数据 actions",
           "name": "@http_get / @http_post",
           "desc": "对接 httpbin.org（需联网）",
           "screen": "t_data_http"
         },
         {
+          "n": "64",
           "category": "L. 数据 actions",
           "name": "@json_decode / @json_encode",
           "desc": "字符串 ↔ 对象",
           "screen": "t_data_json"
         },
         {
+          "n": "65",
           "category": "L. 数据 actions",
           "name": "@str_* 系列",
           "desc": "8 个常用字符串 action",
           "screen": "t_data_str"
         },
         {
+          "n": "66",
           "category": "L. 数据 actions",
           "name": "@list_* 系列",
           "desc": "add/remove/remove_at/insert/clear/sort",
           "screen": "t_data_list_actions"
         },
         {
+          "n": "67",
           "category": "L. 数据 actions",
           "name": "@random / @uuid",
           "desc": "随机数/字符/UUID",
           "screen": "t_data_random"
         },
         {
+          "n": "68",
           "category": "L. 数据 actions",
           "name": "@timestamp / @date_format",
           "desc": "时间戳与格式化",
           "screen": "t_data_time"
         },
         {
+          "n": "69",
           "category": "M. UI actions",
           "name": "@show_toast",
           "desc": "底部 toast 提示",
           "screen": "t_ui_toast"
         },
         {
+          "n": "70",
           "category": "M. UI actions",
           "name": "@show_dialog",
           "desc": "确认弹窗（true/false）",
           "screen": "t_ui_dialog"
         },
         {
+          "n": "71",
           "category": "M. UI actions",
           "name": "@show_input_dialog",
           "desc": "文本输入弹窗",
           "screen": "t_ui_input_dialog"
         },
         {
+          "n": "72",
           "category": "M. UI actions",
           "name": "@show_choice_dialog ⭐",
           "desc": "自定义按钮弹窗（保存/丢弃/取消）",
           "screen": "t_ui_choice"
         },
         {
+          "n": "73",
           "category": "M. UI actions",
           "name": "@show_snackbar ⭐",
           "desc": "底部 SnackBar + 操作按钮",
           "screen": "t_ui_snackbar"
         },
         {
+          "n": "74",
           "category": "M. UI actions",
           "name": "@show_date_picker ⭐",
           "desc": "命令式日期选择器",
           "screen": "t_ui_date_picker_action"
         },
         {
+          "n": "75",
           "category": "M. UI actions",
           "name": "@show_time_picker ⭐",
           "desc": "命令式时间选择器",
           "screen": "t_ui_time_picker_action"
         },
         {
+          "n": "76",
           "category": "M. UI actions",
           "name": "@show_bottom_sheet ⭐",
           "desc": "底部弹窗（content 是任意 widget）",
           "screen": "t_ui_bottom_sheet"
         },
         {
+          "n": "77",
           "category": "N. 持久化",
           "name": "@storage_* (SharedPreferences)",
           "desc": "set/get/remove/clear",
           "screen": "t_storage"
         },
         {
+          "n": "78",
           "category": "N. 持久化",
           "name": "@file_* (App 文档目录)",
           "desc": "write_json/read_json/exists/append",
           "screen": "t_file"
         },
         {
+          "n": "79",
           "category": "N. 持久化",
           "name": "@db_* (drift 数据库)",
           "desc": "create_table/insert/query/update/delete + kv",
           "screen": "t_db"
         },
         {
+          "n": "80",
           "category": "O. 函数/依赖",
           "name": "@global.func",
           "desc": "params + logic + 多步",
           "screen": "t_func"
         },
         {
+          "n": "81",
           "category": "O. 函数/依赖",
           "name": "@common-ui.func",
           "desc": "调用依赖里的 showSuccess / confirm",
           "screen": "t_dep"
         },
         {
+          "n": "82",
           "category": "P. 循环上下文",
           "name": "loop.* 在 action 里（List 递归）",
           "desc": "card.onTap 含 List 字段嵌 loop.* 模板",
           "screen": "t_loop_action"
         },
         {
+          "n": "83",
           "category": "Q. 边界/错误",
           "name": "空 list emptyText",
           "desc": "source 为空时显示空状态",
           "screen": "t_edge_empty"
         },
         {
+          "n": "84",
           "category": "Q. 边界/错误",
           "name": "HTTP 失败被 try_catch 捕获",
           "desc": "坏 URL 应进 catch 分支",
           "screen": "t_edge_http_err"
         },
         {
+          "n": "85",
           "category": "Q. 边界/错误",
           "name": "未知 widget / 未知 action",
           "desc": "应有占位错误，不崩溃",
@@ -879,6 +964,7 @@
           },
           {
             "type": "list",
+            "key": "home_test_list",
             "source": "{{ global.test_points }}",
             "item_template": {
               "type": "card",
@@ -903,16 +989,25 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "{{ loop.item.category }}",
+                          "value": "#{{ loop.item.n }}",
                           "style": {
                             "fontSize": 11,
-                            "color": "#1A73E8"
+                            "color": "#1A73E8",
+                            "fontWeight": "bold"
                           }
                         }
                       ]
                     },
                     {
                       "type": "spacer"
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.category }}",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#999999"
+                      }
                     },
                     {
                       "type": "icon",
@@ -945,7 +1040,7 @@
       },
       {
         "id": "t_text",
-        "title": "text 控件",
+        "title": "#01 text 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1030,7 +1125,7 @@
       },
       {
         "id": "t_button",
-        "title": "button 控件",
+        "title": "#02 button 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1142,7 +1237,7 @@
       },
       {
         "id": "t_input",
-        "title": "input 控件",
+        "title": "#03 input 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1202,7 +1297,7 @@
       },
       {
         "id": "t_list",
-        "title": "list 控件",
+        "title": "#04 list 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1321,7 +1416,7 @@
       },
       {
         "id": "t_container",
-        "title": "container 控件",
+        "title": "#05 container 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1446,7 +1541,7 @@
       },
       {
         "id": "t_divider",
-        "title": "divider 控件",
+        "title": "#06 divider 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1492,7 +1587,7 @@
       },
       {
         "id": "t_image",
-        "title": "image 控件",
+        "title": "#07 image 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1549,7 +1644,7 @@
       },
       {
         "id": "t_image_picker",
-        "title": "image_picker 控件",
+        "title": "#08 image_picker 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1596,7 +1691,7 @@
       },
       {
         "id": "t_spacer",
-        "title": "spacer 控件",
+        "title": "#09 spacer 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1651,7 +1746,7 @@
       },
       {
         "id": "t_switch",
-        "title": "switch 控件",
+        "title": "#10 switch 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1695,7 +1790,7 @@
       },
       {
         "id": "t_video",
-        "title": "video 控件",
+        "title": "#11 video 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1738,7 +1833,7 @@
       },
       {
         "id": "t_ref",
-        "title": "ref 控件",
+        "title": "#12 ref 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1781,7 +1876,7 @@
       },
       {
         "id": "t_icon",
-        "title": "icon 控件",
+        "title": "#13 icon 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1847,7 +1942,7 @@
       },
       {
         "id": "t_card",
-        "title": "card 控件",
+        "title": "#14 card 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1939,7 +2034,7 @@
       },
       {
         "id": "t_checkbox",
-        "title": "checkbox 控件",
+        "title": "#15 checkbox 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -1988,7 +2083,7 @@
       },
       {
         "id": "t_expanded",
-        "title": "expanded 控件",
+        "title": "#16 expanded 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2049,7 +2144,7 @@
       },
       {
         "id": "t_loading",
-        "title": "loading 控件",
+        "title": "#17 loading 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2128,7 +2223,7 @@
       },
       {
         "id": "t_dropdown",
-        "title": "dropdown 控件",
+        "title": "#18 dropdown 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2210,7 +2305,7 @@
       },
       {
         "id": "t_radio",
-        "title": "radio 控件",
+        "title": "#19 radio 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2295,7 +2390,7 @@
       },
       {
         "id": "t_wrap",
-        "title": "wrap 控件",
+        "title": "#20 wrap 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2377,7 +2472,7 @@
       },
       {
         "id": "t_grid",
-        "title": "grid 控件",
+        "title": "#21 grid 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2470,7 +2565,7 @@
       },
       {
         "id": "t_progress",
-        "title": "progress 控件",
+        "title": "#22 progress 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2537,7 +2632,7 @@
       },
       {
         "id": "t_padding",
-        "title": "padding 控件",
+        "title": "#23 padding 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2617,7 +2712,7 @@
       },
       {
         "id": "t_center",
-        "title": "center 控件",
+        "title": "#24 center 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2661,7 +2756,7 @@
       },
       {
         "id": "t_align",
-        "title": "align 控件",
+        "title": "#25 align 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2722,7 +2817,7 @@
       },
       {
         "id": "t_flexible",
-        "title": "flexible 控件",
+        "title": "#26 flexible 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2811,7 +2906,7 @@
       },
       {
         "id": "t_stack",
-        "title": "stack 控件",
+        "title": "#27 stack 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2888,7 +2983,7 @@
       },
       {
         "id": "t_slider",
-        "title": "slider 控件",
+        "title": "#28 slider 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2935,7 +3030,7 @@
       },
       {
         "id": "t_date_picker",
-        "title": "date_picker 控件",
+        "title": "#29 date_picker 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -2980,7 +3075,7 @@
       },
       {
         "id": "t_time_picker",
-        "title": "time_picker 控件",
+        "title": "#30 time_picker 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3025,7 +3120,7 @@
       },
       {
         "id": "t_tooltip",
-        "title": "tooltip 控件",
+        "title": "#31 tooltip 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3070,7 +3165,7 @@
       },
       {
         "id": "t_chip",
-        "title": "chip 控件",
+        "title": "#32 chip 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3185,7 +3280,7 @@
       },
       {
         "id": "t_badge",
-        "title": "badge 控件",
+        "title": "#33 badge 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3291,7 +3386,7 @@
       },
       {
         "id": "t_avatar",
-        "title": "avatar 控件",
+        "title": "#34 avatar 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3363,7 +3458,7 @@
       },
       {
         "id": "t_rich_text",
-        "title": "rich_text 控件",
+        "title": "#35 rich_text 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3445,7 +3540,7 @@
       },
       {
         "id": "t_inkwell",
-        "title": "inkwell 控件",
+        "title": "#36 inkwell 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3520,7 +3615,7 @@
       },
       {
         "id": "t_gesture",
-        "title": "gesture_detector",
+        "title": "#37 gesture_detector",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3612,7 +3707,7 @@
       },
       {
         "id": "t_dismissible",
-        "title": "dismissible 控件",
+        "title": "#38 dismissible 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3700,7 +3795,7 @@
       },
       {
         "id": "t_draggable",
-        "title": "draggable 控件",
+        "title": "#39 draggable 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3774,7 +3869,7 @@
       },
       {
         "id": "t_refresh",
-        "title": "refresh 控件",
+        "title": "#40 refresh 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3861,7 +3956,7 @@
       },
       {
         "id": "t_tab_view",
-        "title": "tab_view 控件",
+        "title": "#41 tab_view 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -3954,7 +4049,7 @@
       },
       {
         "id": "t_app_bar",
-        "title": "app_bar 独立 widget",
+        "title": "#42 app_bar 独立 widget",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4021,7 +4116,7 @@
       },
       {
         "id": "t_webview",
-        "title": "webview 控件",
+        "title": "#43 webview 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4061,7 +4156,7 @@
       },
       {
         "id": "t_qr_code",
-        "title": "qr_code 控件",
+        "title": "#44 qr_code 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4106,7 +4201,7 @@
       },
       {
         "id": "t_chart",
-        "title": "chart 控件",
+        "title": "#45 chart 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4232,7 +4327,7 @@
       },
       {
         "id": "t_map",
-        "title": "map 控件",
+        "title": "#46 map 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4275,7 +4370,7 @@
       },
       {
         "id": "t_camera",
-        "title": "camera 控件",
+        "title": "#47 camera 控件",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4318,7 +4413,7 @@
       },
       {
         "id": "t_screen_layout",
-        "title": "screen.layout=stack",
+        "title": "#48 screen.layout=stack",
         "layout": "stack",
         "padding": 0,
         "children": [
@@ -4375,7 +4470,7 @@
       },
       {
         "id": "t_screen_tabs",
-        "title": "screen.tabs",
+        "title": "#49 screen.tabs",
         "tabs": [
           {
             "label": "首页",
@@ -4490,7 +4585,7 @@
       },
       {
         "id": "t_screen_appbar",
-        "title": "screen.appBar 测试（应被覆写）",
+        "title": "#50 screen.appBar 测试（应被覆写）",
         "appBar": {
           "title": "自定义 AppBar",
           "centerTitle": true,
@@ -4551,7 +4646,7 @@
       },
       {
         "id": "t_screen_drawer",
-        "title": "screen.drawer 测试",
+        "title": "#51 screen.drawer 测试",
         "appBar": {
           "title": "drawer 测试 — 点左上角菜单"
         },
@@ -4641,7 +4736,7 @@
       },
       {
         "id": "t_template",
-        "title": "模板",
+        "title": "#52 模板",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4692,7 +4787,7 @@
       },
       {
         "id": "t_jl_std",
-        "title": "jsonlogic 标准",
+        "title": "#53 jsonlogic 标准",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4810,7 +4905,7 @@
       },
       {
         "id": "t_jl_custom",
-        "title": "jsonlogic 自定义",
+        "title": "#54 jsonlogic 自定义",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -4956,7 +5051,7 @@
       },
       {
         "id": "t_cf_if",
-        "title": "@if",
+        "title": "#55 @if",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5051,7 +5146,7 @@
       },
       {
         "id": "t_cf_while",
-        "title": "@while",
+        "title": "#56 @while",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5138,7 +5233,7 @@
       },
       {
         "id": "t_cf_foreach",
-        "title": "@for_each",
+        "title": "#57 @for_each",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5227,7 +5322,7 @@
       },
       {
         "id": "t_cf_loopbynum",
-        "title": "@loop_by_num",
+        "title": "#58 @loop_by_num",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5298,7 +5393,7 @@
       },
       {
         "id": "t_cf_try",
-        "title": "@try_catch",
+        "title": "#59 @try_catch",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5376,7 +5471,7 @@
       },
       {
         "id": "t_cf_parallel",
-        "title": "@parallel",
+        "title": "#60 @parallel",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5455,7 +5550,7 @@
       },
       {
         "id": "t_cf_delay",
-        "title": "@delay",
+        "title": "#61 @delay",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5491,7 +5586,7 @@
       },
       {
         "id": "t_data_set",
-        "title": "@set",
+        "title": "#62 @set",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5575,7 +5670,7 @@
       },
       {
         "id": "t_data_http",
-        "title": "@http_*",
+        "title": "#63 @http_*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5640,7 +5735,7 @@
       },
       {
         "id": "t_data_json",
-        "title": "@json_*",
+        "title": "#64 @json_*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5702,7 +5797,7 @@
       },
       {
         "id": "t_data_str",
-        "title": "@str_*",
+        "title": "#65 @str_*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -5862,7 +5957,7 @@
       },
       {
         "id": "t_data_list_actions",
-        "title": "@list_*",
+        "title": "#66 @list_*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6025,7 +6120,7 @@
       },
       {
         "id": "t_data_random",
-        "title": "@random / @uuid",
+        "title": "#67 @random / @uuid",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6121,7 +6216,7 @@
       },
       {
         "id": "t_data_time",
-        "title": "@timestamp / @date_format",
+        "title": "#68 @timestamp / @date_format",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6171,7 +6266,7 @@
       },
       {
         "id": "t_ui_toast",
-        "title": "@show_toast",
+        "title": "#69 @show_toast",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6226,7 +6321,7 @@
       },
       {
         "id": "t_ui_dialog",
-        "title": "@show_dialog",
+        "title": "#70 @show_dialog",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6278,7 +6373,7 @@
       },
       {
         "id": "t_ui_input_dialog",
-        "title": "@show_input_dialog",
+        "title": "#71 @show_input_dialog",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6323,7 +6418,7 @@
       },
       {
         "id": "t_ui_choice",
-        "title": "@show_choice_dialog",
+        "title": "#72 @show_choice_dialog",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6392,7 +6487,7 @@
       },
       {
         "id": "t_ui_snackbar",
-        "title": "@show_snackbar",
+        "title": "#73 @show_snackbar",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6448,7 +6543,7 @@
       },
       {
         "id": "t_ui_date_picker_action",
-        "title": "@show_date_picker",
+        "title": "#74 @show_date_picker",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6493,7 +6588,7 @@
       },
       {
         "id": "t_ui_time_picker_action",
-        "title": "@show_time_picker",
+        "title": "#75 @show_time_picker",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6536,7 +6631,7 @@
       },
       {
         "id": "t_ui_bottom_sheet",
-        "title": "@show_bottom_sheet",
+        "title": "#76 @show_bottom_sheet",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6604,7 +6699,7 @@
       },
       {
         "id": "t_storage",
-        "title": "@storage_*",
+        "title": "#77 @storage_*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6678,7 +6773,7 @@
       },
       {
         "id": "t_file",
-        "title": "@file_*",
+        "title": "#78 @file_*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6793,7 +6888,7 @@
       },
       {
         "id": "t_db",
-        "title": "@db_*",
+        "title": "#79 @db_*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -6973,7 +7068,7 @@
       },
       {
         "id": "t_func",
-        "title": "@global.func",
+        "title": "#80 @global.func",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -7036,7 +7131,7 @@
       },
       {
         "id": "t_dep",
-        "title": "@common-ui.*",
+        "title": "#81 @common-ui.*",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -7111,7 +7206,7 @@
       },
       {
         "id": "t_loop_action",
-        "title": "循环上下文 action",
+        "title": "#82 循环上下文 action",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -7201,7 +7296,7 @@
       },
       {
         "id": "t_edge_empty",
-        "title": "空 list",
+        "title": "#83 空 list",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -7245,7 +7340,7 @@
       },
       {
         "id": "t_edge_http_err",
-        "title": "HTTP 失败",
+        "title": "#84 HTTP 失败",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -7309,7 +7404,7 @@
       },
       {
         "id": "t_edge_unknown",
-        "title": "未知 widget / action",
+        "title": "#85 未知 widget / action",
         "layout": "column",
         "padding": 16,
         "children": [
