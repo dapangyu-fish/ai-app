@@ -9,20 +9,20 @@ import os
 import uuid
 from flask import request, jsonify, send_from_directory
 from minio import Minio
-from config import TEMPLATES_DIR, MINIO_PUBLIC_URL, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
+from config import TEMPLATES_DIR, MINIO_PUBLIC_URL, MINIO_ENDPOINT, MINIO_SECURE, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
 from database import db_query, db_execute
 from auth import require_auth, require_role
 
 _minio_client = Minio(
-    "127.0.0.1:9000",
+    MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=False,
+    secure=MINIO_SECURE,
 )
 
 
 def _minio_upload(bucket, key, data, content_type="application/json"):
-    """上传文件到 MinIO（使用 Python SDK）"""
+    """上传文件到 MinIO（使用 Python SDK），返回预签名 URL（1小时有效期）"""
     if isinstance(data, dict):
         data = json.dumps(data, ensure_ascii=False, indent=2)
     data_bytes = data.encode("utf-8") if isinstance(data, str) else data
@@ -34,7 +34,47 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
         bucket, key, io.BytesIO(data_bytes), len(data_bytes),
         content_type=content_type,
     )
-    return f"{MINIO_PUBLIC_URL}/{bucket}/{key}"
+
+    # 返回预签名 GET URL（1小时有效期）而不是公开 URL
+    from datetime import timedelta
+    presigned_url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=1))
+    return presigned_url
+
+
+def _minio_presigned_put(bucket, key, expires_hours=1):
+    from datetime import timedelta
+    if not _minio_client.bucket_exists(bucket):
+        _minio_client.make_bucket(bucket)
+    return _minio_client.presigned_put_object(bucket, key, expires=timedelta(hours=expires_hours))
+
+
+def _minio_presigned_get(bucket, key, expires_hours=1):
+    from datetime import timedelta
+    if not _minio_client.bucket_exists(bucket):
+        _minio_client.make_bucket(bucket)
+    url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
+    print(f"[MinIO] Generated presigned GET URL: {url}")
+    return url
+
+
+@require_auth
+def get_ai_upload_url():
+    """获取前端临时上传大 JSON 的 PUT 链接"""
+    import uuid
+    filename = f"{uuid.uuid4().hex}.json"
+    bucket = "ai-chat-temp"
+    try:
+        put_url = _minio_presigned_put(bucket, filename)
+        # 前端将 PUT 上传到 put_url，并将此 get_url 发送给大模型用于下载
+        get_url = _minio_presigned_get(bucket, filename)
+        return jsonify({
+            "put_url": put_url,
+            "get_url": get_url,
+            "filename": filename
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 def _generate_appid():
@@ -77,34 +117,17 @@ def _increment_version(version_str):
 
 
 def store_apps():
-    """列出所有公开 APP"""
-    rows = db_query(
-        "SELECT id, name, version, description, author_name, download_url, tags, icon_url, meta_json FROM app_registry WHERE type = 'app' AND is_public = true ORDER BY created_at DESC",
-        fetch_all=True
-    )
-    apps = []
-    for row in rows:
-        app_data = {
-            "id": row["id"] or "",
-            "name": row["name"] or "",
-            "version": row["version"] or "",
-            "description": row["description"] or "",
-            "author": row["author_name"] or "",
-            "download_url": row["download_url"] or "",
-            "tags": row["tags"] or []
-        }
-        # 优先从 icon_url 字段读取，如果没有则从 meta_json 读取
-        icon_url = row.get("icon_url")
-        if icon_url:
-            app_data["icon_url"] = icon_url
-        else:
-            meta_json = row.get("meta_json")
-            if meta_json and isinstance(meta_json, dict):
-                app_data["icon_url"] = meta_json.get("icon_url", "")
-            else:
-                app_data["icon_url"] = ""
-        apps.append(app_data)
-    return jsonify({"apps": apps})
+    """
+    [已废弃] 列出所有公开 APP
+    请使用新的 Registry 服务: GET https://registry.dapangyu.work/packages?type=app
+    """
+    # 返回废弃警告
+    return jsonify({
+        "deprecated": True,
+        "message": "此接口已废弃，请使用 Registry 服务",
+        "new_endpoint": "https://registry.dapangyu.work/packages?type=app",
+        "apps": []
+    }), 410  # 410 Gone
 
 
 def store_components():
@@ -147,13 +170,16 @@ def new_appid():
 @require_auth
 @require_role("pro", "admin")
 def store_publish():
-    """发布 JSON-APP/组件到市场（支持新建和更新）"""
-    try:
-        return _do_store_publish()
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"服务器内部错误: {e}"}), 500
+    """
+    [已废弃] 发布 JSON-APP/组件到市场
+    请使用新的 Registry 服务: POST https://registry.dapangyu.work/publish
+    """
+    return jsonify({
+        "deprecated": True,
+        "message": "此接口已废弃，请使用 Registry 服务",
+        "new_endpoint": "https://registry.dapangyu.work/publish",
+        "migration_guide": "请参考 REGISTRY_README.md 了解如何迁移到新的发布流程"
+    }), 410  # 410 Gone
 
 def _do_store_publish():
     body = request.get_json(silent=True) or {}

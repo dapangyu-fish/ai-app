@@ -30,6 +30,12 @@ class JsonListWidget extends JsonBaseWidget {
     final emptyText = json['emptyText']?.toString() ?? '暂无数据';
     final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
     final onLoadMore = json['onLoadMore'] as Map<String, dynamic>?;
+    // 跨屏导航时保留滚动位置：JSON 里给 list 设 "key": "唯一名"，
+    // 框架包成 PageStorageKey，Flutter 的 PageStorage 自动存/取 scroll offset
+    final keyStr = json['key']?.toString();
+    final pageKey = keyStr != null && keyStr.isNotEmpty
+        ? PageStorageKey<String>(keyStr)
+        : null;
 
     // 空状态
     if (itemTemplate == null || items.isEmpty) {
@@ -97,31 +103,24 @@ class JsonListWidget extends JsonBaseWidget {
 
     // 构建列表
     Widget listView = ListView.separated(
+      key: pageKey,
       itemCount: items.length + (onLoadMore != null ? 1 : 0),
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (ctx, index) {
         // 最后一项：加载更多
         if (index == items.length && onLoadMore != null) {
-          // 自动触发加载
-          interpreter.executeAction(onLoadMore, ctx);
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
+          return _LoadMoreTrigger(
+            onTrigger: () => interpreter.executeAction(onLoadMore, ctx),
           );
         }
 
-        return interpreter.buildWidgetInLoopContext(
+        final itemWidget = interpreter.buildWidgetInLoopContext(
           context: ctx,
           json: itemTemplate,
           loopItem: items[index],
           loopIndex: index,
         );
+        return IntrinsicHeight(child: itemWidget);
       },
     );
 
@@ -134,5 +133,37 @@ class JsonListWidget extends JsonBaseWidget {
     }
 
     return Expanded(child: listView);
+  }
+}
+
+class _LoadMoreTrigger extends StatefulWidget {
+  final Future<void> Function() onTrigger;
+  const _LoadMoreTrigger({required this.onTrigger});
+
+  @override
+  State<_LoadMoreTrigger> createState() => _LoadMoreTriggerState();
+}
+
+class _LoadMoreTriggerState extends State<_LoadMoreTrigger> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onTrigger();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(16),
+      child: Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+    );
   }
 }

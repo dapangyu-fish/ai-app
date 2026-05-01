@@ -69,6 +69,16 @@ class JsonImageWidget extends JsonBaseWidget {
       );
     }
 
+    // 当同时指定了 width 和 height 时，用 SizedBox 约束尺寸
+    // 防止父级 Column/Row 的 CrossAxisAlignment.stretch 拉伸图片
+    if (width != null && height != null) {
+      image = SizedBox(
+        width: width,
+        height: height,
+        child: image,
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: image,

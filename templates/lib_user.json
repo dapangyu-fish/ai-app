@@ -1,0 +1,179 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "lib_user",
+    "version": "1.2.0",
+    "type": "library",
+    "description": "用户信息组件库 — 读取/修改用户资料",
+    "author": "demo",
+    "exports": [
+      "loadUserInfo",
+      "getUserAvatar",
+      "getUserEmail",
+      "getUserName",
+      "getAuthToken",
+      "checkLogin",
+      "updateAvatar",
+      "updateName"
+    ]
+  },
+  "global": {
+    "variables": {
+      "_info": null
+    },
+    "functions": {
+      "loadUserInfo": {
+        "params": [
+          "bind"
+        ],
+        "logic": [
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
+        ]
+      },
+      "getUserAvatar": {
+        "params": [
+          "bind"
+        ],
+        "logic": [
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._info.avatar_url }}"
+            }
+          }
+        ]
+      },
+      "getUserEmail": {
+        "params": [
+          "bind"
+        ],
+        "logic": [
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._info.email }}"
+            }
+          }
+        ]
+      },
+      "getUserName": {
+        "params": [
+          "bind"
+        ],
+        "logic": [
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._info.username }}"
+            }
+          }
+        ]
+      },
+      "getAuthToken": {
+        "params": [
+          "bind"
+        ],
+        "logic": [
+          {
+            "call": "@get_auth_token",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
+        ]
+      },
+      "checkLogin": {
+        "params": [
+          "bind"
+        ],
+        "logic": [
+          {
+            "call": "@is_logged_in",
+            "args": {
+              "bind": "{{ params.bind }}"
+            }
+          }
+        ]
+      },
+      "updateAvatar": {
+        "params": [
+          "imagePath"
+        ],
+        "logic": [
+          {
+            "call": "@file_to_base64",
+            "args": {
+              "path": "{{ params.imagePath }}",
+              "bind": "global._avatarB64"
+            }
+          },
+          {
+            "call": "@upload_avatar",
+            "args": {
+              "base64": "{{ global._avatarB64 }}",
+              "bind": "global._newAvatarUrl"
+            }
+          },
+          {
+            "call": "@update_profile",
+            "args": {
+              "avatar_url": "{{ global._newAvatarUrl }}"
+            }
+          },
+          {
+            "call": "@refresh_user",
+            "args": {}
+          }
+        ]
+      },
+      "updateName": {
+        "params": [
+          "newName"
+        ],
+        "logic": [
+          {
+            "call": "@update_profile",
+            "args": {
+              "username": "{{ params.newName }}"
+            }
+          },
+          {
+            "call": "@refresh_user",
+            "args": {}
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  },
+  "appid": "98936e32-c7d8-4e8b-9d8d-4d45697b157f"
+}

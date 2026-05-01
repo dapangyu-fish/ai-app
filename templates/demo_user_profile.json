@@ -1,0 +1,489 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "demo-user-profile",
+    "version": "2.3.0",
+    "type": "app",
+    "description": "用户资料演示 — 头像/昵称编辑",
+    "author": "demo"
+  },
+  "dependencies": {
+    "lib_user": "^1.2.0",
+    "common-ui": "^1.0.0"
+  },
+  "global": {
+    "variables": {
+      "userInfo": null,
+      "avatarUrl": "",
+      "userName": "",
+      "userEmail": "",
+      "authToken": "",
+      "isLoggedIn": false,
+      "statusText": "加载中...",
+      "_photoPath": ""
+    },
+    "functions": {
+      "loadAll": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@lib_user.checkLogin",
+            "args": {
+              "bind": "global.isLoggedIn"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.isLoggedIn"
+              },
+              "then": [
+                {
+                  "call": "@lib_user.loadUserInfo",
+                  "args": {
+                    "bind": "global.userInfo"
+                  }
+                },
+                {
+                  "call": "@lib_user.getUserAvatar",
+                  "args": {
+                    "bind": "global.avatarUrl"
+                  }
+                },
+                {
+                  "call": "@lib_user.getUserName",
+                  "args": {
+                    "bind": "global.userName"
+                  }
+                },
+                {
+                  "call": "@lib_user.getUserEmail",
+                  "args": {
+                    "bind": "global.userEmail"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.statusText",
+                    "value": "已登录"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.statusText",
+                    "value": "未登录"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "refreshInfo": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.statusText",
+              "value": "刷新中..."
+            }
+          },
+          {
+            "call": "@global.loadAll",
+            "args": {}
+          },
+          {
+            "call": "@common-ui.showSuccess",
+            "args": {
+              "message": "已刷新"
+            }
+          }
+        ]
+      },
+      "showToken": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@lib_user.getAuthToken",
+            "args": {
+              "bind": "global.authToken"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!!": [
+                  {
+                    "var": "global.authToken"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@common-ui.confirm",
+                  "args": {
+                    "title": "Access Token",
+                    "message": "{{ global.authToken }}"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@common-ui.showError",
+                  "args": {
+                    "message": "无 Token"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "changeAvatar": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@common-ui.pickImage",
+            "args": {
+              "bind": "global._photoPath"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!!": [
+                  {
+                    "var": "global._photoPath"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@lib_user.updateAvatar",
+                  "args": {
+                    "imagePath": "{{ global._photoPath }}"
+                  }
+                },
+                {
+                  "call": "@global.loadAll",
+                  "args": {}
+                },
+                {
+                  "call": "@common-ui.showSuccess",
+                  "args": {
+                    "message": "头像已更新"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@common-ui.showError",
+                  "args": {
+                    "message": "未选择图片"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "takeAvatar": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@common-ui.takePhoto",
+            "args": {
+              "bind": "global._photoPath"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!!": [
+                  {
+                    "var": "global._photoPath"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@lib_user.updateAvatar",
+                  "args": {
+                    "imagePath": "{{ global._photoPath }}"
+                  }
+                },
+                {
+                  "call": "@global.loadAll",
+                  "args": {}
+                },
+                {
+                  "call": "@common-ui.showSuccess",
+                  "args": {
+                    "message": "头像已更新"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@common-ui.showError",
+                  "args": {
+                    "message": "未拍照"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "editName": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_input_dialog",
+            "args": {
+              "title": "修改昵称",
+              "hint": "请输入新昵称",
+              "defaultValue": "{{ global.userName }}",
+              "bind": "global._newName"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!!": [
+                  {
+                    "var": "global._newName"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@lib_user.updateName",
+                  "args": {
+                    "newName": "{{ global._newName }}"
+                  }
+                },
+                {
+                  "call": "@global.loadAll",
+                  "args": {}
+                },
+                {
+                  "call": "@common-ui.showSuccess",
+                  "args": {
+                    "message": "昵称已更新"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@global.loadAll",
+      "args": {}
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "用户资料",
+        "layout": "column",
+        "padding": 20,
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "crossAxisAlignment": "center",
+            "color": "#F0F4FF",
+            "borderRadius": 16,
+            "padding": 20,
+            "children": [
+              {
+                "type": "image",
+                "url": "{{ global.avatarUrl }}",
+                "width": 80,
+                "height": 80,
+                "borderRadius": 40
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "拍照",
+                    "variant": "text",
+                    "icon": "camera_alt",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.takeAvatar",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "相册",
+                    "variant": "text",
+                    "icon": "photo_library",
+                    "action": {
+                      "type": "call",
+                      "call": "@global.changeAvatar",
+                      "args": {}
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "{{ global.userName }}",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "color": "#1A1A1A"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "{{ global.userEmail }}",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#666666"
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "borderRadius": 12,
+            "padding": 16,
+            "children": [
+              {
+                "type": "text",
+                "value": "登录状态",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#999999"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 2
+              },
+              {
+                "type": "text",
+                "value": "{{ global.statusText }}",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": "#1A1A1A"
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "text",
+                "value": "用户 ID",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#999999"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 2
+              },
+              {
+                "type": "text",
+                "value": "{{ global.userInfo.id }}",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#333333"
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 20
+          },
+          {
+            "type": "button",
+            "label": "修改昵称",
+            "variant": "filled",
+            "icon": "edit",
+            "action": {
+              "type": "call",
+              "call": "@global.editName",
+              "args": {}
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 10
+          },
+          {
+            "type": "button",
+            "label": "刷新信息",
+            "variant": "outlined",
+            "icon": "refresh",
+            "action": {
+              "type": "call",
+              "call": "@global.refreshInfo",
+              "args": {}
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 10
+          },
+          {
+            "type": "button",
+            "label": "查看 Token",
+            "variant": "outlined",
+            "icon": "key",
+            "action": {
+              "type": "call",
+              "call": "@global.showToken",
+              "args": {}
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "appid": "648edf0c-5717-488b-ba61-381837a59766"
+}

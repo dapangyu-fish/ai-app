@@ -1,35 +1,58 @@
 import 'package:flutter/material.dart';
+import 'ai_chat_service.dart';
 
 /// 对话消息
 class ChatMessage {
   final String role; // 'user' | 'assistant' | 'system'
   final String content;
   final Map<String, dynamic>? jsonApp; // AI 生成的 JSON-APP
-  ChatMessage({required this.role, required this.content, this.jsonApp});
+  final String? action; // 客户端动作，例如 'UPLOAD_CURRENT_APP'
+  final String? failedJsonUrl; // 下载失败的 URL
+  final String? jsonUrl; // 待用户点击下载并运行的 JSON URL
+  ChatMessage({required this.role, required this.content, this.jsonApp, this.action, this.failedJsonUrl, this.jsonUrl});
 }
 
 /// 纯字幕式覆层 — 半透明浮在屏幕底部，带窗口框和标题栏。
-class ChatOverlay extends StatelessWidget {
+class ChatOverlay extends StatefulWidget {
   final List<ChatMessage> messages;
   final String? liveTranscript;
   final bool isListening;
   final bool isThinking;
+  final bool isGeneratingJson;
+  final String generatingStatusMessage;
   final VoidCallback onClose;
   final VoidCallback? onClear;
   final ScrollController scrollController;
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
+  final void Function(String providerId)? onProviderChanged;
+  final VoidCallback? onUploadCurrentApp;
+  final void Function(String url)? onRetryDownload;
+  final Future<void> Function(String url)? onDownloadAndRun;
 
   const ChatOverlay({
     super.key,
     required this.messages,
     required this.isListening,
     required this.isThinking,
+    this.isGeneratingJson = false,
+    this.generatingStatusMessage = '正在生成代码...',
     required this.onClose,
     required this.scrollController,
     this.liveTranscript,
     this.onRunJsonApp,
     this.onClear,
+    this.onProviderChanged,
+    this.onUploadCurrentApp,
+    this.onRetryDownload,
+    this.onDownloadAndRun,
   });
+
+  @override
+  State<ChatOverlay> createState() => _ChatOverlayState();
+}
+
+class _ChatOverlayState extends State<ChatOverlay> {
+  double _offsetY = 0.0; // 窗口垂直偏移量
 
   @override
   Widget build(BuildContext context) {
@@ -37,17 +60,17 @@ class ChatOverlay extends StatelessWidget {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     final visibleMessages =
-        messages.where((m) => m.content.isNotEmpty).toList();
-    final hasLive = liveTranscript != null && liveTranscript!.isNotEmpty;
+        widget.messages.where((m) => m.content.isNotEmpty).toList();
+    final hasLive = widget.liveTranscript != null && widget.liveTranscript!.isNotEmpty;
 
-    if (visibleMessages.isEmpty && !hasLive && !isThinking) {
+    if (visibleMessages.isEmpty && !hasLive && !widget.isThinking && !widget.isGeneratingJson) {
       return const SizedBox.shrink();
     }
 
     return Positioned(
       left: 12,
       right: 12,
-      bottom: bottomPadding + 80,
+      bottom: bottomPadding + 80 + _offsetY,
       child: Container(
         constraints: BoxConstraints(maxHeight: screen.height * 0.4),
         decoration: BoxDecoration(
@@ -62,7 +85,7 @@ class ChatOverlay extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 标题栏 — 类 Windows 风格
+            // 标题栏
             Container(
               height: 36,
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -87,16 +110,52 @@ class ChatOverlay extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const Spacer(),
-                  if (onClear != null && visibleMessages.isNotEmpty)
+                  if (AiChatService.providers.length > 1) ...[
+                    const SizedBox(width: 8),
+                    _ProviderChip(
+                      providers: AiChatService.providers,
+                      selectedId: AiChatService.selectedProvider,
+                      onChanged: widget.onProviderChanged,
+                    ),
+                  ],
+                  // 可拖动区域
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onPanUpdate: (details) {
+                        setState(() {
+                          // 向上拖动时 dy 为负，增加 offsetY（窗口上移）
+                          // 向下拖动时 dy 为正，减少 offsetY（窗口下移）
+                          _offsetY -= details.delta.dy;
+
+                          // 限制拖动范围：不能超出屏幕
+                          final maxOffset = screen.height - bottomPadding - 200; // 至少保留200px在屏幕内
+                          final minOffset = -80.0; // 不能低于初始位置
+                          _offsetY = _offsetY.clamp(minOffset, maxOffset);
+                        });
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        child: Container(
+                          width: 30,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.onClear != null && visibleMessages.isNotEmpty)
                     _TitleBarButton(
                       icon: Icons.delete_outline,
-                      onTap: onClear!,
+                      onTap: widget.onClear!,
                     ),
                   const SizedBox(width: 4),
                   _TitleBarButton(
                     icon: Icons.close,
-                    onTap: onClose,
+                    onTap: widget.onClose,
                   ),
                 ],
               ),
@@ -106,21 +165,34 @@ class ChatOverlay extends StatelessWidget {
               child: ScrollConfiguration(
                 behavior: _NoGlowBehavior(),
                 child: ListView.builder(
-                  controller: scrollController,
+                  controller: widget.scrollController,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shrinkWrap: true,
                   itemCount: visibleMessages.length +
                       (hasLive ? 1 : 0) +
-                      (isThinking ? 1 : 0),
+                      (widget.isThinking ? 1 : 0) +
+                      (widget.isGeneratingJson ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (hasLive && index == visibleMessages.length) {
-                      return _buildLine('you', liveTranscript!, live: true);
+                      return _buildLine('you', widget.liveTranscript!, live: true);
                     }
-                    if (index >= visibleMessages.length + (hasLive ? 1 : 0)) {
+                    if (widget.isThinking && index == visibleMessages.length + (hasLive ? 1 : 0)) {
                       return _buildThinkingLine();
                     }
+                    if (widget.isGeneratingJson && index == visibleMessages.length + (hasLive ? 1 : 0) + (widget.isThinking ? 1 : 0)) {
+                      return _buildGeneratingLine();
+                    }
                     final msg = visibleMessages[index];
+                    if (msg.action == 'UPLOAD_CURRENT_APP') {
+                      return _buildActionLine(msg.content, '上传当前应用配置', widget.onUploadCurrentApp);
+                    }
+                    if (msg.failedJsonUrl != null) {
+                      return _buildRetryLine(msg.content, msg.failedJsonUrl!);
+                    }
+                    if (msg.jsonUrl != null) {
+                      return _buildDownloadLine(msg.content, msg.jsonUrl!);
+                    }
                     if (msg.role == 'system' && msg.jsonApp != null) {
                       return _buildRunButton(msg.content, msg.jsonApp!);
                     }
@@ -182,7 +254,7 @@ class ChatOverlay extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
-        onTap: () => onRunJsonApp?.call(jsonApp),
+        onTap: () => widget.onRunJsonApp?.call(jsonApp),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
@@ -209,6 +281,96 @@ class ChatOverlay extends StatelessWidget {
     );
   }
 
+  Widget _buildRetryLine(String content, String url) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (content.isNotEmpty) _buildLine('assistant', content),
+          GestureDetector(
+            onTap: () => widget.onRetryDownload?.call(url),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.refresh, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '重试下载 JSON',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionLine(String content, String buttonText, VoidCallback? onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (content.isNotEmpty) _buildLine('system', content),
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_upload, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDownloadLine(String content, String url) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (content.isNotEmpty) _buildLine('AI', content),
+          _DownloadRunButton(
+            url: url,
+            onDownloadAndRun: widget.onDownloadAndRun,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildThinkingLine() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -219,6 +381,44 @@ class ChatOverlay extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: const _ThinkingDots(),
+      ),
+    );
+  }
+
+  Widget _buildGeneratingLine() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.purpleAccent.shade100),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                widget.generatingStatusMessage,
+                style: TextStyle(
+                  color: Colors.purpleAccent.shade100,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -253,6 +453,185 @@ class _NoGlowBehavior extends ScrollBehavior {
   Widget buildOverscrollIndicator(
       BuildContext context, Widget child, ScrollableDetails details) {
     return child;
+  }
+}
+
+/// 供应商选择小标签 — 点击弹出切换菜单
+class _ProviderChip extends StatelessWidget {
+  final List<AiProvider> providers;
+  final String selectedId;
+  final void Function(String providerId)? onChanged;
+
+  const _ProviderChip({
+    required this.providers,
+    required this.selectedId,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final current = providers
+        .where((p) => p.id == selectedId)
+        .firstOrNull;
+    final label = current?.name ?? selectedId;
+
+    return Builder(
+      builder: (builderContext) => GestureDetector(
+        onTap: () => _showMenu(builderContext),
+        child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.smart_toy,
+                color: Colors.white.withValues(alpha: 0.6), size: 11),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.expand_more,
+                color: Colors.white.withValues(alpha: 0.4), size: 12),
+          ],
+        ),
+      ),
+    ));
+  }
+
+  void _showMenu(BuildContext context) {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final offset = box.localToGlobal(Offset.zero);
+
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + box.size.height + 4,
+        offset.dx + box.size.width,
+        0,
+      ),
+      items: providers.map((p) {
+        return PopupMenuItem<String>(
+          value: p.id,
+          child: Row(
+            children: [
+              if (p.id == selectedId)
+                const Icon(Icons.check, size: 16, color: Colors.green)
+              else
+                const SizedBox(width: 16),
+              const SizedBox(width: 8),
+              Text(p.name),
+            ],
+          ),
+        );
+      }).toList(),
+    ).then((value) {
+      if (value != null && value != selectedId) {
+        onChanged?.call(value);
+      }
+    });
+  }
+}
+
+class _DownloadRunButton extends StatefulWidget {
+  final String url;
+  final Future<void> Function(String url)? onDownloadAndRun;
+
+  const _DownloadRunButton({
+    required this.url,
+    this.onDownloadAndRun,
+  });
+
+  @override
+  State<_DownloadRunButton> createState() => _DownloadRunButtonState();
+}
+
+class _DownloadRunButtonState extends State<_DownloadRunButton> {
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _handleTap() async {
+    if (_isLoading || widget.onDownloadAndRun == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    String? err;
+    try {
+      await widget.onDownloadAndRun!(widget.url);
+    } catch (e) {
+      err = e.toString();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _error = err;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buttonLabel = _isLoading
+        ? '下载中...'
+        : (_error == null ? '下载并运行' : '重试下载并运行');
+
+    return GestureDetector(
+      onTap: _handleTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: _error == null
+              ? Colors.green.withValues(alpha: 0.5)
+              : Colors.orange.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isLoading)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            else
+              Icon(
+                _error == null ? Icons.download : Icons.refresh,
+                color: Colors.white,
+                size: 18,
+              ),
+            const SizedBox(width: 6),
+            Text(
+              buttonLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

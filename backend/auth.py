@@ -4,6 +4,7 @@
 """
 
 import base64
+import time
 import requests
 from functools import wraps
 from flask import request, jsonify
@@ -48,6 +49,76 @@ def _extract_user_info(user):
     }
 
 
+def find_user_by_email(email):
+    """
+    通过邮箱查找 Supabase 用户 ID
+    使用 Supabase Admin API
+
+    Returns:
+        user_id (str) 或 None
+    """
+    try:
+        # 使用 Supabase Admin API 列出用户
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/admin/users",
+            headers=_service_headers(),
+            timeout=10,
+        )
+
+        if resp.status_code != 200:
+            print(f"[Auth] Failed to fetch users: {resp.status_code}")
+            return None
+
+        data = resp.json()
+        users = data.get("users", [])
+
+        # 查找匹配的邮箱
+        for user in users:
+            if user.get("email", "").lower() == email.lower():
+                return user.get("id")
+
+        return None
+    except Exception as e:
+        print(f"[Auth] Error finding user by email: {e}")
+        return None
+
+
+def find_user_by_phone(phone):
+    """
+    通过手机号查找 Supabase 用户 ID
+    使用 Supabase Admin API
+
+    注意：目前 Supabase 还未启用手机号注册，此函数预留接口
+
+    Returns:
+        user_id (str) 或 None
+    """
+    try:
+        # 使用 Supabase Admin API 列出用户
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/admin/users",
+            headers=_service_headers(),
+            timeout=10,
+        )
+
+        if resp.status_code != 200:
+            print(f"[Auth] Failed to fetch users: {resp.status_code}")
+            return None
+
+        data = resp.json()
+        users = data.get("users", [])
+
+        # 查找匹配的手机号
+        for user in users:
+            if user.get("phone", "") == phone:
+                return user.get("id")
+
+        return None
+    except Exception as e:
+        print(f"[Auth] Error finding user by phone: {e}")
+        return None
+
+
 def require_auth(f):
     """装饰器：要求用户登录"""
     @wraps(f)
@@ -63,6 +134,34 @@ def require_auth(f):
         )
         if resp.status_code != 200:
             return jsonify({"error": "token 无效或已过期"}), 401
+        request.supabase_user = resp.json()
+        request.supabase_token = token
+        request.user_role = _get_user_role(request.supabase_user)
+        return f(*args, **kwargs)
+    return decorated
+
+
+def require_auth_socketio(f):
+    """装饰器：SocketIO 事件要求用户登录"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # SocketIO 通过 request.args 传递 token
+        token = request.args.get("token", "")
+        if not token:
+            from flask_socketio import emit
+            emit('asr_error', {"error": "未提供认证 token"})
+            return
+
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers=_supabase_headers(token),
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            from flask_socketio import emit
+            emit('asr_error', {"error": "token 无效或已过期"})
+            return
+
         request.supabase_user = resp.json()
         request.supabase_token = token
         request.user_role = _get_user_role(request.supabase_user)
@@ -228,6 +327,7 @@ def refresh_token():
     })
 
 
+@require_auth
 def logout():
     """用户登出"""
     requests.post(f"{SUPABASE_URL}/auth/v1/logout",
@@ -235,11 +335,13 @@ def logout():
     return jsonify({"message": "已登出"})
 
 
+@require_auth
 def get_user():
     """获取当前用户信息"""
     return jsonify(_extract_user_info(request.supabase_user))
 
 
+@require_auth
 def update_user():
     """更新用户信息"""
     body = request.get_json(silent=True) or {}
@@ -258,6 +360,7 @@ def update_user():
     return jsonify({"message": "更新成功", "user": _extract_user_info(data)})
 
 
+@require_auth
 def upload_avatar():
     """上传头像"""
     body = request.get_json(silent=True) or {}
@@ -283,13 +386,16 @@ def upload_avatar():
     if upload_resp.status_code >= 400:
         return jsonify({"error": f"存储上传失败: {upload_resp.text}"}), 502
 
-    public_url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}"
-    requests.put(f"{SUPABASE_URL}/auth/v1/user",
+    public_url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}?t={int(time.time())}"
+    meta_resp = requests.put(f"{SUPABASE_URL}/auth/v1/user",
                  headers=_supabase_headers(request.supabase_token),
                  json={"data": {"avatar_url": public_url}}, timeout=10)
+    if meta_resp.status_code >= 400:
+        return jsonify({"error": f"头像已上传但更新用户信息失败: {meta_resp.text}"}), 502
     return jsonify({"message": "头像更新成功", "avatar_url": public_url})
 
 
+@require_auth
 def get_quota():
     """获取用户配额"""
     user_id = request.supabase_user.get("id")

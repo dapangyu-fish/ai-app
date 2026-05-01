@@ -14,7 +14,14 @@ Widget buildScreenLayout(Map<String, dynamic> screen, List<Widget> children) {
 
   switch (layout) {
     case 'stack':
-      layoutWidget = Stack(children: children);
+      // 在 screen 级别用 SizedBox.expand 撑满给定的有界空间，
+      // 让 Positioned 的 bottom/right 有正确的参考点
+      layoutWidget = SizedBox.expand(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: children,
+        ),
+      );
       break;
     case 'row':
       layoutWidget = Row(

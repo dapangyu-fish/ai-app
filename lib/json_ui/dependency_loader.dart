@@ -4,6 +4,22 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'http_client.dart';
 import 'semver.dart';
+import 'cache_manager.dart';
+import '../config/app_config.dart';
+
+/// Registry 配置
+class RegistryConfig {
+  // 使用统一配置管理的Registry地址
+  static String get defaultRegistry => AppConfig.registryUrl;
+
+  // 支持多源（未来扩展）
+  static Map<String, String> get registries => {
+    'default': AppConfig.registryUrl,
+    'local': 'http://localhost:3254',
+  };
+
+  static String get registryUrl => registries['default']!;
+}
 
 /// 已加载的模块信息
 class LoadedModule {
@@ -33,20 +49,41 @@ class LoadedModule {
 /// 依赖声明
 class DependencySpec {
   final String name;
-  final String url;
+  final String? url; // 可选，如果为空则通过 registry 解析
   final VersionConstraint constraint;
 
   DependencySpec({
     required this.name,
-    required this.url,
+    this.url,
     required this.constraint,
   });
 
-  factory DependencySpec.fromJson(String name, Map<String, dynamic> json) {
+  factory DependencySpec.fromJson(String name, dynamic json) {
+    // 新格式：简化版本约束字符串
+    // "common-ui": "^1.0.0"
+    if (json is String) {
+      return DependencySpec(
+        name: name,
+        url: null,
+        constraint: VersionConstraint.parse(json),
+      );
+    }
+
+    // 旧格式：对象格式
+    // "common-ui": { "url": "...", "version": "^1.0.0" }
+    if (json is Map<String, dynamic>) {
+      return DependencySpec(
+        name: name,
+        url: json['url']?.toString(),
+        constraint: VersionConstraint.parse(json['version']?.toString() ?? '*'),
+      );
+    }
+
+    // 默认
     return DependencySpec(
       name: name,
-      url: json['url']?.toString() ?? '',
-      constraint: VersionConstraint.parse(json['version']?.toString() ?? '*'),
+      url: null,
+      constraint: VersionConstraint.parse('*'),
     );
   }
 }
@@ -75,14 +112,14 @@ class DependencyLoader {
 
     final specs = <DependencySpec>[];
     for (final entry in deps.entries) {
-      if (entry.value is Map<String, dynamic>) {
-        specs.add(DependencySpec.fromJson(entry.key, entry.value));
-      }
+      specs.add(DependencySpec.fromJson(entry.key, entry.value));
     }
 
     // 并发加载所有依赖
     await Future.wait(specs.map((spec) => _loadDependency(spec)));
   }
+
+
 
   /// 加载单个依赖
   Future<void> _loadDependency(DependencySpec spec) async {
@@ -102,30 +139,14 @@ class DependencyLoader {
       return;
     }
 
-    if (spec.url.isEmpty) {
-      debugPrint('[JSON DSL] 依赖 ${spec.name} 没有提供 URL');
-      return;
-    }
-
     _loadingStack.add(spec.name);
 
     try {
-      debugPrint('[JSON DSL] 正在加载依赖: ${spec.name} from ${spec.url}');
-
-      // 下载 JSON
-      final response = await _httpClient.get(spec.url);
-      if (response['error'] != null || response['data'] == null) {
-        debugPrint('[JSON DSL] 加载依赖失败: ${spec.name} - ${response['error']}');
-        return;
-      }
-
-      Map<String, dynamic> config;
-      if (response['data'] is String) {
-        config = json.decode(response['data'] as String);
-      } else if (response['data'] is Map) {
-        config = Map<String, dynamic>.from(response['data'] as Map);
-      } else {
-        debugPrint('[JSON DSL] 依赖 ${spec.name} 返回了非 JSON 数据');
+      // 通过 CacheManager 获取资源（自带本地缓存 + 后台热更新）
+      final config = await CacheManager.instance.getResource(spec.name, spec.constraint, type: 'library');
+      
+      if (config == null) {
+        debugPrint('[JSON DSL] 加载依赖失败或无法解析: ${spec.name}');
         return;
       }
 

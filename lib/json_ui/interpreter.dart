@@ -5,15 +5,20 @@
 // 变量路径格式：global.xxx / loop.item / params.xxx（兼容 $.global.xxx 旧格式）
 // ───────────────────────────────────────────────
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
+import '../auth/auth_service.dart';
+import '../designer/app_storage.dart';
+import 'drift_database.dart';
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -22,10 +27,16 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _variables;
   late Map<String, dynamic> _functions;
   String _currentScreenId = '';
+  String _appId = 'default';
 
   final List<Map<String, dynamic>> _loopContextStack = [];
   final List<Map<String, dynamic>> _paramsStack = [];
   final Map<String, TextEditingController> _textControllers = {};
+
+  /// 屏幕导航历史栈（不含当前页）。
+  /// PopScope / Android 物理返回键 / iOS 边缘滑动 都会调 navigateBack 弹出栈顶。
+  /// navigateTo 时把当前页推入；若目标已在栈中则弹到那一帧（防止历史无限增长）。
+  final List<String> _navigationHistory = [];
 
   /// jsonlogic 标准引擎 + 自定义操作符
   late Jsonlogic _jl;
@@ -37,6 +48,10 @@ class JsonInterpreter extends ChangeNotifier {
 
   void Function(String screenId)? onNavigate;
   BuildContext? globalContext;
+
+  // ============ Toast 重叠显示管理 ============
+  final List<OverlayEntry> _activeToasts = [];
+  static const int _maxOverlappingToasts = 20;
 
   // ============ Getters ============
 
@@ -257,6 +272,9 @@ class JsonInterpreter extends ChangeNotifier {
   void loadConfig(Map<String, dynamic> config) {
     _config = config;
 
+    // 提取 appid，用于 Drift 数据库隔离
+    _appId = config['appid']?.toString() ?? config['meta']?['name']?.toString() ?? 'default';
+
     final global = config['global'] as Map<String, dynamic>? ?? {};
     _variables =
         _deepCopy(global['variables'] as Map<String, dynamic>? ?? {});
@@ -264,6 +282,7 @@ class JsonInterpreter extends ChangeNotifier {
 
     _loopContextStack.clear();
     _paramsStack.clear();
+    _navigationHistory.clear();
     _depLoader.clear();
     for (final c in _textControllers.values) {
       c.dispose();
@@ -323,8 +342,9 @@ class JsonInterpreter extends ChangeNotifier {
     }
 
     // 没有前缀：先查 global 变量，再查依赖模块变量
-    final globalResult = _getNestedValue(_variables, path);
-    if (globalResult != null) return globalResult;
+    if (_hasNestedKey(_variables, path)) {
+      return _getNestedValue(_variables, path);
+    }
 
     // 尝试作为依赖变量: "depName.varPath"
     return _getDependencyVariable(path);
@@ -366,6 +386,19 @@ class JsonInterpreter extends ChangeNotifier {
       }
     }
     return current;
+  }
+
+  bool _hasNestedKey(Map<String, dynamic> map, String dotPath) {
+    final keys = dotPath.split('.');
+    dynamic current = map;
+    for (final key in keys) {
+      if (current is Map<String, dynamic> && current.containsKey(key)) {
+        current = current[key];
+      } else {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _setNestedValue(
@@ -446,8 +479,12 @@ class JsonInterpreter extends ChangeNotifier {
       case 'call':
         final callTarget = action['call'] as String?;
         final args = action['args'] as Map<String, dynamic>?;
+        final assignVar = action['assign'] as String?;
         if (callTarget != null) {
-          await _executeCall(callTarget, args ?? {});
+          final result = await _executeCall(callTarget, args ?? {});
+          if (assignVar != null && result != null) {
+            setVariable(assignVar, result);
+          }
         }
         break;
       case 'navigate':
@@ -456,7 +493,39 @@ class JsonInterpreter extends ChangeNotifier {
           navigateTo(screenId);
         }
         break;
+      case 'back':
+        // 弹出导航历史回到上一屏；栈空则尝试 pop 外层 Route（退出 JSON-APP）
+        if (canNavigateBack) {
+          navigateBack();
+        } else if (context.mounted) {
+          Navigator.of(context).maybePop();
+        }
+        break;
     }
+  }
+
+  /// 与 executeAction 相同，但返回函数调用的返回值
+  /// 主要供需要决策结果的回调使用（如 dismissible.confirmAction）
+  Future<dynamic> executeActionWithResult(
+      dynamic action, BuildContext context) async {
+    if (action is! Map<String, dynamic>) return null;
+    final type = action['type'] ?? 'call';
+    if (type == 'call') {
+      final callTarget = action['call'] as String?;
+      final args = action['args'] as Map<String, dynamic>?;
+      final assignVar = action['assign'] as String?;
+      if (callTarget != null) {
+        final result = await _executeCall(callTarget, args ?? {});
+        if (assignVar != null && result != null) {
+          setVariable(assignVar, result);
+        }
+        return result;
+      }
+    } else if (type == 'navigate') {
+      final screenId = action['screen'] as String?;
+      if (screenId != null) navigateTo(screenId);
+    }
+    return null;
   }
 
   void navigateTo(String screenId) {
@@ -480,8 +549,31 @@ class JsonInterpreter extends ChangeNotifier {
         }
       }
     }
+
+    // 维护导航历史栈：
+    // - 目标页已在历史中（用户在做"回退式跳转"，例如点 home 链接）
+    //   → 弹到那一帧，避免历史无限增长
+    // - 否则普通前进：把当前页推入历史
+    final lastIdx = _navigationHistory.lastIndexOf(screenId);
+    if (lastIdx >= 0) {
+      _navigationHistory.removeRange(lastIdx, _navigationHistory.length);
+    } else if (_currentScreenId.isNotEmpty && _currentScreenId != screenId) {
+      _navigationHistory.add(_currentScreenId);
+    }
+
     _currentScreenId = screenId;
     onNavigate?.call(screenId);
+    notifyListeners();
+  }
+
+  /// 是否能回退到上一屏（历史栈非空）
+  bool get canNavigateBack => _navigationHistory.isNotEmpty;
+
+  /// 弹出历史栈，回到上一屏。栈空时无操作（调用方应自行决定是否退出 app）。
+  void navigateBack() {
+    if (_navigationHistory.isEmpty) return;
+    _currentScreenId = _navigationHistory.removeLast();
+    onNavigate?.call(_currentScreenId);
     notifyListeners();
   }
 
@@ -572,22 +664,26 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 控制流 ──
       case '@if':
-        return await _builtinIf(resolvedArgs);
+        return await _builtinIf(args);
       case '@while':
-        return await _builtinWhile(resolvedArgs);
+        return await _builtinWhile(args);
       case '@for_each':
-        return await _builtinForEach(resolvedArgs);
+        return await _builtinForEach(args);
       case '@loop_by_num':
-        return await _builtinLoopByNum(resolvedArgs);
+        return await _builtinLoopByNum(args);
       case '@try_catch':
-        return await _builtinTryCatch(resolvedArgs);
+        return await _builtinTryCatch(args);
       case '@parallel':
-        return await _builtinParallel(resolvedArgs);
+        return await _builtinParallel(args);
       case '@delay':
         final ms =
             _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
         await Future.delayed(Duration(milliseconds: ms));
         return null;
+      case '@throw':
+        // 主动抛错——用于测试 @try_catch / 业务侧主动失败
+        throw Exception(
+            resolvedArgs['message']?.toString() ?? 'thrown by @throw');
 
       // ── HTTP ──
       case '@http_get':
@@ -674,6 +770,19 @@ class JsonInterpreter extends ChangeNotifier {
           }
         }
         return null;
+      case '@list_remove':
+        final listPath = resolvedArgs['var'] as String?;
+        final value = _evaluateExpression(resolvedArgs['value']);
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final newList = List<dynamic>.from(current)
+              ..removeWhere((e) => e == value);
+            setVariable(listPath, newList);
+            return newList;
+          }
+        }
+        return null;
       case '@list_insert':
         final listPath = resolvedArgs['var'] as String?;
         final index = _toInt(resolvedArgs['index'] ?? 0);
@@ -712,6 +821,67 @@ class JsonInterpreter extends ChangeNotifier {
           resolvedArgs['title']?.toString() ?? '',
           resolvedArgs['message']?.toString() ?? '',
         );
+
+      case '@show_input_dialog':
+        final title = resolvedArgs['title']?.toString() ?? '输入';
+        final hint = resolvedArgs['hint']?.toString() ?? '';
+        final defaultValue = resolvedArgs['defaultValue']?.toString() ?? '';
+        final bindPath = resolvedArgs['bind'] as String?;
+        final result = await _showTextInputDialog(title, hint, defaultValue);
+        if (bindPath != null) {
+          setVariable(bindPath, result);
+        }
+        return result;
+
+      case '@show_choice_dialog':
+        // 自定义按钮对话框
+        // args: { title, message, buttons: [{label, value, style?}], dismissible? }
+        // 返回值：被点击按钮的 value（dismiss 关闭返回 null）
+        final choiceTitle = resolvedArgs['title']?.toString() ?? '';
+        final choiceMessage = resolvedArgs['message']?.toString() ?? '';
+        final rawButtons = resolvedArgs['buttons'];
+        final dismissible = resolvedArgs['dismissible'] != false;
+        return await _showChoiceDialog(
+          choiceTitle,
+          choiceMessage,
+          rawButtons is List ? rawButtons : const [],
+          dismissible: dismissible,
+        );
+
+      case '@show_snackbar':
+        // 增强版 toast：带操作按钮的底部 SnackBar
+        // args: { message, actionLabel?, action?, durationMs?, backgroundColor? }
+        final snackMsg = resolvedArgs['message']?.toString() ?? '';
+        final actionLabel = resolvedArgs['actionLabel']?.toString();
+        final actionDef = resolvedArgs['action'];
+        final durationMs = (resolvedArgs['durationMs'] as num?)?.toInt() ?? 3000;
+        final bgColorStr = resolvedArgs['backgroundColor']?.toString();
+        _showSnackBar(
+          snackMsg,
+          actionLabel: actionLabel,
+          actionDef: actionDef,
+          durationMs: durationMs,
+          backgroundColor: _parseColorHex(bgColorStr),
+        );
+        return null;
+
+      case '@show_date_picker':
+        // 命令式日期选择器
+        // args: { initial?, firstDate?, lastDate?, bind? }
+        // 返回值：yyyy-MM-dd 字符串（取消返回 null）
+        return await _showDatePickerImperative(resolvedArgs);
+
+      case '@show_time_picker':
+        // 命令式时间选择器
+        // args: { initial?, bind? }
+        // 返回值：HH:mm 字符串（取消返回 null）
+        return await _showTimePickerImperative(resolvedArgs);
+
+      case '@show_bottom_sheet':
+        // 底部弹窗
+        // args: { content: { ...widget... }, isDismissible?, enableDrag?, backgroundColor? }
+        // 返回值：弹窗里 close action 透传的值（关闭返回 null）
+        return await _showBottomSheet(resolvedArgs);
 
       // ── 本地存储 ──
       case '@storage_set':
@@ -752,10 +922,309 @@ class JsonInterpreter extends ChangeNotifier {
         await prefs.clear();
         return null;
 
+      // ── 文件持久化 ──
+      // 所有文件操作都基于应用文档目录（getApplicationDocumentsDirectory），
+      // path 参数是相对路径，如 "diary/entries.json"
+      case '@file_write_json':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final data = resolvedArgs['data'];
+          if (relPath == null || data == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          await file.parent.create(recursive: true);
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_write_json error: $e');
+          return false;
+        }
+
+      case '@file_read_json':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return null;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return resolvedArgs['default'];
+          final content = await file.readAsString();
+          return json.decode(content);
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_read_json error: $e');
+          return resolvedArgs['default'];
+        }
+
+      case '@file_exists':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          return await file.exists();
+        } catch (e) {
+          return false;
+        }
+
+      case '@file_delete':
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          if (relPath == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (await file.exists()) {
+            await file.delete();
+            return true;
+          }
+          return false;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_delete error: $e');
+          return false;
+        }
+
+      case '@file_list':
+        try {
+          final relDir = resolvedArgs['path']?.toString() ?? '';
+          final dir = await _getAppDocDir();
+          final targetDir = Directory('${dir.path}/$relDir');
+          if (!await targetDir.exists()) return <String>[];
+          final entities = await targetDir.list().toList();
+          return entities
+              .whereType<File>()
+              .map((f) => f.path.split('/').last)
+              .toList();
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_list error: $e');
+          return <String>[];
+        }
+
+      case '@file_append_json':
+        // 追加一条记录到 JSON 数组文件（原子性：读→追加→写）
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final item = resolvedArgs['item'];
+          if (relPath == null || item == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          List<dynamic> list = [];
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            final decoded = json.decode(content);
+            if (decoded is List) list = decoded;
+          }
+          list.add(item);
+          await file.parent.create(recursive: true);
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(list);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_append_json error: $e');
+          return false;
+        }
+
+      case '@file_remove_json_item':
+        // 从 JSON 数组文件中按字段匹配删除一条记录
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final matchField = resolvedArgs['field']?.toString();
+          final matchValue = resolvedArgs['value'];
+          if (relPath == null || matchField == null) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return false;
+          final content = await file.readAsString();
+          final decoded = json.decode(content);
+          if (decoded is! List) return false;
+          final newList = decoded.where((item) {
+            if (item is Map) {
+              return item[matchField]?.toString() != matchValue?.toString();
+            }
+            return true;
+          }).toList();
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(newList);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_remove_json_item error: $e');
+          return false;
+        }
+
+      case '@file_update_json_item':
+        // 从 JSON 数组文件中按字段匹配更新一条记录
+        try {
+          final relPath = resolvedArgs['path']?.toString();
+          final matchField = resolvedArgs['field']?.toString();
+          final matchValue = resolvedArgs['value'];
+          final updates = resolvedArgs['updates'];
+          if (relPath == null || matchField == null || updates is! Map) return false;
+          final dir = await _getAppDocDir();
+          final file = File('${dir.path}/$relPath');
+          if (!await file.exists()) return false;
+          final content = await file.readAsString();
+          final decoded = json.decode(content);
+          if (decoded is! List) return false;
+          bool found = false;
+          for (int i = 0; i < decoded.length; i++) {
+            if (decoded[i] is Map && decoded[i][matchField]?.toString() == matchValue?.toString()) {
+              for (final entry in updates.entries) {
+                decoded[i][entry.key] = entry.value;
+              }
+              found = true;
+              break;
+            }
+          }
+          if (!found) return false;
+          final jsonStr = const JsonEncoder.withIndent('  ').convert(decoded);
+          await file.writeAsString(jsonStr, flush: true);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @file_update_json_item error: $e');
+          return false;
+        }
+
+      // ── Drift 数据库 ──
+      case '@db_create_table':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final columns = resolvedArgs['columns'];
+          if (table == null || columns is! List) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final colList = columns.map((c) => Map<String, String>.from(
+            (c as Map).map((k, v) => MapEntry(k.toString(), v.toString()))
+          )).toList();
+          await db.ensureTable(table, colList);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_create_table error: $e');
+          return false;
+        }
+
+      case '@db_insert':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final data = resolvedArgs['data'];
+          if (table == null || data is! Map) return -1;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          return await db.insertRow(table, Map<String, dynamic>.from(data));
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_insert error: $e');
+          return -1;
+        }
+
+      case '@db_query':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          if (table == null) return <Map<String, dynamic>>[];
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final where = resolvedArgs['where']?.toString();
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          final orderBy = resolvedArgs['orderBy']?.toString();
+          final limit = resolvedArgs['limit'] != null ? _toInt(resolvedArgs['limit']!) : null;
+          final offset = resolvedArgs['offset'] != null ? _toInt(resolvedArgs['offset']!) : null;
+          return await db.queryRows(table,
+            where: where,
+            whereArgs: whereArgs,
+            orderBy: orderBy,
+            limit: limit,
+            offset: offset,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_query error: $e');
+          return <Map<String, dynamic>>[];
+        }
+
+      case '@db_update':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final data = resolvedArgs['data'];
+          final where = resolvedArgs['where']?.toString();
+          if (table == null || data is! Map || where == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.updateRows(table, Map<String, dynamic>.from(data),
+            where: where,
+            whereArgs: whereArgs,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_update error: $e');
+          return 0;
+        }
+
+      case '@db_delete':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          final where = resolvedArgs['where']?.toString();
+          if (table == null || where == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.deleteRows(table, where: where, whereArgs: whereArgs);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_delete error: $e');
+          return 0;
+        }
+
+      case '@db_count':
+        try {
+          final table = resolvedArgs['table']?.toString();
+          if (table == null) return 0;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          final where = resolvedArgs['where']?.toString();
+          final whereArgs = resolvedArgs['whereArgs'] is List
+              ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
+              : null;
+          return await db.countRows(table, where: where, whereArgs: whereArgs);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_count error: $e');
+          return 0;
+        }
+
+      case '@db_kv_set':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          final value = resolvedArgs['value'];
+          if (key == null) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          await db.kvSet(key, value);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_set error: $e');
+          return false;
+        }
+
+      case '@db_kv_get':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          if (key == null) return null;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          return await db.kvGet(key);
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_get error: $e');
+          return null;
+        }
+
+      case '@db_kv_delete':
+        try {
+          final key = resolvedArgs['key']?.toString();
+          if (key == null) return false;
+          final db = DriftDatabaseManager.instance.getDatabase(_appId);
+          await db.kvDelete(key);
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] @db_kv_delete error: $e');
+          return false;
+        }
+
       // ── 随机数 ──
       case '@random':
         final min = _toInt(resolvedArgs['min'] ?? 0);
         final max = _toInt(resolvedArgs['max'] ?? 100);
+        if (min >= max) return min;
         return min + Random().nextInt(max - min + 1);
 
       case '@random_float':
@@ -1034,6 +1503,127 @@ class JsonInterpreter extends ChangeNotifier {
       case '@pick_image':
         return await _pickOrTakeImage(resolvedArgs, ImageSource.gallery);
 
+      case '@file_to_base64':
+        final filePath = resolvedArgs['path'] as String?;
+        if (filePath == null || filePath.isEmpty) return null;
+        try {
+          final file = File(filePath);
+          if (await file.exists()) {
+            final bytes = await file.readAsBytes();
+            final b64 = base64Encode(bytes);
+            final b64Bind = resolvedArgs['bind'] as String?;
+            if (b64Bind != null) {
+              setVariable(b64Bind, b64);
+            }
+            return b64;
+          }
+        } catch (e) {
+          debugPrint('[JSON DSL] file_to_base64 失败: $e');
+        }
+        return null;
+
+      // ── 用户信息 ──
+      case '@get_user_info':
+        final userInfo = AuthService.currentUser != null
+            ? Map<String, dynamic>.from(AuthService.currentUser!)
+            : null;
+        final bindPath = resolvedArgs['bind'] as String?;
+        if (bindPath != null && userInfo != null) {
+          setVariable(bindPath, userInfo);
+        }
+        return userInfo;
+
+      case '@get_auth_token':
+        final token = AuthService.token;
+        final tokenBind = resolvedArgs['bind'] as String?;
+        if (tokenBind != null && token != null) {
+          setVariable(tokenBind, token);
+        }
+        return token;
+
+      case '@is_logged_in':
+        final loggedIn = AuthService.isLoggedIn;
+        final loginBind = resolvedArgs['bind'] as String?;
+        if (loginBind != null) {
+          setVariable(loginBind, loggedIn);
+        }
+        return loggedIn;
+
+      case '@logout':
+        await AuthService.signOut();
+        return null;
+
+      case '@refresh_user':
+        try {
+          return await AuthService.fetchUser();
+        } catch (e) {
+          debugPrint('[JSON DSL] refresh_user 失败: $e');
+          return null;
+        }
+
+      case '@update_profile':
+        final username = resolvedArgs['username'] as String?;
+        final avatarUrl = resolvedArgs['avatar_url'] as String?;
+        try {
+          return await AuthService.updateProfile(
+            username: username,
+            avatarUrl: avatarUrl,
+          );
+        } catch (e) {
+          debugPrint('[JSON DSL] update_profile 失败: $e');
+          return {'error': e.toString()};
+        }
+
+      case '@upload_avatar':
+        final base64Data = resolvedArgs['base64'] as String?;
+        if (base64Data == null || base64Data.isEmpty) return null;
+        try {
+          final url = await AuthService.uploadAvatar(base64Data);
+          final bindPath = resolvedArgs['bind'] as String?;
+          if (bindPath != null) {
+            setVariable(bindPath, url);
+          }
+          return url;
+        } catch (e) {
+          debugPrint('[JSON DSL] upload_avatar 失败: $e');
+          return null;
+        }
+
+      case '@get_app_config':
+        final bindPath = resolvedArgs['bind'] as String?;
+        if (bindPath != null) {
+          setVariable(bindPath, rawConfig);
+        }
+        return rawConfig;
+
+      case '@apply_app_config':
+        final newConfig = resolvedArgs['config'] as Map<String, dynamic>?;
+        if (newConfig == null) return false;
+        try {
+          // 修改内存中的配置
+          loadConfig(newConfig);
+          // 重新执行初始化
+          await executeSteps();
+          notifyListeners();
+          return true;
+        } catch (e) {
+          debugPrint('[JSON DSL] apply_app_config 失败: $e');
+          return false;
+        }
+
+      case '@save_app_config':
+        final configToSave = resolvedArgs['config'] as Map<String, dynamic>? ?? rawConfig;
+        if (configToSave == null) return false;
+        try {
+          final appStorageClass = AppStorage.instance;
+          final fileName = await appStorageClass.save(configToSave);
+          debugPrint('[JSON DSL] 保存 APP 成功: $fileName');
+          return fileName;
+        } catch (e) {
+          debugPrint('[JSON DSL] save_app_config 失败: $e');
+          return false;
+        }
+
       default:
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');
         return null;
@@ -1062,7 +1652,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> _builtinWhile(Map<String, dynamic> args) async {
     final condition = args['condition'];
     final body = args['body'] as List<dynamic>? ?? [];
-    final maxIterations = _toInt(args['max_iterations'] ?? 10000);
+    final maxIterations = _toInt(_resolveTemplatesInRule(args['max_iterations']) ?? 10000);
 
     int count = 0;
     while (_evaluateBool(condition) && count < maxIterations) {
@@ -1098,7 +1688,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<dynamic> _builtinLoopByNum(Map<String, dynamic> args) async {
-    final count = _toInt(args['count'] ?? 0);
+    final count = _toInt(_resolveTemplatesInRule(args['count']) ?? 0);
     final body = args['body'] as List<dynamic>? ?? [];
 
     for (var i = 0; i < count; i++) {
@@ -1118,7 +1708,7 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> _builtinTryCatch(Map<String, dynamic> args) async {
     final trySteps = args['try'] as List<dynamic>? ?? [];
     final catchSteps = args['catch'] as List<dynamic>? ?? [];
-    final errorVar = args['error_var'] as String?;
+    final errorVar = _resolveTemplatesInRule(args['error_var']) as String?;
 
     try {
       dynamic lastResult;
@@ -1211,19 +1801,70 @@ class JsonInterpreter extends ChangeNotifier {
     }
   }
 
+  // ============ 文件持久化辅助 ============
+
+  Directory? _appDocDirCache;
+  Future<Directory> _getAppDocDir() async {
+    _appDocDirCache ??= await getApplicationDocumentsDirectory();
+    return _appDocDirCache!;
+  }
+
   // ============ UI 反馈 ============
 
   void _showToast(String message) {
     final ctx = globalContext;
-    if (ctx != null && ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    if (ctx == null || !ctx.mounted) return;
+
+    // 超过 20 个立即清空所有旧的
+    if (_activeToasts.length >= _maxOverlappingToasts) {
+      for (final entry in _activeToasts) {
+        entry.remove();
+      }
+      _activeToasts.clear();
     }
+
+    final overlay = Overlay.of(ctx);
+    late OverlayEntry entry;
+
+    // 所有 toast 都在同一位置（贴底 80），新进入的天然盖在旧的上面（z-order）。
+    // 视觉风格参考原生 Android Toast / 微信：紧凑、半透明深色、最大宽度封顶。
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 80,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+    _activeToasts.add(entry);
+
+    // 2 秒后自动移除
+    Future.delayed(const Duration(seconds: 2), () {
+      if (entry.mounted) {
+        entry.remove();
+        _activeToasts.remove(entry);
+      }
+    });
   }
 
   Future<bool> _showAlertDialog(String title, String message) async {
@@ -1234,7 +1875,9 @@ class JsonInterpreter extends ChangeNotifier {
       context: ctx,
       builder: (dialogCtx) => AlertDialog(
         title: Text(title),
-        content: Text(message),
+        content: SingleChildScrollView(
+          child: SelectableText(message),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
@@ -1248,6 +1891,217 @@ class JsonInterpreter extends ChangeNotifier {
       ),
     );
     return result ?? false;
+  }
+
+  /// 自定义按钮对话框 — 返回被点击按钮的 value（关闭返回 null）
+  /// buttons 项格式：{ label: String, value: dynamic, style?: 'primary'/'danger'/'text' }
+  Future<dynamic> _showChoiceDialog(
+    String title,
+    String message,
+    List<dynamic> buttons, {
+    bool dismissible = true,
+  }) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+
+    return await showDialog<dynamic>(
+      context: ctx,
+      barrierDismissible: dismissible,
+      builder: (dialogCtx) {
+        final actions = <Widget>[];
+        for (final btn in buttons) {
+          if (btn is! Map) continue;
+          final label = btn['label']?.toString() ?? '';
+          final value = btn['value'];
+          final style = btn['style']?.toString() ?? 'text';
+
+          Widget button;
+          switch (style) {
+            case 'primary':
+              button = FilledButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+              break;
+            case 'danger':
+              button = FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(dialogCtx).colorScheme.error,
+                  foregroundColor: Theme.of(dialogCtx).colorScheme.onError,
+                ),
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+              break;
+            case 'text':
+            default:
+              button = TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+          }
+          actions.add(button);
+        }
+        return AlertDialog(
+          title: title.isEmpty ? null : Text(title),
+          content: message.isEmpty
+              ? null
+              : SingleChildScrollView(child: SelectableText(message)),
+          actions: actions,
+        );
+      },
+    );
+  }
+
+  Future<String?> _showTextInputDialog(String title, String hint, String defaultValue) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+
+    return await showDialog<String>(
+      context: ctx,
+      builder: (dialogCtx) => _TextInputDialog(
+        title: title,
+        hint: hint,
+        defaultValue: defaultValue,
+      ),
+    );
+  }
+
+  /// 增强版 SnackBar — 支持操作按钮
+  void _showSnackBar(
+    String message, {
+    String? actionLabel,
+    dynamic actionDef,
+    int durationMs = 3000,
+    Color? backgroundColor,
+  }) {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    if (messenger == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(milliseconds: durationMs),
+        backgroundColor: backgroundColor,
+        action: (actionLabel != null && actionDef != null)
+            ? SnackBarAction(
+                label: actionLabel,
+                onPressed: () {
+                  if (ctx.mounted) {
+                    executeAction(actionDef, ctx);
+                  }
+                },
+              )
+            : null,
+      ),
+    );
+  }
+
+  /// 命令式日期选择器
+  Future<String?> _showDatePickerImperative(
+      Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    DateTime parseOr(String? s, DateTime fallback) {
+      if (s == null || s.isEmpty) return fallback;
+      try {
+        return DateTime.parse(s);
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    final now = DateTime.now();
+    final initial = parseOr(args['initial']?.toString(), now);
+    final firstDate = parseOr(args['firstDate']?.toString(),
+        DateTime(now.year - 50));
+    final lastDate = parseOr(args['lastDate']?.toString(),
+        DateTime(now.year + 50));
+    final bindPath = args['bind'] as String?;
+
+    final picked = await showDatePicker(
+      context: ctx,
+      initialDate: initial.isBefore(firstDate) ? firstDate : initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
+    if (picked == null) return null;
+    final m = picked.month.toString().padLeft(2, '0');
+    final d = picked.day.toString().padLeft(2, '0');
+    final s = '${picked.year}-$m-$d';
+    if (bindPath != null) {
+      setVariable(bindPath, s);
+    }
+    return s;
+  }
+
+  /// 命令式时间选择器
+  Future<String?> _showTimePickerImperative(
+      Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    TimeOfDay initial = TimeOfDay.now();
+    final initStr = args['initial']?.toString();
+    if (initStr != null && initStr.contains(':')) {
+      final parts = initStr.split(':');
+      final h = int.tryParse(parts[0]);
+      final mi = parts.length > 1 ? int.tryParse(parts[1]) : null;
+      if (h != null && mi != null && h >= 0 && h < 24 && mi >= 0 && mi < 60) {
+        initial = TimeOfDay(hour: h, minute: mi);
+      }
+    }
+    final bindPath = args['bind'] as String?;
+
+    final picked = await showTimePicker(
+      context: ctx,
+      initialTime: initial,
+    );
+    if (picked == null) return null;
+    final h = picked.hour.toString().padLeft(2, '0');
+    final m = picked.minute.toString().padLeft(2, '0');
+    final s = '$h:$m';
+    if (bindPath != null) {
+      setVariable(bindPath, s);
+    }
+    return s;
+  }
+
+  /// 命令式底部弹窗
+  Future<dynamic> _showBottomSheet(Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    final content = args['content'];
+    if (content is! Map<String, dynamic>) return null;
+    final isDismissible = args['isDismissible'] != false;
+    final enableDrag = args['enableDrag'] != false;
+    final bg = _parseColorHex(args['backgroundColor']?.toString());
+
+    return await showModalBottomSheet<dynamic>(
+      context: ctx,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
+      backgroundColor: bg,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: buildWidget(sheetCtx, content),
+        ),
+      ),
+    );
+  }
+
+  /// 解析 #RRGGBB / #AARRGGBB 颜色字符串
+  Color? _parseColorHex(String? colorStr) {
+    if (colorStr == null || !colorStr.startsWith('#')) return null;
+    final hex = colorStr.replaceFirst('#', '');
+    if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
+    if (hex.length == 8) return Color(int.parse(hex, radix: 16));
+    return null;
   }
 
   Future<String?> _pickOrTakeImage(
@@ -1342,20 +2196,28 @@ class JsonInterpreter extends ChangeNotifier {
 
   // ============ 参数解析 ============
 
+  dynamic _resolveValue(dynamic value) {
+    if (value is String) {
+      if (value.contains('{{') && value.contains('}}')) {
+        return resolveExpression(value);
+      }
+      return value;
+    } else if (value is List) {
+      return value.map((e) => _resolveValue(e)).toList();
+    } else if (value is Map<String, dynamic>) {
+      final resolvedMap = <String, dynamic>{};
+      value.forEach((k, v) {
+        resolvedMap[k] = _resolveValue(v);
+      });
+      return resolvedMap;
+    }
+    return value;
+  }
+
   Map<String, dynamic> _resolveArgs(Map<String, dynamic> args) {
     final resolved = <String, dynamic>{};
     for (final entry in args.entries) {
-      if (entry.value is String) {
-        final str = entry.value as String;
-        if (str.contains('{{') && str.contains('}}')) {
-          // resolveExpression: 整体 {{ path }} 返回原始类型，混合文本返回 String
-          resolved[entry.key] = resolveExpression(str);
-        } else {
-          resolved[entry.key] = str;
-        }
-      } else {
-        resolved[entry.key] = entry.value;
-      }
+      resolved[entry.key] = _resolveValue(entry.value);
     }
     return resolved;
   }
@@ -1446,5 +2308,61 @@ class JsonInterpreter extends ChangeNotifier {
     }
     _textControllers.clear();
     super.dispose();
+  }
+}
+
+class _TextInputDialog extends StatefulWidget {
+  final String title;
+  final String hint;
+  final String defaultValue;
+
+  const _TextInputDialog({
+    required this.title,
+    required this.hint,
+    required this.defaultValue,
+  });
+
+  @override
+  State<_TextInputDialog> createState() => _TextInputDialogState();
+}
+
+class _TextInputDialogState extends State<_TextInputDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.defaultValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('确定'),
+        ),
+      ],
+    );
   }
 }

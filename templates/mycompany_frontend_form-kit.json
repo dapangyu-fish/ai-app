@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "name": "mycompany/frontend/form-kit",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "Form Components Kit"
+  },
+  "components": {
+    "FormInput": {
+      "type": "TextField",
+      "props": {
+        "decoration": {
+          "border": "outline",
+          "labelText": "Input Field"
+        }
+      }
+    }
+  },
+  "appid": "3a74f3b0-57d2-428b-ab4d-725cf07659e0"
+}

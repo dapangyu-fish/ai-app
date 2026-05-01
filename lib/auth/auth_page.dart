@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../designer/app_storage.dart';
 import 'auth_service.dart';
 
 /// 登录 / 注册页面
@@ -21,8 +24,22 @@ class _AuthPageState extends State<AuthPage> {
   bool _isLogin = true;
   bool _loading = false;
   String? _error;
-  String? _info; // 成功提示（如"请查收验证邮件"）
+  String? _info;
   bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastEmail();
+  }
+
+  Future<void> _loadLastEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastEmail = prefs.getString('auth_last_email');
+    if (lastEmail != null && mounted) {
+      _emailCtrl.text = lastEmail;
+    }
+  }
 
   @override
   void dispose() {
@@ -54,6 +71,7 @@ class _AuthPageState extends State<AuthPage> {
     try {
       if (_isLogin) {
         await AuthService.signIn(email: email, password: password);
+        await _saveLastEmail(email);
         widget.onAuthSuccess();
       } else {
         final result = await AuthService.register(
@@ -65,7 +83,6 @@ class _AuthPageState extends State<AuthPage> {
         );
         if (result['needs_confirm'] == true) {
           if (!context.mounted) return;
-          // 跳转到 OTP 验证页
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => OtpVerifyPage(
@@ -75,19 +92,22 @@ class _AuthPageState extends State<AuthPage> {
             ),
           );
         } else {
+          await _saveLastEmail(email);
           widget.onAuthSuccess();
         }
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
       if (msg.contains('邮箱未验证') || msg.contains('not confirmed')) {
-        // 未验证 → 跳转到验证码页面
         if (context.mounted) {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => OtpVerifyPage(
                 email: _emailCtrl.text.trim(),
-                onVerified: widget.onAuthSuccess,
+                onVerified: () async {
+                  await _saveLastEmail(_emailCtrl.text.trim());
+                  widget.onAuthSuccess();
+                },
               ),
             ),
           );
@@ -100,132 +120,147 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
+  Future<void> _saveLastEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_last_email', email);
+  }
+
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('auth');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.code, size: 64, color: cs.primary),
-                const SizedBox(height: 16),
+                const SizedBox(height: 60),
+
+                // Brand icon
+                Icon(Icons.auto_awesome, size: 48, color: cs.onSurface),
+                const SizedBox(height: 20),
+
+                // Brand name
                 Text(
-                  'JSON DSL v3.2',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold, color: cs.primary),
+                  'MyApp',
+                  style: GoogleFonts.inter(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _isLogin ? '登录你的账户' : '创建新账户',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge
-                      ?.copyWith(color: cs.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
-                const SizedBox(height: 40),
 
-                // 用户名（仅注册）
+                const SizedBox(height: 48),
+
+                // Username (register only)
                 if (!_isLogin) ...[
                   TextField(
                     controller: _usernameCtrl,
+                    style: TextStyle(color: cs.onSurface),
                     decoration: InputDecoration(
-                      labelText: '用户名（可选）',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      hintText: '用户名（可选）',
+                      hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                      prefixIcon: Icon(Icons.person_outline, color: cs.onSurfaceVariant),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                 ],
 
-                // 邮箱
+                // Email
                 TextField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
+                  style: TextStyle(color: cs.onSurface),
                   decoration: InputDecoration(
-                    labelText: '邮箱',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    hintText: '邮箱',
+                    hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                    prefixIcon: Icon(Icons.email_outlined, color: cs.onSurfaceVariant),
                   ),
                   onSubmitted: (_) => _submit(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // 密码
+                // Password
                 TextField(
                   controller: _passwordCtrl,
                   obscureText: _obscure,
+                  style: TextStyle(color: cs.onSurface),
                   decoration: InputDecoration(
-                    labelText: '密码',
-                    prefixIcon: const Icon(Icons.lock_outlined),
+                    hintText: '密码',
+                    hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                    prefixIcon: Icon(Icons.lock_outlined, color: cs.onSurfaceVariant),
                     suffixIcon: IconButton(
                       icon: Icon(
-                          _obscure ? Icons.visibility_off : Icons.visibility),
+                          _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          color: cs.onSurfaceVariant),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
                   ),
                   onSubmitted: (_) => _submit(),
                 ),
-                const SizedBox(height: 24),
 
-                // 提交
+                const SizedBox(height: 28),
+
+                // Submit button
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 52,
                   child: FilledButton(
                     onPressed: _loading ? null : _submit,
                     child: _loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2, color: cs.onPrimary),
                           )
-                        : Text(_isLogin ? '登录' : '注册',
-                            style: const TextStyle(fontSize: 16)),
+                        : Text(_isLogin ? '登录' : '注册'),
                   ),
                 ),
 
-                // 成功提示
+                // Success info
                 if (_info != null) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
                         Icon(Icons.check_circle_outline,
-                            color: Colors.green.shade700, size: 18),
+                            color: cs.onSurface, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                             child: Text(_info!,
-                                style:
-                                    TextStyle(color: Colors.green.shade700))),
+                                style: TextStyle(color: cs.onSurface, fontSize: 13))),
                       ],
                     ),
                   ),
                 ],
 
-                // 错误提示
+                // Error
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: cs.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
@@ -233,31 +268,39 @@ class _AuthPageState extends State<AuthPage> {
                         const SizedBox(width: 8),
                         Expanded(
                             child: Text(_error!,
-                                style:
-                                    TextStyle(color: cs.onErrorContainer))),
+                                style: TextStyle(color: cs.onErrorContainer, fontSize: 13))),
                       ],
                     ),
                   ),
                 ],
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
-                // 切换
+                // Toggle login/register
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(_isLogin ? '还没有账户？' : '已有账户？',
-                        style: TextStyle(color: cs.onSurfaceVariant)),
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
                     TextButton(
                       onPressed: () => setState(() {
                         _isLogin = !_isLogin;
                         _error = null;
                         _info = null;
                       }),
-                      child: Text(_isLogin ? '注册' : '登录'),
+                      child: Text(
+                        _isLogin ? '注册' : '登录',
+                        style: TextStyle(
+                          color: cs.onSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -340,76 +383,92 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('otp_verify');
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('邮箱验证')),
+      appBar: AppBar(
+        title: Text('邮箱验证', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               children: [
-                Icon(Icons.mark_email_read, size: 64, color: cs.primary),
-                const SizedBox(height: 16),
+                Icon(Icons.mark_email_read_outlined, size: 56, color: cs.onSurface),
+                const SizedBox(height: 20),
                 Text(
                   '验证你的邮箱',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold),
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '验证码已发送到\n${widget.email}',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: cs.onSurfaceVariant),
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 36),
 
-                // 验证码输入
+                // Code input
                 TextField(
                   controller: _codeCtrl,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    letterSpacing: 8,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onSurface,
+                  ),
                   decoration: InputDecoration(
-                    labelText: '6 位验证码',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    hintText: '6 位验证码',
+                    hintStyle: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 16,
+                      letterSpacing: 0,
+                    ),
                   ),
                   onSubmitted: (_) => _verify(),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
-                // 验证按钮
+                // Verify button
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 52,
                   child: FilledButton(
                     onPressed: _loading ? null : _verify,
                     child: _loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2, color: cs.onPrimary),
                           )
-                        : const Text('验证', style: TextStyle(fontSize: 16)),
+                        : const Text('验证'),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // 重新发送
+                // Resend
                 TextButton(
                   onPressed: _loading ? null : _resend,
-                  child: const Text('没收到？重新发送验证码'),
+                  child: Text(
+                    '没收到？重新发送验证码',
+                    style: TextStyle(color: cs.onSurfaceVariant),
+                  ),
                 ),
 
                 if (_info != null) ...[
                   const SizedBox(height: 12),
-                  Text(_info!, style: TextStyle(color: Colors.green.shade700)),
+                  Text(_info!, style: TextStyle(color: cs.onSurface, fontSize: 13)),
                 ],
 
                 if (_error != null) ...[
@@ -418,7 +477,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: cs.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
@@ -426,7 +485,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                         const SizedBox(width: 8),
                         Expanded(
                             child: Text(_error!,
-                                style: TextStyle(color: cs.onErrorContainer))),
+                                style: TextStyle(color: cs.onErrorContainer, fontSize: 13))),
                       ],
                     ),
                   ),
@@ -440,7 +499,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
   }
 }
 
-/// 个人资料页面 — 修改用户名、头像
+/// 个人资料页面
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -504,6 +563,10 @@ class _ProfilePageState extends State<ProfilePage> {
       final b64 = base64Encode(bytes);
       await AuthService.uploadAvatar(b64);
 
+      // 清除图片缓存，确保新头像立即显示
+      imageCache.clear();
+      imageCache.clearLiveImages();
+
       setState(() => _message = '头像已更新');
     } catch (e) {
       setState(
@@ -515,8 +578,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('profile');
     final user = AuthService.currentUser;
-    final avatarUrl = user?['avatar_url'] as String? ?? '';
+    String avatarUrl = user?['avatar_url'] as String? ?? '';
+    if (avatarUrl.isNotEmpty && avatarUrl.startsWith('http')) {
+      avatarUrl = avatarUrl.contains('?') 
+          ? '$avatarUrl&_cb=${AuthService.avatarCacheBuster}'
+          : '$avatarUrl?_cb=${AuthService.avatarCacheBuster}';
+    }
+    debugPrint('[ProfilePage] Final avatarUrl to render: $avatarUrl');
     final cs = Theme.of(context).colorScheme;
 
     Widget avatar;
@@ -524,7 +594,10 @@ class _ProfilePageState extends State<ProfilePage> {
       avatar = CircleAvatar(
         radius: 48,
         backgroundImage: NetworkImage(avatarUrl),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (e, stack) {
+          debugPrint('[ProfilePage] NetworkImage ERROR: $e');
+        },
+        child: const Icon(Icons.person, color: Colors.transparent),
       );
     } else if (avatarUrl.startsWith('data:')) {
       final parts = avatarUrl.split(',');
@@ -535,20 +608,25 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       } else {
         avatar = CircleAvatar(
-            radius: 48, child: Icon(Icons.person, size: 48, color: cs.primary));
+            radius: 48, child: Icon(Icons.person_outline, size: 48, color: cs.onSurface));
       }
     } else {
       avatar = CircleAvatar(
-          radius: 48, child: Icon(Icons.person, size: 48, color: cs.primary));
+          radius: 48, child: Icon(Icons.person_outline, size: 48, color: cs.onSurface));
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('个人资料'), centerTitle: true),
+      appBar: AppBar(
+        title: Text('个人资料', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // 头像
+            const SizedBox(height: 16),
+
+            // Avatar
             GestureDetector(
               onTap: _loading ? null : _pickAvatar,
               child: Stack(
@@ -560,43 +638,78 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: cs.primary,
+                        color: cs.onSurface,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.camera_alt,
-                          size: 16, color: Colors.white),
+                      child: Icon(Icons.camera_alt,
+                          size: 16, color: cs.surface),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(user?['email'] ?? '',
-                style: TextStyle(color: cs.onSurfaceVariant)),
-            const SizedBox(height: 32),
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+            const SizedBox(height: 8),
+            // User Role Badge
+            Builder(builder: (context) {
+              final role = user?['role']?.toString() ?? 'user';
+              String roleText = '普通用户';
+              Color roleColor = cs.surfaceContainerHighest;
+              Color roleTextColor = cs.onSurfaceVariant;
+              
+              if (role == 'admin') {
+                roleText = '管理员';
+                roleColor = cs.primaryContainer;
+                roleTextColor = cs.onPrimaryContainer;
+              } else if (role == 'pro') {
+                roleText = '高级用户';
+                roleColor = cs.tertiaryContainer;
+                roleTextColor = cs.onTertiaryContainer;
+              }
 
-            // 用户名
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: roleColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  roleText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: roleTextColor,
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 36),
+
+            // Username
             TextField(
               controller: _usernameCtrl,
+              style: TextStyle(color: cs.onSurface),
               decoration: InputDecoration(
-                labelText: '用户名',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                hintText: '用户名',
+                hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                prefixIcon: Icon(Icons.person_outline, color: cs.onSurfaceVariant),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             SizedBox(
               width: double.infinity,
+              height: 52,
               child: FilledButton(
                 onPressed: _loading ? null : _saveUsername,
                 child: _loading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2, color: cs.onPrimary),
                       )
                     : const Text('保存'),
               ),
@@ -604,24 +717,25 @@ class _ProfilePageState extends State<ProfilePage> {
 
             if (_message != null) ...[
               const SizedBox(height: 16),
-              Text(_message!, style: TextStyle(color: cs.primary)),
+              Text(_message!, style: TextStyle(color: cs.onSurface, fontSize: 13)),
             ],
 
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 36),
+            Divider(color: cs.outline),
+            const SizedBox(height: 20),
 
-            // 登出
+            // Logout
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(
+              child: TextButton(
                 onPressed: () async {
                   await AuthService.signOut();
                   if (context.mounted) Navigator.of(context).pop();
                 },
-                icon: const Icon(Icons.logout),
-                label: const Text('退出登录'),
-                style: OutlinedButton.styleFrom(foregroundColor: cs.error),
+                child: Text(
+                  '退出登录',
+                  style: TextStyle(color: cs.error, fontSize: 15),
+                ),
               ),
             ),
           ],

@@ -100,3 +100,199 @@ Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notif
 2. Register it in `JsonWidgetBuilder._builders` map in `widget_builder.dart`
 3. The interpreter's `buildWidget` → `applyPosition` pipeline handles positioning automatically
 4. Update `JSON-DSL.md` widget type table
+
+## MinIO 对象存储操作
+
+服务器上的 MinIO 用于存储模型文件、JSON-APP 等静态资源。
+
+### 连接信息
+
+- 服务器内网地址: `127.0.0.1:9000`（仅服务器本地访问）
+- 公网地址: `https://app-oss-endpoint.dapangyu.work`
+- Access Key: `m3wZkIA5EgmEwkctueZM`
+- Secret Key: `m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk`
+- Bucket 列表: `json-app`、`json-component`、`models`
+
+### 上传文件到 MinIO
+
+通过 SSH 登录服务器，使用 Python minio SDK 上传：
+
+```bash
+ssh root@app-backend.dapangyu.work
+
+/opt/miniconda3/bin/python3 << 'EOF'
+from minio import Minio
+
+c = Minio('127.0.0.1:9000',
+          access_key='m3wZkIA5EgmEwkctueZM',
+          secret_key='m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk',
+          secure=False)
+
+# 上传单个文件
+c.fput_object('models', 'sherpa-onnx/xxx/model.onnx', '/本地路径/model.onnx')
+
+# 列出 bucket 内容
+for obj in c.list_objects('models', recursive=True):
+    print(f'{obj.object_name}  {obj.size/1048576:.1f}MB')
+EOF
+```
+
+### 上传大文件（如 ASR 模型）的标准流程
+
+1. 先将文件下载到服务器 `/mnt/storage00/`（服务器带宽大，比本地快）
+2. 如果是压缩包，在服务器上解压（`tar xjf xxx.tar.bz2 --exclude='test_wavs'`）
+3. SSH 到服务器，用 minio SDK 将解压后的**单个文件**逐个上传到对应 bucket 和路径
+4. 客户端代码按单个文件从 `https://app-oss-endpoint.dapangyu.work/<bucket>/<path>` 下载
+
+**注意**: 不要上传压缩包本身，客户端是按单个文件下载的。上传前先看客户端代码确认需要哪些文件和目录结构。
+
+## 发布 JSON-APP / 组件到市场
+
+### 发布方式
+
+**推荐方式：通过 Registry API 发布**
+
+所有包（官方包和用户包）统一通过 Registry 服务发布，支持命名空间管理和版本控制。
+
+#### 1. 官方包发布（admin 专用）
+
+官方包无命名空间（如 `common-ui`, `data-utils`），只有 admin 角色可以发布。
+推荐使用内置的 Python 发布工具，支持批量发布和测试环境绕过：
+
+```bash
+# 发布指定文件（默认使用测试环境 token）
+python3 backend/publish_script.py lib_user.json demo_user_profile.json
+
+# 批量发布 templates 目录下的所有组件
+python3 backend/publish_script.py
+
+# 使用真实的 admin token 发布
+python3 backend/publish_script.py lib_user.json --token <admin_token>
+```
+
+#### 2. 用户包发布
+
+用户包必须带命名空间（如 `mycompany/app-name` 或 `mycompany/frontend/ui-kit`）。
+
+**首次发布前，创建命名空间**：
+```bash
+curl -X POST https://registry.dapangyu.work/namespace/create \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user_token>" \
+  -d '{
+    "namespace": "mycompany",
+    "sub_namespace": "frontend"
+  }'
+```
+
+**发布包**：
+```bash
+curl -X POST https://registry.dapangyu.work/publish \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <user_token>" \
+  -d '{
+    "json_content": {
+      "dsl": "3.3",
+      "meta": {
+        "name": "mycompany/frontend/ui-kit",
+        "version": "1.0.0",
+        "type": "library"
+      },
+      "global": { ... }
+    }
+  }'
+```
+
+### 命名空间规则
+
+| 类型 | 格式 | 示例 | 权限 |
+|------|------|------|------|
+| 官方包 | 无 `/` | `common-ui`, `data-utils` | admin 专属 |
+| 用户包（一级） | `namespace/app` | `mycompany/app-name` | 命名空间所有者 |
+| 用户包（二级） | `namespace/sub/app` | `mycompany/frontend/ui-kit` | 命名空间所有者 |
+
+### 依赖声明（简化格式）
+
+发布后，其他应用可以通过简化格式引用：
+
+```json
+{
+  "dependencies": {
+    "common-ui": "^1.0.0",
+    "mycompany/frontend/ui-kit": "~1.0.0"
+  }
+}
+```
+
+框架会自动通过 Registry 解析依赖 URL，无需手动填写完整的 MinIO 路径。
+
+### Registry 服务信息
+
+- **域名**: https://registry.dapangyu.work
+- **端口**: 3254
+- **文档**: `backend/REGISTRY_README.md`
+- **健康检查**: `GET /health`
+
+### 批量发布测试组件
+
+使用 `backend/migrate_templates.py` 脚本可以批量发布 `templates/` 目录下的所有模板文件到 Registry：
+
+```bash
+# 在项目根目录执行
+python3 backend/migrate_templates.py
+```
+
+**注意事项**：
+1. 包名必须符合规范：小写字母、数字、`-` 和 `_`，不能包含中文或特殊字符
+2. 每个 JSON 文件必须包含 `meta` 字段，包含 `name`、`version`、`type` 等信息
+3. 脚本使用测试 token（`test-token`），具有 admin 权限
+4. 已存在的版本会被跳过，不会覆盖
+
+**脚本输出示例**：
+```
+处理: calculator.json
+  名称: calculator
+  版本: 1.0.0
+  类型: app
+  ✅ 发布成功
+
+处理: lib_common_ui.json
+  名称: common-ui
+  版本: 1.0.0
+  类型: library
+  ⚠️  版本已存在: ['1.0.0']
+```
+
+## Antigravity AI 上下文同步
+
+AI 编程助手 Antigravity 的上下文数据存储在 `~/.gemini/antigravity/`，通过私有 Git 仓库在多台开发机之间同步。
+
+**仓库地址**: `git@github.com:dapangyu-fish/antigravity.git`
+
+### 推送上下文（当前电脑 → 远端）
+
+在结束工作时**手动**执行：
+
+```bash
+cd ~/.gemini/antigravity
+git add .
+git commit -m "sync: $(date '+%Y-%m-%d %H:%M') from $(hostname)"
+git push
+```
+
+### 拉取上下文（远端 → 当前电脑）
+
+在另一台电脑开始工作前**手动**执行：
+
+```bash
+cd ~/.gemini/antigravity
+git pull
+```
+
+### 首次在新电脑上设置
+
+```bash
+git clone git@github.com:dapangyu-fish/antigravity.git ~/.gemini/antigravity
+```
+
+> **注意**: `installation_id` 已被 `.gitignore` 忽略，每台机器会自动生成自己的 ID，无需同步。

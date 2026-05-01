@@ -1,7 +1,87 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+
+/// 当前页面作用域
+/// - framework: Flutter 框架页面（登录、设置、市场、我的APP、崩溃页等）
+/// - jsonApp: 正在运行某个 JSON-APP 的页面
+/// - unknown: 尚未确定
+
+enum AppPageScope {
+  unknown,
+  framework,
+  jsonApp,
+}
+
+/// 全局页面状态
+///
+/// 用于回答类似：
+/// - 当前是不是在 JSON-APP 里？
+/// - 当前框架页是什么？
+/// - 当前 JSON-APP 的 screenId 是什么？
+/// - 当前 JSON-APP 名称是什么？
+class CurrentPageState extends ChangeNotifier {
+  static CurrentPageState? _instance;
+  static CurrentPageState get instance => _instance ??= CurrentPageState._();
+  CurrentPageState._();
+
+  AppPageScope _scope = AppPageScope.unknown;
+  String? _frameworkPage;
+  String? _jsonScreenId;
+  String? _jsonAppName;
+
+  AppPageScope get scope => _scope;
+  String? get frameworkPage => _frameworkPage;
+  String? get jsonScreenId => _jsonScreenId;
+  String? get jsonAppName => _jsonAppName;
+
+  bool get isInJsonApp => _scope == AppPageScope.jsonApp;
+  bool get isInFrameworkPage => _scope == AppPageScope.framework;
+
+  void setFrameworkPage(String pageName) {
+    final changed =
+        _scope != AppPageScope.framework ||
+        _frameworkPage != pageName ||
+        _jsonScreenId != null ||
+        _jsonAppName != null;
+    _scope = AppPageScope.framework;
+    _frameworkPage = pageName;
+    _jsonScreenId = null;
+    _jsonAppName = null;
+    if (changed) {
+      debugPrint('[CurrentPageState] framework -> $pageName');
+      notifyListeners();
+    }
+  }
+
+  void setJsonAppPage({required String screenId, required String appName}) {
+    final changed =
+        _scope != AppPageScope.jsonApp ||
+        _jsonScreenId != screenId ||
+        _jsonAppName != appName ||
+        _frameworkPage != null;
+    _scope = AppPageScope.jsonApp;
+    _frameworkPage = null;
+    _jsonScreenId = screenId;
+    _jsonAppName = appName;
+    if (changed) {
+      debugPrint('[CurrentPageState] jsonApp -> app=$appName, screen=$screenId');
+      notifyListeners();
+    }
+  }
+
+  Map<String, dynamic> snapshot() {
+    return {
+      'scope': _scope.name,
+      'frameworkPage': _frameworkPage,
+      'jsonScreenId': _jsonScreenId,
+      'jsonAppName': _jsonAppName,
+      'isInJsonApp': isInJsonApp,
+    };
+  }
+}
 
 /// 本地 JSON-APP 存储 — 保存 AI 生成的 APP 到本地文件系统
 class AppStorage {
@@ -22,7 +102,7 @@ class AppStorage {
     final meta = jsonConfig['meta'] as Map<String, dynamic>? ?? {};
     final name = (meta['name'] as String?) ?? 'Untitled';
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final fileName = '${ts}_${name.replaceAll(RegExp(r'[^\w\u4e00-\u9fff]'), '_')}.json';
+    final fileName = '${ts}_${name.replaceAll(RegExp(r'[^\w一-鿿]'), '_')}.json';
 
     // 在 JSON 中嵌入保存时间
     jsonConfig['_saved_at'] = DateTime.now().toIso8601String();
