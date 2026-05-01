@@ -24,6 +24,7 @@ import 'widgets/position_handler.dart';
 import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
 import 'drift_database.dart';
+import '../main.dart' show appThemeMode, appLifecycleEvent;
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -206,10 +207,35 @@ class JsonInterpreter extends ChangeNotifier {
 
   // ============ jsonlogic 数据上下文 ============
 
+  /// 正在求值中的 computed key，用于防递归（A→B→A 时第二次进入 A 直接 null）
+  final Set<String> _computingNow = {};
+
   /// 每次求值前，将当前状态组装为 jsonlogic 的 data 参数
+  /// global.computed.* 会被即时求值，作为 global 名空间下的"派生字段"暴露
   Map<String, dynamic> _buildDataContext() {
+    Map<String, dynamic> globalView = _variables;
+    final computed =
+        (_config['global'] as Map<String, dynamic>?)?['computed'];
+    if (computed is Map && computed.isNotEmpty) {
+      // 只有真存在 computed 时才浅拷贝并注入，避免每次求值都付拷贝成本
+      globalView = Map<String, dynamic>.from(_variables);
+      for (final entry in computed.entries) {
+        final key = entry.key.toString();
+        // 真实变量同名时以真实变量为准（shadow）
+        if (globalView.containsKey(key)) continue;
+        if (_computingNow.contains(key)) continue;
+        _computingNow.add(key);
+        try {
+          globalView[key] = _evaluateExpression(entry.value);
+        } catch (_) {
+          // 求值失败留 null，避免整个上下文构建失败
+        } finally {
+          _computingNow.remove(key);
+        }
+      }
+    }
     return {
-      'global': _variables,
+      'global': globalView,
       'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
       'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
     };
@@ -298,6 +324,9 @@ class JsonInterpreter extends ChangeNotifier {
       _currentScreenId =
           (screens.first as Map<String, dynamic>)['id'] ?? 'home';
     }
+
+    // 注册生命周期 hook（resume/pause/...）
+    _attachLifecycleListener();
   }
 
   Future<void> executeSteps() async {
@@ -343,6 +372,14 @@ class JsonInterpreter extends ChangeNotifier {
 
     if (path.startsWith('global.')) {
       final subPath = path.substring(7);
+      // 优先返回普通变量；普通变量没有时再看是否为 computed 派生值
+      if (_hasNestedKey(_variables, subPath)) {
+        return _getNestedValue(_variables, subPath);
+      }
+      final computedExpr = _findComputedExpr(subPath);
+      if (computedExpr != null) {
+        return _evaluateExpression(computedExpr);
+      }
       return _getNestedValue(_variables, subPath);
     }
 
@@ -353,6 +390,18 @@ class JsonInterpreter extends ChangeNotifier {
 
     // 尝试作为依赖变量: "depName.varPath"
     return _getDependencyVariable(path);
+  }
+
+  /// 在 global.computed 字典里查表达式（按 dot 路径匹配）
+  /// 例: global.computed = { fullName: <expr> }, subPath="fullName" → 命中
+  dynamic _findComputedExpr(String subPath) {
+    final computed =
+        (_config['global'] as Map<String, dynamic>?)?['computed'];
+    if (computed is! Map) return null;
+    if (computed[subPath] != null) return computed[subPath];
+    // 也支持嵌套 dot 路径（极少需要，但成本几乎为零）
+    return _getNestedValue(
+        Map<String, dynamic>.from(computed), subPath);
   }
 
   /// 读取依赖模块的变量（只读）: "depName.varPath"
@@ -433,9 +482,40 @@ class JsonInterpreter extends ChangeNotifier {
     final regex = RegExp(r'\{\{\s*(.+?)\s*\}\}');
     return template.replaceAllMapped(regex, (match) {
       final expression = match.group(1)!;
-      final value = getVariable(expression);
+      final value = _resolveTemplateExpression(expression);
       return value?.toString() ?? '';
     });
+  }
+
+  /// 解析模板内表达式：
+  ///   - `t('key.path')` / `t("key.path")` → i18n 字典查找
+  ///   - 其他 → 走 getVariable
+  dynamic _resolveTemplateExpression(String expr) {
+    final trimmed = expr.trim();
+    // 形如 t('home.title') 或 t("home.title")
+    final tMatch =
+        RegExp(r'''^t\(\s*['"](.+?)['"]\s*\)$''').firstMatch(trimmed);
+    if (tMatch != null) {
+      return _i18nLookup(tMatch.group(1)!);
+    }
+    return getVariable(trimmed);
+  }
+
+  /// i18n 字典查找：global.i18n[locale][key.path]
+  /// locale 取自 global.locale；找不到回退当前 key 本身（方便快速调试）
+  String _i18nLookup(String keyPath) {
+    final locale = (_variables['locale'] ??
+            (_config['global'] as Map<String, dynamic>?)?['locale'] ??
+            'zh')
+        .toString();
+    final dict =
+        (_config['global'] as Map<String, dynamic>?)?['i18n'] as Map?;
+    if (dict == null) return keyPath;
+    final localeDict = dict[locale];
+    if (localeDict is! Map) return keyPath;
+    final value = _getNestedValue(
+        Map<String, dynamic>.from(localeDict), keyPath);
+    return value?.toString() ?? keyPath;
   }
 
   /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
@@ -775,6 +855,34 @@ class JsonInterpreter extends ChangeNotifier {
         // 用户拒绝过权限后跳系统设置
         await openAppSettings();
         return null;
+      case '@set_locale':
+        // value: locale 字符串（如 'zh' / 'en'）；写入 global.locale，触发 UI 重建
+        final localeStr = resolvedArgs['value']?.toString() ??
+            resolvedArgs['locale']?.toString() ??
+            'zh';
+        setVariable('global.locale', localeStr);
+        return null;
+      case '@get_locale':
+        return (_variables['locale'] ??
+                (_config['global'] as Map<String, dynamic>?)?['locale'] ??
+                'zh')
+            .toString();
+      case '@set_theme':
+        // mode: light / dark / system
+        final mode = resolvedArgs['mode']?.toString() ?? 'system';
+        appThemeMode.value = switch (mode) {
+          'light' => ThemeMode.light,
+          'dark' => ThemeMode.dark,
+          _ => ThemeMode.system,
+        };
+        return null;
+      case '@get_theme':
+        // 返回当前 mode（system 时返回 'system'，由调用方再决定怎么显示当前实际亮度）
+        return switch (appThemeMode.value) {
+          ThemeMode.light => 'light',
+          ThemeMode.dark => 'dark',
+          ThemeMode.system => 'system',
+        };
       case '@biometric_auth':
         // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
         // 返回 bool：通过 / 失败
@@ -2451,8 +2559,56 @@ class JsonInterpreter extends ChangeNotifier {
     return result;
   }
 
+  // ============ App 生命周期 hook ============
+  // global.lifecycle = {
+  //   onResume: [...steps],
+  //   onPause:  [...steps],
+  //   onInactive / onDetached / onHidden: ...
+  // }
+
+  void Function()? _lifecycleListener;
+
+  void _attachLifecycleListener() {
+    _detachLifecycleListener();
+    _lifecycleListener = () {
+      final event = appLifecycleEvent.value;
+      final hooks =
+          (_config['global'] as Map<String, dynamic>?)?['lifecycle']
+              as Map<String, dynamic>?;
+      if (hooks == null) return;
+      // event=resume → onResume；event=pause → onPause；…
+      final key = 'on${event[0].toUpperCase()}${event.substring(1)}';
+      final steps = hooks[key];
+      if (steps is! List) return;
+      // 异步触发，不阻塞 notifier
+      // ignore: discarded_futures
+      _runStepList(steps);
+    };
+    appLifecycleEvent.addListener(_lifecycleListener!);
+  }
+
+  void _detachLifecycleListener() {
+    if (_lifecycleListener != null) {
+      appLifecycleEvent.removeListener(_lifecycleListener!);
+      _lifecycleListener = null;
+    }
+  }
+
+  Future<void> _runStepList(List<dynamic> steps) async {
+    for (final step in steps) {
+      if (step is Map<String, dynamic>) {
+        try {
+          await _executeStep(step);
+        } catch (e) {
+          debugPrint('[JSON DSL] lifecycle step 失败: $e');
+        }
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _detachLifecycleListener();
     for (final controller in _textControllers.values) {
       controller.dispose();
     }
