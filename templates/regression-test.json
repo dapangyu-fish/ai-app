@@ -3,7 +3,7 @@
   "appid": "5f993b2a-815b-4ff9-820a-e6dba721943d",
   "meta": {
     "name": "regression-test",
-    "version": "1.3.0",
+    "version": "1.3.1",
     "type": "app",
     "description": "JSON-DSL 框架回归测试套件，覆盖 main 既有 + batch 1-8 全部新功能",
     "author": "regression-test"
@@ -4511,17 +4511,50 @@
           },
           {
             "type": "text",
-            "value": "首次进入会请求相机权限；同意后下方应有实时预览（前置/后置切换待框架支持）",
+            "value": "首次进入会请求相机权限；同意后应看到不变形的预览。三种模式对比：",
             "style": {
               "fontSize": 13,
               "color": "#666666"
             }
           },
           {
+            "type": "text",
+            "value": "1) 不指定尺寸（按摄像头原生比例自然撑开）："
+          },
+          {
+            "type": "camera",
+            "lensDirection": "back",
+            "resolution": "medium"
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "2) 固定 height=200，fit=contain（保比例，可能有黑边）："
+          },
+          {
             "type": "camera",
             "lensDirection": "back",
             "resolution": "medium",
-            "height": 320
+            "height": 200,
+            "fit": "contain"
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "3) 固定 height=200，fit=cover（保比例，会裁切）："
+          },
+          {
+            "type": "camera",
+            "lensDirection": "back",
+            "resolution": "medium",
+            "height": 200,
+            "fit": "cover"
           },
           {
             "type": "text",

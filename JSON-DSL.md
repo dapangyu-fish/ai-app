@@ -1193,8 +1193,14 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 #### camera
 ```json
-{ "type": "camera", "lensDirection": "back", "resolution": "medium", "height": 360 }
+{ "type": "camera", "lensDirection": "back", "resolution": "medium" }
 ```
+- 不写 `width` / `height` 时按摄像头原生比例自然撑开（推荐）。
+- 想固定尺寸用 `fit` 指定缩放方式，**永远不会压扁**：
+  - `fit: "contain"`（默认）—— 保比例 + 黑边
+  - `fit: "cover"` —— 保比例 + 裁切
+  - `fit: "fill"` —— 拉伸到目标尺寸（**会变形**，慎用）
+
 **需要平台权限**：
 - Android：`AndroidManifest.xml` 加 `<uses-permission android:name="android.permission.CAMERA"/>`
 - iOS：`Info.plist` 加 `NSCameraUsageDescription`
