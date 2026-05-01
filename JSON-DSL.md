@@ -199,6 +199,7 @@
 | `@loop_by_num` | `{ "count": 10, "body": [...] }` | 按次数循环 |
 | `@try_catch` | `{ "try": [...], "catch": [...], "error_var": "$.global.err" }` | 异常捕获 |
 | `@parallel` | `{ "steps": [...] }` | **并发执行**多个 step，全部完成后继续 |
+| `@throw` | `{ "message": "..." }` | 主动抛出异常（用于测试 @try_catch / 业务侧失败时进入 catch 分支） |
 
 **@if 示例**：
 ```json
@@ -285,6 +286,7 @@
 | `@list_length` | `{ "value": {expr} }` | 返回数组长度 |
 | `@list_add` | `{ "var": "$.global.list", "item": "xxx" }` | 向数组末尾添加元素 |
 | `@list_remove_at` | `{ "var": "$.global.list", "index": 0 }` | 按索引删除 |
+| `@list_remove` | `{ "var": "$.global.list", "value": "xxx" }` | 按值删除（删除所有等于 value 的元素） |
 | `@list_insert` | `{ "var": "$.global.list", "index": 0, "item": "xxx" }` | 在指定位置插入 |
 | `@list_clear` | `{ "var": "$.global.list" }` | 清空数组 |
 
@@ -301,7 +303,13 @@
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@show_toast` | `{ "message": "保存成功" }` | 底部 SnackBar 提示 |
+| `@show_snackbar` | `{ "message": "邮件已发送", "actionLabel": "撤销", "action": {...}, "durationMs": 4000, "backgroundColor": "#333333" }` | 增强 SnackBar，支持操作按钮回调 |
 | `@show_dialog` | `{ "title": "确认", "message": "确定删除？" }` | 弹窗，返回 `true`/`false` |
+| `@show_input_dialog` | `{ "title": "重命名", "hint": "请输入", "defaultValue": "", "bind": "global.name" }` | 文本输入弹窗，返回输入值（取消返回 `null`） |
+| `@show_choice_dialog` | `{ "title": "保存修改？", "message": "...", "buttons": [{"label":"保存","value":"save","style":"primary"},{"label":"丢弃","value":"discard","style":"danger"},{"label":"取消","value":"cancel"}], "dismissible": true }` | 自定义按钮弹窗，返回被点按钮的 `value`（关闭返回 `null`）。`style`：`primary` / `danger` / `text`（默认） |
+| `@show_date_picker` | `{ "initial": "2026-04-28", "firstDate": "2020-01-01", "lastDate": "2030-12-31", "bind": "global.date" }` | 命令式日期选择器，返回 yyyy-MM-dd 字符串（取消返回 `null`） |
+| `@show_time_picker` | `{ "initial": "14:30", "bind": "global.time" }` | 命令式时间选择器，返回 HH:mm 字符串（取消返回 `null`） |
+| `@show_bottom_sheet` | `{ "content": { ...widget... }, "isDismissible": true, "enableDrag": true, "backgroundColor": "#FFFFFF" }` | 底部弹窗，content 是任意 widget 配置，弹窗内可通过自定义函数关闭并返回值 |
 
 ---
 
@@ -432,14 +440,49 @@
 | `text` | `Text` | `value` | `style` |
 | `button` | `FilledButton` / `OutlinedButton` / `TextButton` | `label` | `action`, `variant`, `icon`, `style`, `disabled` |
 | `input` | `TextField` | `placeholder` / `bind` | `maxLines`, `keyboardType`, `obscureText`, `prefix`, `suffix`, `prefixIcon`, `suffixIcon`, `label`, `style` |
-| `list` | `ListView.builder` | `source`, `item_template` | — |
-| `container` | `Container` | `children` | `layout`, `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
+| `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留) |
+| `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
 | `divider` | `Divider` | — | `height`, `thickness`, `color`, `indent` |
 | `image` | `Image.network` | `url` | `fit`, `width`, `height`, `borderRadius` |
-| `spacer` | `SizedBox` | — | `height`, `width` |
+| `spacer` | `SizedBox` / `Spacer` | — | `height`, `width`, `flex`（不写任何字段时默认 `Spacer()`，仅在 Flex 父级生效） |
 | `switch` | `Switch` | `bind` | `label`, `action` |
 | `image_picker` | `ImagePicker` | `bind` | `source`(gallery/camera), `placeholder`, `width`, `height`, `borderRadius` |
 | `video` | `Chewie` + `VideoPlayer` | `url` | `autoplay`, `looping`, `aspectRatio`, `borderRadius` |
+| `icon` | `Icon` | `name` | `size`, `color` |
+| `card` | `Card` | `children` | `layout`, `padding`, `margin`, `elevation`, `borderRadius`, `color`, `onTap`, `crossAxisAlignment`, `mainAxisAlignment` |
+| `checkbox` | `Checkbox` | `bind` | `label`, `action`, `disabled`, `color` |
+| `expanded` | `Expanded` | `child` | `flex` |
+| `loading` | `CircularProgressIndicator` / `LinearProgressIndicator` | — | `kind`(circular/linear), `size`, `color`, `value`, `strokeWidth`, `label` |
+| `dropdown` | `DropdownButtonFormField` | `bind`, `options` | `placeholder`, `label`, `disabled`, `prefixIcon`, `color`, `action` |
+| `radio` | `Radio` 组 | `bind`, `options` | `layout`(column/row), `disabled`, `color`, `action` |
+| `wrap` | `Wrap` | `children` | `spacing`, `runSpacing`, `direction`, `alignment`, `runAlignment`, `crossAlignment` |
+| `grid` | `GridView.builder` | `source`, `item_template` | `crossAxisCount`, `spacing`, `crossAxisSpacing`, `mainAxisSpacing`, `childAspectRatio`, `padding`, `shrinkWrap`, `emptyText`, `key`(滚动位置保留) |
+| `padding` | `Padding` | `child` | `padding`, `paddingH`, `paddingV`, `paddingTop/Bottom/Left/Right` |
+| `center` | `Center` | `child` | `widthFactor`, `heightFactor` |
+| `align` | `Align` | `child` | `alignment`(topLeft/center/bottomRight 等), `widthFactor`, `heightFactor` |
+| `flexible` | `Flexible` | `child` | `flex`, `fit`(loose/tight) |
+| `stack` | `Stack` | `children` | `alignment`, `fit`(loose/expand), `clipBehavior` |
+| `slider` | `Slider` | `bind` | `min`, `max`, `divisions`, `showLabel`, `color`, `disabled`, `action` |
+| `date_picker` | 触发 `showDatePicker` 的输入框 | `bind` | `placeholder`, `label`, `prefixIcon`, `firstDate`, `lastDate`, `disabled`, `action` |
+| `time_picker` | 触发 `showTimePicker` 的输入框 | `bind` | `placeholder`, `label`, `prefixIcon`, `disabled`, `action` |
+| `tooltip` | `Tooltip` | `message`, `child` | `preferBelow`, `waitDuration`, `showDuration` |
+| `chip` | `Chip` / `ChoiceChip` / `FilterChip` | `label` | `variant`(chip/choice/filter), `bind`, `value`, `icon`, `action`, `color`, `deletable` |
+| `badge` | `Badge` | `child` | `count`, `label`, `color`, `textColor`, `isLabelVisible` |
+| `avatar` | `CircleAvatar` | — | `url`, `text`(无图时取首字母), `size`, `color`, `textColor` |
+| `rich_text` | `Text.rich` | `spans` | `style`(默认), `textAlign` |
+| `progress` | `LinearProgressIndicator` | — | `value`, `color`, `backgroundColor`, `height`, `width`, `borderRadius` |
+| `inkwell` | `InkWell` (含 Material 包裹) | `child` | `onTap`, `onLongPress`, `onDoubleTap`, `borderRadius`, `splashColor` |
+| `gesture_detector` | `GestureDetector` | `child` | `onTap`, `onDoubleTap`, `onLongPress`, `onSwipeLeft/Right/Up/Down` |
+| `dismissible` | `Dismissible` | `key`, `child` | `direction`, `onDismissed`, `confirmAction`, `background`, `secondaryBackground` |
+| `draggable` | `Draggable` | `child` | `feedback`, `data`, `axis`, `onDragStarted/Completed/Canceled` |
+| `refresh` | `RefreshIndicator` | `child`, `onRefresh` | `color`, `backgroundColor` |
+| `tab_view` | `TabBar` + `TabBarView` | `tabs` | `initialIndex`, `isScrollable`, `color`, `backgroundColor`, `height`, `onTabChange` |
+| `app_bar` | `AppBar` | — | `title`, `centerTitle`, `backgroundColor`, `color`, `elevation`, `leading`, `actions` |
+| `webview` | `WebViewWidget` (webview_flutter) | `url` | `height`, `javascriptEnabled` |
+| `qr_code` | `QrImageView` (qr_flutter) | `data` | `size`, `backgroundColor`, `color`, `errorCorrectionLevel`(L/M/Q/H) |
+| `chart` | `LineChart` / `BarChart` / `PieChart` (fl_chart) | `data` | `kind`(line/bar/pie), `height`, `width`, `color` |
+| `map` | `FlutterMap` (OSM, 无需 API key) | — | `latitude`, `longitude`, `zoom`, `markers`, `height`, `borderRadius` |
+| `camera` | `CameraPreview` (camera 包) | — | `lensDirection`(back/front), `resolution`(low/medium/high/veryHigh), `height` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 
 ### 6.4 button 详细属性
@@ -543,9 +586,12 @@
 "action": {
   "type": "call",
   "call": "@global.submitForm",
-  "args": { "name": "{{ global.username }}" }
+  "args": { "name": "{{ global.username }}" },
+  "assign": "global.last_result"
 }
 ```
+
+- `assign`（可选）：把 call 的返回值写进指定变量。和 steps 里的 `assign` 语义一致，方便点按钮直接抓结果。
 
 或导航（支持依赖页面 `depName:screenId`）：
 ```json
@@ -553,9 +599,615 @@
 "action": { "type": "navigate", "screen": "auth:loginPage" }
 ```
 
+或返回上一屏（弹出导航历史栈）：
+```json
+"action": { "type": "back" }
+```
+
+**导航历史与系统返回手势**：
+
+框架在 `JsonInterpreter` 内部维护一个导航历史栈：
+- 每次 `{type: "navigate", screen: X}` 把当前页推入栈，再切到 X；如果 X 已在栈中，则弹到那一帧（防止死循环增长）
+- `{type: "back"}` 从栈顶弹一帧，回到上一屏
+- iOS 边缘滑动 / Android 物理返回键 / AppBar 默认返回按钮 都会**优先**调 `navigateBack`；只有栈空（已在入口屏）才会真正弹出外层 Route 退出 JSON-APP
+
+这样任何 JSON-APP 都自动具备"返回上一屏"行为，无需特殊配置。
+
 **双向绑定**：`"bind": "global.xxx"` 使 input / switch 的值与变量实时同步。
 
-### 6.9 ref 控件 — 引用依赖模板
+### 6.9 icon 控件 — 图标
+
+```json
+{
+  "type": "icon",
+  "name": "favorite",
+  "size": 32,
+  "color": "#E91E63"
+}
+```
+
+**name** 必须是 `IconRegistry` 中定义的名称（home / search / add / delete / edit / save / send / settings / person / star / favorite / check / close / email 等 100+ 个）。未识别的名称会显示 `help_outline` 占位。
+
+### 6.10 card 控件 — 卡片容器
+
+```json
+{
+  "type": "card",
+  "layout": "column",
+  "elevation": 4,
+  "borderRadius": 16,
+  "padding": 20,
+  "margin": 12,
+  "color": "#FFFFFF",
+  "onTap": { "type": "navigate", "screen": "detail" },
+  "children": [
+    { "type": "text", "value": "标题" },
+    { "type": "text", "value": "副标题" }
+  ]
+}
+```
+
+`Card` 与 `container` 的区别：默认带阴影 + 圆角 + 自动剪裁，更适合内容卡片场景。`onTap` 自带波纹效果。
+
+### 6.11 checkbox 控件 — 复选框
+
+```json
+{
+  "type": "checkbox",
+  "bind": "global.agreed",
+  "label": "我已阅读并同意用户协议",
+  "action": { "type": "call", "call": "@global.onAgreeChange" },
+  "disabled": false,
+  "color": "#6C5CE7"
+}
+```
+
+与 `switch` 用法相同，区别在表现形式（方框 vs 滑动开关）。
+
+### 6.12 expanded 控件 — 弹性占位
+
+```json
+{
+  "type": "container",
+  "layout": "row",
+  "children": [
+    { "type": "icon", "name": "search" },
+    {
+      "type": "expanded",
+      "flex": 1,
+      "child": { "type": "input", "placeholder": "搜索…", "bind": "global.q" }
+    },
+    { "type": "button", "label": "搜索" }
+  ]
+}
+```
+
+只能用在 `Row` / `Column` 内部。等价于在子控件上设 `position.type=flex`，但写法更直观。
+
+### 6.13 loading 控件 — 加载指示器
+
+```json
+{
+  "type": "loading",
+  "kind": "circular",
+  "size": 48,
+  "color": "#6C5CE7",
+  "strokeWidth": 4,
+  "label": "正在加载…"
+}
+```
+
+```json
+{
+  "type": "loading",
+  "kind": "linear",
+  "value": 0.65,
+  "color": "#00B894",
+  "size": 200
+}
+```
+
+- `kind`：`circular`（默认，圆形）/ `linear`（横条）
+- `value`：0~1 之间，**不传 = 不确定进度**（无限旋转），传了 = 确定进度
+- `label`：可选文字，仅 `circular` 时显示在下方
+
+### 6.14 dropdown 控件 — 下拉选择
+
+```json
+{
+  "type": "dropdown",
+  "bind": "global.gender",
+  "label": "性别",
+  "placeholder": "请选择",
+  "prefixIcon": "person",
+  "options": [
+    { "label": "男", "value": "male" },
+    { "label": "女", "value": "female" },
+    { "label": "其他", "value": "other" }
+  ],
+  "action": { "type": "call", "call": "@global.onGenderChange" }
+}
+```
+
+`options` 支持两种格式：
+- `[{label, value}]` — 显示文本与绑定值不同
+- `["a", "b", "c"]` — 文本即值
+
+被选中时 `bind` 变量被赋值为对应的 `value`（保留原始类型，可以是 string/num/bool 等）。
+
+### 6.15 radio 控件 — 单选组
+
+```json
+{
+  "type": "radio",
+  "bind": "global.size",
+  "layout": "row",
+  "color": "#6C5CE7",
+  "options": [
+    { "label": "S", "value": "small" },
+    { "label": "M", "value": "medium" },
+    { "label": "L", "value": "large" }
+  ]
+}
+```
+
+整组单选按钮，`bind` 绑定当前选中的 value。`layout`：`column`（默认，一项一行）或 `row`（自动换行）。
+
+### 6.16 wrap 控件 — 自动换行
+
+```json
+{
+  "type": "wrap",
+  "spacing": 8,
+  "runSpacing": 8,
+  "alignment": "start",
+  "children": [
+    { "type": "button", "label": "标签 1", "variant": "outlined" },
+    { "type": "button", "label": "标签 2", "variant": "outlined" },
+    { "type": "button", "label": "标签 3", "variant": "outlined" }
+  ]
+}
+```
+
+子项排到一行放不下时自动换行，常用于标签云、筛选条、按钮组。
+
+- `spacing`：同行子项间距（默认 8）
+- `runSpacing`：行间距（默认 8）
+- `alignment`：`start` / `center` / `end` / `spaceBetween` / `spaceAround` / `spaceEvenly`
+- `direction`：`horizontal`（默认）/ `vertical`
+
+### 6.17 grid 控件 — 网格布局
+
+```json
+{
+  "type": "grid",
+  "source": "{{ global.products }}",
+  "crossAxisCount": 3,
+  "spacing": 12,
+  "childAspectRatio": 0.75,
+  "shrinkWrap": true,
+  "padding": 12,
+  "item_template": {
+    "type": "card",
+    "padding": 8,
+    "margin": 0,
+    "children": [
+      { "type": "image", "url": "{{ loop.item.image }}" },
+      { "type": "text", "value": "{{ loop.item.name }}" }
+    ]
+  }
+}
+```
+
+数据驱动的网格，渲染 `source` 数组的每一项 → `item_template`。在循环上下文里通过 `{{ loop.item }}` / `{{ loop.index }}` 访问当前项。
+
+- `crossAxisCount`：列数（默认 2）
+- `childAspectRatio`：子项宽高比（默认 1）
+- `spacing` 一次设置横纵两个方向；也可分别用 `crossAxisSpacing`、`mainAxisSpacing`
+- `shrinkWrap`：放进 ScrollView/Column 内时设 `true`，避免高度无限或冲突；独占整屏时留 `false`（默认走 Expanded）
+- `key`：跨屏导航时保留滚动位置。给 list / grid 设一个**全局唯一**的字符串键
+  （如 `"home_list"`），框架会用 `PageStorageKey` + Flutter 内置 `PageStorage`
+  自动存/取该列表的滚动 offset。从子页 `back` 回来后停在原来位置而不是回到顶部。
+  同一 JSON-APP 里不同的 list/grid 必须用不同的 key 否则会串。
+
+### 6.18 padding 控件 — 内边距
+
+```json
+{ "type": "padding", "padding": 16, "child": { ... } }
+{ "type": "padding", "paddingH": 24, "paddingV": 8, "child": { ... } }
+{ "type": "padding", "paddingTop": 12, "paddingBottom": 4, "child": { ... } }
+```
+
+`padding` 一次设置四个方向；`paddingH`/`paddingV` 横纵分组；`paddingTop`/`Bottom`/`Left`/`Right` 单独设置。优先级：单边 > 横纵 > all。
+
+### 6.19 center 控件 — 居中
+
+```json
+{ "type": "center", "child": { "type": "text", "value": "居中文字" } }
+```
+
+可选 `widthFactor` / `heightFactor`（子项宽/高的倍数）。
+
+### 6.20 align 控件 — 对齐
+
+```json
+{
+  "type": "align",
+  "alignment": "bottomRight",
+  "child": { "type": "icon", "name": "favorite" }
+}
+```
+
+`alignment`：`topLeft` / `topCenter` / `topRight` / `centerLeft` / `center` / `centerRight` / `bottomLeft` / `bottomCenter` / `bottomRight`。
+
+### 6.21 flexible 控件 — 灵活占位
+
+```json
+{
+  "type": "flexible",
+  "flex": 2,
+  "fit": "loose",
+  "child": { "type": "text", "value": "可大可小" }
+}
+```
+
+与 `expanded` 的区别：`fit=loose`（默认）允许子项小于剩余空间；`fit=tight` 强制填满（等价 `Expanded`）。
+
+### 6.22 stack 控件 — 堆叠布局
+
+```json
+{
+  "type": "stack",
+  "children": [
+    { "type": "image", "url": "...", "width": 200, "height": 200 },
+    {
+      "type": "icon",
+      "name": "favorite",
+      "color": "#FF5252",
+      "position": { "type": "absolute", "top": 8, "right": 8 }
+    }
+  ]
+}
+```
+
+子项默认按 `alignment`（默认 `topStart`）排列；要精确定位，给子项加 `position.type=absolute` + `top`/`left`/`bottom`/`right`（已有的位置系统直接复用）。
+
+### 6.23 slider 控件 — 滑块
+
+```json
+{
+  "type": "slider",
+  "bind": "global.volume",
+  "min": 0,
+  "max": 100,
+  "divisions": 10,
+  "showLabel": true,
+  "color": "#6C5CE7"
+}
+```
+
+`divisions` 设置后值会按整数取整。
+
+### 6.24 date_picker / time_picker — 日期 / 时间选择器
+
+```json
+{
+  "type": "date_picker",
+  "bind": "global.birthday",
+  "label": "生日",
+  "prefixIcon": "calendar",
+  "firstDate": "1900-01-01",
+  "lastDate": "2030-12-31"
+}
+```
+
+```json
+{
+  "type": "time_picker",
+  "bind": "global.alarmTime",
+  "label": "闹钟时间",
+  "prefixIcon": "clock"
+}
+```
+
+`bind` 写回字符串：date 是 `yyyy-MM-dd`，time 是 `HH:mm`。也可以用命令式 `@show_date_picker` / `@show_time_picker` 在事件回调里弹出。
+
+### 6.25 tooltip 控件 — 工具提示
+
+```json
+{
+  "type": "tooltip",
+  "message": "点击查看详情",
+  "child": { "type": "icon", "name": "info" }
+}
+```
+
+长按或鼠标悬停 1 秒显示。
+
+### 6.26 chip 控件 — 标签
+
+```json
+{ "type": "chip", "label": "Flutter", "icon": "tag", "deletable": true, "action": {...} }
+{ "type": "chip", "label": "已读", "variant": "choice", "bind": "global.isRead", "value": true }
+{ "type": "chip", "label": "前端", "variant": "filter", "bind": "global.tags", "value": "frontend" }
+```
+
+三种 variant：
+- `chip`（默认）：单纯展示，可设 `deletable=true` 出现 × 按钮（点击触发 `action`）
+- `choice`：单选，`bind` 通常是单一值；点击切换为 `value`
+- `filter`：多选，`bind` 是 List；点击切换 `value` 是否在列表中
+
+### 6.27 badge 控件 — 角标
+
+```json
+{
+  "type": "badge",
+  "count": "{{ global.unread }}",
+  "color": "#E74C3C",
+  "child": { "type": "icon", "name": "notification", "size": 28 }
+}
+```
+
+`count > 99` 自动显示 `99+`；`count = 0` 自动隐藏。也可以用 `label` 字段显示任意文字。
+
+### 6.28 avatar 控件 — 圆形头像
+
+```json
+{ "type": "avatar", "url": "{{ global.user.avatar }}", "size": 48 }
+{ "type": "avatar", "text": "张三", "size": 40, "color": "#6C5CE7" }
+```
+
+`url` 优先；为空时用 `text` 的首字母（中文取首字、英文大写首字母）。
+
+### 6.29 rich_text 控件 — 多样式文本
+
+```json
+{
+  "type": "rich_text",
+  "style": { "fontSize": 14 },
+  "spans": [
+    { "text": "总计 " },
+    { "text": "{{ global.count }}", "style": { "fontWeight": "bold", "color": "#E74C3C" } },
+    { "text": " 条结果" }
+  ]
+}
+```
+
+每个 span 是字符串或 `{ text, style }`；子 style 与默认 `style` 合并。
+
+### 6.30 progress 控件 — 线性进度条
+
+```json
+{
+  "type": "progress",
+  "value": "{{ global.ratio }}",
+  "color": "#00B894",
+  "height": 8,
+  "borderRadius": 4
+}
+```
+
+与 `loading kind=linear` 重叠，但接口更简洁直接。
+
+### 6.31 inkwell — 水波纹点击
+
+```json
+{
+  "type": "inkwell",
+  "borderRadius": 12,
+  "onTap": { "type": "call", "call": "@global.openDetail" },
+  "onLongPress": { "type": "call", "call": "@global.openMenu" },
+  "child": { "type": "container", ... }
+}
+```
+
+`Material` 已在内部包好；onTap / onLongPress / onDoubleTap 在 build 阶段预解析模板，可安全用于 list/grid 循环上下文。
+
+### 6.32 gesture_detector — 手势检测
+
+```json
+{
+  "type": "gesture_detector",
+  "onSwipeLeft": { "type": "call", "call": "@global.next" },
+  "onSwipeRight": { "type": "call", "call": "@global.prev" },
+  "child": { ... }
+}
+```
+
+不带水波纹但能识别滑动（基于 200 像素/秒阈值的 primaryVelocity）。
+
+### 6.33 dismissible — 滑动删除
+
+```json
+{
+  "type": "dismissible",
+  "key": "{{ loop.item.id }}",
+  "direction": "rightToLeft",
+  "confirmAction": { "type": "call", "call": "@common-ui.confirmDelete", "args": { "itemName": "{{ loop.item.name }}" } },
+  "onDismissed": { "type": "call", "call": "@global.removeAt", "args": { "i": "{{ loop.index }}" } },
+  "child": { ... }
+}
+```
+
+- `key` **必填**且需唯一，否则 Flutter 会抱怨重复 key
+- `confirmAction` 调用的函数返回 `true` 或非空字符串（如 `"delete"`）才会真正执行 onDismissed
+- `direction`：`leftToRight` / `rightToLeft` / `up` / `down` / `vertical` / `horizontal`(默认)
+- `background` / `secondaryBackground`：滑动时露出的背景，可以是 widget 配置（默认红色 + 删除图标）
+
+### 6.34 draggable — 可拖拽
+
+```json
+{
+  "type": "draggable",
+  "data": "{{ loop.item.id }}",
+  "axis": "vertical",
+  "feedback": { "type": "icon", "name": "drag_indicator" },
+  "onDragCompleted": { "type": "call", "call": "@global.onDrop" },
+  "child": { ... }
+}
+```
+
+通常与上层逻辑里的 DragTarget 配合（当前框架未单独暴露 DragTarget 控件，可在后续批次补）。
+
+### 6.35 refresh — 下拉刷新
+
+```json
+{
+  "type": "refresh",
+  "onRefresh": { "type": "call", "call": "@global.reload" },
+  "child": { "type": "list", "source": "...", "item_template": {...} }
+}
+```
+
+`child` 必须是可滚动 widget（list / grid / 内置 ScrollView）。已有 `list.onRefresh` 是同样语义，refresh 控件适合包非 list 的滚动内容。
+
+### 6.36 tab_view — 内嵌标签页
+
+```json
+{
+  "type": "tab_view",
+  "height": 400,
+  "tabs": [
+    { "label": "首页", "icon": "home",     "content": { ...widget... } },
+    { "label": "消息", "icon": "message",  "content": { ...widget... } },
+    { "label": "我的", "icon": "person",   "content": { ...widget... } }
+  ]
+}
+```
+
+单 widget 同时管 TabBar 和 TabBarView，避免上下两层 widget 各自管理 controller 的麻烦。`height` 用于 TabBarView 高度（必须明确）。
+
+> 提示：如果你想要的是底部 tab + 多页面切换，screen 级别的 `tabs` 配置更合适（已支持，见下文）。
+
+### 6.37 app_bar 与 screen.appBar 配置
+
+**作为独立 widget 嵌入 column**：
+```json
+{
+  "type": "app_bar",
+  "title": "页面标题",
+  "actions": [{ "icon": "search", "action": {...} }]
+}
+```
+
+**作为 screen 的顶部栏（覆写默认 AppBar）**：
+```json
+{
+  "id": "home",
+  "appBar": {
+    "title": "{{ global.user.name }} 的主页",
+    "backgroundColor": "#6C5CE7",
+    "color": "#FFFFFF",
+    "actions": [
+      { "icon": "search", "action": { "type": "call", "call": "@global.openSearch" } },
+      { "icon": "more",   "action": { "type": "call", "call": "@global.openMenu" } }
+    ]
+  },
+  "children": [...]
+}
+```
+
+字段：`title` / `centerTitle` / `backgroundColor` / `color`(前景) / `elevation` / `leading: {icon, action}` / `actions: [{icon, action}]`。
+
+### 6.38 screen.drawer — 侧边栏（Scaffold 级别）
+
+```json
+{
+  "id": "home",
+  "drawer": {
+    "header": { "type": "text", "value": "{{ global.user.name }}", "style": { "fontSize": 20, "color": "#FFFFFF" } },
+    "items": [
+      { "icon": "home",     "label": "首页", "action": { "type": "navigate", "screen": "home" } },
+      { "icon": "settings", "label": "设置", "action": { "type": "navigate", "screen": "settings" } },
+      { "icon": "logout",   "label": "退出", "action": { "type": "call", "call": "@global.logout" } }
+    ]
+  },
+  "children": [...]
+}
+```
+
+drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏的 item 会先关闭 drawer 再触发 action。
+
+### 6.39 screen.tabs — 底部导航栏（已支持，等同 bottom_nav）
+
+```json
+{
+  "id": "home",
+  "title": "我的应用",
+  "tabs": [
+    { "label": "首页", "icon": "home",     "children": [...] },
+    { "label": "消息", "icon": "message",  "children": [...] },
+    { "label": "我的", "icon": "person",   "children": [...] }
+  ]
+}
+```
+
+每个 tab 有独立的 `children`，切换 tab 时 body 整个换。等价于其他框架的 BottomNavigationBar。
+
+### 6.40 webview / qr_code / chart / map / camera —— 特殊控件
+
+#### webview
+```json
+{ "type": "webview", "url": "https://flutter.dev", "height": 500 }
+```
+基于 `webview_flutter`。Android 不需额外配置（自带 INTERNET 权限）；iOS 加载 http URL 需要在 Info.plist 配置 NSAppTransportSecurity。
+
+#### qr_code
+```json
+{ "type": "qr_code", "data": "https://example.com", "size": 200, "color": "#000000" }
+```
+仅生成。扫码功能后续可接 `mobile_scanner`。
+
+#### chart
+```json
+{
+  "type": "chart",
+  "kind": "line",
+  "height": 240,
+  "color": "#6C5CE7",
+  "data": [
+    {"x": 0, "y": 1}, {"x": 1, "y": 3}, {"x": 2, "y": 2},
+    {"x": 3, "y": 5}, {"x": 4, "y": 4}
+  ]
+}
+```
+- `kind=line`：data 是 `[{x, y}]` 或 `[number]`
+- `kind=bar`：data 是 `[{label, value}]`
+- `kind=pie`：data 是 `[{label, value, color?}]`
+
+#### map
+```json
+{
+  "type": "map",
+  "latitude": 39.9042,
+  "longitude": 116.4074,
+  "zoom": 12,
+  "height": 320,
+  "markers": [
+    { "latitude": 39.9042, "longitude": 116.4074, "label": "北京" },
+    { "latitude": 39.9700, "longitude": 116.3000 }
+  ]
+}
+```
+基于 OpenStreetMap，**无需 API key**。
+
+#### camera
+```json
+{ "type": "camera", "lensDirection": "back", "resolution": "medium" }
+```
+- 不写 `width` / `height` 时按摄像头原生比例自然撑开（推荐）。
+- 想固定尺寸用 `fit` 指定缩放方式，**永远不会压扁**：
+  - `fit: "contain"`（默认）—— 保比例 + 黑边
+  - `fit: "cover"` —— 保比例 + 裁切
+  - `fit: "fill"` —— 拉伸到目标尺寸（**会变形**，慎用）
+
+**需要平台权限**：
+- Android：`AndroidManifest.xml` 加 `<uses-permission android:name="android.permission.CAMERA"/>`
+- iOS：`Info.plist` 加 `NSCameraUsageDescription`
+
+只需"拍照存路径"用 `image_picker`（source=camera）更简单，本控件做实时预览。
+
+### 6.41 ref 控件 — 引用依赖模板
 
 ```json
 {
@@ -618,6 +1270,42 @@ lib/
         ├── ref_widget.dart        # Ref 控件（引用依赖模板）
         ├── spacer_widget.dart     # Spacer 控件
         ├── switch_widget.dart     # Switch 控件
+        ├── icon_widget.dart       # Icon 控件
+        ├── card_widget.dart       # Card 控件
+        ├── checkbox_widget.dart   # Checkbox 控件
+        ├── expanded_widget.dart   # Expanded 控件
+        ├── loading_widget.dart    # Loading 控件
+        ├── dropdown_widget.dart   # Dropdown 控件
+        ├── radio_widget.dart      # Radio 单选组
+        ├── wrap_widget.dart       # Wrap 自动换行
+        ├── grid_widget.dart       # Grid 网格
+        ├── padding_widget.dart    # Padding 内边距
+        ├── center_widget.dart     # Center 居中
+        ├── align_widget.dart      # Align 对齐
+        ├── flexible_widget.dart   # Flexible 灵活占位
+        ├── stack_widget.dart      # Stack 堆叠
+        ├── slider_widget.dart     # Slider 滑块
+        ├── date_picker_widget.dart # DatePicker 日期
+        ├── time_picker_widget.dart # TimePicker 时间
+        ├── tooltip_widget.dart    # Tooltip 工具提示
+        ├── chip_widget.dart       # Chip 标签
+        ├── badge_widget.dart      # Badge 角标
+        ├── avatar_widget.dart     # Avatar 头像
+        ├── rich_text_widget.dart  # RichText 多样式文本
+        ├── progress_widget.dart   # Progress 进度条
+        ├── inkwell_widget.dart    # InkWell 水波纹
+        ├── gesture_detector_widget.dart # GestureDetector
+        ├── dismissible_widget.dart # Dismissible 滑动删除
+        ├── draggable_widget.dart  # Draggable 拖拽
+        ├── refresh_widget.dart    # RefreshIndicator
+        ├── tab_view_widget.dart   # TabBar + TabBarView
+        ├── app_bar_widget.dart    # AppBar (含 buildAppBar 共享构建器)
+        ├── drawer_helper.dart     # buildDrawer (供 screen.drawer 使用)
+        ├── webview_widget.dart    # WebView 网页
+        ├── qr_code_widget.dart    # QR 二维码生成
+        ├── chart_widget.dart      # Chart line/bar/pie
+        ├── map_widget.dart        # Map (OSM)
+        ├── camera_widget.dart     # Camera 实时预览
         ├── position_handler.dart  # position 定位处理
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射

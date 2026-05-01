@@ -33,6 +33,11 @@ class JsonInterpreter extends ChangeNotifier {
   final List<Map<String, dynamic>> _paramsStack = [];
   final Map<String, TextEditingController> _textControllers = {};
 
+  /// 屏幕导航历史栈（不含当前页）。
+  /// PopScope / Android 物理返回键 / iOS 边缘滑动 都会调 navigateBack 弹出栈顶。
+  /// navigateTo 时把当前页推入；若目标已在栈中则弹到那一帧（防止历史无限增长）。
+  final List<String> _navigationHistory = [];
+
   /// jsonlogic 标准引擎 + 自定义操作符
   late Jsonlogic _jl;
 
@@ -277,6 +282,7 @@ class JsonInterpreter extends ChangeNotifier {
 
     _loopContextStack.clear();
     _paramsStack.clear();
+    _navigationHistory.clear();
     _depLoader.clear();
     for (final c in _textControllers.values) {
       c.dispose();
@@ -473,8 +479,12 @@ class JsonInterpreter extends ChangeNotifier {
       case 'call':
         final callTarget = action['call'] as String?;
         final args = action['args'] as Map<String, dynamic>?;
+        final assignVar = action['assign'] as String?;
         if (callTarget != null) {
-          await _executeCall(callTarget, args ?? {});
+          final result = await _executeCall(callTarget, args ?? {});
+          if (assignVar != null && result != null) {
+            setVariable(assignVar, result);
+          }
         }
         break;
       case 'navigate':
@@ -483,7 +493,39 @@ class JsonInterpreter extends ChangeNotifier {
           navigateTo(screenId);
         }
         break;
+      case 'back':
+        // 弹出导航历史回到上一屏；栈空则尝试 pop 外层 Route（退出 JSON-APP）
+        if (canNavigateBack) {
+          navigateBack();
+        } else if (context.mounted) {
+          Navigator.of(context).maybePop();
+        }
+        break;
     }
+  }
+
+  /// 与 executeAction 相同，但返回函数调用的返回值
+  /// 主要供需要决策结果的回调使用（如 dismissible.confirmAction）
+  Future<dynamic> executeActionWithResult(
+      dynamic action, BuildContext context) async {
+    if (action is! Map<String, dynamic>) return null;
+    final type = action['type'] ?? 'call';
+    if (type == 'call') {
+      final callTarget = action['call'] as String?;
+      final args = action['args'] as Map<String, dynamic>?;
+      final assignVar = action['assign'] as String?;
+      if (callTarget != null) {
+        final result = await _executeCall(callTarget, args ?? {});
+        if (assignVar != null && result != null) {
+          setVariable(assignVar, result);
+        }
+        return result;
+      }
+    } else if (type == 'navigate') {
+      final screenId = action['screen'] as String?;
+      if (screenId != null) navigateTo(screenId);
+    }
+    return null;
   }
 
   void navigateTo(String screenId) {
@@ -507,8 +549,31 @@ class JsonInterpreter extends ChangeNotifier {
         }
       }
     }
+
+    // 维护导航历史栈：
+    // - 目标页已在历史中（用户在做"回退式跳转"，例如点 home 链接）
+    //   → 弹到那一帧，避免历史无限增长
+    // - 否则普通前进：把当前页推入历史
+    final lastIdx = _navigationHistory.lastIndexOf(screenId);
+    if (lastIdx >= 0) {
+      _navigationHistory.removeRange(lastIdx, _navigationHistory.length);
+    } else if (_currentScreenId.isNotEmpty && _currentScreenId != screenId) {
+      _navigationHistory.add(_currentScreenId);
+    }
+
     _currentScreenId = screenId;
     onNavigate?.call(screenId);
+    notifyListeners();
+  }
+
+  /// 是否能回退到上一屏（历史栈非空）
+  bool get canNavigateBack => _navigationHistory.isNotEmpty;
+
+  /// 弹出历史栈，回到上一屏。栈空时无操作（调用方应自行决定是否退出 app）。
+  void navigateBack() {
+    if (_navigationHistory.isEmpty) return;
+    _currentScreenId = _navigationHistory.removeLast();
+    onNavigate?.call(_currentScreenId);
     notifyListeners();
   }
 
@@ -615,6 +680,10 @@ class JsonInterpreter extends ChangeNotifier {
             _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
         await Future.delayed(Duration(milliseconds: ms));
         return null;
+      case '@throw':
+        // 主动抛错——用于测试 @try_catch / 业务侧主动失败
+        throw Exception(
+            resolvedArgs['message']?.toString() ?? 'thrown by @throw');
 
       // ── HTTP ──
       case '@http_get':
@@ -701,6 +770,19 @@ class JsonInterpreter extends ChangeNotifier {
           }
         }
         return null;
+      case '@list_remove':
+        final listPath = resolvedArgs['var'] as String?;
+        final value = _evaluateExpression(resolvedArgs['value']);
+        if (listPath != null) {
+          final current = getVariable(listPath);
+          if (current is List) {
+            final newList = List<dynamic>.from(current)
+              ..removeWhere((e) => e == value);
+            setVariable(listPath, newList);
+            return newList;
+          }
+        }
+        return null;
       case '@list_insert':
         final listPath = resolvedArgs['var'] as String?;
         final index = _toInt(resolvedArgs['index'] ?? 0);
@@ -750,6 +832,56 @@ class JsonInterpreter extends ChangeNotifier {
           setVariable(bindPath, result);
         }
         return result;
+
+      case '@show_choice_dialog':
+        // 自定义按钮对话框
+        // args: { title, message, buttons: [{label, value, style?}], dismissible? }
+        // 返回值：被点击按钮的 value（dismiss 关闭返回 null）
+        final choiceTitle = resolvedArgs['title']?.toString() ?? '';
+        final choiceMessage = resolvedArgs['message']?.toString() ?? '';
+        final rawButtons = resolvedArgs['buttons'];
+        final dismissible = resolvedArgs['dismissible'] != false;
+        return await _showChoiceDialog(
+          choiceTitle,
+          choiceMessage,
+          rawButtons is List ? rawButtons : const [],
+          dismissible: dismissible,
+        );
+
+      case '@show_snackbar':
+        // 增强版 toast：带操作按钮的底部 SnackBar
+        // args: { message, actionLabel?, action?, durationMs?, backgroundColor? }
+        final snackMsg = resolvedArgs['message']?.toString() ?? '';
+        final actionLabel = resolvedArgs['actionLabel']?.toString();
+        final actionDef = resolvedArgs['action'];
+        final durationMs = (resolvedArgs['durationMs'] as num?)?.toInt() ?? 3000;
+        final bgColorStr = resolvedArgs['backgroundColor']?.toString();
+        _showSnackBar(
+          snackMsg,
+          actionLabel: actionLabel,
+          actionDef: actionDef,
+          durationMs: durationMs,
+          backgroundColor: _parseColorHex(bgColorStr),
+        );
+        return null;
+
+      case '@show_date_picker':
+        // 命令式日期选择器
+        // args: { initial?, firstDate?, lastDate?, bind? }
+        // 返回值：yyyy-MM-dd 字符串（取消返回 null）
+        return await _showDatePickerImperative(resolvedArgs);
+
+      case '@show_time_picker':
+        // 命令式时间选择器
+        // args: { initial?, bind? }
+        // 返回值：HH:mm 字符串（取消返回 null）
+        return await _showTimePickerImperative(resolvedArgs);
+
+      case '@show_bottom_sheet':
+        // 底部弹窗
+        // args: { content: { ...widget... }, isDismissible?, enableDrag?, backgroundColor? }
+        // 返回值：弹窗里 close action 透传的值（关闭返回 null）
+        return await _showBottomSheet(resolvedArgs);
 
       // ── 本地存储 ──
       case '@storage_set':
@@ -1694,23 +1826,29 @@ class JsonInterpreter extends ChangeNotifier {
     final overlay = Overlay.of(ctx);
     late OverlayEntry entry;
 
+    // 所有 toast 都在同一位置（贴底 80），新进入的天然盖在旧的上面（z-order）。
+    // 视觉风格参考原生 Android Toast / 微信：紧凑、半透明深色、最大宽度封顶。
     entry = OverlayEntry(
       builder: (context) => Positioned(
-        bottom: 80.0 + (_activeToasts.length * 60.0), // 每个 toast 向上偏移 60px
-        left: 16,
-        right: 16,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              message,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              textAlign: TextAlign.center,
+        bottom: 80,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ),
@@ -1755,6 +1893,66 @@ class JsonInterpreter extends ChangeNotifier {
     return result ?? false;
   }
 
+  /// 自定义按钮对话框 — 返回被点击按钮的 value（关闭返回 null）
+  /// buttons 项格式：{ label: String, value: dynamic, style?: 'primary'/'danger'/'text' }
+  Future<dynamic> _showChoiceDialog(
+    String title,
+    String message,
+    List<dynamic> buttons, {
+    bool dismissible = true,
+  }) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+
+    return await showDialog<dynamic>(
+      context: ctx,
+      barrierDismissible: dismissible,
+      builder: (dialogCtx) {
+        final actions = <Widget>[];
+        for (final btn in buttons) {
+          if (btn is! Map) continue;
+          final label = btn['label']?.toString() ?? '';
+          final value = btn['value'];
+          final style = btn['style']?.toString() ?? 'text';
+
+          Widget button;
+          switch (style) {
+            case 'primary':
+              button = FilledButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+              break;
+            case 'danger':
+              button = FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(dialogCtx).colorScheme.error,
+                  foregroundColor: Theme.of(dialogCtx).colorScheme.onError,
+                ),
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+              break;
+            case 'text':
+            default:
+              button = TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(value),
+                child: Text(label),
+              );
+          }
+          actions.add(button);
+        }
+        return AlertDialog(
+          title: title.isEmpty ? null : Text(title),
+          content: message.isEmpty
+              ? null
+              : SingleChildScrollView(child: SelectableText(message)),
+          actions: actions,
+        );
+      },
+    );
+  }
+
   Future<String?> _showTextInputDialog(String title, String hint, String defaultValue) async {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
@@ -1767,6 +1965,143 @@ class JsonInterpreter extends ChangeNotifier {
         defaultValue: defaultValue,
       ),
     );
+  }
+
+  /// 增强版 SnackBar — 支持操作按钮
+  void _showSnackBar(
+    String message, {
+    String? actionLabel,
+    dynamic actionDef,
+    int durationMs = 3000,
+    Color? backgroundColor,
+  }) {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    if (messenger == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(milliseconds: durationMs),
+        backgroundColor: backgroundColor,
+        action: (actionLabel != null && actionDef != null)
+            ? SnackBarAction(
+                label: actionLabel,
+                onPressed: () {
+                  if (ctx.mounted) {
+                    executeAction(actionDef, ctx);
+                  }
+                },
+              )
+            : null,
+      ),
+    );
+  }
+
+  /// 命令式日期选择器
+  Future<String?> _showDatePickerImperative(
+      Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    DateTime parseOr(String? s, DateTime fallback) {
+      if (s == null || s.isEmpty) return fallback;
+      try {
+        return DateTime.parse(s);
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    final now = DateTime.now();
+    final initial = parseOr(args['initial']?.toString(), now);
+    final firstDate = parseOr(args['firstDate']?.toString(),
+        DateTime(now.year - 50));
+    final lastDate = parseOr(args['lastDate']?.toString(),
+        DateTime(now.year + 50));
+    final bindPath = args['bind'] as String?;
+
+    final picked = await showDatePicker(
+      context: ctx,
+      initialDate: initial.isBefore(firstDate) ? firstDate : initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
+    if (picked == null) return null;
+    final m = picked.month.toString().padLeft(2, '0');
+    final d = picked.day.toString().padLeft(2, '0');
+    final s = '${picked.year}-$m-$d';
+    if (bindPath != null) {
+      setVariable(bindPath, s);
+    }
+    return s;
+  }
+
+  /// 命令式时间选择器
+  Future<String?> _showTimePickerImperative(
+      Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    TimeOfDay initial = TimeOfDay.now();
+    final initStr = args['initial']?.toString();
+    if (initStr != null && initStr.contains(':')) {
+      final parts = initStr.split(':');
+      final h = int.tryParse(parts[0]);
+      final mi = parts.length > 1 ? int.tryParse(parts[1]) : null;
+      if (h != null && mi != null && h >= 0 && h < 24 && mi >= 0 && mi < 60) {
+        initial = TimeOfDay(hour: h, minute: mi);
+      }
+    }
+    final bindPath = args['bind'] as String?;
+
+    final picked = await showTimePicker(
+      context: ctx,
+      initialTime: initial,
+    );
+    if (picked == null) return null;
+    final h = picked.hour.toString().padLeft(2, '0');
+    final m = picked.minute.toString().padLeft(2, '0');
+    final s = '$h:$m';
+    if (bindPath != null) {
+      setVariable(bindPath, s);
+    }
+    return s;
+  }
+
+  /// 命令式底部弹窗
+  Future<dynamic> _showBottomSheet(Map<String, dynamic> args) async {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return null;
+    final content = args['content'];
+    if (content is! Map<String, dynamic>) return null;
+    final isDismissible = args['isDismissible'] != false;
+    final enableDrag = args['enableDrag'] != false;
+    final bg = _parseColorHex(args['backgroundColor']?.toString());
+
+    return await showModalBottomSheet<dynamic>(
+      context: ctx,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
+      backgroundColor: bg,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: buildWidget(sheetCtx, content),
+        ),
+      ),
+    );
+  }
+
+  /// 解析 #RRGGBB / #AARRGGBB 颜色字符串
+  Color? _parseColorHex(String? colorStr) {
+    if (colorStr == null || !colorStr.startsWith('#')) return null;
+    final hex = colorStr.replaceFirst('#', '');
+    if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
+    if (hex.length == 8) return Color(int.parse(hex, radix: 16));
+    return null;
   }
 
   Future<String?> _pickOrTakeImage(

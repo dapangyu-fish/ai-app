@@ -30,6 +30,12 @@ class JsonListWidget extends JsonBaseWidget {
     final emptyText = json['emptyText']?.toString() ?? '暂无数据';
     final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
     final onLoadMore = json['onLoadMore'] as Map<String, dynamic>?;
+    // 跨屏导航时保留滚动位置：JSON 里给 list 设 "key": "唯一名"，
+    // 框架包成 PageStorageKey，Flutter 的 PageStorage 自动存/取 scroll offset
+    final keyStr = json['key']?.toString();
+    final pageKey = keyStr != null && keyStr.isNotEmpty
+        ? PageStorageKey<String>(keyStr)
+        : null;
 
     // 空状态
     if (itemTemplate == null || items.isEmpty) {
@@ -97,6 +103,7 @@ class JsonListWidget extends JsonBaseWidget {
 
     // 构建列表
     Widget listView = ListView.separated(
+      key: pageKey,
       itemCount: items.length + (onLoadMore != null ? 1 : 0),
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (ctx, index) {

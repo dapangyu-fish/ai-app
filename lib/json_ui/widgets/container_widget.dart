@@ -1,6 +1,7 @@
 // Container 控件 — 增强版
-// 支持：children, layout (row/column), color, padding, margin,
+// 支持：children, layout (row/column/stack), color, padding, margin,
 //       borderRadius, border { color, width }, elevation, width, height
+//       layout=stack 时子项可用 position.type=absolute 绝对定位
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
@@ -56,6 +57,11 @@ class JsonContainerWidget extends JsonBaseWidget {
       layoutWidget = Row(
         crossAxisAlignment: crossAlign,
         mainAxisAlignment: mainAlign,
+        children: childWidgets,
+      );
+    } else if (layout == 'stack') {
+      layoutWidget = Stack(
+        clipBehavior: Clip.none,
         children: childWidgets,
       );
     } else {

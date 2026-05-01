@@ -61,6 +61,21 @@ dependencies:
   drift: ^2.22.1
   drift_flutter: ^0.2.4
 
+  # Special widgets (batch 8)
+  # WebView
+  webview_flutter: ^4.10.0
+  # QR code generation
+  qr_flutter: ^4.1.0
+  # QR / barcode scanning
+  mobile_scanner: ^5.2.3
+  # Charts
+  fl_chart: ^0.69.0
+  # Map (OpenStreetMap based, no API key needed)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  # Camera live preview (note: needs Android camera permission + iOS NSCameraUsageDescription)
+  camera: ^0.11.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

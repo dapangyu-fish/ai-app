@@ -1,0 +1,281 @@
+{
+  "dsl": "3.3",
+  "appid": "90bf48be-7670-49e0-9961-3ddd68a70b93",
+  "meta": {
+    "name": "widgets-showcase-3",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "第三批 Widget 演示 — padding / center / align / flexible / stack",
+    "author": "Claude"
+  },
+  "dependencies": {
+    "common-ui": "^1.2.0"
+  },
+  "global": {
+    "variables": {
+      "leftFlex": 1,
+      "rightFlex": 2
+    },
+    "functions": {}
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Widgets Showcase 3",
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F4F6FB",
+        "scrollable": true,
+        "children": [
+          {
+            "type": "text",
+            "value": "第三批 Widget — 布局",
+            "style": { "fontSize": 26, "fontWeight": "bold", "paddingH": 12, "paddingV": 8 }
+          },
+          {
+            "type": "text",
+            "value": "padding / center / align / flexible / stack",
+            "style": { "fontSize": 13, "color": "#666666", "paddingH": 12 }
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "1. Padding — 内边距",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              {
+                "type": "padding",
+                "padding": 24,
+                "child": {
+                  "type": "container",
+                  "color": "#FFEAA7",
+                  "borderRadius": 8,
+                  "padding": 12,
+                  "children": [
+                    { "type": "text", "value": "padding=24（四边）", "style": { "fontSize": 14 } }
+                  ]
+                }
+              },
+              {
+                "type": "padding",
+                "paddingH": 32,
+                "paddingV": 4,
+                "child": {
+                  "type": "container",
+                  "color": "#FAB1A0",
+                  "borderRadius": 8,
+                  "padding": 12,
+                  "children": [
+                    { "type": "text", "value": "paddingH=32 paddingV=4", "style": { "fontSize": 14 } }
+                  ]
+                }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "2. Center — 居中",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              {
+                "type": "container",
+                "color": "#A29BFE",
+                "borderRadius": 8,
+                "height": 80,
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "center",
+                      "child": {
+                        "type": "text",
+                        "value": "我在中间",
+                        "style": { "fontSize": 16, "fontWeight": "bold", "color": "#FFFFFF" }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "3. Align — 9 宫格对齐",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              {
+                "type": "container",
+                "color": "#DFE6E9",
+                "borderRadius": 8,
+                "height": 200,
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "stack",
+                      "fit": "expand",
+                      "children": [
+                        { "type": "align", "alignment": "topLeft",      "child": { "type": "icon", "name": "favorite", "color": "#E74C3C" } },
+                        { "type": "align", "alignment": "topCenter",    "child": { "type": "icon", "name": "star",     "color": "#F39C12" } },
+                        { "type": "align", "alignment": "topRight",     "child": { "type": "icon", "name": "check",    "color": "#27AE60" } },
+                        { "type": "align", "alignment": "centerLeft",   "child": { "type": "icon", "name": "info",     "color": "#3498DB" } },
+                        { "type": "align", "alignment": "center",       "child": { "type": "icon", "name": "settings", "color": "#34495E" } },
+                        { "type": "align", "alignment": "centerRight",  "child": { "type": "icon", "name": "person",   "color": "#9B59B6" } },
+                        { "type": "align", "alignment": "bottomLeft",   "child": { "type": "icon", "name": "home",     "color": "#16A085" } },
+                        { "type": "align", "alignment": "bottomCenter", "child": { "type": "icon", "name": "search",   "color": "#D35400" } },
+                        { "type": "align", "alignment": "bottomRight",  "child": { "type": "icon", "name": "delete",   "color": "#7F8C8D" } }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "4. Flexible — 弹性比例（loose vs tight）",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              {
+                "type": "text",
+                "value": "fit=loose（子项可以小于剩余空间）",
+                "style": { "fontSize": 12, "color": "#888888" }
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "color": "#ECF0F1",
+                "padding": 8,
+                "borderRadius": 8,
+                "children": [
+                  {
+                    "type": "flexible",
+                    "flex": 1,
+                    "fit": "loose",
+                    "child": { "type": "container", "color": "#FF7675", "padding": 12, "children": [{ "type": "text", "value": "1×" }] }
+                  },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "flexible",
+                    "flex": 2,
+                    "fit": "loose",
+                    "child": { "type": "container", "color": "#FDCB6E", "padding": 12, "children": [{ "type": "text", "value": "2×" }] }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "fit=tight（强制填满）",
+                "style": { "fontSize": 12, "color": "#888888" }
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "color": "#ECF0F1",
+                "padding": 8,
+                "borderRadius": 8,
+                "children": [
+                  {
+                    "type": "flexible",
+                    "flex": 1,
+                    "fit": "tight",
+                    "child": { "type": "container", "color": "#FF7675", "padding": 12, "children": [{ "type": "text", "value": "1×" }] }
+                  },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "flexible",
+                    "flex": 2,
+                    "fit": "tight",
+                    "child": { "type": "container", "color": "#FDCB6E", "padding": 12, "children": [{ "type": "text", "value": "2×" }] }
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "5. Stack — 堆叠 + 角标",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              {
+                "type": "stack",
+                "alignment": "topStart",
+                "children": [
+                  {
+                    "type": "container",
+                    "color": "#74B9FF",
+                    "width": 200,
+                    "height": 120,
+                    "borderRadius": 12,
+                    "children": [
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "center",
+                          "child": { "type": "text", "value": "卡片内容", "style": { "fontSize": 16, "color": "#FFFFFF" } }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "icon",
+                    "name": "favorite",
+                    "size": 28,
+                    "color": "#E74C3C",
+                    "position": { "type": "absolute", "top": 8, "right": 8 }
+                  },
+                  {
+                    "type": "container",
+                    "color": "#E74C3C",
+                    "borderRadius": 12,
+                    "padding": 4,
+                    "children": [
+                      { "type": "text", "value": "NEW", "style": { "fontSize": 10, "color": "#FFFFFF", "fontWeight": "bold" } }
+                    ],
+                    "position": { "type": "absolute", "top": -4, "left": -4 }
+                  }
+                ]
+              }
+            ]
+          },
+
+          { "type": "spacer", "height": 24 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    { "call": "@print", "args": { "value": "[widgets-showcase-3] booted" } }
+  ]
+}

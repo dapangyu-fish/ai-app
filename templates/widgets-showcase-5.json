@@ -1,0 +1,253 @@
+{
+  "dsl": "3.3",
+  "appid": "1eb8b6c3-7303-4cb0-83ef-7a784b8e9abc",
+  "meta": {
+    "name": "widgets-showcase-5",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "第五批 Widget 演示 — chip / badge / avatar / rich_text / progress",
+    "author": "Claude"
+  },
+  "dependencies": {
+    "common-ui": "^1.2.0"
+  },
+  "global": {
+    "variables": {
+      "isFavorite": false,
+      "filterTags": ["frontend"],
+      "unreadCount": 5,
+      "ratio": 0.4
+    },
+    "functions": {
+      "incRatio": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ratio",
+              "value": {
+                "min": [
+                  { "+": [{ "var": "global.ratio" }, 0.1] },
+                  1
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "incUnread": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.unreadCount",
+              "value": { "+": [{ "var": "global.unreadCount" }, 1] }
+            }
+          }
+        ]
+      },
+      "clearUnread": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": { "var": "global.unreadCount", "value": 0 }
+          }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Widgets Showcase 5",
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F4F6FB",
+        "scrollable": true,
+        "children": [
+          {
+            "type": "text",
+            "value": "第五批 — 展示类",
+            "style": { "fontSize": 26, "fontWeight": "bold", "paddingH": 12, "paddingV": 8 }
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "1. Chip — 三种 variant", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              { "type": "text", "value": "chip（普通，可删除）", "style": { "fontSize": 12, "color": "#888888" } },
+              {
+                "type": "wrap",
+                "spacing": 6,
+                "children": [
+                  { "type": "chip", "label": "Flutter", "icon": "code", "deletable": true,
+                    "action": { "type": "call", "call": "@common-ui.showInfo", "args": { "message": "删除 Flutter" } } },
+                  { "type": "chip", "label": "Dart", "icon": "code", "deletable": true,
+                    "action": { "type": "call", "call": "@common-ui.showInfo", "args": { "message": "删除 Dart" } } },
+                  { "type": "chip", "label": "未读", "icon": "info", "color": "#FFEAA7" }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              { "type": "text", "value": "choice（单选 - 收藏开关）", "style": { "fontSize": 12, "color": "#888888" } },
+              {
+                "type": "chip",
+                "label": "{{ global.isFavorite }} 收藏",
+                "variant": "choice",
+                "icon": "favorite",
+                "bind": "global.isFavorite",
+                "value": true,
+                "color": "#E91E63"
+              },
+              { "type": "spacer", "height": 12 },
+              { "type": "text", "value": "filter（多选 - 兴趣标签）", "style": { "fontSize": 12, "color": "#888888" } },
+              {
+                "type": "wrap",
+                "spacing": 6,
+                "children": [
+                  { "type": "chip", "label": "前端", "variant": "filter", "bind": "global.filterTags", "value": "frontend", "color": "#6C5CE7" },
+                  { "type": "chip", "label": "后端", "variant": "filter", "bind": "global.filterTags", "value": "backend",  "color": "#6C5CE7" },
+                  { "type": "chip", "label": "AI",   "variant": "filter", "bind": "global.filterTags", "value": "ai",       "color": "#6C5CE7" },
+                  { "type": "chip", "label": "DevOps", "variant": "filter", "bind": "global.filterTags", "value": "devops", "color": "#6C5CE7" }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              { "type": "text", "value": "已选: {{ global.filterTags }}", "style": { "fontSize": 12, "color": "#666666" } }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "2. Badge — 角标", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "badge",
+                    "count": "{{ global.unreadCount }}",
+                    "color": "#E74C3C",
+                    "child": { "type": "icon", "name": "notification", "size": 32, "color": "#34495E" }
+                  },
+                  { "type": "spacer", "width": 24 },
+                  {
+                    "type": "badge",
+                    "label": "NEW",
+                    "color": "#27AE60",
+                    "child": { "type": "icon", "name": "email", "size": 32, "color": "#34495E" }
+                  },
+                  { "type": "spacer", "width": 24 },
+                  {
+                    "type": "badge",
+                    "count": 150,
+                    "color": "#9B59B6",
+                    "child": { "type": "icon", "name": "message", "size": 32, "color": "#34495E" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "button", "label": "+1", "variant": "outlined", "action": { "type": "call", "call": "@global.incUnread" } },
+                  { "type": "spacer", "width": 8 },
+                  { "type": "button", "label": "清零", "variant": "text", "action": { "type": "call", "call": "@global.clearUnread" } },
+                  { "type": "spacer", "width": 8 },
+                  { "type": "text", "value": "未读: {{ global.unreadCount }}", "style": { "fontSize": 13, "color": "#888888" } }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "3. Avatar — 头像（图片 / 文字 fallback）", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "avatar", "url": "https://api.dicebear.com/9.x/avataaars/png?seed=alice", "size": 56 },
+                  { "type": "spacer", "width": 12 },
+                  { "type": "avatar", "text": "张三", "size": 56, "color": "#6C5CE7" },
+                  { "type": "spacer", "width": 12 },
+                  { "type": "avatar", "text": "Alice", "size": 56, "color": "#00B894" },
+                  { "type": "spacer", "width": 12 },
+                  { "type": "avatar", "text": "Bob", "size": 40, "color": "#E67E22" }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "4. RichText — 多样式拼接", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "rich_text",
+                "style": { "fontSize": 14, "color": "#34495E" },
+                "spans": [
+                  { "text": "总计 " },
+                  { "text": "{{ global.unreadCount }}", "style": { "fontWeight": "bold", "color": "#E74C3C", "fontSize": 18 } },
+                  { "text": " 条 " },
+                  { "text": "未读消息", "style": { "decoration": "underline", "color": "#3498DB" } },
+                  { "text": "，进度 " },
+                  { "text": "{{ global.ratio }}", "style": { "fontWeight": "bold", "color": "#27AE60" } }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "5. Progress — 进度条", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "progress",
+                "value": "{{ global.ratio }}",
+                "color": "#00B894",
+                "backgroundColor": "#DFE6E9",
+                "height": 10,
+                "borderRadius": 5
+              },
+              { "type": "spacer", "height": 8 },
+              { "type": "text", "value": "比例: {{ global.ratio }}", "style": { "fontSize": 13, "color": "#888888" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "button",
+                "label": "+0.1",
+                "variant": "outlined",
+                "action": { "type": "call", "call": "@global.incRatio" }
+              }
+            ]
+          },
+
+          { "type": "spacer", "height": 24 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    { "call": "@print", "args": { "value": "[widgets-showcase-5] booted" } }
+  ]
+}

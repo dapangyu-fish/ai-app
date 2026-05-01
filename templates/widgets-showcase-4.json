@@ -1,0 +1,257 @@
+{
+  "dsl": "3.3",
+  "appid": "48f5e912-3371-401e-8e9a-2384ec1c709b",
+  "meta": {
+    "name": "widgets-showcase-4",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "第四批 Widget 演示 — slider / date_picker / time_picker / tooltip + 增强 SnackBar / DatePicker / TimePicker action",
+    "author": "Claude"
+  },
+  "dependencies": {
+    "common-ui": "^1.2.0"
+  },
+  "global": {
+    "variables": {
+      "volume": 50,
+      "rating": 3,
+      "birthday": "",
+      "alarmTime": "",
+      "lastEmail": ""
+    },
+    "functions": {
+      "sendEmail": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_snackbar",
+            "args": {
+              "message": "邮件已发送给客户",
+              "actionLabel": "撤销",
+              "action": { "type": "call", "call": "@global.undoSend" },
+              "durationMs": 4000,
+              "backgroundColor": "#34495E"
+            }
+          }
+        ]
+      },
+      "undoSend": {
+        "params": [],
+        "logic": [
+          { "call": "@common-ui.showInfo", "args": { "message": "已撤销发送" } }
+        ]
+      },
+      "pickQuickDate": {
+        "params": [],
+        "description": "命令式 @show_date_picker，选完写到 lastEmail（演示返回值）",
+        "logic": [
+          {
+            "call": "@show_date_picker",
+            "args": {
+              "initial": "2026-04-29",
+              "firstDate": "2020-01-01",
+              "lastDate": "2030-12-31"
+            },
+            "assign": "global.lastEmail"
+          },
+          {
+            "call": "@common-ui.showInfo",
+            "args": { "message": "选了日期：{{ global.lastEmail }}" }
+          }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Widgets Showcase 4",
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F4F6FB",
+        "scrollable": true,
+        "children": [
+          {
+            "type": "text",
+            "value": "第四批 — 表单/反馈",
+            "style": { "fontSize": 26, "fontWeight": "bold", "paddingH": 12, "paddingV": 8 }
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "1. Slider — 滑块",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              {
+                "type": "text",
+                "value": "音量：{{ global.volume }}",
+                "style": { "fontSize": 14, "color": "#666666" }
+              },
+              {
+                "type": "slider",
+                "bind": "global.volume",
+                "min": 0,
+                "max": 100,
+                "color": "#6C5CE7"
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "评分（1~5，divisions 强制取整）：{{ global.rating }}",
+                "style": { "fontSize": 14, "color": "#666666" }
+              },
+              {
+                "type": "slider",
+                "bind": "global.rating",
+                "min": 1,
+                "max": 5,
+                "divisions": 4,
+                "color": "#F39C12"
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "2. DatePicker / TimePicker — 输入框形式",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "date_picker",
+                "bind": "global.birthday",
+                "label": "生日",
+                "placeholder": "请选择生日",
+                "firstDate": "1900-01-01",
+                "lastDate": "2030-12-31"
+              },
+              {
+                "type": "time_picker",
+                "bind": "global.alarmTime",
+                "label": "闹钟时间",
+                "placeholder": "请选择时间"
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "已选：{{ global.birthday }}  /  {{ global.alarmTime }}",
+                "style": { "fontSize": 13, "color": "#666666" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "3. 命令式 @show_date_picker",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              {
+                "type": "text",
+                "value": "在事件回调里弹出（不绑定输入框）",
+                "style": { "fontSize": 12, "color": "#888888" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "button",
+                "label": "选个日期",
+                "variant": "outlined",
+                "icon": "calendar",
+                "action": { "type": "call", "call": "@global.pickQuickDate" }
+              },
+              { "type": "spacer", "height": 4 },
+              {
+                "type": "text",
+                "value": "上次选择：{{ global.lastEmail }}",
+                "style": { "fontSize": 13, "color": "#888888" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "4. Tooltip — 长按提示",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "tooltip",
+                    "message": "收藏到我的列表",
+                    "child": { "type": "icon", "name": "favorite", "size": 32, "color": "#E91E63" }
+                  },
+                  { "type": "spacer", "width": 24 },
+                  {
+                    "type": "tooltip",
+                    "message": "点赞",
+                    "child": { "type": "icon", "name": "check_circle", "size": 32, "color": "#27AE60" }
+                  },
+                  { "type": "spacer", "width": 24 },
+                  {
+                    "type": "tooltip",
+                    "message": "分享给朋友",
+                    "child": { "type": "icon", "name": "share", "size": 32, "color": "#3498DB" }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "value": "↑ 长按图标看 tooltip",
+                "style": { "fontSize": 12, "color": "#888888" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 16,
+            "margin": 12,
+            "children": [
+              {
+                "type": "text",
+                "value": "5. @show_snackbar — 带按钮的 SnackBar",
+                "style": { "fontSize": 17, "fontWeight": "bold" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "button",
+                "label": "发送邮件（含撤销按钮）",
+                "variant": "filled",
+                "icon": "send",
+                "action": { "type": "call", "call": "@global.sendEmail" }
+              }
+            ]
+          },
+
+          { "type": "spacer", "height": 24 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    { "call": "@print", "args": { "value": "[widgets-showcase-4] booted" } }
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "dsl": "3.3",
+  "appid": "a6231772-9743-4d2e-a1b8-fb9b65231acf",
+  "meta": {
+    "name": "widgets-showcase-8",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "第八批 — webview / qr_code / chart / map / camera（特殊控件，需要新加包）",
+    "author": "Claude"
+  },
+  "dependencies": {
+    "common-ui": "^1.2.0"
+  },
+  "global": {
+    "variables": {
+      "qrInput": "https://github.com/dapangyu-fish/ai-app",
+      "lineData": [
+        { "x": 0, "y": 1 }, { "x": 1, "y": 3 }, { "x": 2, "y": 2 },
+        { "x": 3, "y": 5 }, { "x": 4, "y": 4 }, { "x": 5, "y": 6 }
+      ],
+      "barData": [
+        { "label": "周一", "value": 12 },
+        { "label": "周二", "value": 18 },
+        { "label": "周三", "value": 9 },
+        { "label": "周四", "value": 22 },
+        { "label": "周五", "value": 30 }
+      ],
+      "pieData": [
+        { "label": "前端", "value": 35, "color": "#6C5CE7" },
+        { "label": "后端", "value": 25, "color": "#00B894" },
+        { "label": "AI",   "value": 30, "color": "#E17055" },
+        { "label": "其他", "value": 10, "color": "#FDCB6E" }
+      ]
+    },
+    "functions": {}
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Widgets Showcase 8",
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F4F6FB",
+        "scrollable": true,
+        "children": [
+          {
+            "type": "text",
+            "value": "第八批 — 特殊控件",
+            "style": { "fontSize": 26, "fontWeight": "bold", "paddingH": 12, "paddingV": 8 }
+          },
+          {
+            "type": "text",
+            "value": "需要 flutter pub get（pubspec.yaml 新增 5 个包）",
+            "style": { "fontSize": 12, "color": "#888888", "paddingH": 12 }
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "1. WebView", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              { "type": "webview", "url": "https://flutter.dev", "height": 400 }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "2. QR Code", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "input",
+                "label": "二维码内容",
+                "bind": "global.qrInput",
+                "placeholder": "输入要编码的文字"
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "center",
+                "child": {
+                  "type": "qr_code",
+                  "data": "{{ global.qrInput }}",
+                  "size": 200,
+                  "color": "#34495E"
+                }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "3. Chart - line", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              {
+                "type": "chart",
+                "kind": "line",
+                "height": 240,
+                "color": "#6C5CE7",
+                "data": "{{ global.lineData }}"
+              },
+              { "type": "spacer", "height": 16 },
+              { "type": "text", "value": "Chart - bar", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              {
+                "type": "chart",
+                "kind": "bar",
+                "height": 240,
+                "color": "#00B894",
+                "data": "{{ global.barData }}"
+              },
+              { "type": "spacer", "height": 16 },
+              { "type": "text", "value": "Chart - pie", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              {
+                "type": "chart",
+                "kind": "pie",
+                "height": 240,
+                "data": "{{ global.pieData }}"
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "4. Map (北京周边)", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "map",
+                "latitude": 39.9042,
+                "longitude": 116.4074,
+                "zoom": 11,
+                "height": 320,
+                "borderRadius": 12,
+                "markers": [
+                  { "latitude": 39.9042, "longitude": 116.4074, "label": "天安门" },
+                  { "latitude": 39.9952, "longitude": 116.3163, "label": "颐和园" },
+                  { "latitude": 39.8830, "longitude": 116.4039, "label": "天坛" }
+                ]
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "padding": 12,
+            "margin": 12,
+            "children": [
+              { "type": "text", "value": "5. Camera 实时预览", "style": { "fontSize": 17, "fontWeight": "bold" } },
+              { "type": "text", "value": "（需要相机权限）", "style": { "fontSize": 12, "color": "#888888" } },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "camera",
+                "lensDirection": "back",
+                "resolution": "medium",
+                "height": 360
+              }
+            ]
+          },
+
+          { "type": "spacer", "height": 24 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    { "call": "@print", "args": { "value": "[widgets-showcase-8] booted" } }
+  ]
+}

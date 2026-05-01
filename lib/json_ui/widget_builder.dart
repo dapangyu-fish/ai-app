@@ -14,6 +14,41 @@ import 'widgets/spacer_widget.dart';
 import 'widgets/switch_widget.dart';
 import 'widgets/video_widget.dart';
 import 'widgets/ref_widget.dart';
+import 'widgets/icon_widget.dart';
+import 'widgets/card_widget.dart';
+import 'widgets/checkbox_widget.dart';
+import 'widgets/expanded_widget.dart';
+import 'widgets/loading_widget.dart';
+import 'widgets/dropdown_widget.dart';
+import 'widgets/radio_widget.dart';
+import 'widgets/wrap_widget.dart';
+import 'widgets/grid_widget.dart';
+import 'widgets/padding_widget.dart';
+import 'widgets/center_widget.dart';
+import 'widgets/align_widget.dart';
+import 'widgets/flexible_widget.dart';
+import 'widgets/stack_widget.dart';
+import 'widgets/slider_widget.dart';
+import 'widgets/date_picker_widget.dart';
+import 'widgets/time_picker_widget.dart';
+import 'widgets/tooltip_widget.dart';
+import 'widgets/chip_widget.dart';
+import 'widgets/badge_widget.dart';
+import 'widgets/avatar_widget.dart';
+import 'widgets/rich_text_widget.dart';
+import 'widgets/progress_widget.dart';
+import 'widgets/inkwell_widget.dart';
+import 'widgets/gesture_detector_widget.dart';
+import 'widgets/dismissible_widget.dart';
+import 'widgets/draggable_widget.dart';
+import 'widgets/refresh_widget.dart';
+import 'widgets/tab_view_widget.dart';
+import 'widgets/app_bar_widget.dart';
+import 'widgets/webview_widget.dart';
+import 'widgets/qr_code_widget.dart';
+import 'widgets/chart_widget.dart';
+import 'widgets/map_widget.dart';
+import 'widgets/camera_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -30,6 +65,41 @@ class JsonWidgetBuilder {
     'switch': JsonSwitchWidget(),
     'video': JsonVideoWidget(),
     'ref': JsonRefWidget(),
+    'icon': JsonIconWidget(),
+    'card': JsonCardWidget(),
+    'checkbox': JsonCheckboxWidget(),
+    'expanded': JsonExpandedWidget(),
+    'loading': JsonLoadingWidget(),
+    'dropdown': JsonDropdownWidget(),
+    'radio': JsonRadioWidget(),
+    'wrap': JsonWrapWidget(),
+    'grid': JsonGridWidget(),
+    'padding': JsonPaddingWidget(),
+    'center': JsonCenterWidget(),
+    'align': JsonAlignWidget(),
+    'flexible': JsonFlexibleWidget(),
+    'stack': JsonStackWidget(),
+    'slider': JsonSliderWidget(),
+    'date_picker': JsonDatePickerWidget(),
+    'time_picker': JsonTimePickerWidget(),
+    'tooltip': JsonTooltipWidget(),
+    'chip': JsonChipWidget(),
+    'badge': JsonBadgeWidget(),
+    'avatar': JsonAvatarWidget(),
+    'rich_text': JsonRichTextWidget(),
+    'progress': JsonProgressWidget(),
+    'inkwell': JsonInkWellWidget(),
+    'gesture_detector': JsonGestureDetectorWidget(),
+    'dismissible': JsonDismissibleWidget(),
+    'draggable': JsonDraggableWidget(),
+    'refresh': JsonRefreshWidget(),
+    'tab_view': JsonTabViewWidget(),
+    'app_bar': JsonAppBarWidget(),
+    'webview': JsonWebViewWidget(),
+    'qr_code': JsonQrCodeWidget(),
+    'chart': JsonChartWidget(),
+    'map': JsonMapWidget(),
+    'camera': JsonCameraWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

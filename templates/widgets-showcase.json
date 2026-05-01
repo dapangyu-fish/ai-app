@@ -1,0 +1,446 @@
+{
+  "dsl": "3.3",
+  "appid": "9c73506a-3e11-4105-8fbf-acbd4353fce9",
+  "meta": {
+    "name": "widgets-showcase",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "新增 Widget 展示 — icon / card / checkbox / expanded / loading 五件套",
+    "author": "Claude"
+  },
+  "dependencies": {
+    "common-ui": "^1.1.0"
+  },
+  "global": {
+    "variables": {
+      "agreeTerms": false,
+      "subNews": true,
+      "subPromo": false,
+      "darkMode": false,
+      "uploadedBytes": 320,
+      "totalBytes": 800,
+      "uploadRatio": 0.4,
+      "searchQuery": ""
+    },
+    "functions": {
+      "submit": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "var": "global.agreeTerms" },
+              "then": [
+                {
+                  "call": "@common-ui.showSuccess",
+                  "args": { "message": "提交成功" }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@common-ui.showError",
+                  "args": { "message": "请先勾选同意条款" }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "recalcRatio": {
+        "params": [],
+        "description": "用 common-ui.progress 算 uploadedBytes/totalBytes 比例并写回 uploadRatio",
+        "logic": [
+          {
+            "call": "@common-ui.progress",
+            "args": {
+              "current": "{{ global.uploadedBytes }}",
+              "total": "{{ global.totalBytes }}"
+            },
+            "assign": "global.uploadRatio"
+          }
+        ]
+      },
+      "addBytes": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.uploadedBytes",
+              "value": {
+                "min": [
+                  { "+": [{ "var": "global.uploadedBytes" }, 80] },
+                  { "var": "global.totalBytes" }
+                ]
+              }
+            }
+          },
+          { "call": "@global.recalcRatio" }
+        ]
+      },
+      "resetBytes": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": { "var": "global.uploadedBytes", "value": 0 }
+          },
+          { "call": "@global.recalcRatio" }
+        ]
+      },
+      "fakeFetch": {
+        "params": [],
+        "description": "模拟一次 1.5 秒的异步加载（演示 @delay + 异步反馈）",
+        "logic": [
+          {
+            "call": "@common-ui.showInfo",
+            "args": { "message": "请求已发出…" }
+          },
+          { "call": "@delay", "args": { "ms": 1500 } },
+          {
+            "call": "@common-ui.showSuccess",
+            "args": { "message": "加载完成（1.5s）" }
+          }
+        ]
+      },
+      "openIconInfo": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@common-ui.confirm",
+            "args": {
+              "title": "Icon 控件",
+              "message": "通过 IconRegistry 引用 Material 图标。支持 100+ 常用图标，未识别名称会显示占位。"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Widgets Showcase",
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F4F6FB",
+        "scrollable": true,
+        "children": [
+          {
+            "type": "text",
+            "value": "新 Widget 展示",
+            "style": {
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "color": "#1A1A1A",
+              "paddingH": 12,
+              "paddingV": 8
+            }
+          },
+          {
+            "type": "text",
+            "value": "本批次新增：icon / card / checkbox / expanded / loading",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666",
+              "paddingH": 12
+            }
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "palette", "size": 22, "color": "#6C5CE7" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "1. Icon — 图标",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "children": [
+                  { "type": "icon", "name": "favorite", "size": 32, "color": "#E91E63" },
+                  { "type": "icon", "name": "star", "size": 32, "color": "#FFC107" },
+                  { "type": "icon", "name": "check_circle", "size": 32, "color": "#4CAF50" },
+                  { "type": "icon", "name": "warning", "size": 32, "color": "#FF9800" },
+                  { "type": "icon", "name": "info", "size": 32, "color": "#2196F3" },
+                  { "type": "icon", "name": "settings", "size": 32, "color": "#607D8B" }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "button",
+                "label": "图标说明",
+                "variant": "text",
+                "icon": "info",
+                "action": { "type": "call", "call": "@global.openIconInfo" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "color": "#FFF8E1",
+            "onTap": {
+              "type": "call",
+              "call": "@common-ui.showInfo",
+              "args": { "message": "整个 Card 都可以接 onTap" }
+            },
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "dashboard", "size": 22, "color": "#FF8F00" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "2. Card — 卡片",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "默认带阴影 + 圆角；支持 onTap，整张卡片可点击。",
+                "style": { "fontSize": 13, "color": "#5D4037" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "check", "size": 22, "color": "#4CAF50" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "3. Checkbox — 复选框",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "checkbox",
+                "bind": "global.subNews",
+                "label": "订阅产品周报",
+                "color": "#6C5CE7"
+              },
+              {
+                "type": "checkbox",
+                "bind": "global.subPromo",
+                "label": "接收促销通知",
+                "color": "#6C5CE7"
+              },
+              {
+                "type": "checkbox",
+                "bind": "global.darkMode",
+                "label": "禁用项（disabled）",
+                "disabled": true
+              },
+              { "type": "divider", "height": 12 },
+              {
+                "type": "checkbox",
+                "bind": "global.agreeTerms",
+                "label": "我已阅读并同意《用户协议》",
+                "color": "#D63031"
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "button",
+                "label": "提交",
+                "variant": "filled",
+                "icon": "send",
+                "action": { "type": "call", "call": "@global.submit" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "tune", "size": 22, "color": "#00B894" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "4. Expanded — 弹性布局",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  { "type": "icon", "name": "search", "size": 22, "color": "#666666" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "input",
+                      "placeholder": "搜索…",
+                      "bind": "global.searchQuery"
+                    }
+                  },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "button",
+                    "label": "搜",
+                    "variant": "outlined"
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "👆 Row 中输入框用 expanded 自动撑满剩余宽度",
+                "style": { "fontSize": 12, "color": "#888888" }
+              }
+            ]
+          },
+
+          {
+            "type": "card",
+            "elevation": 3,
+            "borderRadius": 16,
+            "padding": 20,
+            "margin": 12,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  { "type": "icon", "name": "refresh", "size": 22, "color": "#2196F3" },
+                  { "type": "spacer", "width": 8 },
+                  {
+                    "type": "text",
+                    "value": "5. Loading — 加载",
+                    "style": { "fontSize": 17, "fontWeight": "bold" }
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "text",
+                "value": "确定进度（linear，从 common-ui.progress 计算）",
+                "style": { "fontSize": 13, "color": "#666666" }
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "loading",
+                "kind": "linear",
+                "value": "{{ global.uploadRatio }}",
+                "color": "#00B894",
+                "strokeWidth": 8
+              },
+              { "type": "spacer", "height": 8 },
+              {
+                "type": "text",
+                "value": "{{ global.uploadedBytes }} / {{ global.totalBytes }} 字节",
+                "style": { "fontSize": 12, "color": "#888888" }
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "+80",
+                    "variant": "outlined",
+                    "action": { "type": "call", "call": "@global.addBytes" }
+                  },
+                  {
+                    "type": "button",
+                    "label": "重置",
+                    "variant": "text",
+                    "action": { "type": "call", "call": "@global.resetBytes" }
+                  }
+                ]
+              },
+              { "type": "divider", "height": 24 },
+              {
+                "type": "text",
+                "value": "不确定进度（circular，模拟异步）",
+                "style": { "fontSize": 13, "color": "#666666" }
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "loading",
+                    "kind": "circular",
+                    "size": 36,
+                    "color": "#6C5CE7",
+                    "label": "加载中…"
+                  }
+                ]
+              },
+              { "type": "spacer", "height": 12 },
+              {
+                "type": "button",
+                "label": "模拟 1.5s 加载",
+                "variant": "filled",
+                "icon": "sync",
+                "action": { "type": "call", "call": "@global.fakeFetch" }
+              }
+            ]
+          },
+
+          { "type": "spacer", "height": 24 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": { "value": "[widgets-showcase] booted" }
+    }
+  ]
+}
