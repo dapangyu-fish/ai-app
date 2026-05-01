@@ -47,6 +47,7 @@
   "appid": "a1b2c3d4e5f67890",
   "meta": {
     "name": "my-app",
+    "displayName": "我的应用",
     "version": "1.0.0",
     "type": "app",
     "description": "应用描述",
@@ -69,11 +70,33 @@
 |------|------|------|
 | `dsl` | 是 | DSL 规范版本（如 `"3.3"`），兼容旧 `version` 字段 |
 | `appid` | 否 | 应用唯一标识（UUID，发布时必须，新创建可留空） |
-| `meta.name` | 是 | 模块唯一标识（包名） |
+| `meta.name` | 是 | 模块唯一标识（包名）。**仅作为标识使用**（路由 / 依赖引用 / 安装路径），不会显示给用户 |
+| `meta.displayName` | 否 | 用户可见的应用名称。支持纯字符串或多语言 Map（见下）。缺省时框架回退到 `meta.name` |
 | `meta.version` | 是 | 模块版本号（semver: `MAJOR.MINOR.PATCH`） |
 | `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
 | `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
 | `dependencies` | 否 | 依赖声明，key 为依赖别名，value 含 `url` 和 `version` 约束 |
+
+#### `meta.displayName` 两种写法
+
+**纯字符串**（不分语言，所有 locale 显示同一个）：
+```json
+"meta": { "name": "todo-app", "displayName": "Todo Master" }
+```
+
+**多语言 Map**（按当前 locale 取，找不到回退）：
+```json
+"meta": {
+  "name": "todo-app",
+  "displayName": {
+    "zh": "待办清单",
+    "en": "Todo List",
+    "default": "Todo"
+  }
+}
+```
+
+查找顺序：精确 BCP 47 tag（如 `zh-CN`） → 语言（`zh`） → `default` → 第一个非空 → `meta.name` → `"JSON App"`
 
 #### 模块类型
 
@@ -345,6 +368,20 @@
 }
 ```
 模板里用 `{{ t('home.title') }}` 查表；查不到回退键名本身。
+
+**与框架 locale 的协作（重要）**：
+
+框架自身（登录页 / 主页 / 设置页）的 i18n 与 JSON-APP 的 i18n 完全独立，但**单向同步**：
+
+- **框架 → app**：JSON-APP `loadConfig` 时，框架把当前 `appLocale` 简化（`zh-CN` → `zh`）一次性写到 `global.locale`，作为 app 的初始 locale。
+- **JSON-APP 已显式预设 `global.locale` 时跳过注入**——保留 JSON 自己的优先级。
+- **app → 框架**：app 调 `@set_locale` 只写自己的 `global.locale`，**不会影响框架**或别的 app。
+- **框架切语言**：只刷新框架自身 UI；不会回头改正在运行的 app（这是设计选择——避免 app 内的语言选择被框架覆盖）。
+
+**fallback 链**（JSON-APP `t('key.path')` 查找时）：
+1. 精确匹配 `global.i18n[当前 locale][key.path]`
+2. 找不到 → 直接返回 key 字符串本身（**不会崩**，方便快速调试）
+3. JSON-APP **完全没写 `global.i18n`** 时同样不报错——所有 `{{ t('xxx') }}` 都返回 `'xxx'`
 
 **生命周期 hook**：
 ```json

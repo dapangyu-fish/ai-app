@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_storage.dart';
 import 'sherpa_asr_service.dart';
 import 'ai_chat_service.dart';
+import '../i18n/framework_strings.dart';
+import '../i18n/language_switcher.dart';
 
 // 语音识别方式枚举
 enum AsrMode {
@@ -166,17 +168,22 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('settings');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('设置', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.settingsTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         centerTitle: true,
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            _buildSectionTitle('AI 供应商', cs),
+            Card(
+              child: LanguageSwitcher.tile(context),
+            ),
+            const SizedBox(height: 24.0),
+            _buildSectionTitle(t.settingsAiProvider, cs),
             const SizedBox(height: 8.0),
             _buildProviderSelector(cs),
             const SizedBox(height: 24.0),

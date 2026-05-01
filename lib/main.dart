@@ -363,7 +363,7 @@ class JsonDslApp extends ConsumerWidget {
               interpreter.loadConfig(jsonConfig);
               await interpreter.executeSteps();
               final meta = jsonConfig['meta'] as Map<String, dynamic>? ?? {};
-              final name = (meta['name'] as String?) ?? 'AI 生成';
+              final name = resolveDisplayName(meta, fallback: 'AI 生成');
               JsonDslApp.navigatorKey.currentState?.push(
                 MaterialPageRoute(
                   builder: (_) => JsonScreenView(fileName: name),
@@ -527,11 +527,11 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     try {
       final name = app['name'] as String;
       final version = app['version'] as String;
-      
+
       // 使用 CacheManager 走统一的热更新缓存策略，传确切的版本号进行约束
       final config = await CacheManager.instance.getResource(
-        name, 
-        VersionConstraint.parse('^$version'), 
+        name,
+        VersionConstraint.parse('^$version'),
         type: 'app'
       );
 
@@ -543,7 +543,12 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       interpreter.loadConfig(config);
       await interpreter.executeSteps();
 
-      _loadedFileName = name;
+      // 用 displayName（多语言）作为 fileName 标题；优先 config.meta，再回退到 app dict
+      final configMeta = config['meta'] as Map<String, dynamic>?;
+      _loadedFileName = resolveDisplayName(
+        configMeta ?? {'name': name},
+        fallback: name,
+      );
       setState(() => _loading = false);
 
       if (!mounted) return;
@@ -586,12 +591,14 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final interpreter = ref.read(interpreterProvider);
       interpreter.loadConfig(app.config);
       await interpreter.executeSteps();
-      _loadedFileName = app.name;
+      final meta = app.config['meta'] as Map<String, dynamic>?;
+      final displayName = resolveDisplayName(meta, fallback: app.name);
+      _loadedFileName = displayName;
       setState(() => _loading = false);
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => JsonScreenView(fileName: app.name),
+          builder: (_) => JsonScreenView(fileName: displayName),
         ),
       );
     } catch (e) {
@@ -647,6 +654,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('home');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
     final username = AuthService.currentUser?['username'] ??
         AuthService.currentUser?['email']?.toString().split('@').first ??
         '';
@@ -662,7 +670,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               Row(
                 children: [
                   Text(
-                    'MyApp',
+                    t.homeAppTitle,
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -684,6 +692,8 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                               builder: (_) => const ProfilePage(),
                             ),
                           );
+                        } else if (value == 'language') {
+                          await showLanguagePicker(context);
                         } else if (value == 'logout') {
                           await AuthService.signOut();
                         }
@@ -699,23 +709,33 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           ),
                         ),
                         const PopupMenuDivider(),
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'profile',
                           child: Row(
                             children: [
-                              Icon(Icons.person_outline, size: 18),
-                              SizedBox(width: 8),
-                              Text('个人资料'),
+                              const Icon(Icons.person_outline, size: 18),
+                              const SizedBox(width: 8),
+                              Text(t.userMenuProfile),
                             ],
                           ),
                         ),
-                        const PopupMenuItem(
+                        PopupMenuItem(
+                          value: 'language',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.language, size: 18),
+                              const SizedBox(width: 8),
+                              Text(t.settingsLanguage),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
                           value: 'logout',
                           child: Row(
                             children: [
-                              Icon(Icons.logout, size: 18),
-                              SizedBox(width: 8),
-                              Text('退出登录'),
+                              const Icon(Icons.logout, size: 18),
+                              const SizedBox(width: 8),
+                              Text(t.userMenuLogout),
                             ],
                           ),
                         ),
@@ -728,7 +748,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
               // Welcome
               Text(
-                'Hi, $username',
+                T.fmt(t.homeWelcome, {'name': username}),
                 style: GoogleFonts.inter(
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
@@ -737,7 +757,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                '探索和运行你的应用',
+                t.homeSubtitle,
                 style: TextStyle(
                   fontSize: 15,
                   color: cs.onSurfaceVariant,
@@ -752,8 +772,8 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                   Expanded(
                     child: _buildEntryCard(
                       icon: Icons.store_outlined,
-                      title: '应用市场',
-                      subtitle: '发现精彩应用',
+                      title: t.homeMarket,
+                      subtitle: t.homeMarketSubtitle,
                       onTap: _loading ? null : _openMarket,
                     ),
                   ),
@@ -761,8 +781,8 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                   Expanded(
                     child: _buildEntryCard(
                       icon: Icons.apps_outlined,
-                      title: '我的 APP',
-                      subtitle: '历史记录',
+                      title: t.homeMyApps,
+                      subtitle: t.homeMyAppsSubtitle,
                       onTap: _loading ? null : _openMyApps,
                     ),
                   ),
@@ -787,7 +807,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '选择本地文件',
+                                t.homePickFile,
                                 style: GoogleFonts.inter(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
@@ -796,7 +816,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '从设备导入 JSON 配置',
+                                t.homePickFileSubtitle,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: cs.onSurfaceVariant,
@@ -937,10 +957,11 @@ class _MarketPageState extends State<_MarketPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('market');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('应用市场', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.marketTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -1020,13 +1041,13 @@ class _MarketPageState extends State<_MarketPage> {
                       const SizedBox(height: 16),
                       Text(_error!, style: TextStyle(color: cs.onSurfaceVariant)),
                       const SizedBox(height: 16),
-                      FilledButton(onPressed: _fetchApps, child: const Text('重试')),
+                      FilledButton(onPressed: _fetchApps, child: Text(t.retry)),
                     ],
                   ),
                 )
               : _apps.isEmpty
                   ? Center(
-                      child: Text('暂无可用应用',
+                      child: Text(t.marketEmpty,
                           style: TextStyle(color: cs.onSurfaceVariant)),
                     )
                   : ListView.builder(
@@ -1125,6 +1146,7 @@ class _MarketPageState extends State<_MarketPage> {
   Widget _buildAppCard(BuildContext context, Map<String, dynamic> app,
       ColorScheme cs) {
     final name = app['name'] as String? ?? '';
+    final displayName = resolveDisplayName(app, fallback: name);
     final desc = app['description'] as String? ?? '';
     final version = app['version']?.toString() ?? '';
     final author = app['author'] as String? ?? '';
@@ -1162,7 +1184,7 @@ class _MarketPageState extends State<_MarketPage> {
                       children: [
                         Expanded(
                           child: Text(
-                            name,
+                            displayName,
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -1743,10 +1765,11 @@ class _MyAppsPageState extends State<_MyAppsPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('my_apps');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('我的 APP', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.myAppsTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
       ),
       body: _apps == null
           ? Center(child: CircularProgressIndicator(color: cs.onSurface))
@@ -1757,7 +1780,7 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                     children: [
                       Icon(Icons.inbox_outlined, size: 64, color: cs.onSurfaceVariant),
                       const SizedBox(height: 16),
-                      Text('还没有 APP', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16)),
+                      Text(t.myAppsEmpty, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16)),
                       const SizedBox(height: 8),
                       Text('长按悬浮球，用语音让 AI 帮你生成', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
                     ],
@@ -1774,6 +1797,8 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                         final timeStr = time != null
                             ? '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
                             : '';
+                        final meta = app.config['meta'] as Map<String, dynamic>?;
+                        final displayName = resolveDisplayName(meta, fallback: app.name);
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -1782,7 +1807,7 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                               backgroundColor: cs.surfaceContainerHighest,
                               child: Icon(Icons.apps, color: cs.onSurface),
                             ),
-                            title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            title: Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(
                               app.description.isNotEmpty ? app.description : timeStr,
                               maxLines: 1,

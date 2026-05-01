@@ -42,17 +42,25 @@ class _Strings {
 
   // ── 登录 / 注册 ──
   final String authLoginTitle;
+  final String authLoginSubtitle;        // 登录页大标题下的副标题
   final String authRegisterTitle;
-  final String authVerifyTitle;
+  final String authRegisterSubtitle;     // 注册页大标题下的副标题
+  final String authVerifyTitle;          // AppBar title
+  final String authVerifyPageHeading;    // OTP 页大标题（页内 H1）
+  final String authVerifyCodeSentTo;     // "验证码已发送到 {email}" — 有 {email} 占位符
   final String authEmailHint;
   final String authPasswordHint;
   final String authPasswordConfirmHint;
   final String authUsernameHint;
+  final String authUsernameOptionalHint; // 注册页可选用户名 hint
   final String authVerifyCodeHint;
   final String authLoginButton;
   final String authRegisterButton;
   final String authVerifyButton;
   final String authResendCodeButton;
+  final String authResendCodePrompt;     // "没收到？重新发送验证码"
+  final String authNoAccountPrompt;      // "还没有账户？"（前缀，跟独立按钮配合）
+  final String authHasAccountPrompt;     // "已有账户？"
   final String authSwitchToRegister;
   final String authSwitchToLogin;
   final String authForgotPassword;
@@ -93,6 +101,12 @@ class _Strings {
   final String profileEditAvatar;
   final String profileSavedSuccess;
   final String profileSaveFailed;
+  final String profileSaveFailedWith;   // "失败：{msg}" — 有 {msg} 占位
+
+  // ── 用户角色徽章 ──
+  final String roleUser;
+  final String roleAdmin;
+  final String roleProUser;
 
   // ── 应用市场 ──
   final String marketTitle;
@@ -139,17 +153,25 @@ class _Strings {
     required this.yes,
     required this.no,
     required this.authLoginTitle,
+    required this.authLoginSubtitle,
     required this.authRegisterTitle,
+    required this.authRegisterSubtitle,
     required this.authVerifyTitle,
+    required this.authVerifyPageHeading,
+    required this.authVerifyCodeSentTo,
     required this.authEmailHint,
     required this.authPasswordHint,
     required this.authPasswordConfirmHint,
     required this.authUsernameHint,
+    required this.authUsernameOptionalHint,
     required this.authVerifyCodeHint,
     required this.authLoginButton,
     required this.authRegisterButton,
     required this.authVerifyButton,
     required this.authResendCodeButton,
+    required this.authResendCodePrompt,
+    required this.authNoAccountPrompt,
+    required this.authHasAccountPrompt,
     required this.authSwitchToRegister,
     required this.authSwitchToLogin,
     required this.authForgotPassword,
@@ -184,6 +206,10 @@ class _Strings {
     required this.profileEditAvatar,
     required this.profileSavedSuccess,
     required this.profileSaveFailed,
+    required this.profileSaveFailedWith,
+    required this.roleUser,
+    required this.roleAdmin,
+    required this.roleProUser,
     required this.marketTitle,
     required this.marketEmpty,
     required this.marketLoadFailed,
@@ -224,17 +250,25 @@ const _Strings _zhCN = _Strings(
   yes: '是',
   no: '否',
   authLoginTitle: '登录',
+  authLoginSubtitle: '登录你的账户',
   authRegisterTitle: '注册',
+  authRegisterSubtitle: '创建新账户',
   authVerifyTitle: '验证邮箱',
+  authVerifyPageHeading: '验证你的邮箱',
+  authVerifyCodeSentTo: '验证码已发送到\n{email}',
   authEmailHint: '邮箱',
   authPasswordHint: '密码',
   authPasswordConfirmHint: '确认密码',
   authUsernameHint: '用户名',
+  authUsernameOptionalHint: '用户名（可选）',
   authVerifyCodeHint: '验证码',
   authLoginButton: '登录',
   authRegisterButton: '注册',
   authVerifyButton: '验证',
   authResendCodeButton: '重新发送',
+  authResendCodePrompt: '没收到？重新发送验证码',
+  authNoAccountPrompt: '还没有账户？',
+  authHasAccountPrompt: '已有账户？',
   authSwitchToRegister: '没有账号？去注册',
   authSwitchToLogin: '已有账号？去登录',
   authForgotPassword: '忘记密码？',
@@ -269,6 +303,10 @@ const _Strings _zhCN = _Strings(
   profileEditAvatar: '更换头像',
   profileSavedSuccess: '保存成功',
   profileSaveFailed: '保存失败',
+  profileSaveFailedWith: '失败：{msg}',
+  roleUser: '普通用户',
+  roleAdmin: '管理员',
+  roleProUser: '高级用户',
   marketTitle: '应用市场',
   marketEmpty: '暂无应用',
   marketLoadFailed: '加载失败',
@@ -308,17 +346,25 @@ const _Strings _enUS = _Strings(
   yes: 'Yes',
   no: 'No',
   authLoginTitle: 'Sign in',
+  authLoginSubtitle: 'Sign in to your account',
   authRegisterTitle: 'Sign up',
+  authRegisterSubtitle: 'Create a new account',
   authVerifyTitle: 'Verify email',
+  authVerifyPageHeading: 'Verify your email',
+  authVerifyCodeSentTo: 'Code sent to\n{email}',
   authEmailHint: 'Email',
   authPasswordHint: 'Password',
   authPasswordConfirmHint: 'Confirm password',
   authUsernameHint: 'Username',
+  authUsernameOptionalHint: 'Username (optional)',
   authVerifyCodeHint: 'Verification code',
   authLoginButton: 'Sign in',
   authRegisterButton: 'Sign up',
   authVerifyButton: 'Verify',
   authResendCodeButton: 'Resend',
+  authResendCodePrompt: "Didn't get it? Resend code",
+  authNoAccountPrompt: "Don't have an account?",
+  authHasAccountPrompt: 'Already have an account?',
   authSwitchToRegister: "No account? Sign up",
   authSwitchToLogin: 'Have an account? Sign in',
   authForgotPassword: 'Forgot password?',
@@ -353,6 +399,10 @@ const _Strings _enUS = _Strings(
   profileEditAvatar: 'Change avatar',
   profileSavedSuccess: 'Saved',
   profileSaveFailed: 'Save failed',
+  profileSaveFailedWith: 'Failed: {msg}',
+  roleUser: 'User',
+  roleAdmin: 'Admin',
+  roleProUser: 'Pro user',
   marketTitle: 'App store',
   marketEmpty: 'No apps yet',
   marketLoadFailed: 'Load failed',
