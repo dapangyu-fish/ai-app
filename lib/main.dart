@@ -31,12 +31,48 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
   return JsonInterpreter();
 });
 
+/// 全局主题模式（light/dark/system）。被 MaterialApp 监听用于运行时切主题。
+/// JSON-APP 通过 @set_theme 写它，框架自动重建。
+final ValueNotifier<ThemeMode> appThemeMode =
+    ValueNotifier<ThemeMode>(ThemeMode.system);
+
+/// 全局 App 生命周期事件总线（resume / pause / inactive / detached / hidden）。
+/// JSON-APP 在 global.lifecycle.onResume 等字段声明步骤，
+/// 解释器订阅这个 notifier 调度对应回调。
+final ValueNotifier<String> appLifecycleEvent = ValueNotifier<String>('init');
+
+class _AppLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        appLifecycleEvent.value = 'resume';
+        break;
+      case AppLifecycleState.paused:
+        appLifecycleEvent.value = 'pause';
+        break;
+      case AppLifecycleState.inactive:
+        appLifecycleEvent.value = 'inactive';
+        break;
+      case AppLifecycleState.detached:
+        appLifecycleEvent.value = 'detached';
+        break;
+      case AppLifecycleState.hidden:
+        appLifecycleEvent.value = 'hidden';
+        break;
+    }
+  }
+}
+
 // ============================================================
 // 入口
 // ============================================================
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 注册 app 生命周期监听（resume / pause / inactive / detached / hidden）
+  WidgetsBinding.instance.addObserver(_AppLifecycleObserver());
 
   // 捕捉全局渲染和布局异常（防止布局越界等导致直接白屏）
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -101,6 +137,13 @@ class JsonDslApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeMode,
+      builder: (context, mode, _) => _buildApp(context, ref, mode),
+    );
+  }
+
+  Widget _buildApp(BuildContext context, WidgetRef ref, ThemeMode mode) {
     return MaterialApp(
       title: 'MyApp',
       navigatorKey: navigatorKey,
@@ -277,7 +320,7 @@ class JsonDslApp extends ConsumerWidget {
           color: Color(0xFF333333),
         ),
       ),
-      themeMode: ThemeMode.system,
+      themeMode: mode,
       // 使用 builder 注入悬浮球，凌驾于所有路由之上
       builder: (context, child) {
         return DesignerBall(

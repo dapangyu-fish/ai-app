@@ -49,6 +49,8 @@ import 'widgets/qr_code_widget.dart';
 import 'widgets/chart_widget.dart';
 import 'widgets/map_widget.dart';
 import 'widgets/camera_widget.dart';
+import 'widgets/skeleton_widget.dart';
+import 'widgets/reorderable_list_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -100,6 +102,8 @@ class JsonWidgetBuilder {
     'chart': JsonChartWidget(),
     'map': JsonMapWidget(),
     'camera': JsonCameraWidget(),
+    'skeleton': JsonSkeletonWidget(),
+    'reorderable_list': JsonReorderableListWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

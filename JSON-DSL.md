@@ -311,6 +311,67 @@
 | `@show_time_picker` | `{ "initial": "14:30", "bind": "global.time" }` | 命令式时间选择器，返回 HH:mm 字符串（取消返回 `null`） |
 | `@show_bottom_sheet` | `{ "content": { ...widget... }, "isDismissible": true, "enableDrag": true, "backgroundColor": "#FFFFFF" }` | 底部弹窗，content 是任意 widget 配置，弹窗内可通过自定义函数关闭并返回值 |
 
+### 4.9 系统 / 平台原生
+
+| 函数 | 参数 | 说明 |
+|------|------|------|
+| `@clipboard_copy` | `{ "text": "..." }` | 写入系统剪贴板 |
+| `@clipboard_paste` | `{}` | 读取系统剪贴板，返回字符串 |
+| `@haptic` | `{ "style": "light" }` | 触觉反馈：`light` / `medium` / `heavy` / `selection` / `vibrate`（默认 `light`） |
+| `@launch_url` | `{ "url": "https://..." 或 "tel:..." 或 "mailto:..." 或 "sms:...", "mode": "external" }` | 打开外链；`mode`：`external`（默认外部浏览器）/ `inAppBrowserView`（iOS Safari / Android Custom Tabs）/ `inAppWebView`（旧式嵌入）。返回 bool |
+| `@share` | `{ "text": "...", "subject": "...", "files": ["/path/to/file.png"] }` | 调起系统分享面板。`text` 必填或 `files` 非空 |
+| `@request_permission` | `{ "type": "camera" }` | 请求权限。`type`：`camera` / `microphone` / `photos` / `location` / `locationWhenInUse` / `locationAlways` / `contacts` / `calendar` / `notification` / `storage` / `bluetooth` / `speech`。返回 status: `granted` / `denied` / `restricted` / `permanentlyDenied` / `limited` |
+| `@permission_status` | `{ "type": "..." }` | 同 `@request_permission`，但只查不请求 |
+| `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
+| `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
+
+### 4.10 主题 / 多语言 / 生命周期
+
+| 函数 | 参数 | 说明 |
+|------|------|------|
+| `@set_theme` | `{ "mode": "light" }` | 运行时切主题。`mode`：`light` / `dark` / `system`（跟随系统） |
+| `@get_theme` | `{}` | 返回当前 `mode` 字符串 |
+| `@set_locale` | `{ "value": "en" }` | 切换语言。等价于 `@set value="global.locale" value="en"`，但额外保证模板里 `t('xxx')` 立即重新查找 |
+| `@get_locale` | `{}` | 返回当前 locale |
+
+**i18n 字典约定**：
+```json
+"global": {
+  "variables": { "locale": "zh" },
+  "i18n": {
+    "zh": { "home": { "title": "首页" }, "logout": "退出登录" },
+    "en": { "home": { "title": "Home"  }, "logout": "Logout"   }
+  }
+}
+```
+模板里用 `{{ t('home.title') }}` 查表；查不到回退键名本身。
+
+**生命周期 hook**：
+```json
+"global": {
+  "lifecycle": {
+    "onResume":    [{ "call": "@http_get", "args": { "url": "..." }, "assign": "global.feed" }],
+    "onPause":     [{ "call": "@storage_set", "args": { "key": "draft", "value": "{{ global.draft }}" } }],
+    "onInactive":  [...],
+    "onDetached":  [...],
+    "onHidden":    [...]
+  }
+}
+```
+
+**计算属性 / 派生值**：
+```json
+"global": {
+  "variables": { "first": "John", "last": "Doe" },
+  "computed": {
+    "fullName": { "cat": [{ "var": "global.first" }, " ", { "var": "global.last" }] }
+  }
+}
+```
+- `{{ global.fullName }}` 自动跟着 `first` / `last` 变化重算，不需要手动 `@set`。
+- 真实变量同名时优先（real shadows computed）。
+- 支持嵌套引用 computed→computed，但有递归保护（A→B→A 时返回 null，不会死循环）。
+
 ---
 
 ## 5. JsonLogic 表达式引擎
@@ -441,6 +502,8 @@
 | `button` | `FilledButton` / `OutlinedButton` / `TextButton` | `label` | `action`, `variant`, `icon`, `style`, `disabled` |
 | `input` | `TextField` | `placeholder` / `bind` | `maxLines`, `keyboardType`, `obscureText`, `prefix`, `suffix`, `prefixIcon`, `suffixIcon`, `label`, `style` |
 | `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留) |
+| `reorderable_list` | `ReorderableListView.builder` | `source`, `item_template`, `bind` | `onReorder`, `emptyText`, `padding`, `itemKey`(默认 `id`)。拖完自动写回 `bind` 变量；onReorder 回调可拿到 `params.from` / `params.to` / `params.list` |
+| `skeleton` | 自实现 shimmer | — | `width`, `height`, `borderRadius`, `loading`(布尔, 与 `child` 联用), `child`(loading=true 时用 child 撑形状再覆盖 shimmer，false 时透传) |
 | `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
 | `divider` | `Divider` | — | `height`, `thickness`, `color`, `indent` |
 | `image` | `Image.network` | `url` | `fit`, `width`, `height`, `borderRadius` |
