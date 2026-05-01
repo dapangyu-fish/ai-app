@@ -76,6 +76,12 @@ dependencies:
   # Camera live preview (note: needs Android camera permission + iOS NSCameraUsageDescription)
   camera: ^0.11.0
 
+  # System / native platform integrations (Tier 1 + 3)
+  url_launcher: ^6.3.0       # @launch_url
+  share_plus: ^10.0.0        # @share
+  permission_handler: ^11.3.0 # @request_permission / @permission_status
+  local_auth: ^2.3.0          # @biometric_auth
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

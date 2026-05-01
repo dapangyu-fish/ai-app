@@ -8,7 +8,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jsonlogic/jsonlogic.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -684,6 +689,111 @@ class JsonInterpreter extends ChangeNotifier {
         // 主动抛错——用于测试 @try_catch / 业务侧主动失败
         throw Exception(
             resolvedArgs['message']?.toString() ?? 'thrown by @throw');
+
+      // ── 系统 / 平台原生 ──
+      case '@clipboard_copy':
+        final text = resolvedArgs['text']?.toString() ?? '';
+        await Clipboard.setData(ClipboardData(text: text));
+        return null;
+      case '@clipboard_paste':
+        final data = await Clipboard.getData(Clipboard.kTextPlain);
+        return data?.text ?? '';
+      case '@haptic':
+        // style: light / medium / heavy / selection / vibrate（默认 light）
+        final style = resolvedArgs['style']?.toString() ?? 'light';
+        switch (style) {
+          case 'medium':
+            await HapticFeedback.mediumImpact();
+            break;
+          case 'heavy':
+            await HapticFeedback.heavyImpact();
+            break;
+          case 'selection':
+            await HapticFeedback.selectionClick();
+            break;
+          case 'vibrate':
+            await HapticFeedback.vibrate();
+            break;
+          case 'light':
+          default:
+            await HapticFeedback.lightImpact();
+            break;
+        }
+        return null;
+      case '@launch_url':
+        // 打开外链：https / tel: / mailto: / sms: / 自定义 scheme
+        // mode: external (默认，跳系统浏览器) / inAppBrowserView (iOS Safari / Android Custom Tabs) / inAppWebView (嵌入)
+        final url = resolvedArgs['url']?.toString() ?? '';
+        if (url.isEmpty) return false;
+        final uri = Uri.tryParse(url);
+        if (uri == null) return false;
+        final modeStr = resolvedArgs['mode']?.toString() ?? 'external';
+        final mode = switch (modeStr) {
+          'inAppBrowserView' => LaunchMode.inAppBrowserView,
+          'inAppWebView' => LaunchMode.inAppWebView,
+          _ => LaunchMode.externalApplication,
+        };
+        try {
+          return await launchUrl(uri, mode: mode);
+        } catch (_) {
+          return false;
+        }
+      case '@share':
+        // text: 必填——分享的文本（可以包含 URL）
+        // subject: 可选——邮件主题等
+        // files: 可选——本地文件路径列表（图片 / 文档）
+        final text = resolvedArgs['text']?.toString() ?? '';
+        final subject = resolvedArgs['subject']?.toString();
+        final filesArg = resolvedArgs['files'];
+        if (filesArg is List && filesArg.isNotEmpty) {
+          final paths = filesArg.map((e) => e.toString()).toList();
+          await Share.shareXFiles(
+            paths.map((p) => XFile(p)).toList(),
+            text: text.isEmpty ? null : text,
+            subject: subject,
+          );
+        } else if (text.isNotEmpty) {
+          await Share.share(text, subject: subject);
+        }
+        return null;
+      case '@request_permission':
+        // type: camera / microphone / photos / location / locationWhenInUse /
+        //       contacts / calendar / notification / storage / bluetooth
+        // 返回 status string: granted / denied / restricted / permanentlyDenied / limited
+        final type = resolvedArgs['type']?.toString() ?? '';
+        final perm = _parsePermission(type);
+        if (perm == null) return 'denied';
+        final status = await perm.request();
+        return _permissionStatusToString(status);
+      case '@permission_status':
+        final type = resolvedArgs['type']?.toString() ?? '';
+        final perm = _parsePermission(type);
+        if (perm == null) return 'denied';
+        final status = await perm.status;
+        return _permissionStatusToString(status);
+      case '@open_app_settings':
+        // 用户拒绝过权限后跳系统设置
+        await openAppSettings();
+        return null;
+      case '@biometric_auth':
+        // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
+        // 返回 bool：通过 / 失败
+        final reason = resolvedArgs['reason']?.toString() ?? '请验证身份';
+        try {
+          final auth = LocalAuthentication();
+          final canCheck = await auth.canCheckBiometrics ||
+              await auth.isDeviceSupported();
+          if (!canCheck) return false;
+          return await auth.authenticate(
+            localizedReason: reason,
+            options: const AuthenticationOptions(
+              biometricOnly: false, // 允许 fallback 到 PIN / 密码
+              stickyAuth: true,
+            ),
+          );
+        } catch (_) {
+          return false;
+        }
 
       // ── HTTP ──
       case '@http_get':
@@ -2286,6 +2396,46 @@ class JsonInterpreter extends ChangeNotifier {
       return val.map((k, v) => MapEntry(k.toString(), v.toString()));
     }
     return null;
+  }
+
+  /// 把 JSON 字符串映射到 permission_handler 的 Permission 枚举
+  /// 不在表里的返回 null（调用方按"denied"兜底）
+  Permission? _parsePermission(String type) {
+    switch (type) {
+      case 'camera':
+        return Permission.camera;
+      case 'microphone':
+        return Permission.microphone;
+      case 'photos':
+        return Permission.photos;
+      case 'location':
+        return Permission.location;
+      case 'locationWhenInUse':
+        return Permission.locationWhenInUse;
+      case 'locationAlways':
+        return Permission.locationAlways;
+      case 'contacts':
+        return Permission.contacts;
+      case 'calendar':
+        return Permission.calendarFullAccess;
+      case 'notification':
+        return Permission.notification;
+      case 'storage':
+        return Permission.storage;
+      case 'bluetooth':
+        return Permission.bluetooth;
+      case 'speech':
+        return Permission.speech;
+    }
+    return null;
+  }
+
+  String _permissionStatusToString(PermissionStatus status) {
+    if (status.isGranted) return 'granted';
+    if (status.isLimited) return 'limited';
+    if (status.isPermanentlyDenied) return 'permanentlyDenied';
+    if (status.isRestricted) return 'restricted';
+    return 'denied';
   }
 
   List<dynamic> _flattenList(List<dynamic> list, int depth) {
