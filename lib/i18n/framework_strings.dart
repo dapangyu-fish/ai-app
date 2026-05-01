@@ -132,9 +132,74 @@ class _Strings {
   final String settingsAbout;
   final String settingsVersion;
 
+  // ── 添加到 我的 APP 弹窗 ──
+  final String addToMyAppsTitle;
+  final String addToMyAppsContent;
+  final String addToMyAppsAdded;
+  final String saveFailedWith;          // "保存失败：{msg}"
+
+  // ── 市场删除 / 上架 / 作者 ──
+  final String marketDeleteConfirmTitle;
+  final String marketDeleteConfirmContent; // 含 {package}
+  final String marketDeleting;
+  final String marketDeleteSuccess;
+  final String marketDeleteFailed;
+  final String marketDeleteFailedWith;     // 含 {msg}
+  final String marketUnpublishTooltip;
+  final String marketAuthor;               // 含 {author}
+
+  // ── 我的 APP 收尾 ──
+  final String myAppsEmptyHint;            // 空态副提示
+  final String myAppsUploadTooltip;
+  final String myAppsUploading;
+  final String myAppsPublishSuccess;
+
+  // ── 发布弹窗 ──
+  final String publishDialogTitle;
+  final String publishCreateNamespace;
+  final String publishCreateNamespaceTitle;
+  final String publishNamespaceName;
+  final String publishNamespaceHint;
+  final String publishCreateFailed;
+  final String publishInviteMember;
+  final String publishNamespaceField;
+  final String publishOfficialNamespace;
+  final String publishPkgNameField;
+  final String publishRandomGenerate;
+  final String publishDescField;
+  final String publishVersionField;
+  final String publishTypeField;
+  final String publishButton;
+  final String publishPkgNameRequired;
+  final String publishAppidInvalid;
+  final String publishVersionInvalid;
+  final String publishNamespaceRequired;
+  final String publishUuidConflictTitle;
+  final String publishUuidConflictContent;  // 含 {pkg}
+  final String publishFailedWithCode;        // 含 {code}
+
+  // ── 通用提示 ──
+  final String create;
+  final String gotIt;
+  final String copy;
+  final String featureInDevelopment;
+  final String featureStayTuned;
+
+  // ── 崩溃页 / 渲染错误 ──
+  final String crashTitle;
+  final String crashSubtitle;          // "{file} 运行崩溃"
+  final String crashCopied;
+  final String crashAiFix;
+  final String uiRenderCrash;
+  final String pageConfigNotFound;
+  final String errorPathUnavailable;
+
   // ── 错误 / 状态 ──
   final String errorGeneric;
   final String errorNoNetwork;
+  final String errorNotLoggedIn;
+  final String errorNetworkWith;        // "网络错误：{msg}"
+  final String errorServerWithCode;     // "服务器错误 ({code})"
 
   const _Strings({
     required this.ok,
@@ -228,8 +293,61 @@ class _Strings {
     required this.settingsAiProvider,
     required this.settingsAbout,
     required this.settingsVersion,
+    required this.addToMyAppsTitle,
+    required this.addToMyAppsContent,
+    required this.addToMyAppsAdded,
+    required this.saveFailedWith,
+    required this.marketDeleteConfirmTitle,
+    required this.marketDeleteConfirmContent,
+    required this.marketDeleting,
+    required this.marketDeleteSuccess,
+    required this.marketDeleteFailed,
+    required this.marketDeleteFailedWith,
+    required this.marketUnpublishTooltip,
+    required this.marketAuthor,
+    required this.myAppsEmptyHint,
+    required this.myAppsUploadTooltip,
+    required this.myAppsUploading,
+    required this.myAppsPublishSuccess,
+    required this.publishDialogTitle,
+    required this.publishCreateNamespace,
+    required this.publishCreateNamespaceTitle,
+    required this.publishNamespaceName,
+    required this.publishNamespaceHint,
+    required this.publishCreateFailed,
+    required this.publishInviteMember,
+    required this.publishNamespaceField,
+    required this.publishOfficialNamespace,
+    required this.publishPkgNameField,
+    required this.publishRandomGenerate,
+    required this.publishDescField,
+    required this.publishVersionField,
+    required this.publishTypeField,
+    required this.publishButton,
+    required this.publishPkgNameRequired,
+    required this.publishAppidInvalid,
+    required this.publishVersionInvalid,
+    required this.publishNamespaceRequired,
+    required this.publishUuidConflictTitle,
+    required this.publishUuidConflictContent,
+    required this.publishFailedWithCode,
+    required this.create,
+    required this.gotIt,
+    required this.copy,
+    required this.featureInDevelopment,
+    required this.featureStayTuned,
+    required this.crashTitle,
+    required this.crashSubtitle,
+    required this.crashCopied,
+    required this.crashAiFix,
+    required this.uiRenderCrash,
+    required this.pageConfigNotFound,
+    required this.errorPathUnavailable,
     required this.errorGeneric,
     required this.errorNoNetwork,
+    required this.errorNotLoggedIn,
+    required this.errorNetworkWith,
+    required this.errorServerWithCode,
   });
 }
 
@@ -325,8 +443,61 @@ const _Strings _zhCN = _Strings(
   settingsAiProvider: 'AI 服务商',
   settingsAbout: '关于',
   settingsVersion: '版本',
+  addToMyAppsTitle: '添加到我的 APP',
+  addToMyAppsContent: '是否将此应用添加到"我的 APP"列表？\n\n添加后可以方便地复用和发布到市场。',
+  addToMyAppsAdded: '已添加到我的 APP',
+  saveFailedWith: '保存失败：{msg}',
+  marketDeleteConfirmTitle: '确认下架',
+  marketDeleteConfirmContent: '确定要永久删除包 "{package}" 吗？\n\n此操作不可撤销，将删除所有版本。',
+  marketDeleting: '正在删除…',
+  marketDeleteSuccess: '删除成功',
+  marketDeleteFailed: '删除失败',
+  marketDeleteFailedWith: '删除失败：{msg}',
+  marketUnpublishTooltip: '下架',
+  marketAuthor: '作者：{author}',
+  myAppsEmptyHint: '长按悬浮球，用语音让 AI 帮你生成',
+  myAppsUploadTooltip: '上传到市场',
+  myAppsUploading: '正在上传到市场…',
+  myAppsPublishSuccess: '发布成功 🎉',
+  publishDialogTitle: '发布到市场',
+  publishCreateNamespace: '创建空间',
+  publishCreateNamespaceTitle: '创建命名空间',
+  publishNamespaceName: '空间名称',
+  publishNamespaceHint: '小写字母、数字、- 和 _',
+  publishCreateFailed: '创建失败',
+  publishInviteMember: '邀请成员',
+  publishNamespaceField: '项目空间',
+  publishOfficialNamespace: '(官方/无空间)',
+  publishPkgNameField: '包名',
+  publishRandomGenerate: '随机生成',
+  publishDescField: '描述',
+  publishVersionField: '版本号',
+  publishTypeField: '类型',
+  publishButton: '发布',
+  publishPkgNameRequired: '包名不能为空',
+  publishAppidInvalid: 'AppID 必须是有效的 UUID 格式',
+  publishVersionInvalid: '版本号必须是 x.y.z 格式',
+  publishNamespaceRequired: '请选择命名空间或创建一个新空间',
+  publishUuidConflictTitle: 'UUID 冲突',
+  publishUuidConflictContent: '该 UUID 已被包 "{pkg}" 使用。\n请点击「随机生成 🎲」获取新的 UUID 后重试。',
+  publishFailedWithCode: '发布失败 ({code})',
+  create: '创建',
+  gotIt: '知道了',
+  copy: '复制',
+  featureInDevelopment: '此功能正在开发中',
+  featureStayTuned: '敬请期待！',
+  crashTitle: '运行出错',
+  crashSubtitle: '{file} 运行崩溃',
+  crashCopied: '崩溃信息已复制',
+  crashAiFix: 'AI 分析修复',
+  uiRenderCrash: 'UI 渲染/布局崩溃',
+  pageConfigNotFound: '未找到页面配置',
+  errorPathUnavailable: '无法获取文件路径',
   errorGeneric: '出错了',
   errorNoNetwork: '无网络连接',
+  errorNotLoggedIn: '未登录',
+  errorNetworkWith: '网络错误：{msg}',
+  errorServerWithCode: '服务器错误 ({code})',
 );
 
 const _Strings _enUS = _Strings(
@@ -421,8 +592,61 @@ const _Strings _enUS = _Strings(
   settingsAiProvider: 'AI provider',
   settingsAbout: 'About',
   settingsVersion: 'Version',
+  addToMyAppsTitle: 'Add to My Apps',
+  addToMyAppsContent: 'Add this app to "My Apps"?\n\nYou can then reuse it and publish it to the marketplace.',
+  addToMyAppsAdded: 'Added to My Apps',
+  saveFailedWith: 'Save failed: {msg}',
+  marketDeleteConfirmTitle: 'Confirm unpublish',
+  marketDeleteConfirmContent: 'Permanently delete package "{package}"?\n\nThis cannot be undone — all versions will be removed.',
+  marketDeleting: 'Deleting…',
+  marketDeleteSuccess: 'Deleted',
+  marketDeleteFailed: 'Delete failed',
+  marketDeleteFailedWith: 'Delete failed: {msg}',
+  marketUnpublishTooltip: 'Unpublish',
+  marketAuthor: 'Author: {author}',
+  myAppsEmptyHint: 'Long-press the floating button and speak — AI will generate one',
+  myAppsUploadTooltip: 'Upload to marketplace',
+  myAppsUploading: 'Uploading to marketplace…',
+  myAppsPublishSuccess: 'Published 🎉',
+  publishDialogTitle: 'Publish to marketplace',
+  publishCreateNamespace: 'Create namespace',
+  publishCreateNamespaceTitle: 'Create namespace',
+  publishNamespaceName: 'Namespace',
+  publishNamespaceHint: 'Lowercase letters, digits, - and _',
+  publishCreateFailed: 'Create failed',
+  publishInviteMember: 'Invite member',
+  publishNamespaceField: 'Namespace',
+  publishOfficialNamespace: '(Official / no namespace)',
+  publishPkgNameField: 'Package name',
+  publishRandomGenerate: 'Random',
+  publishDescField: 'Description',
+  publishVersionField: 'Version',
+  publishTypeField: 'Type',
+  publishButton: 'Publish',
+  publishPkgNameRequired: 'Package name is required',
+  publishAppidInvalid: 'AppID must be a valid UUID',
+  publishVersionInvalid: 'Version must follow x.y.z',
+  publishNamespaceRequired: 'Pick or create a namespace',
+  publishUuidConflictTitle: 'UUID conflict',
+  publishUuidConflictContent: 'This UUID is already used by package "{pkg}".\nClick "Random 🎲" to generate a new one and retry.',
+  publishFailedWithCode: 'Publish failed ({code})',
+  create: 'Create',
+  gotIt: 'Got it',
+  copy: 'Copy',
+  featureInDevelopment: 'This feature is under development',
+  featureStayTuned: 'Stay tuned!',
+  crashTitle: 'Runtime error',
+  crashSubtitle: '{file} crashed',
+  crashCopied: 'Crash info copied',
+  crashAiFix: 'AI fix',
+  uiRenderCrash: 'UI render / layout crash',
+  pageConfigNotFound: 'Page config not found',
+  errorPathUnavailable: 'Could not resolve file path',
   errorGeneric: 'Something went wrong',
   errorNoNetwork: 'No network',
+  errorNotLoggedIn: 'Not signed in',
+  errorNetworkWith: 'Network error: {msg}',
+  errorServerWithCode: 'Server error ({code})',
 );
 
 /// 公开访问点。
