@@ -199,6 +199,7 @@
 | `@loop_by_num` | `{ "count": 10, "body": [...] }` | 按次数循环 |
 | `@try_catch` | `{ "try": [...], "catch": [...], "error_var": "$.global.err" }` | 异常捕获 |
 | `@parallel` | `{ "steps": [...] }` | **并发执行**多个 step，全部完成后继续 |
+| `@throw` | `{ "message": "..." }` | 主动抛出异常（用于测试 @try_catch / 业务侧失败时进入 catch 分支） |
 
 **@if 示例**：
 ```json
@@ -440,10 +441,10 @@
 | `button` | `FilledButton` / `OutlinedButton` / `TextButton` | `label` | `action`, `variant`, `icon`, `style`, `disabled` |
 | `input` | `TextField` | `placeholder` / `bind` | `maxLines`, `keyboardType`, `obscureText`, `prefix`, `suffix`, `prefixIcon`, `suffixIcon`, `label`, `style` |
 | `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留) |
-| `container` | `Container` | `children` | `layout`, `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
+| `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
 | `divider` | `Divider` | — | `height`, `thickness`, `color`, `indent` |
 | `image` | `Image.network` | `url` | `fit`, `width`, `height`, `borderRadius` |
-| `spacer` | `SizedBox` | — | `height`, `width` |
+| `spacer` | `SizedBox` / `Spacer` | — | `height`, `width`, `flex`（不写任何字段时默认 `Spacer()`，仅在 Flex 父级生效） |
 | `switch` | `Switch` | `bind` | `label`, `action` |
 | `image_picker` | `ImagePicker` | `bind` | `source`(gallery/camera), `placeholder`, `width`, `height`, `borderRadius` |
 | `video` | `Chewie` + `VideoPlayer` | `url` | `autoplay`, `looping`, `aspectRatio`, `borderRadius` |
@@ -585,9 +586,12 @@
 "action": {
   "type": "call",
   "call": "@global.submitForm",
-  "args": { "name": "{{ global.username }}" }
+  "args": { "name": "{{ global.username }}" },
+  "assign": "global.last_result"
 }
 ```
+
+- `assign`（可选）：把 call 的返回值写进指定变量。和 steps 里的 `assign` 语义一致，方便点按钮直接抓结果。
 
 或导航（支持依赖页面 `depName:screenId`）：
 ```json

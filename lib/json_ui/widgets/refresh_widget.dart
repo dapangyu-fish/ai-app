@@ -1,6 +1,11 @@
 // RefreshIndicator 控件 — 下拉刷新
-// 用于包裹任意可滚动的 child（不限于 list）
+// 用于包裹任意可滚动的 child（list / 普通 ListView 等）
 // 支持: child (必须是可滚动 widget), onRefresh, color, backgroundColor
+//
+// 注意：list 控件默认返回 Expanded(ListView)。直接放进 RefreshIndicator
+// 会让 Expanded 处于非 Flex 父级，触发 Flutter assert。所以这里：
+//   1. 自动 unwrap 子级 Expanded
+//   2. 整体再用 Expanded 包一层（refresh 期望放在 Column 屏幕里）
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'action_helper.dart';
@@ -21,6 +26,11 @@ class JsonRefreshWidget extends JsonBaseWidget {
       child = const SizedBox.shrink();
     }
 
+    // 兜底：list 默认返回 Expanded → unwrap 后给 RefreshIndicator
+    if (child is Expanded) {
+      child = child.child;
+    }
+
     final onRefresh =
         resolveActionAtBuildTime(json['onRefresh'], interpreter)
             as Map<String, dynamic>?;
@@ -31,17 +41,21 @@ class JsonRefreshWidget extends JsonBaseWidget {
     final bg = _parseColor(
         rawBg != null ? interpreter.resolveTemplate(rawBg) : null);
 
-    if (onRefresh == null) return child;
+    if (onRefresh == null) {
+      return Expanded(child: child);
+    }
 
-    return RefreshIndicator(
-      color: color,
-      backgroundColor: bg,
-      onRefresh: () async {
-        if (context.mounted) {
-          await interpreter.executeAction(onRefresh, context);
-        }
-      },
-      child: child,
+    return Expanded(
+      child: RefreshIndicator(
+        color: color,
+        backgroundColor: bg,
+        onRefresh: () async {
+          if (context.mounted) {
+            await interpreter.executeAction(onRefresh, context);
+          }
+        },
+        child: child,
+      ),
     );
   }
 

@@ -1163,17 +1163,25 @@ class _MarketPageState extends State<_MarketPage> {
 // JSON 渲染页面
 // ============================================================
 
-// 检测子树里是否存在会返回 Expanded 的 widget（list、非 shrinkWrap 的 grid）。
-// 命中时屏幕级别要走 Column 而不是 SingleChildScrollView，否则 Expanded
-// 在 unbounded 高度里会抛 RenderFlex 异常。
+// 检测子树里是否存在会返回 Expanded 的 widget（list、非 shrinkWrap 的 grid、
+// refresh —— refresh 自身也包了 Expanded）。命中时屏幕级别要走 Column 而不是
+// SingleChildScrollView，否则 Expanded 在 unbounded 高度里会抛 RenderFlex 异常。
 bool _containsListInChildren(List<dynamic> children) {
   for (final child in children) {
     if (child is Map<String, dynamic>) {
       final type = child['type'];
       if (type == 'list') return true;
       if (type == 'grid' && child['shrinkWrap'] != true) return true;
+      if (type == 'refresh') return true;
+      // 递归 children 字段
       final subChildren = child['children'] as List<dynamic>?;
       if (subChildren != null && _containsListInChildren(subChildren)) {
+        return true;
+      }
+      // 递归单 child 字段（refresh / padding / align / center 等）
+      final singleChild = child['child'];
+      if (singleChild is Map<String, dynamic> &&
+          _containsListInChildren([singleChild])) {
         return true;
       }
     }
@@ -1307,6 +1315,29 @@ class JsonScreenView extends ConsumerWidget {
       drawer = drawer_helper.buildDrawer(context, drawerConfig, interpreter);
     }
 
+    // screen.layout=stack 时，需要全屏 Stack（绝对定位才有参考系），
+    // 不能再放进 SingleChildScrollView 里——否则 Stack 高度坍缩到子项最大尺寸
+    final isStackLayout = (screenConfig['layout'] ?? 'column') == 'stack';
+
+    final Widget bodyContent;
+    if (isStackLayout) {
+      bodyContent = buildScreenLayout(screenConfig, childWidgets);
+    } else if (hasListWidget) {
+      bodyContent = Padding(
+        padding: EdgeInsets.all(
+          (screenConfig['padding'] as num?)?.toDouble() ?? 0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: childWidgets,
+        ),
+      );
+    } else {
+      bodyContent = SingleChildScrollView(
+        child: buildScreenLayout(screenConfig, childWidgets),
+      );
+    }
+
     return PopScope(
       // 历史栈非空时拦截系统返回手势（iOS edge swipe / Android 返回键）
       canPop: !interpreter.canNavigateBack,
@@ -1318,21 +1349,7 @@ class JsonScreenView extends ConsumerWidget {
         backgroundColor: bgColor,
         appBar: appBar,
         drawer: drawer,
-        body: SafeArea(
-        child: hasListWidget
-            ? Padding(
-                padding: EdgeInsets.all(
-                  (screenConfig['padding'] as num?)?.toDouble() ?? 0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: childWidgets,
-                ),
-              )
-            : SingleChildScrollView(
-                child: buildScreenLayout(screenConfig, childWidgets),
-              ),
-        ),
+        body: SafeArea(child: bodyContent),
       ),
     );
   }

@@ -479,8 +479,12 @@ class JsonInterpreter extends ChangeNotifier {
       case 'call':
         final callTarget = action['call'] as String?;
         final args = action['args'] as Map<String, dynamic>?;
+        final assignVar = action['assign'] as String?;
         if (callTarget != null) {
-          await _executeCall(callTarget, args ?? {});
+          final result = await _executeCall(callTarget, args ?? {});
+          if (assignVar != null && result != null) {
+            setVariable(assignVar, result);
+          }
         }
         break;
       case 'navigate':
@@ -509,8 +513,13 @@ class JsonInterpreter extends ChangeNotifier {
     if (type == 'call') {
       final callTarget = action['call'] as String?;
       final args = action['args'] as Map<String, dynamic>?;
+      final assignVar = action['assign'] as String?;
       if (callTarget != null) {
-        return await _executeCall(callTarget, args ?? {});
+        final result = await _executeCall(callTarget, args ?? {});
+        if (assignVar != null && result != null) {
+          setVariable(assignVar, result);
+        }
+        return result;
       }
     } else if (type == 'navigate') {
       final screenId = action['screen'] as String?;
@@ -671,6 +680,10 @@ class JsonInterpreter extends ChangeNotifier {
             _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
         await Future.delayed(Duration(milliseconds: ms));
         return null;
+      case '@throw':
+        // 主动抛错——用于测试 @try_catch / 业务侧主动失败
+        throw Exception(
+            resolvedArgs['message']?.toString() ?? 'thrown by @throw');
 
       // ── HTTP ──
       case '@http_get':

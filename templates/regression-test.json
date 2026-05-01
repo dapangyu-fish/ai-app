@@ -3,7 +3,7 @@
   "appid": "5f993b2a-815b-4ff9-820a-e6dba721943d",
   "meta": {
     "name": "regression-test",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "type": "app",
     "description": "JSON-DSL 框架回归测试套件，覆盖 main 既有 + batch 1-8 全部新功能",
     "author": "regression-test"
@@ -88,7 +88,7 @@
           "n": "11",
           "category": "A. 基础",
           "name": "video 控件",
-          "desc": "占位：本地无样例视频",
+          "desc": "HLS m3u8 流播放（控制条/全屏）",
           "screen": "t_video"
         },
         {
@@ -312,7 +312,7 @@
           "n": "43",
           "category": "H. 重型/外部",
           "name": "webview 控件",
-          "desc": "加载 example.com（需联网）",
+          "desc": "可输入网址；默认加载 example.com",
           "screen": "t_webview"
         },
         {
@@ -333,14 +333,14 @@
           "n": "46",
           "category": "H. 重型/外部",
           "name": "map 控件",
-          "desc": "占位：OSM 地图（需联网/平台 tile 依赖）",
+          "desc": "OSM 地图，含两个 marker（需联网拉 tile）",
           "screen": "t_map"
         },
         {
           "n": "47",
           "category": "H. 重型/外部",
           "name": "camera 控件",
-          "desc": "占位：实时预览（需相机权限 + 硬件）",
+          "desc": "实时预览（需相机权限 + 硬件）",
           "screen": "t_camera"
         },
         {
@@ -424,7 +424,7 @@
           "n": "59",
           "category": "K. 控制流",
           "name": "@try_catch",
-          "desc": "捕获 try 块异常",
+          "desc": "捕获 try 块异常（@throw 触发）",
           "screen": "t_cf_try"
         },
         {
@@ -598,8 +598,8 @@
         {
           "n": "84",
           "category": "Q. 边界/错误",
-          "name": "HTTP 失败被 try_catch 捕获",
-          "desc": "坏 URL 应进 catch 分支",
+          "name": "HTTP 失败错误字段",
+          "desc": "坏 URL 返回 status<0 + error 字段",
           "screen": "t_edge_http_err"
         },
         {
@@ -665,6 +665,8 @@
       ],
       "t_refresh_count": 0,
       "t_tab_change_count": 0,
+      "t_webview_url": "https://example.com",
+      "t_webview_url_active": "https://example.com",
       "t_tpl_user": {
         "name": "Alice",
         "age": 30,
@@ -730,7 +732,9 @@
           "id": "c",
           "name": "橙子"
         }
-      ]
+      ],
+      "t_edge_resp": "",
+      "cf_err": ""
     },
     "functions": {
       "t_cf_delay_run": {
@@ -1612,7 +1616,7 @@
           },
           {
             "type": "text",
-            "value": "第一张应显示；第二张是无效 URL，应自动回退",
+            "value": "第一张应按图片宽高比展示（长方形 PNG）；第二张是无效 URL，应显示错误占位",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -1620,13 +1624,21 @@
           },
           {
             "type": "text",
-            "value": "网络图片 (httpbin.org PNG):"
+            "value": "网络图片（不限定 height，宽 240，按原比例显示）:"
           },
           {
             "type": "image",
-            "url": "https://httpbin.org/image/png",
-            "width": 200,
-            "height": 100,
+            "url": "https://picsum.photos/seed/regression/600/400",
+            "width": 240,
+            "borderRadius": 8
+          },
+          {
+            "type": "text",
+            "value": "另一张（不限定尺寸，宽度铺满父级，按原比例）:"
+          },
+          {
+            "type": "image",
+            "url": "https://picsum.photos/seed/regression2/800/450",
             "borderRadius": 8
           },
           {
@@ -1637,7 +1649,7 @@
             "type": "image",
             "url": "https://invalid.example.invalid/nope.png",
             "width": 200,
-            "height": 100,
+            "height": 120,
             "borderRadius": 8
           }
         ]
@@ -1806,28 +1818,36 @@
             "type": "divider"
           },
           {
-            "type": "container",
-            "padding": 16,
-            "color": "#FFF3CD",
-            "borderRadius": 8,
-            "children": [
-              {
-                "type": "text",
-                "value": "⚠️ 开发中 / 占位",
-                "style": {
-                  "fontSize": 18,
-                  "fontWeight": "bold"
-                }
-              },
-              {
-                "type": "text",
-                "value": "video 控件需要一个稳定的视频源（http(s) URL 或本地文件）。本回归套件未内置样例视频；可临时填一个 https://*.mp4 直链 URL 测试，或参考 demo_video_browser.json。",
-                "style": {
-                  "fontSize": 14,
-                  "color": "#856404"
-                }
-              }
-            ]
+            "type": "text",
+            "value": "video 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "应能播放 HLS m3u8 视频流，含播放/暂停、进度条、全屏按钮",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "video",
+            "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+            "autoplay": false,
+            "looping": false,
+            "aspectRatio": 1.78,
+            "borderRadius": 8
+          },
+          {
+            "type": "text",
+            "value": "源: tears-of-steel.ism/.m3u8（unified-streaming demo）",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
           }
         ]
       },
@@ -1850,6 +1870,7 @@
           },
           {
             "type": "container",
+            "layout": "column",
             "padding": 16,
             "color": "#FFF3CD",
             "borderRadius": 8,
@@ -2781,7 +2802,7 @@
           },
           {
             "type": "text",
-            "value": "下方容器内的 icon 应在右下角",
+            "value": "下方 200x120 的容器内 icon 应在右下角；align 必须有有限尺寸的父容器才能定位",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -2789,26 +2810,52 @@
           },
           {
             "type": "container",
+            "layout": "column",
             "color": "#FFF3E0",
+            "borderRadius": 8,
+            "width": 200,
+            "height": 120,
             "children": [
               {
-                "type": "padding",
-                "padding": 0,
+                "type": "align",
+                "alignment": "bottomRight",
                 "child": {
-                  "type": "container",
-                  "padding": 32,
-                  "children": [
-                    {
-                      "type": "align",
-                      "alignment": "bottomRight",
-                      "child": {
-                        "type": "icon",
-                        "name": "favorite",
-                        "color": "#E91E63",
-                        "size": 32
-                      }
-                    }
-                  ]
+                  "type": "icon",
+                  "name": "favorite",
+                  "color": "#E91E63",
+                  "size": 32
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 8
+          },
+          {
+            "type": "text",
+            "value": "再来一个 width=240/height=120、align=topCenter 的容器，icon 应在顶部居中",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "color": "#E1F5FE",
+            "borderRadius": 8,
+            "width": 240,
+            "height": 120,
+            "children": [
+              {
+                "type": "align",
+                "alignment": "topCenter",
+                "child": {
+                  "type": "icon",
+                  "name": "star",
+                  "color": "#F9A825",
+                  "size": 32
                 }
               }
             ]
@@ -4141,15 +4188,64 @@
           },
           {
             "type": "text",
-            "value": "应加载 example.com 的官方测试页",
+            "value": "修改下方网址后点「加载」按钮，下方 webview 会切换",
             "style": {
               "fontSize": 13,
               "color": "#666666"
             }
           },
           {
+            "type": "input",
+            "bind": "global.t_webview_url",
+            "label": "URL",
+            "placeholder": "https://example.com"
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "button",
+                "label": "加载",
+                "icon": "open_in_browser",
+                "action": {
+                  "type": "call",
+                  "call": "@set",
+                  "args": {
+                    "var": "global.t_webview_url_active",
+                    "value": "{{ global.t_webview_url }}"
+                  }
+                }
+              },
+              {
+                "type": "spacer"
+              },
+              {
+                "type": "button",
+                "label": "example.com",
+                "variant": "outlined",
+                "action": {
+                  "type": "call",
+                  "call": "@set",
+                  "args": {
+                    "var": "global.t_webview_url_active",
+                    "value": "https://example.com"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "当前: {{ global.t_webview_url_active }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#666666"
+            }
+          },
+          {
             "type": "webview",
-            "url": "https://example.com",
+            "url": "{{ global.t_webview_url_active }}",
             "height": 360
           }
         ]
@@ -4343,28 +4439,48 @@
             "type": "divider"
           },
           {
-            "type": "container",
-            "padding": 16,
-            "color": "#FFF3CD",
+            "type": "text",
+            "value": "map 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "应显示北京市中心，含两个 marker（天安门、故宫）；可拖拽/缩放",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "map",
+            "latitude": 39.9087,
+            "longitude": 116.3975,
+            "zoom": 14,
+            "height": 300,
             "borderRadius": 8,
-            "children": [
+            "markers": [
               {
-                "type": "text",
-                "value": "⚠️ 开发中 / 占位",
-                "style": {
-                  "fontSize": 18,
-                  "fontWeight": "bold"
-                }
+                "latitude": 39.9055,
+                "longitude": 116.3976,
+                "label": "天安门"
               },
               {
-                "type": "text",
-                "value": "map 基于 flutter_map + OpenStreetMap，需联网拉 tile，在不同平台/网络下行为差别大；本套件只列入口。如需测试，可手工在此 screen 加 {type:'map', latitude:39.9, longitude:116.4, zoom:13}。",
-                "style": {
-                  "fontSize": 14,
-                  "color": "#856404"
-                }
+                "latitude": 39.9163,
+                "longitude": 116.3972,
+                "label": "故宫"
               }
             ]
+          },
+          {
+            "type": "text",
+            "value": "数据源：OpenStreetMap tile（无需 key）",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
           }
         ]
       },
@@ -4386,28 +4502,34 @@
             "type": "divider"
           },
           {
-            "type": "container",
-            "padding": 16,
-            "color": "#FFF3CD",
-            "borderRadius": 8,
-            "children": [
-              {
-                "type": "text",
-                "value": "⚠️ 开发中 / 占位",
-                "style": {
-                  "fontSize": 18,
-                  "fontWeight": "bold"
-                }
-              },
-              {
-                "type": "text",
-                "value": "camera 控件需要 Android Manifest / iOS Info.plist 配置相机权限，且依赖物理摄像头。本套件只列入口。若设备已配置权限，可在此 screen 加 {type:'camera', height:300} 测试。",
-                "style": {
-                  "fontSize": 14,
-                  "color": "#856404"
-                }
-              }
-            ]
+            "type": "text",
+            "value": "camera 控件",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "首次进入会请求相机权限；同意后下方应有实时预览（前置/后置切换待框架支持）",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "camera",
+            "lensDirection": "back",
+            "resolution": "medium",
+            "height": 320
+          },
+          {
+            "type": "text",
+            "value": "若失败：检查 iOS Info.plist 含 NSCameraUsageDescription / Android Manifest 含 CAMERA 权限",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
           }
         ]
       },
@@ -4419,6 +4541,7 @@
         "children": [
           {
             "type": "container",
+            "layout": "column",
             "color": "#E8EAF6",
             "children": [
               {
@@ -4426,28 +4549,47 @@
                 "padding": 16,
                 "child": {
                   "type": "text",
-                  "value": "screen.layout=stack 时，子项默认堆叠；可用 position.type=absolute 精确定位。"
+                  "value": "screen.layout=stack 时，body 是一个铺满的 Stack。子项默认堆叠在左上角；可用 position.type=absolute 精确定位到 4 角。"
                 }
               }
-            ]
-          },
-          {
-            "type": "button",
-            "label": "← 返回",
-            "variant": "text",
-            "action": {
-              "type": "back"
-            },
+            ],
             "position": {
               "type": "absolute",
-              "top": 8,
-              "left": 8
+              "top": 0,
+              "left": 0,
+              "right": 0,
+              "bottom": 0
             }
           },
           {
             "type": "container",
             "color": "#1A73E8",
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "padding",
+                "padding": 8,
+                "child": {
+                  "type": "text",
+                  "value": "顶部标签",
+                  "style": {
+                    "color": "#FFFFFF",
+                    "fontSize": 12
+                  }
+                }
+              }
+            ],
+            "position": {
+              "type": "absolute",
+              "top": 16,
+              "left": 120
+            }
+          },
+          {
+            "type": "container",
+            "color": "#E91E63",
             "borderRadius": 28,
+            "elevation": 4,
             "children": [
               {
                 "type": "padding",
@@ -4464,6 +4606,28 @@
               "type": "absolute",
               "bottom": 24,
               "right": 24
+            }
+          },
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "padding",
+                "padding": 8,
+                "child": {
+                  "type": "text",
+                  "value": "← 左下角",
+                  "style": {
+                    "fontSize": 12,
+                    "color": "#666666"
+                  }
+                }
+              }
+            ],
+            "position": {
+              "type": "absolute",
+              "bottom": 24,
+              "left": 16
             }
           }
         ]
@@ -5418,7 +5582,7 @@
           },
           {
             "type": "text",
-            "value": "try 里故意访问坏 URL，catch 块写入错误信息",
+            "value": "try 里调 @throw 主动抛错，catch 块写入错误信息；err 应显示自定义消息",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -5426,16 +5590,16 @@
           },
           {
             "type": "button",
-            "label": "运行 @try_catch",
+            "label": "运行 @try_catch（@throw）",
             "action": {
               "type": "call",
               "call": "@try_catch",
               "args": {
                 "try": [
                   {
-                    "call": "@http_get",
+                    "call": "@throw",
                     "args": {
-                      "url": "https://invalid.example.invalid/x"
+                      "message": "故意失败：测试用"
                     }
                   }
                 ],
@@ -5456,6 +5620,41 @@
                   }
                 ],
                 "error_var": "global.cf_err"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "正常路径（try 不抛错）",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@try_catch",
+              "args": {
+                "try": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.t_cf_log",
+                      "value": "try 走完没抛"
+                    }
+                  }
+                ],
+                "catch": [],
+                "error_var": "global.cf_err"
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "重置",
+            "variant": "outlined",
+            "action": {
+              "type": "call",
+              "call": "@set",
+              "args": {
+                "var": "global.cf_err",
+                "value": ""
               }
             }
           },
@@ -7357,48 +7556,38 @@
           },
           {
             "type": "text",
-            "value": "HTTP 失败 + try_catch",
+            "value": "HTTP 失败：检查响应",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
             }
           },
           {
+            "type": "text",
+            "value": "@http_get 永远不抛错，错误信息在返回的 error 字段（status<0 表示连接级失败）",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
             "type": "button",
-            "label": "请求坏 URL（应被 catch）",
+            "label": "请求坏 URL",
             "action": {
               "type": "call",
-              "call": "@try_catch",
+              "call": "@http_get",
               "args": {
-                "try": [
-                  {
-                    "call": "@http_get",
-                    "args": {
-                      "url": "https://invalid.example.invalid/x"
-                    }
-                  },
-                  {
-                    "call": "@show_toast",
-                    "args": {
-                      "message": "❌ 不应到达这里"
-                    }
-                  }
-                ],
-                "catch": [
-                  {
-                    "call": "@show_toast",
-                    "args": {
-                      "message": "✅ catch: {{ global.t_edge_err }}"
-                    }
-                  }
-                ],
-                "error_var": "global.t_edge_err"
-              }
+                "url": "https://invalid.example.invalid/x"
+              },
+              "assign": "global.t_edge_resp"
             }
           },
           {
             "type": "text",
-            "value": "err: {{ global.t_edge_err }}"
+            "value": "完整响应: {{ global.t_edge_resp }}",
+            "style": {
+              "fontSize": 12
+            }
           }
         ]
       },
