@@ -4,6 +4,7 @@ import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
+import '../config/app_config.dart';
 
 /// OpenIM SDK 封装服务
 /// 负责: 初始化 SDK、登录/登出、消息监听、连接状态管理
@@ -12,7 +13,7 @@ class IMService {
   static IMService get instance => _instance;
   IMService._();
 
-  static const String _backendUrl = 'https://app-backend.dapangyu.work';
+  static String get _backendUrl => AppConfig.backendUrl;
   static const String _imTokenKey = 'im_token';
   static const String _imUserIdKey = 'im_user_id';
   static const String _imWsUrlKey = 'im_ws_url';
@@ -25,6 +26,8 @@ class IMService {
 
   bool _initialized = false;
   bool _loggedIn = false;
+  // 复用进行中的 login future，防止 `_AuthGate.build()` 反复触发登录（rebuild 重入）
+  Future<bool>? _loginInFlight;
 
   final ValueNotifier<bool> connectionNotifier = ValueNotifier(false);
   final ValueNotifier<int> unreadCountNotifier = ValueNotifier(0);
@@ -106,9 +109,24 @@ class IMService {
 
   /// 登录 OpenIM
   /// 先从后端获取 IM token, 然后调用 SDK login
+  ///
+  /// 幂等：已登录时直接返回 true；进行中时返回同一个 future，避免 `_AuthGate`
+  /// 重 build 时多次发起登录请求。
   Future<bool> login() async {
     if (!AuthService.isLoggedIn) return false;
+    if (_loggedIn) return true;
+    if (_loginInFlight != null) return _loginInFlight!;
 
+    final future = _doLogin();
+    _loginInFlight = future;
+    try {
+      return await future;
+    } finally {
+      _loginInFlight = null;
+    }
+  }
+
+  Future<bool> _doLogin() async {
     try {
       final credentials = await _fetchIMCredentials();
       if (credentials == null) return false;
@@ -155,7 +173,23 @@ class IMService {
   }
 
   /// 从本地恢复 IM 会话 (App 启动时调用)
+  ///
+  /// 与 [login] 共享 `_loginInFlight`，避免和 `_AuthGate` 触发的 login()
+  /// 同时跑出两条登录链路。
   Future<bool> restoreSession() async {
+    if (_loggedIn) return true;
+    if (_loginInFlight != null) return _loginInFlight!;
+
+    final future = _doRestoreSession();
+    _loginInFlight = future;
+    try {
+      return await future;
+    } finally {
+      _loginInFlight = null;
+    }
+  }
+
+  Future<bool> _doRestoreSession() async {
     final prefs = await SharedPreferences.getInstance();
     _imToken = prefs.getString(_imTokenKey);
     _imUserId = prefs.getString(_imUserIdKey);
@@ -175,7 +209,7 @@ class IMService {
         return true;
       } catch (e) {
         debugPrint('[IM] 恢复会话失败, 尝试重新获取 token: $e');
-        return await login();
+        return await _doLogin();
       }
     }
     return false;
@@ -184,10 +218,19 @@ class IMService {
   // ---------- 消息操作 ----------
 
   /// 发送文本消息
+  /// [userID] 1:1 单聊收件人；与 [groupID] 二选一
+  /// [groupID] 群聊群 ID；与 [userID] 二选一
   Future<Message?> sendTextMessage({
     required String conversationID,
     required String text,
+    String? userID,
+    String? groupID,
   }) async {
+    if ((userID == null || userID.isEmpty) &&
+        (groupID == null || groupID.isEmpty)) {
+      debugPrint('[IM] sendTextMessage: 必须提供 userID 或 groupID');
+      return null;
+    }
     try {
       final msg = await OpenIM.iMManager.messageManager.createTextMessage(
         text: text,
@@ -198,6 +241,8 @@ class IMService {
           title: '新消息',
           desc: text.length > 50 ? '${text.substring(0, 50)}...' : text,
         ),
+        userID: userID,
+        groupID: groupID,
       );
       return result;
     } catch (e) {
@@ -207,10 +252,18 @@ class IMService {
   }
 
   /// 发送图片消息
+  /// [userID] / [groupID] 二选一，参见 [sendTextMessage]
   Future<Message?> sendImageMessage({
     required String conversationID,
     required String imagePath,
+    String? userID,
+    String? groupID,
   }) async {
+    if ((userID == null || userID.isEmpty) &&
+        (groupID == null || groupID.isEmpty)) {
+      debugPrint('[IM] sendImageMessage: 必须提供 userID 或 groupID');
+      return null;
+    }
     try {
       final msg = await OpenIM.iMManager.messageManager.createImageMessageFromFullPath(
         imagePath: imagePath,
@@ -218,6 +271,8 @@ class IMService {
       return await OpenIM.iMManager.messageManager.sendMessage(
         message: msg,
         offlinePushInfo: OfflinePushInfo(title: '新消息', desc: '[图片]'),
+        userID: userID,
+        groupID: groupID,
       );
     } catch (e) {
       debugPrint('[IM] 发送图片失败: $e');
@@ -389,7 +444,17 @@ class IMService {
     try {
       final result = await OpenIM.iMManager.conversationManager
           .getTotalUnreadMsgCount();
-      unreadCountNotifier.value = (result is int) ? result : 0;
+      // SDK 文档说明 getTotalUnreadMsgCount 返回字符串形式的数字（int.tryParse）
+      // 老代码 `result is int` 永远返回 false，未读数永远为 0。
+      int count;
+      if (result is int) {
+        count = result;
+      } else if (result is String) {
+        count = int.tryParse(result) ?? 0;
+      } else {
+        count = int.tryParse('$result') ?? 0;
+      }
+      unreadCountNotifier.value = count;
     } catch (_) {}
   }
 

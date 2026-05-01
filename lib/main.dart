@@ -715,18 +715,21 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () async {
+                        // 捕获 across-async 用到的对象，避免 use_build_context_synchronously
+                        final messenger = ScaffoldMessenger.of(context);
+                        final navigator = Navigator.of(context);
                         if (!IMService.instance.isLoggedIn) {
                           final ok = await IMService.instance.login();
                           if (!mounted) return;
                           if (!ok) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               const SnackBar(content: Text('IM 连接失败，请稍后重试')),
                             );
                             return;
                           }
                         }
                         if (!mounted) return;
-                        Navigator.of(context).push(
+                        navigator.push(
                           MaterialPageRoute(
                               builder: (_) => const IMConversationPage()),
                         );

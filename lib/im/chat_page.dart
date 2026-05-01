@@ -5,11 +5,18 @@ import 'im_service.dart';
 import 'group_management.dart';
 
 /// 聊天页面 - 单聊/群聊消息界面
+///
+/// 注意：发送消息的 OpenIM SDK 需要 userID 或 groupID 作为收件人。
+/// conversationID 仅用于标记会话（拉历史/已读/撤回）。如果只传 conversationID，
+/// 消息会被以空收件人发送出去（旧 bug）。
 class IMChatPage extends StatefulWidget {
   final String conversationID;
   final String conversationName;
   final String? faceURL;
   final int conversationType; // 1=单聊, 3=群聊
+  // 收件人；单聊时填 userID，群聊时填 groupID。从 ConversationInfo 透传。
+  final String? userID;
+  final String? groupID;
 
   const IMChatPage({
     super.key,
@@ -17,6 +24,8 @@ class IMChatPage extends StatefulWidget {
     required this.conversationName,
     this.faceURL,
     this.conversationType = 1,
+    this.userID,
+    this.groupID,
   });
 
   @override
@@ -129,6 +138,8 @@ class _IMChatPageState extends State<IMChatPage> {
     final msg = await IMService.instance.sendTextMessage(
       conversationID: widget.conversationID,
       text: text,
+      userID: widget.userID,
+      groupID: widget.groupID,
     );
 
     if (mounted) {

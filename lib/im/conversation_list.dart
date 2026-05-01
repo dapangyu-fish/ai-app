@@ -272,6 +272,8 @@ class _IMConversationPageState extends State<IMConversationPage> {
                 conversationName: name,
                 faceURL: faceUrl,
                 conversationType: conv.conversationType ?? 1,
+                userID: conv.userID,
+                groupID: conv.groupID,
               ),
             ),
           ).then((_) => _loadConversations());
