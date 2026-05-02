@@ -641,6 +641,14 @@ def after_send_msg():
     sender_nickname = payload.get("senderNickname") or "新消息"
     content_type = int(payload.get("contentType") or 0)
     content_str = payload.get("content") or ""
+
+    # 只推用户可见的消息类型，跳过 typing / 已读回执 / 系统通知 / custom 等
+    # 101=text 102=picture 103=voice 104=video 105=file 106=@text 108=card
+    # 109=location 114=quote
+    PUSHABLE_CONTENT_TYPES = {101, 102, 103, 104, 105, 106, 108, 109, 114}
+    if content_type not in PUSHABLE_CONTENT_TYPES:
+        return jsonify({"errCode": 0, "errMsg": ""})
+
     body_text = _extract_msg_body_for_push(content_type, content_str)
 
     # 在线判断：在线就直接 short-circuit（OpenIM 自己会通过长连接送给在线 app）

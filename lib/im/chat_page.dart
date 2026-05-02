@@ -44,7 +44,6 @@ class _IMChatPageState extends State<IMChatPage> {
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = true;
-  bool _sending = false;
 
   StreamSubscription<Message>? _msgSub;
   StreamSubscription<RevokedInfo>? _revokedSub;
@@ -98,8 +97,28 @@ class _IMChatPageState extends State<IMChatPage> {
         _messages.removeWhere((m) => m.clientMsgID == info.clientMsgID);
       });
     });
-    _receiptSub = IMService.instance.c2cReceiptStream.listen((_) {
-      if (mounted) setState(() {}); // 刷新已读勾勾
+    _receiptSub = IMService.instance.c2cReceiptStream.listen((receipts) {
+      // OpenIM SDK 不会自动改本地内存里 Message.isRead，必须我们自己根据
+      // ReadReceiptInfo.msgIDList 把对应消息标已读，UI 才会刷新（之前空 setState
+      // 没用——msg.isRead 还是 false）。
+      if (!mounted) return;
+      final readIds = <String>{};
+      for (final r in receipts) {
+        // 只关心当前对话的 receipt（其他对话的别动）
+        if (r.userID != null && r.userID != widget.userID) continue;
+        for (final id in r.msgIDList ?? const <String>[]) {
+          readIds.add(id);
+        }
+      }
+      if (readIds.isEmpty) return;
+      setState(() {
+        for (var i = 0; i < _messages.length; i++) {
+          final m = _messages[i];
+          if (m.clientMsgID != null && readIds.contains(m.clientMsgID)) {
+            m.isRead = true;
+          }
+        }
+      });
     });
   }
 
@@ -155,28 +174,44 @@ class _IMChatPageState extends State<IMChatPage> {
     );
   }
 
+  /// 乐观 UI 发送文本：
+  ///   1. create 拿到本地 Message（status=sending） → 立刻插 list 显示
+  ///   2. 输入框清空，按钮立即可用，用户能继续敲下一条
+  ///   3. 后台 sendMessage 不阻塞 UI；回来后按 clientMsgID 找到那条更新 status
+  ///
+  /// 这样网慢/丢包不会卡住输入区，符合主流 IM 的体验
   Future<void> _sendText() async {
     final text = _inputController.text.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty) return;
 
     _inputController.clear();
-    setState(() => _sending = true);
-
-    final msg = await IMService.instance.sendTextMessage(
-      conversationID: widget.conversationID,
-      text: text,
-      userID: widget.userID,
-      groupID: widget.groupID,
-    );
+    final pending = await IMService.instance.createTextMessage(text);
 
     if (mounted) {
+      setState(() => _messages.insert(0, pending));
+    }
+
+    // 后台发，不阻塞 UI
+    unawaited(IMService.instance.sendPreparedMessage(
+      message: pending,
+      previewText: text,
+      userID: widget.userID,
+      groupID: widget.groupID,
+    ).then((sent) {
+      if (!mounted) return;
       setState(() {
-        _sending = false;
-        if (msg != null) {
-          _messages.insert(0, msg);
+        final idx = _messages.indexWhere((m) => m.clientMsgID == pending.clientMsgID);
+        if (idx < 0) return;
+        if (sent != null) {
+          // SDK 把状态改成 sendSuccess，且可能补 serverMsgID
+          _messages[idx] = sent;
+        } else {
+          // 发送失败：把本地这条标记为 failed（SDK 会改 pending.status 但保险显式改）
+          pending.status = MessageStatus.failed;
+          _messages[idx] = pending;
         }
       });
-    }
+    }));
   }
 
   @override
@@ -421,6 +456,17 @@ class _IMChatPageState extends State<IMChatPage> {
   }
 
   Widget _buildReadStatus(Message msg, ColorScheme cs) {
+    // 状态优先级：sending（转圈）→ sendFailed（红感叹）→ isRead（双勾）→ 默认（单勾）
+    final status = msg.status;
+    if (status == MessageStatus.sending) {
+      return SizedBox(
+        width: 12, height: 12,
+        child: CircularProgressIndicator(strokeWidth: 1.5, color: cs.outline),
+      );
+    }
+    if (status == MessageStatus.failed) {
+      return Icon(Icons.error_outline, size: 14, color: cs.error);
+    }
     final isRead = msg.isRead ?? false;
     return Icon(
       isRead ? Icons.done_all : Icons.done,
@@ -474,19 +520,10 @@ class _IMChatPageState extends State<IMChatPage> {
             ),
           ),
           const SizedBox(width: 4),
-          _sending
-              ? const SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  icon: Icon(Icons.send, color: cs.primary),
-                  onPressed: _sendText,
-                ),
+          IconButton(
+            icon: Icon(Icons.send, color: cs.primary),
+            onPressed: _sendText,
+          ),
         ],
       ),
     );

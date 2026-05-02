@@ -326,38 +326,58 @@ class IMService {
 
   // ---------- 消息操作 ----------
 
-  /// 发送文本消息
-  /// [userID] 1:1 单聊收件人；与 [groupID] 二选一
-  /// [groupID] 群聊群 ID；与 [userID] 二选一
+  /// 创建一条本地文本消息（不发送，只是 SDK 帮你拼好 Message 结构 + 分配 clientMsgID）
+  /// 给乐观 UI 用：先 create 拿到 Message → 立刻插入 list 显示 → 后台再 send
+  Future<Message> createTextMessage(String text) {
+    return OpenIM.iMManager.messageManager.createTextMessage(text: text);
+  }
+
+  /// 发送一条已经 create 好的消息（不再走 createXxxMessage 那一步）
+  /// 调用方拿到的 Message status 一开始是 sending，发送成功后 SDK 会把
+  /// 同一个 clientMsgID 的 Message 改成 sendSuccess（或 sendFailed）
+  /// 返回的 Message 就是更新后的版本（如果失败返回 null）
+  Future<Message?> sendPreparedMessage({
+    required Message message,
+    required String previewText,
+    String? userID,
+    String? groupID,
+  }) async {
+    if ((userID == null || userID.isEmpty) &&
+        (groupID == null || groupID.isEmpty)) {
+      debugPrint('[IM] sendPreparedMessage: 必须提供 userID 或 groupID');
+      return null;
+    }
+    try {
+      return await OpenIM.iMManager.messageManager.sendMessage(
+        message: message,
+        offlinePushInfo: OfflinePushInfo(
+          title: '新消息',
+          desc: previewText.length > 50 ? '${previewText.substring(0, 50)}...' : previewText,
+        ),
+        userID: userID,
+        groupID: groupID,
+      );
+    } catch (e) {
+      debugPrint('[IM] 发送失败: $e');
+      return null;
+    }
+  }
+
+  /// （旧路径，保留兼容）一次性发文本：create + send 都阻塞 await
+  /// 推荐用 createTextMessage + sendPreparedMessage 实现乐观 UI
   Future<Message?> sendTextMessage({
     required String conversationID,
     required String text,
     String? userID,
     String? groupID,
   }) async {
-    if ((userID == null || userID.isEmpty) &&
-        (groupID == null || groupID.isEmpty)) {
-      debugPrint('[IM] sendTextMessage: 必须提供 userID 或 groupID');
-      return null;
-    }
-    try {
-      final msg = await OpenIM.iMManager.messageManager.createTextMessage(
-        text: text,
-      );
-      final result = await OpenIM.iMManager.messageManager.sendMessage(
-        message: msg,
-        offlinePushInfo: OfflinePushInfo(
-          title: '新消息',
-          desc: text.length > 50 ? '${text.substring(0, 50)}...' : text,
-        ),
-        userID: userID,
-        groupID: groupID,
-      );
-      return result;
-    } catch (e) {
-      debugPrint('[IM] 发送文本失败: $e');
-      return null;
-    }
+    final msg = await createTextMessage(text);
+    return sendPreparedMessage(
+      message: msg,
+      previewText: text,
+      userID: userID,
+      groupID: groupID,
+    );
   }
 
   /// 发送图片消息
