@@ -57,6 +57,17 @@
 	<string>需要相册权限用于选择图片</string>
 	<key>NSCameraUsageDescription</key>
 	<string>需要相机权限用于拍照</string>
+	<!-- OpenIM 暂走 IP（无 SSL）；上线再改回 NSAllowsArbitraryLoads=false -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<!-- OpenIM 后台保活 / 后台收消息（暂不开 voip / fetch；后面接 APNs 时再开） -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

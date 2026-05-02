@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:http/http.dart' as http;
@@ -373,6 +374,128 @@ class IMService {
     }
   }
 
+  // ---------- 好友 / 联系人 ----------
+
+  /// 拉好友列表
+  Future<List<FriendInfo>> getFriendList() async {
+    try {
+      return await OpenIM.iMManager.friendshipManager.getFriendList();
+    } catch (e) {
+      debugPrint('[IM] 获取好友列表失败: $e');
+      return [];
+    }
+  }
+
+  /// 给指定 userID 发好友申请。OpenIM 默认走"申请-同意"流，对方在
+  /// `getFriendApplicationListAsRecipient` 里能看到。
+  /// [reqMsg] 申请附言（"我是 xxx"）。
+  Future<bool> sendFriendApplication({
+    required String userID,
+    String reqMsg = '',
+  }) async {
+    try {
+      await OpenIM.iMManager.friendshipManager.addFriend(
+        userID: userID,
+        reason: reqMsg,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[IM] 发送好友申请失败: $e');
+      return false;
+    }
+  }
+
+  /// 我收到的好友申请列表（待处理 / 历史）
+  Future<List<FriendApplicationInfo>> getIncomingFriendApplications() async {
+    try {
+      return await OpenIM.iMManager.friendshipManager
+          .getFriendApplicationListAsRecipient();
+    } catch (e) {
+      debugPrint('[IM] 获取收到的好友申请失败: $e');
+      return [];
+    }
+  }
+
+  /// 我发出的好友申请列表（待对方处理）
+  Future<List<FriendApplicationInfo>> getOutgoingFriendApplications() async {
+    try {
+      return await OpenIM.iMManager.friendshipManager
+          .getFriendApplicationListAsApplicant();
+    } catch (e) {
+      debugPrint('[IM] 获取发出的好友申请失败: $e');
+      return [];
+    }
+  }
+
+  /// 同意好友申请
+  Future<bool> acceptFriendApplication({
+    required String fromUserID,
+    String handleMsg = '',
+  }) async {
+    try {
+      await OpenIM.iMManager.friendshipManager.acceptFriendApplication(
+        userID: fromUserID,
+        handleMsg: handleMsg,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[IM] 同意好友申请失败: $e');
+      return false;
+    }
+  }
+
+  /// 拒绝好友申请
+  Future<bool> rejectFriendApplication({
+    required String fromUserID,
+    String handleMsg = '',
+  }) async {
+    try {
+      await OpenIM.iMManager.friendshipManager.refuseFriendApplication(
+        userID: fromUserID,
+        handleMsg: handleMsg,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[IM] 拒绝好友申请失败: $e');
+      return false;
+    }
+  }
+
+  /// 删除好友
+  Future<bool> deleteFriend(String userID) async {
+    try {
+      await OpenIM.iMManager.friendshipManager.deleteFriend(userID: userID);
+      return true;
+    } catch (e) {
+      debugPrint('[IM] 删除好友失败: $e');
+      return false;
+    }
+  }
+
+  /// 查 OpenIM 用户基础信息（用于"加好友"前先校验对方 user_id 真实存在）
+  /// 走后端 /api/im/users/lookup（后端有 admin token 才查得到陌生用户）
+  Future<Map<String, dynamic>?> lookupUser(String userID) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$_backendUrl/api/im/users/lookup?user_id=${Uri.encodeQueryComponent(userID)}'),
+        headers: {'Authorization': 'Bearer ${AuthService.token}'},
+      ).timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) {
+        debugPrint('[IM] lookupUser 失败 ${resp.statusCode}: ${resp.body}');
+        return null;
+      }
+      return json.decode(resp.body) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('[IM] lookupUser 异常: $e');
+      return null;
+    }
+  }
+
+  /// 监听好友申请到达（其它页面订阅这个 listener 实时刷新红点）
+  void setFriendshipListener(OnFriendshipListener listener) {
+    OpenIM.iMManager.friendshipManager.setFriendshipListener(listener);
+  }
+
   // ---------- FCM 推送 ----------
 
   /// 注册 FCM token
@@ -474,8 +597,22 @@ class IMService {
     await prefs.remove(_imApiUrlKey);
   }
 
+  // OpenIM 平台 ID：1=iOS 2=Android 3=Windows 4=macOS 5=Web 7=Linux 8=Android Pad 9=iPad
   int _getPlatformID() {
-    if (identical(0, 0.0)) return 5; // Web
-    return 8; // Flutter default
+    if (kIsWeb) return 5;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+        return 1;
+      case TargetPlatform.android:
+        return 2;
+      case TargetPlatform.windows:
+        return 3;
+      case TargetPlatform.macOS:
+        return 4;
+      case TargetPlatform.linux:
+        return 7;
+      default:
+        return 5; // 兜底用 Web，后端不在意精确值，只要不撞群聊一致性就行
+    }
   }
 }

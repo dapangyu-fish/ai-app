@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'im_service.dart';
 import 'chat_page.dart';
+import 'friend_page.dart';
 
 /// 会话列表页面 - 类似微信消息列表
 class IMConversationPage extends StatefulWidget {
@@ -108,6 +109,15 @@ class _IMConversationPageState extends State<IMConversationPage> {
         title: const Text('消息'),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.contacts_outlined),
+            tooltip: '联系人',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const IMFriendPage()),
+              ).then((_) => _loadConversations());
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.group_add),
             tooltip: '创建群聊',

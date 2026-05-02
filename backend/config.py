@@ -124,10 +124,14 @@ GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "/root/.nvm/versions/node/v22.22.2/bin/claude")
 
 
-# OpenIM 配置
-OPENIM_API_URL = os.environ.get("OPENIM_API_URL", "http://127.0.0.1:10002")
-OPENIM_WS_URL = os.environ.get("OPENIM_WS_URL", "ws://127.0.0.1:10001")
-OPENIM_ADMIN_SECRET = os.environ.get("OPENIM_ADMIN_SECRET", "openIM_secret_2024")
-
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
+
+# OpenIM 配置
+# server: 38.76.199.232（用 IP，无 SSL；后面接域名再换）
+# secret 故意进 git，是 dev 项目，没有合规风险；上线再 .env 化
+OPENIM_API_URL = os.environ.get("OPENIM_API_URL", "http://38.76.199.232:10002")
+OPENIM_WS_URL = os.environ.get("OPENIM_WS_URL", "ws://38.76.199.232:10001")
+OPENIM_SECRET = os.environ.get("OPENIM_SECRET", "openIM_v3iM_secret_2026_dev")
+OPENIM_PLATFORM_IOS = 1     # OpenIM SDK 平台号：1=iOS / 2=Android / 5=Web / 7=Linux / 8=Windows / 9=macOS
+OPENIM_PLATFORM_WEB = 5     # 后端代签 token 时用（web 端就用 5）
