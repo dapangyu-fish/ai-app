@@ -718,6 +718,15 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                         // 捕获 across-async 用到的对象，避免 use_build_context_synchronously
                         final messenger = ScaffoldMessenger.of(context);
                         final navigator = Navigator.of(context);
+                        if (!IMService.isPlatformSupported) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('IM 仅支持 iOS / Android（OpenIM SDK 限制）。请在 iOS 模拟器或真机上运行。'),
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                          return;
+                        }
                         if (!IMService.instance.isLoggedIn) {
                           final ok = await IMService.instance.login();
                           if (!mounted) return;

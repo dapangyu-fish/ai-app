@@ -38,6 +38,15 @@ class IMService {
   bool get isLoggedIn => _loggedIn;
   String? get currentUserId => _imUserId;
 
+  /// flutter_openim_sdk 仅支持 iOS / Android。
+  /// macOS / Web / Windows / Linux 调任何 OpenIM 方法都会抛 MissingPluginException。
+  /// 上层用这个 flag 决定要不要展示消息入口 / 直接 short-circuit login。
+  static bool get isPlatformSupported {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.android;
+  }
+
   /// 初始化 SDK (App 启动时调用一次)
   ///
   /// 注意：dataDir 必须传可写目录（iOS 沙盒不允许写根目录 / 上）。
@@ -134,6 +143,10 @@ class IMService {
   /// 幂等：已登录时直接返回 true；进行中时返回同一个 future，避免 `_AuthGate`
   /// 重 build 时多次发起登录请求。
   Future<bool> login() async {
+    if (!isPlatformSupported) {
+      // macOS / Web / Windows / Linux —— SDK 不支持，直接 short-circuit
+      return false;
+    }
     if (!AuthService.isLoggedIn) return false;
     if (_loggedIn) return true;
     if (_loginInFlight != null) return _loginInFlight!;
@@ -198,6 +211,7 @@ class IMService {
   /// 与 [login] 共享 `_loginInFlight`，避免和 `_AuthGate` 触发的 login()
   /// 同时跑出两条登录链路。
   Future<bool> restoreSession() async {
+    if (!isPlatformSupported) return false;
     if (_loggedIn) return true;
     if (_loginInFlight != null) return _loginInFlight!;
 
