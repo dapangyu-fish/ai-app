@@ -331,6 +331,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.2"
+  flutter_openim_sdk:
+    dependency: "direct main"
+    description:
+      name: flutter_openim_sdk
+      sha256: b57d1fd63f52fa5cbd7c257fccc9d04902c266e96172f5112c00b428af2f2ff5
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.8.3+hotfix.12"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -463,6 +471,7 @@ packages:
     version: "0.2.2"
   intl:
     dependency: "direct main"
+    dependency: transitive
     description:
       name: intl
       sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"

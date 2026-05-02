@@ -87,6 +87,9 @@ dependencies:
   permission_handler: ^11.3.0 # @request_permission / @permission_status
   local_auth: ^2.3.0          # @biometric_auth
 
+  # IM messaging (OpenIM)
+  flutter_openim_sdk: ^3.8.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
