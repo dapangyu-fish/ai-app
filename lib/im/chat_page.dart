@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'im_service.dart';
 import 'group_management.dart';
+import 'message_preview.dart';
 
 /// 聊天页面 - 单聊/群聊消息界面
 ///
@@ -223,6 +224,23 @@ class _IMChatPageState extends State<IMChatPage> {
   }
 
   Widget _buildMessageBubble(Message msg, ColorScheme cs) {
+    // 系统通知（加好友 / 群组变更 / 撤回 / OA 等）—— 居中灰文，不画头像气泡
+    if (isSystemNotification(msg.contentType)) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Center(
+          child: Text(
+            systemMessageDisplay(msg),
+            style: TextStyle(
+              color: cs.outline,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
+    }
+
     final isMe = msg.sendID == IMService.instance.currentUserId;
     final time = _formatMsgTime(msg.sendTime);
     final senderName = msg.senderNickname ?? '';
@@ -373,11 +391,11 @@ class _IMChatPageState extends State<IMChatPage> {
                 overflow: TextOverflow.ellipsis),
           ],
         );
-      case MessageType.revokeMessageNotification:
-        return Text('消息已撤回',
-            style: TextStyle(color: textColor.withAlpha(150), fontStyle: FontStyle.italic));
       default:
-        return Text('[不支持的消息类型]', style: TextStyle(color: textColor));
+        // 其余罕见类型（card / merger / location / customFace / quote / advancedText / custom 等）
+        // 走 message_preview 的标准映射，至少给个有意义的中文 placeholder。
+        // 系统通知在 _buildMessageBubble 顶部已经被拦截，这里走不到。
+        return Text(previewMessage(msg), style: TextStyle(color: textColor));
     }
   }
 

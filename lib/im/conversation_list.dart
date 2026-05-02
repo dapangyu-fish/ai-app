@@ -3,6 +3,7 @@ import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'im_service.dart';
 import 'chat_page.dart';
 import 'friend_page.dart';
+import 'message_preview.dart';
 
 /// 会话列表页面 - 类似微信消息列表
 class IMConversationPage extends StatefulWidget {
@@ -76,29 +77,8 @@ class _IMConversationPageState extends State<IMConversationPage> {
     return '${dt.month}/${dt.day}';
   }
 
-  String _getLastMessageContent(ConversationInfo conv) {
-    final msg = conv.latestMsg;
-    if (msg == null) return '';
-
-    switch (msg.contentType) {
-      case MessageType.text:
-        return msg.textElem?.content ?? '';
-      case MessageType.picture:
-        return '[图片]';
-      case MessageType.video:
-        return '[视频]';
-      case MessageType.voice:
-        return '[语音]';
-      case MessageType.file:
-        return '[文件]';
-      case MessageType.location:
-        return '[位置]';
-      case MessageType.revokeMessageNotification:
-        return '撤回了一条消息';
-      default:
-        return '[消息]';
-    }
-  }
+  String _getLastMessageContent(ConversationInfo conv) =>
+      previewMessage(conv.latestMsg);
 
   @override
   Widget build(BuildContext context) {
