@@ -525,6 +525,27 @@ class IMService {
     }
   }
 
+  /// 搜索用户。q 可以是 email / username / uuid（带或不带 hyphen）模糊匹配。
+  /// 至少 2 个字符才发请求；返回每条 {im_user_id, nickname, email, face_url}
+  Future<List<Map<String, dynamic>>> searchUsers(String q) async {
+    if (q.trim().length < 2) return const [];
+    try {
+      final resp = await http.get(
+        Uri.parse('$_backendUrl/api/im/users/search?q=${Uri.encodeQueryComponent(q.trim())}'),
+        headers: {'Authorization': 'Bearer ${AuthService.token}'},
+      ).timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) {
+        debugPrint('[IM] searchUsers 失败 ${resp.statusCode}: ${resp.body}');
+        return const [];
+      }
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      return List<Map<String, dynamic>>.from(data['users'] ?? const []);
+    } catch (e) {
+      debugPrint('[IM] searchUsers 异常: $e');
+      return const [];
+    }
+  }
+
   /// 监听好友申请到达（其它页面订阅这个 listener 实时刷新红点）
   void setFriendshipListener(OnFriendshipListener listener) {
     OpenIM.iMManager.friendshipManager.setFriendshipListener(listener);

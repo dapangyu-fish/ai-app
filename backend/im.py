@@ -25,12 +25,13 @@ import logging
 import threading
 import requests
 from flask import jsonify, request
-from auth import require_auth
+from auth import require_auth, _service_headers
 from config import (
     OPENIM_API_URL,
     OPENIM_WS_URL,
     OPENIM_SECRET,
     OPENIM_PLATFORM_WEB,
+    SUPABASE_URL,
 )
 
 logger = logging.getLogger(__name__)
@@ -244,3 +245,133 @@ def lookup_user():
         "nickname": u.get("nickname", ""),
         "face_url": u.get("faceURL", ""),
     })
+
+
+# ============================================================
+# 用户搜索（加好友用）
+# ============================================================
+
+# 缓存 Supabase 用户表，60 秒过期一次
+# 因为 admin/users 接口没有"模糊搜索"参数，得拉全表然后内存里 filter。
+# 几十-几百用户量级 OK，上千就要换成数据库直接查。
+_users_cache = {"users": None, "expires_at": 0.0}
+_users_cache_lock = threading.Lock()
+_USERS_CACHE_TTL = 60.0
+
+
+def _list_supabase_users(force_refresh: bool = False):
+    """拉 Supabase 全部用户。带缓存，避免每次搜索都打 Admin API"""
+    now = time.time()
+    if not force_refresh:
+        with _users_cache_lock:
+            if _users_cache["users"] is not None and _users_cache["expires_at"] > now:
+                return _users_cache["users"]
+
+    # Supabase Admin API 默认 50 条 / 页，per_page 最大 1000
+    resp = requests.get(
+        f"{SUPABASE_URL}/auth/v1/admin/users",
+        headers=_service_headers(),
+        params={"per_page": 1000},
+        timeout=10,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"Supabase admin/users HTTP {resp.status_code}: {resp.text[:200]}")
+
+    users = resp.json().get("users", [])
+    with _users_cache_lock:
+        _users_cache["users"] = users
+        _users_cache["expires_at"] = now + _USERS_CACHE_TTL
+    return users
+
+
+@require_auth
+def search_users():
+    """
+    GET /api/im/users/search?q=xxx[&limit=20]
+
+    给"加好友"的搜索框用：
+      - q 是 email 前缀 / username 前缀 / 完整 user_id（带或不带 hyphen 都行）
+      - 三种字段都试一遍，模糊匹配（ILIKE %q%），合并结果
+      - 排除当前登录用户自己
+      - 默认返回前 20 条
+
+    每条返回：
+      { im_user_id, nickname, email, face_url }
+        im_user_id 是去掉 - 的形式，可直接用于 OpenIM 操作。
+    """
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        # 至少两个字符才搜，避免误触全列表
+        return jsonify({"users": []})
+
+    try:
+        limit = max(1, min(50, int(request.args.get("limit", "20"))))
+    except (TypeError, ValueError):
+        limit = 20
+
+    me_id = str(request.supabase_user.get("id", ""))
+    me_im_id = _to_im_user_id(me_id)
+
+    try:
+        all_users = _list_supabase_users()
+    except RuntimeError as e:
+        logger.error(f"[IM] search users 拉表失败: {e}")
+        return jsonify({"error": str(e)}), 502
+
+    q_lower = q.lower()
+    q_no_hyphen = q.replace("-", "").lower()
+
+    matches = []
+    for u in all_users:
+        uid = str(u.get("id", ""))
+        if uid == me_id:
+            continue  # 排除自己
+
+        email = (u.get("email") or "").lower()
+        meta = u.get("user_metadata") or {}
+        username = (meta.get("username") or "").lower()
+        avatar_url = meta.get("avatar_url") or ""
+
+        # 三种字段任一匹配就算命中
+        hit = (
+            (email and q_lower in email) or
+            (username and q_lower in username) or
+            (uid and q_no_hyphen in uid.replace("-", "").lower())
+        )
+        if not hit:
+            continue
+
+        matches.append({
+            "im_user_id": _to_im_user_id(uid),
+            "nickname": meta.get("username") or email.split("@")[0] or uid[:8],
+            "email": u.get("email", ""),
+            "face_url": avatar_url,
+            # 一个相关性分数：完全匹配 > 前缀匹配 > 包含匹配，给客户端做排序参考
+            "_rank": _rank_user(u, q_lower, q_no_hyphen, me_im_id),
+        })
+        if len(matches) >= limit * 2:  # 多搜一点再排序裁剪
+            break
+
+    matches.sort(key=lambda x: x["_rank"])
+    matches = matches[:limit]
+    for m in matches:
+        m.pop("_rank", None)
+
+    return jsonify({"users": matches})
+
+
+def _rank_user(u, q_lower: str, q_no_hyphen: str, me_im_id: str) -> int:
+    """越小越靠前。完全匹配 / 前缀 / 包含 各档分。"""
+    uid = str(u.get("id", ""))
+    email = (u.get("email") or "").lower()
+    username = ((u.get("user_metadata") or {}).get("username") or "").lower()
+    uid_no_hyphen = uid.replace("-", "").lower()
+
+    # 完全匹配
+    if uid_no_hyphen == q_no_hyphen or email == q_lower or username == q_lower:
+        return 0
+    # 前缀匹配
+    if email.startswith(q_lower) or username.startswith(q_lower):
+        return 1
+    # 包含匹配
+    return 2

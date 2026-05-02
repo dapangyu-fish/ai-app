@@ -17,6 +17,7 @@ import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'im_service.dart';
 import 'chat_page.dart';
 import 'create_group_page.dart';
+import 'add_friend_search_page.dart';
 
 class IMFriendPage extends StatefulWidget {
   const IMFriendPage({super.key});
@@ -77,7 +78,9 @@ class _IMFriendPageState extends State<IMFriendPage> {
             tooltip: '添加',
             onSelected: (v) {
               if (v == 'add_friend') {
-                _showAddFriendDialog();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AddFriendSearchPage()),
+                ).then((_) => _load());
               } else if (v == 'create_group') {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const CreateGroupPage()),
@@ -278,137 +281,6 @@ class _IMFriendPageState extends State<IMFriendPage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────
-  // 加好友弹窗
-  // ─────────────────────────────────────────────────────
-
-  Future<void> _showAddFriendDialog() async {
-    final idCtrl = TextEditingController();
-    final reasonCtrl = TextEditingController(text: '我想加你为好友');
-    Map<String, dynamic>? lookedUp;
-    bool checking = false;
-    String? error;
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) {
-          Future<void> doLookup() async {
-            final id = idCtrl.text.trim();
-            if (id.isEmpty) {
-              setLocal(() => error = '请输入对方 ID');
-              return;
-            }
-            if (id == _myUserId()) {
-              setLocal(() => error = '不能加自己为好友');
-              return;
-            }
-            setLocal(() {
-              checking = true;
-              error = null;
-              lookedUp = null;
-            });
-            final info = await IMService.instance.lookupUser(id);
-            setLocal(() {
-              checking = false;
-              if (info == null) {
-                error = '用户不存在或后端不可达';
-              } else {
-                lookedUp = info;
-              }
-            });
-          }
-
-          return AlertDialog(
-            title: const Text('加好友'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: idCtrl,
-                  decoration: InputDecoration(
-                    labelText: '对方 ID',
-                    hintText: 'UUID 字符串',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    suffixIcon: checking
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 16, height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.search),
-                            onPressed: doLookup,
-                          ),
-                  ),
-                  onSubmitted: (_) => doLookup(),
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
-                ],
-                if (lookedUp != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Theme.of(ctx).colorScheme.primaryContainer.withAlpha(120),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${lookedUp!['nickname'] ?? '(无昵称)'}',
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                TextField(
-                  controller: reasonCtrl,
-                  decoration: InputDecoration(
-                    labelText: '附言',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  maxLines: 2,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-              FilledButton(
-                onPressed: lookedUp == null ? null : () => Navigator.pop(ctx, true),
-                child: const Text('发送申请'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    if (ok != true || lookedUp == null) return;
-
-    final success = await IMService.instance.sendFriendApplication(
-      userID: lookedUp!['user_id'] as String,
-      reqMsg: reasonCtrl.text.trim(),
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(success ? '申请已发送，等对方同意' : '申请发送失败'),
-        backgroundColor: success ? null : Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
 }
 
 // ============================================================
