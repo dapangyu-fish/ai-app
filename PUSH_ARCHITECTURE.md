@@ -19,7 +19,7 @@
                                    │     senderNickname, ... }
                                    ▼
                        ┌──────────────────────────┐
-                       │  我们的 Flask 后端        │  app-backend.dapangyu.work
+                       │  我们的 Flask 后端        │  myapp-backend.dapangyu.work
                        │  /api/im/after_send_msg   │
                        │                           │
                        │  ③ 查 OpenIM API:         │
@@ -64,7 +64,7 @@ OpenIM v3.8 有 6+ 个 webhook 钩子。我们曾试过 `beforeOfflinePush`，**
 ### 1. OpenIM webhook 配置（`webhooks.yml`）
 
 ```yaml
-url: https://app-backend.dapangyu.work/api/im/after_send_msg?secret=<OPENIM_WEBHOOK_SECRET>
+url: https://myapp-backend.dapangyu.work/api/im/after_send_msg?secret=<OPENIM_WEBHOOK_SECRET>
 afterSendSingleMsg:
   enable: true
   timeout: 5

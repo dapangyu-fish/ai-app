@@ -1032,7 +1032,7 @@ class _MarketPageState extends State<_MarketPage> {
       // 根据当前选中的 Tab 获取对应类型的包
       final type = _selectedTabIndex == 0 ? 'app' : 'library';
       final resp = await http
-          .get(Uri.parse('https://registry.dapangyu.work/packages?type=$type'))
+          .get(Uri.parse('https://myapp-registry.dapangyu.work/packages?type=$type'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
@@ -1232,7 +1232,7 @@ class _MarketPageState extends State<_MarketPage> {
       if (token == null) throw Exception(t.errorNotLoggedIn);
 
       final resp = await http.delete(
-        Uri.parse('https://registry.dapangyu.work/package/$packageName'),
+        Uri.parse('https://myapp-registry.dapangyu.work/package/$packageName'),
         headers: {'Authorization': 'Bearer $token'},
       ).timeout(const Duration(seconds: 10));
 
@@ -2011,7 +2011,7 @@ class _PublishDialog extends StatefulWidget {
 }
 
 class _PublishDialogState extends State<_PublishDialog> {
-  final _registryUrl = 'https://registry.dapangyu.work';
+  final _registryUrl = 'https://myapp-registry.dapangyu.work';
 
   List<Map<String, dynamic>>? _namespaces;
   String? _selectedNamespace;

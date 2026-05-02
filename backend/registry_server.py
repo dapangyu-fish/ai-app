@@ -5,7 +5,7 @@ JSON-DSL Registry Server
 
 启动: python backend/registry_server.py
 端口: 3254
-域名: https://registry.dapangyu.work
+域名: https://myapp-registry.dapangyu.work
 """
 
 import io

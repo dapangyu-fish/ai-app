@@ -33,7 +33,7 @@ class TestSherpaPage extends StatefulWidget {
 }
 
 class _TestSherpaPageState extends State<TestSherpaPage> {
-  static const String _ossBase = 'https://app-oss-endpoint.dapangyu.work/models';
+  static const String _ossBase = 'https://myapp-oss-endpoint.dapangyu.work/models';
   static const String _modelPath = 'sherpa-onnx/streaming-zipformer-small-bilingual-zh-en-int8';
   static const Map<String, String> _modelFiles = {
     'encoder': 'encoder-epoch-99-avg-1.int8.onnx',

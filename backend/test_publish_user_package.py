@@ -11,7 +11,7 @@ import urllib3
 # 禁用 SSL 警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-REGISTRY_URL = "https://registry.dapangyu.work"
+REGISTRY_URL = "https://myapp-registry.dapangyu.work"
 
 # 测试用的认证 token
 HEADERS = {

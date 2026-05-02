@@ -7,7 +7,7 @@ import os
 import requests
 from pathlib import Path
 
-REGISTRY_URL = "https://registry.dapangyu.work"
+REGISTRY_URL = "https://myapp-registry.dapangyu.work"
 TOKEN = "test-token"  # 使用管理员测试 token
 
 def publish_template(file_path):

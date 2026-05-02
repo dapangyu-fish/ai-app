@@ -108,7 +108,7 @@ Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notif
 ### 连接信息
 
 - 服务器内网地址: `127.0.0.1:9000`（仅服务器本地访问）
-- 公网地址: `https://app-oss-endpoint.dapangyu.work`
+- 公网地址: `https://myapp-oss-endpoint.dapangyu.work`
 - Access Key: `m3wZkIA5EgmEwkctueZM`
 - Secret Key: `m9M7M70F6SpsQxTZZ6roLklq33AUMV8mzAm1RJGk`
 - Bucket 列表: `json-app`、`json-component`、`models`
@@ -118,7 +118,7 @@ Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notif
 通过 SSH 登录服务器，使用 Python minio SDK 上传：
 
 ```bash
-ssh root@app-backend.dapangyu.work
+ssh root@myapp-backend.dapangyu.work
 
 /opt/miniconda3/bin/python3 << 'EOF'
 from minio import Minio
@@ -142,7 +142,7 @@ EOF
 1. 先将文件下载到服务器 `/mnt/storage00/`（服务器带宽大，比本地快）
 2. 如果是压缩包，在服务器上解压（`tar xjf xxx.tar.bz2 --exclude='test_wavs'`）
 3. SSH 到服务器，用 minio SDK 将解压后的**单个文件**逐个上传到对应 bucket 和路径
-4. 客户端代码按单个文件从 `https://app-oss-endpoint.dapangyu.work/<bucket>/<path>` 下载
+4. 客户端代码按单个文件从 `https://myapp-oss-endpoint.dapangyu.work/<bucket>/<path>` 下载
 
 **注意**: 不要上传压缩包本身，客户端是按单个文件下载的。上传前先看客户端代码确认需要哪些文件和目录结构。
 
@@ -176,7 +176,7 @@ python3 backend/publish_script.py lib_user.json --token <admin_token>
 
 **首次发布前，创建命名空间**：
 ```bash
-curl -X POST https://registry.dapangyu.work/namespace/create \
+curl -X POST https://myapp-registry.dapangyu.work/namespace/create \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <user_token>" \
   -d '{
@@ -187,7 +187,7 @@ curl -X POST https://registry.dapangyu.work/namespace/create \
 
 **发布包**：
 ```bash
-curl -X POST https://registry.dapangyu.work/publish \
+curl -X POST https://myapp-registry.dapangyu.work/publish \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <user_token>" \
   -d '{
@@ -228,7 +228,7 @@ curl -X POST https://registry.dapangyu.work/publish \
 
 ### Registry 服务信息
 
-- **域名**: https://registry.dapangyu.work
+- **域名**: https://myapp-registry.dapangyu.work
 - **端口**: 3254
 - **文档**: `backend/REGISTRY_README.md`
 - **健康检查**: `GET /health`

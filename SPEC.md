@@ -144,8 +144,8 @@ conn = psycopg2.connect(...)  # 禁止！
 **配置**：
 ```python
 # backend/config.py
-MINIO_PUBLIC_URL = "https://app-oss-endpoint.dapangyu.work"
-MINIO_ENDPOINT = "app-oss-endpoint.dapangyu.work"
+MINIO_PUBLIC_URL = "https://myapp-oss-endpoint.dapangyu.work"
+MINIO_ENDPOINT = "myapp-oss-endpoint.dapangyu.work"
 MINIO_ACCESS_KEY = "..."
 MINIO_SECRET_KEY = "..."
 ```
@@ -596,7 +596,7 @@ def get_namespaces():
 **必需的环境变量**：
 ```bash
 # Supabase
-SUPABASE_URL=https://app-auth.dapangyu.work
+SUPABASE_URL=https://myapp-auth.dapangyu.work
 SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_KEY=...
 
@@ -608,7 +608,7 @@ DB_USER=jsonapp
 DB_PASSWORD=...
 
 # MinIO
-MINIO_PUBLIC_URL=https://app-oss-endpoint.dapangyu.work
+MINIO_PUBLIC_URL=https://myapp-oss-endpoint.dapangyu.work
 MINIO_ACCESS_KEY=...
 MINIO_SECRET_KEY=...
 

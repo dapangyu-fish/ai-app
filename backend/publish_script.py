@@ -5,7 +5,7 @@ import os
 import sys
 import argparse
 
-URL = "https://registry.dapangyu.work/publish"
+URL = "https://myapp-registry.dapangyu.work/publish"
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates")
 
 def publish(filename, token="test-token", force=True):

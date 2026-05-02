@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 videos/
+
+# backend secrets — manage manually via scp
+backend/.env

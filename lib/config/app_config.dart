@@ -13,28 +13,28 @@ class AppConfig {
   /// 后端API服务器地址
   ///
   /// 开发环境：http://localhost:5566 或 http://127.0.0.1:5566
-  /// 生产环境：https://app-backend.dapangyu.work
+  /// 生产环境：https://myapp-backend.dapangyu.work
   static const String backendUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'https://app-backend.dapangyu.work',
+    defaultValue: 'https://myapp-backend.dapangyu.work',
   );
 
   /// Supabase认证服务器地址
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://app-auth.dapangyu.work',
+    defaultValue: 'https://myapp-auth.dapangyu.work',
   );
 
   /// MinIO对象存储服务器地址
   static const String minioUrl = String.fromEnvironment(
     'MINIO_URL',
-    defaultValue: 'https://app-oss-endpoint.dapangyu.work',
+    defaultValue: 'https://myapp-oss-endpoint.dapangyu.work',
   );
 
   /// 组件注册中心地址
   static const String registryUrl = String.fromEnvironment(
     'REGISTRY_URL',
-    defaultValue: 'https://registry.dapangyu.work',
+    defaultValue: 'https://myapp-registry.dapangyu.work',
   );
 
   // ==================== API端点配置 ====================

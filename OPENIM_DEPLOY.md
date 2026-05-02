@@ -5,7 +5,7 @@
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  iOS / Android / Web 客户端                              │
-│   ├─ POST /api/im/token  →  app-backend.dapangyu.work   │
+│   ├─ POST /api/im/token  →  myapp-backend.dapangyu.work   │
 │   └─ WS / API           →  38.76.199.232:10001 / 10002 │
 └──────────────────────────────────────────────────────────┘
             │                                │
@@ -78,7 +78,7 @@ curl -X POST http://38.76.199.232:10002/auth/get_user_token \
   -d '{"secret":"openIM_v3iM_secret_2026_dev","platformID":1,"userID":"smoketest001"}'
 ```
 
-## 后端集成（app-backend.dapangyu.work）
+## 后端集成（myapp-backend.dapangyu.work）
 
 后端通过 `backend/im.py` 提供两个路由：
 - `POST /api/im/token` —— 客户端登录后调，业务 token 换 IM token
@@ -87,7 +87,7 @@ curl -X POST http://38.76.199.232:10002/auth/get_user_token \
 **部署**：
 ```bash
 # 在本机 push 代码到 origin/feat/openim-messaging 后
-ssh root@app-backend.dapangyu.work
+ssh root@myapp-backend.dapangyu.work
 cd /root/ai-app && git pull   # 或 scp 单个文件
 supervisorctl restart ai-app
 tail -f /var/log/ai-app/ai-app.log    # 看启动日志中是否有 "IM: /api/im/{token,users/lookup}"

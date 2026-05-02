@@ -59,7 +59,7 @@ with open(file_path, 'rb') as f:
     data = f.read()
 
 # MinIO 配置
-endpoint = os.environ.get('MINIO_PUBLIC_URL', 'https://app-oss-endpoint.dapangyu.work').split('://')[-1]
+endpoint = os.environ.get('MINIO_PUBLIC_URL', 'https://myapp-oss-endpoint.dapangyu.work').split('://')[-1]
 access_key = os.environ.get('MINIO_ACCESS_KEY', '')
 secret_key = os.environ.get('MINIO_SECRET_KEY', '')
 
