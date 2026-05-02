@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import '../i18n/framework_strings.dart';
 import 'im_models.dart';
 
 /// 群组管理页面 — 群详情、成员管理、群设置
@@ -65,10 +66,11 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('群聊设置'),
+        title: Text(s.imGroupSettings),
         centerTitle: true,
       ),
       body: _loading
@@ -82,7 +84,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
                       const SizedBox(height: 16),
                       Text(_error!, style: TextStyle(color: cs.outline)),
                       const SizedBox(height: 16),
-                      FilledButton(onPressed: _loadGroupInfo, child: const Text('重试')),
+                      FilledButton(onPressed: _loadGroupInfo, child: Text(s.retry)),
                     ],
                   ),
                 )
@@ -91,6 +93,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
   }
 
   Widget _buildContent(ColorScheme cs) {
+    final s = T.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -115,7 +118,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${_members.length} 名成员',
+                T.fmt(s.imMemberCount, {'n': _members.length}),
                 style: TextStyle(color: cs.outline),
               ),
             ],
@@ -135,7 +138,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
                     children: [
                       Icon(Icons.campaign, size: 18, color: cs.primary),
                       const SizedBox(width: 8),
-                      Text('群公告', style: TextStyle(fontWeight: FontWeight.w600, color: cs.primary)),
+                      Text(s.imGroupNotice, style: TextStyle(fontWeight: FontWeight.w600, color: cs.primary)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -153,7 +156,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
             children: [
               ListTile(
                 leading: Icon(Icons.people, color: cs.primary),
-                title: const Text('群成员'),
+                title: Text(s.imGroupMembers),
                 trailing: Text('${_members.length}', style: TextStyle(color: cs.outline)),
               ),
               const Divider(height: 1),
@@ -182,7 +185,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
                           color: cs.tertiaryContainer,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text('群主', style: TextStyle(fontSize: 10, color: cs.onTertiaryContainer)),
+                        child: Text(s.imGroupOwnerLabel, style: TextStyle(fontSize: 10, color: cs.onTertiaryContainer)),
                       ),
                     ] else if (member.role == 2) ...[
                       const SizedBox(width: 6),
@@ -192,7 +195,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
                           color: cs.secondaryContainer,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text('管理员', style: TextStyle(fontSize: 10, color: cs.onSecondaryContainer)),
+                        child: Text(s.imGroupAdminLabel, style: TextStyle(fontSize: 10, color: cs.onSecondaryContainer)),
                       ),
                     ],
                   ],
@@ -207,7 +210,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
         OutlinedButton.icon(
           onPressed: _showInviteDialog,
           icon: const Icon(Icons.person_add),
-          label: const Text('邀请成员'),
+          label: Text(s.imInviteMembers),
         ),
         const SizedBox(height: 8),
 
@@ -215,7 +218,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
         FilledButton.icon(
           onPressed: _confirmQuitGroup,
           icon: const Icon(Icons.exit_to_app),
-          label: const Text('退出群聊'),
+          label: Text(s.imLeaveGroup),
           style: FilledButton.styleFrom(
             backgroundColor: cs.error,
             foregroundColor: cs.onError,
@@ -226,21 +229,22 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
   }
 
   void _showInviteDialog() {
+    final s = T.of(context);
     final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('邀请成员'),
+        title: Text(s.imInviteMembers),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            labelText: '用户 ID',
-            hintText: '输入要邀请的用户 ID',
+            labelText: s.imUserIdLabel,
+            hintText: s.imUserIdHint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(s.cancel)),
           FilledButton(
             onPressed: () async {
               final uid = controller.text.trim();
@@ -253,19 +257,19 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
                 );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('邀请已发送')),
+                    SnackBar(content: Text(s.imInviteSent)),
                   );
                   _loadGroupInfo();
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('邀请失败: $e')),
+                    SnackBar(content: Text(T.fmt(s.imInviteFailedWith, {'err': e}))),
                   );
                 }
               }
             },
-            child: const Text('邀请'),
+            child: Text(s.imInviteMembers),
           ),
         ],
       ),
@@ -273,13 +277,15 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
   }
 
   void _confirmQuitGroup() {
+    final s = T.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('退出群聊'),
-        content: Text('确定退出「${_groupInfo?.groupName ?? widget.groupName}」？'),
+        title: Text(s.imLeaveGroup),
+        content: Text(T.fmt(s.imLeaveGroupConfirmContent,
+            {'name': _groupInfo?.groupName ?? widget.groupName})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(s.cancel)),
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -292,7 +298,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('退出失败: $e')),
+                    SnackBar(content: Text(T.fmt(s.imLeaveFailedWith, {'err': e}))),
                   );
                 }
               }
@@ -301,7 +307,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
-            child: const Text('确定退出'),
+            child: Text(s.imConfirmLeave),
           ),
         ],
       ),

@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import '../i18n/framework_strings.dart';
 import 'chat_page.dart';
 import 'im_service.dart';
 
@@ -68,7 +69,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     if (group == null || group.groupID.isEmpty) {
       setState(() => _creating = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('创建群聊失败，请重试')),
+        SnackBar(content: Text(T.of(context).imCreateGroupFailed)),
       );
       return;
     }
@@ -92,10 +93,11 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('创建群聊'),
+        title: Text(s.imCreateGroupTitle),
         actions: [
           TextButton(
             onPressed: _canSubmit ? _submit : null,
@@ -104,7 +106,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                     width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('创建'),
+                : Text(s.imCreate),
           ),
         ],
       ),
@@ -118,8 +120,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                   child: TextField(
                     controller: _nameCtrl,
                     decoration: InputDecoration(
-                      labelText: '群名称',
-                      hintText: '给群聊起个名字',
+                      labelText: s.imGroupNameLabel,
+                      hintText: s.imGroupNameHint,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onChanged: (_) => setState(() {}),
@@ -131,9 +133,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                   child: Row(
                     children: [
-                      Text('选择成员', style: TextStyle(color: cs.outline)),
+                      Text(s.imSelectMembers, style: TextStyle(color: cs.outline)),
                       const Spacer(),
-                      Text('已选 ${_selected.length} 人',
+                      Text(T.fmt(s.imSelectedCount, {'n': _selected.length}),
                           style: TextStyle(color: cs.primary, fontWeight: FontWeight.w500)),
                     ],
                   ),
@@ -148,9 +150,9 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                             children: [
                               Icon(Icons.people_outline, size: 56, color: cs.outline),
                               const SizedBox(height: 12),
-                              Text('还没有好友', style: TextStyle(color: cs.outline)),
+                              Text(s.imEmptyFriends, style: TextStyle(color: cs.outline)),
                               const SizedBox(height: 4),
-                              Text('要先加几个好友才能建群',
+                              Text(s.imEmptyFriendsForGroupHint,
                                   style: TextStyle(color: cs.outline, fontSize: 13)),
                             ],
                           ),

@@ -8,6 +8,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../i18n/framework_strings.dart';
 import 'im_service.dart';
 
 class AddFriendSearchPage extends StatefulWidget {
@@ -67,13 +68,15 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
     final imUserId = user['im_user_id'] as String? ?? '';
     if (imUserId.isEmpty || imUserId == _myUserId) return;
 
-    final reasonCtrl = TextEditingController(text: '我想加你为好友');
+    final s = T.of(context);
+    final reasonCtrl = TextEditingController(text: s.imAddFriendDefaultGreeting);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
+        final ds = T.of(ctx);
         return AlertDialog(
-          title: const Text('发送好友申请'),
+          title: Text(ds.imAddFriendDialogTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -119,7 +122,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
               TextField(
                 controller: reasonCtrl,
                 decoration: InputDecoration(
-                  labelText: '附言',
+                  labelText: ds.imAddFriendNote,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 maxLines: 2,
@@ -127,10 +130,10 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ds.cancel)),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('发送申请'),
+              child: Text(ds.imSendApplication),
             ),
           ],
         );
@@ -146,7 +149,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ok ? '申请已发送，等对方同意' : '申请发送失败'),
+        content: Text(ok ? s.imApplicationSent : s.imApplicationFailed),
         backgroundColor: ok ? null : Theme.of(context).colorScheme.error,
       ),
     );
@@ -156,10 +159,11 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('加好友'),
+        title: Text(s.imSearchTitle),
       ),
       body: Column(
         children: [
@@ -170,7 +174,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
               controller: _searchCtrl,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: '邮箱 / 用户名 / ID 都可以搜',
+                hintText: s.imSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchCtrl.text.isEmpty
                     ? null
@@ -197,6 +201,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
   }
 
   Widget _buildResults(ColorScheme cs) {
+    final s = T.of(context);
     if (_searching) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -211,10 +216,10 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
             children: [
               Icon(Icons.search_off, size: 56, color: cs.outline),
               const SizedBox(height: 12),
-              Text('输入邮箱、用户名或 ID 搜索',
+              Text(s.imSearchHelp,
                   style: TextStyle(color: cs.outline)),
               const SizedBox(height: 4),
-              Text('至少输入 2 个字符',
+              Text(s.imSearchHelpMin,
                   style: TextStyle(color: cs.outline, fontSize: 12)),
             ],
           ),
@@ -229,10 +234,10 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
           children: [
             Icon(Icons.person_search, size: 56, color: cs.outline),
             const SizedBox(height: 12),
-            Text('没找到匹配 "$_lastQuery" 的用户',
+            Text(T.fmt(s.imSearchNoMatch, {'q': _lastQuery}),
                 style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('对方需要先在 app 里注册',
+            Text(s.imSearchNoMatchHint,
                 style: TextStyle(color: cs.outline, fontSize: 12)),
           ],
         ),
@@ -265,7 +270,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
           trailing: isMe
-              ? Text('（你自己）', style: TextStyle(color: cs.outline, fontSize: 12))
+              ? Text(s.imYouSelfBadge, style: TextStyle(color: cs.outline, fontSize: 12))
               : const Icon(Icons.person_add_alt_1, size: 20),
           onTap: isMe ? null : () => _onTapUser(u),
         );

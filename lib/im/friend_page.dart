@@ -16,6 +16,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import '../i18n/framework_strings.dart';
 import 'im_service.dart';
 import 'chat_page.dart';
 import 'create_group_page.dart';
@@ -68,16 +69,17 @@ class _IMFriendPageState extends State<IMFriendPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('通讯录'),
+        title: Text(s.imContacts),
         centerTitle: true,
         actions: [
           // 一个 + 按钮，点开二选一菜单：加好友 / 建群
           PopupMenuButton<String>(
             icon: const Icon(Icons.add),
-            tooltip: '添加',
+            tooltip: s.imAdd,
             onSelected: (v) {
               if (v == 'add_friend') {
                 Navigator.of(context).push(
@@ -89,20 +91,20 @@ class _IMFriendPageState extends State<IMFriendPage> {
                 ).then((_) => _load());
               }
             },
-            itemBuilder: (_) => const [
+            itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'add_friend',
                 child: ListTile(
-                  leading: Icon(Icons.person_add_alt_1),
-                  title: Text('加好友'),
+                  leading: const Icon(Icons.person_add_alt_1),
+                  title: Text(s.imAddFriend),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
               PopupMenuItem(
                 value: 'create_group',
                 child: ListTile(
-                  leading: Icon(Icons.group_add),
-                  title: Text('建群'),
+                  leading: const Icon(Icons.group_add),
+                  title: Text(s.imCreateGroup),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -117,6 +119,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
   }
 
   Widget _buildBody(ColorScheme cs) {
+    final s = T.of(context);
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -133,7 +136,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
               children: [
                 Icon(Icons.fingerprint, color: cs.primary),
                 const SizedBox(width: 8),
-                const Text('我的 ID:', style: TextStyle(fontWeight: FontWeight.w500)),
+                Text(s.imMyId, style: const TextStyle(fontWeight: FontWeight.w500)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SelectableText(
@@ -143,12 +146,12 @@ class _IMFriendPageState extends State<IMFriendPage> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy, size: 18),
-                  tooltip: '复制',
+                  tooltip: s.copy,
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: _myUserId()));
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已复制 ID'), duration: Duration(seconds: 1)),
+                      SnackBar(content: Text(s.imCopiedId), duration: const Duration(seconds: 1)),
                     );
                   },
                 ),
@@ -162,7 +165,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
               backgroundColor: cs.tertiaryContainer,
               child: Icon(Icons.person_add, color: cs.onTertiaryContainer),
             ),
-            title: const Text('新的朋友'),
+            title: Text(s.imNewFriends),
             trailing: _pendingApplications > 0
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -194,9 +197,9 @@ class _IMFriendPageState extends State<IMFriendPage> {
                 children: [
                   Icon(Icons.people_outline, size: 56, color: cs.outline),
                   const SizedBox(height: 12),
-                  Text('还没有好友', style: TextStyle(color: cs.outline, fontSize: 16)),
+                  Text(s.imEmptyFriends, style: TextStyle(color: cs.outline, fontSize: 16)),
                   const SizedBox(height: 4),
-                  Text('点右上角 + 加好友', style: TextStyle(color: cs.outline, fontSize: 13)),
+                  Text(s.imEmptyFriendsHint, style: TextStyle(color: cs.outline, fontSize: 13)),
                 ],
               ),
             )
@@ -208,6 +211,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
   }
 
   Widget _buildFriendTile(FriendInfo f, ColorScheme cs) {
+    final s = T.of(context);
     final name = (f.remark?.isNotEmpty == true ? f.remark : null) ??
         (f.nickname?.isNotEmpty == true ? f.nickname : null) ??
         f.userID ??
@@ -221,14 +225,14 @@ class _IMFriendPageState extends State<IMFriendPage> {
         return await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('删除好友'),
-            content: Text('确定删除 $name？'),
+            title: Text(s.imDeleteFriendTitle),
+            content: Text(T.fmt(s.imDeleteFriendContent, {'name': name})),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel)),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 style: FilledButton.styleFrom(backgroundColor: cs.error),
-                child: const Text('删除'),
+                child: Text(s.delete),
               ),
             ],
           ),
@@ -315,22 +319,23 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
     });
   }
 
-  String _statusText(int? r) {
+  String _statusText(int? r, FrameworkStrings s) {
     switch (r) {
       case 1:
-        return '已同意';
+        return s.imApplyAccepted;
       case -1:
-        return '已拒绝';
+        return s.imApplyRejected;
       default:
-        return '待处理';
+        return s.imApplyPending;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('新的朋友')),
+      appBar: AppBar(title: Text(s.imNewFriends)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _apps.isEmpty
@@ -340,7 +345,7 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
                     children: [
                       Icon(Icons.inbox_outlined, size: 56, color: cs.outline),
                       const SizedBox(height: 12),
-                      Text('还没有人申请加你', style: TextStyle(color: cs.outline)),
+                      Text(s.imEmptyApplications, style: TextStyle(color: cs.outline)),
                     ],
                   ),
                 )
@@ -367,7 +372,7 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
                       subtitle: Text(
                         (a.reqMsg?.isNotEmpty == true)
                             ? a.reqMsg!
-                            : '请求加你为好友',
+                            : s.imApplyDefaultMessage,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -377,7 +382,7 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
                               children: [
                                 IconButton(
                                   icon: Icon(Icons.close, color: cs.error),
-                                  tooltip: '拒绝',
+                                  tooltip: s.imReject,
                                   onPressed: () async {
                                     await IMService.instance.rejectFriendApplication(
                                       fromUserID: a.fromUserID!,
@@ -387,7 +392,7 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
                                 ),
                                 IconButton(
                                   icon: Icon(Icons.check, color: Colors.green),
-                                  tooltip: '同意',
+                                  tooltip: s.imAccept,
                                   onPressed: () async {
                                     await IMService.instance.acceptFriendApplication(
                                       fromUserID: a.fromUserID!,
@@ -398,7 +403,7 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
                               ],
                             )
                           : Text(
-                              _statusText(a.handleResult),
+                              _statusText(a.handleResult, s),
                               style: TextStyle(color: cs.outline, fontSize: 13),
                             ),
                     );

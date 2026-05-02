@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import '../i18n/framework_strings.dart';
 import 'im_service.dart';
 import 'group_management.dart';
 import 'message_preview.dart';
@@ -217,6 +218,7 @@ class _IMChatPageState extends State<IMChatPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -228,7 +230,7 @@ class _IMChatPageState extends State<IMChatPage> {
             ),
             if (widget.conversationType == 3)
               Text(
-                '群聊',
+                s.imGroupChat,
                 style: TextStyle(fontSize: 11, color: cs.outline),
               ),
           ],
@@ -258,7 +260,7 @@ class _IMChatPageState extends State<IMChatPage> {
 
     if (_messages.isEmpty) {
       return Center(
-        child: Text('暂无消息', style: TextStyle(color: cs.outline)),
+        child: Text(T.of(context).imEmptyMessages, style: TextStyle(color: cs.outline)),
       );
     }
 
@@ -415,7 +417,7 @@ class _IMChatPageState extends State<IMChatPage> {
             ),
           );
         }
-        return Text('[图片]', style: TextStyle(color: textColor));
+        return Text(T.of(context).imPreviewImage, style: TextStyle(color: textColor));
       case MessageType.voice:
         final duration = msg.soundElem?.duration ?? 0;
         return Row(
@@ -432,7 +434,7 @@ class _IMChatPageState extends State<IMChatPage> {
           children: [
             Icon(Icons.videocam, size: 16, color: textColor),
             const SizedBox(width: 4),
-            Text('[视频]', style: TextStyle(color: textColor)),
+            Text(T.of(context).imPreviewVideo, style: TextStyle(color: textColor)),
           ],
         );
       case MessageType.file:
@@ -441,7 +443,7 @@ class _IMChatPageState extends State<IMChatPage> {
           children: [
             Icon(Icons.insert_drive_file, size: 16, color: textColor),
             const SizedBox(width: 4),
-            Text(msg.fileElem?.fileName ?? '[文件]',
+            Text(msg.fileElem?.fileName ?? T.of(context).imPreviewFile,
                 style: TextStyle(color: textColor),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
@@ -507,7 +509,7 @@ class _IMChatPageState extends State<IMChatPage> {
               minLines: 1,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: '输入消息...',
+                hintText: T.of(context).imChatInputHint,
                 filled: true,
                 fillColor: cs.surfaceContainerHighest,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -532,6 +534,7 @@ class _IMChatPageState extends State<IMChatPage> {
   void _showMessageActions(Message msg) {
     final isMe = msg.sendID == IMService.instance.currentUserId;
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -542,26 +545,26 @@ class _IMChatPageState extends State<IMChatPage> {
             if (msg.contentType == MessageType.text)
               ListTile(
                 leading: const Icon(Icons.copy),
-                title: const Text('复制'),
+                title: Text(s.imActionCopy),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: msg.textElem?.content ?? ''));
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已复制'), duration: Duration(seconds: 1)),
+                    SnackBar(content: Text(s.imToastCopied), duration: const Duration(seconds: 1)),
                   );
                 },
               ),
             if (isMe)
               ListTile(
                 leading: Icon(Icons.undo, color: cs.error),
-                title: const Text('撤回'),
+                title: Text(s.imActionRevoke),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final now = DateTime.now().millisecondsSinceEpoch;
                   final sendTime = msg.sendTime ?? 0;
                   if (now - sendTime > 2 * 60 * 1000) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('超过 2 分钟无法撤回')),
+                      SnackBar(content: Text(s.imToastRevokeExpired)),
                     );
                     return;
                   }
@@ -578,7 +581,7 @@ class _IMChatPageState extends State<IMChatPage> {
               ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: cs.error),
-              title: const Text('删除'),
+              title: Text(s.delete),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
@@ -603,6 +606,7 @@ class _IMChatPageState extends State<IMChatPage> {
   }
 
   void _showAttachmentOptions() {
+    final s = T.of(context);
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -613,7 +617,7 @@ class _IMChatPageState extends State<IMChatPage> {
             children: [
               _buildAttachmentButton(
                 icon: Icons.photo,
-                label: '图片',
+                label: s.imAttachImage,
                 onTap: () {
                   Navigator.pop(ctx);
                   // TODO: 集成 image_picker 发送图片
@@ -621,7 +625,7 @@ class _IMChatPageState extends State<IMChatPage> {
               ),
               _buildAttachmentButton(
                 icon: Icons.camera_alt,
-                label: '拍照',
+                label: s.imAttachCamera,
                 onTap: () {
                   Navigator.pop(ctx);
                   // TODO: 集成 camera 拍照发送
@@ -629,7 +633,7 @@ class _IMChatPageState extends State<IMChatPage> {
               ),
               _buildAttachmentButton(
                 icon: Icons.insert_drive_file,
-                label: '文件',
+                label: s.imAttachFile,
                 onTap: () {
                   Navigator.pop(ctx);
                   // TODO: 集成 file_picker 发送文件

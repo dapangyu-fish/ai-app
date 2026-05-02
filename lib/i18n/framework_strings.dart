@@ -18,6 +18,7 @@
 //   - 后端返回的错误信息（这类显示原文，不要硬编码到客户端 i18n 里）
 
 import 'package:flutter/widgets.dart';
+import 'locale_controller.dart';
 
 // 暴露给外部用作类型签名（避免 library_private_types_in_public_api 警告）
 typedef FrameworkStrings = _Strings;
@@ -201,6 +202,153 @@ class _Strings {
   final String errorNetworkWith;        // "网络错误：{msg}"
   final String errorServerWithCode;     // "服务器错误 ({code})"
 
+  // ── IM 消息预览 / 系统消息 fallback ──
+  final String imPreviewImage;
+  final String imPreviewVoice;
+  final String imPreviewVideo;
+  final String imPreviewFile;
+  final String imPreviewFileWithName;     // "[文件] {name}"
+  final String imPreviewLocation;
+  final String imPreviewCard;
+  final String imPreviewMerger;
+  final String imPreviewQuoteFallback;
+  final String imPreviewEmoji;
+  final String imPreviewRichTextFallback;
+  final String imPreviewCustom;
+  final String imPreviewAtFallback;
+  final String imPreviewOA;
+  final String imPreviewSystem;
+  final String imPreviewBurnAfterRead;
+  final String imPreviewRevoked;
+  final String imPreviewUnknown;          // "[未知消息: {type}]"
+
+  // ── IM 好友系统消息 ──
+  final String imSysFriendApplyAccepted;
+  final String imSysFriendApplyRejected;
+  final String imSysFriendApplyReceived;
+  final String imSysFriendAdded;
+  final String imSysFriendDeleted;
+  final String imSysFriendRemarkChanged;
+  final String imSysFriendBlacklisted;
+  final String imSysFriendUnblacklisted;
+
+  // ── IM 群聊系统消息 ──
+  final String imSysGroupCreated;
+  final String imSysGroupInfoChanged;
+  final String imSysGroupNameChanged;
+  final String imSysGroupNoticeUpdated;
+  final String imSysGroupApplyReceived;
+  final String imSysGroupMemberQuit;
+  final String imSysGroupMemberKicked;
+  final String imSysGroupMemberInvited;
+  final String imSysGroupMemberJoined;
+  final String imSysGroupDismissed;
+  final String imSysGroupOwnerTransferred;
+  final String imSysGroupApplyApproved;
+  final String imSysGroupApplyRejected;
+  final String imSysGroupMemberMuted;
+  final String imSysGroupMemberUnmuted;
+  final String imSysGroupMutedAll;
+  final String imSysGroupUnmutedAll;
+  final String imSysGroupMemberInfoChanged;
+  final String imSysGroupMemberSetAdmin;
+  final String imSysGroupAdminRevoked;
+
+  // ── IM 其他系统消息 ──
+  final String imSysUserInfoUpdated;
+  final String imSysConversationChanged;
+
+  // ── IM 会话列表 ──
+  final String imConversationsTitle;
+  final String imContacts;
+  final String imEmptyMessages;
+  final String imEmptyMessagesHint;
+  final String imUnknownPeer;
+  final String imConfirmDeleteTitle;
+  final String imDeleteConversationContent;   // "删除与 {name} 的会话？"
+  final String imPin;
+  final String imUnpin;
+  final String imMarkRead;
+  final String imDeleteConversation;
+
+  // ── IM 时间相对 ──
+  final String imTimeJustNow;
+  final String imTimeMinutesAgo;          // "{n}分钟前"
+  final String imTimeYesterday;
+  final String imTimeDaysAgo;             // "{n}天前"
+
+  // ── IM 聊天页 ──
+  final String imGroupChat;
+  final String imChatInputHint;
+  final String imActionCopy;
+  final String imToastCopied;
+  final String imActionRevoke;
+  final String imToastRevokeExpired;
+  final String imAttachImage;
+  final String imAttachCamera;
+  final String imAttachFile;
+
+  // ── IM 好友页 ──
+  final String imAdd;
+  final String imAddFriend;
+  final String imCreateGroup;
+  final String imMyId;
+  final String imCopiedId;
+  final String imNewFriends;
+  final String imEmptyFriends;
+  final String imEmptyFriendsHint;
+  final String imDeleteFriendTitle;
+  final String imDeleteFriendContent;     // "确定删除 {name}？"
+  final String imApplyAccepted;
+  final String imApplyRejected;
+  final String imApplyPending;
+  final String imEmptyApplications;
+  final String imApplyDefaultMessage;
+  final String imAccept;
+  final String imReject;
+
+  // ── IM 加好友搜索 ──
+  final String imAddFriendDialogTitle;
+  final String imAddFriendDefaultGreeting;
+  final String imAddFriendNote;
+  final String imSendApplication;
+  final String imApplicationSent;
+  final String imApplicationFailed;
+  final String imSearchTitle;
+  final String imSearchHint;
+  final String imSearchHelp;
+  final String imSearchHelpMin;
+  final String imSearchNoMatch;            // 'No users matching "{q}"'
+  final String imSearchNoMatchHint;
+  final String imYouSelfBadge;
+
+  // ── IM 创建群聊 ──
+  final String imCreateGroupFailed;
+  final String imCreateGroupTitle;
+  final String imCreate;
+  final String imGroupNameLabel;
+  final String imGroupNameHint;
+  final String imSelectMembers;
+  final String imSelectedCount;            // "已选 {n} 人"
+  final String imEmptyFriendsForGroupHint;
+
+  // ── IM 群聊管理 ──
+  final String imGroupSettings;
+  final String imMemberCount;              // "{n} 名成员"
+  final String imGroupNotice;
+  final String imGroupMembers;
+  final String imGroupOwnerLabel;
+  final String imGroupAdminLabel;
+  final String imInviteMembers;
+  final String imLeaveGroup;
+  final String imUserIdLabel;
+  final String imUserIdHint;
+  final String imInviteSent;
+  final String imInviteFailedWith;         // "邀请失败: {err}"
+  final String imLeaveGroupConfirmContent; // "确定退出「{name}」？"
+  final String imLeaveFailedWith;          // "退出失败: {err}"
+  final String imConfirmLeave;
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -348,6 +496,131 @@ class _Strings {
     required this.errorNotLoggedIn,
     required this.errorNetworkWith,
     required this.errorServerWithCode,
+    required this.imPreviewImage,
+    required this.imPreviewVoice,
+    required this.imPreviewVideo,
+    required this.imPreviewFile,
+    required this.imPreviewFileWithName,
+    required this.imPreviewLocation,
+    required this.imPreviewCard,
+    required this.imPreviewMerger,
+    required this.imPreviewQuoteFallback,
+    required this.imPreviewEmoji,
+    required this.imPreviewRichTextFallback,
+    required this.imPreviewCustom,
+    required this.imPreviewAtFallback,
+    required this.imPreviewOA,
+    required this.imPreviewSystem,
+    required this.imPreviewBurnAfterRead,
+    required this.imPreviewRevoked,
+    required this.imPreviewUnknown,
+    required this.imSysFriendApplyAccepted,
+    required this.imSysFriendApplyRejected,
+    required this.imSysFriendApplyReceived,
+    required this.imSysFriendAdded,
+    required this.imSysFriendDeleted,
+    required this.imSysFriendRemarkChanged,
+    required this.imSysFriendBlacklisted,
+    required this.imSysFriendUnblacklisted,
+    required this.imSysGroupCreated,
+    required this.imSysGroupInfoChanged,
+    required this.imSysGroupNameChanged,
+    required this.imSysGroupNoticeUpdated,
+    required this.imSysGroupApplyReceived,
+    required this.imSysGroupMemberQuit,
+    required this.imSysGroupMemberKicked,
+    required this.imSysGroupMemberInvited,
+    required this.imSysGroupMemberJoined,
+    required this.imSysGroupDismissed,
+    required this.imSysGroupOwnerTransferred,
+    required this.imSysGroupApplyApproved,
+    required this.imSysGroupApplyRejected,
+    required this.imSysGroupMemberMuted,
+    required this.imSysGroupMemberUnmuted,
+    required this.imSysGroupMutedAll,
+    required this.imSysGroupUnmutedAll,
+    required this.imSysGroupMemberInfoChanged,
+    required this.imSysGroupMemberSetAdmin,
+    required this.imSysGroupAdminRevoked,
+    required this.imSysUserInfoUpdated,
+    required this.imSysConversationChanged,
+    required this.imConversationsTitle,
+    required this.imContacts,
+    required this.imEmptyMessages,
+    required this.imEmptyMessagesHint,
+    required this.imUnknownPeer,
+    required this.imConfirmDeleteTitle,
+    required this.imDeleteConversationContent,
+    required this.imPin,
+    required this.imUnpin,
+    required this.imMarkRead,
+    required this.imDeleteConversation,
+    required this.imTimeJustNow,
+    required this.imTimeMinutesAgo,
+    required this.imTimeYesterday,
+    required this.imTimeDaysAgo,
+    required this.imGroupChat,
+    required this.imChatInputHint,
+    required this.imActionCopy,
+    required this.imToastCopied,
+    required this.imActionRevoke,
+    required this.imToastRevokeExpired,
+    required this.imAttachImage,
+    required this.imAttachCamera,
+    required this.imAttachFile,
+    required this.imAdd,
+    required this.imAddFriend,
+    required this.imCreateGroup,
+    required this.imMyId,
+    required this.imCopiedId,
+    required this.imNewFriends,
+    required this.imEmptyFriends,
+    required this.imEmptyFriendsHint,
+    required this.imDeleteFriendTitle,
+    required this.imDeleteFriendContent,
+    required this.imApplyAccepted,
+    required this.imApplyRejected,
+    required this.imApplyPending,
+    required this.imEmptyApplications,
+    required this.imApplyDefaultMessage,
+    required this.imAccept,
+    required this.imReject,
+    required this.imAddFriendDialogTitle,
+    required this.imAddFriendDefaultGreeting,
+    required this.imAddFriendNote,
+    required this.imSendApplication,
+    required this.imApplicationSent,
+    required this.imApplicationFailed,
+    required this.imSearchTitle,
+    required this.imSearchHint,
+    required this.imSearchHelp,
+    required this.imSearchHelpMin,
+    required this.imSearchNoMatch,
+    required this.imSearchNoMatchHint,
+    required this.imYouSelfBadge,
+    required this.imCreateGroupFailed,
+    required this.imCreateGroupTitle,
+    required this.imCreate,
+    required this.imGroupNameLabel,
+    required this.imGroupNameHint,
+    required this.imSelectMembers,
+    required this.imSelectedCount,
+    required this.imEmptyFriendsForGroupHint,
+    required this.imGroupSettings,
+    required this.imMemberCount,
+    required this.imGroupNotice,
+    required this.imGroupMembers,
+    required this.imGroupOwnerLabel,
+    required this.imGroupAdminLabel,
+    required this.imInviteMembers,
+    required this.imLeaveGroup,
+    required this.imUserIdLabel,
+    required this.imUserIdHint,
+    required this.imInviteSent,
+    required this.imInviteFailedWith,
+    required this.imLeaveGroupConfirmContent,
+    required this.imLeaveFailedWith,
+    required this.imConfirmLeave,
   });
 }
 
@@ -498,6 +771,131 @@ const _Strings _zhCN = _Strings(
   errorNotLoggedIn: '未登录',
   errorNetworkWith: '网络错误：{msg}',
   errorServerWithCode: '服务器错误 ({code})',
+  imPreviewImage: '[图片]',
+  imPreviewVoice: '[语音]',
+  imPreviewVideo: '[视频]',
+  imPreviewFile: '[文件]',
+  imPreviewFileWithName: '[文件] {name}',
+  imPreviewLocation: '[位置]',
+  imPreviewCard: '[名片]',
+  imPreviewMerger: '[聊天记录]',
+  imPreviewQuoteFallback: '[引用]',
+  imPreviewEmoji: '[表情]',
+  imPreviewRichTextFallback: '[富文本]',
+  imPreviewCustom: '[自定义消息]',
+  imPreviewAtFallback: '[@消息]',
+  imPreviewOA: '[OA 通知]',
+  imPreviewSystem: '[系统通知]',
+  imPreviewBurnAfterRead: '[阅后即焚]',
+  imPreviewRevoked: '撤回了一条消息',
+  imPreviewUnknown: '[未知消息: {type}]',
+  imSysFriendApplyAccepted: '对方同意了你的好友申请',
+  imSysFriendApplyRejected: '对方拒绝了你的好友申请',
+  imSysFriendApplyReceived: '收到一条好友申请',
+  imSysFriendAdded: '你们已经是好友了，可以聊天了',
+  imSysFriendDeleted: '你们的好友关系已解除',
+  imSysFriendRemarkChanged: '好友备注已修改',
+  imSysFriendBlacklisted: '已加入黑名单',
+  imSysFriendUnblacklisted: '已移出黑名单',
+  imSysGroupCreated: '群聊已创建',
+  imSysGroupInfoChanged: '群信息已修改',
+  imSysGroupNameChanged: '群名已修改',
+  imSysGroupNoticeUpdated: '群公告已更新',
+  imSysGroupApplyReceived: '收到一条入群申请',
+  imSysGroupMemberQuit: '有成员退出群聊',
+  imSysGroupMemberKicked: '有成员被移出群聊',
+  imSysGroupMemberInvited: '有成员被邀请入群',
+  imSysGroupMemberJoined: '有成员加入群聊',
+  imSysGroupDismissed: '群聊已解散',
+  imSysGroupOwnerTransferred: '群主已转让',
+  imSysGroupApplyApproved: '入群申请已通过',
+  imSysGroupApplyRejected: '入群申请已被拒绝',
+  imSysGroupMemberMuted: '成员被禁言',
+  imSysGroupMemberUnmuted: '成员禁言已解除',
+  imSysGroupMutedAll: '全员禁言',
+  imSysGroupUnmutedAll: '全员禁言已解除',
+  imSysGroupMemberInfoChanged: '成员信息变更',
+  imSysGroupMemberSetAdmin: '成员被设为管理员',
+  imSysGroupAdminRevoked: '管理员已恢复为普通成员',
+  imSysUserInfoUpdated: '用户资料已更新',
+  imSysConversationChanged: '会话已变更',
+  imConversationsTitle: '消息',
+  imContacts: '通讯录',
+  imEmptyMessages: '暂无消息',
+  imEmptyMessagesHint: '开始一段对话吧',
+  imUnknownPeer: '未知',
+  imConfirmDeleteTitle: '确认删除',
+  imDeleteConversationContent: '删除与 {name} 的会话？',
+  imPin: '置顶',
+  imUnpin: '取消置顶',
+  imMarkRead: '标记已读',
+  imDeleteConversation: '删除会话',
+  imTimeJustNow: '刚刚',
+  imTimeMinutesAgo: '{n}分钟前',
+  imTimeYesterday: '昨天',
+  imTimeDaysAgo: '{n}天前',
+  imGroupChat: '群聊',
+  imChatInputHint: '输入消息...',
+  imActionCopy: '复制',
+  imToastCopied: '已复制',
+  imActionRevoke: '撤回',
+  imToastRevokeExpired: '超过 2 分钟无法撤回',
+  imAttachImage: '图片',
+  imAttachCamera: '拍照',
+  imAttachFile: '文件',
+  imAdd: '添加',
+  imAddFriend: '加好友',
+  imCreateGroup: '建群',
+  imMyId: '我的 ID:',
+  imCopiedId: '已复制 ID',
+  imNewFriends: '新的朋友',
+  imEmptyFriends: '还没有好友',
+  imEmptyFriendsHint: '点右上角 + 加好友',
+  imDeleteFriendTitle: '删除好友',
+  imDeleteFriendContent: '确定删除 {name}？',
+  imApplyAccepted: '已同意',
+  imApplyRejected: '已拒绝',
+  imApplyPending: '待处理',
+  imEmptyApplications: '还没有人申请加你',
+  imApplyDefaultMessage: '请求加你为好友',
+  imAccept: '同意',
+  imReject: '拒绝',
+  imAddFriendDialogTitle: '发送好友申请',
+  imAddFriendDefaultGreeting: '我想加你为好友',
+  imAddFriendNote: '附言',
+  imSendApplication: '发送申请',
+  imApplicationSent: '申请已发送，等对方同意',
+  imApplicationFailed: '申请发送失败',
+  imSearchTitle: '加好友',
+  imSearchHint: '邮箱 / 用户名 / ID 都可以搜',
+  imSearchHelp: '输入邮箱、用户名或 ID 搜索',
+  imSearchHelpMin: '至少输入 2 个字符',
+  imSearchNoMatch: '没找到匹配 "{q}" 的用户',
+  imSearchNoMatchHint: '对方需要先在 app 里注册',
+  imYouSelfBadge: '（你自己）',
+  imCreateGroupFailed: '创建群聊失败，请重试',
+  imCreateGroupTitle: '创建群聊',
+  imCreate: '创建',
+  imGroupNameLabel: '群名称',
+  imGroupNameHint: '给群聊起个名字',
+  imSelectMembers: '选择成员',
+  imSelectedCount: '已选 {n} 人',
+  imEmptyFriendsForGroupHint: '要先加几个好友才能建群',
+  imGroupSettings: '群聊设置',
+  imMemberCount: '{n} 名成员',
+  imGroupNotice: '群公告',
+  imGroupMembers: '群成员',
+  imGroupOwnerLabel: '群主',
+  imGroupAdminLabel: '管理员',
+  imInviteMembers: '邀请成员',
+  imLeaveGroup: '退出群聊',
+  imUserIdLabel: '用户 ID',
+  imUserIdHint: '输入要邀请的用户 ID',
+  imInviteSent: '邀请已发送',
+  imInviteFailedWith: '邀请失败: {err}',
+  imLeaveGroupConfirmContent: '确定退出「{name}」？',
+  imLeaveFailedWith: '退出失败: {err}',
+  imConfirmLeave: '确定退出',
 );
 
 const _Strings _enUS = _Strings(
@@ -647,6 +1045,131 @@ const _Strings _enUS = _Strings(
   errorNotLoggedIn: 'Not signed in',
   errorNetworkWith: 'Network error: {msg}',
   errorServerWithCode: 'Server error ({code})',
+  imPreviewImage: '[Image]',
+  imPreviewVoice: '[Voice]',
+  imPreviewVideo: '[Video]',
+  imPreviewFile: '[File]',
+  imPreviewFileWithName: '[File] {name}',
+  imPreviewLocation: '[Location]',
+  imPreviewCard: '[Card]',
+  imPreviewMerger: '[Forwarded chat]',
+  imPreviewQuoteFallback: '[Quote]',
+  imPreviewEmoji: '[Sticker]',
+  imPreviewRichTextFallback: '[Rich text]',
+  imPreviewCustom: '[Custom message]',
+  imPreviewAtFallback: '[Mention]',
+  imPreviewOA: '[OA notice]',
+  imPreviewSystem: '[System notice]',
+  imPreviewBurnAfterRead: '[Burn after read]',
+  imPreviewRevoked: 'recalled a message',
+  imPreviewUnknown: '[Unknown message: {type}]',
+  imSysFriendApplyAccepted: 'Your friend request was accepted',
+  imSysFriendApplyRejected: 'Your friend request was declined',
+  imSysFriendApplyReceived: 'New friend request received',
+  imSysFriendAdded: "You're now friends. Say hi!",
+  imSysFriendDeleted: 'Your friendship has ended',
+  imSysFriendRemarkChanged: 'Friend remark updated',
+  imSysFriendBlacklisted: 'Added to blacklist',
+  imSysFriendUnblacklisted: 'Removed from blacklist',
+  imSysGroupCreated: 'Group created',
+  imSysGroupInfoChanged: 'Group info updated',
+  imSysGroupNameChanged: 'Group name changed',
+  imSysGroupNoticeUpdated: 'Group notice updated',
+  imSysGroupApplyReceived: 'New join request',
+  imSysGroupMemberQuit: 'A member left the group',
+  imSysGroupMemberKicked: 'A member was removed',
+  imSysGroupMemberInvited: 'A member was invited',
+  imSysGroupMemberJoined: 'A new member joined',
+  imSysGroupDismissed: 'The group was dismissed',
+  imSysGroupOwnerTransferred: 'Group ownership transferred',
+  imSysGroupApplyApproved: 'Join request approved',
+  imSysGroupApplyRejected: 'Join request rejected',
+  imSysGroupMemberMuted: 'A member was muted',
+  imSysGroupMemberUnmuted: 'A member was unmuted',
+  imSysGroupMutedAll: 'All members muted',
+  imSysGroupUnmutedAll: 'All members unmuted',
+  imSysGroupMemberInfoChanged: "A member's info changed",
+  imSysGroupMemberSetAdmin: 'A member was made admin',
+  imSysGroupAdminRevoked: 'An admin was demoted',
+  imSysUserInfoUpdated: 'Profile updated',
+  imSysConversationChanged: 'Conversation changed',
+  imConversationsTitle: 'Messages',
+  imContacts: 'Contacts',
+  imEmptyMessages: 'No messages yet',
+  imEmptyMessagesHint: 'Start a conversation',
+  imUnknownPeer: 'Unknown',
+  imConfirmDeleteTitle: 'Confirm delete',
+  imDeleteConversationContent: 'Delete conversation with {name}?',
+  imPin: 'Pin',
+  imUnpin: 'Unpin',
+  imMarkRead: 'Mark as read',
+  imDeleteConversation: 'Delete conversation',
+  imTimeJustNow: 'Just now',
+  imTimeMinutesAgo: '{n}m ago',
+  imTimeYesterday: 'Yesterday',
+  imTimeDaysAgo: '{n}d ago',
+  imGroupChat: 'Group',
+  imChatInputHint: 'Type a message...',
+  imActionCopy: 'Copy',
+  imToastCopied: 'Copied',
+  imActionRevoke: 'Recall',
+  imToastRevokeExpired: 'Cannot recall after 2 minutes',
+  imAttachImage: 'Image',
+  imAttachCamera: 'Camera',
+  imAttachFile: 'File',
+  imAdd: 'Add',
+  imAddFriend: 'Add friend',
+  imCreateGroup: 'New group',
+  imMyId: 'My ID:',
+  imCopiedId: 'ID copied',
+  imNewFriends: 'New requests',
+  imEmptyFriends: 'No friends yet',
+  imEmptyFriendsHint: 'Tap + at the top to add friends',
+  imDeleteFriendTitle: 'Delete friend',
+  imDeleteFriendContent: 'Delete {name}?',
+  imApplyAccepted: 'Accepted',
+  imApplyRejected: 'Rejected',
+  imApplyPending: 'Pending',
+  imEmptyApplications: 'No incoming requests',
+  imApplyDefaultMessage: 'Wants to be your friend',
+  imAccept: 'Accept',
+  imReject: 'Reject',
+  imAddFriendDialogTitle: 'Send friend request',
+  imAddFriendDefaultGreeting: "Hi, I'd like to add you",
+  imAddFriendNote: 'Message',
+  imSendApplication: 'Send',
+  imApplicationSent: 'Request sent. Waiting for approval.',
+  imApplicationFailed: 'Failed to send request',
+  imSearchTitle: 'Add friend',
+  imSearchHint: 'Search by email, username, or ID',
+  imSearchHelp: 'Enter email, username, or ID to search',
+  imSearchHelpMin: 'Type at least 2 characters',
+  imSearchNoMatch: 'No users matching "{q}"',
+  imSearchNoMatchHint: 'They need to sign up first',
+  imYouSelfBadge: '(you)',
+  imCreateGroupFailed: 'Failed to create group. Please retry.',
+  imCreateGroupTitle: 'New group',
+  imCreate: 'Create',
+  imGroupNameLabel: 'Group name',
+  imGroupNameHint: 'Give the group a name',
+  imSelectMembers: 'Pick members',
+  imSelectedCount: '{n} selected',
+  imEmptyFriendsForGroupHint: 'Add some friends first',
+  imGroupSettings: 'Group settings',
+  imMemberCount: '{n} members',
+  imGroupNotice: 'Group notice',
+  imGroupMembers: 'Members',
+  imGroupOwnerLabel: 'Owner',
+  imGroupAdminLabel: 'Admin',
+  imInviteMembers: 'Invite members',
+  imLeaveGroup: 'Leave group',
+  imUserIdLabel: 'User ID',
+  imUserIdHint: 'User ID to invite',
+  imInviteSent: 'Invitation sent',
+  imInviteFailedWith: 'Invite failed: {err}',
+  imLeaveGroupConfirmContent: 'Leave "{name}"?',
+  imLeaveFailedWith: 'Leave failed: {err}',
+  imConfirmLeave: 'Confirm leave',
 );
 
 /// 公开访问点。
@@ -655,6 +1178,13 @@ class T {
   static FrameworkStrings of(BuildContext context) {
     final localeStr = Localizations.localeOf(context).toLanguageTag();
     return _pick(localeStr);
+  }
+
+  /// 不在 widget 树里时（纯函数 / service 层）用这个，跟随用户当前选择的 locale。
+  /// 走 LocaleController.currentLocaleTag()：appLocale 有值用值，否则回退到系统 locale。
+  /// 注意启动早期 loadFromPrefs() 还没跑时也是回退到系统 locale，行为可预期。
+  static FrameworkStrings get current {
+    return _pick(LocaleController.currentLocaleTag());
   }
 
   /// 显式指定 locale 的查找（用于初始化前 / 不在 widget 树里的代码）
