@@ -7,7 +7,9 @@ import UserNotifications
 
   // 给 Flutter 端发推送 token 用的 channel
   private static let pushChannelName = "dapangyu.fish.myapp/push"
-  private weak var pushChannel: FlutterMethodChannel?
+  // 必须强引用：weak 会导致 didInitializeImplicitFlutterEngine 返回后 channel 被释放，
+  // 之后 APNs 回调里 invokeMethod 走不通
+  private var pushChannel: FlutterMethodChannel?
 
   override func application(
     _ application: UIApplication,
@@ -49,6 +51,7 @@ import UserNotifications
           return
         }
         if granted {
+          print("[APNs-iOS] calling registerForRemoteNotifications")
           UIApplication.shared.registerForRemoteNotifications()
         }
         result(["granted": granted])
@@ -62,7 +65,7 @@ import UserNotifications
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
-    NSLog("[APNs] deviceToken: \(hex)")
+    print("[APNs-iOS] deviceToken: \(hex)")
     pushChannel?.invokeMethod("onDeviceToken", arguments: hex)
   }
 
@@ -71,7 +74,7 @@ import UserNotifications
     _ application: UIApplication,
     didFailToRegisterForRemoteNotificationsWithError error: Error
   ) {
-    NSLog("[APNs] register failed: \(error)")
+    print("[APNs-iOS] register failed: \(error)")
     pushChannel?.invokeMethod("onRegisterError", arguments: error.localizedDescription)
   }
 
