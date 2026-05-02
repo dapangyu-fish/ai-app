@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Directory;
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
@@ -8,6 +9,36 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
+
+/// IMService.friendshipStream 推的事件类型
+enum FriendshipEventKind {
+  applicationAdded,    // 收到一条好友申请
+  applicationAccepted, // 我发的申请被对方同意
+  applicationRejected, // 我发的申请被拒绝
+  added,               // 双向好友建立完成（FriendInfo）
+  deleted,             // 好友被删除
+  infoChanged,         // 好友资料更新
+}
+
+class FriendshipEvent {
+  final FriendshipEventKind kind;
+  final dynamic payload; // FriendApplicationInfo / FriendInfo / BlacklistInfo
+
+  const FriendshipEvent._(this.kind, this.payload);
+
+  factory FriendshipEvent.applicationAdded(dynamic p) =>
+      FriendshipEvent._(FriendshipEventKind.applicationAdded, p);
+  factory FriendshipEvent.applicationAccepted(dynamic p) =>
+      FriendshipEvent._(FriendshipEventKind.applicationAccepted, p);
+  factory FriendshipEvent.applicationRejected(dynamic p) =>
+      FriendshipEvent._(FriendshipEventKind.applicationRejected, p);
+  factory FriendshipEvent.added(dynamic p) =>
+      FriendshipEvent._(FriendshipEventKind.added, p);
+  factory FriendshipEvent.deleted(dynamic p) =>
+      FriendshipEvent._(FriendshipEventKind.deleted, p);
+  factory FriendshipEvent.infoChanged(dynamic p) =>
+      FriendshipEvent._(FriendshipEventKind.infoChanged, p);
+}
 
 /// OpenIM SDK 封装服务
 /// 负责: 初始化 SDK、登录/登出、消息监听、连接状态管理
@@ -34,6 +65,23 @@ class IMService {
 
   final ValueNotifier<bool> connectionNotifier = ValueNotifier(false);
   final ValueNotifier<int> unreadCountNotifier = ValueNotifier(0);
+
+  // ── 事件 stream（broadcast；多个页面可同时订阅）──
+  // OpenIM SDK 的 setXxxListener 是"单 listener"语义，谁后调谁覆盖。所以所有 listener
+  // 集中在 IMService 这里订一次，页面通过下面的 stream 拿事件，避免相互踩。
+  final StreamController<Message> _newMessageCtrl = StreamController.broadcast();
+  final StreamController<RevokedInfo> _revokedCtrl = StreamController.broadcast();
+  final StreamController<List<ReadReceiptInfo>> _c2cReceiptCtrl = StreamController.broadcast();
+  final StreamController<List<ConversationInfo>> _conversationsChangedCtrl =
+      StreamController.broadcast();
+  final StreamController<FriendshipEvent> _friendshipCtrl = StreamController.broadcast();
+
+  Stream<Message> get newMessageStream => _newMessageCtrl.stream;
+  Stream<RevokedInfo> get revokedStream => _revokedCtrl.stream;
+  Stream<List<ReadReceiptInfo>> get c2cReceiptStream => _c2cReceiptCtrl.stream;
+  Stream<List<ConversationInfo>> get conversationsChangedStream =>
+      _conversationsChangedCtrl.stream;
+  Stream<FriendshipEvent> get friendshipStream => _friendshipCtrl.stream;
 
   bool get isLoggedIn => _loggedIn;
   String? get currentUserId => _imUserId;
@@ -107,27 +155,33 @@ class IMService {
     }
   }
 
-  /// 设置全局消息监听
+  /// 设置全局监听 —— 所有 OpenIM listener 都在这里统一订一次
+  /// 页面 / 组件不要自己调 setXxxListener（会被覆盖），改订阅本服务的 stream。
   void _setupListeners() {
     OpenIM.iMManager.messageManager.setAdvancedMsgListener(OnAdvancedMsgListener(
       onRecvNewMessage: (msg) {
         debugPrint('[IM] 新消息: ${msg.senderNickname} -> ${msg.contentType}');
+        _newMessageCtrl.add(msg);
         _updateUnreadCount();
       },
       onNewRecvMessageRevoked: (info) {
         debugPrint('[IM] 消息撤回: ${info.clientMsgID}');
+        _revokedCtrl.add(info);
       },
       onRecvC2CReadReceipt: (list) {
         debugPrint('[IM] 已读回执: ${list.length} 条');
+        _c2cReceiptCtrl.add(list);
       },
     ));
 
     OpenIM.iMManager.conversationManager.setConversationListener(
       OnConversationListener(
         onConversationChanged: (list) {
+          _conversationsChangedCtrl.add(list);
           _updateUnreadCount();
         },
         onNewConversation: (list) {
+          _conversationsChangedCtrl.add(list);
           _updateUnreadCount();
         },
         onTotalUnreadMessageCountChanged: (count) {
@@ -135,6 +189,18 @@ class IMService {
         },
       ),
     );
+
+    OpenIM.iMManager.friendshipManager.setFriendshipListener(OnFriendshipListener(
+      onFriendApplicationAdded: (a) =>
+          _friendshipCtrl.add(FriendshipEvent.applicationAdded(a)),
+      onFriendApplicationAccepted: (a) =>
+          _friendshipCtrl.add(FriendshipEvent.applicationAccepted(a)),
+      onFriendApplicationRejected: (a) =>
+          _friendshipCtrl.add(FriendshipEvent.applicationRejected(a)),
+      onFriendAdded: (f) => _friendshipCtrl.add(FriendshipEvent.added(f)),
+      onFriendDeleted: (f) => _friendshipCtrl.add(FriendshipEvent.deleted(f)),
+      onFriendInfoChanged: (f) => _friendshipCtrl.add(FriendshipEvent.infoChanged(f)),
+    ));
   }
 
   /// 登录 OpenIM
@@ -333,11 +399,16 @@ class IMService {
   }
 
   /// 标记消息已读
+  ///
+  /// SDK 内部会触发 onTotalUnreadMessageCountChanged，但有时（特别是没新消息进来
+  /// 只是清旧未读时）回调延迟或不触发，所以这里手动 _updateUnreadCount() 兜底。
   Future<void> markConversationRead({required String conversationID}) async {
     try {
       await OpenIM.iMManager.conversationManager.markConversationMessageAsRead(
         conversationID: conversationID,
       );
+      // 立刻刷一次总未读数，不依赖回调时机
+      await _updateUnreadCount();
     } catch (e) {
       debugPrint('[IM] 标记已读失败: $e');
     }
@@ -546,10 +617,8 @@ class IMService {
     }
   }
 
-  /// 监听好友申请到达（其它页面订阅这个 listener 实时刷新红点）
-  void setFriendshipListener(OnFriendshipListener listener) {
-    OpenIM.iMManager.friendshipManager.setFriendshipListener(listener);
-  }
+  // ※ 旧的 setFriendshipListener 已移除：OpenIM SDK 单 listener 语义会让页面之间互相覆盖。
+  //   订阅 friendshipStream 替代。
 
   // ---------- FCM 推送 ----------
 

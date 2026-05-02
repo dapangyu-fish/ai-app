@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
@@ -44,42 +46,61 @@ class _IMChatPageState extends State<IMChatPage> {
   bool _hasMore = true;
   bool _sending = false;
 
+  StreamSubscription<Message>? _msgSub;
+  StreamSubscription<RevokedInfo>? _revokedSub;
+  StreamSubscription<List<ReadReceiptInfo>>? _receiptSub;
+
   @override
   void initState() {
     super.initState();
     _loadMessages();
     _markRead();
-    _setupMessageListener();
+    _subscribe();
     _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _msgSub?.cancel();
+    _revokedSub?.cancel();
+    _receiptSub?.cancel();
     _inputController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _setupMessageListener() {
-    OpenIM.iMManager.messageManager.setAdvancedMsgListener(OnAdvancedMsgListener(
-      onRecvNewMessage: (msg) {
-        if (mounted) {
-          setState(() => _messages.insert(0, msg));
-          _markRead();
-        }
-      },
-      onNewRecvMessageRevoked: (info) {
-        if (mounted) {
-          setState(() {
-            _messages.removeWhere((m) => m.clientMsgID == info.clientMsgID);
-          });
-        }
-      },
-      onRecvC2CReadReceipt: (list) {
-        if (mounted) setState(() {});
-      },
-    ));
+  /// 此消息属于当前 conversation 才处理（避免别的会话的新消息也插进来）
+  bool _isForThisConversation(Message msg) {
+    if (msg.contentType == null) return false;
+    if (widget.conversationType == 1) {
+      // 单聊：sendID 或 recvID 是对方
+      final me = IMService.instance.currentUserId;
+      final other = widget.userID;
+      if (me == null || other == null) return false;
+      return (msg.sendID == other && msg.recvID == me) ||
+          (msg.sendID == me && msg.recvID == other);
+    } else {
+      // 群聊：groupID 匹配
+      return widget.groupID != null && msg.groupID == widget.groupID;
+    }
+  }
+
+  void _subscribe() {
+    _msgSub = IMService.instance.newMessageStream.listen((msg) {
+      if (!mounted || !_isForThisConversation(msg)) return;
+      setState(() => _messages.insert(0, msg));
+      _markRead();
+    });
+    _revokedSub = IMService.instance.revokedStream.listen((info) {
+      if (!mounted) return;
+      setState(() {
+        _messages.removeWhere((m) => m.clientMsgID == info.clientMsgID);
+      });
+    });
+    _receiptSub = IMService.instance.c2cReceiptStream.listen((_) {
+      if (mounted) setState(() {}); // 刷新已读勾勾
+    });
   }
 
   // OpenIM 的 getAdvancedHistoryMessageList 返的是升序（旧→新），

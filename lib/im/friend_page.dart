@@ -11,6 +11,8 @@
 // user_id 来自业务系统的 Supabase user.id（UUID 字符串）。本期没好友搜索，
 // 必须明文输入对方 user_id（"加好友"页头部显示自己的 user_id 方便对方加）。
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
@@ -30,23 +32,23 @@ class _IMFriendPageState extends State<IMFriendPage> {
   List<FriendInfo> _friends = [];
   int _pendingApplications = 0;
   bool _loading = true;
+  StreamSubscription<FriendshipEvent>? _friendshipSub;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _setupListener();
+    // 订阅 IMService 的 friendshipStream，不再 setFriendshipListener
+    // （SDK 单 listener 语义会被踩坏）
+    _friendshipSub = IMService.instance.friendshipStream.listen((_) {
+      if (mounted) _load();
+    });
   }
 
-  void _setupListener() {
-    IMService.instance.setFriendshipListener(OnFriendshipListener(
-      onFriendApplicationAdded: (_) => _load(),
-      onFriendApplicationAccepted: (_) => _load(),
-      onFriendApplicationRejected: (_) => _load(),
-      onFriendAdded: (_) => _load(),
-      onFriendDeleted: (_) => _load(),
-      onFriendInfoChanged: (_) => _load(),
-    ));
+  @override
+  void dispose() {
+    _friendshipSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {

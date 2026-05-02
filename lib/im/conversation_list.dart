@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'im_service.dart';
@@ -18,27 +20,29 @@ class _IMConversationPageState extends State<IMConversationPage> {
   bool _loading = true;
   String? _error;
 
+  StreamSubscription<List<ConversationInfo>>? _convChangedSub;
+  StreamSubscription<Message>? _msgSub;
+
   @override
   void initState() {
     super.initState();
     _loadConversations();
-    _setupConversationListener();
+    // 订阅 IMService 的 stream，避免直接 setConversationListener 把 IMService 内部
+    // 维护未读数 totalUnreadMessageCount 的回调覆盖（以前每次进出消息页都把全局未读
+    // 数 listener 踩坏，主页 badge 就一直对不上）。
+    _convChangedSub = IMService.instance.conversationsChangedStream.listen((_) {
+      if (mounted) _loadConversations();
+    });
+    _msgSub = IMService.instance.newMessageStream.listen((_) {
+      if (mounted) _loadConversations(); // latestMsg / 时间戳要变
+    });
   }
 
-  void _setupConversationListener() {
-    OpenIM.iMManager.conversationManager.setConversationListener(
-      OnConversationListener(
-        onConversationChanged: (list) {
-          _loadConversations();
-        },
-        onNewConversation: (list) {
-          _loadConversations();
-        },
-        onTotalUnreadMessageCountChanged: (count) {
-          if (mounted) setState(() {});
-        },
-      ),
-    );
+  @override
+  void dispose() {
+    _convChangedSub?.cancel();
+    _msgSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadConversations() async {
