@@ -6,8 +6,11 @@
 //   101-117  普通消息（text / picture / voice / video / file / @ / merger / card / location / custom / typing / quote / customFace / advancedText）
 //   1000+    各种 notification（加好友 / 群组变更 / 撤回 / OA 等）
 //   2101     撤回消息
+//
+// i18n: 这些函数是纯函数（无 BuildContext），所以走 T.current 拿当前 locale 的字符串。
 
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import '../i18n/framework_strings.dart';
 
 /// 是否是"系统通知"类型 —— 在聊天页里应当以居中灰文形式展示，不带气泡
 bool isSystemNotification(int? contentType) {
@@ -22,34 +25,37 @@ bool isSystemNotification(int? contentType) {
 /// 系统通知也走这里 —— 文案与聊天页一致
 String previewMessage(Message? msg) {
   if (msg == null) return '';
+  final s = T.current;
   switch (msg.contentType) {
     case MessageType.text:
       return msg.textElem?.content ?? '';
     case MessageType.atText:
-      return msg.atTextElem?.text ?? '[@消息]';
+      return msg.atTextElem?.text ?? s.imPreviewAtFallback;
     case MessageType.picture:
-      return '[图片]';
+      return s.imPreviewImage;
     case MessageType.voice:
-      return '[语音]';
+      return s.imPreviewVoice;
     case MessageType.video:
-      return '[视频]';
+      return s.imPreviewVideo;
     case MessageType.file:
       final name = msg.fileElem?.fileName;
-      return name?.isNotEmpty == true ? '[文件] $name' : '[文件]';
+      return name?.isNotEmpty == true
+          ? T.fmt(s.imPreviewFileWithName, {'name': name})
+          : s.imPreviewFile;
     case MessageType.location:
-      return '[位置]';
+      return s.imPreviewLocation;
     case MessageType.card:
-      return '[名片]';
+      return s.imPreviewCard;
     case MessageType.merger:
-      return '[聊天记录]';
+      return s.imPreviewMerger;
     case MessageType.quote:
-      return msg.quoteElem?.text ?? '[引用]';
+      return msg.quoteElem?.text ?? s.imPreviewQuoteFallback;
     case MessageType.customFace:
-      return '[表情]';
+      return s.imPreviewEmoji;
     case MessageType.advancedText:
-      return msg.advancedTextElem?.text ?? '[富文本]';
+      return msg.advancedTextElem?.text ?? s.imPreviewRichTextFallback;
     case MessageType.custom:
-      return '[自定义消息]';
+      return s.imPreviewCustom;
     default:
       return _systemMessageText(msg);
   }
@@ -59,84 +65,85 @@ String previewMessage(Message? msg) {
 String systemMessageDisplay(Message msg) => _systemMessageText(msg);
 
 String _systemMessageText(Message msg) {
+  final s = T.current;
   switch (msg.contentType) {
     // ── 好友相关 ──
     case MessageType.friendApplicationApprovedNotification:
-      return '对方同意了你的好友申请';
+      return s.imSysFriendApplyAccepted;
     case MessageType.friendApplicationRejectedNotification:
-      return '对方拒绝了你的好友申请';
+      return s.imSysFriendApplyRejected;
     case MessageType.friendApplicationNotification:
-      return '收到一条好友申请';
+      return s.imSysFriendApplyReceived;
     case MessageType.friendAddedNotification:
-      return '你们已经是好友了，可以聊天了';
+      return s.imSysFriendAdded;
     case MessageType.friendDeletedNotification:
-      return '你们的好友关系已解除';
+      return s.imSysFriendDeleted;
     case MessageType.friendRemarkSetNotification:
-      return '好友备注已修改';
+      return s.imSysFriendRemarkChanged;
     case MessageType.blackAddedNotification:
-      return '已加入黑名单';
+      return s.imSysFriendBlacklisted;
     case MessageType.blackDeletedNotification:
-      return '已移出黑名单';
+      return s.imSysFriendUnblacklisted;
 
     // ── 群组相关 ──
     case MessageType.groupCreatedNotification:
-      return '群聊已创建';
+      return s.imSysGroupCreated;
     case MessageType.groupInfoSetNotification:
-      return '群信息已修改';
+      return s.imSysGroupInfoChanged;
     case MessageType.groupInfoSetNameNotification:
-      return '群名已修改';
+      return s.imSysGroupNameChanged;
     case MessageType.groupInfoSetAnnouncementNotification:
-      return '群公告已更新';
+      return s.imSysGroupNoticeUpdated;
     case MessageType.joinGroupApplicationNotification:
-      return '收到一条入群申请';
+      return s.imSysGroupApplyReceived;
     case MessageType.memberQuitNotification:
-      return '有成员退出群聊';
+      return s.imSysGroupMemberQuit;
     case MessageType.memberKickedNotification:
-      return '有成员被移出群聊';
+      return s.imSysGroupMemberKicked;
     case MessageType.memberInvitedNotification:
-      return '有成员被邀请入群';
+      return s.imSysGroupMemberInvited;
     case MessageType.memberEnterNotification:
-      return '有成员加入群聊';
+      return s.imSysGroupMemberJoined;
     case MessageType.dismissGroupNotification:
-      return '群聊已解散';
+      return s.imSysGroupDismissed;
     case MessageType.groupOwnerTransferredNotification:
-      return '群主已转让';
+      return s.imSysGroupOwnerTransferred;
     case MessageType.groupApplicationAcceptedNotification:
-      return '入群申请已通过';
+      return s.imSysGroupApplyApproved;
     case MessageType.groupApplicationRejectedNotification:
-      return '入群申请已被拒绝';
+      return s.imSysGroupApplyRejected;
     case MessageType.groupMemberMutedNotification:
-      return '成员被禁言';
+      return s.imSysGroupMemberMuted;
     case MessageType.groupMemberCancelMutedNotification:
-      return '成员禁言已解除';
+      return s.imSysGroupMemberUnmuted;
     case MessageType.groupMutedNotification:
-      return '全员禁言';
+      return s.imSysGroupMutedAll;
     case MessageType.groupCancelMutedNotification:
-      return '全员禁言已解除';
+      return s.imSysGroupUnmutedAll;
     case MessageType.groupMemberInfoChangedNotification:
-      return '成员信息变更';
+      return s.imSysGroupMemberInfoChanged;
     case MessageType.groupMemberSetToAdminNotification:
-      return '成员被设为管理员';
+      return s.imSysGroupMemberSetAdmin;
     case MessageType.groupMemberSetToOrdinaryUserNotification:
-      return '管理员已恢复为普通成员';
+      return s.imSysGroupAdminRevoked;
 
     // ── 用户相关 ──
     case MessageType.userInfoUpdatedNotification:
-      return '用户资料已更新';
+      return s.imSysUserInfoUpdated;
     case MessageType.conversationChangeNotification:
-      return '会话已变更';
+      return s.imSysConversationChanged;
 
     // ── 其它 ──
     case MessageType.revokeMessageNotification:
-      return '撤回了一条消息';
+      return s.imPreviewRevoked;
     case MessageType.oaNotification:
-      return '[OA 通知]';
+      return s.imPreviewOA;
     case MessageType.businessNotification:
-      return '[系统通知]';
+      return s.imPreviewSystem;
     case MessageType.burnAfterReadingNotification:
-      return '[阅后即焚]';
+      return s.imPreviewBurnAfterRead;
 
     default:
-      return '[未知消息: ${msg.contentType}]';
+      return T.fmt(s.imPreviewUnknown, {'type': msg.contentType});
   }
 }

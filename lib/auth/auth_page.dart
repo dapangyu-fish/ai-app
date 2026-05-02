@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../designer/app_storage.dart';
+import '../i18n/framework_strings.dart';
+import '../i18n/language_switcher.dart';
 import 'auth_service.dart';
 
 /// 登录 / 注册页面
@@ -52,13 +54,18 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _submit() async {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
+    final t = T.of(context);
 
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = '请填写邮箱和密码');
+    if (email.isEmpty) {
+      setState(() => _error = t.authEmailRequired);
+      return;
+    }
+    if (password.isEmpty) {
+      setState(() => _error = t.authPasswordRequired);
       return;
     }
     if (!_isLogin && password.length < 6) {
-      setState(() => _error = '密码至少 6 位');
+      setState(() => _error = t.authPasswordTooShort);
       return;
     }
 
@@ -129,8 +136,19 @@ class _AuthPageState extends State<AuthPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('auth');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        actions: const [
+          LanguageSwitcher(),
+          SizedBox(width: 8),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -156,7 +174,7 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _isLogin ? '登录你的账户' : '创建新账户',
+                  _isLogin ? t.authLoginSubtitle : t.authRegisterSubtitle,
                   style: TextStyle(
                     fontSize: 15,
                     color: cs.onSurfaceVariant,
@@ -171,7 +189,7 @@ class _AuthPageState extends State<AuthPage> {
                     controller: _usernameCtrl,
                     style: TextStyle(color: cs.onSurface),
                     decoration: InputDecoration(
-                      hintText: '用户名（可选）',
+                      hintText: t.authUsernameOptionalHint,
                       hintStyle: TextStyle(color: cs.onSurfaceVariant),
                       prefixIcon: Icon(Icons.person_outline, color: cs.onSurfaceVariant),
                     ),
@@ -185,7 +203,7 @@ class _AuthPageState extends State<AuthPage> {
                   keyboardType: TextInputType.emailAddress,
                   style: TextStyle(color: cs.onSurface),
                   decoration: InputDecoration(
-                    hintText: '邮箱',
+                    hintText: t.authEmailHint,
                     hintStyle: TextStyle(color: cs.onSurfaceVariant),
                     prefixIcon: Icon(Icons.email_outlined, color: cs.onSurfaceVariant),
                   ),
@@ -199,7 +217,7 @@ class _AuthPageState extends State<AuthPage> {
                   obscureText: _obscure,
                   style: TextStyle(color: cs.onSurface),
                   decoration: InputDecoration(
-                    hintText: '密码',
+                    hintText: t.authPasswordHint,
                     hintStyle: TextStyle(color: cs.onSurfaceVariant),
                     prefixIcon: Icon(Icons.lock_outlined, color: cs.onSurfaceVariant),
                     suffixIcon: IconButton(
@@ -227,7 +245,7 @@ class _AuthPageState extends State<AuthPage> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: cs.onPrimary),
                           )
-                        : Text(_isLogin ? '登录' : '注册'),
+                        : Text(_isLogin ? t.authLoginButton : t.authRegisterButton),
                   ),
                 ),
 
@@ -280,7 +298,7 @@ class _AuthPageState extends State<AuthPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_isLogin ? '还没有账户？' : '已有账户？',
+                    Text(_isLogin ? t.authNoAccountPrompt : t.authHasAccountPrompt,
                         style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
                     TextButton(
                       onPressed: () => setState(() {
@@ -289,7 +307,7 @@ class _AuthPageState extends State<AuthPage> {
                         _info = null;
                       }),
                       child: Text(
-                        _isLogin ? '注册' : '登录',
+                        _isLogin ? t.authRegisterButton : t.authLoginButton,
                         style: TextStyle(
                           color: cs.onSurface,
                           fontWeight: FontWeight.w600,
@@ -340,7 +358,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
   Future<void> _verify() async {
     final code = _codeCtrl.text.trim();
     if (code.isEmpty) {
-      setState(() => _error = '请输入验证码');
+      setState(() => _error = T.of(context).authVerifyCodeRequired);
       return;
     }
 
@@ -372,7 +390,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
 
     try {
       await AuthService.resendVerification(widget.email);
-      setState(() => _info = '验证邮件已重新发送');
+      setState(() => _info = T.of(context).authVerifyCodeSent);
     } catch (e) {
       setState(
           () => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -385,10 +403,11 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('otp_verify');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('邮箱验证', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.authVerifyTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -400,7 +419,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                 Icon(Icons.mark_email_read_outlined, size: 56, color: cs.onSurface),
                 const SizedBox(height: 20),
                 Text(
-                  '验证你的邮箱',
+                  t.authVerifyPageHeading,
                   style: GoogleFonts.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -409,7 +428,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '验证码已发送到\n${widget.email}',
+                  T.fmt(t.authVerifyCodeSentTo, {'email': widget.email}),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                 ),
@@ -427,7 +446,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                     color: cs.onSurface,
                   ),
                   decoration: InputDecoration(
-                    hintText: '6 位验证码',
+                    hintText: t.authVerifyCodeHint,
                     hintStyle: TextStyle(
                       color: cs.onSurfaceVariant,
                       fontSize: 16,
@@ -451,7 +470,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: cs.onPrimary),
                           )
-                        : const Text('验证'),
+                        : Text(t.authVerifyButton),
                   ),
                 ),
 
@@ -461,7 +480,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                 TextButton(
                   onPressed: _loading ? null : _resend,
                   child: Text(
-                    '没收到？重新发送验证码',
+                    t.authResendCodePrompt,
                     style: TextStyle(color: cs.onSurfaceVariant),
                   ),
                 ),
@@ -534,10 +553,14 @@ class _ProfilePageState extends State<ProfilePage> {
     });
     try {
       await AuthService.updateProfile(username: name);
-      setState(() => _message = '用户名已更新');
+      if (!mounted) return;
+      setState(() => _message = T.of(context).profileSavedSuccess);
     } catch (e) {
-      setState(
-          () => _message = '失败: ${e.toString().replaceFirst("Exception: ", "")}');
+      if (!mounted) return;
+      setState(() => _message = T.fmt(
+            T.of(context).profileSaveFailedWith,
+            {'msg': e.toString().replaceFirst('Exception: ', '')},
+          ));
     } finally {
       setState(() => _loading = false);
     }
@@ -567,10 +590,14 @@ class _ProfilePageState extends State<ProfilePage> {
       imageCache.clear();
       imageCache.clearLiveImages();
 
-      setState(() => _message = '头像已更新');
+      if (!mounted) return;
+      setState(() => _message = T.of(context).profileSavedSuccess);
     } catch (e) {
-      setState(
-          () => _message = '失败: ${e.toString().replaceFirst("Exception: ", "")}');
+      if (!mounted) return;
+      setState(() => _message = T.fmt(
+            T.of(context).profileSaveFailedWith,
+            {'msg': e.toString().replaceFirst('Exception: ', '')},
+          ));
     } finally {
       setState(() => _loading = false);
     }
@@ -588,6 +615,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
     debugPrint('[ProfilePage] Final avatarUrl to render: $avatarUrl');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     Widget avatar;
     if (avatarUrl.startsWith('http')) {
@@ -617,7 +645,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('个人资料', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.profileTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -655,16 +683,16 @@ class _ProfilePageState extends State<ProfilePage> {
             // User Role Badge
             Builder(builder: (context) {
               final role = user?['role']?.toString() ?? 'user';
-              String roleText = '普通用户';
+              String roleText = t.roleUser;
               Color roleColor = cs.surfaceContainerHighest;
               Color roleTextColor = cs.onSurfaceVariant;
-              
+
               if (role == 'admin') {
-                roleText = '管理员';
+                roleText = t.roleAdmin;
                 roleColor = cs.primaryContainer;
                 roleTextColor = cs.onPrimaryContainer;
               } else if (role == 'pro') {
-                roleText = '高级用户';
+                roleText = t.roleProUser;
                 roleColor = cs.tertiaryContainer;
                 roleTextColor = cs.onTertiaryContainer;
               }
@@ -692,7 +720,7 @@ class _ProfilePageState extends State<ProfilePage> {
               controller: _usernameCtrl,
               style: TextStyle(color: cs.onSurface),
               decoration: InputDecoration(
-                hintText: '用户名',
+                hintText: t.authUsernameHint,
                 hintStyle: TextStyle(color: cs.onSurfaceVariant),
                 prefixIcon: Icon(Icons.person_outline, color: cs.onSurfaceVariant),
               ),
@@ -711,7 +739,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: cs.onPrimary),
                       )
-                    : const Text('保存'),
+                    : Text(t.save),
               ),
             ),
 
@@ -733,7 +761,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   if (context.mounted) Navigator.of(context).pop();
                 },
                 child: Text(
-                  '退出登录',
+                  t.userMenuLogout,
                   style: TextStyle(color: cs.error, fontSize: 15),
                 ),
               ),

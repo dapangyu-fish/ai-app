@@ -4,9 +4,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
+import 'i18n/framework_strings.dart';
+import 'i18n/locale_controller.dart';
+import 'i18n/language_switcher.dart';
+import 'i18n/meta_helper.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/widget_builder.dart';
 import 'json_ui/cache_manager.dart';
@@ -33,6 +38,39 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
   return JsonInterpreter();
 });
 
+/// 全局主题模式（light/dark/system）。被 MaterialApp 监听用于运行时切主题。
+/// JSON-APP 通过 @set_theme 写它，框架自动重建。
+final ValueNotifier<ThemeMode> appThemeMode =
+    ValueNotifier<ThemeMode>(ThemeMode.system);
+
+/// 全局 App 生命周期事件总线（resume / pause / inactive / detached / hidden）。
+/// JSON-APP 在 global.lifecycle.onResume 等字段声明步骤，
+/// 解释器订阅这个 notifier 调度对应回调。
+final ValueNotifier<String> appLifecycleEvent = ValueNotifier<String>('init');
+
+class _AppLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        appLifecycleEvent.value = 'resume';
+        break;
+      case AppLifecycleState.paused:
+        appLifecycleEvent.value = 'pause';
+        break;
+      case AppLifecycleState.inactive:
+        appLifecycleEvent.value = 'inactive';
+        break;
+      case AppLifecycleState.detached:
+        appLifecycleEvent.value = 'detached';
+        break;
+      case AppLifecycleState.hidden:
+        appLifecycleEvent.value = 'hidden';
+        break;
+    }
+  }
+}
+
 // ============================================================
 // 入口
 // ============================================================
@@ -40,8 +78,16 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
+  await LocaleController.loadFromPrefs();
+
+  // 注册 app 生命周期监听（resume / pause / inactive / detached / hidden）
+  WidgetsBinding.instance.addObserver(_AppLifecycleObserver());
+
   // 捕捉全局渲染和布局异常（防止布局越界等导致直接白屏）
   ErrorWidget.builder = (FlutterErrorDetails details) {
+    // 没有 context；按 appLocale.value（用户偏好）选 i18n
+    final t = T.lookup(appLocale.value ?? const Locale('zh', 'CN'));
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -57,13 +103,13 @@ void main() async {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red, size: 16),
-                  SizedBox(width: 8),
+                  const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                  const SizedBox(width: 8),
                   Text(
-                    'UI 渲染/布局崩溃',
-                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                    t.uiRenderCrash,
+                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ],
               ),
@@ -107,10 +153,38 @@ class JsonDslApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: appLocale,
+      builder: (context, locale, _) => ValueListenableBuilder<ThemeMode>(
+        valueListenable: appThemeMode,
+        builder: (context, mode, _) => _buildApp(context, ref, mode, locale),
+      ),
+    );
+  }
+
+  Widget _buildApp(
+      BuildContext context, WidgetRef ref, ThemeMode mode, Locale? locale) {
     return MaterialApp(
       title: 'MyApp',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
+      locale: locale, // null = 跟随系统
+      supportedLocales: T.supportedLocales,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      localeResolutionCallback: (deviceLocale, supported) {
+        // 用户没显式选 locale 时，按系统 locale 匹配；不在支持列表里就回退中文
+        if (locale != null) return locale;
+        if (deviceLocale != null) {
+          for (final s in supported) {
+            if (s.languageCode == deviceLocale.languageCode) return s;
+          }
+        }
+        return T.supportedLocales.first;
+      },
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
@@ -283,7 +357,7 @@ class JsonDslApp extends ConsumerWidget {
           color: Color(0xFF333333),
         ),
       ),
-      themeMode: ThemeMode.system,
+      themeMode: mode,
       // 使用 builder 注入悬浮球，凌驾于所有路由之上
       builder: (context, child) {
         return DesignerBall(
@@ -297,7 +371,7 @@ class JsonDslApp extends ConsumerWidget {
               interpreter.loadConfig(jsonConfig);
               await interpreter.executeSteps();
               final meta = jsonConfig['meta'] as Map<String, dynamic>? ?? {};
-              final name = (meta['name'] as String?) ?? 'AI 生成';
+              final name = resolveDisplayName(meta, fallback: 'AI 生成');
               JsonDslApp.navigatorKey.currentState?.push(
                 MaterialPageRoute(
                   builder: (_) => JsonScreenView(fileName: name),
@@ -381,7 +455,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       if (filePath == null) {
         setState(() {
           _loading = false;
-          _error = '无法获取文件路径';
+          _error = T.of(context).errorPathUnavailable;
         });
         return;
       }
@@ -401,22 +475,26 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       if (!mounted) return;
 
       // 弹出确认对话框：是否添加到"我的 APP"
+      final t = T.of(context);
       final shouldSave = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('添加到我的 APP'),
-          content: const Text('是否将此应用添加到"我的 APP"列表？\n\n添加后可以方便地复用和发布到市场。'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('否'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('是'),
-            ),
-          ],
-        ),
+        builder: (dialogCtx) {
+          final dt = T.of(dialogCtx);
+          return AlertDialog(
+            title: Text(dt.addToMyAppsTitle),
+            content: Text(dt.addToMyAppsContent),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx, false),
+                child: Text(dt.no),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogCtx, true),
+                child: Text(dt.yes),
+              ),
+            ],
+          );
+        },
       );
 
       // 如果用户选择保存，则添加到"我的 APP"
@@ -425,13 +503,13 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
           await AppStorage.instance.save(config);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('已添加到我的 APP')),
+              SnackBar(content: Text(t.addToMyAppsAdded)),
             );
           }
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('保存失败: $e')),
+              SnackBar(content: Text(T.fmt(t.saveFailedWith, {'msg': '$e'}))),
             );
           }
         }
@@ -462,11 +540,11 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     try {
       final name = app['name'] as String;
       final version = app['version'] as String;
-      
+
       // 使用 CacheManager 走统一的热更新缓存策略，传确切的版本号进行约束
       final config = await CacheManager.instance.getResource(
-        name, 
-        VersionConstraint.parse('^$version'), 
+        name,
+        VersionConstraint.parse('^$version'),
         type: 'app'
       );
 
@@ -478,7 +556,12 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       interpreter.loadConfig(config);
       await interpreter.executeSteps();
 
-      _loadedFileName = name;
+      // 用 displayName（多语言）作为 fileName 标题；优先 config.meta，再回退到 app dict
+      final configMeta = config['meta'] as Map<String, dynamic>?;
+      _loadedFileName = resolveDisplayName(
+        configMeta ?? {'name': name},
+        fallback: name,
+      );
       setState(() => _loading = false);
 
       if (!mounted) return;
@@ -521,12 +604,14 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final interpreter = ref.read(interpreterProvider);
       interpreter.loadConfig(app.config);
       await interpreter.executeSteps();
-      _loadedFileName = app.name;
+      final meta = app.config['meta'] as Map<String, dynamic>?;
+      final displayName = resolveDisplayName(meta, fallback: app.name);
+      _loadedFileName = displayName;
       setState(() => _loading = false);
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => JsonScreenView(fileName: app.name),
+          builder: (_) => JsonScreenView(fileName: displayName),
         ),
       );
     } catch (e) {
@@ -582,6 +667,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('home');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
     final username = AuthService.currentUser?['username'] ??
         AuthService.currentUser?['email']?.toString().split('@').first ??
         '';
@@ -597,7 +683,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               Row(
                 children: [
                   Text(
-                    'MyApp',
+                    t.homeAppTitle,
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -619,6 +705,8 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                               builder: (_) => const ProfilePage(),
                             ),
                           );
+                        } else if (value == 'language') {
+                          await showLanguagePicker(context);
                         } else if (value == 'logout') {
                           await IMService.instance.logout();
                           await AuthService.signOut();
@@ -635,23 +723,33 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           ),
                         ),
                         const PopupMenuDivider(),
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'profile',
                           child: Row(
                             children: [
-                              Icon(Icons.person_outline, size: 18),
-                              SizedBox(width: 8),
-                              Text('个人资料'),
+                              const Icon(Icons.person_outline, size: 18),
+                              const SizedBox(width: 8),
+                              Text(t.userMenuProfile),
                             ],
                           ),
                         ),
-                        const PopupMenuItem(
+                        PopupMenuItem(
+                          value: 'language',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.language, size: 18),
+                              const SizedBox(width: 8),
+                              Text(t.settingsLanguage),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
                           value: 'logout',
                           child: Row(
                             children: [
-                              Icon(Icons.logout, size: 18),
-                              SizedBox(width: 8),
-                              Text('退出登录'),
+                              const Icon(Icons.logout, size: 18),
+                              const SizedBox(width: 8),
+                              Text(t.userMenuLogout),
                             ],
                           ),
                         ),
@@ -664,7 +762,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
               // Welcome
               Text(
-                'Hi, $username',
+                T.fmt(t.homeWelcome, {'name': username}),
                 style: GoogleFonts.inter(
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
@@ -673,7 +771,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                '探索和运行你的应用',
+                t.homeSubtitle,
                 style: TextStyle(
                   fontSize: 15,
                   color: cs.onSurfaceVariant,
@@ -688,8 +786,8 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                   Expanded(
                     child: _buildEntryCard(
                       icon: Icons.store_outlined,
-                      title: '应用市场',
-                      subtitle: '发现精彩应用',
+                      title: t.homeMarket,
+                      subtitle: t.homeMarketSubtitle,
                       onTap: _loading ? null : _openMarket,
                     ),
                   ),
@@ -697,8 +795,8 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                   Expanded(
                     child: _buildEntryCard(
                       icon: Icons.apps_outlined,
-                      title: '我的 APP',
-                      subtitle: '历史记录',
+                      title: t.homeMyApps,
+                      subtitle: t.homeMyAppsSubtitle,
                       onTap: _loading ? null : _openMyApps,
                     ),
                   ),
@@ -819,7 +917,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '选择本地文件',
+                                t.homePickFile,
                                 style: GoogleFonts.inter(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
@@ -828,7 +926,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '从设备导入 JSON 配置',
+                                t.homePickFileSubtitle,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: cs.onSurfaceVariant,
@@ -924,6 +1022,7 @@ class _MarketPageState extends State<_MarketPage> {
   }
 
   Future<void> _fetchApps() async {
+    final t = T.of(context);
     setState(() {
       _loading = true;
       _error = null;
@@ -937,7 +1036,7 @@ class _MarketPageState extends State<_MarketPage> {
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
-        throw Exception('服务器错误 (${resp.statusCode})');
+        throw Exception(T.fmt(t.errorServerWithCode, {'code': resp.statusCode}));
       }
 
       final data = json.decode(resp.body) as Map<String, dynamic>;
@@ -969,10 +1068,11 @@ class _MarketPageState extends State<_MarketPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('market');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('应用市场', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.marketTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -1052,13 +1152,13 @@ class _MarketPageState extends State<_MarketPage> {
                       const SizedBox(height: 16),
                       Text(_error!, style: TextStyle(color: cs.onSurfaceVariant)),
                       const SizedBox(height: 16),
-                      FilledButton(onPressed: _fetchApps, child: const Text('重试')),
+                      FilledButton(onPressed: _fetchApps, child: Text(t.retry)),
                     ],
                   ),
                 )
               : _apps.isEmpty
                   ? Center(
-                      child: Text('暂无可用应用',
+                      child: Text(t.marketEmpty,
                           style: TextStyle(color: cs.onSurfaceVariant)),
                     )
                   : ListView.builder(
@@ -1073,31 +1173,37 @@ class _MarketPageState extends State<_MarketPage> {
   }
 
   Future<void> _confirmDelete(BuildContext context, String packageName) async {
+    final t = T.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认下架'),
-        content: Text('确定要永久删除包 "$packageName" 吗？\n\n此操作不可撤销，将删除所有版本。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+      builder: (dialogCtx) {
+        final dt = T.of(dialogCtx);
+        return AlertDialog(
+          title: Text(dt.marketDeleteConfirmTitle),
+          content: Text(T.fmt(dt.marketDeleteConfirmContent, {'package': packageName})),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: Text(dt.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: Text(dt.delete),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true && context.mounted) {
-      await _deletePackage(context, packageName);
+      // 用上面已经抓到的 t（避免在 await 后跨 context 取）
+      await _deletePackage(context, packageName, t);
     }
   }
 
-  Future<void> _deletePackage(BuildContext context, String packageName) async {
+  Future<void> _deletePackage(
+      BuildContext context, String packageName, FrameworkStrings t) async {
     final cs = Theme.of(context).colorScheme;
 
     // 显示加载提示
@@ -1113,7 +1219,7 @@ class _MarketPageState extends State<_MarketPage> {
               children: [
                 CircularProgressIndicator(color: cs.onSurface),
                 const SizedBox(height: 16),
-                const Text('正在删除...'),
+                Text(t.marketDeleting),
               ],
             ),
           ),
@@ -1123,7 +1229,7 @@ class _MarketPageState extends State<_MarketPage> {
 
     try {
       final token = AuthService.token;
-      if (token == null) throw Exception('未登录');
+      if (token == null) throw Exception(t.errorNotLoggedIn);
 
       final resp = await http.delete(
         Uri.parse('https://registry.dapangyu.work/package/$packageName'),
@@ -1135,20 +1241,20 @@ class _MarketPageState extends State<_MarketPage> {
       if (resp.statusCode == 200) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('删除成功')),
+            SnackBar(content: Text(t.marketDeleteSuccess)),
           );
           // 刷新列表
           _fetchApps();
         }
       } else {
         final data = json.decode(resp.body);
-        throw Exception(data['error'] ?? '删除失败');
+        throw Exception(data['error'] ?? t.marketDeleteFailed);
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context); // 关闭加载对话框
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除失败: $e')),
+          SnackBar(content: Text(T.fmt(t.marketDeleteFailedWith, {'msg': '$e'}))),
         );
       }
     }
@@ -1157,6 +1263,7 @@ class _MarketPageState extends State<_MarketPage> {
   Widget _buildAppCard(BuildContext context, Map<String, dynamic> app,
       ColorScheme cs) {
     final name = app['name'] as String? ?? '';
+    final displayName = resolveDisplayName(app, fallback: name);
     final desc = app['description'] as String? ?? '';
     final version = app['version']?.toString() ?? '';
     final author = app['author'] as String? ?? '';
@@ -1194,7 +1301,7 @@ class _MarketPageState extends State<_MarketPage> {
                       children: [
                         Expanded(
                           child: Text(
-                            name,
+                            displayName,
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -1235,7 +1342,7 @@ class _MarketPageState extends State<_MarketPage> {
                     if (author.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        '作者: $author',
+                        T.fmt(T.of(context).marketAuthor, {'author': author}),
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurfaceVariant,
@@ -1251,7 +1358,7 @@ class _MarketPageState extends State<_MarketPage> {
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   color: Colors.red,
-                  tooltip: '下架',
+                  tooltip: T.of(context).marketUnpublishTooltip,
                   onPressed: () => _confirmDelete(context, name),
                 ),
               Icon(Icons.download_outlined, color: cs.onSurfaceVariant),
@@ -1347,7 +1454,7 @@ class JsonScreenView extends ConsumerWidget {
     if (screenConfig == null) {
       return Scaffold(
         appBar: AppBar(title: Text(interpreter.appName)),
-        body: const Center(child: Text('未找到页面配置')),
+        body: Center(child: Text(T.of(context).pageConfigNotFound)),
       );
     }
 
@@ -1479,9 +1586,10 @@ class _CrashPage extends StatelessWidget {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('crash');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('运行出错', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.crashTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -1494,7 +1602,7 @@ class _CrashPage extends StatelessWidget {
           children: [
             Icon(Icons.warning_amber_rounded, size: 48, color: cs.error),
             const SizedBox(height: 12),
-            Text('$fileName 运行崩溃',
+            Text(T.fmt(t.crashSubtitle, {'file': fileName}),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Container(
@@ -1531,16 +1639,16 @@ class _CrashPage extends StatelessWidget {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () async {
-                      final fullText = '$fileName 运行崩溃\n\n错误:\n$error\n\n堆栈:\n$stackTrace';
+                      final fullText = '${T.fmt(t.crashSubtitle, {'file': fileName})}\n\n$error\n\n$stackTrace';
                       await Clipboard.setData(ClipboardData(text: fullText));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('崩溃信息已复制')),
+                          SnackBar(content: Text(t.crashCopied)),
                         );
                       }
                     },
                     icon: const Icon(Icons.copy_all),
-                    label: const Text('复制'),
+                    label: Text(t.copy),
                     style: FilledButton.styleFrom(
                       backgroundColor: cs.primary,
                       foregroundColor: cs.onPrimary,
@@ -1560,7 +1668,7 @@ class _CrashPage extends StatelessWidget {
                       DesignerBall.sendCrashReport?.call(crashMsg);
                     },
                     icon: const Icon(Icons.auto_fix_high),
-                    label: const Text('AI 分析修复'),
+                    label: Text(t.crashAiFix),
                     style: FilledButton.styleFrom(
                       backgroundColor: cs.tertiary,
                       foregroundColor: cs.onTertiary,
@@ -1572,7 +1680,7 @@ class _CrashPage extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.arrow_back),
-                    label: const Text('返回'),
+                    label: Text(t.back),
                   ),
                 ),
               ],
@@ -1767,7 +1875,8 @@ class _MyAppsPageState extends State<_MyAppsPage> {
     );
 
     if (result == true) {
-      _showSnackBar('发布成功 🎉');
+      if (!mounted) return;
+      _showSnackBar(T.of(context).myAppsPublishSuccess);
     }
   }
 
@@ -1775,10 +1884,11 @@ class _MyAppsPageState extends State<_MyAppsPage> {
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('my_apps');
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('我的 APP', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(t.myAppsTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
       ),
       body: _apps == null
           ? Center(child: CircularProgressIndicator(color: cs.onSurface))
@@ -1789,9 +1899,9 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                     children: [
                       Icon(Icons.inbox_outlined, size: 64, color: cs.onSurfaceVariant),
                       const SizedBox(height: 16),
-                      Text('还没有 APP', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16)),
+                      Text(t.myAppsEmpty, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Text('长按悬浮球，用语音让 AI 帮你生成', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+                      Text(t.myAppsEmptyHint, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
                     ],
                   ),
                 )
@@ -1806,6 +1916,8 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                         final timeStr = time != null
                             ? '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
                             : '';
+                        final meta = app.config['meta'] as Map<String, dynamic>?;
+                        final displayName = resolveDisplayName(meta, fallback: app.name);
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -1814,7 +1926,7 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                               backgroundColor: cs.surfaceContainerHighest,
                               child: Icon(Icons.apps, color: cs.onSurface),
                             ),
-                            title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            title: Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(
                               app.description.isNotEmpty ? app.description : timeStr,
                               maxLines: 1,
@@ -1827,7 +1939,7 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                                   IconButton(
                                     icon: Icon(Icons.cloud_upload_outlined,
                                         size: 20, color: cs.onSurfaceVariant),
-                                    tooltip: '上传到市场',
+                                    tooltip: t.myAppsUploadTooltip,
                                     onPressed: _uploading ? null : () => _uploadToMarket(app),
                                   ),
                                 IconButton(
@@ -1850,16 +1962,16 @@ class _MyAppsPageState extends State<_MyAppsPage> {
                     if (_uploading)
                       Container(
                         color: Colors.black26,
-                        child: const Center(
+                        child: Center(
                           child: Card(
                             child: Padding(
-                              padding: EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(24),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  CircularProgressIndicator(),
-                                  SizedBox(height: 16),
-                                  Text('正在上传到市场...'),
+                                  const CircularProgressIndicator(),
+                                  const SizedBox(height: 16),
+                                  Text(t.myAppsUploading),
                                 ],
                               ),
                             ),
@@ -1969,27 +2081,31 @@ class _PublishDialogState extends State<_PublishDialog> {
   }
 
   Future<void> _createNamespace() async {
+    final t = T.of(context);
     final ctrl = TextEditingController();
     final nsName = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('创建命名空间'),
-        content: TextField(
-          controller: ctrl,
-          decoration: InputDecoration(
-            labelText: '空间名称',
-            hintText: '小写字母、数字、- 和 _',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      builder: (ctx) {
+        final dt = T.of(ctx);
+        return AlertDialog(
+          title: Text(dt.publishCreateNamespaceTitle),
+          content: TextField(
+            controller: ctrl,
+            decoration: InputDecoration(
+              labelText: dt.publishNamespaceName,
+              hintText: dt.publishNamespaceHint,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('创建'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(dt.cancel)),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text(dt.create),
+            ),
+          ],
+        );
+      },
     );
     if (nsName == null || nsName.isEmpty) return;
 
@@ -2008,46 +2124,53 @@ class _PublishDialogState extends State<_PublishDialog> {
         await _fetchNamespaces();
         if (mounted) setState(() => _selectedNamespace = nsName);
       } else {
-        if (mounted) setState(() => _error = data['error']?.toString() ?? '创建失败');
+        if (mounted) {
+          setState(() => _error = data['error']?.toString() ?? t.publishCreateFailed);
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => _error = '网络错误: $e');
+      if (mounted) {
+        setState(() => _error = T.fmt(t.errorNetworkWith, {'msg': '$e'}));
+      }
     }
   }
 
   Future<void> _inviteMember() async {
-    // 显示"开发中"提示
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('邀请成员'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.construction, size: 48, color: Colors.orange),
-            SizedBox(height: 16),
-            Text(
-              '此功能正在开发中',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '敬请期待！',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+      builder: (ctx) {
+        final dt = T.of(ctx);
+        return AlertDialog(
+          title: Text(dt.publishInviteMember),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.construction, size: 48, color: Colors.orange),
+              const SizedBox(height: 16),
+              Text(
+                dt.featureInDevelopment,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                dt.featureStayTuned,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(dt.gotIt),
             ),
           ],
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('知道了'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Future<void> _doPublish() async {
+    final t = T.of(context);
     // 前端校验
     final name = _nameCtrl.text.trim();
     final appid = _appidCtrl.text.trim();
@@ -2055,19 +2178,19 @@ class _PublishDialogState extends State<_PublishDialog> {
     final desc = _descCtrl.text.trim();
 
     if (name.isEmpty) {
-      setState(() => _error = '包名不能为空');
+      setState(() => _error = t.publishPkgNameRequired);
       return;
     }
     if (!_isValidUuid(appid)) {
-      setState(() => _error = 'AppID 必须是有效的 UUID 格式');
+      setState(() => _error = t.publishAppidInvalid);
       return;
     }
     if (!RegExp(r'^\d+\.\d+\.\d+$').hasMatch(version)) {
-      setState(() => _error = '版本号必须是 x.y.z 格式');
+      setState(() => _error = t.publishVersionInvalid);
       return;
     }
     if (!_isAdmin && (_selectedNamespace == null || _selectedNamespace!.isEmpty)) {
-      setState(() => _error = '请选择命名空间或创建一个新空间');
+      setState(() => _error = t.publishNamespaceRequired);
       return;
     }
 
@@ -2109,13 +2232,19 @@ class _PublishDialogState extends State<_PublishDialog> {
         if (mounted) {
           await showDialog(
             context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('UUID 冲突'),
-              content: Text('该 UUID 已被包 "$pkg" 使用。\n请点击「随机生成 🎲」获取新的 UUID 后重试。'),
-              actions: [
-                FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('知道了')),
-              ],
-            ),
+            builder: (ctx) {
+              final dt = T.of(ctx);
+              return AlertDialog(
+                title: Text(dt.publishUuidConflictTitle),
+                content: Text(T.fmt(dt.publishUuidConflictContent, {'pkg': pkg})),
+                actions: [
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(dt.gotIt),
+                  ),
+                ],
+              );
+            },
           );
           setState(() => _publishing = false);
         }
@@ -2125,14 +2254,15 @@ class _PublishDialogState extends State<_PublishDialog> {
       // 其他错误
       if (mounted) {
         setState(() {
-          _error = data['error']?.toString() ?? '发布失败 (${resp.statusCode})';
+          _error = data['error']?.toString() ??
+              T.fmt(t.publishFailedWithCode, {'code': resp.statusCode});
           _publishing = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = '网络错误: $e';
+          _error = T.fmt(t.errorNetworkWith, {'msg': '$e'});
           _publishing = false;
         });
       }
@@ -2142,21 +2272,22 @@ class _PublishDialogState extends State<_PublishDialog> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final t = T.of(context);
 
     return AlertDialog(
       title: Row(
         children: [
-          const Expanded(child: Text('发布到市场')),
+          Expanded(child: Text(t.publishDialogTitle)),
           TextButton.icon(
             onPressed: _inviteMember,
             icon: const Icon(Icons.person_add, size: 18),
-            label: const Text('邀请成员'),
+            label: Text(t.publishInviteMember),
           ),
           const SizedBox(width: 8),
           TextButton.icon(
             onPressed: _createNamespace,
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('创建空间'),
+            label: Text(t.publishCreateNamespace),
           ),
         ],
       ),
@@ -2190,16 +2321,19 @@ class _PublishDialogState extends State<_PublishDialog> {
                         : DropdownButtonFormField<String>(
                             value: _selectedNamespace,
                             decoration: InputDecoration(
-                              labelText: '项目空间',
+                              labelText: t.publishNamespaceField,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                             ),
                             isExpanded: true,
                             items: [
                               if (_isAdmin)
-                                const DropdownMenuItem(
+                                DropdownMenuItem(
                                   value: '_official_',
-                                  child: Text('(官方/无空间)', style: TextStyle(fontStyle: FontStyle.italic)),
+                                  child: Text(
+                                    t.publishOfficialNamespace,
+                                    style: const TextStyle(fontStyle: FontStyle.italic),
+                                  ),
                                 ),
                               ...(_namespaces ?? []).map((ns) {
                                 final n = ns['name'] as String;
@@ -2215,7 +2349,7 @@ class _PublishDialogState extends State<_PublishDialog> {
                     child: TextField(
                       controller: _nameCtrl,
                       decoration: InputDecoration(
-                        labelText: '包名',
+                        labelText: t.publishPkgNameField,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                       ),
@@ -2245,7 +2379,7 @@ class _PublishDialogState extends State<_PublishDialog> {
                       setState(() => _appidCtrl.text = _generateUuidV4());
                     },
                     icon: const Icon(Icons.casino, size: 18),
-                    label: const Text('随机生成'),
+                    label: Text(t.publishRandomGenerate),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
@@ -2259,7 +2393,7 @@ class _PublishDialogState extends State<_PublishDialog> {
                 controller: _descCtrl,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  labelText: '描述',
+                  labelText: t.publishDescField,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 ),
@@ -2273,7 +2407,7 @@ class _PublishDialogState extends State<_PublishDialog> {
                     child: TextField(
                       controller: _versionCtrl,
                       decoration: InputDecoration(
-                        labelText: '版本号',
+                        labelText: t.publishVersionField,
                         hintText: '1.0.0',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -2285,7 +2419,7 @@ class _PublishDialogState extends State<_PublishDialog> {
                     child: DropdownButtonFormField<String>(
                       value: _type,
                       decoration: InputDecoration(
-                        labelText: '类型',
+                        labelText: t.publishTypeField,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                       ),
@@ -2307,13 +2441,13 @@ class _PublishDialogState extends State<_PublishDialog> {
       actions: [
         TextButton(
           onPressed: _publishing ? null : () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
+          child: Text(t.cancel),
         ),
         FilledButton(
           onPressed: _publishing ? null : _doPublish,
           child: _publishing
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('发布'),
+              : Text(t.publishButton),
         ),
       ],
     );

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import '../i18n/framework_strings.dart';
 import 'im_service.dart';
 import 'chat_page.dart';
 import 'friend_page.dart';
@@ -70,14 +71,15 @@ class _IMConversationPageState extends State<IMConversationPage> {
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
     final diff = now.difference(dt);
+    final s = T.current;
 
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
+    if (diff.inMinutes < 1) return s.imTimeJustNow;
+    if (diff.inHours < 1) return T.fmt(s.imTimeMinutesAgo, {'n': diff.inMinutes});
     if (diff.inDays < 1) {
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
-    if (diff.inDays == 1) return '昨天';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    if (diff.inDays == 1) return s.imTimeYesterday;
+    if (diff.inDays < 7) return T.fmt(s.imTimeDaysAgo, {'n': diff.inDays});
     return '${dt.month}/${dt.day}';
   }
 
@@ -87,16 +89,17 @@ class _IMConversationPageState extends State<IMConversationPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final s = T.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('消息'),
+        title: Text(s.imConversationsTitle),
         centerTitle: true,
         actions: [
           // 一个入口干到底：进通讯录后再分"加好友 / 建群"
           IconButton(
             icon: const Icon(Icons.people_outline),
-            tooltip: '通讯录',
+            tooltip: s.imContacts,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const IMFriendPage()),
@@ -125,7 +128,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _loadConversations,
-              child: const Text('重试'),
+              child: Text(T.of(context).retry),
             ),
           ],
         ),
@@ -139,9 +142,9 @@ class _IMConversationPageState extends State<IMConversationPage> {
           children: [
             Icon(Icons.chat_bubble_outline, size: 64, color: cs.outline),
             const SizedBox(height: 16),
-            Text('暂无消息', style: TextStyle(color: cs.outline, fontSize: 16)),
+            Text(T.of(context).imEmptyMessages, style: TextStyle(color: cs.outline, fontSize: 16)),
             const SizedBox(height: 8),
-            Text('开始一段对话吧', style: TextStyle(color: cs.outline, fontSize: 13)),
+            Text(T.of(context).imEmptyMessagesHint, style: TextStyle(color: cs.outline, fontSize: 13)),
           ],
         ),
       );
@@ -161,7 +164,8 @@ class _IMConversationPageState extends State<IMConversationPage> {
   }
 
   Widget _buildConversationTile(ConversationInfo conv, ColorScheme cs) {
-    final name = conv.showName ?? '未知';
+    final s = T.of(context);
+    final name = conv.showName ?? s.imUnknownPeer;
     final lastMsg = _getLastMessageContent(conv);
     final time = _formatTime(conv.latestMsgSendTime);
     final unread = conv.unreadCount;
@@ -175,11 +179,11 @@ class _IMConversationPageState extends State<IMConversationPage> {
         return await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('确认删除'),
-            content: Text('删除与 $name 的会话？'),
+            title: Text(s.imConfirmDeleteTitle),
+            content: Text(T.fmt(s.imDeleteConversationContent, {'name': name})),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除')),
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel)),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(s.delete)),
             ],
           ),
         );
@@ -275,6 +279,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
 
   void _showConversationActions(ConversationInfo conv) {
     final isPinned = conv.isPinned ?? false;
+    final s = T.of(context);
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -283,7 +288,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
           children: [
             ListTile(
               leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
-              title: Text(isPinned ? '取消置顶' : '置顶'),
+              title: Text(isPinned ? s.imUnpin : s.imPin),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
@@ -299,7 +304,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
             ),
             ListTile(
               leading: Icon(Icons.mark_chat_read, color: Theme.of(context).colorScheme.primary),
-              title: const Text('标记已读'),
+              title: Text(s.imMarkRead),
               onTap: () async {
                 Navigator.pop(ctx);
                 await IMService.instance.markConversationRead(
@@ -310,7 +315,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
             ),
             ListTile(
               leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
-              title: const Text('删除会话'),
+              title: Text(s.imDeleteConversation),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {

@@ -8,7 +8,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jsonlogic/jsonlogic.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,6 +24,8 @@ import 'widgets/position_handler.dart';
 import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
 import 'drift_database.dart';
+import '../main.dart' show appThemeMode, appLifecycleEvent;
+import '../i18n/locale_controller.dart' show LocaleController;
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -201,10 +208,35 @@ class JsonInterpreter extends ChangeNotifier {
 
   // ============ jsonlogic 数据上下文 ============
 
+  /// 正在求值中的 computed key，用于防递归（A→B→A 时第二次进入 A 直接 null）
+  final Set<String> _computingNow = {};
+
   /// 每次求值前，将当前状态组装为 jsonlogic 的 data 参数
+  /// global.computed.* 会被即时求值，作为 global 名空间下的"派生字段"暴露
   Map<String, dynamic> _buildDataContext() {
+    Map<String, dynamic> globalView = _variables;
+    final computed =
+        (_config['global'] as Map<String, dynamic>?)?['computed'];
+    if (computed is Map && computed.isNotEmpty) {
+      // 只有真存在 computed 时才浅拷贝并注入，避免每次求值都付拷贝成本
+      globalView = Map<String, dynamic>.from(_variables);
+      for (final entry in computed.entries) {
+        final key = entry.key.toString();
+        // 真实变量同名时以真实变量为准（shadow）
+        if (globalView.containsKey(key)) continue;
+        if (_computingNow.contains(key)) continue;
+        _computingNow.add(key);
+        try {
+          globalView[key] = _evaluateExpression(entry.value);
+        } catch (_) {
+          // 求值失败留 null，避免整个上下文构建失败
+        } finally {
+          _computingNow.remove(key);
+        }
+      }
+    }
     return {
-      'global': _variables,
+      'global': globalView,
       'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
       'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
     };
@@ -293,6 +325,26 @@ class JsonInterpreter extends ChangeNotifier {
       _currentScreenId =
           (screens.first as Map<String, dynamic>)['id'] ?? 'home';
     }
+
+    // 单向同步：把当前框架 locale 一次性写到 global.locale。
+    // 之后两边各自演化——框架切语言不会回头改 app；app 调 @set_locale 不会影响框架。
+    // 只在 JSON-APP 没显式预设 locale 时才注入，保留 JSON 自己的优先级。
+    if (!_variables.containsKey('locale')) {
+      _variables['locale'] = _normalizeLocaleTag(
+          LocaleController.currentLocaleTag());
+    }
+
+    // 注册生命周期 hook（resume/pause/...）
+    _attachLifecycleListener();
+  }
+
+  /// 把 BCP 47 tag 简化成 JSON-APP 习惯用的语言代码（zh-CN → zh / en-US → en）。
+  /// JSON-APP 的 i18n 字典通常用 'zh' / 'en' 作 key，简化后命中率更高。
+  /// 如果 JSON-APP 想精细到 zh-TW / zh-HK，自己用完整 tag 也支持（_i18nLookup 会精确匹配）。
+  String _normalizeLocaleTag(String tag) {
+    final dash = tag.indexOf(RegExp(r'[-_]'));
+    if (dash < 0) return tag;
+    return tag.substring(0, dash);
   }
 
   Future<void> executeSteps() async {
@@ -338,6 +390,14 @@ class JsonInterpreter extends ChangeNotifier {
 
     if (path.startsWith('global.')) {
       final subPath = path.substring(7);
+      // 优先返回普通变量；普通变量没有时再看是否为 computed 派生值
+      if (_hasNestedKey(_variables, subPath)) {
+        return _getNestedValue(_variables, subPath);
+      }
+      final computedExpr = _findComputedExpr(subPath);
+      if (computedExpr != null) {
+        return _evaluateExpression(computedExpr);
+      }
       return _getNestedValue(_variables, subPath);
     }
 
@@ -348,6 +408,18 @@ class JsonInterpreter extends ChangeNotifier {
 
     // 尝试作为依赖变量: "depName.varPath"
     return _getDependencyVariable(path);
+  }
+
+  /// 在 global.computed 字典里查表达式（按 dot 路径匹配）
+  /// 例: global.computed = { fullName: <expr> }, subPath="fullName" → 命中
+  dynamic _findComputedExpr(String subPath) {
+    final computed =
+        (_config['global'] as Map<String, dynamic>?)?['computed'];
+    if (computed is! Map) return null;
+    if (computed[subPath] != null) return computed[subPath];
+    // 也支持嵌套 dot 路径（极少需要，但成本几乎为零）
+    return _getNestedValue(
+        Map<String, dynamic>.from(computed), subPath);
   }
 
   /// 读取依赖模块的变量（只读）: "depName.varPath"
@@ -428,9 +500,40 @@ class JsonInterpreter extends ChangeNotifier {
     final regex = RegExp(r'\{\{\s*(.+?)\s*\}\}');
     return template.replaceAllMapped(regex, (match) {
       final expression = match.group(1)!;
-      final value = getVariable(expression);
+      final value = _resolveTemplateExpression(expression);
       return value?.toString() ?? '';
     });
+  }
+
+  /// 解析模板内表达式：
+  ///   - `t('key.path')` / `t("key.path")` → i18n 字典查找
+  ///   - 其他 → 走 getVariable
+  dynamic _resolveTemplateExpression(String expr) {
+    final trimmed = expr.trim();
+    // 形如 t('home.title') 或 t("home.title")
+    final tMatch =
+        RegExp(r'''^t\(\s*['"](.+?)['"]\s*\)$''').firstMatch(trimmed);
+    if (tMatch != null) {
+      return _i18nLookup(tMatch.group(1)!);
+    }
+    return getVariable(trimmed);
+  }
+
+  /// i18n 字典查找：global.i18n[locale][key.path]
+  /// locale 取自 global.locale；找不到回退当前 key 本身（方便快速调试）
+  String _i18nLookup(String keyPath) {
+    final locale = (_variables['locale'] ??
+            (_config['global'] as Map<String, dynamic>?)?['locale'] ??
+            'zh')
+        .toString();
+    final dict =
+        (_config['global'] as Map<String, dynamic>?)?['i18n'] as Map?;
+    if (dict == null) return keyPath;
+    final localeDict = dict[locale];
+    if (localeDict is! Map) return keyPath;
+    final value = _getNestedValue(
+        Map<String, dynamic>.from(localeDict), keyPath);
+    return value?.toString() ?? keyPath;
   }
 
   /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
@@ -684,6 +787,139 @@ class JsonInterpreter extends ChangeNotifier {
         // 主动抛错——用于测试 @try_catch / 业务侧主动失败
         throw Exception(
             resolvedArgs['message']?.toString() ?? 'thrown by @throw');
+
+      // ── 系统 / 平台原生 ──
+      case '@clipboard_copy':
+        final text = resolvedArgs['text']?.toString() ?? '';
+        await Clipboard.setData(ClipboardData(text: text));
+        return null;
+      case '@clipboard_paste':
+        final data = await Clipboard.getData(Clipboard.kTextPlain);
+        return data?.text ?? '';
+      case '@haptic':
+        // style: light / medium / heavy / selection / vibrate（默认 light）
+        final style = resolvedArgs['style']?.toString() ?? 'light';
+        switch (style) {
+          case 'medium':
+            await HapticFeedback.mediumImpact();
+            break;
+          case 'heavy':
+            await HapticFeedback.heavyImpact();
+            break;
+          case 'selection':
+            await HapticFeedback.selectionClick();
+            break;
+          case 'vibrate':
+            await HapticFeedback.vibrate();
+            break;
+          case 'light':
+          default:
+            await HapticFeedback.lightImpact();
+            break;
+        }
+        return null;
+      case '@launch_url':
+        // 打开外链：https / tel: / mailto: / sms: / 自定义 scheme
+        // mode: external (默认，跳系统浏览器) / inAppBrowserView (iOS Safari / Android Custom Tabs) / inAppWebView (嵌入)
+        final url = resolvedArgs['url']?.toString() ?? '';
+        if (url.isEmpty) return false;
+        final uri = Uri.tryParse(url);
+        if (uri == null) return false;
+        final modeStr = resolvedArgs['mode']?.toString() ?? 'external';
+        final mode = switch (modeStr) {
+          'inAppBrowserView' => LaunchMode.inAppBrowserView,
+          'inAppWebView' => LaunchMode.inAppWebView,
+          _ => LaunchMode.externalApplication,
+        };
+        try {
+          return await launchUrl(uri, mode: mode);
+        } catch (_) {
+          return false;
+        }
+      case '@share':
+        // text: 必填——分享的文本（可以包含 URL）
+        // subject: 可选——邮件主题等
+        // files: 可选——本地文件路径列表（图片 / 文档）
+        final text = resolvedArgs['text']?.toString() ?? '';
+        final subject = resolvedArgs['subject']?.toString();
+        final filesArg = resolvedArgs['files'];
+        if (filesArg is List && filesArg.isNotEmpty) {
+          final paths = filesArg.map((e) => e.toString()).toList();
+          await Share.shareXFiles(
+            paths.map((p) => XFile(p)).toList(),
+            text: text.isEmpty ? null : text,
+            subject: subject,
+          );
+        } else if (text.isNotEmpty) {
+          await Share.share(text, subject: subject);
+        }
+        return null;
+      case '@request_permission':
+        // type: camera / microphone / photos / location / locationWhenInUse /
+        //       contacts / calendar / notification / storage / bluetooth
+        // 返回 status string: granted / denied / restricted / permanentlyDenied / limited
+        final type = resolvedArgs['type']?.toString() ?? '';
+        final perm = _parsePermission(type);
+        if (perm == null) return 'denied';
+        final status = await perm.request();
+        return _permissionStatusToString(status);
+      case '@permission_status':
+        final type = resolvedArgs['type']?.toString() ?? '';
+        final perm = _parsePermission(type);
+        if (perm == null) return 'denied';
+        final status = await perm.status;
+        return _permissionStatusToString(status);
+      case '@open_app_settings':
+        // 用户拒绝过权限后跳系统设置
+        await openAppSettings();
+        return null;
+      case '@set_locale':
+        // value: locale 字符串（如 'zh' / 'en'）；写入 global.locale，触发 UI 重建
+        final localeStr = resolvedArgs['value']?.toString() ??
+            resolvedArgs['locale']?.toString() ??
+            'zh';
+        setVariable('global.locale', localeStr);
+        return null;
+      case '@get_locale':
+        return (_variables['locale'] ??
+                (_config['global'] as Map<String, dynamic>?)?['locale'] ??
+                'zh')
+            .toString();
+      case '@set_theme':
+        // mode: light / dark / system
+        final mode = resolvedArgs['mode']?.toString() ?? 'system';
+        appThemeMode.value = switch (mode) {
+          'light' => ThemeMode.light,
+          'dark' => ThemeMode.dark,
+          _ => ThemeMode.system,
+        };
+        return null;
+      case '@get_theme':
+        // 返回当前 mode（system 时返回 'system'，由调用方再决定怎么显示当前实际亮度）
+        return switch (appThemeMode.value) {
+          ThemeMode.light => 'light',
+          ThemeMode.dark => 'dark',
+          ThemeMode.system => 'system',
+        };
+      case '@biometric_auth':
+        // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
+        // 返回 bool：通过 / 失败
+        final reason = resolvedArgs['reason']?.toString() ?? '请验证身份';
+        try {
+          final auth = LocalAuthentication();
+          final canCheck = await auth.canCheckBiometrics ||
+              await auth.isDeviceSupported();
+          if (!canCheck) return false;
+          return await auth.authenticate(
+            localizedReason: reason,
+            options: const AuthenticationOptions(
+              biometricOnly: false, // 允许 fallback 到 PIN / 密码
+              stickyAuth: true,
+            ),
+          );
+        } catch (_) {
+          return false;
+        }
 
       // ── HTTP ──
       case '@http_get':
@@ -2288,6 +2524,46 @@ class JsonInterpreter extends ChangeNotifier {
     return null;
   }
 
+  /// 把 JSON 字符串映射到 permission_handler 的 Permission 枚举
+  /// 不在表里的返回 null（调用方按"denied"兜底）
+  Permission? _parsePermission(String type) {
+    switch (type) {
+      case 'camera':
+        return Permission.camera;
+      case 'microphone':
+        return Permission.microphone;
+      case 'photos':
+        return Permission.photos;
+      case 'location':
+        return Permission.location;
+      case 'locationWhenInUse':
+        return Permission.locationWhenInUse;
+      case 'locationAlways':
+        return Permission.locationAlways;
+      case 'contacts':
+        return Permission.contacts;
+      case 'calendar':
+        return Permission.calendarFullAccess;
+      case 'notification':
+        return Permission.notification;
+      case 'storage':
+        return Permission.storage;
+      case 'bluetooth':
+        return Permission.bluetooth;
+      case 'speech':
+        return Permission.speech;
+    }
+    return null;
+  }
+
+  String _permissionStatusToString(PermissionStatus status) {
+    if (status.isGranted) return 'granted';
+    if (status.isLimited) return 'limited';
+    if (status.isPermanentlyDenied) return 'permanentlyDenied';
+    if (status.isRestricted) return 'restricted';
+    return 'denied';
+  }
+
   List<dynamic> _flattenList(List<dynamic> list, int depth) {
     if (depth <= 0) return list;
     final result = <dynamic>[];
@@ -2301,8 +2577,56 @@ class JsonInterpreter extends ChangeNotifier {
     return result;
   }
 
+  // ============ App 生命周期 hook ============
+  // global.lifecycle = {
+  //   onResume: [...steps],
+  //   onPause:  [...steps],
+  //   onInactive / onDetached / onHidden: ...
+  // }
+
+  void Function()? _lifecycleListener;
+
+  void _attachLifecycleListener() {
+    _detachLifecycleListener();
+    _lifecycleListener = () {
+      final event = appLifecycleEvent.value;
+      final hooks =
+          (_config['global'] as Map<String, dynamic>?)?['lifecycle']
+              as Map<String, dynamic>?;
+      if (hooks == null) return;
+      // event=resume → onResume；event=pause → onPause；…
+      final key = 'on${event[0].toUpperCase()}${event.substring(1)}';
+      final steps = hooks[key];
+      if (steps is! List) return;
+      // 异步触发，不阻塞 notifier
+      // ignore: discarded_futures
+      _runStepList(steps);
+    };
+    appLifecycleEvent.addListener(_lifecycleListener!);
+  }
+
+  void _detachLifecycleListener() {
+    if (_lifecycleListener != null) {
+      appLifecycleEvent.removeListener(_lifecycleListener!);
+      _lifecycleListener = null;
+    }
+  }
+
+  Future<void> _runStepList(List<dynamic> steps) async {
+    for (final step in steps) {
+      if (step is Map<String, dynamic>) {
+        try {
+          await _executeStep(step);
+        } catch (e) {
+          debugPrint('[JSON DSL] lifecycle step 失败: $e');
+        }
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _detachLifecycleListener();
     for (final controller in _textControllers.values) {
       controller.dispose();
     }
