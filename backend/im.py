@@ -495,8 +495,9 @@ def offline_push_hook():
     返回：OpenIM 期望 { "errCode": 0 } 表示通过；其他状态码 OpenIM 会按 failedContinue 处理
     """
     # 简易共享密钥校验（OpenIM 不支持 Bearer header，只能 query 或自定义 header）
-    secret = request.args.get("secret") or request.headers.get("X-OpenIM-Webhook-Secret")
-    if secret != OPENIM_WEBHOOK_SECRET:
+    # 同 after_send_msg：OpenIM 会拼 /callbackXxxCommand 到 URL 末尾，用 startswith
+    secret_raw = request.args.get("secret") or request.headers.get("X-OpenIM-Webhook-Secret") or ""
+    if not (secret_raw == OPENIM_WEBHOOK_SECRET or secret_raw.startswith(f"{OPENIM_WEBHOOK_SECRET}/")):
         return jsonify({"errCode": 1001, "errMsg": "bad secret"}), 401
 
     payload = request.get_json(silent=True) or {}
@@ -585,6 +586,10 @@ def after_send_msg():
     设计理由：v3.8 的 `beforeOfflinePush` 钩子写在 geTui/fcm/jpush provider 内部，
     没配 provider 就走不到。详见 PUSH_ARCHITECTURE.md。
 
+    URL 约定坑：OpenIM 会自动在配置的 url 后面拼 `/<callbackCommand>`，比如
+    `?secret=xxx` → `?secret=xxx/callbackAfterSendSingleMsgCommand`，所以 secret
+    校验要 startswith / split，不能 `==`。
+
     OpenIM v3.8 afterSendSingleMsg payload（实测）：
       {
         "callbackCommand": "callbackAfterSendSingleMsgCommand",
@@ -604,12 +609,20 @@ def after_send_msg():
 
     永远返回 `{errCode: 0}`，避免推送错误反阻塞 IM 主流程
     """
-    # 校验共享密钥
-    secret = request.args.get("secret") or request.headers.get("X-OpenIM-Webhook-Secret")
-    if secret != OPENIM_WEBHOOK_SECRET:
+    # 校验共享密钥（OpenIM 会自动拼 /callbackXxxCommand 到 URL 末尾，
+    # 导致 secret query 后面被加 "/callbackXxx"，所以用 startswith 而不是 ==）
+    secret_raw = request.args.get("secret") or request.headers.get("X-OpenIM-Webhook-Secret") or ""
+    if not (secret_raw == OPENIM_WEBHOOK_SECRET or secret_raw.startswith(f"{OPENIM_WEBHOOK_SECRET}/")):
         return jsonify({"errCode": 1001, "errMsg": "bad secret"}), 401
 
     payload = request.get_json(silent=True) or {}
+
+    # OpenIM 一个 URL 接收所有 callback，靠 callbackCommand 字段区分。
+    # 我们这个路由只处理 afterSendSingleMsg，其他 command 直接放过（很可能是
+    # 配置时多开了 beforeSendSingleMsg 之类的副作用）
+    cmd = payload.get("callbackCommand") or ""
+    if cmd and cmd != "callbackAfterSendSingleMsgCommand":
+        return jsonify({"errCode": 0, "errMsg": ""})
 
     # 只处理单聊（sessionType=1）。群消息走另一个 webhook（afterSendGroupMsg），暂不实现
     session_type = payload.get("sessionType")
