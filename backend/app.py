@@ -14,6 +14,7 @@ import auth
 # import ai_code_generator as chat  # DEPRECATED: 已废弃，使用 claude_chat 替代
 import claude_chat
 import store
+import im
 from bytedance_asr_routes import register_asr_routes
 
 # 配置日志
@@ -60,6 +61,25 @@ def create_app():
     app.add_url_rule("/api/store/publish", methods=["POST"], view_func=store.store_publish)
     app.add_url_rule("/api/store/delete/<app_id>", methods=["DELETE"], view_func=store.store_delete)
 
+    # 注册 OpenIM 桥接路由
+    app.add_url_rule("/api/im/token", methods=["POST"], view_func=im.get_im_token)
+    app.add_url_rule("/api/im/users/lookup", methods=["GET"], view_func=im.lookup_user)
+    app.add_url_rule("/api/im/users/search", methods=["GET"], view_func=im.search_users)
+    app.add_url_rule("/api/im/push_token", methods=["POST"], view_func=im.upload_push_token)
+    # 当前在用：afterSendSingleMsg webhook → 后端按平台分发（详见 PUSH_ARCHITECTURE.md）
+    app.add_url_rule(
+        "/api/im/after_send_msg",
+        methods=["POST"],
+        view_func=im.after_send_msg,
+    )
+    # 旧入口保留：以前接 beforeOfflinePush，OpenIM v3.8 实测不会触发，改用 after_send_msg
+    # 不主动用，但保留路由以便切回时无需改代码
+    app.add_url_rule(
+        "/api/im/offline_push_hook",
+        methods=["POST"],
+        view_func=im.offline_push_hook,
+    )
+
     # 注册豆包ASR WebSocket路由
     register_asr_routes(socketio)
 
@@ -75,6 +95,7 @@ if __name__ == "__main__":
     logger.info("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
     logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
+    logger.info("   IM:    /api/im/{token,users/lookup,users/search,push_token,after_send_msg,offline_push_hook}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
     logger.info("   Debug mode: ENABLED")
     socketio.run(app, host="0.0.0.0", port=PORT, debug=True, allow_unsafe_werkzeug=True)

@@ -76,6 +76,9 @@ dependencies:
   # Camera live preview (note: needs Android camera permission + iOS NSCameraUsageDescription)
   camera: ^0.11.0
 
+  # IM messaging (OpenIM)
+  flutter_openim_sdk: ^3.8.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

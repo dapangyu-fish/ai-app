@@ -1,0 +1,205 @@
+# OpenIM Server 自托管部署
+# 使用方式: cd deploy/openim && docker-compose up -d
+#
+# 依赖组件: MySQL, MongoDB, Redis, Kafka, MinIO, Etcd
+# OpenIM Server 默认端口:
+#   - API:        10002
+#   - WS Gateway: 10001
+#   - Admin API:  10009
+#
+# 首次部署后需要通过 Admin API 创建初始管理员账号
+
+version: '3.8'
+
+services:
+  # ---- 基础设施 ----
+
+  mysql:
+    image: mysql:8.0
+    container_name: openim-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-openIM_root_2024}"
+      MYSQL_DATABASE: openim_v3
+      MYSQL_USER: openim
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-openIM_db_2024}"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "13306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:7.0
+    container_name: openim-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: openim
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_PASSWORD:-openIM_mongo_2024}"
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "37017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: openim-redis
+    restart: always
+    command: redis-server --requirepass "${REDIS_PASSWORD:-openIM_redis_2024}" --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-openIM_redis_2024}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: openim-kafka
+    restart: always
+    environment:
+      KAFKA_CFG_NODE_ID: 0
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.13
+    container_name: openim-etcd
+    restart: always
+    environment:
+      ETCD_NAME: node1
+      ETCD_DATA_DIR: /etcd-data
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_INITIAL_CLUSTER: node1=http://etcd:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: openim-etcd
+    volumes:
+      - etcd_data:/etcd-data
+
+  minio:
+    image: minio/minio:latest
+    container_name: openim-minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ACCESS_KEY:-openim_minio}"
+      MINIO_ROOT_PASSWORD: "${MINIO_SECRET_KEY:-openIM_minio_2024}"
+    command: server /data --console-address ":9090"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "10005:9000"
+      - "10006:9090"
+
+  # ---- OpenIM Server ----
+
+  openim-server:
+    image: ghcr.io/openimsdk/openim-server:v3.8
+    container_name: openim-server
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      # 数据库
+      MYSQL_ADDRESS: mysql:3306
+      MYSQL_USERNAME: openim
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-openIM_db_2024}"
+      MYSQL_DATABASE: openim_v3
+      # MongoDB
+      MONGO_ADDRESS: mongodb:27017
+      MONGO_USERNAME: openim
+      MONGO_PASSWORD: "${MONGO_PASSWORD:-openIM_mongo_2024}"
+      MONGO_DATABASE: openim_v3
+      # Redis
+      REDIS_ADDRESS: redis:6379
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-openIM_redis_2024}"
+      # Kafka
+      KAFKA_ADDRESS: kafka:9092
+      # Etcd
+      ETCD_ADDRESS: etcd:2379
+      # MinIO (对象存储)
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY_ID: "${MINIO_ACCESS_KEY:-openim_minio}"
+      MINIO_SECRET_ACCESS_KEY: "${MINIO_SECRET_KEY:-openIM_minio_2024}"
+      MINIO_BUCKET: openim
+      # 外部访问地址 (部署时需要改成实际域名/IP)
+      API_OPENIM_PORT: "10002"
+      OPENIM_WS_PORT: "10001"
+      MINIO_EXTERNAL_ADDRESS: "${MINIO_EXTERNAL_URL:-http://127.0.0.1:10005}"
+      # Secret
+      SECRET: "${OPENIM_SECRET:-openIM_secret_2024}"
+    ports:
+      - "10001:10001"  # WebSocket Gateway
+      - "10002:10002"  # HTTP API
+      - "10009:10009"  # Admin API
+    volumes:
+      - openim_logs:/app/logs
+
+  # ---- OpenIM Chat (可选 - 提供用户注册/登录/好友管理的业务服务) ----
+
+  openim-chat:
+    image: ghcr.io/openimsdk/openim-chat:v1.8
+    container_name: openim-chat
+    restart: always
+    depends_on:
+      - openim-server
+      - mysql
+      - redis
+    environment:
+      MYSQL_ADDRESS: mysql:3306
+      MYSQL_USERNAME: openim
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-openIM_db_2024}"
+      REDIS_ADDRESS: redis:6379
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-openIM_redis_2024}"
+      OPENIM_SERVER_ADDRESS: http://openim-server:10002
+      OPENIM_SECRET: "${OPENIM_SECRET:-openIM_secret_2024}"
+      CHAT_API_PORT: "10008"
+      ADMIN_API_PORT: "10009"
+    ports:
+      - "10008:10008"  # Chat API
+
+volumes:
+  mysql_data:
+  mongo_data:
+  redis_data:
+  kafka_data:
+  etcd_data:
+  minio_data:
+  openim_logs:

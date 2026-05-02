@@ -21,6 +21,8 @@ import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
+import 'im/im_service.dart';
+import 'im/conversation_list.dart';
 
 // ============================================================
 // Riverpod Providers
@@ -79,6 +81,10 @@ void main() async {
 
   await AuthService.restoreSession();
   await AiChatService.loadProvider();
+  // 如果已登录，后台初始化 IM 连接
+  if (AuthService.isLoggedIn) {
+    IMService.instance.restoreSession();
+  }
   runApp(
     const ProviderScope(
       child: JsonDslApp(),
@@ -319,6 +325,7 @@ class _AuthGate extends StatelessWidget {
       valueListenable: AuthService.authNotifier,
       builder: (context, loggedIn, _) {
         if (loggedIn) {
+          IMService.instance.login();
           return const FilePickerPage();
         }
         return AuthPage(
@@ -613,6 +620,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                             ),
                           );
                         } else if (value == 'logout') {
+                          await IMService.instance.logout();
                           await AuthService.signOut();
                         }
                       },
@@ -695,6 +703,102 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // 消息（IM）入口 — 带未读数角标
+              ValueListenableBuilder<int>(
+                valueListenable: IMService.instance.unreadCountNotifier,
+                builder: (context, unread, _) {
+                  return Card(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        // 捕获 across-async 用到的对象，避免 use_build_context_synchronously
+                        final messenger = ScaffoldMessenger.of(context);
+                        final navigator = Navigator.of(context);
+                        if (!IMService.isPlatformSupported) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('IM 仅支持 iOS / Android（OpenIM SDK 限制）。请在 iOS 模拟器或真机上运行。'),
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                          return;
+                        }
+                        if (!IMService.instance.isLoggedIn) {
+                          final ok = await IMService.instance.login();
+                          if (!mounted) return;
+                          if (!ok) {
+                            messenger.showSnackBar(
+                              const SnackBar(content: Text('IM 连接失败，请稍后重试')),
+                            );
+                            return;
+                          }
+                        }
+                        if (!mounted) return;
+                        navigator.push(
+                          MaterialPageRoute(
+                              builder: (_) => const IMConversationPage()),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        child: Row(
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Icon(Icons.chat_outlined, size: 24, color: cs.onSurface),
+                                if (unread > 0)
+                                  Positioned(
+                                    right: -6,
+                                    top: -4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: cs.error,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                      child: Text(
+                                        unread > 99 ? '99+' : unread.toString(),
+                                        style: TextStyle(color: cs.onError, fontSize: 10),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '消息',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: cs.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    unread > 0 ? '$unread 条未读' : '查看会话与好友消息',
+                                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 12),
