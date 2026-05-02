@@ -4,7 +4,6 @@ import 'im_service.dart';
 import 'chat_page.dart';
 import 'friend_page.dart';
 import 'message_preview.dart';
-import 'create_group_page.dart';
 
 /// 会话列表页面 - 类似微信消息列表
 class IMConversationPage extends StatefulWidget {
@@ -90,19 +89,15 @@ class _IMConversationPageState extends State<IMConversationPage> {
         title: const Text('消息'),
         centerTitle: true,
         actions: [
+          // 一个入口干到底：进通讯录后再分"加好友 / 建群"
           IconButton(
-            icon: const Icon(Icons.contacts_outlined),
-            tooltip: '联系人',
+            icon: const Icon(Icons.people_outline),
+            tooltip: '通讯录',
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const IMFriendPage()),
               ).then((_) => _loadConversations());
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.group_add),
-            tooltip: '创建群聊',
-            onPressed: _openCreateGroup,
           ),
         ],
       ),
@@ -329,10 +324,4 @@ class _IMConversationPageState extends State<IMConversationPage> {
     );
   }
 
-  Future<void> _openCreateGroup() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CreateGroupPage()),
-    );
-    if (mounted) _loadConversations();
-  }
 }

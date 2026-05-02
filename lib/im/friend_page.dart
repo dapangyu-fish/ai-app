@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'im_service.dart';
 import 'chat_page.dart';
+import 'create_group_page.dart';
 
 class IMFriendPage extends StatefulWidget {
   const IMFriendPage({super.key});
@@ -67,13 +68,40 @@ class _IMFriendPageState extends State<IMFriendPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('联系人'),
+        title: const Text('通讯录'),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_add_alt_1),
-            tooltip: '加好友',
-            onPressed: _showAddFriendDialog,
+          // 一个 + 按钮，点开二选一菜单：加好友 / 建群
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.add),
+            tooltip: '添加',
+            onSelected: (v) {
+              if (v == 'add_friend') {
+                _showAddFriendDialog();
+              } else if (v == 'create_group') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CreateGroupPage()),
+                ).then((_) => _load());
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'add_friend',
+                child: ListTile(
+                  leading: Icon(Icons.person_add_alt_1),
+                  title: Text('加好友'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'create_group',
+                child: ListTile(
+                  leading: Icon(Icons.group_add),
+                  title: Text('建群'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
