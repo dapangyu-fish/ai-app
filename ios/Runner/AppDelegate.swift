@@ -24,10 +24,10 @@ import UserNotifications
     // 建立 push MethodChannel：
     //   Flutter → iOS:  invokeMethod('requestPermissionAndRegister') 弹权限 + 调 registerForRemoteNotifications
     //   iOS → Flutter:  invokeMethod('onDeviceToken', args: hexToken)
-    let messenger = engineBridge.applicationRegistrar.messenger
+    let messenger = engineBridge.applicationRegistrar.messenger()
     let channel = FlutterMethodChannel(name: AppDelegate.pushChannelName, binaryMessenger: messenger)
     self.pushChannel = channel
-    channel.setMethodCallHandler { [weak self] call, result in
+    channel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
       switch call.method {
       case "requestPermissionAndRegister":
         self?.requestPermissionAndRegister(result: result)
@@ -83,7 +83,11 @@ import UserNotifications
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    completionHandler([.banner, .badge, .sound, .list])
+    if #available(iOS 14.0, *) {
+      completionHandler([.banner, .badge, .sound, .list])
+    } else {
+      completionHandler([.alert, .badge, .sound])
+    }
   }
 
   // 用户点了通知（不论 app 在哪个状态下点的）—— 把 payload 给 Flutter，让它跳到对应聊天
