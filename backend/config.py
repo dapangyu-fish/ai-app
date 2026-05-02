@@ -135,3 +135,18 @@ OPENIM_WS_URL = os.environ.get("OPENIM_WS_URL", "ws://38.76.199.232:10001")
 OPENIM_SECRET = os.environ.get("OPENIM_SECRET", "openIM_v3iM_secret_2026_dev")
 OPENIM_PLATFORM_IOS = 1     # OpenIM SDK 平台号：1=iOS / 2=Android / 5=Web / 7=Linux / 8=Windows / 9=macOS
 OPENIM_PLATFORM_WEB = 5     # 后端代签 token 时用（web 端就用 5）
+
+# OpenIM webhook 共享密钥
+# OpenIM 调我们 /api/im/offline_push_hook 时不带任何 auth header，我们自己加一个简易 secret
+# 通过 query string ?secret=xxx 或 header X-OpenIM-Webhook-Secret 校验
+OPENIM_WEBHOOK_SECRET = os.environ.get("OPENIM_WEBHOOK_SECRET", "openIM_webhook_secret_2026_dev")
+
+# APNs 配置（仅 iOS 推送）
+# .p8 私钥文件不进 git，存在服务器 /etc/apns/，权限 600 给 root
+APNS_KEY_PATH = os.environ.get("APNS_KEY_PATH", "/etc/apns/AuthKey_8NM9U7CJCJ.p8")
+APNS_KEY_ID = os.environ.get("APNS_KEY_ID", "8NM9U7CJCJ")
+APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID", "5CD2U23TPH")
+APNS_BUNDLE_ID = os.environ.get("APNS_BUNDLE_ID", "dapangyu.fish.myapp")
+# Sandbox & Production 共用同一把 .p8 key，host 不同
+# 开发版 / TestFlight 默认走 sandbox；App Store 上线版走 production
+APNS_USE_SANDBOX = os.environ.get("APNS_USE_SANDBOX", "true").lower() in ("1", "true", "yes")

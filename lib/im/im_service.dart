@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
+import 'apns_service.dart';
 
 /// IMService.friendshipStream 推的事件类型
 enum FriendshipEventKind {
@@ -251,6 +252,11 @@ class IMService {
       connectionNotifier.value = true;
       await _updateUnreadCount();
 
+      // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
+      // 模拟器调用不会崩，但拿不到真 token；非 iOS 直接 short-circuit
+      // ignore: unawaited_futures
+      ApnsService.instance.start();
+
       debugPrint('[IM] 登录成功: $_imUserId');
       return true;
     } catch (e) {
@@ -307,6 +313,8 @@ class IMService {
         _loggedIn = true;
         connectionNotifier.value = true;
         await _updateUnreadCount();
+        // ignore: unawaited_futures
+        ApnsService.instance.start();
         return true;
       } catch (e) {
         debugPrint('[IM] 恢复会话失败, 尝试重新获取 token: $e');

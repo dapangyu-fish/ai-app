@@ -31,8 +31,11 @@ from config import (
     OPENIM_WS_URL,
     OPENIM_SECRET,
     OPENIM_PLATFORM_WEB,
+    OPENIM_WEBHOOK_SECRET,
     SUPABASE_URL,
 )
+from database import db_execute, db_query
+import apns
 
 logger = logging.getLogger(__name__)
 
@@ -375,3 +378,129 @@ def _rank_user(u, q_lower: str, q_no_hyphen: str, me_im_id: str) -> int:
         return 1
     # 包含匹配
     return 2
+
+
+# ============================================================
+# APNs 推送 —— 客户端 token 上传 + OpenIM webhook 回调
+# ============================================================
+
+@require_auth
+def upload_push_token():
+    """
+    POST /api/im/push_token
+
+    Body: { "platform": "ios", "token": "<64 char hex APNs deviceToken>" }
+
+    客户端拿到 APNs deviceToken 后调；按 (user_id, platform, token) UPSERT
+    一个 user 可有多 token（多设备），共存。
+    """
+    user = request.supabase_user
+    raw_user_id = str(user.get("id", ""))
+    if not raw_user_id:
+        return jsonify({"error": "no user id"}), 500
+
+    body = request.get_json(silent=True) or {}
+    platform = (body.get("platform") or "").strip().lower()
+    token = (body.get("token") or "").strip()
+    if platform not in ("ios", "android"):
+        return jsonify({"error": "platform 必须是 ios / android"}), 400
+    if not token or len(token) > 256:
+        return jsonify({"error": "token 非法"}), 400
+
+    db_execute(
+        """
+        INSERT INTO device_tokens (user_id, platform, token, updated_at)
+        VALUES (%s, %s, %s, NOW())
+        ON CONFLICT (user_id, platform, token)
+        DO UPDATE SET updated_at = NOW()
+        """,
+        (raw_user_id, platform, token),
+    )
+    logger.info(f"[Push] token registered user={raw_user_id[:8]} platform={platform} ...{token[-8:]}")
+    return jsonify({"ok": True})
+
+
+def _supabase_id_from_im_id(im_user_id: str) -> str | None:
+    """OpenIM userID（去 hyphen 后的 32 hex） → Supabase user.id（带 hyphen 的 UUID）
+
+    DB 里我们存的是 raw Supabase user.id（带 hyphen）。这里把 32 hex 重新插回 hyphen。
+    标准 UUID 格式：8-4-4-4-12
+    """
+    s = (im_user_id or "").strip()
+    if len(s) != 32 or "-" in s:
+        return s or None  # 已经是 UUID 形式或者奇怪的 ID，原样返回
+    return f"{s[0:8]}-{s[8:12]}-{s[12:16]}-{s[16:20]}-{s[20:32]}"
+
+
+def offline_push_hook():
+    """
+    POST /api/im/offline_push_hook?secret=<OPENIM_WEBHOOK_SECRET>
+
+    OpenIM 在用户离线收到消息时调这个接口（webhooks.yml 配置 beforeOfflinePush.enable=true）
+    我们查 device_tokens，按每个 token 推 APNs 一次。
+
+    OpenIM v3.8 webhook payload 结构（实测）：
+      {
+        "callbackCommand": "callbackBeforeOfflinePushCommand",
+        "operationID": "...",
+        "platformID": 1,
+        "userIDs": ["receiver1", "receiver2"],     ← OpenIM userID 形式（去 hyphen）
+        "title": "...",
+        "content": "...",
+        "seq": 123,
+        ...
+      }
+
+    返回：OpenIM 期望 { "errCode": 0 } 表示通过；其他状态码 OpenIM 会按 failedContinue 处理
+    """
+    # 简易共享密钥校验（OpenIM 不支持 Bearer header，只能 query 或自定义 header）
+    secret = request.args.get("secret") or request.headers.get("X-OpenIM-Webhook-Secret")
+    if secret != OPENIM_WEBHOOK_SECRET:
+        return jsonify({"errCode": 1001, "errMsg": "bad secret"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    receiver_im_ids = payload.get("userIDs") or []
+    if not receiver_im_ids:
+        # 单聊只有一个 recv：fallback
+        recv = payload.get("recvID")
+        if recv:
+            receiver_im_ids = [recv]
+    title = payload.get("title") or ""
+    content = payload.get("content") or "你收到一条新消息"
+    sender_nickname = payload.get("senderNickname") or ""
+    conversation_id = payload.get("conversationID") or ""
+
+    # 标题兜底：OpenIM 不一定会塞 title，自己拼一个
+    if not title:
+        title = sender_nickname or "新消息"
+
+    pushed_count = 0
+    for im_id in receiver_im_ids:
+        sup_id = _supabase_id_from_im_id(im_id)
+        if not sup_id:
+            continue
+        rows = db_query(
+            "SELECT platform, token FROM device_tokens WHERE user_id = %s",
+            (sup_id,),
+            fetch_all=True,
+        ) or []
+        for row in rows:
+            if row.get("platform") != "ios":
+                continue  # 暂只做 iOS
+            ok = apns.push_to_device(
+                device_token=row["token"],
+                title=title,
+                body=content,
+                custom={
+                    "conversation_id": conversation_id,
+                    "im_user_id": im_id,
+                },
+                collapse_id=conversation_id or None,  # 同一会话多条合并
+            )
+            if ok:
+                pushed_count += 1
+
+    logger.info(f"[Push] offline_push_hook: receivers={len(receiver_im_ids)} pushed={pushed_count}")
+    # 返回 errCode=0，让 OpenIM 继续走它的 push 流程（即使我们成功了，OpenIM 内置 push
+    # 也是 disabled 的，反正只走我们这一条）
+    return jsonify({"errCode": 0, "errMsg": ""})
