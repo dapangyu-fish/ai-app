@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io' show Directory;
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
@@ -37,45 +39,63 @@ class IMService {
   String? get currentUserId => _imUserId;
 
   /// 初始化 SDK (App 启动时调用一次)
+  ///
+  /// 注意：dataDir 必须传可写目录（iOS 沙盒不允许写根目录 / 上）。
+  /// 之前传空字符串 → SDK 拼出 `/OpenIM_v3_<userID>.db` → 10006 init database 失败。
   Future<void> init() async {
     if (_initialized) return;
 
-    await OpenIM.iMManager.initSDK(
-      platformID: _getPlatformID(),
-      apiAddr: _apiUrl ?? 'http://127.0.0.1:10002',
-      wsAddr: _wsUrl ?? 'ws://127.0.0.1:10001',
-      dataDir: '',
-      listener: OnConnectListener(
-        onConnectSuccess: () {
-          debugPrint('[IM] 连接成功');
-          connectionNotifier.value = true;
-        },
-        onConnecting: () {
-          debugPrint('[IM] 连接中...');
-        },
-        onConnectFailed: (code, error) {
-          debugPrint('[IM] 连接失败: $code $error');
-          connectionNotifier.value = false;
-        },
-        onUserTokenExpired: () {
-          debugPrint('[IM] Token 过期, 尝试刷新');
-          _refreshIMToken();
-        },
-        onUserTokenInvalid: () {
-          debugPrint('[IM] Token 无效');
-          connectionNotifier.value = false;
-          _loggedIn = false;
-        },
-        onKickedOffline: () {
-          debugPrint('[IM] 被踢下线');
-          connectionNotifier.value = false;
-          _loggedIn = false;
-        },
-      ),
-    );
+    // OpenIM SDK 内部用 dataDir + 文件名拼绝对路径，所以末尾必须带 /
+    final dir = await getApplicationSupportDirectory();
+    final imDir = Directory('${dir.path}/openim');
+    if (!await imDir.exists()) {
+      await imDir.create(recursive: true);
+    }
+    final dataDir = '${imDir.path}/'; // 末尾的 / 不能漏，SDK 直接拼
 
-    _setupListeners();
-    _initialized = true;
+    try {
+      await OpenIM.iMManager.initSDK(
+        platformID: _getPlatformID(),
+        apiAddr: _apiUrl ?? 'http://127.0.0.1:10002',
+        wsAddr: _wsUrl ?? 'ws://127.0.0.1:10001',
+        dataDir: dataDir,
+        listener: OnConnectListener(
+          onConnectSuccess: () {
+            debugPrint('[IM] 连接成功');
+            connectionNotifier.value = true;
+          },
+          onConnecting: () {
+            debugPrint('[IM] 连接中...');
+          },
+          onConnectFailed: (code, error) {
+            debugPrint('[IM] 连接失败: $code $error');
+            connectionNotifier.value = false;
+          },
+          onUserTokenExpired: () {
+            debugPrint('[IM] Token 过期, 尝试刷新');
+            _refreshIMToken();
+          },
+          onUserTokenInvalid: () {
+            debugPrint('[IM] Token 无效');
+            connectionNotifier.value = false;
+            _loggedIn = false;
+          },
+          onKickedOffline: () {
+            debugPrint('[IM] 被踢下线');
+            connectionNotifier.value = false;
+            _loggedIn = false;
+          },
+        ),
+      );
+
+      _setupListeners();
+      _initialized = true;
+      debugPrint('[IM] initSDK ok, dataDir=$dataDir');
+    } catch (e) {
+      // init 失败时**不**置 _initialized=true，让下次 login 能重新 init
+      debugPrint('[IM] initSDK 失败: $e');
+      rethrow;
+    }
   }
 
   /// 设置全局消息监听
