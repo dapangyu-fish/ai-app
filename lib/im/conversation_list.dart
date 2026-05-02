@@ -4,6 +4,7 @@ import 'im_service.dart';
 import 'chat_page.dart';
 import 'friend_page.dart';
 import 'message_preview.dart';
+import 'create_group_page.dart';
 
 /// 会话列表页面 - 类似微信消息列表
 class IMConversationPage extends StatefulWidget {
@@ -101,7 +102,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
           IconButton(
             icon: const Icon(Icons.group_add),
             tooltip: '创建群聊',
-            onPressed: _showCreateGroupDialog,
+            onPressed: _openCreateGroup,
           ),
         ],
       ),
@@ -328,44 +329,10 @@ class _IMConversationPageState extends State<IMConversationPage> {
     );
   }
 
-  void _showCreateGroupDialog() {
-    final nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('创建群聊'),
-        content: TextField(
-          controller: nameController,
-          decoration: InputDecoration(
-            labelText: '群名称',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-              final group = await IMService.instance.createGroup(
-                groupName: name,
-                memberUserIDs: [],
-              );
-              if (group != null && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('群聊 "$name" 创建成功')),
-                );
-                _loadConversations();
-              }
-            },
-            child: const Text('创建'),
-          ),
-        ],
-      ),
+  Future<void> _openCreateGroup() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CreateGroupPage()),
     );
+    if (mounted) _loadConversations();
   }
 }
