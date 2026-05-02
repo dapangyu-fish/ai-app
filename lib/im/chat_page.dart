@@ -81,6 +81,9 @@ class _IMChatPageState extends State<IMChatPage> {
     ));
   }
 
+  // OpenIM 的 getAdvancedHistoryMessageList 返的是升序（旧→新），
+  // 我们 ListView 是 reverse:true（index=0 在底）+ 实时消息走 insert(0)，
+  // 所以 _messages 必须是降序（newest at 0）才一致。
   Future<void> _loadMessages() async {
     setState(() => _loading = true);
     final messages = await IMService.instance.getHistoryMessages(
@@ -89,7 +92,7 @@ class _IMChatPageState extends State<IMChatPage> {
     );
     if (mounted) {
       setState(() {
-        _messages = messages;
+        _messages = messages.reversed.toList();
         _loading = false;
         _hasMore = messages.length >= 20;
       });
@@ -100,6 +103,8 @@ class _IMChatPageState extends State<IMChatPage> {
     if (_loadingMore || !_hasMore || _messages.isEmpty) return;
     _loadingMore = true;
 
+    // _messages.last = 当前 list 中最旧的一条（降序 list 的 last）
+    // OpenIM 用 startMsg 做锚点取"它之前"的，仍然返升序，要再翻转
     final older = await IMService.instance.getHistoryMessages(
       conversationID: widget.conversationID,
       startMsg: _messages.last,
@@ -108,7 +113,7 @@ class _IMChatPageState extends State<IMChatPage> {
 
     if (mounted) {
       setState(() {
-        _messages.addAll(older);
+        _messages.addAll(older.reversed);
         _hasMore = older.length >= 20;
         _loadingMore = false;
       });
