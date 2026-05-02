@@ -66,6 +66,14 @@ def create_app():
     app.add_url_rule("/api/im/users/lookup", methods=["GET"], view_func=im.lookup_user)
     app.add_url_rule("/api/im/users/search", methods=["GET"], view_func=im.search_users)
     app.add_url_rule("/api/im/push_token", methods=["POST"], view_func=im.upload_push_token)
+    # 当前在用：afterSendSingleMsg webhook → 后端按平台分发（详见 PUSH_ARCHITECTURE.md）
+    app.add_url_rule(
+        "/api/im/after_send_msg",
+        methods=["POST"],
+        view_func=im.after_send_msg,
+    )
+    # 旧入口保留：以前接 beforeOfflinePush，OpenIM v3.8 实测不会触发，改用 after_send_msg
+    # 不主动用，但保留路由以便切回时无需改代码
     app.add_url_rule(
         "/api/im/offline_push_hook",
         methods=["POST"],
@@ -87,7 +95,7 @@ if __name__ == "__main__":
     logger.info("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
     logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
-    logger.info("   IM:    /api/im/{token,users/lookup,users/search,push_token,offline_push_hook}")
+    logger.info("   IM:    /api/im/{token,users/lookup,users/search,push_token,after_send_msg,offline_push_hook}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
     logger.info("   Debug mode: ENABLED")
     socketio.run(app, host="0.0.0.0", port=PORT, debug=True, allow_unsafe_werkzeug=True)

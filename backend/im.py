@@ -432,6 +432,47 @@ def _supabase_id_from_im_id(im_user_id: str) -> str | None:
     return f"{s[0:8]}-{s[8:12]}-{s[12:16]}-{s[16:20]}-{s[20:32]}"
 
 
+def _check_users_online(im_user_ids: list[str]) -> set[str]:
+    """查 OpenIM 哪些 userID 当前在线。
+
+    OpenIM API: POST /user/get_users_online_status
+      body: { "userIDs": [...] }
+      need: admin token
+      resp.data.successResult: [
+        {"userID": "...", "status": "online"|"offline", "detailPlatformStatus": [...]}
+      ]
+
+    返回 online 的 userID set。任何异常静默返空 set（fail-open：宁可多推也别漏推）
+    """
+    if not im_user_ids:
+        return set()
+    try:
+        admin_token = _get_admin_token()
+        data = _post_openim(
+            "/user/get_users_online_status",
+            {"userIDs": list(im_user_ids)},
+            admin_token=admin_token,
+        )
+        # OpenIM 这个接口的 data 是 list 直接挂在 resp.data 上（不是 successResult）
+        results = data if isinstance(data, list) else data.get("successResult") or []
+        online = set()
+        for item in results:
+            uid = item.get("userID")
+            if not uid:
+                continue
+            # status 是 "online" 或 "offline"；也兜底看 detailPlatformStatus 里有没有平台 online
+            if item.get("status") == "online":
+                online.add(uid)
+                continue
+            details = item.get("detailPlatformStatus") or []
+            if any(d.get("status") == "online" for d in details):
+                online.add(uid)
+        return online
+    except Exception as e:
+        logger.warning(f"[Push] _check_users_online failed: {e} —— fail-open，全推")
+        return set()
+
+
 def offline_push_hook():
     """
     POST /api/im/offline_push_hook?secret=<OPENIM_WEBHOOK_SECRET>
@@ -503,4 +544,145 @@ def offline_push_hook():
     logger.info(f"[Push] offline_push_hook: receivers={len(receiver_im_ids)} pushed={pushed_count}")
     # 返回 errCode=0，让 OpenIM 继续走它的 push 流程（即使我们成功了，OpenIM 内置 push
     # 也是 disabled 的，反正只走我们这一条）
+    return jsonify({"errCode": 0, "errMsg": ""})
+
+
+# 不同 contentType 的"消息正文"提取规则
+# 参考 OpenIM message 协议：101=text, 102=picture, 103=voice, 104=video, 105=file, 106=@text...
+def _extract_msg_body_for_push(content_type: int, content_str: str) -> str:
+    """从 OpenIM content 字段（JSON 字符串）里提取要展示在推送 banner 上的正文。"""
+    import json
+    try:
+        c = json.loads(content_str) if content_str else {}
+    except Exception:
+        c = {}
+    if content_type == 101:                       # text
+        return (c.get("content") or "").strip() or "新消息"
+    if content_type in (102, 109):                # picture / card
+        return "[图片]"
+    if content_type == 103:                       # voice
+        return "[语音]"
+    if content_type == 104:                       # video
+        return "[视频]"
+    if content_type == 105:                       # file
+        return "[文件]"
+    if content_type == 106:                       # @ text
+        return (c.get("text") or "").strip() or "[@消息]"
+    if content_type == 110:                       # location
+        return "[位置]"
+    if content_type == 114:                       # merge
+        return "[合并消息]"
+    return "新消息"
+
+
+def after_send_msg():
+    """
+    POST /api/im/after_send_msg?secret=<OPENIM_WEBHOOK_SECRET>
+
+    OpenIM `afterSendSingleMsg` webhook —— 单聊每条消息发送后都会调一次，与
+    收件人在线状态无关。我们这边自己查在线状态决定推不推（避免在线时双重打扰）。
+
+    设计理由：v3.8 的 `beforeOfflinePush` 钩子写在 geTui/fcm/jpush provider 内部，
+    没配 provider 就走不到。详见 PUSH_ARCHITECTURE.md。
+
+    OpenIM v3.8 afterSendSingleMsg payload（实测）：
+      {
+        "callbackCommand": "callbackAfterSendSingleMsgCommand",
+        "operationID": "...",
+        "sendID": "<sender im userID>",
+        "recvID": "<receiver im userID>",
+        "clientMsgID": "...", "serverMsgID": "...",
+        "senderPlatformID": 1,
+        "senderNickname": "...",
+        "senderFaceURL": "https://...",
+        "sessionType": 1,                  # 1=单聊 2=群 3=超级群
+        "msgFrom": 100, "contentType": 101,
+        "content": "{\\"content\\":\\"hi\\"}",   # JSON 字符串，结构随 contentType
+        "seq": 37, "sendTime": 1777..., "createTime": 1777..., "status": 2,
+        "ex": "..."
+      }
+
+    永远返回 `{errCode: 0}`，避免推送错误反阻塞 IM 主流程
+    """
+    # 校验共享密钥
+    secret = request.args.get("secret") or request.headers.get("X-OpenIM-Webhook-Secret")
+    if secret != OPENIM_WEBHOOK_SECRET:
+        return jsonify({"errCode": 1001, "errMsg": "bad secret"}), 401
+
+    payload = request.get_json(silent=True) or {}
+
+    # 只处理单聊（sessionType=1）。群消息走另一个 webhook（afterSendGroupMsg），暂不实现
+    session_type = payload.get("sessionType")
+    if session_type and session_type != 1:
+        return jsonify({"errCode": 0, "errMsg": ""})
+
+    send_id = payload.get("sendID") or ""
+    recv_id = payload.get("recvID") or ""
+    if not recv_id:
+        return jsonify({"errCode": 0, "errMsg": ""})
+
+    # 自己给自己发不推
+    if send_id == recv_id:
+        return jsonify({"errCode": 0, "errMsg": ""})
+
+    sender_nickname = payload.get("senderNickname") or "新消息"
+    content_type = int(payload.get("contentType") or 0)
+    content_str = payload.get("content") or ""
+    body_text = _extract_msg_body_for_push(content_type, content_str)
+
+    # 在线判断：在线就直接 short-circuit（OpenIM 自己会通过长连接送给在线 app）
+    online = _check_users_online([recv_id])
+    if recv_id in online:
+        logger.info(f"[Push] after_send_msg: recv={recv_id[:8]} online，跳过")
+        return jsonify({"errCode": 0, "errMsg": ""})
+
+    # 离线：查 device_tokens 分发
+    sup_id = _supabase_id_from_im_id(recv_id)
+    if not sup_id:
+        logger.info(f"[Push] after_send_msg: recv={recv_id[:8]} 无法换 supabase id")
+        return jsonify({"errCode": 0, "errMsg": ""})
+
+    rows = db_query(
+        "SELECT platform, token FROM device_tokens WHERE user_id = %s",
+        (sup_id,),
+        fetch_all=True,
+    ) or []
+
+    if not rows:
+        logger.info(f"[Push] after_send_msg: recv={recv_id[:8]} 离线但无 device_token")
+        return jsonify({"errCode": 0, "errMsg": ""})
+
+    # 用对话 ID 让同会话多条 push 折叠（APNs collapse-id）
+    # 单聊会话 ID 约定（OpenIM）：sender 和 recv 字典序排好的 "si_" + min + "_" + max
+    a, b = sorted([send_id, recv_id])
+    conversation_id = f"si_{a}_{b}"
+
+    pushed_count = 0
+    for row in rows:
+        platform = row.get("platform")
+        token = row.get("token")
+        if not token:
+            continue
+        if platform == "ios":
+            ok = apns.push_to_device(
+                device_token=token,
+                title=sender_nickname,
+                body=body_text,
+                custom={
+                    "conversation_id": conversation_id,
+                    "sender_id": send_id,
+                    "msg_seq": payload.get("seq"),
+                },
+                collapse_id=conversation_id,
+            )
+            if ok:
+                pushed_count += 1
+        else:
+            # FCM / geTui 待实现，先跳过
+            logger.info(f"[Push] platform={platform} 暂未实现，token=...{token[-8:]} 跳过")
+
+    logger.info(
+        f"[Push] after_send_msg: send={send_id[:8]} recv={recv_id[:8]} "
+        f"type={content_type} pushed={pushed_count}/{len(rows)}"
+    )
     return jsonify({"errCode": 0, "errMsg": ""})
