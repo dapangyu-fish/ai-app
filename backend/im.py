@@ -665,10 +665,10 @@ def after_send_msg():
         logger.info(f"[Push] after_send_msg: recv={recv_id[:8]} 离线但无 device_token")
         return jsonify({"errCode": 0, "errMsg": ""})
 
-    # 用对话 ID 让同会话多条 push 折叠（APNs collapse-id）
-    # 单聊会话 ID 约定（OpenIM）：sender 和 recv 字典序排好的 "si_" + min + "_" + max
+    # APNs collapse-id 上限 64 字节。用对话两端 user id 各取前 16 hex 拼，
+    # 避免 si_<32hex>_<32hex> 超长被 Apple 拒（InvalidCollapseId）
     a, b = sorted([send_id, recv_id])
-    conversation_id = f"si_{a}_{b}"
+    conversation_id = f"si_{a[:16]}_{b[:16]}"   # 3 + 16 + 1 + 16 = 36 chars，安全
 
     pushed_count = 0
     for row in rows:
