@@ -4,6 +4,7 @@
 //       layout=stack 时子项可用 position.type=absolute 绝对定位
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
+import 'action_helper.dart';
 import '../interpreter.dart';
 
 class JsonContainerWidget extends JsonBaseWidget {
@@ -111,7 +112,14 @@ class JsonContainerWidget extends JsonBaseWidget {
     );
 
     // 点击事件 (onTap)
-    final onTapDef = json['onTap'];
+    // build 阶段预解析 action 中的 {{ }}：list / grid 的 item_template 在用户点击
+    // 时 loop.item / loop.index 已经被 pop，所以模板必须在循环上下文还在的 build
+    // 阶段就解析掉。和 button / card / inkwell 等控件保持一致行为。
+    final rawOnTap = json['onTap'];
+    final onTapDef = rawOnTap is Map<String, dynamic>
+        ? resolveActionAtBuildTime(rawOnTap, interpreter)
+            as Map<String, dynamic>?
+        : null;
     if (onTapDef != null) {
       return GestureDetector(
         onTap: () => interpreter.executeAction(onTapDef, context),
