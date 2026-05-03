@@ -22,15 +22,20 @@ class JsonContainerWidget extends JsonBaseWidget {
     final width = (json['width'] as num?)?.toDouble();
     final height = (json['height'] as num?)?.toDouble();
 
-    // 背景色
-    Color? bgColor = _parseColor(json['color'] as String?);
+    // 背景色（支持 "{{ loop.item.bubble_color }}" 这类模板）
+    final rawColor = json['color']?.toString();
+    Color? bgColor = _parseColor(
+        rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
 
     // 边框
     Border? border;
     final borderDef = json['border'] as Map<String, dynamic>?;
     if (borderDef != null) {
-      final borderColor =
-          _parseColor(borderDef['color'] as String?) ?? Colors.grey;
+      final rawBorderColor = borderDef['color']?.toString();
+      final borderColor = _parseColor(rawBorderColor != null
+              ? interpreter.resolveTemplate(rawBorderColor)
+              : null) ??
+          Colors.grey;
       final borderWidth = (borderDef['width'] as num?)?.toDouble() ?? 1;
       border = Border.all(color: borderColor, width: borderWidth);
     }

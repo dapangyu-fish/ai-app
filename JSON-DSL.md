@@ -375,7 +375,7 @@
 | `@im_accept_friend` / `@im_reject_friend` | `{ "user_id": "..." }` | bool | 通过 / 拒绝某用户的好友申请 |
 | `@im_friend_list` | `{ "bind": "..." }` | List | 我的好友列表。每条 `{user_id, nickname, face_url, remark}` |
 | `@im_conversations` | `{ "bind": "..." }` | List | 会话列表。每条 `{conversation_id, user_id, show_name, face_url, latest_text, latest_time, unread_count, display_unread, display_time}` |
-| `@im_history` | `{ "user_id": "...", "count": 30, "bind": "..." }` | List | 单聊历史（与某 user 之间）。每条 `{client_msg_id, send_id, recv_id, send_time, content_type, text, sender_nickname, sender_face_url, is_me, display_sender, display_time}` |
+| `@im_history` | `{ "user_id": "...", "count": 30, "bind": "..." }` | List | 单聊历史（**升序：旧→新**，UI 直接 list 渲染呈现"老消息在顶、新消息在底"的微信式聊天）。每条 `{client_msg_id, send_id, recv_id, send_time, content_type, text, sender_nickname, sender_face_url, is_me, is_other, display_sender, display_time, bubble_color, bubble_text_color}` |
 | `@im_send_text` | `{ "user_id": "...", "text": "..." }` | Map \| null | 给某 user 发文本，返回已发送 message 对象 |
 | `@im_mark_read` | `{ "user_id": "..." }` | bool | 标记与某 user 的会话为已读 |
 | `@im_total_unread` | `{ "bind": "..." }` | int | 跨所有会话的未读总数（用于 tab badge / 应用角标）。失败返回 0 |
@@ -576,6 +576,38 @@
 | `relative` | 顺序排列（默认） | — |
 | `absolute` | 绝对定位（需 `layout=stack`） | `top`, `left`, `bottom`, `right` |
 | `flex` | 弹性布局 | `flex` (数字) |
+
+#### visible 字段（条件渲染）
+
+任何控件都可以加 `visible` 字段控制是否渲染：
+
+| 写法 | 行为 |
+|------|------|
+| 不写 | 默认渲染（向后兼容） |
+| `"visible": true` / `false` | 直接控制 |
+| `"visible": "{{ loop.item.is_me }}"` | 模板，按解析值的真假 |
+| `"visible": {">": [{"var": "global.appCount"}, 0]}` | jsonlogic 表达式求值 |
+
+`visible: false` 时框架返回 `SizedBox.shrink()`，**完全不占空间**（Flex 布局里不会留 flex slot），等价于把整个节点从 widget tree 里摘掉。常见场景：
+
+```json
+// 微信式聊天气泡 — 自/他用两个 row 子树，靠 visible 二选一
+{
+  "type": "container", "visible": "{{ loop.item.is_other }}",
+  "layout": "row",
+  "children": [{"type": "avatar", ...}, {"type": "container", "color": "{{ loop.item.bubble_color }}", ...}]
+},
+{
+  "type": "container", "visible": "{{ loop.item.is_me }}",
+  "layout": "row",
+  "children": [{"type": "spacer", "position": {"type": "flex", "flex": 1}}, {"type": "container", "color": "{{ loop.item.bubble_color }}", ...}, {"type": "avatar", ...}]
+}
+```
+
+```json
+// 角标徽章 — 数为 0 时整个红圈消失
+{"type": "container", "visible": {">": [{"var": "global.unread"}, 0]}, "color": "#FF3B30", "borderRadius": 10, ...}
+```
 
 ### 6.3 Widget 类型完整映射表
 

@@ -2033,8 +2033,11 @@ class JsonInterpreter extends ChangeNotifier {
               conversationID: convId,
               count: count,
             );
-            // SDK 返回顺序通常是新到旧，反转方便 UI 直接顺序渲染
-            final list = messages.reversed.map(_messageToMap).toList();
+            // OpenIM SDK 的 getAdvancedHistoryMessageList 返回**升序**（旧→新），
+            // JSON-DSL 的 list 控件从上往下渲染 index 0 → N，所以**直接保留升序**
+            // 即可让 UI 上呈现"老消息在顶、新消息在底"的微信式聊天体验。
+            // 之前这里多了一步 .reversed 反而把"新消息"顶到列表最上方。
+            final list = messages.map(_messageToMap).toList();
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, list);
             return list;
@@ -2759,6 +2762,15 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Widget 构建 ============
 
   Widget buildWidget(BuildContext context, Map<String, dynamic> json) {
+    // 通用 visible 字段：
+    //   - 布尔/模板/jsonlogic 都支持，求值为 false 时返回 SizedBox.shrink
+    //   - 没写 visible 字段视为永远显示（默认行为）
+    //   - 这里同时把外层 position 也吃掉，避免 false 还占 flex 空间
+    if (json.containsKey('visible')) {
+      if (!_evaluateBool(json['visible'])) {
+        return const SizedBox.shrink();
+      }
+    }
     final widgetBuilder = JsonWidgetBuilder();
     final child = widgetBuilder.build(context, json, this);
     final position = json['position'] as Map<String, dynamic>?;
@@ -3002,9 +3014,15 @@ class JsonInterpreter extends ChangeNotifier {
       'sender_nickname': senderNick,
       'sender_face_url': m.senderFaceUrl ?? '',
       'is_me': isMe,
+      // 给 JSON-APP 用的"另一面"flag：is_me 取反，配合 widget visible 字段做
+      // 自他分支渲染时不用写 jsonlogic `{"!": [...]}`
+      'is_other': !isMe,
       // 预格式化字段：JSON-DSL 不支持条件 / 时间格式表达式，所以在这里算好
       'display_time': _formatChatTime(sendTime),
       'display_sender': isMe ? '我' : otherDisplay,
+      // 微信风格气泡配色：自己绿色（#95EC69），他人白色
+      'bubble_color': isMe ? '#95EC69' : '#FFFFFF',
+      'bubble_text_color': '#000000',
     };
   }
 
