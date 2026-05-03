@@ -134,6 +134,32 @@ def _ensure_user_registered(user_id: str, *, nickname: str = "", face_url: str =
         raise
 
 
+def _sync_user_profile(user_id: str, *, nickname: str = "", face_url: str = "", admin_token: str = None) -> None:
+    """把 Supabase 端的 nickname/avatar 同步到 OpenIM（每次 /im/login 都调）。
+
+    Why: _ensure_user_registered 只对"新用户"写一次 faceURL，老用户首次注册后
+    就算 Supabase 改了头像也不会同步进 OpenIM。结果 getUsersInfo / 每条消息的
+    senderFaceUrl 永远是空。这里强制每次登录都 update_user_info 一次。
+    OpenIM v3.8 update_user_info 是 idempotent 的，重复调没副作用。
+    """
+    if admin_token is None:
+        admin_token = _get_admin_token()
+    user_info = {"userID": user_id}
+    if nickname:
+        user_info["nickname"] = nickname
+    # 注意：faceURL 即使是空串也写进去——保留"清空头像"语义
+    user_info["faceURL"] = face_url or ""
+    try:
+        _post_openim(
+            "/user/update_user_info",
+            {"userInfo": user_info},
+            admin_token=admin_token,
+        )
+    except RuntimeError as e:
+        # 同步失败不应阻断登录
+        logger.warning(f"[IM] 同步 user profile 失败 user={user_id}: {e}")
+
+
 def _sign_user_token(user_id: str, platform_id: int, admin_token: str = None) -> str:
     """给 user 签一个 IM token（业务后端代签，客户端只拿到这个 token，不接触 secret）"""
     if admin_token is None:
@@ -196,12 +222,14 @@ def get_im_token():
     try:
         admin_token = _get_admin_token()
         _ensure_user_registered(user_id, nickname=nickname, face_url=face_url, admin_token=admin_token)
+        _sync_user_profile(user_id, nickname=nickname, face_url=face_url, admin_token=admin_token)
         im_token = _sign_user_token(user_id, platform_id, admin_token=admin_token)
     except RuntimeError as e:
         # admin token 可能过期，强制刷一次再重试一次
         try:
             admin_token = _get_admin_token(force_refresh=True)
             _ensure_user_registered(user_id, nickname=nickname, face_url=face_url, admin_token=admin_token)
+            _sync_user_profile(user_id, nickname=nickname, face_url=face_url, admin_token=admin_token)
             im_token = _sign_user_token(user_id, platform_id, admin_token=admin_token)
         except RuntimeError as e2:
             logger.error(f"[IM] 取 token 失败 user={user_id}: {e2}")
