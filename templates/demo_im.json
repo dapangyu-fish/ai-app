@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "type": "app",
     "description": "lib_im 演示 — 搜好友 / 加好友 / 好友列表 / 单聊收发文本",
     "author": "demo"
@@ -101,13 +101,7 @@
               "bind": "global.messages"
             }
           },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.messages",
-              "value": {"reverse": [{"var": "global.messages"}]}
-            }
-          },
+          {"call": "@list_reverse", "args": {"var": "global.messages"}},
           {"call": "@lib_im.markRead", "args": {"userId": "{{ params.userId }}"}},
           {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}},
           {"call": "@navigate", "args": {"screen": "chat"}}
@@ -135,13 +129,7 @@
               "bind": "global.messages"
             }
           },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.messages",
-              "value": {"reverse": [{"var": "global.messages"}]}
-            }
-          },
+          {"call": "@list_reverse", "args": {"var": "global.messages"}},
           {"call": "@lib_im.markRead", "args": {"userId": "{{ global.currentChatUserId }}"}},
           {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}}
         ]
