@@ -35,7 +35,8 @@ class JsonGridWidget extends JsonBaseWidget {
         (json['childAspectRatio'] as num?)?.toDouble() ?? 1.0;
     final padding = (json['padding'] as num?)?.toDouble() ?? 0;
     final shrinkWrap = json['shrinkWrap'] == true;
-    final emptyText = json['emptyText']?.toString() ?? '暂无数据';
+    final emptyText = interpreter.resolveTemplate(
+        json['emptyText']?.toString() ?? '暂无数据');
     // 跨屏导航时保留滚动位置（同 list 的 key 字段）
     final keyStr = json['key']?.toString();
     final pageKey = keyStr != null && keyStr.isNotEmpty

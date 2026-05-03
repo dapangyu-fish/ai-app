@@ -36,7 +36,8 @@ class JsonReorderableListWidget extends JsonBaseWidget {
 
     final itemTemplate = json['item_template'] as Map<String, dynamic>?;
     final bindPath = json['bind']?.toString();
-    final emptyText = json['emptyText']?.toString() ?? '暂无数据';
+    final emptyText = interpreter.resolveTemplate(
+        json['emptyText']?.toString() ?? '暂无数据');
     final padding = (json['padding'] as num?)?.toDouble() ?? 0;
     final itemKeyField = json['itemKey']?.toString() ?? 'id';
 

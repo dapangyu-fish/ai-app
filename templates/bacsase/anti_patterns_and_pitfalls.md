@@ -274,3 +274,62 @@ if (value is Map<String, dynamic>) {
 `_evaluateExpression` 现在用 `_knownJsonLogicOps` 静态白名单判断。未来在 `_createJsonLogic` 里 `jl.add('xxx', ...)` 注册新 op 时，**必须同步把 'xxx' 加到 `_knownJsonLogicOps` 集合**，否则该 op 写法会被当数据 Map，jsonlogic 求值不会触发。
 
 ---
+
+## 7. 字符串字段塞模板，Widget 端却没跑 resolveTemplate
+
+### 🚨 表现
+
+UI 上某个文本位置直接显示**字面量** `{{ t('xxx.yyy') }}` 或 `{{ global.zzz }}`，
+而不是渲染成解析后的内容。例如：
+
+- 底部 Tab 栏文字写成 `t('screen.home.title')` 字面量，没翻译
+- 列表空态显示 `{{ t('list.empty') }}` 几个字
+- 输入框 placeholder 是 `{{ global.someHint }}` 没替换
+
+### 💔 反面教材分析
+
+JSON-DSL 有一条隐含契约：**任何最终被渲染成文本的字段，框架必须在
+build 时跑一遍 `interpreter.resolveTemplate(...)`**，把 `{{ ... }}` 解析掉。
+这条约定散落在每个 widget 里——`button.label` / `text.value` / 自定义
+`appBar.title` 都自己调，没有集中处理。
+
+历史上这块写得很乱：button / chip / app_bar 的 `label`/`title` 走 resolveTemplate，
+但**同样性质的字段**漏调的不少（一次复审找出 8 处）：
+
+- `screen.title`（默认 AppBar，不是自定义 appBar）
+- `screen.tabs[].title`（tab 内层 AppBar）
+- `screen.tabs[].label`（底部 BottomNavigationBar 的 tab 文字）← regression-test 撞上的就是这个
+- `input.placeholder`、`dropdown.placeholder`、`date_picker.placeholder`、
+  `time_picker.placeholder`、`image_picker.placeholder`
+- `list.emptyText`、`grid.emptyText`、`reorderable_list.emptyText`
+
+判断的根因是：写 widget 代码的人脑子里"label / title / heading 是给人看的文本 →
+模板"是直觉，但"placeholder / emptyText / tab 标签"在直觉里更像"配置"，
+就忘了走 resolveTemplate。
+
+### ✅ 正确姿势 / 避坑指南
+
+**新增任何 widget 字段时，问自己：这个字段最终会进 `Text(...)` 或类似
+显示控件吗？**
+
+- 是 → 必须在 widget 内取出后立刻 `interpreter.resolveTemplate(...)`
+- 否（数字 / 颜色 / 布尔 / 路径）→ 不需要
+
+不要靠 widget 调用方提前展开模板——`_resolveArgs` 只解 `args` 内的字符串，
+**widget 拿到的 `json` 还是原始 raw map**，模板靠 widget 自己解。
+
+模板检测一行 grep（CI 可以加）：
+
+```bash
+# 找出还在用裸 toString() 渲染显示文本的字段
+grep -rn "json\['\(label\|title\|placeholder\|emptyText\|hint\|heading\|text\)'\]\?\.toString()" \
+  lib/json_ui/widgets/ | grep -v resolveTemplate
+```
+
+### 🔧 框架改进备忘
+
+如果以后 widget 数量继续涨，可以考虑把 resolveTemplate 提到 widget_builder
+那一层做"显示文本字段白名单批量预处理"。但目前散落在各 widget 自己解的方式
+仍然是契约——加新 widget 时务必参照已有 widget 的实现。
+
+---

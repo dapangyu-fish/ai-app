@@ -14,7 +14,8 @@ class JsonTimePickerWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final bindPath = json['bind'] as String?;
-    final placeholder = json['placeholder']?.toString() ?? '请选择时间';
+    final placeholder = interpreter.resolveTemplate(
+        json['placeholder']?.toString() ?? '请选择时间');
     final label = json['label']?.toString();
     final prefixIcon = json['prefixIcon']?.toString() ?? 'clock';
     final action =
