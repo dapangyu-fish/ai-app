@@ -384,6 +384,10 @@ class JsonInterpreter extends ChangeNotifier {
     }
     _textControllers.clear();
 
+    // 切 app 时清掉旧 IM 监听，避免老 app 的 inbox 还在写新 app 的 _variables
+    _imInboxSub?.cancel();
+    _imInboxSub = null;
+
     if (screens.isNotEmpty) {
       _currentScreenId =
           (screens.first as Map<String, dynamic>)['id'] ?? 'home';
@@ -2982,12 +2986,15 @@ class JsonInterpreter extends ChangeNotifier {
         text = '[消息]';
     }
     final myId = IMService.instance.currentUserId ?? '';
-    final isMe = (m.sendID ?? '') == myId;
+    final sendId = m.sendID ?? '';
+    final isMe = sendId == myId && sendId.isNotEmpty;
     final sendTime = m.sendTime ?? 0;
     final senderNick = m.senderNickname ?? '';
+    // 他人显示名兜底：nick 为空时回退到 sendId（不要让 UI 出现空白发送者）
+    final otherDisplay = senderNick.isNotEmpty ? senderNick : sendId;
     return {
       'client_msg_id': m.clientMsgID ?? '',
-      'send_id': m.sendID ?? '',
+      'send_id': sendId,
       'recv_id': m.recvID ?? '',
       'send_time': sendTime,
       'content_type': m.contentType ?? 101,
@@ -2997,7 +3004,7 @@ class JsonInterpreter extends ChangeNotifier {
       'is_me': isMe,
       // 预格式化字段：JSON-DSL 不支持条件 / 时间格式表达式，所以在这里算好
       'display_time': _formatChatTime(sendTime),
-      'display_sender': isMe ? '我' : senderNick,
+      'display_sender': isMe ? '我' : otherDisplay,
     };
   }
 
@@ -3035,7 +3042,9 @@ class JsonInterpreter extends ChangeNotifier {
     final dtDay = DateTime(dt.year, dt.month, dt.day);
     final diff = today.difference(dtDay).inDays;
     String two(int n) => n.toString().padLeft(2, '0');
-    if (diff == 0) return '${two(dt.hour)}:${two(dt.minute)}';
+    // 时钟漂移 / 服务器时间快于本地时（diff < 0）也按"今天 HH:mm"渲染，
+    // 避免出现 "−1 天前" 之类怪字符串。
+    if (diff <= 0) return '${two(dt.hour)}:${two(dt.minute)}';
     if (diff == 1) return '昨天';
     if (diff < 7) return '$diff天前';
     return '${two(dt.month)}-${two(dt.day)}';

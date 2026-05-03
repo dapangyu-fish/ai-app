@@ -1528,8 +1528,12 @@ class JsonScreenView extends ConsumerWidget {
     if (customAppBarConfig is Map<String, dynamic>) {
       appBar = appbar_helper.buildAppBar(context, customAppBarConfig, interpreter);
     } else {
+      // 走 resolveTemplate 让 title 支持 "{{ global.xxx }}" 模板
+      // （和自定义 appBar / 普通 text widget 行为一致）
+      final rawTitle = screenConfig['title']?.toString() ?? interpreter.appName;
+      final titleText = interpreter.resolveTemplate(rawTitle);
       appBar = AppBar(
-        title: Text(screenConfig['title'] ?? interpreter.appName),
+        title: Text(titleText),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -1743,7 +1747,10 @@ class _TabScreenViewState extends State<_TabScreenView> {
   @override
   Widget build(BuildContext context) {
     final tabs = widget.screenConfig['tabs'] as List<dynamic>;
-    final title = widget.screenConfig['title'] ?? widget.interpreter.appName;
+    // 支持 "{{ }}" 模板（同普通 screen 的 AppBar 行为）
+    final rawTitle = widget.screenConfig['title']?.toString() ??
+        widget.interpreter.appName;
+    final title = widget.interpreter.resolveTemplate(rawTitle);
 
     final bgColorStr = widget.screenConfig['backgroundColor'] as String?;
     Color? bgColor;
@@ -1823,7 +1830,8 @@ class _TabScreenViewState extends State<_TabScreenView> {
       child: Scaffold(
         backgroundColor: tabBgColor ?? bgColor,
         appBar: AppBar(
-          title: Text(currentTab['title']?.toString() ?? title),
+          title: Text(widget.interpreter.resolveTemplate(
+              currentTab['title']?.toString() ?? title)),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
