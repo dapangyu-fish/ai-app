@@ -501,8 +501,10 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
 
-    // 进入对话模式的重震动反馈
-    HapticFeedback.heavyImpact();
+    // 进入对话模式的重震动反馈：双击 heavyImpact，间隔 ~70ms。
+    // Flutter SDK 的 heavyImpact 已是单次最强，要更明显只能连击。
+    // ignore: unawaited_futures
+    _strongHapticBurst();
 
     // 后台拉取供应商列表（不阻塞进入对话模式）
     AiChatService.fetchProviders().then((_) {
@@ -1392,6 +1394,15 @@ class _DesignerBallState extends State<DesignerBall>
     _closeChatMode();
     _messages.clear();
     _chatService.clear(); // resetSession is async but fire-and-forget is fine here
+  }
+
+  /// 双击 heavyImpact，主观上明显比单次更"重"。
+  /// 用于进入对话模式等关键状态切换；普通触摸/拖拽别用，会很烦。
+  Future<void> _strongHapticBurst() async {
+    HapticFeedback.heavyImpact();
+    await Future.delayed(const Duration(milliseconds: 70));
+    if (!mounted) return;
+    HapticFeedback.heavyImpact();
   }
 
   void _scrollToBottom() {
