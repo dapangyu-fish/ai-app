@@ -16,7 +16,7 @@
         │  │
         ▼  ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              Flask 后端 (app-backend.dapangyu.work)              │
+│              Flask 后端 (myapp-backend.dapangyu.work)              │
 │                                                                 │
 │  ┌─────────┐ ┌───────────┐ ┌──────────┐ ┌───────────────────┐  │
 │  │ Auth    │ │ User Mgmt │ │ AI Chat  │ │ App Store         │  │
@@ -51,7 +51,7 @@
 
 ### 2.3 用户管理后台
 
-**直接使用 Supabase Studio**（`https://app-auth.dapangyu.work`）
+**直接使用 Supabase Studio**（`https://myapp-auth.dapangyu.work`）
 
 操作流程：Authentication → Users → 编辑用户的 `app_metadata` → 设置 `"role": "pro"` 或 `"admin"`
 

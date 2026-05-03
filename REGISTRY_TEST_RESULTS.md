@@ -1,7 +1,7 @@
 # Registry 服务测试报告
 
 ## 测试环境
-- **服务地址**: https://registry.dapangyu.work
+- **服务地址**: https://myapp-registry.dapangyu.work
 - **服务端口**: 3254
 - **部署方式**: Supervisor
 - **测试时间**: 2024
@@ -14,7 +14,7 @@
 
 ### 1. 服务健康检查
 ```bash
-curl https://registry.dapangyu.work/health
+curl https://myapp-registry.dapangyu.work/health
 ```
 **结果**: ✅ 通过
 ```json
@@ -29,7 +29,7 @@ curl https://registry.dapangyu.work/health
 
 #### 2.1 检查命名空间可用性
 ```bash
-curl "https://registry.dapangyu.work/namespace/check?name=mycompany"
+curl "https://myapp-registry.dapangyu.work/namespace/check?name=mycompany"
 ```
 **结果**: ✅ 通过
 ```json
@@ -42,7 +42,7 @@ curl "https://registry.dapangyu.work/namespace/check?name=mycompany"
 
 #### 2.2 创建命名空间
 ```bash
-curl -X POST https://registry.dapangyu.work/namespace/create \
+curl -X POST https://myapp-registry.dapangyu.work/namespace/create \
   -H "Authorization: Bearer test-token" \
   -H "Content-Type: application/json" \
   -d '{"namespace": "mycompany"}'
@@ -58,7 +58,7 @@ curl -X POST https://registry.dapangyu.work/namespace/create \
 
 #### 2.3 创建嵌套命名空间（2级）
 ```bash
-curl -X POST https://registry.dapangyu.work/namespace/create \
+curl -X POST https://myapp-registry.dapangyu.work/namespace/create \
   -H "Authorization: Bearer test-token" \
   -H "Content-Type: application/json" \
   -d '{"namespace": "mycompany", "sub_namespace": "frontend"}'
@@ -84,7 +84,7 @@ curl -X POST https://registry.dapangyu.work/namespace/create \
   "message": "发布成功",
   "name": "mycompany/ui-kit",
   "version": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-kit-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-kit-1.0.0.json"
 }
 ```
 
@@ -98,7 +98,7 @@ curl -X POST https://registry.dapangyu.work/namespace/create \
   "message": "发布成功",
   "name": "mycompany/frontend/form-kit",
   "version": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/form-kit/form-kit-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/form-kit/form-kit-1.0.0.json"
 }
 ```
 
@@ -117,7 +117,7 @@ curl -X POST https://registry.dapangyu.work/namespace/create \
 
 #### 4.1 解析用户包依赖
 ```bash
-curl "https://registry.dapangyu.work/resolve?name=mycompany/ui-kit&version=^1.0.0"
+curl "https://myapp-registry.dapangyu.work/resolve?name=mycompany/ui-kit&version=^1.0.0"
 ```
 **结果**: ✅ 通过
 ```json
@@ -126,13 +126,13 @@ curl "https://registry.dapangyu.work/resolve?name=mycompany/ui-kit&version=^1.0.
   "version": "1.0.0",
   "type": "user",
   "latest": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-kit-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-kit-1.0.0.json"
 }
 ```
 
 #### 4.2 解析嵌套包依赖
 ```bash
-curl "https://registry.dapangyu.work/resolve?name=mycompany/frontend/form-kit&version=^1.0.0"
+curl "https://myapp-registry.dapangyu.work/resolve?name=mycompany/frontend/form-kit&version=^1.0.0"
 ```
 **结果**: ✅ 通过
 ```json
@@ -141,13 +141,13 @@ curl "https://registry.dapangyu.work/resolve?name=mycompany/frontend/form-kit&ve
   "version": "1.0.0",
   "type": "user",
   "latest": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/form-kit/form-kit-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/form-kit/form-kit-1.0.0.json"
 }
 ```
 
 #### 4.3 解析官方包依赖
 ```bash
-curl "https://registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
+curl "https://myapp-registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
 ```
 **结果**: ✅ 通过
 ```json
@@ -156,7 +156,7 @@ curl "https://registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
   "version": "1.0.0",
   "type": "official",
   "latest": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/common-ui-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/common-ui-1.0.0.json"
 }
 ```
 
@@ -164,7 +164,7 @@ curl "https://registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
 
 #### 5.1 下载用户包
 ```bash
-curl "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-kit-1.0.0.json"
+curl "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-kit-1.0.0.json"
 ```
 **结果**: ✅ 通过
 - 包名: mycompany/ui-kit
@@ -173,7 +173,7 @@ curl "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-
 
 #### 5.2 下载嵌套包
 ```bash
-curl "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/form-kit/form-kit-1.0.0.json"
+curl "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/form-kit/form-kit-1.0.0.json"
 ```
 **结果**: ✅ 通过
 - 包名: mycompany/frontend/form-kit

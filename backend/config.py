@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Supabase 配置
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://app-auth.dapangyu.work")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://myapp-auth.dapangyu.work")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
@@ -95,7 +95,7 @@ AI_PROVIDERS = {
 DEFAULT_PROVIDER = "deepseek"
 
 # MinIO 配置
-MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "https://app-oss-endpoint.dapangyu.work")
+MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "https://myapp-oss-endpoint.dapangyu.work")
 _minio_url_parts = MINIO_PUBLIC_URL.split("://")
 MINIO_SECURE = _minio_url_parts[0] == "https" if len(_minio_url_parts) > 1 else True
 MINIO_ENDPOINT = _minio_url_parts[-1]

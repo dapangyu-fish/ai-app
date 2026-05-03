@@ -5,7 +5,7 @@
 ## 服务信息
 
 - **端口**: 3254
-- **域名**: https://registry.dapangyu.work
+- **域名**: https://myapp-registry.dapangyu.work
 - **存储**: MinIO (`json-component` bucket)
 - **索引文件**: `_index.json`
 
@@ -30,7 +30,7 @@
 
 ```bash
 # 在服务器上执行
-ssh root@app-backend.dapangyu.work
+ssh root@myapp-backend.dapangyu.work
 cd /path/to/ai-app
 python3 backend/registry_init.py
 ```
@@ -48,10 +48,10 @@ nohup python3 backend/registry_server.py > logs/registry.log 2>&1 &
 ### 3. 配置 Nginx 反向代理
 
 ```nginx
-# /etc/nginx/sites-available/registry.dapangyu.work
+# /etc/nginx/sites-available/myapp-registry.dapangyu.work
 server {
     listen 443 ssl http2;
-    server_name registry.dapangyu.work;
+    server_name myapp-registry.dapangyu.work;
 
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
@@ -67,7 +67,7 @@ server {
 ```
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/registry.dapangyu.work /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/myapp-registry.dapangyu.work /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -100,7 +100,7 @@ GET /resolve?name=common-ui&version=^1.0.0
 {
   "name": "common-ui",
   "version": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/common-ui/common-ui-1.0.0.json",
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/common-ui/common-ui-1.0.0.json",
   "type": "official",
   "latest": "1.0.0"
 }
@@ -191,7 +191,7 @@ Content-Type: application/json
   "message": "发布成功",
   "name": "mycompany/frontend/ui-kit",
   "version": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/ui-kit/ui-kit-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/ui-kit/ui-kit-1.0.0.json"
 }
 ```
 
@@ -222,7 +222,7 @@ Content-Type: application/json
 {
   "dependencies": {
     "common-ui": {
-      "url": "https://app-oss-endpoint.dapangyu.work/json-component/common-ui/common-ui-1.0.0.json",
+      "url": "https://myapp-oss-endpoint.dapangyu.work/json-component/common-ui/common-ui-1.0.0.json",
       "version": "^1.0.0"
     }
   }

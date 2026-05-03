@@ -44,7 +44,7 @@
 ```json
 "dependencies": {
   "common-ui": {
-    "url": "https://app-oss-endpoint.dapangyu.work/json-component/xxx/common-ui-1.0.0.json",
+    "url": "https://myapp-oss-endpoint.dapangyu.work/json-component/xxx/common-ui-1.0.0.json",
     "version": "^1.0.0"
   }
 }
@@ -102,7 +102,7 @@
 ### 1. 初始化索引
 
 ```bash
-ssh root@app-backend.dapangyu.work
+ssh root@myapp-backend.dapangyu.work
 cd /path/to/ai-app
 python3 backend/registry_init.py
 ```
@@ -118,7 +118,7 @@ nohup python3 backend/registry_server.py > logs/registry.log 2>&1 &
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name registry.dapangyu.work;
+    server_name myapp-registry.dapangyu.work;
     
     location / {
         proxy_pass http://127.0.0.1:3254;
@@ -133,8 +133,8 @@ server {
 python3 backend/test_registry.py
 
 # 远程测试
-curl https://registry.dapangyu.work/health
-curl "https://registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
+curl https://myapp-registry.dapangyu.work/health
+curl "https://myapp-registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
 ```
 
 ## 向后兼容性

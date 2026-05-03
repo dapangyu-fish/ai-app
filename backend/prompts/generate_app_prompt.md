@@ -6,7 +6,7 @@
 
 **当用户询问关于"当前应用"、"这个应用"、"我的应用"、"修改当前应用"等问题时，你需要先获取应用的配置代码才能回答。（要求每次都必须问）**
 
-用户会提供一个带签名的临时 URL（格式类似：`https://app-oss-endpoint.dapangyu.work/ai-chat-temp/xxx.json?X-Amz-Algorithm=...`）。
+用户会提供一个带签名的临时 URL（格式类似：`https://myapp-oss-endpoint.dapangyu.work/ai-chat-temp/xxx.json?X-Amz-Algorithm=...`）。
 
 **获取配置的步骤**：
 1. 使用 `Bash` 工具执行 `curl -s "完整URL"` 下载 JSON 配置（URL 包含签名参数，必须用引号包裹）
@@ -156,7 +156,7 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 # 必须遵守的准则
 
 ## 代码生成意见
-1. 你可以通过 curl https://registry.dapangyu.work/packages 获取已经发布的包，检索接近的需求 或者寻找lib组件 来开发app     
+1. 你可以通过 curl https://myapp-registry.dapangyu.work/packages 获取已经发布的包，检索接近的需求 或者寻找lib组件 来开发app     
 2. 你需要以 'templates/bacsase/anti_patterns_and_pitfalls.md' 这份文档中的案例作为反面教材，这些都是历史上无法运行的app
 3. 当前所在环境没有flutter环境是十分正常的，你只需要严格按照本项目中说明实现接口，相信自己的技术能力，不需要flutter调试
 

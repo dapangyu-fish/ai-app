@@ -5,7 +5,7 @@
 通过 SSH 登录到后端服务器：
 
 ```bash
-ssh root@app-backend.dapangyu.work
+ssh root@myapp-backend.dapangyu.work
 ```
 
 （本机已配置免密登录，无需输入密码）
@@ -164,7 +164,7 @@ supervisorctl restart ai-app
 客户端登录后，调用发布接口：
 
 ```bash
-curl -X POST https://app-backend.dapangyu.work/api/store/publish \
+curl -X POST https://myapp-backend.dapangyu.work/api/store/publish \
   -H "Authorization: Bearer <用户token>" \
   -H "Content-Type: application/json" \
   -d '{"json_content": <JSON-APP内容>}'
@@ -177,13 +177,13 @@ curl -X POST https://app-backend.dapangyu.work/api/store/publish \
 SSH 登录服务器后，使用 Python 脚本直接操作数据库和 MinIO：
 
 ```bash
-ssh root@app-backend.dapangyu.work
+ssh root@myapp-backend.dapangyu.work
 /opt/miniconda3/bin/python -c "
 import json, uuid, subprocess, tempfile, os, psycopg2, psycopg2.extras
 
 DB_CONFIG = dict(host='127.0.0.1', port=5433, dbname='jsonapp', user='jsonapp',
                  password='hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg')
-MINIO_PUBLIC_URL = 'https://app-oss-endpoint.dapangyu.work'
+MINIO_PUBLIC_URL = 'https://myapp-oss-endpoint.dapangyu.work'
 
 # 读取要发布的 JSON 文件
 with open('/root/ai-app/templates/<文件名>.json', 'r') as f:
@@ -237,7 +237,7 @@ git commit -m "feat: ..."
 git push
 
 # 2. 服务器部署
-ssh root@app-backend.dapangyu.work "cd /root/ai-app && git pull && supervisorctl restart ai-app"
+ssh root@myapp-backend.dapangyu.work "cd /root/ai-app && git pull && supervisorctl restart ai-app"
 
 # 3. 发布到市场（在服务器上执行上面的 Python 脚本）
 ```

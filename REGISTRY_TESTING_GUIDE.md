@@ -4,7 +4,7 @@
 
 1. 确保 Registry 服务正在运行：
    ```bash
-   curl https://registry.dapangyu.work/health
+   curl https://myapp-registry.dapangyu.work/health
    ```
    应该返回：`{"status": "ok"}`
 
@@ -56,7 +56,7 @@ python3 test_publish_user_package.py
 
 #### 测试依赖解析（官方包）
 ```bash
-curl "https://registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
+curl "https://myapp-registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
 ```
 
 预期返回：
@@ -64,18 +64,18 @@ curl "https://registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0"
 {
   "name": "common-ui",
   "version": "1.0.0",
-  "download_url": "https://app-oss-endpoint.dapangyu.work/json-component/.../common-ui-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/.../common-ui-1.0.0.json"
 }
 ```
 
 #### 测试依赖解析（用户包）
 ```bash
-curl "https://registry.dapangyu.work/resolve?name=mycompany/ui-kit&version=^1.0.0"
+curl "https://myapp-registry.dapangyu.work/resolve?name=mycompany/ui-kit&version=^1.0.0"
 ```
 
 #### 测试包元数据查询
 ```bash
-curl "https://registry.dapangyu.work/package/common-ui"
+curl "https://myapp-registry.dapangyu.work/package/common-ui"
 ```
 
 预期返回：
@@ -119,9 +119,9 @@ curl "https://registry.dapangyu.work/package/common-ui"
 **症状**: 控制台显示 "Failed to resolve dependency"
 
 **解决方法**:
-- 检查 Registry 服务是否运行：`curl https://registry.dapangyu.work/health`
-- 检查包是否存在：`curl "https://registry.dapangyu.work/package/common-ui"`
-- 查看 Registry 服务日志：`ssh root@app-backend.dapangyu.work "tail -f /var/log/registry/registry.log"`
+- 检查 Registry 服务是否运行：`curl https://myapp-registry.dapangyu.work/health`
+- 检查包是否存在：`curl "https://myapp-registry.dapangyu.work/package/common-ui"`
+- 查看 Registry 服务日志：`ssh root@myapp-backend.dapangyu.work "tail -f /var/log/registry/registry.log"`
 
 ### 2. SSL 证书错误
 **症状**: SSL handshake failed
