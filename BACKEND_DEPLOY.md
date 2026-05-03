@@ -14,6 +14,23 @@ ssh root@myapp-backend.dapangyu.work
 
 代码位于服务器的 `/root/ai-app` 目录。
 
+## 密钥配置位置 ⚠️
+
+**所有后端 secret 集中在 `/etc/ai-app/backend.env`**（mode 600，root only），**不在 git 工作树内**，不受 `git pull` / `git checkout` 影响。
+
+```
+加载顺序（首个存在的文件生效）：
+  1. $BACKEND_ENV_PATH        — supervisor 通过环境变量注入
+  2. /etc/ai-app/backend.env  — 生产环境标准位置 ← 当前用这个
+  3. backend/.env             — 仓库内位置（本地开发兜底）
+```
+
+模板见 `backend/.env.example`。新增 secret 步骤：
+1. 在本地 `backend/.env.example` 加 `NEW_KEY=` 占位 + 注释说明用途
+2. 提交 + push（不带真实值）
+3. ssh 到服务器，编辑 `/etc/ai-app/backend.env` 填入真实值
+4. `supervisorctl restart ai-app registry`
+
 ## 更新代码
 
 在本地提交代码后，在服务器上执行以下命令更新最新代码：

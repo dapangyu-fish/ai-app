@@ -6,8 +6,20 @@
 import os
 from dotenv import load_dotenv
 
-# 加载 .env 文件
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+# .env 加载顺序（首个存在的文件生效）：
+#   1. $BACKEND_ENV_PATH 环境变量指定的路径（生产环境用 supervisor 注入）
+#   2. /etc/ai-app/backend.env （系统标准位置，root:root 600）
+#   3. backend/.env             （仓库内位置，仅本地开发兜底）
+# 这样 prod 的 secret 不放在 git 工作树里，git pull / checkout 都不会受影响。
+_env_candidates = [
+    os.environ.get("BACKEND_ENV_PATH"),
+    "/etc/ai-app/backend.env",
+    os.path.join(os.path.dirname(__file__), ".env"),
+]
+for _p in _env_candidates:
+    if _p and os.path.isfile(_p):
+        load_dotenv(_p)
+        break
 
 # Supabase 配置
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://myapp-auth.dapangyu.work")
