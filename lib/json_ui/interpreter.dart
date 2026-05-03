@@ -255,24 +255,68 @@ class JsonInterpreter extends ChangeNotifier {
       return value;
     }
 
-    // Map → JsonLogic 表达式（来自原始 JSON 配置，不会是运行时数据）
+    // Map → 区分 JsonLogic 表达式 vs 普通数据 Map：
+    //   - 单 key + key 在已知 jsonlogic operator 集合里 → 走 jsonlogic 求值
+    //   - 其它（多 key、单 key 但 key 不是 op、空 Map）→ 当数据 Map，
+    //     递归把内部值再 _evaluateExpression（保留模板/嵌套表达式都能展开）
+    //
+    // 这里曾经是无脑把所有 Map 都 jl.apply()，导致 AI 写
+    //   @list_add args.item = {"id":..., "display":..., "bg":...}
+    // 这种正常数据 Map 时，jsonlogic 把第一个 key 当 operator → "operator id not defined"
+    // 崩溃。框架契约（CLAUDE.md §3）：合法 JSON 数据不能让框架崩。
     if (value is Map<String, dynamic>) {
-      final preprocessed = _resolveTemplatesInRule(value);
-      return _jl.apply(preprocessed, _buildDataContext());
+      if (_looksLikeJsonLogic(value)) {
+        final preprocessed = _resolveTemplatesInRule(value);
+        return _jl.apply(preprocessed, _buildDataContext());
+      }
+      // 数据 Map：值再走一遍 evaluate，模板 / 嵌套 jsonlogic 都能正确展开
+      final out = <String, dynamic>{};
+      value.forEach((k, v) {
+        out[k] = _evaluateExpression(v);
+      });
+      return out;
     }
 
-    // List → 解析字符串模板，Map/其他类型原样保留
+    // List → 元素再走 evaluate（之前只处理字符串模板，这里改成全递归
+    // 保持一致：List<Map> 里如果有数据 Map，里面的 {{ }} 现在也能解开）
     if (value is List) {
-      return value.map((e) {
-        if (e is String && e.contains('{{') && e.contains('}}')) {
-          return resolveExpression(e);
-        }
-        return e;
-      }).toList();
+      return value.map(_evaluateExpression).toList();
     }
 
     return value;
   }
+
+  /// 判断一个 Map 是否是 jsonlogic 表达式（而不是普通数据 Map）：
+  /// 单 key 且 key 在已知 operator 白名单里。
+  ///
+  /// 标准 jsonlogic operator 由 `Jsonlogic()` 构造器内置，自定义的通过
+  /// `_jl.add()` 注册。两份合在一起就是当前引擎认识的全部 op。
+  static bool _looksLikeJsonLogic(Map<String, dynamic> m) {
+    if (m.length != 1) return false;
+    return _knownJsonLogicOps.contains(m.keys.first);
+  }
+
+  /// jsonlogic 标准 operator + 本文件 _createJsonLogic 里 jl.add 注册的自定义 op。
+  /// 维护提示：在 _createJsonLogic 里加新的 jl.add('xxx', ...) 时，**记得把
+  /// 'xxx' 加到这里**，否则该 op 写法会被当作数据 Map 不再触发 jsonlogic 求值。
+  static const Set<String> _knownJsonLogicOps = {
+    // 标准（来自 jsonlogic 包）
+    'var', 'missing', 'missing_some',
+    'if', '?:',
+    'and', 'or', '!', '!!',
+    '==', '!=', '===', '!==', '<', '<=', '>', '>=',
+    '+', '-', '*', '/', '%',
+    'min', 'max',
+    'cat', 'substr', 'in',
+    'map', 'filter', 'reduce', 'all', 'some', 'none', 'merge', 'method',
+    'log',
+    // 本文件自定义
+    'str_len', 'str_upper', 'str_lower', 'str_trim', 'str_contains',
+    'str_replace', 'str_split', 'str_join',
+    'length', 'at', 'slice', 'sort', 'reverse',
+    'to_string', 'to_int', 'to_double',
+    'abs',
+  };
 
   /// 求值为布尔
   bool _evaluateBool(dynamic condition) {

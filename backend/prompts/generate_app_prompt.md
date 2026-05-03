@@ -45,11 +45,33 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 
 ## ★ 自动上传机制（强制要求）
 
-当你生成了新的或修改好的 JSON-APP 代码后，你**必须**执行以下步骤：
+当你生成了新的或修改好的 JSON-APP 代码后，你**必须**按顺序执行以下步骤，**任何一步失败都不能跳过/上传**：
+
 1. 使用工具把生成的 JSON 代码写入到临时文件（如 `/tmp/app.json`）。
-2. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh /tmp/app.json`。该命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
-3. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
-4. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
+2. **强制：上传前过一遍合法性校验**（见下"上传前自检 checklist"），任何一条不通过，回去改 JSON，**重新过一遍**，再继续。
+3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh /tmp/app.json`。该命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
+4. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
+5. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
+
+### 上传前自检 checklist（必跑）
+
+a. **JSON 语法**：`python3 -m json.tool /tmp/app.json > /dev/null && echo OK`
+   - 报错 → 改到 OK 再走 b。
+
+b. **必填字段**：用 `python3 -c "..."` 或 `jq` 确认 `dsl`、`meta.name`、`meta.version`、`meta.type`、`ui.screens` 都齐全且非空（library 例外，可以没有 `ui.screens`）。
+
+c. **不存在的 `@action` / 控件类型**：grep 一遍 JSON 里所有 `"call": "@xxx"` 和 `"type": "xxx"`，对照
+   - `lib/json_ui/interpreter.dart` 里的 `case '@xxx':` 列表（@action）
+   - `lib/json_ui/widget_builder.dart` 里 `_builders` Map（控件类型）
+   出现任何对不上的就是 typo / 自创函数，**必改**。
+
+d. **跨依赖调用**：所有 `@<dep>.<func>` 形式，要么 `<dep>` 在 `dependencies` 里，要么 `<dep>` 是 `global`。漏声明一律删 / 补。
+
+e. **不写自创框架字段**：禁忌字段名（基本都是 web 来的）：`transform`、`transition`、`marginBottom`、`shadow`、`style`（在 container 上）、`pages`、`entry` —— grep 出现就改。
+
+f. **空 list 不要硬塞 jsonlogic**：list 的 `source` 必须是模板字符串 `"{{ global.xxx }}"`，**不能**是 `{"sort": [...]}` 等 jsonlogic Map（在 logic 层先 sort 完写到变量再绑）。
+
+g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2": ...}` 这种**多 key 数据 Map** 是安全的，框架会按数据处理。但**单 key + key 看着像 op 的 Map**（比如 `{"sort": [...]}`、`{"if": [...]}`、`{"merge": [...]}`）会被当 jsonlogic 求值。如果你想原样存一个 `{"sort": "..."}` 数据键名，把它包进多 key Map（比如多加个 `"_data": true` 同伴 key）或者改 key 名避开 op 集合。jsonlogic 标准 op 集合：`var/if/and/or/!/!!/==/!=/===/!==/</>/<=/>=/+/-/*///%/min/max/in/cat/substr/log/missing/missing_some/merge/reduce/map/filter/all/some/none/method`，本框架另注册了：`str_*`、`length/at/slice/sort/reverse/to_string/to_int/to_double/abs`。
 
 **注意事项**：
 - URL 包含签名参数（如 `?X-Amz-Algorithm=...&X-Amz-Signature=...`），必须完整复制，不能截断！
