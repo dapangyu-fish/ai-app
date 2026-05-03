@@ -3,9 +3,9 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.3.2",
+    "version": "1.4.0",
     "type": "app",
-    "description": "lib_im 演示 — 搜好友 / 加好友 / 好友列表 / 单聊收发文本",
+    "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
   },
   "dependencies": {
@@ -31,6 +31,10 @@
       "draft": "",
       "_im": null
     },
+    "computed": {
+      "applicationCount": {"length": [{"var": "global.applications"}]},
+      "friendCount": {"length": [{"var": "global.friends"}]}
+    },
     "functions": {
       "loadHome": {
         "params": [],
@@ -51,10 +55,7 @@
         "logic": [
           {
             "call": "@lib_im.searchUsers",
-            "args": {
-              "q": "{{ global.searchQ }}",
-              "bind": "global.searchResults"
-            }
+            "args": {"q": "{{ global.searchQ }}", "bind": "global.searchResults"}
           }
         ]
       },
@@ -64,10 +65,7 @@
         "logic": [
           {
             "call": "@lib_im.sendFriendRequest",
-            "args": {
-              "userId": "{{ params.userId }}",
-              "message": "你好，加个好友"
-            }
+            "args": {"userId": "{{ params.userId }}", "message": "你好，加个好友"}
           },
           {"call": "@common-ui.showSuccess", "args": {"message": "已发送申请"}}
         ]
@@ -102,11 +100,7 @@
           },
           {
             "call": "@lib_im.getMessages",
-            "args": {
-              "userId": "{{ params.userId }}",
-              "count": 50,
-              "bind": "global.messages"
-            }
+            "args": {"userId": "{{ params.userId }}", "count": 50, "bind": "global.messages"}
           },
           {"call": "@lib_im.markRead", "args": {"userId": "{{ params.userId }}"}},
           {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}},
@@ -117,10 +111,7 @@
       "openChatFromConversation": {
         "params": ["userId", "name"],
         "logic": [
-          {
-            "call": "@global.openChat",
-            "args": {"userId": "{{ params.userId }}", "name": "{{ params.name }}"}
-          }
+          {"call": "@global.openChat", "args": {"userId": "{{ params.userId }}", "name": "{{ params.name }}"}}
         ]
       },
 
@@ -129,11 +120,7 @@
         "logic": [
           {
             "call": "@lib_im.getMessages",
-            "args": {
-              "userId": "{{ global.currentChatUserId }}",
-              "count": 50,
-              "bind": "global.messages"
-            }
+            "args": {"userId": "{{ global.currentChatUserId }}", "count": 50, "bind": "global.messages"}
           },
           {"call": "@lib_im.markRead", "args": {"userId": "{{ global.currentChatUserId }}"}},
           {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}}
@@ -155,10 +142,7 @@
               "then": [
                 {
                   "call": "@lib_im.sendText",
-                  "args": {
-                    "userId": "{{ global.currentChatUserId }}",
-                    "text": "{{ global.draft }}"
-                  }
+                  "args": {"userId": "{{ global.currentChatUserId }}", "text": "{{ global.draft }}"}
                 },
                 {"call": "@set", "args": {"var": "global.draft", "value": ""}},
                 {"call": "@global.refreshChat", "args": {}}
@@ -176,187 +160,218 @@
     "screens": [
       {
         "id": "home",
-        "title": "私信 ({{ global.totalUnread }})",
-        "layout": "column",
-        "padding": 16,
-        "children": [
+        "title": "微信",
+        "tabs": [
           {
-            "type": "container",
-            "layout": "column",
-            "color": "#F0F4FF",
-            "borderRadius": 12,
-            "padding": 12,
+            "label": "微信",
+            "icon": "chat",
+            "backgroundColor": "#EDEDED",
+            "padding": 0,
             "children": [
               {
-                "type": "text",
-                "value": "我: {{ global.myName }}",
-                "style": {"fontSize": 14, "fontWeight": "bold"}
-              },
-              {
-                "type": "text",
-                "value": "ID: {{ global.myId }}",
-                "style": {"fontSize": 11, "color": "#666666"}
-              },
-              {
-                "type": "text",
-                "value": "未读 {{ global.totalUnread }} 条 · 实时 tick={{ global._im.tick }}",
-                "style": {"fontSize": 11, "color": "#999999"}
+                "type": "list",
+                "source": "{{ global.conversations }}",
+                "emptyText": "还没有会话，去通讯录里点一个好友开始聊天",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "padding": 12,
+                  "color": "#FFFFFF",
+                  "crossAxisAlignment": "center",
+                  "onTap": {
+                    "type": "call",
+                    "call": "@global.openChatFromConversation",
+                    "args": {
+                      "userId": "{{ loop.item.user_id }}",
+                      "name": "{{ loop.item.show_name }}"
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "avatar",
+                      "url": "{{ loop.item.face_url }}",
+                      "text": "{{ loop.item.show_name }}",
+                      "size": 48,
+                      "color": "#5C6BC0",
+                      "textColor": "#FFFFFF"
+                    },
+                    {"type": "spacer", "width": 12},
+                    {
+                      "type": "container",
+                      "position": {"type": "flex", "flex": 1},
+                      "layout": "column",
+                      "crossAxisAlignment": "start",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.show_name }}",
+                          "style": {"fontSize": 16, "fontWeight": "bold", "color": "#1A1A1A"}
+                        },
+                        {"type": "spacer", "height": 4},
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.latest_text }}",
+                          "style": {"fontSize": 13, "color": "#999999"}
+                        }
+                      ]
+                    },
+                    {"type": "spacer", "width": 8},
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "crossAxisAlignment": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.display_time }}",
+                          "style": {"fontSize": 11, "color": "#B0B0B0"}
+                        },
+                        {"type": "spacer", "height": 6},
+                        {
+                          "type": "container",
+                          "visible": "{{ loop.item.unread_count }}",
+                          "color": "#FA5151",
+                          "borderRadius": 10,
+                          "padding": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.display_unread }}",
+                              "style": {"fontSize": 11, "fontWeight": "bold", "color": "#FFFFFF"}
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
               }
             ]
           },
-          {"type": "spacer", "height": 12},
           {
-            "type": "container",
-            "layout": "row",
+            "label": "通讯录",
+            "icon": "person",
+            "backgroundColor": "#FFFFFF",
+            "padding": 0,
             "children": [
               {
-                "type": "button",
-                "label": "搜好友",
-                "icon": "person_search",
-                "variant": "filled",
-                "position": {"type": "flex", "flex": 1},
-                "action": {"type": "navigate", "screen": "add_friend"}
+                "type": "container",
+                "layout": "row",
+                "padding": 14,
+                "color": "#FFFFFF",
+                "crossAxisAlignment": "center",
+                "onTap": {"type": "navigate", "screen": "applications"},
+                "children": [
+                  {
+                    "type": "container",
+                    "color": "#FA5151",
+                    "borderRadius": 8,
+                    "padding": 8,
+                    "children": [
+                      {"type": "icon", "name": "person_add", "color": "#FFFFFF", "size": 20}
+                    ]
+                  },
+                  {"type": "spacer", "width": 12},
+                  {
+                    "type": "text",
+                    "value": "新的朋友",
+                    "style": {"fontSize": 16, "color": "#1A1A1A"},
+                    "position": {"type": "flex", "flex": 1}
+                  },
+                  {
+                    "type": "container",
+                    "visible": "{{ global.applicationCount }}",
+                    "color": "#FA5151",
+                    "borderRadius": 10,
+                    "padding": 4,
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.applicationCount }}",
+                        "style": {"fontSize": 11, "fontWeight": "bold", "color": "#FFFFFF"}
+                      }
+                    ]
+                  }
+                ]
               },
-              {"type": "spacer", "width": 8},
+              {"type": "divider"},
               {
-                "type": "button",
-                "label": "新申请",
-                "icon": "person_add",
-                "variant": "outlined",
-                "position": {"type": "flex", "flex": 1},
-                "action": {"type": "navigate", "screen": "applications"}
-              }
-            ]
-          },
-          {"type": "spacer", "height": 12},
-          {
-            "type": "button",
-            "label": "刷新",
-            "icon": "refresh",
-            "variant": "text",
-            "action": {"type": "call", "call": "@global.loadHome", "args": {}}
-          },
-          {"type": "spacer", "height": 12},
-          {
-            "type": "text",
-            "value": "会话",
-            "style": {"fontSize": 16, "fontWeight": "bold"}
-          },
-          {
-            "type": "list",
-            "source": "{{ global.conversations }}",
-            "emptyText": "还没有会话",
-            "item_template": {
-              "type": "container",
-              "layout": "row",
-              "padding": 12,
-              "margin": 4,
-              "color": "#FFFFFF",
-              "borderRadius": 10,
-              "onTap": {
-                "type": "call",
-                "call": "@global.openChatFromConversation",
-                "args": {
-                  "userId": "{{ loop.item.user_id }}",
-                  "name": "{{ loop.item.show_name }}"
-                }
+                "type": "container",
+                "layout": "row",
+                "padding": 14,
+                "color": "#FFFFFF",
+                "crossAxisAlignment": "center",
+                "onTap": {"type": "navigate", "screen": "add_friend"},
+                "children": [
+                  {
+                    "type": "container",
+                    "color": "#07C160",
+                    "borderRadius": 8,
+                    "padding": 8,
+                    "children": [
+                      {"type": "icon", "name": "person_search", "color": "#FFFFFF", "size": 20}
+                    ]
+                  },
+                  {"type": "spacer", "width": 12},
+                  {
+                    "type": "text",
+                    "value": "搜好友",
+                    "style": {"fontSize": 16, "color": "#1A1A1A"},
+                    "position": {"type": "flex", "flex": 1}
+                  }
+                ]
               },
-              "children": [
-                {
-                  "type": "container",
-                  "position": {"type": "flex", "flex": 1},
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "{{ loop.item.show_name }}",
-                      "style": {"fontSize": 15, "fontWeight": "bold"}
-                    },
-                    {
-                      "type": "text",
-                      "value": "{{ loop.item.latest_text }}",
-                      "style": {"fontSize": 13, "color": "#666666"}
-                    }
-                  ]
-                },
-                {
-                  "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "{{ loop.item.display_time }}",
-                      "style": {"fontSize": 11, "color": "#999999"}
-                    },
-                    {
-                      "type": "text",
-                      "value": "{{ loop.item.display_unread }}",
-                      "style": {"fontSize": 11, "color": "#FF3B30", "fontWeight": "bold"}
-                    }
-                  ]
-                }
-              ]
-            }
-          },
-          {"type": "spacer", "height": 8},
-          {
-            "type": "text",
-            "value": "好友",
-            "style": {"fontSize": 16, "fontWeight": "bold"}
-          },
-          {
-            "type": "list",
-            "source": "{{ global.friends }}",
-            "emptyText": "还没有好友",
-            "item_template": {
-              "type": "container",
-              "layout": "row",
-              "padding": 10,
-              "margin": 4,
-              "color": "#FFFFFF",
-              "borderRadius": 10,
-              "onTap": {
-                "type": "call",
-                "call": "@global.openChat",
-                "args": {
-                  "userId": "{{ loop.item.user_id }}",
-                  "name": "{{ loop.item.nickname }}"
-                }
+              {"type": "divider"},
+              {
+                "type": "container",
+                "padding": 14,
+                "color": "#F7F7F7",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "我的好友 ({{ global.friendCount }})",
+                    "style": {"fontSize": 13, "color": "#888888"}
+                  }
+                ]
               },
-              "children": [
-                {
+              {
+                "type": "list",
+                "source": "{{ global.friends }}",
+                "emptyText": "还没有好友",
+                "item_template": {
                   "type": "container",
-                  "position": {"type": "flex", "flex": 1},
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "{{ loop.item.nickname }}",
-                      "style": {"fontSize": 15, "fontWeight": "bold"}
-                    },
-                    {
-                      "type": "text",
-                      "value": "{{ loop.item.user_id }}",
-                      "style": {"fontSize": 11, "color": "#999999"}
-                    }
-                  ]
-                },
-                {
-                  "type": "button",
-                  "label": "聊天",
-                  "icon": "chat",
-                  "variant": "text",
-                  "action": {
+                  "layout": "row",
+                  "padding": 12,
+                  "color": "#FFFFFF",
+                  "crossAxisAlignment": "center",
+                  "onTap": {
                     "type": "call",
                     "call": "@global.openChat",
                     "args": {
                       "userId": "{{ loop.item.user_id }}",
                       "name": "{{ loop.item.nickname }}"
                     }
-                  }
+                  },
+                  "children": [
+                    {
+                      "type": "avatar",
+                      "url": "{{ loop.item.face_url }}",
+                      "text": "{{ loop.item.nickname }}",
+                      "size": 40,
+                      "color": "#5C6BC0",
+                      "textColor": "#FFFFFF"
+                    },
+                    {"type": "spacer", "width": 12},
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.nickname }}",
+                      "style": {"fontSize": 16, "color": "#1A1A1A"},
+                      "position": {"type": "flex", "flex": 1}
+                    }
+                  ]
                 }
-              ]
-            }
+              }
+            ]
           }
         ]
       },
@@ -393,11 +408,22 @@
               "margin": 4,
               "color": "#FFFFFF",
               "borderRadius": 10,
+              "crossAxisAlignment": "center",
               "children": [
+                {
+                  "type": "avatar",
+                  "url": "{{ loop.item.face_url }}",
+                  "text": "{{ loop.item.nickname }}",
+                  "size": 40,
+                  "color": "#5C6BC0",
+                  "textColor": "#FFFFFF"
+                },
+                {"type": "spacer", "width": 12},
                 {
                   "type": "container",
                   "position": {"type": "flex", "flex": 1},
                   "layout": "column",
+                  "crossAxisAlignment": "start",
                   "children": [
                     {
                       "type": "text",
@@ -407,13 +433,13 @@
                     {
                       "type": "text",
                       "value": "{{ loop.item.email }}",
-                      "style": {"fontSize": 12, "color": "#666666"}
+                      "style": {"fontSize": 12, "color": "#888888"}
                     }
                   ]
                 },
                 {
                   "type": "button",
-                  "label": "加好友",
+                  "label": "加",
                   "icon": "person_add",
                   "variant": "filled",
                   "action": {
@@ -430,21 +456,10 @@
 
       {
         "id": "applications",
-        "title": "新申请",
+        "title": "新的朋友",
         "layout": "column",
-        "padding": 16,
+        "padding": 0,
         "children": [
-          {
-            "type": "button",
-            "label": "刷新",
-            "icon": "refresh",
-            "variant": "text",
-            "action": {
-              "type": "call",
-              "call": "@lib_im.listFriendApplications",
-              "args": {"bind": "global.applications"}
-            }
-          },
           {
             "type": "list",
             "source": "{{ global.applications }}",
@@ -453,24 +468,33 @@
               "type": "container",
               "layout": "row",
               "padding": 12,
-              "margin": 4,
               "color": "#FFFFFF",
-              "borderRadius": 10,
+              "crossAxisAlignment": "center",
               "children": [
+                {
+                  "type": "avatar",
+                  "url": "{{ loop.item.from_face_url }}",
+                  "text": "{{ loop.item.from_nickname }}",
+                  "size": 44,
+                  "color": "#5C6BC0",
+                  "textColor": "#FFFFFF"
+                },
+                {"type": "spacer", "width": 12},
                 {
                   "type": "container",
                   "position": {"type": "flex", "flex": 1},
                   "layout": "column",
+                  "crossAxisAlignment": "start",
                   "children": [
                     {
                       "type": "text",
                       "value": "{{ loop.item.from_nickname }}",
-                      "style": {"fontSize": 15, "fontWeight": "bold"}
+                      "style": {"fontSize": 15, "fontWeight": "bold", "color": "#1A1A1A"}
                     },
                     {
                       "type": "text",
                       "value": "{{ loop.item.req_msg }}",
-                      "style": {"fontSize": 13, "color": "#666666"}
+                      "style": {"fontSize": 13, "color": "#888888"}
                     }
                   ]
                 },
@@ -487,7 +511,7 @@
                 {"type": "spacer", "width": 6},
                 {
                   "type": "button",
-                  "label": "拒绝",
+                  "label": "拒",
                   "variant": "outlined",
                   "action": {
                     "type": "call",
@@ -506,109 +530,90 @@
         "title": "{{ global.currentChatName }}",
         "layout": "column",
         "padding": 0,
+        "backgroundColor": "#EDEDED",
         "children": [
           {
-            "type": "container",
-            "layout": "row",
-            "padding": 8,
-            "color": "#FFFFFF",
-            "children": [
-              {
-                "type": "avatar",
-                "url": "{{ global.myAvatar }}",
-                "text": "{{ global.myName }}",
-                "size": 32
-              },
-              {"type": "spacer", "width": 6},
-              {
-                "type": "text",
-                "value": "我 ↔ {{ global.currentChatName }}",
-                "style": {"fontSize": 12, "color": "#666666"},
-                "position": {"type": "flex", "flex": 1}
-              },
-              {"type": "spacer", "width": 6},
-              {
-                "type": "avatar",
-                "url": "{{ global.otherAvatar }}",
-                "text": "{{ global.currentChatName }}",
-                "size": 32
-              }
-            ]
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "position": {"type": "flex", "flex": 1},
-            "padding": 12,
-            "color": "#F4F4F8",
-            "children": [
-              {
-                "type": "list",
-                "source": "{{ global.messages }}",
-                "emptyText": "还没有消息，发条招呼吧",
-                "item_template": {
+            "type": "list",
+            "source": "{{ global.messages }}",
+            "emptyText": "还没有消息，发条招呼吧",
+            "item_template": {
+              "type": "container",
+              "layout": "column",
+              "padding": 4,
+              "children": [
+                {
                   "type": "container",
+                  "visible": "{{ loop.item.is_other }}",
                   "layout": "row",
-                  "padding": 6,
+                  "mainAxisAlignment": "start",
                   "crossAxisAlignment": "start",
+                  "padding": 6,
                   "children": [
                     {
                       "type": "avatar",
-                      "visible": "{{ loop.item.is_me }}",
-                      "url": "{{ global.myAvatar }}",
-                      "text": "{{ global.myName }}",
-                      "size": 36,
-                      "color": "#5C6BC0",
-                      "textColor": "#FFFFFF"
-                    },
-                    {
-                      "type": "avatar",
-                      "visible": "{{ loop.item.is_other }}",
                       "url": "{{ global.otherAvatar }}",
                       "text": "{{ global.currentChatName }}",
-                      "size": 36,
+                      "size": 40,
                       "color": "#5C6BC0",
                       "textColor": "#FFFFFF"
                     },
                     {"type": "spacer", "width": 8},
                     {
                       "type": "container",
-                      "position": {"type": "flex", "flex": 1},
-                      "layout": "column",
-                      "crossAxisAlignment": "start",
+                      "color": "#FFFFFF",
+                      "borderRadius": 8,
+                      "padding": 10,
                       "children": [
                         {
                           "type": "text",
-                          "value": "{{ loop.item.display_sender }} · {{ loop.item.display_time }}",
-                          "style": {"fontSize": 11, "color": "#999999"}
-                        },
-                        {
-                          "type": "container",
-                          "layout": "column",
-                          "padding": 10,
-                          "margin": 2,
-                          "color": "#FFFFFF",
-                          "borderRadius": 10,
-                          "children": [
-                            {
-                              "type": "text",
-                              "value": "{{ loop.item.text }}",
-                              "style": {"fontSize": 14}
-                            }
-                          ]
+                          "value": "{{ loop.item.text }}",
+                          "style": {"fontSize": 15, "color": "#1A1A1A"}
                         }
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "container",
+                  "visible": "{{ loop.item.is_me }}",
+                  "layout": "row",
+                  "mainAxisAlignment": "end",
+                  "crossAxisAlignment": "start",
+                  "padding": 6,
+                  "children": [
+                    {
+                      "type": "container",
+                      "color": "#95EC69",
+                      "borderRadius": 8,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.text }}",
+                          "style": {"fontSize": 15, "color": "#1A1A1A"}
+                        }
+                      ]
+                    },
+                    {"type": "spacer", "width": 8},
+                    {
+                      "type": "avatar",
+                      "url": "{{ global.myAvatar }}",
+                      "text": "{{ global.myName }}",
+                      "size": 40,
+                      "color": "#5C6BC0",
+                      "textColor": "#FFFFFF"
+                    }
+                  ]
                 }
-              }
-            ]
+              ]
+            }
           },
           {
             "type": "container",
             "layout": "row",
             "padding": 8,
-            "color": "#F8F8F8",
+            "color": "#F7F7F7",
+            "crossAxisAlignment": "center",
             "children": [
               {
                 "type": "input",
@@ -624,14 +629,6 @@
                 "icon": "send",
                 "variant": "filled",
                 "action": {"type": "call", "call": "@global.sendMessage", "args": {}}
-              },
-              {"type": "spacer", "width": 6},
-              {
-                "type": "button",
-                "label": "刷新",
-                "icon": "refresh",
-                "variant": "text",
-                "action": {"type": "call", "call": "@global.refreshChat", "args": {}}
               }
             ]
           }
