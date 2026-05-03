@@ -4,15 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_storage.dart';
 import 'sherpa_asr_service.dart';
 import 'ai_chat_service.dart';
+// AsrMode + AsrModePrefs 共用 designer_ball 定义的，避免两份枚举漂移
+import 'designer_ball.dart' show AsrMode, AsrModePrefs;
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
-
-// 语音识别方式枚举
-enum AsrMode {
-  online,    // 在线识别（speech_to_text）
-  offline,   // 离线识别（sherpa_onnx）
-  bytedance, // 豆包ASR
-}
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -45,23 +40,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-
-    // 读取语音识别方式
-    final asrModeStr = prefs.getString('asr_mode') ?? 'online';
-    AsrMode mode = AsrMode.online;
-    switch (asrModeStr) {
-      case 'offline':
-        mode = AsrMode.offline;
-        break;
-      case 'bytedance':
-        mode = AsrMode.bytedance;
-        break;
-      default:
-        mode = AsrMode.online;
-    }
-
+    // ASR 模式从 notifier 拿（DesignerBall 也用同一个），保证三处一致
     setState(() {
-      _asrMode = mode;
+      _asrMode = AsrModePrefs.notifier.value;
       _selectedProvider = AiChatService.selectedProvider;
       _selectedModelId = prefs.getString('asr_model_id') ?? 'sensevoice';
     });
@@ -89,22 +70,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _selectAsrMode(AsrMode mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    String modeStr = 'online';
-    switch (mode) {
-      case AsrMode.offline:
-        modeStr = 'offline';
-        await _sherpaAsr.setForceOffline(true);
-        break;
-      case AsrMode.bytedance:
-        modeStr = 'bytedance';
-        await _sherpaAsr.setForceOffline(false);
-        break;
-      default:
-        modeStr = 'online';
-        await _sherpaAsr.setForceOffline(false);
-    }
-    await prefs.setString('asr_mode', modeStr);
+    // 配 sherpa 的离线开关
+    await _sherpaAsr.setForceOffline(mode == AsrMode.offline);
+    // 写 prefs + 通知所有监听者（DesignerBall 在此重新挂载会立刻拿到新值）
+    await AsrModePrefs.set(mode);
     setState(() {
       _asrMode = mode;
     });

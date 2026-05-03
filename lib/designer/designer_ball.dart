@@ -19,6 +19,53 @@ enum AsrMode {
   bytedance, // 豆包ASR
 }
 
+/// 全局 ASR 模式管理 —— 让 settings_page 改完之后悬浮球能立刻感知。
+///
+/// 之前 bug：DesignerBall 在 initState 里读一次 SharedPreferences 就缓存到
+/// `_asrMode` 字段，永远不再刷新。settings_page 写了 prefs，但 DesignerBall
+/// 是 MaterialApp 外层的常驻 widget，永远不会重新 initState，结果用户切到
+/// "离线"或"豆包"，运行时 `_asrMode` 还是启动时的旧值，体感"切了没切成功"。
+class AsrModePrefs {
+  AsrModePrefs._();
+
+  static final ValueNotifier<AsrMode> notifier = ValueNotifier(AsrMode.online);
+
+  static AsrMode _decode(String? s) {
+    switch (s) {
+      case 'offline':
+        return AsrMode.offline;
+      case 'bytedance':
+        return AsrMode.bytedance;
+      default:
+        return AsrMode.online;
+    }
+  }
+
+  static String _encode(AsrMode m) {
+    switch (m) {
+      case AsrMode.offline:
+        return 'offline';
+      case AsrMode.bytedance:
+        return 'bytedance';
+      case AsrMode.online:
+        return 'online';
+    }
+  }
+
+  /// App 启动 / 悬浮球 initState 时调一次，把 prefs 里的值灌进 notifier
+  static Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    notifier.value = _decode(prefs.getString('asr_mode'));
+  }
+
+  /// settings 页改 mode 时调；写 prefs + 通知所有监听者
+  static Future<void> set(AsrMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('asr_mode', _encode(mode));
+    notifier.value = mode;
+  }
+}
+
 /// 悬浮设计师球 — iOS 风格丝滑拖拽 + 长按对话模式。
 /// 凌驾于所有页面之上，不影响 JSON APP。
 class DesignerBall extends StatefulWidget {
@@ -94,7 +141,9 @@ class _DesignerBallState extends State<DesignerBall>
   stt.SpeechToText? _speech;
   bool _speechInited = false;
   bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
-  AsrMode _asrMode = AsrMode.online; // 当前语音识别方式
+  // ⚠️ 不要直接读这个字段，用 _asrMode getter，永远拿到 AsrModePrefs 最新值。
+  // 历史 bug：缓存了 initState 时的旧值，settings 改完不感知。
+  AsrMode get _asrMode => AsrModePrefs.notifier.value;
   final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
@@ -134,8 +183,11 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 注册崩溃分析回调
     DesignerBall.sendCrashReport = _handleCrashReport;
-    // 加载配置
-    _loadAsrMode();
+    // 加载配置（asr_mode 走全局 notifier，settings 改完悬浮球能立刻感知）
+    AsrModePrefs.load().then((_) {
+      if (mounted) setState(() {}); // 触发一次 rebuild 让 _asrMode getter 拿到新值
+    });
+    AsrModePrefs.notifier.addListener(_onAsrModeChanged);
     _sherpaAsr.loadConfig().then((_) {
       setState(() {});
     });
@@ -149,25 +201,11 @@ class _DesignerBallState extends State<DesignerBall>
     _initBytedanceAsr();
   }
 
-  /// 加载语音识别方式设置
-  Future<void> _loadAsrMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    final asrModeStr = prefs.getString('asr_mode') ?? 'online';
-    AsrMode mode = AsrMode.online;
-    switch (asrModeStr) {
-      case 'offline':
-        mode = AsrMode.offline;
-        break;
-      case 'bytedance':
-        mode = AsrMode.bytedance;
-        break;
-      default:
-        mode = AsrMode.online;
-    }
-    setState(() {
-      _asrMode = mode;
-    });
-    debugPrint('[DesignerBall] Loaded ASR mode: $asrModeStr');
+  /// notifier → 悬浮球内部状态：设置页改完能立刻生效
+  void _onAsrModeChanged() {
+    if (!mounted) return;
+    setState(() {}); // _asrMode 是 getter，rebuild 自然拿新值
+    debugPrint('[DesignerBall] ASR mode changed -> ${AsrModePrefs.notifier.value.name}');
   }
 
   /// 初始化豆包ASR连接
@@ -260,6 +298,7 @@ class _DesignerBallState extends State<DesignerBall>
     _countdownController.dispose();
     _speech?.stop();
     _scrollController.dispose();
+    AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
     super.dispose();
   }
 
