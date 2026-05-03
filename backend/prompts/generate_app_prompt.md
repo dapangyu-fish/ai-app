@@ -55,6 +55,10 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 - URL 包含签名参数（如 `?X-Amz-Algorithm=...&X-Amz-Signature=...`），必须完整复制，不能截断！
 - 这是用户唯一能接收到应用配置的方式，绝对不能漏掉这个标签！
 - 不要在聊天框直接输出大段的 JSON 文本。
+- ❌ **绝对不要把 URL 包成 markdown 链接语法**：
+  - ❌ 错误：`[json_app_url](https://...)[/json_app_url]`  ← 多了一对括号，客户端会解析失败
+  - ❌ 错误：`[json_app_url][链接](https://...)[/json_app_url]`
+  - ✅ 正确：`[json_app_url]https://...[/json_app_url]`  ← URL 直接写，前后没有任何符号
 
 ## ⚠️ 禁止自动发布（极其重要！）
 

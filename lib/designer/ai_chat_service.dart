@@ -444,10 +444,14 @@ class AiChatService {
       // 流结束后，统一解析标签指令（避免流式传输过程中重复解析）
 
       // 1. 检测 [json_app_url] 标记 → 不自动下载，仅通知 UI 显示按钮
-      final urlRegex = RegExp(r'\[json_app_url\]([^\]]+)\[/json_app_url\]');
+      // AI 偶尔会把 URL 包成 markdown 链接 [json_app_url](URL)[/json_app_url]，
+      // 容错处理：从匹到的内容里抽出真正的 http(s) URL。
+      final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
       final urlMatch = urlRegex.firstMatch(accumulated);
       if (urlMatch != null) {
-        final url = urlMatch.group(1)!;
+        final raw = urlMatch.group(1)!.trim();
+        final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
+        final url = httpMatch?.group(0) ?? raw;
         debugPrint('[AI_CHAT] 流结束，检测到 JSON URL，等待用户确认下载: $url');
         yield ChatEvent(pendingJsonUrl: url);
       }
