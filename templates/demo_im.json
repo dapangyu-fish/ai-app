@@ -3,20 +3,22 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.2.7",
+    "version": "1.3.0",
     "type": "app",
     "description": "lib_im 演示 — 搜好友 / 加好友 / 好友列表 / 单聊收发文本",
     "author": "demo"
   },
   "dependencies": {
     "lib_im": "^1.1.0",
-    "lib_user": "^1.2.0",
+    "lib_user": "^1.3.0",
     "common-ui": "^1.0.0"
   },
   "global": {
     "variables": {
       "myId": "",
       "myName": "",
+      "myAvatar": "",
+      "otherAvatar": "",
       "friends": [],
       "applications": [],
       "conversations": [],
@@ -36,6 +38,7 @@
           {"call": "@lib_im.subscribeInbox", "args": {}},
           {"call": "@lib_im.currentUserId", "args": {"bind": "global.myId"}},
           {"call": "@lib_user.getUserName", "args": {"bind": "global.myName"}},
+          {"call": "@lib_user.getUserAvatar", "args": {"bind": "global.myAvatar"}},
           {"call": "@lib_im.listFriends", "args": {"bind": "global.friends"}},
           {"call": "@lib_im.listFriendApplications", "args": {"bind": "global.applications"}},
           {"call": "@lib_im.listConversations", "args": {"bind": "global.conversations"}},
@@ -93,6 +96,10 @@
           {"call": "@set", "args": {"var": "global.currentChatUserId", "value": "{{ params.userId }}"}},
           {"call": "@set", "args": {"var": "global.currentChatName", "value": "{{ params.name }}"}},
           {"call": "@set", "args": {"var": "global.draft", "value": ""}},
+          {
+            "call": "@lib_user.getOtherUserAvatar",
+            "args": {"userId": "{{ params.userId }}", "bind": "global.otherAvatar"}
+          },
           {
             "call": "@lib_im.getMessages",
             "args": {
@@ -502,6 +509,34 @@
         "children": [
           {
             "type": "container",
+            "layout": "row",
+            "padding": 8,
+            "color": "#FFFFFF",
+            "children": [
+              {
+                "type": "avatar",
+                "url": "{{ global.myAvatar }}",
+                "text": "{{ global.myName }}",
+                "size": 32
+              },
+              {"type": "spacer", "width": 6},
+              {
+                "type": "text",
+                "value": "我 ↔ {{ global.currentChatName }}",
+                "style": {"fontSize": 12, "color": "#666666"},
+                "position": {"type": "flex", "flex": 1}
+              },
+              {"type": "spacer", "width": 6},
+              {
+                "type": "avatar",
+                "url": "{{ global.otherAvatar }}",
+                "text": "{{ global.currentChatName }}",
+                "size": 32
+              }
+            ]
+          },
+          {
+            "type": "container",
             "layout": "column",
             "position": {"type": "flex", "flex": 1},
             "padding": 12,
@@ -513,26 +548,44 @@
                 "emptyText": "还没有消息，发条招呼吧",
                 "item_template": {
                   "type": "container",
-                  "layout": "column",
-                  "padding": 4,
+                  "layout": "row",
+                  "padding": 6,
+                  "crossAxisAlignment": "start",
                   "children": [
                     {
-                      "type": "text",
-                      "value": "{{ loop.item.display_sender }} · {{ loop.item.display_time }}",
-                      "style": {"fontSize": 11, "color": "#999999"}
+                      "type": "avatar",
+                      "url": "{{ loop.item.sender_face_url }}",
+                      "text": "{{ loop.item.display_sender }}",
+                      "size": 36,
+                      "color": "#5C6BC0",
+                      "textColor": "#FFFFFF"
                     },
+                    {"type": "spacer", "width": 8},
                     {
                       "type": "container",
+                      "position": {"type": "flex", "flex": 1},
                       "layout": "column",
-                      "padding": 10,
-                      "margin": 2,
-                      "color": "#FFFFFF",
-                      "borderRadius": 10,
+                      "crossAxisAlignment": "start",
                       "children": [
                         {
                           "type": "text",
-                          "value": "{{ loop.item.text }}",
-                          "style": {"fontSize": 14}
+                          "value": "{{ loop.item.display_sender }} · {{ loop.item.display_time }}",
+                          "style": {"fontSize": 11, "color": "#999999"}
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "padding": 10,
+                          "margin": 2,
+                          "color": "#FFFFFF",
+                          "borderRadius": 10,
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.text }}",
+                              "style": {"fontSize": 14}
+                            }
+                          ]
                         }
                       ]
                     }

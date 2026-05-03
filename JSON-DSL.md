@@ -369,6 +369,7 @@
 | 函数 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `@im_current_user_id` | `{ "bind": "..." }` | string \| null | 我的 IM userId。未登录返回 null |
+| `@im_get_user_info` | `{ "user_id": "...", "bind": "..." }` 或 `{ "user_ids": [...], "bind": "..." }` | Map \| List \| null | 按 userId 取对方在 OpenIM 的公开资料：`{user_id, nickname, face_url, ex}`。单 ID 返回单个 dict（找不到返 null），批量返回 list |
 | `@im_search_users` | `{ "q": "...", "bind": "..." }` | List | 关键词模糊搜邮箱/昵称/UUID（≥2 字符），每条 `{im_user_id, nickname, email, face_url}` |
 | `@im_send_friend_request` | `{ "user_id": "...", "message": "..." }` | bool | 发好友申请，对方在 friend_applications 里能看到 |
 | `@im_friend_applications` | `{ "bind": "..." }` | List | 我收到的好友申请。每条 `{from_user_id, from_nickname, from_face_url, req_msg, handle_result, create_time}`（handle_result：0=待处理 1=已同意 -1=已拒绝） |

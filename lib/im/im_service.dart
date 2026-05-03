@@ -476,6 +476,20 @@ class IMService {
     }
   }
 
+  /// 按 userID 列表批量取 OpenIM 端的公开用户信息（昵称、头像、ex 等）
+  /// JSON-DSL 的 @im_get_user_info 走这个；自己的资料走 Supabase / @get_user_info，
+  /// 这里专门给 "看对方资料" 的场景用
+  Future<List<PublicUserInfo>> getUsersInfo(List<String> userIDList) async {
+    if (userIDList.isEmpty) return [];
+    try {
+      return await OpenIM.iMManager.userManager
+          .getUsersInfo(userIDList: userIDList);
+    } catch (e) {
+      debugPrint('[IM] 获取用户信息失败: $e');
+      return [];
+    }
+  }
+
   // ---------- 群聊操作 ----------
 
   /// 创建群聊

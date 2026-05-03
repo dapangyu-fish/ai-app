@@ -1923,6 +1923,46 @@ class JsonInterpreter extends ChangeNotifier {
           return id;
         }
 
+      case '@im_get_user_info':
+        {
+          // 按 userId 取对方在 OpenIM 的公开资料（昵称 / 头像 / ex）
+          // 单用户便利接口：args.user_id 字符串 → 返回 dict
+          // 批量接口：args.user_ids 列表 → 返回 list<dict>
+          // bind 可选：把结果同步写到变量
+          final singleId = (resolvedArgs['user_id'] as String?) ?? '';
+          final rawIds = resolvedArgs['user_ids'];
+          List<String> ids;
+          final isBatch = rawIds is List;
+          if (isBatch) {
+            ids = rawIds.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+          } else {
+            ids = singleId.isNotEmpty ? [singleId] : const [];
+          }
+          if (ids.isEmpty) {
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, isBatch ? const [] : null);
+            return isBatch ? const [] : null;
+          }
+          try {
+            final infos = await IMService.instance.getUsersInfo(ids);
+            final list = infos.map((u) => {
+              'user_id': u.userID ?? '',
+              'nickname': u.nickname ?? '',
+              'face_url': u.faceURL ?? '',
+              'ex': u.ex ?? '',
+            }).toList();
+            final result = isBatch
+                ? list
+                : (list.isNotEmpty ? list.first : null);
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, result);
+            return result;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_get_user_info 失败: $e');
+            return isBatch ? const [] : null;
+          }
+        }
+
       case '@im_search_users':
         {
           final q = (resolvedArgs['q'] as String?) ?? '';
