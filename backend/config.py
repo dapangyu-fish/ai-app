@@ -45,8 +45,8 @@ AI_PROVIDERS = {
         "name": "GLM (智谱)",
         "description": "智谱 GLM — 多模型系列",
         "type": "anthropic",
-        "base_url": os.environ.get("GLM_ANTHROPIC_BASE_URL", "http://14.103.26.181"),
-        "api_key": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", "sk-FUsE9Q3QaEjHo7qnad7ffBINpQHkkETW16K8OXl26SHfRUfN"),
+        "base_url": os.environ.get("GLM_ANTHROPIC_BASE_URL", ""),
+        "api_key": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", ""),
         "models": {
             "default": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
             "haiku": os.environ.get("GLM_ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
@@ -56,8 +56,8 @@ AI_PROVIDERS = {
         },
         "agent_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
         "cli_env": {
-            "ANTHROPIC_BASE_URL": os.environ.get("GLM_ANTHROPIC_BASE_URL", "http://14.103.26.181"),
-            "ANTHROPIC_AUTH_TOKEN": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", "sk-FUsE9Q3QaEjHo7qnad7ffBINpQHkkETW16K8OXl26SHfRUfN"),
+            "ANTHROPIC_BASE_URL": os.environ.get("GLM_ANTHROPIC_BASE_URL", ""),
+            "ANTHROPIC_AUTH_TOKEN": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", ""),
             "ANTHROPIC_MODEL": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
             "ANTHROPIC_DEFAULT_HAIKU_MODEL": os.environ.get("GLM_ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
             "API_TIMEOUT_MS": "600000",
@@ -70,8 +70,8 @@ AI_PROVIDERS = {
         "name": "CC-4.7",
         "description": "CC Anthropic API Proxy",
         "type": "anthropic",
-        "base_url": os.environ.get("CC_ANTHROPIC_BASE_URL", "https://cc-vibe.com"),
-        "api_key": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", "sk-68900ea64051c89cbba31fa0a3f4198fdaffd8272c3d6b2ce3acf82bd098e6a5"),
+        "base_url": os.environ.get("CC_ANTHROPIC_BASE_URL", ""),
+        "api_key": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", ""),
         "models": {
             "default": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
             "opus": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
@@ -81,8 +81,8 @@ AI_PROVIDERS = {
             "skipDangerousModePermissionPrompt": True
         },
         "cli_env": {
-            "ANTHROPIC_BASE_URL": os.environ.get("CC_ANTHROPIC_BASE_URL", "https://cc-vibe.com"),
-            "ANTHROPIC_AUTH_TOKEN": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", "sk-68900ea64051c89cbba31fa0a3f4198fdaffd8272c3d6b2ce3acf82bd098e6a5"),
+            "ANTHROPIC_BASE_URL": os.environ.get("CC_ANTHROPIC_BASE_URL", ""),
+            "ANTHROPIC_AUTH_TOKEN": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", ""),
             "ANTHROPIC_MODEL": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
             "ANTHROPIC_DEFAULT_HAIKU_MODEL": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
             "API_TIMEOUT_MS": "600000",
@@ -127,19 +127,17 @@ CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "/root/.nvm/versions/node/v22.22.2/bin
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
 
-# OpenIM 配置
-# server: 38.76.199.232（用 IP，无 SSL；后面接域名再换）
-# secret 故意进 git，是 dev 项目，没有合规风险；上线再 .env 化
-OPENIM_API_URL = os.environ.get("OPENIM_API_URL", "http://38.76.199.232:10002")
-OPENIM_WS_URL = os.environ.get("OPENIM_WS_URL", "ws://38.76.199.232:10001")
-OPENIM_SECRET = os.environ.get("OPENIM_SECRET", "openIM_v3iM_secret_2026_dev")
+# OpenIM 配置（全部走 .env，不再硬编码）
+OPENIM_API_URL = os.environ.get("OPENIM_API_URL", "")
+OPENIM_WS_URL = os.environ.get("OPENIM_WS_URL", "")
+OPENIM_SECRET = os.environ.get("OPENIM_SECRET", "")
 OPENIM_PLATFORM_IOS = 1     # OpenIM SDK 平台号：1=iOS / 2=Android / 5=Web / 7=Linux / 8=Windows / 9=macOS
 OPENIM_PLATFORM_WEB = 5     # 后端代签 token 时用（web 端就用 5）
 
 # OpenIM webhook 共享密钥
 # OpenIM 调我们 /api/im/offline_push_hook 时不带任何 auth header，我们自己加一个简易 secret
 # 通过 query string ?secret=xxx 或 header X-OpenIM-Webhook-Secret 校验
-OPENIM_WEBHOOK_SECRET = os.environ.get("OPENIM_WEBHOOK_SECRET", "openIM_webhook_secret_2026_dev")
+OPENIM_WEBHOOK_SECRET = os.environ.get("OPENIM_WEBHOOK_SECRET", "")
 
 # APNs 配置（仅 iOS 推送）
 # .p8 私钥文件不进 git，存在服务器 /etc/apns/，权限 600 给 root

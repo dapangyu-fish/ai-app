@@ -4,6 +4,7 @@
 演示如何创建命名空间并发布用户包
 """
 
+import os
 import requests
 import json
 import urllib3
@@ -11,11 +12,13 @@ import urllib3
 # 禁用 SSL 警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-REGISTRY_URL = "https://myapp-registry.dapangyu.work"
+REGISTRY_URL = os.environ.get("REGISTRY_URL", "https://myapp-registry.dapangyu.work")
 
-# 测试用的认证 token
+_TOKEN = os.environ.get("REGISTRY_ADMIN_TOKEN")
+if not _TOKEN:
+    raise SystemExit("请设置 REGISTRY_ADMIN_TOKEN 环境变量（在 backend/.env 里），不要硬编码")
 HEADERS = {
-    "Authorization": "Bearer test-token"
+    "Authorization": f"Bearer {_TOKEN}"
 }
 
 def test_namespace_creation():

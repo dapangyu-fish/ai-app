@@ -4,6 +4,7 @@
 豆包ASR服务 - 字节跳动语音识别核心逻辑
 """
 
+import os
 import json
 import base64
 import struct
@@ -15,11 +16,11 @@ import websocket
 
 logger = logging.getLogger(__name__)
 
-# 字节跳动 ASR 配置
-APP_KEY = "5982591805"
-ACCESS_KEY = "j5JzySkHs2ncLKrFxy6TAYZDDDmrpMEa"
-RESOURCE_ID = "volc.bigasr.sauc.duration"
-WS_URL = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
+# 字节跳动 ASR 配置（从 .env 读取，不再硬编码）
+APP_KEY = os.environ["BYTEDANCE_ASR_APP_KEY"]
+ACCESS_KEY = os.environ["BYTEDANCE_ASR_ACCESS_KEY"]
+RESOURCE_ID = os.environ.get("BYTEDANCE_ASR_RESOURCE_ID", "volc.bigasr.sauc.duration")
+WS_URL = os.environ.get("BYTEDANCE_ASR_WS_URL", "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel")
 
 # 音频参数
 SAMPLE_RATE = 16000
