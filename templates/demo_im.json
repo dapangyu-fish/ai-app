@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
@@ -563,22 +563,46 @@
                       "type": "container",
                       "position": {"type": "flex", "flex": 1},
                       "layout": "column",
-                      "crossAxisAlignment": "start",
                       "children": [
                         {
-                          "type": "container",
-                          "layout": "column",
-                          "crossAxisAlignment": "start",
-                          "color": "{{ loop.item.bubble_color }}",
-                          "borderRadius": 8,
-                          "padding": 10,
-                          "children": [
-                            {
-                              "type": "text",
-                              "value": "{{ loop.item.text }}",
-                              "style": {"fontSize": 15, "color": "#1A1A1A"}
-                            }
-                          ]
+                          "type": "align",
+                          "visible": "{{ loop.item.is_other }}",
+                          "alignment": "centerLeft",
+                          "child": {
+                            "type": "container",
+                            "layout": "column",
+                            "crossAxisAlignment": "start",
+                            "color": "{{ loop.item.bubble_color }}",
+                            "borderRadius": 8,
+                            "padding": 10,
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "{{ loop.item.text }}",
+                                "style": {"fontSize": 15, "color": "#1A1A1A"}
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "align",
+                          "visible": "{{ loop.item.is_me }}",
+                          "alignment": "centerRight",
+                          "child": {
+                            "type": "container",
+                            "layout": "column",
+                            "crossAxisAlignment": "start",
+                            "color": "{{ loop.item.bubble_color }}",
+                            "borderRadius": 8,
+                            "padding": 10,
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "{{ loop.item.text }}",
+                                "style": {"fontSize": 15, "color": "#1A1A1A"}
+                              }
+                            ]
+                          }
                         }
                       ]
                     },
