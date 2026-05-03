@@ -164,12 +164,26 @@
 | `123` / `true` / `[]` | 原始值 | 直接使用 | `"value": []` |
 | `"{{ path }}"` | 模板引用 | 解析为变量的**原始类型**（List/Map/String 等） | `"value": "{{ global.list }}"` → 实际 List |
 | `"前缀 {{ path }} 后缀"` | 模板插值 | 解析为**字符串**（变量 toString 后拼接） | `"value": "共 {{ global.count }} 条"` → `"共 5 条"` |
-| `{ "op": [...] }` | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
+| `{ "op": [...] }` 单 key + key 在 op 集合 | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
+| `{ "key": ..., "key2": ... }` 数据 Map | 普通数据对象 | **原样传递**，递归展开内部 `{{ }}` 模板，不走 jsonlogic | `"item": { "id": "{{ loop.index }}", "name": "..." }` |
 
 **关键区分**：
 - `"{{ global.items }}"` → 返回 items 变量本身（可能是 List、Map、数字等，保留原始类型）
 - `{ "var": "global.items" }` → 通过 jsonlogic 引擎求值，效果相同但更明确
 - `"总数: {{ global.count }}"` → 返回字符串 `"总数: 5"`（混合文本，强制 String）
+
+#### Map 何时被当 jsonlogic 表达式？
+
+引擎只对**单 key + key 在已知 op 集合**的 Map 跑 jsonlogic：
+- ✅ jsonlogic：`{"if": [...]}`、`{"var": "..."}`、`{"merge": [...]}`、`{"sort": [...]}`、`{"==": [...]}` …
+- ✅ 数据 Map：`{"id": 1, "name": "x"}`（多 key）、`{"display": "🐹"}`（单 key 但 `display` 不是 op）
+- ⚠️ 数据 Map 但单 key 撞上 op 名：`{"in": "users"}` 会被当 `in` 表达式跑去崩。要么换键名，要么塞进多 key（`{"_kind": "data", "in": "users"}`）。
+
+**op 集合**（写新 key 名前请确认不撞）：
+`var / missing / missing_some / if / ?: / and / or / ! / !! / == / != / === / !== / < / <= / > / >= / + / - / * / / / % / min / max / cat / substr / in / map / filter / reduce / all / some / none / merge / log` ＋ 框架自定义：
+`str_len / str_upper / str_lower / str_trim / str_contains / str_replace / str_split / str_join / length / at / slice / sort / reverse / to_string / to_int / to_double / abs`
+
+> 历史背景：3.3 之前所有 Map 都被无脑送进 jsonlogic，导致 `@list_add args.item={"id":..., "display":...}` 这种正常数据对象也会抛 `JsonlogicException: operator id not defined`。修复后数据 Map 安全可用，详见 `templates/bacsase/anti_patterns_and_pitfalls.md` §6。
 
 **HTTP 响应数据处理示例**：
 ```json

@@ -85,6 +85,17 @@ class JsonInterpreter extends ChangeNotifier {
   /// 获取依赖加载器（供 ref 控件使用）
   DependencyLoader get depLoader => _depLoader;
 
+  /// 全局运行时崩溃回调。框架在 [executeAction] / [executeActionWithResult] /
+  /// [executeSteps] 抛异常时调用，由 main.dart 在 app 启动时注册并把崩溃路由到
+  /// `_CrashPage`（带 AI 一键修复按钮）。
+  ///
+  /// 这条路径专门给"动作执行类异常"（按钮 onPressed、on_start steps 跑炸了）
+  /// 兜底——它们和 widget build 异常不一样，不会触发 [JsonScreenView] 里的
+  /// try/catch，老代码下要么静默 debugPrint，要么只在启动页显示一行红字，
+  /// AI 修复按钮根本看不到。
+  static void Function(Object error, StackTrace stack, String fileName)?
+      onActionCrash;
+
   // ============ 初始化 ============
 
   JsonInterpreter() {
@@ -263,24 +274,68 @@ class JsonInterpreter extends ChangeNotifier {
       return value;
     }
 
-    // Map → JsonLogic 表达式（来自原始 JSON 配置，不会是运行时数据）
+    // Map → 区分 JsonLogic 表达式 vs 普通数据 Map：
+    //   - 单 key + key 在已知 jsonlogic operator 集合里 → 走 jsonlogic 求值
+    //   - 其它（多 key、单 key 但 key 不是 op、空 Map）→ 当数据 Map，
+    //     递归把内部值再 _evaluateExpression（保留模板/嵌套表达式都能展开）
+    //
+    // 这里曾经是无脑把所有 Map 都 jl.apply()，导致 AI 写
+    //   @list_add args.item = {"id":..., "display":..., "bg":...}
+    // 这种正常数据 Map 时，jsonlogic 把第一个 key 当 operator → "operator id not defined"
+    // 崩溃。框架契约（CLAUDE.md §3）：合法 JSON 数据不能让框架崩。
     if (value is Map<String, dynamic>) {
-      final preprocessed = _resolveTemplatesInRule(value);
-      return _jl.apply(preprocessed, _buildDataContext());
+      if (_looksLikeJsonLogic(value)) {
+        final preprocessed = _resolveTemplatesInRule(value);
+        return _jl.apply(preprocessed, _buildDataContext());
+      }
+      // 数据 Map：值再走一遍 evaluate，模板 / 嵌套 jsonlogic 都能正确展开
+      final out = <String, dynamic>{};
+      value.forEach((k, v) {
+        out[k] = _evaluateExpression(v);
+      });
+      return out;
     }
 
-    // List → 解析字符串模板，Map/其他类型原样保留
+    // List → 元素再走 evaluate（之前只处理字符串模板，这里改成全递归
+    // 保持一致：List<Map> 里如果有数据 Map，里面的 {{ }} 现在也能解开）
     if (value is List) {
-      return value.map((e) {
-        if (e is String && e.contains('{{') && e.contains('}}')) {
-          return resolveExpression(e);
-        }
-        return e;
-      }).toList();
+      return value.map(_evaluateExpression).toList();
     }
 
     return value;
   }
+
+  /// 判断一个 Map 是否是 jsonlogic 表达式（而不是普通数据 Map）：
+  /// 单 key 且 key 在已知 operator 白名单里。
+  ///
+  /// 标准 jsonlogic operator 由 `Jsonlogic()` 构造器内置，自定义的通过
+  /// `_jl.add()` 注册。两份合在一起就是当前引擎认识的全部 op。
+  static bool _looksLikeJsonLogic(Map<String, dynamic> m) {
+    if (m.length != 1) return false;
+    return _knownJsonLogicOps.contains(m.keys.first);
+  }
+
+  /// jsonlogic 标准 operator + 本文件 _createJsonLogic 里 jl.add 注册的自定义 op。
+  /// 维护提示：在 _createJsonLogic 里加新的 jl.add('xxx', ...) 时，**记得把
+  /// 'xxx' 加到这里**，否则该 op 写法会被当作数据 Map 不再触发 jsonlogic 求值。
+  static const Set<String> _knownJsonLogicOps = {
+    // 标准（来自 jsonlogic 包）
+    'var', 'missing', 'missing_some',
+    'if', '?:',
+    'and', 'or', '!', '!!',
+    '==', '!=', '===', '!==', '<', '<=', '>', '>=',
+    '+', '-', '*', '/', '%',
+    'min', 'max',
+    'cat', 'substr', 'in',
+    'map', 'filter', 'reduce', 'all', 'some', 'none', 'merge', 'method',
+    'log',
+    // 本文件自定义
+    'str_len', 'str_upper', 'str_lower', 'str_trim', 'str_contains',
+    'str_replace', 'str_split', 'str_join',
+    'length', 'at', 'slice', 'sort', 'reverse',
+    'to_string', 'to_int', 'to_double',
+    'abs',
+  };
 
   /// 求值为布尔
   bool _evaluateBool(dynamic condition) {
@@ -356,18 +411,25 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<void> executeSteps() async {
-    // 先加载依赖
-    final deps = _config['dependencies'] as Map<String, dynamic>?;
-    if (deps != null && deps.isNotEmpty) {
-      await _depLoader.loadDependencies(deps);
-    }
-
-    // 再执行 steps
-    final steps = _config['steps'] as List<dynamic>? ?? [];
-    for (final step in steps) {
-      if (step is Map<String, dynamic>) {
-        await _executeStep(step);
+    try {
+      // 先加载依赖
+      final deps = _config['dependencies'] as Map<String, dynamic>?;
+      if (deps != null && deps.isNotEmpty) {
+        await _depLoader.loadDependencies(deps);
       }
+
+      // 再执行 steps
+      final steps = _config['steps'] as List<dynamic>? ?? [];
+      for (final step in steps) {
+        if (step is Map<String, dynamic>) {
+          await _executeStep(step);
+        }
+      }
+    } catch (e, st) {
+      // 启动期 steps 抛错：先调一遍崩溃回调（路由到 _CrashPage 显示 AI 修复按钮），
+      // 再 rethrow 让外层 loadConfig 调用方自己也能感知（避免还推 JsonScreenView 进去）。
+      onActionCrash?.call(e, st, appName);
+      rethrow;
     }
   }
 
@@ -584,34 +646,40 @@ class JsonInterpreter extends ChangeNotifier {
 
   Future<void> executeAction(
       Map<String, dynamic> action, BuildContext context) async {
-    final type = action['type'] ?? 'call';
+    try {
+      final type = action['type'] ?? 'call';
 
-    switch (type) {
-      case 'call':
-        final callTarget = action['call'] as String?;
-        final args = action['args'] as Map<String, dynamic>?;
-        final assignVar = action['assign'] as String?;
-        if (callTarget != null) {
-          final result = await _executeCall(callTarget, args ?? {});
-          if (assignVar != null && result != null) {
-            setVariable(assignVar, result);
+      switch (type) {
+        case 'call':
+          final callTarget = action['call'] as String?;
+          final args = action['args'] as Map<String, dynamic>?;
+          final assignVar = action['assign'] as String?;
+          if (callTarget != null) {
+            final result = await _executeCall(callTarget, args ?? {});
+            if (assignVar != null && result != null) {
+              setVariable(assignVar, result);
+            }
           }
-        }
-        break;
-      case 'navigate':
-        final screenId = action['screen'] as String?;
-        if (screenId != null) {
-          navigateTo(screenId);
-        }
-        break;
-      case 'back':
-        // 弹出导航历史回到上一屏；栈空则尝试 pop 外层 Route（退出 JSON-APP）
-        if (canNavigateBack) {
-          navigateBack();
-        } else if (context.mounted) {
-          Navigator.of(context).maybePop();
-        }
-        break;
+          break;
+        case 'navigate':
+          final screenId = action['screen'] as String?;
+          if (screenId != null) {
+            navigateTo(screenId);
+          }
+          break;
+        case 'back':
+          // 弹出导航历史回到上一屏；栈空则尝试 pop 外层 Route（退出 JSON-APP）
+          if (canNavigateBack) {
+            navigateBack();
+          } else if (context.mounted) {
+            Navigator.of(context).maybePop();
+          }
+          break;
+      }
+    } catch (e, st) {
+      // 按钮 onPressed 等事件回调里抛错没人接，老代码会被 dart 框架直接吞掉
+      // / 走默认 onError。这里兜底路由到 _CrashPage（带 AI 一键修复按钮）。
+      onActionCrash?.call(e, st, appName);
     }
   }
 
@@ -620,23 +688,28 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> executeActionWithResult(
       dynamic action, BuildContext context) async {
     if (action is! Map<String, dynamic>) return null;
-    final type = action['type'] ?? 'call';
-    if (type == 'call') {
-      final callTarget = action['call'] as String?;
-      final args = action['args'] as Map<String, dynamic>?;
-      final assignVar = action['assign'] as String?;
-      if (callTarget != null) {
-        final result = await _executeCall(callTarget, args ?? {});
-        if (assignVar != null && result != null) {
-          setVariable(assignVar, result);
+    try {
+      final type = action['type'] ?? 'call';
+      if (type == 'call') {
+        final callTarget = action['call'] as String?;
+        final args = action['args'] as Map<String, dynamic>?;
+        final assignVar = action['assign'] as String?;
+        if (callTarget != null) {
+          final result = await _executeCall(callTarget, args ?? {});
+          if (assignVar != null && result != null) {
+            setVariable(assignVar, result);
+          }
+          return result;
         }
-        return result;
+      } else if (type == 'navigate') {
+        final screenId = action['screen'] as String?;
+        if (screenId != null) navigateTo(screenId);
       }
-    } else if (type == 'navigate') {
-      final screenId = action['screen'] as String?;
-      if (screenId != null) navigateTo(screenId);
+      return null;
+    } catch (e, st) {
+      onActionCrash?.call(e, st, appName);
+      return null;
     }
-    return null;
   }
 
   void navigateTo(String screenId) {
