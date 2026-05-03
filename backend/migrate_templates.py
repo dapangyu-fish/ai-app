@@ -7,8 +7,10 @@ import os
 import requests
 from pathlib import Path
 
-REGISTRY_URL = "https://myapp-registry.dapangyu.work"
-TOKEN = "test-token"  # 使用管理员测试 token
+REGISTRY_URL = os.environ.get("REGISTRY_URL", "https://myapp-registry.dapangyu.work")
+TOKEN = os.environ.get("REGISTRY_ADMIN_TOKEN")
+if not TOKEN:
+    raise SystemExit("请设置 REGISTRY_ADMIN_TOKEN 环境变量（在 backend/.env 里），不要硬编码")
 
 def publish_template(file_path):
     """发布单个模板文件"""

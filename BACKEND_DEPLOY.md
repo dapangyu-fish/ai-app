@@ -14,6 +14,23 @@ ssh root@myapp-backend.dapangyu.work
 
 代码位于服务器的 `/root/ai-app` 目录。
 
+## 密钥配置位置 ⚠️
+
+**所有后端 secret 集中在 `/etc/ai-app/backend.env`**（mode 600，root only），**不在 git 工作树内**，不受 `git pull` / `git checkout` 影响。
+
+```
+加载顺序（首个存在的文件生效）：
+  1. $BACKEND_ENV_PATH        — supervisor 通过环境变量注入
+  2. /etc/ai-app/backend.env  — 生产环境标准位置 ← 当前用这个
+  3. backend/.env             — 仓库内位置（本地开发兜底）
+```
+
+模板见 `backend/.env.example`。新增 secret 步骤：
+1. 在本地 `backend/.env.example` 加 `NEW_KEY=` 占位 + 注释说明用途
+2. 提交 + push（不带真实值）
+3. ssh 到服务器，编辑 `/etc/ai-app/backend.env` 填入真实值
+4. `supervisorctl restart ai-app registry`
+
 ## 更新代码
 
 在本地提交代码后，在服务器上执行以下命令更新最新代码：
@@ -62,10 +79,12 @@ docker-compose up -d
 ### 数据库配置
 
 - 主机: 127.0.0.1
-- 端口: 5433
+- 端口: 15433
 - 数据库名: jsonapp
 - 用户名: jsonapp
-- 密码: hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg
+- 密码: 见 `/root/ai-app/backend/.env` 中的 `DB_PASSWORD`
+
+> ⚠️ git 历史里曾出现过的老密码（`hOad2ANFL...`）只对老机有效，老机下线后即作废。新机已轮换。
 
 ### 数据库初始化
 
@@ -178,12 +197,14 @@ SSH 登录服务器后，使用 Python 脚本直接操作数据库和 MinIO：
 
 ```bash
 ssh root@myapp-backend.dapangyu.work
-/opt/miniconda3/bin/python -c "
+# 加载 .env 里的密钥后再 exec python，避免明文落盘
+set -a && source /root/ai-app/backend/.env && set +a
+/opt/ai-app-venv/bin/python -c "
 import json, uuid, subprocess, tempfile, os, psycopg2, psycopg2.extras
 
-DB_CONFIG = dict(host='127.0.0.1', port=5433, dbname='jsonapp', user='jsonapp',
-                 password='hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg')
-MINIO_PUBLIC_URL = 'https://myapp-oss-endpoint.dapangyu.work'
+DB_CONFIG = dict(host='127.0.0.1', port=15433, dbname='jsonapp', user='jsonapp',
+                 password=os.environ['DB_PASSWORD'])
+MINIO_PUBLIC_URL = os.environ.get('MINIO_PUBLIC_URL', 'https://myapp-oss-endpoint.dapangyu.work')
 
 # 读取要发布的 JSON 文件
 with open('/root/ai-app/templates/<文件名>.json', 'r') as f:

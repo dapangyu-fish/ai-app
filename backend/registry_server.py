@@ -75,11 +75,13 @@ def require_auth(f):
             return jsonify({"error": "未提供认证 token"}), 401
         token = auth[7:]
 
-        # 测试模式：允许使用 test-token
-        if token == "test-token":
+        # 管理员 token：从 .env 读 REGISTRY_ADMIN_TOKEN（不再用 hardcoded test-token）
+        # 用于发布脚本 / migrate_templates 等 server-side 工具绕过 supabase 鉴权
+        admin_token = os.environ.get("REGISTRY_ADMIN_TOKEN", "")
+        if admin_token and token == admin_token:
             request.supabase_user = {
-                "id": "test-user-id",
-                "email": "test@example.com"
+                "id": "registry-admin",
+                "email": "admin@registry.local"
             }
             request.supabase_token = token
             request.user_role = "admin"
