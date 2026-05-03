@@ -18,7 +18,8 @@ class JsonImagePickerWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final bindPath = json['bind'] as String?;
-    final placeholder = json['placeholder']?.toString() ?? '点击选择图片';
+    final placeholder = interpreter.resolveTemplate(
+        json['placeholder']?.toString() ?? '点击选择图片');
     final width = (json['width'] as num?)?.toDouble() ?? double.infinity;
     final height = (json['height'] as num?)?.toDouble() ?? 200;
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 12;

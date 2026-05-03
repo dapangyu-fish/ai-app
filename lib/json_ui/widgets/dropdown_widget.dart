@@ -22,7 +22,8 @@ class JsonDropdownWidget extends JsonBaseWidget {
   ) {
     final bindPath = json['bind'] as String?;
     final disabled = json['disabled'] == true;
-    final placeholder = json['placeholder']?.toString() ?? '请选择';
+    final placeholder = interpreter.resolveTemplate(
+        json['placeholder']?.toString() ?? '请选择');
     final label = json['label']?.toString();
     final action =
         resolveActionAtBuildTime(json['action'], interpreter)
