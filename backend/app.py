@@ -3,8 +3,14 @@
 JSON DSL Backend - Flask App
 主入口文件
 
-启动: python backend/app.py
+生产: gunicorn -k eventlet -w 1 -b 0.0.0.0:5566 app:app
+开发: python backend/app.py（用 socketio.run 的 werkzeug，仅本地）
 """
+
+# eventlet monkey_patch 必须在所有其他 import 之前，否则 stdlib 已加载就来不及了。
+# 只在 gunicorn eventlet worker 下生效；本地直跑 socketio.run 时也兼容（patch 是幂等的）。
+import eventlet
+eventlet.monkey_patch()
 
 import logging
 from flask import Flask
@@ -31,7 +37,9 @@ def create_app():
     app.config['SECRET_KEY'] = 'your-secret-key'
 
     # 初始化 SocketIO
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    # async_mode='eventlet' 配合上面 monkey_patch + gunicorn eventlet worker，是 Flask-SocketIO
+    # 官方推荐的生产组合（裸 WebSocket 客户端 → 必须协程 worker，gthread 撑不起）
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
     # 注册 Auth 路由
     app.add_url_rule("/api/auth/register", methods=["POST"], view_func=auth.register)
@@ -97,5 +105,5 @@ if __name__ == "__main__":
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
     logger.info("   IM:    /api/im/{token,users/lookup,users/search,push_token,after_send_msg,offline_push_hook}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
-    logger.info("   Debug mode: ENABLED")
-    socketio.run(app, host="0.0.0.0", port=PORT, debug=True, allow_unsafe_werkzeug=True)
+    logger.info("   ⚠️  本地开发模式（werkzeug）；生产用 gunicorn -k eventlet -w 1 app:app")
+    socketio.run(app, host="0.0.0.0", port=PORT, allow_unsafe_werkzeug=True)
