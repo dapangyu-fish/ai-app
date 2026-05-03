@@ -374,16 +374,24 @@
 | `@im_friend_applications` | `{ "bind": "..." }` | List | 我收到的好友申请。每条 `{from_user_id, from_nickname, from_face_url, req_msg, handle_result, create_time}`（handle_result：0=待处理 1=已同意 -1=已拒绝） |
 | `@im_accept_friend` / `@im_reject_friend` | `{ "user_id": "..." }` | bool | 通过 / 拒绝某用户的好友申请 |
 | `@im_friend_list` | `{ "bind": "..." }` | List | 我的好友列表。每条 `{user_id, nickname, face_url, remark}` |
-| `@im_conversations` | `{ "bind": "..." }` | List | 会话列表。每条 `{conversation_id, user_id, show_name, face_url, latest_text, latest_time, unread_count}` |
-| `@im_history` | `{ "user_id": "...", "count": 30, "bind": "..." }` | List | 单聊历史（与某 user 之间）。每条 `{client_msg_id, send_id, recv_id, send_time, content_type, text, sender_nickname, sender_face_url, is_me}` |
+| `@im_conversations` | `{ "bind": "..." }` | List | 会话列表。每条 `{conversation_id, user_id, show_name, face_url, latest_text, latest_time, unread_count, display_unread, display_time}` |
+| `@im_history` | `{ "user_id": "...", "count": 30, "bind": "..." }` | List | 单聊历史（与某 user 之间）。每条 `{client_msg_id, send_id, recv_id, send_time, content_type, text, sender_nickname, sender_face_url, is_me, display_sender, display_time}` |
 | `@im_send_text` | `{ "user_id": "...", "text": "..." }` | Map \| null | 给某 user 发文本，返回已发送 message 对象 |
 | `@im_mark_read` | `{ "user_id": "..." }` | bool | 标记与某 user 的会话为已读 |
+| `@im_total_unread` | `{ "bind": "..." }` | int | 跨所有会话的未读总数（用于 tab badge / 应用角标）。失败返回 0 |
 | `@im_subscribe_inbox` | `{}` | bool | 订阅新消息（幂等）。订阅后 `global._im` 会被维护：`{tick, last_message, current_user_id}`，每来一条新消息 `tick` +1 + `last_message` 更新一次。UI 绑 `tick` 即可被动刷新（参见下方"实时新消息"） |
+
+**display_*** 字段说明（v1.1 起）：
+- `display_sender`：消息发送者的展示名。本人发的固定 `"我"`，其他人用 `sender_nickname`
+- `display_time`：epoch 毫秒预格式化为 IM 列表常见的 `HH:mm` / `昨天` / `N天前` / `MM-dd`
+- `display_unread`：会话未读数；0 时为空串（绑到 text.value 上自动隐藏徽标）
+- 这几个字段是为了让 JSON-APP 不用在 DSL 层写条件 / 时间格式（DSL 静态属性不接受 jsonlogic Map），原始 `is_me` / `unread_count` / `send_time` / `latest_time` 同时也保留，开发者可按需自取
 
 **实时新消息约定**：
 - JSON-APP 在 `steps` / 启动函数里调一次 `@lib_im.subscribeInbox`（即 `@im_subscribe_inbox`）
 - 之后 `global._im.tick` 每收到一条新消息会 +1，`global._im.last_message` 更新到最新一条
 - 想做"自动刷新会话列表"，绑 `tick` 触发 rebuild + 在适当时机重新调 `listConversations` 即可
+- 想做未读 badge，调一次 `@lib_im.totalUnread { bind: "global.totalUnread" }`，UI 绑 `{{ global.totalUnread }}`，业务路径里发完 / 读完消息再调一次刷新
 - 平台限制：iOS / Android 才有真实数据；macOS / Web / Windows / Linux 上 IM SDK 无效，所有 `@im_*` 安全降级返回空数据，不会崩
 
 ### 4.11 主题 / 多语言 / 生命周期

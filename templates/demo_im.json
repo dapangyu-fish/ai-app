@@ -3,13 +3,13 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "type": "app",
     "description": "lib_im 演示 — 搜好友 / 加好友 / 好友列表 / 单聊收发文本",
     "author": "demo"
   },
   "dependencies": {
-    "lib_im": "^1.0.0",
+    "lib_im": "^1.1.0",
     "lib_user": "^1.2.0",
     "common-ui": "^1.0.0"
   },
@@ -20,6 +20,7 @@
       "friends": [],
       "applications": [],
       "conversations": [],
+      "totalUnread": 0,
       "searchQ": "",
       "searchResults": [],
       "currentChatUserId": "",
@@ -32,30 +33,13 @@
       "loadHome": {
         "params": [],
         "logic": [
-          {
-            "call": "@lib_im.subscribeInbox",
-            "args": {}
-          },
-          {
-            "call": "@lib_im.currentUserId",
-            "args": {"bind": "global.myId"}
-          },
-          {
-            "call": "@lib_user.getUserName",
-            "args": {"bind": "global.myName"}
-          },
-          {
-            "call": "@lib_im.listFriends",
-            "args": {"bind": "global.friends"}
-          },
-          {
-            "call": "@lib_im.listFriendApplications",
-            "args": {"bind": "global.applications"}
-          },
-          {
-            "call": "@lib_im.listConversations",
-            "args": {"bind": "global.conversations"}
-          }
+          {"call": "@lib_im.subscribeInbox", "args": {}},
+          {"call": "@lib_im.currentUserId", "args": {"bind": "global.myId"}},
+          {"call": "@lib_user.getUserName", "args": {"bind": "global.myName"}},
+          {"call": "@lib_im.listFriends", "args": {"bind": "global.friends"}},
+          {"call": "@lib_im.listFriendApplications", "args": {"bind": "global.applications"}},
+          {"call": "@lib_im.listConversations", "args": {"bind": "global.conversations"}},
+          {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}}
         ]
       },
 
@@ -82,69 +66,33 @@
               "message": "你好，加个好友"
             }
           },
-          {
-            "call": "@common-ui.showSuccess",
-            "args": {"message": "已发送申请"}
-          }
+          {"call": "@common-ui.showSuccess", "args": {"message": "已发送申请"}}
         ]
       },
 
       "acceptFriend": {
         "params": ["userId"],
         "logic": [
-          {
-            "call": "@lib_im.acceptFriend",
-            "args": {"userId": "{{ params.userId }}"}
-          },
-          {
-            "call": "@global.loadHome",
-            "args": {}
-          },
-          {
-            "call": "@common-ui.showSuccess",
-            "args": {"message": "已通过"}
-          }
+          {"call": "@lib_im.acceptFriend", "args": {"userId": "{{ params.userId }}"}},
+          {"call": "@global.loadHome", "args": {}},
+          {"call": "@common-ui.showSuccess", "args": {"message": "已通过"}}
         ]
       },
 
       "rejectFriend": {
         "params": ["userId"],
         "logic": [
-          {
-            "call": "@lib_im.rejectFriend",
-            "args": {"userId": "{{ params.userId }}"}
-          },
-          {
-            "call": "@global.loadHome",
-            "args": {}
-          }
+          {"call": "@lib_im.rejectFriend", "args": {"userId": "{{ params.userId }}"}},
+          {"call": "@global.loadHome", "args": {}}
         ]
       },
 
       "openChat": {
         "params": ["userId", "name"],
         "logic": [
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.currentChatUserId",
-              "value": "{{ params.userId }}"
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.currentChatName",
-              "value": "{{ params.name }}"
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.draft",
-              "value": ""
-            }
-          },
+          {"call": "@set", "args": {"var": "global.currentChatUserId", "value": "{{ params.userId }}"}},
+          {"call": "@set", "args": {"var": "global.currentChatName", "value": "{{ params.name }}"}},
+          {"call": "@set", "args": {"var": "global.draft", "value": ""}},
           {
             "call": "@lib_im.getMessages",
             "args": {
@@ -153,14 +101,9 @@
               "bind": "global.messages"
             }
           },
-          {
-            "call": "@lib_im.markRead",
-            "args": {"userId": "{{ params.userId }}"}
-          },
-          {
-            "call": "@navigate",
-            "args": {"screen": "chat"}
-          }
+          {"call": "@lib_im.markRead", "args": {"userId": "{{ params.userId }}"}},
+          {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}},
+          {"call": "@navigate", "args": {"screen": "chat"}}
         ]
       },
 
@@ -169,10 +112,7 @@
         "logic": [
           {
             "call": "@global.openChat",
-            "args": {
-              "userId": "{{ params.userId }}",
-              "name": "{{ params.name }}"
-            }
+            "args": {"userId": "{{ params.userId }}", "name": "{{ params.name }}"}
           }
         ]
       },
@@ -187,7 +127,9 @@
               "count": 50,
               "bind": "global.messages"
             }
-          }
+          },
+          {"call": "@lib_im.markRead", "args": {"userId": "{{ global.currentChatUserId }}"}},
+          {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}}
         ]
       },
 
@@ -211,14 +153,8 @@
                     "text": "{{ global.draft }}"
                   }
                 },
-                {
-                  "call": "@set",
-                  "args": {"var": "global.draft", "value": ""}
-                },
-                {
-                  "call": "@global.refreshChat",
-                  "args": {}
-                }
+                {"call": "@set", "args": {"var": "global.draft", "value": ""}},
+                {"call": "@global.refreshChat", "args": {}}
               ]
             }
           }
@@ -233,7 +169,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "私信",
+        "title": "私信 ({{ global.totalUnread }})",
         "layout": "column",
         "padding": 16,
         "children": [
@@ -253,6 +189,11 @@
                 "type": "text",
                 "value": "ID: {{ global.myId }}",
                 "style": {"fontSize": 11, "color": "#666666"}
+              },
+              {
+                "type": "text",
+                "value": "未读 {{ global.totalUnread }} 条 · 实时 tick={{ global._im.tick }}",
+                "style": {"fontSize": 11, "color": "#999999"}
               }
             ]
           },
@@ -286,11 +227,7 @@
             "label": "刷新",
             "icon": "refresh",
             "variant": "text",
-            "action": {
-              "type": "call",
-              "call": "@global.loadHome",
-              "args": {}
-            }
+            "action": {"type": "call", "call": "@global.loadHome", "args": {}}
           },
           {"type": "spacer", "height": 12},
           {
@@ -336,9 +273,20 @@
                   ]
                 },
                 {
-                  "type": "text",
-                  "value": "未读 {{ loop.item.unread_count }}",
-                  "style": {"fontSize": 11, "color": "#FF3B30"}
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.display_time }}",
+                      "style": {"fontSize": 11, "color": "#999999"}
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.display_unread }}",
+                      "style": {"fontSize": 11, "color": "#FF3B30", "fontWeight": "bold"}
+                    }
+                  ]
                 }
               ]
             }
@@ -424,11 +372,7 @@
             "label": "搜索",
             "icon": "search",
             "variant": "filled",
-            "action": {
-              "type": "call",
-              "call": "@global.search",
-              "args": {}
-            }
+            "action": {"type": "call", "call": "@global.search", "args": {}}
           },
           {"type": "spacer", "height": 12},
           {
@@ -558,8 +502,10 @@
         "children": [
           {
             "type": "container",
+            "layout": "column",
             "position": {"type": "flex", "flex": 1},
             "padding": 12,
+            "color": "#F4F4F8",
             "children": [
               {
                 "type": "list",
@@ -567,18 +513,25 @@
                 "emptyText": "还没有消息，发条招呼吧",
                 "item_template": {
                   "type": "container",
-                  "layout": "row",
-                  "padding": 6,
+                  "layout": "column",
+                  "padding": 4,
                   "children": [
                     {
+                      "type": "text",
+                      "value": "{{ loop.item.display_sender }} · {{ loop.item.display_time }}",
+                      "style": {"fontSize": 11, "color": "#999999"}
+                    },
+                    {
                       "type": "container",
+                      "layout": "column",
                       "padding": 10,
+                      "margin": 2,
                       "color": "#FFFFFF",
                       "borderRadius": 10,
                       "children": [
                         {
                           "type": "text",
-                          "value": "{{ loop.item.sender_nickname }}: {{ loop.item.text }}",
+                          "value": "{{ loop.item.text }}",
                           "style": {"fontSize": 14}
                         }
                       ]
@@ -607,36 +560,17 @@
                 "label": "发送",
                 "icon": "send",
                 "variant": "filled",
-                "action": {
-                  "type": "call",
-                  "call": "@global.sendMessage",
-                  "args": {}
-                }
-              }
-            ]
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "padding": 6,
-            "children": [
+                "action": {"type": "call", "call": "@global.sendMessage", "args": {}}
+              },
+              {"type": "spacer", "width": 6},
               {
-                "type": "text",
-                "value": "新消息提示: tick={{ global._im.tick }} 最近 {{ global._im.last_message.text }}",
-                "style": {"fontSize": 11, "color": "#888888"}
+                "type": "button",
+                "label": "刷新",
+                "icon": "refresh",
+                "variant": "text",
+                "action": {"type": "call", "call": "@global.refreshChat", "args": {}}
               }
             ]
-          },
-          {
-            "type": "button",
-            "label": "刷新历史",
-            "icon": "refresh",
-            "variant": "text",
-            "action": {
-              "type": "call",
-              "call": "@global.refreshChat",
-              "args": {}
-            }
           }
         ]
       }

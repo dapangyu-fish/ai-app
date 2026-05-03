@@ -2075,6 +2075,24 @@ class JsonInterpreter extends ChangeNotifier {
           }
         }
 
+      case '@im_total_unread':
+        {
+          // 跨所有会话的未读总数，用于 tab badge / 应用图标角标
+          try {
+            final convos = await IMService.instance.getConversationList();
+            int total = 0;
+            for (final c in convos) {
+              total += c.unreadCount;
+            }
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, total);
+            return total;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_total_unread 失败: $e');
+            return 0;
+          }
+        }
+
       case '@im_subscribe_inbox':
         {
           // 每次调用都会重置 global._im 在当前 _variables 里的初值（loadConfig
@@ -2964,16 +2982,22 @@ class JsonInterpreter extends ChangeNotifier {
         text = '[消息]';
     }
     final myId = IMService.instance.currentUserId ?? '';
+    final isMe = (m.sendID ?? '') == myId;
+    final sendTime = m.sendTime ?? 0;
+    final senderNick = m.senderNickname ?? '';
     return {
       'client_msg_id': m.clientMsgID ?? '',
       'send_id': m.sendID ?? '',
       'recv_id': m.recvID ?? '',
-      'send_time': m.sendTime ?? 0,
+      'send_time': sendTime,
       'content_type': m.contentType ?? 101,
       'text': text,
-      'sender_nickname': m.senderNickname ?? '',
+      'sender_nickname': senderNick,
       'sender_face_url': m.senderFaceUrl ?? '',
-      'is_me': (m.sendID ?? '') == myId,
+      'is_me': isMe,
+      // 预格式化字段：JSON-DSL 不支持条件 / 时间格式表达式，所以在这里算好
+      'display_time': _formatChatTime(sendTime),
+      'display_sender': isMe ? '我' : senderNick,
     };
   }
 
@@ -2985,15 +3009,36 @@ class JsonInterpreter extends ChangeNotifier {
     } else {
       latest = _messageToMap(lm)['text'] as String? ?? '';
     }
+    final unread = c.unreadCount;
+    final latestTime = c.latestMsgSendTime ?? 0;
     return {
       'conversation_id': c.conversationID,
       'user_id': c.userID ?? '',
       'show_name': c.showName ?? '',
       'face_url': c.faceURL ?? '',
       'latest_text': latest,
-      'latest_time': c.latestMsgSendTime ?? 0,
-      'unread_count': c.unreadCount,
+      'latest_time': latestTime,
+      'unread_count': unread,
+      // 预格式化：unread 为 0 时空字符串（绑 text.value 直接隐藏徽标视觉）
+      'display_unread': unread > 0 ? unread.toString() : '',
+      'display_time': _formatChatTime(latestTime),
     };
+  }
+
+  /// 把 epoch 毫秒时间戳格式化为 IM 列表常见的"今天 HH:mm / 昨天 / MM-dd"。
+  /// 0 / 负数 → 空串（用于"暂无消息"等场景）。
+  String _formatChatTime(int millis) {
+    if (millis <= 0) return '';
+    final dt = DateTime.fromMillisecondsSinceEpoch(millis);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dtDay = DateTime(dt.year, dt.month, dt.day);
+    final diff = today.difference(dtDay).inDays;
+    String two(int n) => n.toString().padLeft(2, '0');
+    if (diff == 0) return '${two(dt.hour)}:${two(dt.minute)}';
+    if (diff == 1) return '昨天';
+    if (diff < 7) return '$diff天前';
+    return '${two(dt.month)}-${two(dt.day)}';
   }
 }
 
