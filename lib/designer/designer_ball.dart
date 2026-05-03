@@ -806,7 +806,10 @@ class _DesignerBallState extends State<DesignerBall>
           // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
           setState(() {
             _isThinking = false;
-            _isGeneratingJson = false;
+            // ⚠️ 不要在这里关 _isGeneratingJson：后端在 thinking 块开始时
+            // 会主动发 status="thinking" 让转圈亮起来；如果这里关掉，转圈
+            // 会被 thinking_delta 第一帧立刻熄掉，用户体感"无反应"。
+            // 转圈的关闭由真正的内容到达（event.content）或 onDone 负责。
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 (_messages.last.content.isEmpty || _messages.last.content.startsWith('💭'))) {

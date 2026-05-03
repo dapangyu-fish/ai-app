@@ -393,6 +393,11 @@ def chat():
                                 logger.info(f"[EVENT #{line_num}] 工具调用开始: {tool_name}")
                                 status_msg = _tool_status_message(tool_name, tool_input)
                                 yield f'data: {json.dumps({"status": tool_name.lower(), "message": status_msg}, ensure_ascii=False)}\n\n'
+                        # 思考块开始 → 显式告诉客户端"AI 正在思考..."，避免 thinking_delta
+                        # 静默刷屏期间用户以为卡住。客户端 status handler 会亮起转圈+文案。
+                        elif block_type == "thinking":
+                            logger.debug(f"[EVENT #{line_num}] thinking 块开始")
+                            yield f'data: {json.dumps({"status": "thinking", "message": "AI 正在思考..."}, ensure_ascii=False)}\n\n'
 
                     # 内容块增量事件
                     elif ev_type == "content_block_delta":
