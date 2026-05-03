@@ -554,11 +554,30 @@
 
 ---
 
+## 单独的端到端 demo（不在 regression-test.json 里）
+
+主回归套件之外，还有几个"完整应用"形态的 demo 用来验证集成场景。**每个 release 都要单独打开点一遍**，确认能正常加载、关键路径能跑通。
+
+| 文件 | 验证内容 | 关键路径 |
+|------|----------|----------|
+| `demo_video_browser.json` | video widget + 视频源切换 | 列表点击 → 视频播放 → 返回不卡 |
+| `demo_user_profile.json` | lib_user 头像 / 昵称编辑 | 进 home 看到自己的资料 → 改头像 → 改昵称 → 重启 app 仍生效 |
+| `demo_im.json` ⭐**新**| lib_im 私信 | ① home 显示自己 ID + 好友列表 + 会话列表（首次空都正常）<br>② "搜好友" → 输关键词（≥2 字）→ 看到结果 → 点"加好友" → toast 成功<br>③ 对端登录后看到"新申请"红点 → 进申请页 → 通过 → 双方好友列表都出现对方<br>④ 点好友进 chat → 输文字 → 发送 → 自己看到消息 → 对端 push + chat 历史拉到 → 来回几条都正常<br>⑤ 杀进程重开 → home 仍能拉到会话和好友（说明 IM session 被恢复） |
+
+**不预期**（任意一个出现就算挂）：
+- 红屏 / "未知内置函数" 警告（说明 lib_im 没正确解析）
+- 搜不到、加不上、消息发不出但**没任何提示**（说明降级失败）
+- 杀进程重启后好友 / 会话**完全空**（说明 OpenIM session 没恢复）
+- macOS / Web 跑 demo_im 时崩（应该安全降级返回空数组，UI 仍渲染）
+
+---
+
 ## 已知限制 / 不算回归
 
 - I.2 tab 页内 appBar/drawer 不生效 — `_TabScreenView` 写死，已记录为 P1
 - E.1 chip choice 取消后如果 bind 是 bool 变量配 value:true，label 可能瞬间显示 "null" — showcase 写法问题，**框架行为正确**
 - H 类 webview/map/camera 行为依赖平台与网络
+- demo_im 仅支持 iOS / Android（OpenIM SDK 限制）；其它平台所有 IM 操作降级返回空，UI 不崩
 
 ---
 
