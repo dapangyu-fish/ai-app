@@ -593,8 +593,18 @@ class JsonInterpreter extends ChangeNotifier {
     return getVariable(trimmed);
   }
 
+  /// i18n 嵌套模板解析最大深度。一个 t('A') 命中的字符串里再写 {{ t('B') }}
+  /// 是常见用法（句式 / 单位词跨语言）；万一翻译者写了循环引用，这里截断保命。
+  static const int _maxI18nDepth = 6;
+  int _i18nDepth = 0;
+
   /// i18n 字典查找：global.i18n[locale][key.path]
   /// locale 取自 global.locale；找不到回退当前 key 本身（方便快速调试）
+  ///
+  /// 翻译值里允许嵌 `{{ ... }}` 模板（变量 / 嵌套 t()），命中后会再次跑
+  /// resolveTemplate 把内部插值解开。这是 i18n 的标准用法 —— 比如英文
+  /// "You have {{ global.count }} messages" / 中文 "你有 {{ global.count }} 条消息"，
+  /// 翻译者控制变量在句子里的位置，不能强制把字符串切碎让调用方拼。
   String _i18nLookup(String keyPath) {
     final locale = (_variables['locale'] ??
             (_config['global'] as Map<String, dynamic>?)?['locale'] ??
@@ -605,9 +615,19 @@ class JsonInterpreter extends ChangeNotifier {
     if (dict == null) return keyPath;
     final localeDict = dict[locale];
     if (localeDict is! Map) return keyPath;
-    final value = _getNestedValue(
+    final raw = _getNestedValue(
         Map<String, dynamic>.from(localeDict), keyPath);
-    return value?.toString() ?? keyPath;
+    final value = raw?.toString() ?? keyPath;
+    // 翻译值里没模板：原样返回（绝大多数情况）
+    if (!value.contains('{{') || !value.contains('}}')) return value;
+    // 含模板：再过一次 resolveTemplate，最深递归 _maxI18nDepth 层
+    if (_i18nDepth >= _maxI18nDepth) return value;
+    _i18nDepth++;
+    try {
+      return resolveTemplate(value);
+    } finally {
+      _i18nDepth--;
+    }
   }
 
   /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
