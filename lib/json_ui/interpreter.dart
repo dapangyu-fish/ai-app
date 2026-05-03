@@ -77,6 +77,17 @@ class JsonInterpreter extends ChangeNotifier {
   /// 获取依赖加载器（供 ref 控件使用）
   DependencyLoader get depLoader => _depLoader;
 
+  /// 全局运行时崩溃回调。框架在 [executeAction] / [executeActionWithResult] /
+  /// [executeSteps] 抛异常时调用，由 main.dart 在 app 启动时注册并把崩溃路由到
+  /// `_CrashPage`（带 AI 一键修复按钮）。
+  ///
+  /// 这条路径专门给"动作执行类异常"（按钮 onPressed、on_start steps 跑炸了）
+  /// 兜底——它们和 widget build 异常不一样，不会触发 [JsonScreenView] 里的
+  /// try/catch，老代码下要么静默 debugPrint，要么只在启动页显示一行红字，
+  /// AI 修复按钮根本看不到。
+  static void Function(Object error, StackTrace stack, String fileName)?
+      onActionCrash;
+
   // ============ 初始化 ============
 
   JsonInterpreter() {
@@ -392,18 +403,25 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<void> executeSteps() async {
-    // 先加载依赖
-    final deps = _config['dependencies'] as Map<String, dynamic>?;
-    if (deps != null && deps.isNotEmpty) {
-      await _depLoader.loadDependencies(deps);
-    }
-
-    // 再执行 steps
-    final steps = _config['steps'] as List<dynamic>? ?? [];
-    for (final step in steps) {
-      if (step is Map<String, dynamic>) {
-        await _executeStep(step);
+    try {
+      // 先加载依赖
+      final deps = _config['dependencies'] as Map<String, dynamic>?;
+      if (deps != null && deps.isNotEmpty) {
+        await _depLoader.loadDependencies(deps);
       }
+
+      // 再执行 steps
+      final steps = _config['steps'] as List<dynamic>? ?? [];
+      for (final step in steps) {
+        if (step is Map<String, dynamic>) {
+          await _executeStep(step);
+        }
+      }
+    } catch (e, st) {
+      // 启动期 steps 抛错：先调一遍崩溃回调（路由到 _CrashPage 显示 AI 修复按钮），
+      // 再 rethrow 让外层 loadConfig 调用方自己也能感知（避免还推 JsonScreenView 进去）。
+      onActionCrash?.call(e, st, appName);
+      rethrow;
     }
   }
 
@@ -620,34 +638,40 @@ class JsonInterpreter extends ChangeNotifier {
 
   Future<void> executeAction(
       Map<String, dynamic> action, BuildContext context) async {
-    final type = action['type'] ?? 'call';
+    try {
+      final type = action['type'] ?? 'call';
 
-    switch (type) {
-      case 'call':
-        final callTarget = action['call'] as String?;
-        final args = action['args'] as Map<String, dynamic>?;
-        final assignVar = action['assign'] as String?;
-        if (callTarget != null) {
-          final result = await _executeCall(callTarget, args ?? {});
-          if (assignVar != null && result != null) {
-            setVariable(assignVar, result);
+      switch (type) {
+        case 'call':
+          final callTarget = action['call'] as String?;
+          final args = action['args'] as Map<String, dynamic>?;
+          final assignVar = action['assign'] as String?;
+          if (callTarget != null) {
+            final result = await _executeCall(callTarget, args ?? {});
+            if (assignVar != null && result != null) {
+              setVariable(assignVar, result);
+            }
           }
-        }
-        break;
-      case 'navigate':
-        final screenId = action['screen'] as String?;
-        if (screenId != null) {
-          navigateTo(screenId);
-        }
-        break;
-      case 'back':
-        // 弹出导航历史回到上一屏；栈空则尝试 pop 外层 Route（退出 JSON-APP）
-        if (canNavigateBack) {
-          navigateBack();
-        } else if (context.mounted) {
-          Navigator.of(context).maybePop();
-        }
-        break;
+          break;
+        case 'navigate':
+          final screenId = action['screen'] as String?;
+          if (screenId != null) {
+            navigateTo(screenId);
+          }
+          break;
+        case 'back':
+          // 弹出导航历史回到上一屏；栈空则尝试 pop 外层 Route（退出 JSON-APP）
+          if (canNavigateBack) {
+            navigateBack();
+          } else if (context.mounted) {
+            Navigator.of(context).maybePop();
+          }
+          break;
+      }
+    } catch (e, st) {
+      // 按钮 onPressed 等事件回调里抛错没人接，老代码会被 dart 框架直接吞掉
+      // / 走默认 onError。这里兜底路由到 _CrashPage（带 AI 一键修复按钮）。
+      onActionCrash?.call(e, st, appName);
     }
   }
 
@@ -656,23 +680,28 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> executeActionWithResult(
       dynamic action, BuildContext context) async {
     if (action is! Map<String, dynamic>) return null;
-    final type = action['type'] ?? 'call';
-    if (type == 'call') {
-      final callTarget = action['call'] as String?;
-      final args = action['args'] as Map<String, dynamic>?;
-      final assignVar = action['assign'] as String?;
-      if (callTarget != null) {
-        final result = await _executeCall(callTarget, args ?? {});
-        if (assignVar != null && result != null) {
-          setVariable(assignVar, result);
+    try {
+      final type = action['type'] ?? 'call';
+      if (type == 'call') {
+        final callTarget = action['call'] as String?;
+        final args = action['args'] as Map<String, dynamic>?;
+        final assignVar = action['assign'] as String?;
+        if (callTarget != null) {
+          final result = await _executeCall(callTarget, args ?? {});
+          if (assignVar != null && result != null) {
+            setVariable(assignVar, result);
+          }
+          return result;
         }
-        return result;
+      } else if (type == 'navigate') {
+        final screenId = action['screen'] as String?;
+        if (screenId != null) navigateTo(screenId);
       }
-    } else if (type == 'navigate') {
-      final screenId = action['screen'] as String?;
-      if (screenId != null) navigateTo(screenId);
+      return null;
+    } catch (e, st) {
+      onActionCrash?.call(e, st, appName);
+      return null;
     }
-    return null;
   }
 
   void navigateTo(String screenId) {
