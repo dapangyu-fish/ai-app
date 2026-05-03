@@ -13,9 +13,10 @@ import eventlet
 eventlet.monkey_patch()
 
 import logging
+import secrets
 from flask import Flask
 from flask_socketio import SocketIO
-from config import PORT
+from config import PORT, FLASK_SECRET_KEY
 import auth
 # import ai_code_generator as chat  # DEPRECATED: 已废弃，使用 claude_chat 替代
 import claude_chat
@@ -34,7 +35,14 @@ logging.basicConfig(
 def create_app():
     """创建 Flask 应用"""
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'your-secret-key'
+    if FLASK_SECRET_KEY:
+        app.config['SECRET_KEY'] = FLASK_SECRET_KEY
+    else:
+        # 本地开发兜底：进程级随机值，重启后失效。生产必须在 .env 里给真值。
+        app.config['SECRET_KEY'] = secrets.token_hex(32)
+        logging.getLogger(__name__).warning(
+            "FLASK_SECRET_KEY 未配置，已生成临时随机值（仅适合本地开发；生产请在 backend.env 里配置）"
+        )
 
     # 初始化 SocketIO
     # async_mode='eventlet' 配合上面 monkey_patch + gunicorn eventlet worker，是 Flask-SocketIO

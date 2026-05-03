@@ -124,6 +124,11 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 # 服务器配置
 PORT = int(os.environ.get("PORT", "5566"))
 
+# Flask SECRET_KEY —— 给 session/CSRF 等扩展签名用（当前业务没用 session，
+# 但保留以防未来加扩展时埋雷）。生产从 /etc/ai-app/backend.env 注入。
+# 空值时 app.py 会生成临时随机值并打 WARNING（仅本地开发兜底，重启后失效）。
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "")
+
 # 路径配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.environ.get("SERVER_PROJECT_PATH", os.path.realpath(os.path.join(BASE_DIR, "..")))
