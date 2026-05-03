@@ -477,8 +477,8 @@ class IMService {
   }
 
   /// 按 userID 列表批量取 OpenIM 端的公开用户信息（昵称、头像、ex 等）
-  /// JSON-DSL 的 @im_get_user_info 走这个；自己的资料走 Supabase / @get_user_info，
-  /// 这里专门给 "看对方资料" 的场景用
+  /// 注意：OpenIM 这边的 faceURL 只在用户首次注册时写一次，Supabase 头像之后改了
+  /// 不会同步过去——所以拿到的头像往往是空。要拿真实头像用 lookupUsersFromSupabase。
   Future<List<PublicUserInfo>> getUsersInfo(List<String> userIDList) async {
     if (userIDList.isEmpty) return [];
     try {
@@ -488,6 +488,35 @@ class IMService {
       debugPrint('[IM] 获取用户信息失败: $e');
       return [];
     }
+  }
+
+  /// 按 userID 列表去后端 /api/im/users/search 查 Supabase 的头像/昵称。
+  /// Supabase 是 avatar 真实源（OpenIM 的 faceURL 不会跟着 Supabase 更新）。
+  /// 用 search 是因为 lookup 接口走的是 OpenIM（也拿不到新数据），search 走 Supabase。
+  /// 返回 map: userID → {im_user_id, nickname, email, face_url}。
+  /// 找不到的 userID 不会出现在返回 map 里。
+  Future<Map<String, Map<String, dynamic>>> lookupUsersFromSupabase(
+      List<String> userIDList) async {
+    if (userIDList.isEmpty) return const {};
+    // 去重 + 过滤空 ID
+    final uniqIds = userIDList.where((s) => s.isNotEmpty).toSet().toList();
+    if (uniqIds.isEmpty) return const {};
+
+    final entries = await Future.wait(uniqIds.map((id) async {
+      try {
+        final hits = await searchUsers(id);
+        for (final u in hits) {
+          if ((u['im_user_id']?.toString() ?? '') == id) {
+            return MapEntry(id, u);
+          }
+        }
+      } catch (e) {
+        debugPrint('[IM] supabase lookup 失败 user=$id: $e');
+      }
+      return null;
+    }));
+    return Map.fromEntries(
+        entries.whereType<MapEntry<String, Map<String, dynamic>>>());
   }
 
   // ---------- 群聊操作 ----------

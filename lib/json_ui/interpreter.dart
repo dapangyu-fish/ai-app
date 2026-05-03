@@ -1999,6 +1999,12 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final apps = await IMService.instance.getIncomingFriendApplications();
             final list = apps.map(_friendApplicationToMap).toList();
+            await _backfillFaceUrls(
+              list,
+              idField: 'from_user_id',
+              faceField: 'from_face_url',
+              nicknameField: 'from_nickname',
+            );
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, list);
             return list;
@@ -2037,6 +2043,12 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final friends = await IMService.instance.getFriendList();
             final list = friends.map(_friendInfoToMap).toList();
+            await _backfillFaceUrls(
+              list,
+              idField: 'user_id',
+              faceField: 'face_url',
+              nicknameField: 'nickname',
+            );
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, list);
             return list;
@@ -2051,6 +2063,14 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final convos = await IMService.instance.getConversationList();
             final list = convos.map(_conversationToMap).toList();
+            // 用 show_name 当昵称兜底字段——OpenIM 的 ConversationInfo.showName 已经是
+            // 对方在 OpenIM 的昵称，但同样可能过时；Supabase 拿到新昵称时覆盖
+            await _backfillFaceUrls(
+              list,
+              idField: 'user_id',
+              faceField: 'face_url',
+              nicknameField: 'show_name',
+            );
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, list);
             return list;
@@ -2988,6 +3008,40 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   // ── IM helpers ──────────────────────────────────────────────────────
+  /// 把 OpenIM 列表（friends / conversations / friend_applications）里的
+  /// face_url 字段从 Supabase 回填一次。
+  ///
+  /// Why: OpenIM 的 user.faceURL 只在用户首次注册时写一次，之后用户在 Supabase
+  /// 改头像不会同步过去——所以 OpenIM 列表里 face_url 多半是空。Supabase 才是
+  /// avatar 的真实源。这里 N 个用户并发查后端 search 接口（已带 60s 缓存），
+  /// 一次刷新一般就 1-2 个新用户产生网络成本，可接受。
+  Future<void> _backfillFaceUrls(
+    List<Map<String, dynamic>> items, {
+    required String idField,
+    required String faceField,
+    required String nicknameField,
+  }) async {
+    if (items.isEmpty) return;
+    final ids = items
+        .map((m) => m[idField]?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+    if (ids.isEmpty) return;
+    final supaMap = await IMService.instance.lookupUsersFromSupabase(ids);
+    if (supaMap.isEmpty) return;
+    for (final item in items) {
+      final id = item[idField]?.toString() ?? '';
+      final supa = supaMap[id];
+      if (supa == null) continue;
+      final supaFace = supa['face_url']?.toString() ?? '';
+      if (supaFace.isNotEmpty) item[faceField] = supaFace;
+      // 昵称同样可能更新过；非空时盖一下，让显示用最新值
+      final supaName = supa['nickname']?.toString() ?? '';
+      if (supaName.isNotEmpty) item[nicknameField] = supaName;
+    }
+  }
+
   // OpenIM SDK 单聊 conversationID 约定：si_<a>_<b>，a/b 按字典序排序。
   // 拿不到自己的 IM userID 时返回 null（一般是没登录或 SDK 没初始化）。
   String? _singleChatConversationId(String otherUserId) {

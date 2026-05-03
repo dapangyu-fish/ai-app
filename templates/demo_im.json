@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
@@ -538,29 +538,29 @@
             "emptyText": "还没有消息，发条招呼吧",
             "item_template": {
               "type": "container",
-              "layout": "column",
-              "padding": 4,
+              "layout": "row",
+              "padding": 6,
+              "crossAxisAlignment": "start",
               "children": [
                 {
-                  "type": "container",
+                  "type": "avatar",
                   "visible": "{{ loop.item.is_other }}",
-                  "layout": "row",
-                  "mainAxisAlignment": "start",
+                  "url": "{{ global.otherAvatar }}",
+                  "text": "{{ global.currentChatName }}",
+                  "size": 40,
+                  "color": "#5C6BC0",
+                  "textColor": "#FFFFFF"
+                },
+                {"type": "spacer", "width": 8},
+                {
+                  "type": "container",
+                  "position": {"type": "flex", "flex": 1},
+                  "layout": "column",
                   "crossAxisAlignment": "start",
-                  "padding": 6,
                   "children": [
                     {
-                      "type": "avatar",
-                      "url": "{{ global.otherAvatar }}",
-                      "text": "{{ global.currentChatName }}",
-                      "size": 40,
-                      "color": "#5C6BC0",
-                      "textColor": "#FFFFFF"
-                    },
-                    {"type": "spacer", "width": 8},
-                    {
                       "type": "container",
-                      "color": "#FFFFFF",
+                      "color": "{{ loop.item.bubble_color }}",
                       "borderRadius": 8,
                       "padding": 10,
                       "children": [
@@ -573,37 +573,15 @@
                     }
                   ]
                 },
+                {"type": "spacer", "width": 8},
                 {
-                  "type": "container",
+                  "type": "avatar",
                   "visible": "{{ loop.item.is_me }}",
-                  "layout": "row",
-                  "mainAxisAlignment": "end",
-                  "crossAxisAlignment": "start",
-                  "padding": 6,
-                  "children": [
-                    {
-                      "type": "container",
-                      "color": "#95EC69",
-                      "borderRadius": 8,
-                      "padding": 10,
-                      "children": [
-                        {
-                          "type": "text",
-                          "value": "{{ loop.item.text }}",
-                          "style": {"fontSize": 15, "color": "#1A1A1A"}
-                        }
-                      ]
-                    },
-                    {"type": "spacer", "width": 8},
-                    {
-                      "type": "avatar",
-                      "url": "{{ global.myAvatar }}",
-                      "text": "{{ global.myName }}",
-                      "size": 40,
-                      "color": "#5C6BC0",
-                      "textColor": "#FFFFFF"
-                    }
-                  ]
+                  "url": "{{ global.myAvatar }}",
+                  "text": "{{ global.myName }}",
+                  "size": 40,
+                  "color": "#5C6BC0",
+                  "textColor": "#FFFFFF"
                 }
               ]
             }
