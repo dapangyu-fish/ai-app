@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "type": "app",
     "description": "lib_im 演示 — 微信式双 tab（聊天 / 通讯录）+ 气泡聊天页",
     "author": "demo"
@@ -127,27 +127,14 @@
         "params": [],
         "logic": [
           {
-            "call": "@if",
+            "call": "@lib_im.sendText",
             "args": {
-              "condition": {
-                "and": [
-                  {"!!": [{"var": "global.draft"}]},
-                  {"!=": [{"var": "global.draft"}, ""]}
-                ]
-              },
-              "then": [
-                {
-                  "call": "@lib_im.sendText",
-                  "args": {
-                    "userId": "{{ global.currentChatUserId }}",
-                    "text": "{{ global.draft }}"
-                  }
-                },
-                {"call": "@set", "args": {"var": "global.draft", "value": ""}},
-                {"call": "@global.refreshChat", "args": {}}
-              ]
+              "userId": "{{ global.currentChatUserId }}",
+              "text": "{{ global.draft }}"
             }
-          }
+          },
+          {"call": "@set", "args": {"var": "global.draft", "value": ""}},
+          {"call": "@global.refreshChat", "args": {}}
         ]
       }
     }
@@ -572,90 +559,41 @@
                 },
                 "item_template": {
                   "type": "container",
-                  "layout": "column",
-                  "padding": 4,
+                  "layout": "row",
+                  "padding": 8,
+                  "crossAxisAlignment": "start",
                   "children": [
                     {
-                      "type": "container",
-                      "visible": {"!": [{"var": "loop.item.is_me"}]},
-                      "layout": "row",
-                      "crossAxisAlignment": "start",
-                      "children": [
-                        {
-                          "type": "avatar",
-                          "url": "{{ loop.item.sender_face_url }}",
-                          "text": "{{ loop.item.sender_nickname }}",
-                          "size": 36
-                        },
-                        {"type": "spacer", "width": 8},
-                        {
-                          "type": "container",
-                          "layout": "column",
-                          "crossAxisAlignment": "start",
-                          "children": [
-                            {
-                              "type": "text",
-                              "value": "{{ loop.item.sender_nickname }}",
-                              "style": {"fontSize": 11, "color": "#888888"}
-                            },
-                            {"type": "spacer", "height": 2},
-                            {
-                              "type": "container",
-                              "color": "#FFFFFF",
-                              "borderRadius": 8,
-                              "padding": 10,
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "value": "{{ loop.item.text }}",
-                                  "style": {"fontSize": 15, "color": "#000000"}
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {"type": "spacer", "position": {"type": "flex", "flex": 1}}
-                      ]
+                      "type": "avatar",
+                      "url": "{{ loop.item.sender_face_url }}",
+                      "text": "{{ loop.item.sender_nickname }}",
+                      "size": 36
                     },
+                    {"type": "spacer", "width": 8},
                     {
                       "type": "container",
-                      "visible": "{{ loop.item.is_me }}",
-                      "layout": "row",
+                      "layout": "column",
+                      "position": {"type": "flex", "flex": 1},
                       "crossAxisAlignment": "start",
                       "children": [
-                        {"type": "spacer", "position": {"type": "flex", "flex": 1}},
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.sender_nickname }}",
+                          "style": {"fontSize": 11, "color": "#888888"}
+                        },
+                        {"type": "spacer", "height": 2},
                         {
                           "type": "container",
-                          "layout": "column",
-                          "crossAxisAlignment": "end",
+                          "color": "#FFFFFF",
+                          "borderRadius": 8,
+                          "padding": 10,
                           "children": [
                             {
                               "type": "text",
-                              "value": "我",
-                              "style": {"fontSize": 11, "color": "#888888"}
-                            },
-                            {"type": "spacer", "height": 2},
-                            {
-                              "type": "container",
-                              "color": "#95EC69",
-                              "borderRadius": 8,
-                              "padding": 10,
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "value": "{{ loop.item.text }}",
-                                  "style": {"fontSize": 15, "color": "#000000"}
-                                }
-                              ]
+                              "value": "{{ loop.item.text }}",
+                              "style": {"fontSize": 15, "color": "#000000"}
                             }
                           ]
-                        },
-                        {"type": "spacer", "width": 8},
-                        {
-                          "type": "avatar",
-                          "url": "{{ global.myAvatar }}",
-                          "text": "{{ global.myName }}",
-                          "size": 36
                         }
                       ]
                     }
