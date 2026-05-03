@@ -208,3 +208,69 @@ if (paddingValue is num) {
 但根据 CLAUDE.md 的"框架稳定性原则"，这类改动需要同步更新 JSON-DSL.md 文档，并确保向后兼容。
 
 ---
+
+## 6. JsonLogic / 数据 Map 混淆：数据键被当 operator
+
+### 🚨 崩溃日志表现
+```text
+JsonlogicException: operator id not defined.
+JsonlogicException: operator title not defined.
+```
+（任何 `operator <数据键名> not defined` 都属于这一类。）
+
+### 💔 反面教材分析
+
+AI 写 `@list_add` / `@http_post` body / 任何"我要传一个数据对象"类的 args 时，最容易写出这种 Map：
+```json
+{
+  "call": "@list_add",
+  "args": {
+    "var": "global.moles",
+    "item": {
+      "id": "{{ loop.index }}",
+      "display": "🐹",
+      "bg": "#FF0000"
+    }
+  }
+}
+```
+
+**根因（jsonlogic 引擎的两条评估规则）**：
+- 单 key Map：`{"if": [...]}` → 把 key 当 operator 找；找不到就抛 `operator xxx not defined`
+- 多 key Map：`{"a": ..., "b": ...}` → 当作隐式 AND，对每个键再走一遍单 key 规则 → 每个键都得是合法 op 才行
+
+所以 `{"id": ..., "display": ..., "bg": ...}` 这种"只是想塞个数据对象"的 Map，无论几个键，**只要有任何一个键不在 op 集合里**，老代码无脑 `jl.apply()` 就直接抛崩溃。
+
+老代码：
+```dart
+// _evaluateExpression
+if (value is Map<String, dynamic>) {
+  return _jl.apply(_resolveTemplatesInRule(value), _buildDataContext()); // 全员判死刑
+}
+```
+
+修复后（commit `5f5e797` / `11e0c79`）：
+```dart
+if (value is Map<String, dynamic>) {
+  if (_looksLikeJsonLogic(value)) {        // 单 key + key 在已知 op 白名单
+    return _jl.apply(_resolveTemplatesInRule(value), _buildDataContext());
+  }
+  // 数据 Map：递归 evaluate 内部值，模板/嵌套表达式继续展开
+  final out = <String, dynamic>{};
+  value.forEach((k, v) => out[k] = _evaluateExpression(v));
+  return out;
+}
+```
+
+### ✅ 正确姿势 / 避坑指南
+
+* **数据 Map 现在合法**：`@list_add args.item` / `@http_post args.body` 等位置可以放任意结构的对象（包括嵌套 `{{ }}` 模板），框架会按数据原样保留 + 模板展开。
+* **想用 jsonlogic 表达式时**：明确写成单 key + 已知 op，比如 `{"if": [...]}`、`{"merge": [...]}`、`{"sort": [...]}`、`{"var": "..."}`。
+* **危险地带 — 单 key 数据 Map 撞上 op 名**：如果数据键名恰好是 `if/var/merge/sort/in/cat/...` 等 op 集合里的词，**框架会优先把它当 jsonlogic 表达式走**。要么换键名（`item_in` 代替 `in`），要么塞进多 key 数据 Map（加个伴随键 `{"_kind": "data", "in": ...}`）以触发非 jsonlogic 分支。
+* **AI 生成时的自检**：见 `backend/prompts/generate_app_prompt.md` 的"上传前自检 checklist" g 项 — `python3 -m json.tool` 走完后，再扫一遍单 key Map 看 key 是不是 op。
+
+### 🔧 框架改进备忘
+
+`_evaluateExpression` 现在用 `_knownJsonLogicOps` 静态白名单判断。未来在 `_createJsonLogic` 里 `jl.add('xxx', ...)` 注册新 op 时，**必须同步把 'xxx' 加到 `_knownJsonLogicOps` 集合**，否则该 op 写法会被当数据 Map，jsonlogic 求值不会触发。
+
+---

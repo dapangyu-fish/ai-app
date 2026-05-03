@@ -126,6 +126,31 @@ void main() async {
     );
   };
 
+  // JSON-DSL 动作执行类异常（按钮 onPressed / @start steps / @if 求值等）
+  // 兜底：路由到 _CrashPage（含 AI 一键修复按钮）。这条路径专门覆盖
+  // JsonScreenView.build 同步沙盒抓不到的 async 异常。
+  JsonInterpreter.onActionCrash = (error, stack, fileName) {
+    final navState = JsonDslApp.navigatorKey.currentState;
+    if (navState == null) {
+      debugPrint('[JSON-APP] action crash before nav ready: $error\n$stack');
+      return;
+    }
+    debugPrint('========================================');
+    debugPrint('[JSON-APP] 运行时崩溃 (action/steps)');
+    debugPrint('文件: $fileName');
+    debugPrint('错误: $error');
+    debugPrint('========================================');
+    debugPrint(stack.toString());
+    debugPrint('========================================');
+    navState.push(MaterialPageRoute(
+      builder: (_) => _CrashPage(
+        error: error.toString(),
+        stackTrace: stack.toString(),
+        fileName: fileName,
+      ),
+    ));
+  };
+
   await AuthService.restoreSession();
   await AiChatService.loadProvider();
   // 如果已登录，后台初始化 IM 连接
