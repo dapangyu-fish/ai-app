@@ -1,0 +1,177 @@
+{
+  "dsl": "3.3",
+  "appid": "64e19f13-f09e-4670-8d9d-b114949c38d5",
+  "meta": {
+    "name": "lib_im",
+    "version": "1.2.0",
+    "type": "library",
+    "description": "私信组件库 — 搜好友 / 加好友 / 好友列表 / 单聊历史 / 发文本，配合 lib_user 用",
+    "author": "demo",
+    "exports": [
+      "currentUserId",
+      "searchUsers",
+      "sendFriendRequest",
+      "listFriendApplications",
+      "acceptFriend",
+      "rejectFriend",
+      "listFriends",
+      "listConversations",
+      "getMessages",
+      "sendText",
+      "markRead",
+      "subscribeInbox",
+      "totalUnread"
+    ]
+  },
+  "global": {
+    "variables": {},
+    "functions": {
+      "currentUserId": {
+        "params": ["bind"],
+        "logic": [
+          {
+            "call": "@im_current_user_id",
+            "args": {"bind": "{{ params.bind }}"}
+          }
+        ]
+      },
+
+      "searchUsers": {
+        "params": ["q", "bind"],
+        "logic": [
+          {
+            "call": "@im_search_users",
+            "args": {
+              "q": "{{ params.q }}",
+              "bind": "{{ params.bind }}"
+            }
+          }
+        ]
+      },
+
+      "sendFriendRequest": {
+        "params": ["userId", "message"],
+        "logic": [
+          {
+            "call": "@im_send_friend_request",
+            "args": {
+              "user_id": "{{ params.userId }}",
+              "message": "{{ params.message }}"
+            }
+          }
+        ]
+      },
+
+      "listFriendApplications": {
+        "params": ["bind"],
+        "logic": [
+          {
+            "call": "@im_friend_applications",
+            "args": {"bind": "{{ params.bind }}"}
+          }
+        ]
+      },
+
+      "acceptFriend": {
+        "params": ["userId"],
+        "logic": [
+          {
+            "call": "@im_accept_friend",
+            "args": {"user_id": "{{ params.userId }}"}
+          }
+        ]
+      },
+
+      "rejectFriend": {
+        "params": ["userId"],
+        "logic": [
+          {
+            "call": "@im_reject_friend",
+            "args": {"user_id": "{{ params.userId }}"}
+          }
+        ]
+      },
+
+      "listFriends": {
+        "params": ["bind"],
+        "logic": [
+          {
+            "call": "@im_friend_list",
+            "args": {"bind": "{{ params.bind }}"}
+          }
+        ]
+      },
+
+      "listConversations": {
+        "params": ["bind"],
+        "logic": [
+          {
+            "call": "@im_conversations",
+            "args": {"bind": "{{ params.bind }}"}
+          }
+        ]
+      },
+
+      "getMessages": {
+        "params": ["userId", "count", "bind"],
+        "logic": [
+          {
+            "call": "@im_history",
+            "args": {
+              "user_id": "{{ params.userId }}",
+              "count": "{{ params.count }}",
+              "bind": "{{ params.bind }}"
+            }
+          }
+        ]
+      },
+
+      "sendText": {
+        "params": ["userId", "text"],
+        "logic": [
+          {
+            "call": "@im_send_text",
+            "args": {
+              "user_id": "{{ params.userId }}",
+              "text": "{{ params.text }}"
+            }
+          }
+        ]
+      },
+
+      "markRead": {
+        "params": ["userId"],
+        "logic": [
+          {
+            "call": "@im_mark_read",
+            "args": {"user_id": "{{ params.userId }}"}
+          }
+        ]
+      },
+
+      "subscribeInbox": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@im_subscribe_inbox",
+            "args": {}
+          }
+        ]
+      },
+
+      "totalUnread": {
+        "params": ["bind"],
+        "logic": [
+          {
+            "call": "@im_total_unread",
+            "args": {"bind": "{{ params.bind }}"}
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  }
+}

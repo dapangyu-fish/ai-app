@@ -362,7 +362,40 @@
 | `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
 | `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
 
-### 4.10 主题 / 多语言 / 生命周期
+### 4.10 私信 / 好友（IM）
+
+> ⚠️ 这些 action 直接对接 OpenIM SDK，建议**通过 `lib_im` 库间接调用**（包装好的 nicely-named function：`searchUsers` / `sendFriendRequest` / `listFriends` / `getMessages` / `sendText` 等），而不是在 JSON-APP 里直接写 `@im_*`。本节仅用作 lib_im 的实现底层参考。
+
+| 函数 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `@im_current_user_id` | `{ "bind": "..." }` | string \| null | 我的 IM userId。未登录返回 null |
+| `@im_get_user_info` | `{ "user_id": "...", "bind": "..." }` | Map \| null | 按 userId 取对方公开资料：`{user_id, nickname, face_url, email}`。底层走后端 user search → Supabase（OpenIM 自己的 faceURL 老不更新，Supabase 是头像真实源）。找不到返 null |
+| `@im_search_users` | `{ "q": "...", "bind": "..." }` | List | 关键词模糊搜邮箱/昵称/UUID（≥2 字符），每条 `{im_user_id, nickname, email, face_url}` |
+| `@im_send_friend_request` | `{ "user_id": "...", "message": "..." }` | bool | 发好友申请，对方在 friend_applications 里能看到 |
+| `@im_friend_applications` | `{ "bind": "..." }` | List | 我收到的好友申请。每条 `{from_user_id, from_nickname, from_face_url, req_msg, handle_result, create_time}`（handle_result：0=待处理 1=已同意 -1=已拒绝） |
+| `@im_accept_friend` / `@im_reject_friend` | `{ "user_id": "..." }` | bool | 通过 / 拒绝某用户的好友申请 |
+| `@im_friend_list` | `{ "bind": "..." }` | List | 我的好友列表。每条 `{user_id, nickname, face_url, remark}` |
+| `@im_conversations` | `{ "bind": "..." }` | List | 会话列表。每条 `{conversation_id, user_id, show_name, face_url, latest_text, latest_time, unread_count, display_unread, display_time}` |
+| `@im_history` | `{ "user_id": "...", "count": 30, "bind": "..." }` | List | 单聊历史（**升序：旧→新**，UI 直接 list 渲染呈现"老消息在顶、新消息在底"的微信式聊天）。每条 `{client_msg_id, send_id, recv_id, send_time, content_type, text, sender_nickname, sender_face_url, is_me, is_other, display_sender, display_time, bubble_color, bubble_text_color}` |
+| `@im_send_text` | `{ "user_id": "...", "text": "..." }` | Map \| null | 给某 user 发文本，返回已发送 message 对象 |
+| `@im_mark_read` | `{ "user_id": "..." }` | bool | 标记与某 user 的会话为已读 |
+| `@im_total_unread` | `{ "bind": "..." }` | int | 跨所有会话的未读总数（用于 tab badge / 应用角标）。失败返回 0 |
+| `@im_subscribe_inbox` | `{}` | bool | 订阅新消息（幂等）。订阅后 `global._im` 会被维护：`{tick, last_message, current_user_id}`，每来一条新消息 `tick` +1 + `last_message` 更新一次。UI 绑 `tick` 即可被动刷新（参见下方"实时新消息"） |
+
+**display_*** 字段说明（v1.1 起）：
+- `display_sender`：消息发送者的展示名。本人发的固定 `"我"`，其他人用 `sender_nickname`
+- `display_time`：epoch 毫秒预格式化为 IM 列表常见的 `HH:mm` / `昨天` / `N天前` / `MM-dd`
+- `display_unread`：会话未读数；0 时为空串（绑到 text.value 上自动隐藏徽标）
+- 这几个字段是为了让 JSON-APP 不用在 DSL 层写条件 / 时间格式（DSL 静态属性不接受 jsonlogic Map），原始 `is_me` / `unread_count` / `send_time` / `latest_time` 同时也保留，开发者可按需自取
+
+**实时新消息约定**：
+- JSON-APP 在 `steps` / 启动函数里调一次 `@lib_im.subscribeInbox`（即 `@im_subscribe_inbox`）
+- 之后 `global._im.tick` 每收到一条新消息会 +1，`global._im.last_message` 更新到最新一条
+- 想做"自动刷新会话列表"，绑 `tick` 触发 rebuild + 在适当时机重新调 `listConversations` 即可
+- 想做未读 badge，调一次 `@lib_im.totalUnread { bind: "global.totalUnread" }`，UI 绑 `{{ global.totalUnread }}`，业务路径里发完 / 读完消息再调一次刷新
+- 平台限制：iOS / Android 才有真实数据；macOS / Web / Windows / Linux 上 IM SDK 无效，所有 `@im_*` 安全降级返回空数据，不会崩
+
+### 4.11 主题 / 多语言 / 生命周期
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
@@ -545,6 +578,38 @@
 | `absolute` | 绝对定位（需 `layout=stack`） | `top`, `left`, `bottom`, `right` |
 | `flex` | 弹性布局 | `flex` (数字) |
 
+#### visible 字段（条件渲染）
+
+任何控件都可以加 `visible` 字段控制是否渲染：
+
+| 写法 | 行为 |
+|------|------|
+| 不写 | 默认渲染（向后兼容） |
+| `"visible": true` / `false` | 直接控制 |
+| `"visible": "{{ loop.item.is_me }}"` | 模板，按解析值的真假 |
+| `"visible": {">": [{"var": "global.appCount"}, 0]}` | jsonlogic 表达式求值 |
+
+`visible: false` 时框架返回 `SizedBox.shrink()`，**完全不占空间**（Flex 布局里不会留 flex slot），等价于把整个节点从 widget tree 里摘掉。常见场景：
+
+```json
+// 微信式聊天气泡 — 自/他用两个 row 子树，靠 visible 二选一
+{
+  "type": "container", "visible": "{{ loop.item.is_other }}",
+  "layout": "row",
+  "children": [{"type": "avatar", ...}, {"type": "container", "color": "{{ loop.item.bubble_color }}", ...}]
+},
+{
+  "type": "container", "visible": "{{ loop.item.is_me }}",
+  "layout": "row",
+  "children": [{"type": "spacer", "position": {"type": "flex", "flex": 1}}, {"type": "container", "color": "{{ loop.item.bubble_color }}", ...}, {"type": "avatar", ...}]
+}
+```
+
+```json
+// 角标徽章 — 数为 0 时整个红圈消失
+{"type": "container", "visible": {">": [{"var": "global.unread"}, 0]}, "color": "#FF3B30", "borderRadius": 10, ...}
+```
+
 ### 6.3 Widget 类型完整映射表
 
 | type | Flutter Widget | 必填字段 | 可选字段 |
@@ -552,7 +617,7 @@
 | `text` | `Text` | `value` | `style` |
 | `button` | `FilledButton` / `OutlinedButton` / `TextButton` | `label` | `action`, `variant`, `icon`, `style`, `disabled` |
 | `input` | `TextField` | `placeholder` / `bind` | `maxLines`, `keyboardType`, `obscureText`, `prefix`, `suffix`, `prefixIcon`, `suffixIcon`, `label`, `style` |
-| `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留) |
+| `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留), `separator`(默认 `"divider"` 画 1px 分隔线；`"none"` 关掉，聊天气泡 / 自定义卡片用), `scrollToEnd`(true 时初次渲染 + items 增多时自动滚到底，聊天页用) |
 | `reorderable_list` | `ReorderableListView.builder` | `source`, `item_template`, `bind` | `onReorder`, `emptyText`, `padding`, `itemKey`(默认 `id`)。拖完自动写回 `bind` 变量；onReorder 回调可拿到 `params.from` / `params.to` / `params.list` |
 | `skeleton` | 自实现 shimmer | — | `width`, `height`, `borderRadius`, `loading`(布尔, 与 `child` 联用), `child`(loading=true 时用 child 撑形状再覆盖 shimmer，false 时透传) |
 | `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |

@@ -2,9 +2,9 @@
   "dsl": "3.3",
   "meta": {
     "name": "lib_user",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "type": "library",
-    "description": "用户信息组件库 — 读取/修改用户资料",
+    "description": "用户信息组件库 — 读取/修改用户资料 + 按 userId 取对方头像/昵称",
     "author": "demo",
     "exports": [
       "loadUserInfo",
@@ -14,12 +14,16 @@
       "getAuthToken",
       "checkLogin",
       "updateAvatar",
-      "updateName"
+      "updateName",
+      "getOtherUserInfo",
+      "getOtherUserAvatar",
+      "getOtherUserName"
     ]
   },
   "global": {
     "variables": {
-      "_info": null
+      "_info": null,
+      "_otherInfo": null
     },
     "functions": {
       "loadUserInfo": {
@@ -166,6 +170,56 @@
           {
             "call": "@refresh_user",
             "args": {}
+          }
+        ]
+      },
+      "getOtherUserInfo": {
+        "params": ["userId", "bind"],
+        "logic": [
+          {
+            "call": "@im_get_user_info",
+            "args": {
+              "user_id": "{{ params.userId }}",
+              "bind": "{{ params.bind }}"
+            }
+          }
+        ]
+      },
+      "getOtherUserAvatar": {
+        "params": ["userId", "bind"],
+        "logic": [
+          {
+            "call": "@im_get_user_info",
+            "args": {
+              "user_id": "{{ params.userId }}",
+              "bind": "global._otherInfo"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._otherInfo.face_url }}"
+            }
+          }
+        ]
+      },
+      "getOtherUserName": {
+        "params": ["userId", "bind"],
+        "logic": [
+          {
+            "call": "@im_get_user_info",
+            "args": {
+              "user_id": "{{ params.userId }}",
+              "bind": "global._otherInfo"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.bind }}",
+              "value": "{{ global._otherInfo.nickname }}"
+            }
           }
         ]
       }

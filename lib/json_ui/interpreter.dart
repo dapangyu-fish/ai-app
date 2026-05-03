@@ -4,11 +4,13 @@
 // 自定义扩展操作符通过 jl.add() 注册
 // 变量路径格式：global.xxx / loop.item / params.xxx（兼容 $.global.xxx 旧格式）
 // ───────────────────────────────────────────────
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -23,6 +25,7 @@ import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
+import '../im/im_service.dart';
 import 'drift_database.dart';
 import '../main.dart' show appThemeMode, appLifecycleEvent;
 import '../i18n/locale_controller.dart' show LocaleController;
@@ -59,6 +62,11 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Toast 重叠显示管理 ============
   final List<OverlayEntry> _activeToasts = [];
   static const int _maxOverlappingToasts = 20;
+
+  // ============ IM 反应式订阅 ============
+  // @im_subscribe_inbox 第一次被调用时挂上 IMService.newMessageStream 监听，
+  // 整个 interpreter 生命周期复用同一个订阅，避免重入创建多个 listener。
+  StreamSubscription<Message>? _imInboxSub;
 
   // ============ Getters ============
 
@@ -375,6 +383,10 @@ class JsonInterpreter extends ChangeNotifier {
       c.dispose();
     }
     _textControllers.clear();
+
+    // 切 app 时清掉旧 IM 监听，避免老 app 的 inbox 还在写新 app 的 _variables
+    _imInboxSub?.cancel();
+    _imInboxSub = null;
 
     if (screens.isNotEmpty) {
       _currentScreenId =
@@ -1898,6 +1910,283 @@ class JsonInterpreter extends ChangeNotifier {
           return null;
         }
 
+      // ── IM（私信 / 好友）──
+      // 这一组 action 把 IMService（OpenIM SDK 封装）暴露给 JSON-DSL；
+      // lib_im 把这些原子 action 包成 nicely-named function 给上层 JSON-APP 用。
+      // 平台限制：iOS / Android 才支持，其它平台 SDK 抛 MissingPluginException —
+      // 这里统一 try / catch 兜底返回 null/false，让 JSON-APP 不会因平台不支持而崩。
+      case '@im_current_user_id':
+        {
+          final id = IMService.instance.currentUserId;
+          final bindPath = resolvedArgs['bind'] as String?;
+          if (bindPath != null) setVariable(bindPath, id);
+          return id;
+        }
+
+      case '@im_get_user_info':
+        {
+          // 按 userId 取对方公开资料（昵称 / 头像）。
+          // 实现走 IMService.searchUsers（→ 后端 /api/im/users/search → Supabase
+          // user_metadata.avatar_url），不用 OpenIM SDK 的 userManager.getUsersInfo——
+          // OpenIM 那边的 faceURL 只在用户首次注册时写一次，Supabase 头像之后改了
+          // 不会同步过去，所以拿到的永远是空。Supabase 是 avatar 的真实来源。
+          // 返回 {user_id, nickname, face_url, email}，找不到返 null。
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final bindPath = resolvedArgs['bind'] as String?;
+          if (userId.isEmpty) {
+            if (bindPath != null) setVariable(bindPath, null);
+            return null;
+          }
+          try {
+            // searchUsers 拿 q 做模糊匹配（email / username / uid 三选一）。
+            // 把 userId 当 q 传，命中且 im_user_id 完全相等的就是目标。
+            final hits = await IMService.instance.searchUsers(userId);
+            final match = hits.firstWhere(
+              (u) => (u['im_user_id']?.toString() ?? '') == userId,
+              orElse: () => const {},
+            );
+            if (match.isEmpty) {
+              if (bindPath != null) setVariable(bindPath, null);
+              return null;
+            }
+            final result = {
+              'user_id': match['im_user_id']?.toString() ?? '',
+              'nickname': match['nickname']?.toString() ?? '',
+              'face_url': match['face_url']?.toString() ?? '',
+              'email': match['email']?.toString() ?? '',
+            };
+            if (bindPath != null) setVariable(bindPath, result);
+            return result;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_get_user_info 失败: $e');
+            if (bindPath != null) setVariable(bindPath, null);
+            return null;
+          }
+        }
+
+      case '@im_search_users':
+        {
+          final q = (resolvedArgs['q'] as String?) ?? '';
+          try {
+            final users = await IMService.instance.searchUsers(q);
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, users);
+            return users;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_search_users 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_send_friend_request':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final reqMsg = (resolvedArgs['message'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            return await IMService.instance.sendFriendApplication(
+              userID: userId,
+              reqMsg: reqMsg,
+            );
+          } catch (e) {
+            debugPrint('[JSON DSL] im_send_friend_request 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_friend_applications':
+        {
+          try {
+            final apps = await IMService.instance.getIncomingFriendApplications();
+            final list = apps.map(_friendApplicationToMap).toList();
+            await _backfillFaceUrls(
+              list,
+              idField: 'from_user_id',
+              faceField: 'from_face_url',
+              nicknameField: 'from_nickname',
+            );
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_friend_applications 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_accept_friend':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            return await IMService.instance.acceptFriendApplication(fromUserID: userId);
+          } catch (e) {
+            debugPrint('[JSON DSL] im_accept_friend 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_reject_friend':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            return await IMService.instance.rejectFriendApplication(fromUserID: userId);
+          } catch (e) {
+            debugPrint('[JSON DSL] im_reject_friend 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_friend_list':
+        {
+          try {
+            final friends = await IMService.instance.getFriendList();
+            final list = friends.map(_friendInfoToMap).toList();
+            await _backfillFaceUrls(
+              list,
+              idField: 'user_id',
+              faceField: 'face_url',
+              nicknameField: 'nickname',
+            );
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_friend_list 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_conversations':
+        {
+          try {
+            final convos = await IMService.instance.getConversationList();
+            final list = convos.map(_conversationToMap).toList();
+            // 用 show_name 当昵称兜底字段——OpenIM 的 ConversationInfo.showName 已经是
+            // 对方在 OpenIM 的昵称，但同样可能过时；Supabase 拿到新昵称时覆盖
+            await _backfillFaceUrls(
+              list,
+              idField: 'user_id',
+              faceField: 'face_url',
+              nicknameField: 'show_name',
+            );
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_conversations 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_history':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final count = (resolvedArgs['count'] is num)
+              ? (resolvedArgs['count'] as num).toInt()
+              : 30;
+          if (userId.isEmpty) return const [];
+          try {
+            final convId = _singleChatConversationId(userId);
+            if (convId == null) return const [];
+            final messages = await IMService.instance.getHistoryMessages(
+              conversationID: convId,
+              count: count,
+            );
+            // OpenIM SDK 的 getAdvancedHistoryMessageList 返回**升序**（旧→新），
+            // JSON-DSL 的 list 控件从上往下渲染 index 0 → N，所以**直接保留升序**
+            // 即可让 UI 上呈现"老消息在顶、新消息在底"的微信式聊天体验。
+            // 之前这里多了一步 .reversed 反而把"新消息"顶到列表最上方。
+            final list = messages.map(_messageToMap).toList();
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_history 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_send_text':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final text = (resolvedArgs['text'] as String?) ?? '';
+          if (userId.isEmpty || text.isEmpty) return null;
+          try {
+            final convId = _singleChatConversationId(userId);
+            if (convId == null) return null;
+            final msg = await IMService.instance.sendTextMessage(
+              conversationID: convId,
+              text: text,
+              userID: userId,
+            );
+            return msg != null ? _messageToMap(msg) : null;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_send_text 失败: $e');
+            return null;
+          }
+        }
+
+      case '@im_mark_read':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            final convId = _singleChatConversationId(userId);
+            if (convId == null) return false;
+            await IMService.instance.markConversationRead(conversationID: convId);
+            return true;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_mark_read 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_total_unread':
+        {
+          // 跨所有会话的未读总数，用于 tab badge / 应用图标角标
+          try {
+            final convos = await IMService.instance.getConversationList();
+            int total = 0;
+            for (final c in convos) {
+              total += c.unreadCount;
+            }
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, total);
+            return total;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_total_unread 失败: $e');
+            return 0;
+          }
+        }
+
+      case '@im_subscribe_inbox':
+        {
+          // 每次调用都会重置 global._im 在当前 _variables 里的初值（loadConfig
+          // 切换 app 后老的 _im 会被清掉，新 app 调一次就有了）
+          setVariable('global._im', {
+            'tick': 0,
+            'last_message': null,
+            'current_user_id': IMService.instance.currentUserId,
+          });
+          // 监听只挂一次：interpreter 整个生命周期共用同一个 sub
+          _imInboxSub ??= IMService.instance.newMessageStream.listen((msg) {
+            try {
+              final current = getVariable('global._im');
+              final tick = (current is Map ? (current['tick'] as int? ?? 0) : 0) + 1;
+              setVariable('global._im', {
+                'tick': tick,
+                'last_message': _messageToMap(msg),
+                'current_user_id': IMService.instance.currentUserId,
+              });
+            } catch (e) {
+              debugPrint('[JSON DSL] im inbox listener 失败: $e');
+            }
+          });
+          return true;
+        }
+
       case '@get_app_config':
         final bindPath = resolvedArgs['bind'] as String?;
         if (bindPath != null) {
@@ -2534,6 +2823,15 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Widget 构建 ============
 
   Widget buildWidget(BuildContext context, Map<String, dynamic> json) {
+    // 通用 visible 字段：
+    //   - 布尔/模板/jsonlogic 都支持，求值为 false 时返回 SizedBox.shrink
+    //   - 没写 visible 字段视为永远显示（默认行为）
+    //   - 这里同时把外层 position 也吃掉，避免 false 还占 flex 空间
+    if (json.containsKey('visible')) {
+      if (!_evaluateBool(json['visible'])) {
+        return const SizedBox.shrink();
+      }
+    }
     final widgetBuilder = JsonWidgetBuilder();
     final child = widgetBuilder.build(context, json, this);
     final position = json['position'] as Map<String, dynamic>?;
@@ -2700,11 +2998,169 @@ class JsonInterpreter extends ChangeNotifier {
   @override
   void dispose() {
     _detachLifecycleListener();
+    _imInboxSub?.cancel();
+    _imInboxSub = null;
     for (final controller in _textControllers.values) {
       controller.dispose();
     }
     _textControllers.clear();
     super.dispose();
+  }
+
+  // ── IM helpers ──────────────────────────────────────────────────────
+  /// 把 OpenIM 列表（friends / conversations / friend_applications）里的
+  /// face_url 字段从 Supabase 回填一次。
+  ///
+  /// Why: OpenIM 的 user.faceURL 只在用户首次注册时写一次，之后用户在 Supabase
+  /// 改头像不会同步过去——所以 OpenIM 列表里 face_url 多半是空。Supabase 才是
+  /// avatar 的真实源。这里 N 个用户并发查后端 search 接口（已带 60s 缓存），
+  /// 一次刷新一般就 1-2 个新用户产生网络成本，可接受。
+  Future<void> _backfillFaceUrls(
+    List<Map<String, dynamic>> items, {
+    required String idField,
+    required String faceField,
+    required String nicknameField,
+  }) async {
+    if (items.isEmpty) return;
+    final ids = items
+        .map((m) => m[idField]?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+    if (ids.isEmpty) return;
+    final supaMap = await IMService.instance.lookupUsersFromSupabase(ids);
+    if (supaMap.isEmpty) return;
+    for (final item in items) {
+      final id = item[idField]?.toString() ?? '';
+      final supa = supaMap[id];
+      if (supa == null) continue;
+      final supaFace = supa['face_url']?.toString() ?? '';
+      if (supaFace.isNotEmpty) item[faceField] = supaFace;
+      // 昵称同样可能更新过；非空时盖一下，让显示用最新值
+      final supaName = supa['nickname']?.toString() ?? '';
+      if (supaName.isNotEmpty) item[nicknameField] = supaName;
+    }
+  }
+
+  // OpenIM SDK 单聊 conversationID 约定：si_<a>_<b>，a/b 按字典序排序。
+  // 拿不到自己的 IM userID 时返回 null（一般是没登录或 SDK 没初始化）。
+  String? _singleChatConversationId(String otherUserId) {
+    final myId = IMService.instance.currentUserId;
+    if (myId == null || myId.isEmpty || otherUserId.isEmpty) return null;
+    final ids = [myId, otherUserId]..sort();
+    return 'si_${ids[0]}_${ids[1]}';
+  }
+
+  Map<String, dynamic> _friendInfoToMap(FriendInfo f) {
+    return {
+      'user_id': f.userID ?? '',
+      'nickname': f.nickname ?? '',
+      'face_url': f.faceURL ?? '',
+      'remark': f.remark ?? '',
+    };
+  }
+
+  Map<String, dynamic> _friendApplicationToMap(FriendApplicationInfo a) {
+    return {
+      'from_user_id': a.fromUserID ?? '',
+      'from_nickname': a.fromNickname ?? '',
+      'from_face_url': a.fromFaceURL ?? '',
+      'req_msg': a.reqMsg ?? '',
+      'handle_result': a.handleResult ?? 0, // 0=待处理 1=已同意 -1=已拒绝
+      'create_time': a.createTime ?? 0,
+    };
+  }
+
+  Map<String, dynamic> _messageToMap(Message m) {
+    String text;
+    switch (m.contentType) {
+      case MessageType.text:
+        text = m.textElem?.content ?? '';
+        break;
+      case MessageType.picture:
+        text = '[图片]';
+        break;
+      case MessageType.video:
+        text = '[视频]';
+        break;
+      case MessageType.voice:
+        text = '[语音]';
+        break;
+      case MessageType.file:
+        text = '[文件]';
+        break;
+      default:
+        text = '[消息]';
+    }
+    final myId = IMService.instance.currentUserId ?? '';
+    final sendId = m.sendID ?? '';
+    final isMe = sendId == myId && sendId.isNotEmpty;
+    final sendTime = m.sendTime ?? 0;
+    final senderNick = m.senderNickname ?? '';
+    // 他人显示名兜底：nick 为空时回退到 sendId（不要让 UI 出现空白发送者）
+    final otherDisplay = senderNick.isNotEmpty ? senderNick : sendId;
+    return {
+      'client_msg_id': m.clientMsgID ?? '',
+      'send_id': sendId,
+      'recv_id': m.recvID ?? '',
+      'send_time': sendTime,
+      'content_type': m.contentType ?? 101,
+      'text': text,
+      'sender_nickname': senderNick,
+      'sender_face_url': m.senderFaceUrl ?? '',
+      'is_me': isMe,
+      // 给 JSON-APP 用的"另一面"flag：is_me 取反，配合 widget visible 字段做
+      // 自他分支渲染时不用写 jsonlogic `{"!": [...]}`
+      'is_other': !isMe,
+      // 预格式化字段：JSON-DSL 不支持条件 / 时间格式表达式，所以在这里算好
+      'display_time': _formatChatTime(sendTime),
+      'display_sender': isMe ? '我' : otherDisplay,
+      // 微信风格气泡配色：自己绿色（#95EC69），他人白色
+      'bubble_color': isMe ? '#95EC69' : '#FFFFFF',
+      'bubble_text_color': '#000000',
+    };
+  }
+
+  Map<String, dynamic> _conversationToMap(ConversationInfo c) {
+    String latest;
+    final lm = c.latestMsg;
+    if (lm == null) {
+      latest = '';
+    } else {
+      latest = _messageToMap(lm)['text'] as String? ?? '';
+    }
+    final unread = c.unreadCount;
+    final latestTime = c.latestMsgSendTime ?? 0;
+    return {
+      'conversation_id': c.conversationID,
+      'user_id': c.userID ?? '',
+      'show_name': c.showName ?? '',
+      'face_url': c.faceURL ?? '',
+      'latest_text': latest,
+      'latest_time': latestTime,
+      'unread_count': unread,
+      // 预格式化：unread 为 0 时空字符串（绑 text.value 直接隐藏徽标视觉）
+      'display_unread': unread > 0 ? unread.toString() : '',
+      'display_time': _formatChatTime(latestTime),
+    };
+  }
+
+  /// 把 epoch 毫秒时间戳格式化为 IM 列表常见的"今天 HH:mm / 昨天 / MM-dd"。
+  /// 0 / 负数 → 空串（用于"暂无消息"等场景）。
+  String _formatChatTime(int millis) {
+    if (millis <= 0) return '';
+    final dt = DateTime.fromMillisecondsSinceEpoch(millis);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dtDay = DateTime(dt.year, dt.month, dt.day);
+    final diff = today.difference(dtDay).inDays;
+    String two(int n) => n.toString().padLeft(2, '0');
+    // 时钟漂移 / 服务器时间快于本地时（diff < 0）也按"今天 HH:mm"渲染，
+    // 避免出现 "−1 天前" 之类怪字符串。
+    if (diff <= 0) return '${two(dt.hour)}:${two(dt.minute)}';
+    if (diff == 1) return '昨天';
+    if (diff < 7) return '$diff天前';
+    return '${two(dt.month)}-${two(dt.day)}';
   }
 }
 
