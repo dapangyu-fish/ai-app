@@ -617,7 +617,7 @@
 | `text` | `Text` | `value` | `style` |
 | `button` | `FilledButton` / `OutlinedButton` / `TextButton` | `label` | `action`, `variant`, `icon`, `style`, `disabled` |
 | `input` | `TextField` | `placeholder` / `bind` | `maxLines`, `keyboardType`, `obscureText`, `prefix`, `suffix`, `prefixIcon`, `suffixIcon`, `label`, `style` |
-| `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留), `separator`(默认 `"divider"` 画 1px 分隔线；`"none"` 关掉，聊天气泡 / 自定义卡片用) |
+| `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留), `separator`(默认 `"divider"` 画 1px 分隔线；`"none"` 关掉，聊天气泡 / 自定义卡片用), `scrollToEnd`(true 时初次渲染 + items 增多时自动滚到底，聊天页用) |
 | `reorderable_list` | `ReorderableListView.builder` | `source`, `item_template`, `bind` | `onReorder`, `emptyText`, `padding`, `itemKey`(默认 `id`)。拖完自动写回 `bind` 变量；onReorder 回调可拿到 `params.from` / `params.to` / `params.list` |
 | `skeleton` | 自实现 shimmer | — | `width`, `height`, `borderRadius`, `loading`(布尔, 与 `child` 联用), `child`(loading=true 时用 child 撑形状再覆盖 shimmer，false 时透传) |
 | `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |

@@ -34,6 +34,8 @@ class JsonListWidget extends JsonBaseWidget {
     // separator: "none" 时不画横线（聊天气泡列表 / 卡片网格用），
     // 默认（不写或 "divider"）保留 1px 分隔线，跟历史行为一致
     final separator = json['separator']?.toString() ?? 'divider';
+    // scrollToEnd: true 时进入页面 / 列表项数增加时自动滚到底（聊天页用）
+    final scrollToEnd = json['scrollToEnd'] == true;
     // 跨屏导航时保留滚动位置：JSON 里给 list 设 "key": "唯一名"，
     // 框架包成 PageStorageKey，Flutter 的 PageStorage 自动存/取 scroll offset
     final keyStr = json['key']?.toString();
@@ -123,18 +125,13 @@ class JsonListWidget extends JsonBaseWidget {
     }
 
     final totalCount = items.length + (onLoadMore != null ? 1 : 0);
-    Widget listView = separator == 'none'
-        ? ListView.builder(
-            key: pageKey,
-            itemCount: totalCount,
-            itemBuilder: itemBuilder,
-          )
-        : ListView.separated(
-            key: pageKey,
-            itemCount: totalCount,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: itemBuilder,
-          );
+    Widget listView = _AutoScrollListView(
+      pageKey: pageKey,
+      itemCount: totalCount,
+      separator: separator,
+      itemBuilder: itemBuilder,
+      scrollToEnd: scrollToEnd,
+    );
 
     // 下拉刷新包裹
     if (onRefresh != null) {
@@ -145,6 +142,83 @@ class JsonListWidget extends JsonBaseWidget {
     }
 
     return Expanded(child: listView);
+  }
+}
+
+/// ListView 的轻量包装：scrollToEnd=true 时第一帧 + 每次 items 变多都跳到底，
+/// 用于聊天页打开后直接停在最新消息（不写 reverse 让数据保持升序原样）。
+class _AutoScrollListView extends StatefulWidget {
+  final Key? pageKey;
+  final int itemCount;
+  final String separator;
+  final Widget Function(BuildContext, int) itemBuilder;
+  final bool scrollToEnd;
+
+  const _AutoScrollListView({
+    this.pageKey,
+    required this.itemCount,
+    required this.separator,
+    required this.itemBuilder,
+    required this.scrollToEnd,
+  });
+
+  @override
+  State<_AutoScrollListView> createState() => _AutoScrollListViewState();
+}
+
+class _AutoScrollListViewState extends State<_AutoScrollListView> {
+  late final ScrollController _controller;
+  int _lastCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController();
+    if (widget.scrollToEnd) {
+      _scheduleJumpToEnd();
+    }
+    _lastCount = widget.itemCount;
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoScrollListView old) {
+    super.didUpdateWidget(old);
+    if (widget.scrollToEnd && widget.itemCount > _lastCount) {
+      _scheduleJumpToEnd();
+    }
+    _lastCount = widget.itemCount;
+  }
+
+  void _scheduleJumpToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.hasClients) return;
+      _controller.jumpTo(_controller.position.maxScrollExtent);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.separator == 'none') {
+      return ListView.builder(
+        key: widget.pageKey,
+        controller: _controller,
+        itemCount: widget.itemCount,
+        itemBuilder: widget.itemBuilder,
+      );
+    }
+    return ListView.separated(
+      key: widget.pageKey,
+      controller: _controller,
+      itemCount: widget.itemCount,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: widget.itemBuilder,
+    );
   }
 }
 

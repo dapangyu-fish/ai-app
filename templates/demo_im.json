@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.4.4",
+    "version": "1.4.5",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
@@ -543,6 +543,7 @@
                 "source": "{{ global.messages }}",
                 "emptyText": "还没有消息，发条招呼吧",
                 "separator": "none",
+                "scrollToEnd": true,
                 "item_template": {
                   "type": "container",
                   "layout": "row",
