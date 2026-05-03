@@ -348,7 +348,31 @@
 | `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
 | `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
 
-### 4.10 主题 / 多语言 / 生命周期
+### 4.10 私信 / 好友（IM）
+
+> ⚠️ 这些 action 直接对接 OpenIM SDK，建议**通过 `lib_im` 库间接调用**（包装好的 nicely-named function：`searchUsers` / `sendFriendRequest` / `listFriends` / `getMessages` / `sendText` 等），而不是在 JSON-APP 里直接写 `@im_*`。本节仅用作 lib_im 的实现底层参考。
+
+| 函数 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `@im_current_user_id` | `{ "bind": "..." }` | string \| null | 我的 IM userId。未登录返回 null |
+| `@im_search_users` | `{ "q": "...", "bind": "..." }` | List | 关键词模糊搜邮箱/昵称/UUID（≥2 字符），每条 `{im_user_id, nickname, email, face_url}` |
+| `@im_send_friend_request` | `{ "user_id": "...", "message": "..." }` | bool | 发好友申请，对方在 friend_applications 里能看到 |
+| `@im_friend_applications` | `{ "bind": "..." }` | List | 我收到的好友申请。每条 `{from_user_id, from_nickname, from_face_url, req_msg, handle_result, create_time}`（handle_result：0=待处理 1=已同意 -1=已拒绝） |
+| `@im_accept_friend` / `@im_reject_friend` | `{ "user_id": "..." }` | bool | 通过 / 拒绝某用户的好友申请 |
+| `@im_friend_list` | `{ "bind": "..." }` | List | 我的好友列表。每条 `{user_id, nickname, face_url, remark}` |
+| `@im_conversations` | `{ "bind": "..." }` | List | 会话列表。每条 `{conversation_id, user_id, show_name, face_url, latest_text, latest_time, unread_count}` |
+| `@im_history` | `{ "user_id": "...", "count": 30, "bind": "..." }` | List | 单聊历史（与某 user 之间）。每条 `{client_msg_id, send_id, recv_id, send_time, content_type, text, sender_nickname, sender_face_url, is_me}` |
+| `@im_send_text` | `{ "user_id": "...", "text": "..." }` | Map \| null | 给某 user 发文本，返回已发送 message 对象 |
+| `@im_mark_read` | `{ "user_id": "..." }` | bool | 标记与某 user 的会话为已读 |
+| `@im_subscribe_inbox` | `{}` | bool | 订阅新消息（幂等）。订阅后 `global._im` 会被维护：`{tick, last_message, current_user_id}`，每来一条新消息 `tick` +1 + `last_message` 更新一次。UI 绑 `tick` 即可被动刷新（参见下方"实时新消息"） |
+
+**实时新消息约定**：
+- JSON-APP 在 `steps` / 启动函数里调一次 `@lib_im.subscribeInbox`（即 `@im_subscribe_inbox`）
+- 之后 `global._im.tick` 每收到一条新消息会 +1，`global._im.last_message` 更新到最新一条
+- 想做"自动刷新会话列表"，绑 `tick` 触发 rebuild + 在适当时机重新调 `listConversations` 即可
+- 平台限制：iOS / Android 才有真实数据；macOS / Web / Windows / Linux 上 IM SDK 无效，所有 `@im_*` 安全降级返回空数据，不会崩
+
+### 4.11 主题 / 多语言 / 生命周期
 
 | 函数 | 参数 | 说明 |
 |------|------|------|

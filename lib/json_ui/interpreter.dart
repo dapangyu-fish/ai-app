@@ -4,11 +4,13 @@
 // 自定义扩展操作符通过 jl.add() 注册
 // 变量路径格式：global.xxx / loop.item / params.xxx（兼容 $.global.xxx 旧格式）
 // ───────────────────────────────────────────────
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -23,6 +25,7 @@ import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
+import '../im/im_service.dart';
 import 'drift_database.dart';
 import '../main.dart' show appThemeMode, appLifecycleEvent;
 import '../i18n/locale_controller.dart' show LocaleController;
@@ -59,6 +62,11 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Toast 重叠显示管理 ============
   final List<OverlayEntry> _activeToasts = [];
   static const int _maxOverlappingToasts = 20;
+
+  // ============ IM 反应式订阅 ============
+  // @im_subscribe_inbox 第一次被调用时挂上 IMService.newMessageStream 监听，
+  // 整个 interpreter 生命周期复用同一个订阅，避免重入创建多个 listener。
+  StreamSubscription<Message>? _imInboxSub;
 
   // ============ Getters ============
 
@@ -1825,6 +1833,201 @@ class JsonInterpreter extends ChangeNotifier {
           return null;
         }
 
+      // ── IM（私信 / 好友）──
+      // 这一组 action 把 IMService（OpenIM SDK 封装）暴露给 JSON-DSL；
+      // lib_im 把这些原子 action 包成 nicely-named function 给上层 JSON-APP 用。
+      // 平台限制：iOS / Android 才支持，其它平台 SDK 抛 MissingPluginException —
+      // 这里统一 try / catch 兜底返回 null/false，让 JSON-APP 不会因平台不支持而崩。
+      case '@im_current_user_id':
+        {
+          final id = IMService.instance.currentUserId;
+          final bindPath = resolvedArgs['bind'] as String?;
+          if (bindPath != null) setVariable(bindPath, id);
+          return id;
+        }
+
+      case '@im_search_users':
+        {
+          final q = (resolvedArgs['q'] as String?) ?? '';
+          try {
+            final users = await IMService.instance.searchUsers(q);
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, users);
+            return users;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_search_users 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_send_friend_request':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final reqMsg = (resolvedArgs['message'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            return await IMService.instance.sendFriendApplication(
+              userID: userId,
+              reqMsg: reqMsg,
+            );
+          } catch (e) {
+            debugPrint('[JSON DSL] im_send_friend_request 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_friend_applications':
+        {
+          try {
+            final apps = await IMService.instance.getIncomingFriendApplications();
+            final list = apps.map(_friendApplicationToMap).toList();
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_friend_applications 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_accept_friend':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            return await IMService.instance.acceptFriendApplication(fromUserID: userId);
+          } catch (e) {
+            debugPrint('[JSON DSL] im_accept_friend 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_reject_friend':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            return await IMService.instance.rejectFriendApplication(fromUserID: userId);
+          } catch (e) {
+            debugPrint('[JSON DSL] im_reject_friend 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_friend_list':
+        {
+          try {
+            final friends = await IMService.instance.getFriendList();
+            final list = friends.map(_friendInfoToMap).toList();
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_friend_list 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_conversations':
+        {
+          try {
+            final convos = await IMService.instance.getConversationList();
+            final list = convos.map(_conversationToMap).toList();
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_conversations 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_history':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final count = (resolvedArgs['count'] is num)
+              ? (resolvedArgs['count'] as num).toInt()
+              : 30;
+          if (userId.isEmpty) return const [];
+          try {
+            final convId = _singleChatConversationId(userId);
+            if (convId == null) return const [];
+            final messages = await IMService.instance.getHistoryMessages(
+              conversationID: convId,
+              count: count,
+            );
+            // SDK 返回顺序通常是新到旧，反转方便 UI 直接顺序渲染
+            final list = messages.reversed.map(_messageToMap).toList();
+            final bindPath = resolvedArgs['bind'] as String?;
+            if (bindPath != null) setVariable(bindPath, list);
+            return list;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_history 失败: $e');
+            return const [];
+          }
+        }
+
+      case '@im_send_text':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final text = (resolvedArgs['text'] as String?) ?? '';
+          if (userId.isEmpty || text.isEmpty) return null;
+          try {
+            final convId = _singleChatConversationId(userId);
+            if (convId == null) return null;
+            final msg = await IMService.instance.sendTextMessage(
+              conversationID: convId,
+              text: text,
+              userID: userId,
+            );
+            return msg != null ? _messageToMap(msg) : null;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_send_text 失败: $e');
+            return null;
+          }
+        }
+
+      case '@im_mark_read':
+        {
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          if (userId.isEmpty) return false;
+          try {
+            final convId = _singleChatConversationId(userId);
+            if (convId == null) return false;
+            await IMService.instance.markConversationRead(conversationID: convId);
+            return true;
+          } catch (e) {
+            debugPrint('[JSON DSL] im_mark_read 失败: $e');
+            return false;
+          }
+        }
+
+      case '@im_subscribe_inbox':
+        {
+          // 每次调用都会重置 global._im 在当前 _variables 里的初值（loadConfig
+          // 切换 app 后老的 _im 会被清掉，新 app 调一次就有了）
+          setVariable('global._im', {
+            'tick': 0,
+            'last_message': null,
+            'current_user_id': IMService.instance.currentUserId,
+          });
+          // 监听只挂一次：interpreter 整个生命周期共用同一个 sub
+          _imInboxSub ??= IMService.instance.newMessageStream.listen((msg) {
+            try {
+              final current = getVariable('global._im');
+              final tick = (current is Map ? (current['tick'] as int? ?? 0) : 0) + 1;
+              setVariable('global._im', {
+                'tick': tick,
+                'last_message': _messageToMap(msg),
+                'current_user_id': IMService.instance.currentUserId,
+              });
+            } catch (e) {
+              debugPrint('[JSON DSL] im inbox listener 失败: $e');
+            }
+          });
+          return true;
+        }
+
       case '@get_app_config':
         final bindPath = resolvedArgs['bind'] as String?;
         if (bindPath != null) {
@@ -2627,11 +2830,97 @@ class JsonInterpreter extends ChangeNotifier {
   @override
   void dispose() {
     _detachLifecycleListener();
+    _imInboxSub?.cancel();
+    _imInboxSub = null;
     for (final controller in _textControllers.values) {
       controller.dispose();
     }
     _textControllers.clear();
     super.dispose();
+  }
+
+  // ── IM helpers ──────────────────────────────────────────────────────
+  // OpenIM SDK 单聊 conversationID 约定：si_<a>_<b>，a/b 按字典序排序。
+  // 拿不到自己的 IM userID 时返回 null（一般是没登录或 SDK 没初始化）。
+  String? _singleChatConversationId(String otherUserId) {
+    final myId = IMService.instance.currentUserId;
+    if (myId == null || myId.isEmpty || otherUserId.isEmpty) return null;
+    final ids = [myId, otherUserId]..sort();
+    return 'si_${ids[0]}_${ids[1]}';
+  }
+
+  Map<String, dynamic> _friendInfoToMap(FriendInfo f) {
+    return {
+      'user_id': f.userID ?? '',
+      'nickname': f.nickname ?? '',
+      'face_url': f.faceURL ?? '',
+      'remark': f.remark ?? '',
+    };
+  }
+
+  Map<String, dynamic> _friendApplicationToMap(FriendApplicationInfo a) {
+    return {
+      'from_user_id': a.fromUserID ?? '',
+      'from_nickname': a.fromNickname ?? '',
+      'from_face_url': a.fromFaceURL ?? '',
+      'req_msg': a.reqMsg ?? '',
+      'handle_result': a.handleResult ?? 0, // 0=待处理 1=已同意 -1=已拒绝
+      'create_time': a.createTime ?? 0,
+    };
+  }
+
+  Map<String, dynamic> _messageToMap(Message m) {
+    String text;
+    switch (m.contentType) {
+      case MessageType.text:
+        text = m.textElem?.content ?? '';
+        break;
+      case MessageType.picture:
+        text = '[图片]';
+        break;
+      case MessageType.video:
+        text = '[视频]';
+        break;
+      case MessageType.voice:
+        text = '[语音]';
+        break;
+      case MessageType.file:
+        text = '[文件]';
+        break;
+      default:
+        text = '[消息]';
+    }
+    final myId = IMService.instance.currentUserId ?? '';
+    return {
+      'client_msg_id': m.clientMsgID ?? '',
+      'send_id': m.sendID ?? '',
+      'recv_id': m.recvID ?? '',
+      'send_time': m.sendTime ?? 0,
+      'content_type': m.contentType ?? 101,
+      'text': text,
+      'sender_nickname': m.senderNickname ?? '',
+      'sender_face_url': m.senderFaceUrl ?? '',
+      'is_me': (m.sendID ?? '') == myId,
+    };
+  }
+
+  Map<String, dynamic> _conversationToMap(ConversationInfo c) {
+    String latest;
+    final lm = c.latestMsg;
+    if (lm == null) {
+      latest = '';
+    } else {
+      latest = _messageToMap(lm)['text'] as String? ?? '';
+    }
+    return {
+      'conversation_id': c.conversationID,
+      'user_id': c.userID ?? '',
+      'show_name': c.showName ?? '',
+      'face_url': c.faceURL ?? '',
+      'latest_text': latest,
+      'latest_time': c.latestMsgSendTime ?? 0,
+      'unread_count': c.unreadCount,
+    };
   }
 }
 
