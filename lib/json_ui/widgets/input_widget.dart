@@ -13,7 +13,8 @@ class JsonInputWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    final placeholder = json['placeholder']?.toString() ?? '';
+    final placeholder = interpreter.resolveTemplate(
+        json['placeholder']?.toString() ?? '');
     final bindPath = json['bind'] as String?;
     final maxLines = (json['maxLines'] as num?)?.toInt() ?? 1;
     final obscureText = json['obscureText'] == true;
@@ -21,7 +22,8 @@ class JsonInputWidget extends JsonBaseWidget {
     final suffix = json['suffix']?.toString();
     final prefixIcon = json['prefixIcon']?.toString();
     final suffixIcon = json['suffixIcon']?.toString();
-    final label = json['label']?.toString();
+    final rawLabel = json['label']?.toString();
+    final label = rawLabel != null ? interpreter.resolveTemplate(rawLabel) : null;
     final style = json['style'] as Map<String, dynamic>? ?? {};
 
     // 键盘类型

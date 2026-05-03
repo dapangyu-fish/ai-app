@@ -15,7 +15,8 @@ class JsonDatePickerWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final bindPath = json['bind'] as String?;
-    final placeholder = json['placeholder']?.toString() ?? '请选择日期';
+    final placeholder = interpreter.resolveTemplate(
+        json['placeholder']?.toString() ?? '请选择日期');
     final label = json['label']?.toString();
     final prefixIcon = json['prefixIcon']?.toString() ?? 'calendar';
     final action =

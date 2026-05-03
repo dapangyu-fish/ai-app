@@ -27,7 +27,8 @@ class JsonListWidget extends JsonBaseWidget {
     }
 
     final itemTemplate = json['item_template'] as Map<String, dynamic>?;
-    final emptyText = json['emptyText']?.toString() ?? '暂无数据';
+    final emptyText = interpreter.resolveTemplate(
+        json['emptyText']?.toString() ?? '暂无数据');
     final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
     final onLoadMore = json['onLoadMore'] as Map<String, dynamic>?;
     // 跨屏导航时保留滚动位置：JSON 里给 list 设 "key": "唯一名"，

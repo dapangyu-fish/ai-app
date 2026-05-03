@@ -1808,7 +1808,10 @@ class _TabScreenViewState extends State<_TabScreenView> {
     final navItems = <BottomNavigationBarItem>[];
     for (final tab in tabs) {
       if (tab is Map<String, dynamic>) {
-        final label = tab['label']?.toString() ?? '';
+        // tab.label 走 resolveTemplate，支持 {{ t('xxx') }} / {{ global.xxx }}
+        // ——和 button.label / text.value 一致
+        final label = widget.interpreter
+            .resolveTemplate(tab['label']?.toString() ?? '');
         final iconName = tab['icon']?.toString();
         final iconData = iconName != null
             ? IconRegistry.get(iconName) ?? Icons.circle
