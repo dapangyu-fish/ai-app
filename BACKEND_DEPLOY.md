@@ -62,10 +62,12 @@ docker-compose up -d
 ### 数据库配置
 
 - 主机: 127.0.0.1
-- 端口: 5433
+- 端口: 15433
 - 数据库名: jsonapp
 - 用户名: jsonapp
-- 密码: hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg
+- 密码: 见 `/root/ai-app/backend/.env` 中的 `DB_PASSWORD`
+
+> ⚠️ git 历史里曾出现过的老密码（`hOad2ANFL...`）只对老机有效，老机下线后即作废。新机已轮换。
 
 ### 数据库初始化
 
@@ -178,12 +180,14 @@ SSH 登录服务器后，使用 Python 脚本直接操作数据库和 MinIO：
 
 ```bash
 ssh root@myapp-backend.dapangyu.work
-/opt/miniconda3/bin/python -c "
+# 加载 .env 里的密钥后再 exec python，避免明文落盘
+set -a && source /root/ai-app/backend/.env && set +a
+/opt/ai-app-venv/bin/python -c "
 import json, uuid, subprocess, tempfile, os, psycopg2, psycopg2.extras
 
-DB_CONFIG = dict(host='127.0.0.1', port=5433, dbname='jsonapp', user='jsonapp',
-                 password='hOad2ANFLla23weqMU3c7IeYKOZRLL8rrXZVcDAkpjg')
-MINIO_PUBLIC_URL = 'https://myapp-oss-endpoint.dapangyu.work'
+DB_CONFIG = dict(host='127.0.0.1', port=15433, dbname='jsonapp', user='jsonapp',
+                 password=os.environ['DB_PASSWORD'])
+MINIO_PUBLIC_URL = os.environ.get('MINIO_PUBLIC_URL', 'https://myapp-oss-endpoint.dapangyu.work')
 
 # 读取要发布的 JSON 文件
 with open('/root/ai-app/templates/<文件名>.json', 'r') as f:
