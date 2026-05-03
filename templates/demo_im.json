@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "type": "app",
     "description": "lib_im 演示 — 微信式双 tab（聊天 / 通讯录）+ 气泡聊天页",
     "author": "demo"
@@ -577,14 +577,14 @@
                   "children": [
                     {
                       "type": "container",
-                      "visible": "{{ loop.item.is_other }}",
+                      "visible": {"!": [{"var": "loop.item.is_me"}]},
                       "layout": "row",
                       "crossAxisAlignment": "start",
                       "children": [
                         {
                           "type": "avatar",
                           "url": "{{ loop.item.sender_face_url }}",
-                          "text": "{{ loop.item.display_sender }}",
+                          "text": "{{ loop.item.sender_nickname }}",
                           "size": 36
                         },
                         {"type": "spacer", "width": 8},
@@ -595,13 +595,13 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "{{ loop.item.display_sender }} · {{ loop.item.display_time }}",
+                              "value": "{{ loop.item.sender_nickname }}",
                               "style": {"fontSize": 11, "color": "#888888"}
                             },
                             {"type": "spacer", "height": 2},
                             {
                               "type": "container",
-                              "color": "{{ loop.item.bubble_color }}",
+                              "color": "#FFFFFF",
                               "borderRadius": 8,
                               "padding": 10,
                               "children": [
@@ -631,13 +631,13 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "{{ loop.item.display_time }}",
+                              "value": "我",
                               "style": {"fontSize": 11, "color": "#888888"}
                             },
                             {"type": "spacer", "height": 2},
                             {
                               "type": "container",
-                              "color": "{{ loop.item.bubble_color }}",
+                              "color": "#95EC69",
                               "borderRadius": 8,
                               "padding": 10,
                               "children": [
