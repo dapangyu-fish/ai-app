@@ -7,11 +7,16 @@ import io
 import json
 import os
 import uuid
+from datetime import timedelta
 from flask import request, jsonify, send_from_directory
 from minio import Minio
 from config import TEMPLATES_DIR, MINIO_PUBLIC_URL, MINIO_ENDPOINT, MINIO_SECURE, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
 from database import db_query, db_execute
 from auth import require_auth, require_role
+
+# AI 临时 JSON（ai-chat-temp bucket）的预签名链接有效期。
+# 服务端生成的 JSON 和客户端上传的 JSON 共用此值；改这一处全部生效。
+TEMP_JSON_EXPIRY_HOURS = 24
 
 _minio_client = Minio(
     MINIO_ENDPOINT,
@@ -22,7 +27,7 @@ _minio_client = Minio(
 
 
 def _minio_upload(bucket, key, data, content_type="application/json"):
-    """上传文件到 MinIO（使用 Python SDK），返回预签名 URL（1小时有效期）"""
+    """上传文件到 MinIO 并返回预签名 GET URL（有效期 TEMP_JSON_EXPIRY_HOURS）"""
     if isinstance(data, dict):
         data = json.dumps(data, ensure_ascii=False, indent=2)
     data_bytes = data.encode("utf-8") if isinstance(data, str) else data
@@ -35,21 +40,18 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
         content_type=content_type,
     )
 
-    # 返回预签名 GET URL（1小时有效期）而不是公开 URL
-    from datetime import timedelta
-    presigned_url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=1))
-    return presigned_url
+    return _minio_client.presigned_get_object(
+        bucket, key, expires=timedelta(hours=TEMP_JSON_EXPIRY_HOURS)
+    )
 
 
-def _minio_presigned_put(bucket, key, expires_hours=1):
-    from datetime import timedelta
+def _minio_presigned_put(bucket, key, expires_hours=TEMP_JSON_EXPIRY_HOURS):
     if not _minio_client.bucket_exists(bucket):
         _minio_client.make_bucket(bucket)
     return _minio_client.presigned_put_object(bucket, key, expires=timedelta(hours=expires_hours))
 
 
-def _minio_presigned_get(bucket, key, expires_hours=1):
-    from datetime import timedelta
+def _minio_presigned_get(bucket, key, expires_hours=TEMP_JSON_EXPIRY_HOURS):
     if not _minio_client.bucket_exists(bucket):
         _minio_client.make_bucket(bucket)
     url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))

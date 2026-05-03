@@ -47,7 +47,7 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 
 当你生成了新的或修改好的 JSON-APP 代码后，你**必须**执行以下步骤：
 1. 使用工具把生成的 JSON 代码写入到临时文件（如 `/tmp/app.json`）。
-2. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh /tmp/app.json 1`。该命令会输出一个带签名的 URL（有效期1小时）。
+2. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh /tmp/app.json`。该命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
 3. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
 4. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
 
