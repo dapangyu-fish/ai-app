@@ -37,6 +37,18 @@ class AppConfig {
     defaultValue: 'https://myapp-registry.dapangyu.work',
   );
 
+  /// OpenIM HTTP API 地址（fallback；正常由后端 /api/im/token 下发覆盖）
+  static const String imApiUrl = String.fromEnvironment(
+    'IM_API_URL',
+    defaultValue: 'https://myapp-im.dapangyu.work',
+  );
+
+  /// OpenIM WebSocket 地址（fallback；正常由后端 /api/im/token 下发覆盖）
+  static const String imWsUrl = String.fromEnvironment(
+    'IM_WS_URL',
+    defaultValue: 'wss://myapp-im.dapangyu.work',
+  );
+
   // ==================== API端点配置 ====================
 
   /// AI对话API端点
@@ -94,6 +106,8 @@ class AppConfig {
     print('Supabase URL: $supabaseUrl');
     print('MinIO URL: $minioUrl');
     print('Registry URL: $registryUrl');
+    print('IM API URL: $imApiUrl');
+    print('IM WS URL: $imWsUrl');
     print('Debug Mode: $isDebug');
     print('Logging Enabled: $enableLogging');
     print('=======================================');

@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:record/record.dart';
+import '../config/app_config.dart';
 
 void main() {
   runApp(const TestSherpaApp());
@@ -33,7 +34,7 @@ class TestSherpaPage extends StatefulWidget {
 }
 
 class _TestSherpaPageState extends State<TestSherpaPage> {
-  static const String _ossBase = 'https://myapp-oss-endpoint.dapangyu.work/models';
+  static final String _ossBase = AppConfig.ossModelsBaseUrl;
   static const String _modelPath = 'sherpa-onnx/streaming-zipformer-small-bilingual-zh-en-int8';
   static const Map<String, String> _modelFiles = {
     'encoder': 'encoder-epoch-99-avg-1.int8.onnx',

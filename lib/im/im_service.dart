@@ -114,8 +114,8 @@ class IMService {
     try {
       await OpenIM.iMManager.initSDK(
         platformID: _getPlatformID(),
-        apiAddr: _apiUrl ?? 'http://127.0.0.1:10002',
-        wsAddr: _wsUrl ?? 'ws://127.0.0.1:10001',
+        apiAddr: _apiUrl ?? AppConfig.imApiUrl,
+        wsAddr: _wsUrl ?? AppConfig.imWsUrl,
         dataDir: dataDir,
         listener: OnConnectListener(
           onConnectSuccess: () {
