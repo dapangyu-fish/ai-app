@@ -31,6 +31,9 @@ class JsonListWidget extends JsonBaseWidget {
         json['emptyText']?.toString() ?? '暂无数据');
     final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
     final onLoadMore = json['onLoadMore'] as Map<String, dynamic>?;
+    // separator: "none" 时不画横线（聊天气泡列表 / 卡片网格用），
+    // 默认（不写或 "divider"）保留 1px 分隔线，跟历史行为一致
+    final separator = json['separator']?.toString() ?? 'divider';
     // 跨屏导航时保留滚动位置：JSON 里给 list 设 "key": "唯一名"，
     // 框架包成 PageStorageKey，Flutter 的 PageStorage 自动存/取 scroll offset
     final keyStr = json['key']?.toString();
@@ -103,27 +106,35 @@ class JsonListWidget extends JsonBaseWidget {
     }
 
     // 构建列表
-    Widget listView = ListView.separated(
-      key: pageKey,
-      itemCount: items.length + (onLoadMore != null ? 1 : 0),
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (ctx, index) {
-        // 最后一项：加载更多
-        if (index == items.length && onLoadMore != null) {
-          return _LoadMoreTrigger(
-            onTrigger: () => interpreter.executeAction(onLoadMore, ctx),
-          );
-        }
-
-        final itemWidget = interpreter.buildWidgetInLoopContext(
-          context: ctx,
-          json: itemTemplate,
-          loopItem: items[index],
-          loopIndex: index,
+    Widget itemBuilder(BuildContext ctx, int index) {
+      // 最后一项：加载更多
+      if (index == items.length && onLoadMore != null) {
+        return _LoadMoreTrigger(
+          onTrigger: () => interpreter.executeAction(onLoadMore, ctx),
         );
-        return IntrinsicHeight(child: itemWidget);
-      },
-    );
+      }
+      final itemWidget = interpreter.buildWidgetInLoopContext(
+        context: ctx,
+        json: itemTemplate,
+        loopItem: items[index],
+        loopIndex: index,
+      );
+      return IntrinsicHeight(child: itemWidget);
+    }
+
+    final totalCount = items.length + (onLoadMore != null ? 1 : 0);
+    Widget listView = separator == 'none'
+        ? ListView.builder(
+            key: pageKey,
+            itemCount: totalCount,
+            itemBuilder: itemBuilder,
+          )
+        : ListView.separated(
+            key: pageKey,
+            itemCount: totalCount,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: itemBuilder,
+          );
 
     // 下拉刷新包裹
     if (onRefresh != null) {
