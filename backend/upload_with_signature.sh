@@ -1,6 +1,7 @@
 #!/bin/bash
 # 上传文件到 MinIO 并返回带签名的 URL
-# 参数: $1 = 文件路径, $2 = 有效期（小时，默认1）
+# 参数: $1 = 文件路径, $2 = 有效期（小时，默认 24）
+# 默认与 backend/store.py 的 TEMP_JSON_EXPIRY_HOURS 保持一致
 
 set -e
 
@@ -10,7 +11,7 @@ if [ $# -lt 1 ]; then
 fi
 
 FILE_PATH="$1"
-EXPIRY_HOURS="${2:-1}"
+EXPIRY_HOURS="${2:-24}"
 
 if [ ! -f "$FILE_PATH" ]; then
     echo "Error: File not found: $FILE_PATH" >&2
