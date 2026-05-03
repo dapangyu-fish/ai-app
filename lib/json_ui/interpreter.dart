@@ -1925,41 +1925,42 @@ class JsonInterpreter extends ChangeNotifier {
 
       case '@im_get_user_info':
         {
-          // 按 userId 取对方在 OpenIM 的公开资料（昵称 / 头像 / ex）
-          // 单用户便利接口：args.user_id 字符串 → 返回 dict
-          // 批量接口：args.user_ids 列表 → 返回 list<dict>
-          // bind 可选：把结果同步写到变量
-          final singleId = (resolvedArgs['user_id'] as String?) ?? '';
-          final rawIds = resolvedArgs['user_ids'];
-          List<String> ids;
-          final isBatch = rawIds is List;
-          if (isBatch) {
-            ids = rawIds.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
-          } else {
-            ids = singleId.isNotEmpty ? [singleId] : const [];
-          }
-          if (ids.isEmpty) {
-            final bindPath = resolvedArgs['bind'] as String?;
-            if (bindPath != null) setVariable(bindPath, isBatch ? const [] : null);
-            return isBatch ? const [] : null;
+          // 按 userId 取对方公开资料（昵称 / 头像）。
+          // 实现走 IMService.searchUsers（→ 后端 /api/im/users/search → Supabase
+          // user_metadata.avatar_url），不用 OpenIM SDK 的 userManager.getUsersInfo——
+          // OpenIM 那边的 faceURL 只在用户首次注册时写一次，Supabase 头像之后改了
+          // 不会同步过去，所以拿到的永远是空。Supabase 是 avatar 的真实来源。
+          // 返回 {user_id, nickname, face_url, email}，找不到返 null。
+          final userId = (resolvedArgs['user_id'] as String?) ?? '';
+          final bindPath = resolvedArgs['bind'] as String?;
+          if (userId.isEmpty) {
+            if (bindPath != null) setVariable(bindPath, null);
+            return null;
           }
           try {
-            final infos = await IMService.instance.getUsersInfo(ids);
-            final list = infos.map((u) => {
-              'user_id': u.userID ?? '',
-              'nickname': u.nickname ?? '',
-              'face_url': u.faceURL ?? '',
-              'ex': u.ex ?? '',
-            }).toList();
-            final result = isBatch
-                ? list
-                : (list.isNotEmpty ? list.first : null);
-            final bindPath = resolvedArgs['bind'] as String?;
+            // searchUsers 拿 q 做模糊匹配（email / username / uid 三选一）。
+            // 把 userId 当 q 传，命中且 im_user_id 完全相等的就是目标。
+            final hits = await IMService.instance.searchUsers(userId);
+            final match = hits.firstWhere(
+              (u) => (u['im_user_id']?.toString() ?? '') == userId,
+              orElse: () => const {},
+            );
+            if (match.isEmpty) {
+              if (bindPath != null) setVariable(bindPath, null);
+              return null;
+            }
+            final result = {
+              'user_id': match['im_user_id']?.toString() ?? '',
+              'nickname': match['nickname']?.toString() ?? '',
+              'face_url': match['face_url']?.toString() ?? '',
+              'email': match['email']?.toString() ?? '',
+            };
             if (bindPath != null) setVariable(bindPath, result);
             return result;
           } catch (e) {
             debugPrint('[JSON DSL] im_get_user_info 失败: $e');
-            return isBatch ? const [] : null;
+            if (bindPath != null) setVariable(bindPath, null);
+            return null;
           }
         }
 
