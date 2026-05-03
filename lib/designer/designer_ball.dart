@@ -840,6 +840,7 @@ class _DesignerBallState extends State<DesignerBall>
       },
       onError: (e) {
         _streamDone = true;
+        _streamSub = null;
         _sessionHeartbeatTimer?.cancel();
         _sessionHeartbeatTimer = null;
         setState(() {
@@ -851,6 +852,7 @@ class _DesignerBallState extends State<DesignerBall>
       },
       onDone: () {
         _streamDone = true;
+        _streamSub = null;
         _sessionHeartbeatTimer?.cancel();
         _sessionHeartbeatTimer = null;
         // SSE 流结束后，统一处理累积的指令
