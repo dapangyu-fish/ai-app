@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
+import 'local_data_wiper.dart';
+
+/// 检测到切换账号时的信息载体（旧账号 → 新账号）。
+/// UI 拿到非空对象就意味着 token 还**没有**写入本地，得先弹确认框。
+class AccountSwitchInfo {
+  final String prevEmail;
+  final String newEmail;
+  const AccountSwitchInfo({required this.prevEmail, required this.newEmail});
+}
 
 /// 后端鉴权服务 — 所有请求通过 Flask 后端代理到 Supabase
 class AuthService {
@@ -11,15 +20,34 @@ class AuthService {
   static const String _tokenKey = 'auth_access_token';
   static const String _refreshKey = 'auth_refresh_token';
   static const String _userKey = 'auth_user';
+  // 上一次成功登录的 email；切账号检测的依据。
+  // 复用历史上 AuthPage 用来"prefill 上次邮箱"的同名 key（值语义一致：上次登录成功的 email）。
+  static const String _lastEmailKey = 'auth_last_email';
 
   static String? _accessToken;
   static String? _refreshToken;
   static Map<String, dynamic>? _user;
 
+  // 检测到切换账号时缓存的 pending 数据。等用户确认/取消后才落地。
+  // 不变量：_pendingAuthData != null 时，prefs 里**没有**对应的 token；
+  // 反之亦然。任何登录路径成功后都必须先复位这两个字段（要么提交、要么丢弃）。
+  static Map<String, dynamic>? _pendingAuthData;
+  static String? _pendingEmail;
+  static AccountSwitchInfo? _pendingAccountSwitch;
+
   static String avatarCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
 
   // 通知监听者
   static final ValueNotifier<bool> authNotifier = ValueNotifier(false);
+
+  /// 上次成功登录的 email；首次登录返回 null。
+  static Future<String?> getLastLoginEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastEmailKey);
+  }
+
+  /// 当前是否有"待确认的切账号" pending —— UI 用来决定要不要弹确认框。
+  static AccountSwitchInfo? get pendingAccountSwitch => _pendingAccountSwitch;
 
   static bool get isLoggedIn => _accessToken != null;
   static Map<String, dynamic>? get currentUser {
@@ -91,6 +119,10 @@ class AuthService {
   }
 
   /// 注册
+  ///
+  /// 调用方拿到结果后：
+  /// - 如果 `data['needs_confirm'] == true` → 跳到 OTP 页让用户输验证码
+  /// - 否则成功登录；此时再检查 [pendingAccountSwitch]，非空就要弹确认框
   static Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -111,18 +143,18 @@ class AuthService {
       throw Exception(data['error'] ?? '注册失败');
     }
 
-    // 如果已自动确认，保存 token
+    // 如果已自动确认（拿到 token），按账号切换规则处理
     if (data['access_token'] != null) {
-      _accessToken = data['access_token'];
-      _refreshToken = data['refresh_token'];
-      _user = data['user'];
-      await _saveLocal();
+      await _commitOrStashAuth(data, email);
     }
 
     return data;
   }
 
-  /// 登录
+  /// 登录。成功返回后，UI **必须**检查 [pendingAccountSwitch]：
+  /// - null：正常登录完成（首次登录 / 同邮箱重登），可以直接进首页
+  /// - 非 null：检测到切换账号，token 还没落地，调
+  ///   [confirmAccountSwitchAndWipe] 或 [cancelPendingAccountSwitch]
   static Future<void> signIn({
     required String email,
     required String password,
@@ -138,13 +170,11 @@ class AuthService {
       throw Exception(data['error'] ?? '登录失败');
     }
 
-    _accessToken = data['access_token'];
-    _refreshToken = data['refresh_token'];
-    _user = data['user'];
-    await _saveLocal();
+    await _commitOrStashAuth(data, email);
   }
 
-  /// 验证邮箱 OTP
+  /// 验证邮箱 OTP。和 [signIn] 一样，成功返回后 UI 必须检查
+  /// [pendingAccountSwitch] 决定是否弹确认框。
   static Future<void> verifyOtp({
     required String email,
     required String token,
@@ -160,13 +190,79 @@ class AuthService {
       throw Exception(data['error'] ?? '验证失败');
     }
 
-    // 验证成功，保存 token
+    // 验证成功，按账号切换规则处理 token
     if (data['access_token'] != null) {
-      _accessToken = data['access_token'];
-      _refreshToken = data['refresh_token'];
-      _user = data['user'];
-      await _saveLocal();
+      await _commitOrStashAuth(data, email);
     }
+  }
+
+  /// 拿到 server 返回的 access_token 后调这个：
+  /// - 如果 email 与 prefs 里"上次登录的 email"不同 → 暂存 pending，**不**写 prefs
+  /// - 否则直接落地（_saveLocal + 写 _lastEmailKey）
+  ///
+  /// 调用前会先把上一次悬挂着的 pending 清掉（避免不同登录路径互相干扰）。
+  static Future<void> _commitOrStashAuth(
+      Map<String, dynamic> data, String email) async {
+    // 复位老 pending（保护：例如先 register 拿到 pending，又走 signIn 成功覆盖）
+    _pendingAuthData = null;
+    _pendingEmail = null;
+    _pendingAccountSwitch = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    final prevEmail = prefs.getString(_lastEmailKey);
+    final isSwitch = prevEmail != null &&
+        prevEmail.isNotEmpty &&
+        prevEmail.toLowerCase() != email.toLowerCase();
+
+    if (isSwitch) {
+      // 不写 prefs / 不动 _accessToken。等 UI 弹完确认框再决定
+      _pendingAuthData = data;
+      _pendingEmail = email;
+      _pendingAccountSwitch =
+          AccountSwitchInfo(prevEmail: prevEmail, newEmail: email);
+      return;
+    }
+
+    // 同邮箱重登 / 首次登录：直接落地
+    _accessToken = data['access_token'];
+    _refreshToken = data['refresh_token'];
+    _user = data['user'];
+    await _saveLocal();
+    await prefs.setString(_lastEmailKey, email);
+  }
+
+  /// 用户在确认框点了"确认清除并继续"。
+  /// 步骤：先清除一切磁盘数据 → 再把 pending token 落地。
+  static Future<void> confirmAccountSwitchAndWipe() async {
+    final pending = _pendingAuthData;
+    final pendingEmail = _pendingEmail;
+    if (pending == null || pendingEmail == null) {
+      throw StateError('confirmAccountSwitchAndWipe: 没有 pending');
+    }
+
+    // 1. 清除（包括所有 prefs，所以 _lastEmailKey 也会被清掉，下面再写回）
+    await wipeAllLocalAccountData();
+
+    // 2. 把新账号 token 写入（此时 prefs 是空的）
+    _accessToken = pending['access_token'];
+    _refreshToken = pending['refresh_token'];
+    _user = pending['user'];
+    await _saveLocal();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastEmailKey, pendingEmail);
+
+    // 3. 复位 pending
+    _pendingAuthData = null;
+    _pendingEmail = null;
+    _pendingAccountSwitch = null;
+  }
+
+  /// 用户在确认框点了"取消"。丢弃 pending token，停留在登录页。
+  /// 旧账号的 prefs / 数据原样保留。
+  static void cancelPendingAccountSwitch() {
+    _pendingAuthData = null;
+    _pendingEmail = null;
+    _pendingAccountSwitch = null;
   }
 
   /// 重新发送验证邮件
