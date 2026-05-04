@@ -62,11 +62,16 @@ def create_app():
     app.add_url_rule("/api/auth/quota", methods=["GET"], view_func=auth.get_quota)
 
     # 注册 Chat 路由
+    # 老路径（保留兼容老客户端）：单一 /chat 端点直推 SSE，client 断 = 任务断
     app.add_url_rule("/chat", methods=["POST"], view_func=claude_chat.chat)
     app.add_url_rule("/api/ai/session_status", methods=["GET"], view_func=claude_chat.session_status)
-    # DEPRECATED: 以下接口已废弃，使用 /chat 替代
-    # app.add_url_rule("/api/ai/generate", methods=["POST"], view_func=chat.generate_app)
-    # app.add_url_rule("/api/ai/fix-app", methods=["POST"], view_func=chat.fix_app)
+    # 新路径（feat/ai-background-push）：worker 与 HTTP 解耦，支持后台续跑 + SSE 重连
+    # 详见 backend/ARCHITECTURE.md §3
+    app.add_url_rule("/api/ai/chat/start", methods=["POST"], view_func=claude_chat.chat_start)
+    app.add_url_rule("/api/ai/chat/<session_id>/stream", methods=["GET"], view_func=claude_chat.chat_stream)
+    app.add_url_rule("/api/ai/chat/<session_id>/result", methods=["GET"], view_func=claude_chat.chat_result)
+    app.add_url_rule("/api/ai/chat/<session_id>/status", methods=["GET"], view_func=claude_chat.chat_status_v2)
+    app.add_url_rule("/api/ai/chat/<session_id>/abort", methods=["POST"], view_func=claude_chat.chat_abort)
     app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=claude_chat.list_providers)
     app.add_url_rule("/api/ai/upload_url", methods=["GET"], view_func=store.get_ai_upload_url)
 

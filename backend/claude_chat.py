@@ -492,3 +492,281 @@ def chat():
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "Access-Control-Allow-Origin": "*"}
     )
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 新流（feat/ai-background-push）：worker 与 HTTP 连接解耦
+#
+# 老 /chat 端点保持不变（client 切走 = 任务断），新流：
+#   POST /api/ai/chat/start             → 起 worker，立刻返 session_id
+#   GET  /api/ai/chat/<id>/stream       → SSE 从 Redis 读，可断重连（last_id 续）
+#   GET  /api/ai/chat/<id>/result       → 一次性返回最终文本（任务完成后）
+#   GET  /api/ai/chat/<id>/status       → meta 元信息（轻量轮询用）
+#   POST /api/ai/chat/<id>/abort        → 请求取消
+#
+# 详见 ARCHITECTURE.md §3。
+# ════════════════════════════════════════════════════════════════════════════
+
+import time as _time
+import ai_session
+
+
+@require_auth
+def chat_start():
+    """提交 AI 任务到 worker，立即返回 session_id。
+
+    Body: {messages, session_id, provider?}
+    Resp: {session_id, status: "running"}
+    """
+    user_id = request.supabase_user.get("id")
+    role = request.user_role
+
+    used, limit, remaining = get_quota_info(user_id, role, ROLE_QUOTAS)
+    if remaining <= 0:
+        return jsonify({"error": "配额已用完", "quota": {"used": used, "limit": limit}}), 429
+
+    body = request.get_json(silent=True) or {}
+    messages = body.get("messages", [])
+    session_id = body.get("session_id")
+    provider_id = body.get("provider")
+    # force_restart=true：用户输入新消息时用，先杀掉同 session 还在跑的 worker 再起新的
+    # 默认 false：双击 send / 重连等场景幂等返回 resumed:true
+    force_restart = bool(body.get("force_restart", False))
+
+    if not messages or not session_id:
+        return jsonify({"error": "messages 和 session_id 是必需的"}), 400
+
+    last_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            last_msg = m.get("content", "")
+            break
+    if not last_msg:
+        return jsonify({"error": "未找到用户消息"}), 400
+
+    store = ai_session.SessionStore()
+    existing = store.get_meta(session_id)
+
+    if existing and existing.get("status") == ai_session.STATUS_RUNNING:
+        if force_restart:
+            # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的
+            # 关键不变量：必须确认旧 worker 已经写完 STATUS_ABORTED 才能 create_meta，
+            # 否则旧 worker 后写的 set_status 会覆盖新 worker 的 fresh meta，
+            # 导致客户端 /status 看到 status=aborted → 又触发重试 → 死循环
+            logger.info(f"[CHAT_START] sid={session_id} force_restart：先 abort 旧 worker")
+            ai_session.abort_session(session_id)  # 内部 _kill_proc 阻塞最多 2s 等 proc 死
+            # abort_session 返回时 proc 已死，worker 线程通常 1-10ms 内 set_status(ABORTED) 完成
+            # 5s 是给 Redis 抖动 / GIL 争抢的余量
+            terminal_observed = False
+            for _ in range(50):  # 5s
+                _time.sleep(0.1)
+                m = store.get_meta(session_id)
+                if not m or m.get("status") in ai_session.TERMINAL_STATUSES:
+                    terminal_observed = True
+                    break
+            if not terminal_observed:
+                # 旧 worker 还没把 status 写成 terminal，但 proc 已死的话风险有限
+                if not ai_session.is_session_proc_alive(session_id):
+                    logger.warning(
+                        f"[CHAT_START] sid={session_id} 5s 没等到 STATUS_ABORTED 但 proc 已死，"
+                        f"继续 create_meta；旧 worker 后续 set_status 可能造成短暂状态错乱"
+                    )
+                else:
+                    logger.error(
+                        f"[CHAT_START] sid={session_id} 5s 后 proc 仍存活，非常异常"
+                    )
+            ai_session.clear_abort(session_id)
+        else:
+            # 同一 session 双连接（前后台切换、重连）：幂等返回，让 client 去 /stream 续读
+            logger.info(f"[CHAT_START] sid={session_id} 已在跑，复用")
+            return jsonify({
+                "session_id": session_id,
+                "status": "running",
+                "resumed": True,
+            })
+
+    # 扣配额（沿用老逻辑：先扣，worker 失败损 1 容忍）
+    increment_quota(user_id)
+    new_remaining = remaining - 1
+
+    # 写 meta + 提交 worker
+    store.create_meta(
+        session_id,
+        user_id=user_id,
+        provider=provider_id or DEFAULT_PROVIDER,
+        quota_used=used + 1,
+        quota_limit=limit,
+        quota_remaining=new_remaining,
+    )
+    ai_session.submit_worker(
+        session_id, last_msg, provider_id,
+        user_id=user_id,
+        quota_used=used + 1,
+        quota_limit=limit,
+        quota_remaining=new_remaining,
+    )
+
+    logger.info(f"[CHAT_START] sid={session_id} worker 已提交")
+    return jsonify({
+        "session_id": session_id,
+        "status": "running",
+        "resumed": False,
+    })
+
+
+def _build_sse_stream(session_id: str, last_id: str):
+    """生成器：从 Redis stream 读事件 + 心跳。
+
+    每条事件输出标准 SSE 格式 `id: <entry_id>\\ndata: <json>\\n\\n`，
+    entry_id 是 Redis Stream 的游标，client 重连时用 ?last_id=<entry_id> 续读。
+
+    - 先回放 last_id 之后的所有事件
+    - 然后阻塞读新事件（block 5s 内没新数据 → 心跳）
+    - meta.status 进入 terminal 状态后，把剩余事件读完再发 [DONE]
+    - 僵尸 session（status=running 但进程已死，常见于后端重启）→ 主动标 FAILED + needs_retry
+    """
+    store = ai_session.SessionStore()
+    cursor = last_id
+    started_at = _time.time()
+    # 僵尸检测：第一次检查在 5s 后（给 worker 注册 _session_procs 留余量），之后每 10s 检查一次
+    next_zombie_check = started_at + 5
+
+    while True:
+        items = store.read_events(session_id, last_id=cursor, block_ms=5000, count=100)
+
+        for entry_id, ev in items:
+            yield f'id: {entry_id}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n'
+            cursor = entry_id
+
+        if not items:
+            # 5s 没新事件 → 心跳保活 nginx / iOS 网络栈
+            yield ': heartbeat\n\n'
+
+        meta = store.get_meta(session_id)
+        status = meta.get("status", "")
+
+        if status in ai_session.TERMINAL_STATUSES:
+            # 任务结束。再读一次（不阻塞）确保没漏事件
+            tail = store.read_events(session_id, last_id=cursor, block_ms=0, count=100)
+            for entry_id, ev in tail:
+                yield f'id: {entry_id}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n'
+                cursor = entry_id
+            yield 'data: [DONE]\n\n'
+            return
+
+        # 僵尸检测：status 是 running 但进程不在 _session_procs（dict 在内存里，
+        # 后端重启就丢了；worker 线程也可能因 OOM / 异常没写完 status 就崩了）
+        # 客户端 idle timeout 不会触发（心跳还在），所以必须 backend 主动告诉它
+        if status == ai_session.STATUS_RUNNING and _time.time() >= next_zombie_check:
+            next_zombie_check = _time.time() + 10
+            if not ai_session.is_session_proc_alive(session_id):
+                logger.warning(
+                    f"[CHAT_STREAM] sid={session_id} 僵尸 session（running 但 proc 不在）"
+                    f"——大概率后端重启过，标 FAILED + needs_retry"
+                )
+                err_evt = {
+                    "error": "服务器进程异常，任务已中断",
+                    "needs_retry": True,
+                }
+                store.append_event(session_id, err_evt)
+                store.set_status(
+                    session_id,
+                    ai_session.STATUS_FAILED,
+                    error="server process gone (zombie session)",
+                )
+                # 不在这里 return，让下一轮 while 循环走 TERMINAL_STATUSES 分支自然 [DONE]，
+                # 顺便把刚 append 的 needs_retry 事件读出来发给 client
+
+        # 防止单次 SSE 连接卡 10 分钟以上（即使心跳还在）
+        # 客户端会自动重连续读，没数据丢失
+        if _time.time() - started_at > 600:
+            logger.info(f"[CHAT_STREAM] sid={session_id} 单次连接超过 10 分钟，主动关闭让 client 重连")
+            return
+
+
+@require_auth
+def chat_stream(session_id):
+    """SSE 端点：从 Redis 读 worker 写入的事件序列。
+
+    Query: ?last_id=<stream entry id>，重连续读用；首次连传 "0" 或省略表示从头。
+    """
+    store = ai_session.SessionStore()
+    meta = store.get_meta(session_id)
+    if not meta:
+        return jsonify({"error": "session 不存在或已过期"}), 404
+
+    # 鉴权：只允许该 session 的发起者读
+    if meta.get("user_id") != request.supabase_user.get("id"):
+        return jsonify({"error": "无权访问此 session"}), 403
+
+    last_id = request.args.get("last_id", "0").strip() or "0"
+
+    return Response(
+        stream_with_context(_build_sse_stream(session_id, last_id)),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "X-Accel-Buffering": "no",  # nginx 不要 buffer SSE
+        },
+    )
+
+
+@require_auth
+def chat_result(session_id):
+    """一次性返回最终结果（任务完成后用）。"""
+    store = ai_session.SessionStore()
+    meta = store.get_meta(session_id)
+    if not meta:
+        return jsonify({"error": "session 不存在或已过期"}), 404
+    if meta.get("user_id") != request.supabase_user.get("id"):
+        return jsonify({"error": "无权访问此 session"}), 403
+
+    return jsonify({
+        "session_id": session_id,
+        "status": meta.get("status"),
+        "final_text": meta.get("final_text", ""),
+        "final_thinking": meta.get("final_thinking", ""),
+        "error": meta.get("error", ""),
+        "started_at": meta.get("started_at"),
+        "finished_at": meta.get("finished_at"),
+    })
+
+
+@require_auth
+def chat_status_v2(session_id):
+    """轻量元信息（不含 final_text，不含 events）。"""
+    store = ai_session.SessionStore()
+    meta = store.get_meta(session_id)
+    if not meta:
+        return jsonify({"error": "session 不存在或已过期"}), 404
+    if meta.get("user_id") != request.supabase_user.get("id"):
+        return jsonify({"error": "无权访问此 session"}), 403
+
+    # 不返回 final_text 这种大字段；想要完整结果走 /result
+    return jsonify({
+        "session_id": session_id,
+        "status": meta.get("status"),
+        "event_count": int(meta.get("event_count", "0") or "0"),
+        "started_at": meta.get("started_at"),
+        "finished_at": meta.get("finished_at"),
+        "error": meta.get("error", ""),
+        "process_alive": ai_session.is_session_proc_alive(session_id),
+    })
+
+
+@require_auth
+def chat_abort(session_id):
+    """请求取消任务。worker 几秒内会感知并把 status 设为 aborted。"""
+    store = ai_session.SessionStore()
+    meta = store.get_meta(session_id)
+    if not meta:
+        return jsonify({"error": "session 不存在或已过期"}), 404
+    if meta.get("user_id") != request.supabase_user.get("id"):
+        return jsonify({"error": "无权访问此 session"}), 403
+    if meta.get("status") in ai_session.TERMINAL_STATUSES:
+        return jsonify({"ok": True, "already_terminal": True})
+
+    ai_session.abort_session(session_id)
+    return jsonify({"ok": True})

@@ -140,6 +140,17 @@ GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
 # Claude CLI 路径（可通过环境变量覆盖）
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "/root/.nvm/versions/node/v22.22.2/bin/claude")
 
+# AI session Redis（独立部署的 ai-session-redis，与 OpenIM 那个 Redis 隔离）
+# 数据：24h TTL 的 AI session 状态 + SSE 事件序列。详见 ARCHITECTURE.md §3
+AI_SESSION_REDIS_HOST = os.environ.get("AI_SESSION_REDIS_HOST", "127.0.0.1")
+AI_SESSION_REDIS_PORT = int(os.environ.get("AI_SESSION_REDIS_PORT", "16379"))
+AI_SESSION_REDIS_PASSWORD = os.environ.get("AI_SESSION_REDIS_PASSWORD", "")
+AI_SESSION_REDIS_TTL_SECONDS = int(os.environ.get("AI_SESSION_REDIS_TTL_SECONDS", "86400"))
+
+# AI worker 并发上限（线程池大小）
+# eventlet monkey_patch 后 thread 实际是 greenlet，开销低；瓶颈是同时跑的 claude CLI 进程数 + RAM
+AI_WORKER_MAX_CONCURRENCY = int(os.environ.get("AI_WORKER_MAX_CONCURRENCY", "200"))
+
 
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}

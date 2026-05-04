@@ -10,6 +10,7 @@ import 'sherpa_asr_service.dart';
 import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
+import '../auth/auth_service.dart';
 import '../main.dart' show JsonDslApp;
 
 /// 语音识别方式枚举
@@ -148,9 +149,10 @@ class _DesignerBallState extends State<DesignerBall>
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
-  Timer? _sessionHeartbeatTimer;
-  DateTime? _lastAiEventAt;
-  bool _streamDone = false;
+  // 老的 5s 独立 heartbeat 已被删掉。新逻辑：
+  // - SSE 内部 20s idle timeout → _checkAliveCarefully 三态探活
+  // - 后端 worker 自身在 CLI 异常退出 / 外部 kill 时主动写 needs_retry 事件
+  // 两条路径都收敛到 needsRetry → UI 弹重试按钮，不再需要独立 timer。
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
   Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
   final List<ChatMessage> _messages = [];
@@ -191,8 +193,14 @@ class _DesignerBallState extends State<DesignerBall>
     _sherpaAsr.loadConfig().then((_) {
       setState(() {});
     });
-    // 加载 AI 对话 session
-    _chatService.loadSession();
+    // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
+    // 不 await，不阻塞 UI 启动
+    _chatService.loadSession().then((_) => _maybeResumeUnfinishedSession());
+
+    // DesignerBall 挂在 MaterialApp.builder 里凌驾所有路由，**不会**因为 AuthGate
+    // 切换 (FilePickerPage <-> AuthPage) 而重建。所以"用户掉登录后重新登录"这个
+    // 场景下，initState 不会再跑——必须显式监听登录态切换，重新触发 resume。
+    AuthService.authNotifier.addListener(_onAuthChanged);
 
     // 提前初始化原生语音识别（参照测试应用的成功实践）
     _initNativeSpeech();
@@ -292,14 +300,30 @@ class _DesignerBallState extends State<DesignerBall>
     _longPressTimer?.cancel();
     _streamSub?.cancel();
     _sherpaAsr.dispose();
-    _chatService.abort();
+    // Plan A 关键：app 关掉 worker 继续在 backend 跑，下次启动 _maybeResumeUnfinishedSession 接回来
+    // 所以 dispose 只关本地 SSE，绝不通知 backend abort
+    _chatService.abortLocal();
     _animController.dispose();
     _pulseController.dispose();
     _countdownController.dispose();
     _speech?.stop();
     _scrollController.dispose();
     AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
+    AuthService.authNotifier.removeListener(_onAuthChanged);
     super.dispose();
+  }
+
+  /// 登录态变化：从未登录 → 已登录时，重新检查是否有未完成会话需要恢复。
+  /// 这弥补了 DesignerBall 不会随 AuthGate 切换而重建的问题（它在 MaterialApp.builder 里）。
+  void _onAuthChanged() {
+    if (!mounted) return;
+    if (AuthService.authNotifier.value) {
+      // 重新登录后重新加载本地 session 信息（_lastUserMessage 等可能在断网期间陈旧）
+      // 然后异步触发恢复
+      _chatService.loadSession().then((_) {
+        if (mounted) _maybeResumeUnfinishedSession();
+      });
+    }
   }
 
   void _initPosition(Size screenSize) {
@@ -774,7 +798,6 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _sendTextToAi(String text, {bool skipUserMessage = false}) {
     _cancelCurrentStream();
-    _startSessionHeartbeat();
 
     if (!skipUserMessage) {
       setState(() {
@@ -785,16 +808,25 @@ class _DesignerBallState extends State<DesignerBall>
       _scrollToBottom();
     }
 
-    // 用于累积流式事件中的指令
-    Map<String, dynamic>? _pendingJsonApp;
-    String? _pendingRequestAction;
-    String? _pendingFailedJsonUrl;
-    String? _pendingFailedJsonError;
-    String? _pendingJsonUrl;
+    _attachAiStream(_chatService.sendStream(text));
+  }
 
-    _streamSub = _chatService.sendStream(text).listen(
+  /// 把一个 AI 事件流接到 UI。三处用：
+  /// (1) _sendTextToAi 正常发消息
+  /// (2) 启动恢复 (_maybeResumeUnfinishedSession 拿到的 ResumeStreaming)
+  /// (3) 重试按钮 (_handleRetryLastTurn)
+  ///
+  /// 调用方负责在调本方法之前把 user 气泡 / 空 assistant 气泡先注入好。
+  void _attachAiStream(Stream<ChatEvent> stream) {
+    // 用于累积流式事件中的指令，[DONE] 时统一处理
+    Map<String, dynamic>? pendingJsonApp;
+    String? pendingRequestAction;
+    String? pendingFailedJsonUrl;
+    String? pendingFailedJsonError;
+    String? pendingJsonUrl;
+
+    _streamSub = stream.listen(
       (event) {
-        _markAiEvent();
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
@@ -812,12 +844,49 @@ class _DesignerBallState extends State<DesignerBall>
           _scrollToBottom();
           return;
         }
+        // worker 真死了 / 重连耗尽 / CLI 被外部 kill / CLI 异常退出
+        // → 把空气泡换成"中断"系统消息 + 重试按钮
+        // ⚠️ needsRetry 必须在 error 之前判断（同一事件常常两个字段都有：
+        //    backend 把 error 和 needs_retry:true 一起塞过来）
+        if (event.needsRetry) {
+          setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = '正在生成代码...';
+            // 如果同时有 error 且最后一个 assistant 气泡是空的，先把 error 写进去
+            // 这样用户既能看到"为啥失败了"也能看到下面的重试按钮
+            if (event.error != null &&
+                _messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                _messages.last.content.isEmpty) {
+              _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+            } else if (event.error == null &&
+                _messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                _messages.last.content.isEmpty) {
+              // 没 error 但有空气泡（idle timeout / 探活检测出来的纯断连）→ 删掉
+              _messages.removeLast();
+            }
+            // 已有 partial 内容时不动它，让用户看到 AI 已经流过的部分
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: 'AI 任务被中断，点击重试',
+              action: 'RETRY_LAST_TURN',
+            ));
+          });
+          _scrollToBottom();
+          return;
+        }
         if (event.error != null && event.content == null) {
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
             _generatingStatusMessage = '正在生成代码...';
-            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+            if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+              _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+            } else {
+              _messages.add(ChatMessage(role: 'assistant', content: event.error!));
+            }
           });
           _scrollToBottom();
           return;
@@ -825,21 +894,21 @@ class _DesignerBallState extends State<DesignerBall>
 
         // 累积指令，不立即处理
         if (event.requestAction != null) {
-          _pendingRequestAction = event.requestAction;
+          pendingRequestAction = event.requestAction;
           return;
         }
         if (event.jsonApp != null) {
-          _pendingJsonApp = event.jsonApp;
+          pendingJsonApp = event.jsonApp;
           _lastGeneratedJson = event.jsonApp;
           return;
         }
         if (event.failedJsonUrl != null) {
-          _pendingFailedJsonUrl = event.failedJsonUrl;
-          _pendingFailedJsonError = event.error;
+          pendingFailedJsonUrl = event.failedJsonUrl;
+          pendingFailedJsonError = event.error;
           return;
         }
         if (event.pendingJsonUrl != null) {
-          _pendingJsonUrl = event.pendingJsonUrl;
+          pendingJsonUrl = event.pendingJsonUrl;
           return;
         }
 
@@ -854,7 +923,6 @@ class _DesignerBallState extends State<DesignerBall>
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 (_messages.last.content.isEmpty || _messages.last.content.startsWith('💭'))) {
-              // 更新最后一条消息为思考内容
               _messages.last = ChatMessage(role: 'assistant', content: '💭 ${event.thinking!}');
             }
           });
@@ -865,14 +933,11 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            // 如果最后一条是思考消息，则追加新消息；否则更新最后一条
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 _messages.last.content.startsWith('💭')) {
-              // 思考过程后的内容，追加新消息
               _messages.add(ChatMessage(role: 'assistant', content: event.content!));
             } else if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-              // 普通内容，更新最后一条消息
               _messages.last = ChatMessage(role: 'assistant', content: event.content!);
             }
           });
@@ -883,63 +948,128 @@ class _DesignerBallState extends State<DesignerBall>
         }
       },
       onError: (e) {
-        _streamDone = true;
         _streamSub = null;
-        _sessionHeartbeatTimer?.cancel();
-        _sessionHeartbeatTimer = null;
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
           _generatingStatusMessage = '正在生成代码...';
-          _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+          if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+            _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+          } else {
+            _messages.add(ChatMessage(role: 'assistant', content: '出错了: $e'));
+          }
         });
       },
       onDone: () {
-        _streamDone = true;
         _streamSub = null;
-        _sessionHeartbeatTimer?.cancel();
-        _sessionHeartbeatTimer = null;
-        // SSE 流结束后，统一处理累积的指令
         setState(() {
           _isGeneratingJson = false;
           _generatingStatusMessage = '正在生成代码...';
 
-          // 处理请求上传当前应用（追加新消息，不替换）
-          if (_pendingRequestAction == 'upload_current_app') {
+          if (pendingRequestAction == 'upload_current_app') {
             _messages.add(ChatMessage(
               role: 'system',
               content: 'AI 需要获取当前应用的代码配置以进行修改：',
               action: 'UPLOAD_CURRENT_APP',
             ));
-          }
-          // 处理待用户确认下载并运行
-          else if (_pendingJsonUrl != null) {
+          } else if (pendingJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
               content: 'JSON-APP 已生成，点击下载并运行：',
-              jsonUrl: _pendingJsonUrl,
+              jsonUrl: pendingJsonUrl,
             ));
-          }
-          // 处理 JSON 下载失败
-          else if (_pendingFailedJsonUrl != null) {
+          } else if (pendingFailedJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
-              content: _pendingFailedJsonError ?? '下载 JSON 失败',
-              failedJsonUrl: _pendingFailedJsonUrl,
+              content: pendingFailedJsonError ?? '下载 JSON 失败',
+              failedJsonUrl: pendingFailedJsonUrl,
             ));
-          }
-          // 处理 JSON 应用生成成功
-          else if (_pendingJsonApp != null) {
+          } else if (pendingJsonApp != null) {
             _messages.add(ChatMessage(
               role: 'system',
               content: '🚀 点击试运行',
-              jsonApp: _pendingJsonApp,
+              jsonApp: pendingJsonApp,
             ));
           }
         });
         _scrollToBottom();
       },
     );
+  }
+
+  /// 重试按钮回调。3 秒 debounce 防止用户连点。
+  bool _retryDebouncing = false;
+  void _handleRetryLastTurn() {
+    if (_retryDebouncing) {
+      debugPrint('[DesignerBall] 重试 debounce 中，忽略');
+      return;
+    }
+    _retryDebouncing = true;
+    Future.delayed(const Duration(seconds: 3), () => _retryDebouncing = false);
+
+    setState(() {
+      // 移除 RETRY_LAST_TURN 那条系统消息
+      if (_messages.isNotEmpty &&
+          _messages.last.role == 'system' &&
+          _messages.last.action == 'RETRY_LAST_TURN') {
+        _messages.removeLast();
+      }
+      // 加一个新的空 assistant 气泡承接新流
+      _messages.add(ChatMessage(role: 'assistant', content: ''));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    _cancelCurrentStream();
+    _attachAiStream(_chatService.retryLastTurn());
+  }
+
+  /// app 启动时调一次：检查后端有没有上一轮未完成 / 已完成的任务，按情况注入消息
+  Future<void> _maybeResumeUnfinishedSession() async {
+    if (!mounted) return;
+    try {
+      final result = await _chatService.tryResumeUnfinished();
+      if (!mounted) return;
+      switch (result) {
+        case ResumeNothing():
+          break;
+        case ResumeCompleted(:final userMessage, :final assistantText, :final jsonUrl):
+          setState(() {
+            _messages.add(ChatMessage(role: 'user', content: userMessage));
+            _messages.add(ChatMessage(role: 'assistant', content: assistantText));
+            if (jsonUrl != null) {
+              _messages.add(ChatMessage(
+                role: 'system',
+                content: 'JSON-APP 已生成，点击下载并运行：',
+                jsonUrl: jsonUrl,
+              ));
+            }
+          });
+          _scrollToBottom();
+        case ResumeStreaming(:final userMessage, :final stream):
+          setState(() {
+            _messages.add(ChatMessage(role: 'user', content: userMessage));
+            _messages.add(ChatMessage(role: 'assistant', content: ''));
+            _isThinking = true;
+            _isGeneratingJson = true;
+            _generatingStatusMessage = '正在恢复上次对话...';
+          });
+          _scrollToBottom();
+          _attachAiStream(stream);
+        case ResumeNeedsRetry(:final userMessage):
+          setState(() {
+            _messages.add(ChatMessage(role: 'user', content: userMessage));
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: 'AI 任务被中断（可能服务器进程异常），点击重试',
+              action: 'RETRY_LAST_TURN',
+            ));
+          });
+          _scrollToBottom();
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] resume 失败 (静默): $e');
+    }
   }
 
   Future<void> _handleUploadCurrentApp() async {
@@ -1297,53 +1427,8 @@ class _DesignerBallState extends State<DesignerBall>
     _sendTextToAi(text, skipUserMessage: true);
   }
 
-  /// 标记最近一次 AI 事件时间，配合心跳判断是否真的卡住
-  void _markAiEvent() {
-    _lastAiEventAt = DateTime.now();
-  }
-
-  /// 启动一个 5 秒心跳，定期问后端 session 是否还活着
-  void _startSessionHeartbeat() {
-    _sessionHeartbeatTimer?.cancel();
-    _lastAiEventAt = DateTime.now();
-    _streamDone = false;
-    _sessionHeartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
-      if (!mounted || _streamDone) return;
-      final last = _lastAiEventAt;
-      if (last == null) return;
-      final silentFor = DateTime.now().difference(last).inSeconds;
-      if (silentFor < 5) return;
-      final alive = await _chatService.isSessionAlive();
-      if (!mounted || _streamDone) return;
-      if (!alive) {
-        debugPrint('[DesignerBall] Session process not alive, stop waiting');
-        _sessionHeartbeatTimer?.cancel();
-        _sessionHeartbeatTimer = null;
-        setState(() {
-          _isThinking = false;
-          _isGeneratingJson = false;
-          _generatingStatusMessage = '正在生成代码...';
-          if (_messages.isNotEmpty &&
-              _messages.last.role == 'assistant' &&
-              _messages.last.content.isEmpty) {
-            _messages.last = ChatMessage(role: 'assistant', content: 'AI 会话已中断，请重试');
-          }
-        });
-      } else if (silentFor >= 10 && mounted) {
-        setState(() {
-          _isGeneratingJson = true;
-          _generatingStatusMessage = 'AI 正在处理...';
-        });
-      }
-    });
-  }
-
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
   void _cancelCurrentStream() {
-    _sessionHeartbeatTimer?.cancel();
-    _sessionHeartbeatTimer = null;
-    _lastAiEventAt = null;
-    _streamDone = true;
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -1356,7 +1441,11 @@ class _DesignerBallState extends State<DesignerBall>
       }
       _streamSub?.cancel();
       _streamSub = null;
-      _chatService.abort();
+      // 只关本地：本方法的下游通常马上要 sendStream/retryLastTurn（带 force_restart），
+      // backend 自己会处理旧 worker。这里发 POST /abort 会和新 worker 起步竞态。
+      // 唯一例外是 _clearAndCloseChatMode (用户点清空)，那条路径走 _chatService.clear()
+      // → resetSession() → 内部用完整 abort()，不依赖这里
+      _chatService.abortLocal();
       setState(() => _isThinking = false);
     }
   }
@@ -1576,6 +1665,7 @@ class _DesignerBallState extends State<DesignerBall>
             onUploadCurrentApp: _handleUploadCurrentApp,
             onRetryDownload: _handleRetryDownload,
             onDownloadAndRun: _handleDownloadAndRun,
+            onRetryLastTurn: _handleRetryLastTurn,
             onRunJsonApp: (jsonConfig) {
               // 先调用外部回调，再清空聊天
               widget.onRunJsonApp?.call(jsonConfig);
@@ -1714,12 +1804,21 @@ class _DesignerBallState extends State<DesignerBall>
       iconColor = defaultFg;
     }
 
+    // 是否有后台 AI 会话（已经攒了消息或正在 stream）→ 给悬浮球加一圈外环表示
+    // 比原来在球内画小红点视觉上更克制
+    final hasBackgroundSession = _messages.isNotEmpty || _streamSub != null;
+    final ringColor = isDark ? const Color(0xFFFFB74D) : const Color(0xFFFB8C00);
+
     Widget ball = Container(
       width: _ballSize,
       height: _ballSize,
       decoration: BoxDecoration(
         color: ballColor,
         shape: BoxShape.circle,
+        // 后台会话指示：在球的边缘画一圈 amber 环
+        border: hasBackgroundSession
+            ? Border.all(color: ringColor, width: 2.5)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
@@ -1745,36 +1844,11 @@ class _DesignerBallState extends State<DesignerBall>
             : _chatMode
                 ? Icon(Icons.chat_bubble_outline,
                     color: iconColor, size: 26)
-                : Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        'D',
-                        style: TextStyle(
-                          color: iconColor,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      if (_messages.isNotEmpty)
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Container(
-                            width: 9,
-                            height: 9,
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.black : Colors.orangeAccent,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isDark ? Colors.white : Colors.black,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+                // 默认：黑白线性麦克风图标（替代原 'D' 字母）
+                : Icon(
+                    Icons.mic_none_outlined,
+                    color: iconColor,
+                    size: 26,
                   ),
       ),
     );
