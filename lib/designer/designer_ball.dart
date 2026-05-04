@@ -191,8 +191,9 @@ class _DesignerBallState extends State<DesignerBall>
     _sherpaAsr.loadConfig().then((_) {
       setState(() {});
     });
-    // 加载 AI 对话 session
-    _chatService.loadSession();
+    // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
+    // 不 await，不阻塞 UI 启动
+    _chatService.loadSession().then((_) => _maybeResumeUnfinishedSession());
 
     // 提前初始化原生语音识别（参照测试应用的成功实践）
     _initNativeSpeech();
@@ -785,14 +786,24 @@ class _DesignerBallState extends State<DesignerBall>
       _scrollToBottom();
     }
 
-    // 用于累积流式事件中的指令
-    Map<String, dynamic>? _pendingJsonApp;
-    String? _pendingRequestAction;
-    String? _pendingFailedJsonUrl;
-    String? _pendingFailedJsonError;
-    String? _pendingJsonUrl;
+    _attachAiStream(_chatService.sendStream(text));
+  }
 
-    _streamSub = _chatService.sendStream(text).listen(
+  /// 把一个 AI 事件流接到 UI。三处用：
+  /// (1) _sendTextToAi 正常发消息
+  /// (2) 启动恢复 (_maybeResumeUnfinishedSession 拿到的 ResumeStreaming)
+  /// (3) 重试按钮 (_handleRetryLastTurn)
+  ///
+  /// 调用方负责在调本方法之前把 user 气泡 / 空 assistant 气泡先注入好。
+  void _attachAiStream(Stream<ChatEvent> stream) {
+    // 用于累积流式事件中的指令，[DONE] 时统一处理
+    Map<String, dynamic>? pendingJsonApp;
+    String? pendingRequestAction;
+    String? pendingFailedJsonUrl;
+    String? pendingFailedJsonError;
+    String? pendingJsonUrl;
+
+    _streamSub = stream.listen(
       (event) {
         _markAiEvent();
         if (event.isGeneratingJson) {
@@ -812,12 +823,38 @@ class _DesignerBallState extends State<DesignerBall>
           _scrollToBottom();
           return;
         }
+        // worker 真死了 / 重连耗尽 → 把空气泡换成"中断"系统消息 + 重试按钮
+        // ⚠️ needsRetry 必须在 error 之前判断（同一事件可能两个字段都有）
+        if (event.needsRetry) {
+          setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = '正在生成代码...';
+            // 末尾 assistant 是空的（还没开始流过任何内容）→ 删掉它，否则会留个空气泡
+            if (_messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                _messages.last.content.isEmpty) {
+              _messages.removeLast();
+            }
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: 'AI 任务被中断（服务器进程异常或网络长时间不通），点击重试',
+              action: 'RETRY_LAST_TURN',
+            ));
+          });
+          _scrollToBottom();
+          return;
+        }
         if (event.error != null && event.content == null) {
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
             _generatingStatusMessage = '正在生成代码...';
-            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+            if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+              _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+            } else {
+              _messages.add(ChatMessage(role: 'assistant', content: event.error!));
+            }
           });
           _scrollToBottom();
           return;
@@ -825,21 +862,21 @@ class _DesignerBallState extends State<DesignerBall>
 
         // 累积指令，不立即处理
         if (event.requestAction != null) {
-          _pendingRequestAction = event.requestAction;
+          pendingRequestAction = event.requestAction;
           return;
         }
         if (event.jsonApp != null) {
-          _pendingJsonApp = event.jsonApp;
+          pendingJsonApp = event.jsonApp;
           _lastGeneratedJson = event.jsonApp;
           return;
         }
         if (event.failedJsonUrl != null) {
-          _pendingFailedJsonUrl = event.failedJsonUrl;
-          _pendingFailedJsonError = event.error;
+          pendingFailedJsonUrl = event.failedJsonUrl;
+          pendingFailedJsonError = event.error;
           return;
         }
         if (event.pendingJsonUrl != null) {
-          _pendingJsonUrl = event.pendingJsonUrl;
+          pendingJsonUrl = event.pendingJsonUrl;
           return;
         }
 
@@ -854,7 +891,6 @@ class _DesignerBallState extends State<DesignerBall>
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 (_messages.last.content.isEmpty || _messages.last.content.startsWith('💭'))) {
-              // 更新最后一条消息为思考内容
               _messages.last = ChatMessage(role: 'assistant', content: '💭 ${event.thinking!}');
             }
           });
@@ -865,14 +901,11 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            // 如果最后一条是思考消息，则追加新消息；否则更新最后一条
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 _messages.last.content.startsWith('💭')) {
-              // 思考过程后的内容，追加新消息
               _messages.add(ChatMessage(role: 'assistant', content: event.content!));
             } else if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-              // 普通内容，更新最后一条消息
               _messages.last = ChatMessage(role: 'assistant', content: event.content!);
             }
           });
@@ -891,7 +924,11 @@ class _DesignerBallState extends State<DesignerBall>
           _isThinking = false;
           _isGeneratingJson = false;
           _generatingStatusMessage = '正在生成代码...';
-          _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+          if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+            _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+          } else {
+            _messages.add(ChatMessage(role: 'assistant', content: '出错了: $e'));
+          }
         });
       },
       onDone: () {
@@ -899,47 +936,116 @@ class _DesignerBallState extends State<DesignerBall>
         _streamSub = null;
         _sessionHeartbeatTimer?.cancel();
         _sessionHeartbeatTimer = null;
-        // SSE 流结束后，统一处理累积的指令
         setState(() {
           _isGeneratingJson = false;
           _generatingStatusMessage = '正在生成代码...';
 
-          // 处理请求上传当前应用（追加新消息，不替换）
-          if (_pendingRequestAction == 'upload_current_app') {
+          if (pendingRequestAction == 'upload_current_app') {
             _messages.add(ChatMessage(
               role: 'system',
               content: 'AI 需要获取当前应用的代码配置以进行修改：',
               action: 'UPLOAD_CURRENT_APP',
             ));
-          }
-          // 处理待用户确认下载并运行
-          else if (_pendingJsonUrl != null) {
+          } else if (pendingJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
               content: 'JSON-APP 已生成，点击下载并运行：',
-              jsonUrl: _pendingJsonUrl,
+              jsonUrl: pendingJsonUrl,
             ));
-          }
-          // 处理 JSON 下载失败
-          else if (_pendingFailedJsonUrl != null) {
+          } else if (pendingFailedJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
-              content: _pendingFailedJsonError ?? '下载 JSON 失败',
-              failedJsonUrl: _pendingFailedJsonUrl,
+              content: pendingFailedJsonError ?? '下载 JSON 失败',
+              failedJsonUrl: pendingFailedJsonUrl,
             ));
-          }
-          // 处理 JSON 应用生成成功
-          else if (_pendingJsonApp != null) {
+          } else if (pendingJsonApp != null) {
             _messages.add(ChatMessage(
               role: 'system',
               content: '🚀 点击试运行',
-              jsonApp: _pendingJsonApp,
+              jsonApp: pendingJsonApp,
             ));
           }
         });
         _scrollToBottom();
       },
     );
+  }
+
+  /// 重试按钮回调。3 秒 debounce 防止用户连点。
+  bool _retryDebouncing = false;
+  void _handleRetryLastTurn() {
+    if (_retryDebouncing) {
+      debugPrint('[DesignerBall] 重试 debounce 中，忽略');
+      return;
+    }
+    _retryDebouncing = true;
+    Future.delayed(const Duration(seconds: 3), () => _retryDebouncing = false);
+
+    setState(() {
+      // 移除 RETRY_LAST_TURN 那条系统消息
+      if (_messages.isNotEmpty &&
+          _messages.last.role == 'system' &&
+          _messages.last.action == 'RETRY_LAST_TURN') {
+        _messages.removeLast();
+      }
+      // 加一个新的空 assistant 气泡承接新流
+      _messages.add(ChatMessage(role: 'assistant', content: ''));
+      _isThinking = true;
+    });
+    _scrollToBottom();
+
+    _cancelCurrentStream();
+    _startSessionHeartbeat();
+    _attachAiStream(_chatService.retryLastTurn());
+  }
+
+  /// app 启动时调一次：检查后端有没有上一轮未完成 / 已完成的任务，按情况注入消息
+  Future<void> _maybeResumeUnfinishedSession() async {
+    if (!mounted) return;
+    try {
+      final result = await _chatService.tryResumeUnfinished();
+      if (!mounted) return;
+      switch (result) {
+        case ResumeNothing():
+          break;
+        case ResumeCompleted(:final userMessage, :final assistantText, :final jsonUrl):
+          setState(() {
+            _messages.add(ChatMessage(role: 'user', content: userMessage));
+            _messages.add(ChatMessage(role: 'assistant', content: assistantText));
+            if (jsonUrl != null) {
+              _messages.add(ChatMessage(
+                role: 'system',
+                content: 'JSON-APP 已生成，点击下载并运行：',
+                jsonUrl: jsonUrl,
+              ));
+            }
+          });
+          _scrollToBottom();
+        case ResumeStreaming(:final userMessage, :final stream):
+          setState(() {
+            _messages.add(ChatMessage(role: 'user', content: userMessage));
+            _messages.add(ChatMessage(role: 'assistant', content: ''));
+            _isThinking = true;
+            _isGeneratingJson = true;
+            _generatingStatusMessage = '正在恢复上次对话...';
+          });
+          _scrollToBottom();
+          _startSessionHeartbeat();
+          _attachAiStream(stream);
+        case ResumeNeedsRetry(:final userMessage):
+          setState(() {
+            _messages.add(ChatMessage(role: 'user', content: userMessage));
+            _messages.add(ChatMessage(
+              role: 'system',
+              content: 'AI 任务被中断（可能服务器进程异常），点击重试',
+              action: 'RETRY_LAST_TURN',
+            ));
+          });
+          _scrollToBottom();
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] resume 失败 (静默): $e');
+    }
   }
 
   Future<void> _handleUploadCurrentApp() async {
@@ -1576,6 +1682,7 @@ class _DesignerBallState extends State<DesignerBall>
             onUploadCurrentApp: _handleUploadCurrentApp,
             onRetryDownload: _handleRetryDownload,
             onDownloadAndRun: _handleDownloadAndRun,
+            onRetryLastTurn: _handleRetryLastTurn,
             onRunJsonApp: (jsonConfig) {
               // 先调用外部回调，再清空聊天
               widget.onRunJsonApp?.call(jsonConfig);

@@ -28,6 +28,7 @@ class ChatOverlay extends StatefulWidget {
   final VoidCallback? onUploadCurrentApp;
   final void Function(String url)? onRetryDownload;
   final Future<void> Function(String url)? onDownloadAndRun;
+  final VoidCallback? onRetryLastTurn;  // worker 死了时的重试按钮
 
   const ChatOverlay({
     super.key,
@@ -45,6 +46,7 @@ class ChatOverlay extends StatefulWidget {
     this.onUploadCurrentApp,
     this.onRetryDownload,
     this.onDownloadAndRun,
+    this.onRetryLastTurn,
   });
 
   @override
@@ -186,6 +188,9 @@ class _ChatOverlayState extends State<ChatOverlay> {
                     final msg = visibleMessages[index];
                     if (msg.action == 'UPLOAD_CURRENT_APP') {
                       return _buildActionLine(msg.content, '上传当前应用配置', widget.onUploadCurrentApp);
+                    }
+                    if (msg.action == 'RETRY_LAST_TURN') {
+                      return _buildActionLine(msg.content, '重试', widget.onRetryLastTurn);
                     }
                     if (msg.failedJsonUrl != null) {
                       return _buildRetryLine(msg.content, msg.failedJsonUrl!);

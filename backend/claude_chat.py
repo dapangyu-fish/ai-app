@@ -549,19 +549,33 @@ def chat_start():
 
     if existing and existing.get("status") == ai_session.STATUS_RUNNING:
         if force_restart:
-            # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的，避免新 worker 立刻被旧 abort 误杀
+            # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的
+            # 关键不变量：必须确认旧 worker 已经写完 STATUS_ABORTED 才能 create_meta，
+            # 否则旧 worker 后写的 set_status 会覆盖新 worker 的 fresh meta，
+            # 导致客户端 /status 看到 status=aborted → 又触发重试 → 死循环
             logger.info(f"[CHAT_START] sid={session_id} force_restart：先 abort 旧 worker")
-            ai_session.abort_session(session_id)
-            # 给老 worker 一点时间走 finally → 写 status=aborted
-            for _ in range(20):
+            ai_session.abort_session(session_id)  # 内部 _kill_proc 阻塞最多 2s 等 proc 死
+            # abort_session 返回时 proc 已死，worker 线程通常 1-10ms 内 set_status(ABORTED) 完成
+            # 5s 是给 Redis 抖动 / GIL 争抢的余量
+            terminal_observed = False
+            for _ in range(50):  # 5s
                 _time.sleep(0.1)
                 m = store.get_meta(session_id)
                 if not m or m.get("status") in ai_session.TERMINAL_STATUSES:
+                    terminal_observed = True
                     break
-            # 清掉 abort flag，否则新 worker 启动后立刻退出
+            if not terminal_observed:
+                # 旧 worker 还没把 status 写成 terminal，但 proc 已死的话风险有限
+                if not ai_session.is_session_proc_alive(session_id):
+                    logger.warning(
+                        f"[CHAT_START] sid={session_id} 5s 没等到 STATUS_ABORTED 但 proc 已死，"
+                        f"继续 create_meta；旧 worker 后续 set_status 可能造成短暂状态错乱"
+                    )
+                else:
+                    logger.error(
+                        f"[CHAT_START] sid={session_id} 5s 后 proc 仍存活，非常异常"
+                    )
             ai_session.clear_abort(session_id)
-            # 落表里仍是老 stream（client 拿新 last_id 直接读），这里不删 stream，
-            # 让重放包含 "abort 之前的内容"，新 worker 写入会接到后面
         else:
             # 同一 session 双连接（前后台切换、重连）：幂等返回，让 client 去 /stream 续读
             logger.info(f"[CHAT_START] sid={session_id} 已在跑，复用")

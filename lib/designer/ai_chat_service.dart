@@ -19,8 +19,49 @@ class ChatEvent {
   final String? failedJsonUrl; // 下载失败的 JSON URL
   final String? statusMessage; // 动态状态文案（思考中/阅读文件/写入代码/上传...）
   final String? pendingJsonUrl; // 待用户确认下载的 JSON URL（不自动下载）
+  // worker 真死了（探活确认 process_alive=false），UI 应弹重试按钮
+  // retryUserMessage 是上一条用户消息，UI 拿来调 retryLastTurn() 时备用（也可以从 service 里读）
+  final bool needsRetry;
+  final String? retryUserMessage;
 
-  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage, this.pendingJsonUrl});
+  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage, this.pendingJsonUrl, this.needsRetry = false, this.retryUserMessage});
+}
+
+/// tryResumeUnfinished 的返回值。app 启动恢复上次会话用。
+sealed class ResumeResult {
+  const ResumeResult();
+}
+
+/// 没什么可恢复的（没存 session_id / 上一轮 status 是 failed 或 aborted / /status 调用失败）
+class ResumeNothing extends ResumeResult {
+  const ResumeNothing();
+}
+
+/// 上一轮已经在服务端跑完了，从 /result 拿到了最终内容
+class ResumeCompleted extends ResumeResult {
+  final String userMessage;
+  final String assistantText;
+  final String? thinking;
+  final String? jsonUrl;  // 解析 [json_app_url] 标签得到
+  const ResumeCompleted({
+    required this.userMessage,
+    required this.assistantText,
+    this.thinking,
+    this.jsonUrl,
+  });
+}
+
+/// 上一轮还在跑且 worker 进程活着，stream 是接续过去 SSE 的
+class ResumeStreaming extends ResumeResult {
+  final String userMessage;
+  final Stream<ChatEvent> stream;
+  const ResumeStreaming({required this.userMessage, required this.stream});
+}
+
+/// 上一轮 status=running 但 worker 进程已死 → 给重试按钮
+class ResumeNeedsRetry extends ResumeResult {
+  final String userMessage;
+  const ResumeNeedsRetry(this.userMessage);
 }
 
 /// AI 供应商信息
@@ -54,6 +95,9 @@ class AiChatService {
   static const String _providerKey = 'ai_provider';
   static const String _sessionKey = 'ai_session_id';
   static const String _sessionUsedKey = 'ai_session_used';
+  // 持久化最后一条用户消息：(1) 重试按钮要重发；(2) app 启动恢复时显示
+  // 关键不变量：只有在 POST /start 成功之后才更新这个值，保证 prefs 永远 ≤ backend 上的状态
+  static const String _lastUserMessageKey = 'ai_last_user_message';
 
   static String _selectedProvider = 'deepseek';
   static List<AiProvider> _providers = [];
@@ -96,8 +140,11 @@ class AiChatService {
   bool _aborting = false;
   // 当前流读到的最后一条 Redis Stream entry id；断线重连传给后端实现"无丢失续读"
   String _lastEntryId = '0';
+  // 最后一条用户消息（已经被 backend 接受了的那条）；空字符串 = 没有
+  String _lastUserMessage = '';
 
   String get sessionId => _sessionId;
+  String get lastUserMessage => _lastUserMessage;
 
   /// 初始化/加载 session（app 启动时调用）
   Future<void> loadSession() async {
@@ -107,9 +154,11 @@ class AiChatService {
     if (cachedId == null || cachedId.length != 36) {
       _sessionId = _generateSessionId();
       _sessionUsed = false;
+      _lastUserMessage = '';
     } else {
       _sessionId = cachedId;
       _sessionUsed = prefs.getBool(_sessionUsedKey) ?? false;
+      _lastUserMessage = prefs.getString(_lastUserMessageKey) ?? '';
     }
     await prefs.setString(_sessionKey, _sessionId);
     await prefs.setBool(_sessionUsedKey, _sessionUsed);
@@ -120,9 +169,11 @@ class AiChatService {
     abort();
     _sessionId = _generateSessionId();
     _sessionUsed = false;
+    _lastUserMessage = '';
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, _sessionId);
     await prefs.setBool(_sessionUsedKey, false);
+    await prefs.remove(_lastUserMessageKey);
   }
 
   String _generateSessionId() {
@@ -211,15 +262,33 @@ class AiChatService {
       yield ChatEvent(error: startResult.error, quota: startResult.quota);
       return;
     }
-    // start 成功 → 标记 session 已使用
+    // ⚠️ 关键时机：先持久化 lastUserMessage 再开 SSE
+    // 不变量：prefs 永远 ≤ backend，所以"持久化"必须发生在 backend 已经接受这条消息之后
+    _lastUserMessage = userMessage;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastUserMessageKey, userMessage);
     if (!_sessionUsed) {
       _sessionUsed = true;
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.setBool(_sessionUsedKey, true);
-      });
+      await prefs.setBool(_sessionUsedKey, true);
     }
 
     // ── 2. SSE 流式读 + 自动重连 ──
+    yield* _streamWithReconnect();
+  }
+
+  /// 重试上一轮（worker 死了 / 用户主动重试）。复用同一个 session_id，
+  /// CLI 通过 -r 参数继承对话上下文，所以不丢历史。
+  Stream<ChatEvent> retryLastTurn() async* {
+    if (_lastUserMessage.isEmpty) {
+      yield ChatEvent(error: '没有可重试的消息');
+      return;
+    }
+    yield* sendStream(_lastUserMessage);
+  }
+
+  /// SSE 主循环：连 → 读 → 断了 → 探活 → 重连 / 报错。
+  /// 调用方负责确保 worker 已经在跑（要么刚 _postStart 起来，要么是恢复已有 session）。
+  Stream<ChatEvent> _streamWithReconnect() async* {
     final state = _StreamState();
     int reconnectCount = 0;
     while (true) {
@@ -238,15 +307,156 @@ class AiChatService {
         return;
       }
 
-      // retry：等一下再连，最多 30 次（指数 backoff，封顶 5s）
+      // 流断了 → 在重连之前先探活
+      // 关键反模式防御：/status 调用本身失败时绝不当成"worker 死了"，
+      // 否则坏网络会被误判 → 弹重试按钮 → 用户点重试 → 又失败 → UX 崩
+      final alive = await _checkAliveCarefully();
+      if (alive == _AliveCheck.confirmedDead) {
+        debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
+        yield ChatEvent(needsRetry: true, retryUserMessage: _lastUserMessage);
+        return;
+      }
+      // alive 或 unknown → 继续重连（真活着 / 网络问题；都不该烧重试按钮）
+
       reconnectCount++;
       if (reconnectCount > 30) {
-        yield ChatEvent(error: '连接持续不稳定，已停止重试');
+        // 重试 30 次还连不上，stream 端确实出问题了。同时给 error 和 needsRetry：
+        // UI 层负责把这俩组合成 "出错了 + 重试按钮" 的系统消息
+        yield ChatEvent(error: '连接持续不稳定（已重试 30 次）');
+        yield ChatEvent(needsRetry: true, retryUserMessage: _lastUserMessage);
         return;
       }
       final delayMs = (500 * (1 << (reconnectCount.clamp(1, 4) - 1))).clamp(500, 5000);
-      debugPrint('[AI_CHAT] 第 $reconnectCount 次重连，${delayMs}ms 后...');
+      debugPrint('[AI_CHAT] 第 $reconnectCount 次重连 (alive=$alive)，${delayMs}ms 后...');
       await Future.delayed(Duration(milliseconds: delayMs));
+    }
+  }
+
+  /// 探活三态：confirmed dead / alive or finished / unknown。
+  /// 只有 confirmedDead 才是"worker 真死了"的可信信号。
+  Future<_AliveCheck> _checkAliveCarefully() async {
+    if (_sessionId.isEmpty) return _AliveCheck.unknown;
+    try {
+      final token = AuthService.token;
+      final headers = <String, String>{};
+      if (token != null) headers['Authorization'] = 'Bearer $token';
+      final resp = await http
+          .get(
+            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/status'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 8));
+      // 404 = session 已过期（24h TTL）；视为 finished，不弹重试
+      if (resp.statusCode == 404) return _AliveCheck.aliveOrFinished;
+      if (resp.statusCode != 200) return _AliveCheck.unknown;
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final status = data['status'] as String? ?? '';
+      final procAlive = data['process_alive'] == true;
+      // status=running + process_alive=false 是唯一可信的 dead 信号
+      if (status == 'running' && !procAlive) return _AliveCheck.confirmedDead;
+      // running + alive，或者已经 done/failed/aborted —— 都让 stream 自己处理
+      return _AliveCheck.aliveOrFinished;
+    } catch (e) {
+      // 网络问题 / 超时：unknown，让外层继续重连而不是弹按钮
+      debugPrint('[AI_CHAT] _checkAliveCarefully 失败 (按 unknown 处理): $e');
+      return _AliveCheck.unknown;
+    }
+  }
+
+  /// app 启动后调一次：如果 prefs 里有 session + lastUserMessage，
+  /// 检查 backend 上是否还有未完成 / 已完成的任务，按情况返回。
+  ///
+  /// UI 层根据返回值决定怎么注入消息：
+  ///  - ResumeNothing：啥也不做
+  ///  - ResumeCompleted：注入 user 气泡 + assistant 气泡 + 可能的下载按钮
+  ///  - ResumeStreaming：注入 user 气泡 + 空 assistant 气泡 + listen stream
+  ///  - ResumeNeedsRetry：注入 user 气泡 + "已中断，点击重试" 系统消息
+  Future<ResumeResult> tryResumeUnfinished() async {
+    if (_sessionId.isEmpty || _lastUserMessage.isEmpty) {
+      return const ResumeNothing();
+    }
+    // 防御：确保还没有正在跑的 stream
+    if (_activeClient != null) {
+      debugPrint('[AI_CHAT] tryResumeUnfinished: 已有活跃 client，跳过');
+      return const ResumeNothing();
+    }
+    try {
+      final token = AuthService.token;
+      if (token == null) return const ResumeNothing();
+      final resp = await http
+          .get(
+            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/status'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode != 200) return const ResumeNothing();
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final status = data['status'] as String? ?? '';
+      final procAlive = data['process_alive'] == true;
+      debugPrint('[AI_CHAT] resume status=$status alive=$procAlive');
+
+      if (status == 'failed' || status == 'aborted') {
+        // 上一轮失败 / 取消，不强行恢复（用户可能不想看到陈年失败）
+        return const ResumeNothing();
+      }
+      if (status == 'done') {
+        // 已完成：取 /result 拿最终文本
+        return await _fetchCompletedResult();
+      }
+      if (status == 'running') {
+        if (!procAlive) {
+          return ResumeNeedsRetry(_lastUserMessage);
+        }
+        // worker 还在跑：续 SSE，不调 /start
+        _aborting = false;
+        _lastEntryId = '0';  // backend stream 是这一轮的，从头读没问题
+        return ResumeStreaming(
+          userMessage: _lastUserMessage,
+          stream: _streamWithReconnect(),
+        );
+      }
+      return const ResumeNothing();
+    } catch (e) {
+      debugPrint('[AI_CHAT] tryResumeUnfinished 异常 (按 nothing 处理): $e');
+      return const ResumeNothing();
+    }
+  }
+
+  /// 从 /result 拿到上一轮完成的最终文本，并解析其中的 [json_app_url] 标签
+  Future<ResumeResult> _fetchCompletedResult() async {
+    try {
+      final token = AuthService.token;
+      if (token == null) return const ResumeNothing();
+      final resp = await http
+          .get(
+            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/result'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode != 200) return const ResumeNothing();
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final finalText = data['final_text'] as String? ?? '';
+      final thinking = data['final_thinking'] as String? ?? '';
+      if (finalText.isEmpty && thinking.isEmpty) return const ResumeNothing();
+
+      // 解析 [json_app_url]…[/json_app_url]（与 _emitTrailingTags 同一份正则）
+      String? jsonUrl;
+      final urlMatch = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]')
+          .firstMatch(finalText);
+      if (urlMatch != null) {
+        final raw = urlMatch.group(1)!.trim();
+        final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
+        jsonUrl = httpMatch?.group(0) ?? raw;
+      }
+      return ResumeCompleted(
+        userMessage: _lastUserMessage,
+        assistantText: finalText,
+        thinking: thinking.isEmpty ? null : thinking,
+        jsonUrl: jsonUrl,
+      );
+    } catch (e) {
+      debugPrint('[AI_CHAT] _fetchCompletedResult 异常: $e');
+      return const ResumeNothing();
     }
   }
 
@@ -804,6 +1014,9 @@ class AiChatService {
 }
 
 // ────────────── 内部辅助类型（仅 sendStream 重连循环用）──────────────
+
+/// 探活三态。只有 confirmedDead 才能可信地断定 worker 真死了。
+enum _AliveCheck { confirmedDead, aliveOrFinished, unknown }
 
 enum _StreamOutcome { done, retry }
 
