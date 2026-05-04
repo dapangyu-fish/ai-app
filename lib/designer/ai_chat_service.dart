@@ -189,11 +189,24 @@ class AiChatService {
     return '${generateHex(8)}-${generateHex(4)}-4${generateHex(3)}-$y${generateHex(3)}-${generateHex(12)}';
   }
 
-  void abort() {
+  /// 只关本地 SSE 连接，**不**通知后端杀 worker。
+  ///
+  /// 用于"客户端马上要发新请求 / app 切后台 / 页面销毁"等不希望影响后端任务的场景：
+  /// - sendStream 开头：force_restart=true 会让 backend chat_start 自己处理旧 worker
+  /// - dispose / 关闭对话浮层：Plan A 要求"app 关 worker 继续跑"，下次恢复
+  ///
+  /// 关键反模式：以前 sendStream 顶部调完整 abort()，会 fire-and-forget POST /abort，
+  /// 极易在新 worker 起来后才到达，把新 worker 误杀（实测复现）。
+  void abortLocal() {
     _aborting = true;
     _activeClient?.close();
     _activeClient = null;
-    // 后端 fire-and-forget abort：让 worker 真的停下来。如果没有 sessionId 也无所谓。
+  }
+
+  /// 本地关 + 显式让后端杀 worker。
+  /// 用户主动"清空对话"/手动"停止"才用。app 后台 / 关浮层 / 发新消息都不该用。
+  void abort() {
+    abortLocal();
     _abortBackend(_sessionId);
   }
 
@@ -245,8 +258,10 @@ class AiChatService {
   ///      worker 仍在跑，不丢事件
   ///   4. 收到 [DONE] → 任务真的完成，退出
   Stream<ChatEvent> sendStream(String userMessage) async* {
-    // 本地中止旧流；force_restart=true 时后端也会杀掉旧 worker
-    abort();
+    // 只关本地 SSE，不发 POST /abort：force_restart=true 会让 backend chat_start
+    // 自己处理旧 worker。如果这里发 POST /abort，会 fire-and-forget 到达 backend
+    // 时新 worker 已经起来了，把新 worker 误杀（实测竞态）
+    abortLocal();
     _aborting = false;
     _lastEntryId = '0';
 

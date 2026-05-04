@@ -294,7 +294,9 @@ class _DesignerBallState extends State<DesignerBall>
     _longPressTimer?.cancel();
     _streamSub?.cancel();
     _sherpaAsr.dispose();
-    _chatService.abort();
+    // Plan A 关键：app 关掉 worker 继续在 backend 跑，下次启动 _maybeResumeUnfinishedSession 接回来
+    // 所以 dispose 只关本地 SSE，绝不通知 backend abort
+    _chatService.abortLocal();
     _animController.dispose();
     _pulseController.dispose();
     _countdownController.dispose();
@@ -1419,7 +1421,11 @@ class _DesignerBallState extends State<DesignerBall>
       }
       _streamSub?.cancel();
       _streamSub = null;
-      _chatService.abort();
+      // 只关本地：本方法的下游通常马上要 sendStream/retryLastTurn（带 force_restart），
+      // backend 自己会处理旧 worker。这里发 POST /abort 会和新 worker 起步竞态。
+      // 唯一例外是 _clearAndCloseChatMode (用户点清空)，那条路径走 _chatService.clear()
+      // → resetSession() → 内部用完整 abort()，不依赖这里
+      _chatService.abortLocal();
       setState(() => _isThinking = false);
     }
   }
