@@ -368,20 +368,29 @@ def parse_cli_line(line_str: str) -> List[dict]:
                     out.append({"assistant_thinking": think_value})
 
     elif evt_type == "result":
+        # 实测 CLI 的 result event 结构是 `{"type":"result","result":"...完整文本..."}`，
+        # 不是想象中的 `{"message":{"content":[{"type":"text","text":"..."}]}}`。
+        # 老代码（搬自 claude_chat.py）一直读 message.content 拿不到东西，导致
+        # meta.final_text 永远为空，恢复流程的 _fetchCompletedResult 因此返回 Nothing。
         if event.get("is_error"):
             res = event.get("result", "")
             out.append({"error": f"生成中断: {res}"})
         else:
-            msg = event.get("message", {})
-            for block in msg.get("content", []):
-                if block.get("type") == "text":
-                    final_text = block.get("text", "")
-                    if final_text:
-                        out.append({"final_content": final_text})
-                elif block.get("type") == "thinking":
-                    final_thinking = block.get("thinking", "")
-                    if final_thinking:
-                        out.append({"final_thinking": final_thinking})
+            # 优先读 result 字段（CLI 实际行为）；message.content 兜底（防止 CLI 升级换 schema）
+            result_text = event.get("result", "")
+            if isinstance(result_text, str) and result_text:
+                out.append({"final_content": result_text})
+            else:
+                msg = event.get("message", {})
+                for block in msg.get("content", []):
+                    if block.get("type") == "text":
+                        ft = block.get("text", "")
+                        if ft:
+                            out.append({"final_content": ft})
+                    elif block.get("type") == "thinking":
+                        fth = block.get("thinking", "")
+                        if fth:
+                            out.append({"final_thinking": fth})
 
     return out
 
