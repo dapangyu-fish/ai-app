@@ -674,7 +674,14 @@ class AiChatService {
       return;
     }
     if (data.containsKey('error')) {
-      yield ChatEvent(error: data['error'] as String);
+      // 后端在外部 kill / CLI 启动失败 / CLI 异常退出 等"值得重试"场景下
+      // 会带上 needs_retry: true。让 UI 同时显示错误内容和重试按钮。
+      final shouldRetry = data['needs_retry'] == true;
+      yield ChatEvent(
+        error: data['error'] as String,
+        needsRetry: shouldRetry,
+        retryUserMessage: shouldRetry ? _lastUserMessage : null,
+      );
       return;
     }
     if (data.containsKey('thinking')) {

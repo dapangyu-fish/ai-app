@@ -531,13 +531,17 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             pass
 
         if proc.returncode is not None and proc.returncode != 0:
-            # 被 abort 杀的（force_restart 或用户主动 abort）→ 安静收摊
-            # 不能写 error 事件：同一 session_id 的新 worker 会复用这个 stream，
-            # client 重连读 stream 会把这条假错误当真错误显示
-            # SIGTERM=-15, SIGKILL=-9
-            if store.is_aborted(session_id) or proc.returncode in (-15, -9):
+            # 关键区分：
+            # - is_aborted=True：是我们自己 abort 的（force_restart 或客户端 /abort）
+            #   → 静默 ABORTED，不写 error 事件（避免下一轮 worker 复用 stream 时
+            #     把这条假错误当真错误重放给 client）
+            # - is_aborted=False 但 returncode 是信号 -15/-9：被外部 kill
+            #   （管理员手动 kill / OOM Killer / supervisor 杀进程等），
+            #   也不是我们自己干的 → 写 needs_retry 事件让客户端弹重试按钮
+            # - 其他非 0 退出：CLI 真正异常，同样写 needs_retry
+            if store.is_aborted(session_id):
                 logger.info(
-                    f"[WORKER] sid={session_id} 启动阶段被 abort/kill "
+                    f"[WORKER] sid={session_id} 启动阶段 self-abort "
                     f"(code {proc.returncode})，静默退出"
                 )
                 _append_cli_log(session_id, "meta", json.dumps({
@@ -563,14 +567,24 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 _register_proc(session_id, proc)
                 first_lines = []
             else:
+                # 信号 kill (-15/-9) 不是 self-abort 的话，那就是外部干的，按 retry 处理
+                killed_externally = proc.returncode in (-15, -9)
+                err_msg = (
+                    f"Claude CLI 被外部信号 {proc.returncode} 终止"
+                    if killed_externally
+                    else f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"
+                )
                 _append_cli_log(session_id, "stderr", stderr_text)
                 _append_cli_log(session_id, "meta", json.dumps({
-                    "event": "startup_failed",
+                    "event": "startup_failed_or_killed",
                     "returncode": proc.returncode,
+                    "killed_externally": killed_externally,
                 }, ensure_ascii=False))
-                err_evt = {"error": f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"}
+                # needs_retry=True 让客户端 emit needsRetry → UI 弹重试按钮
+                # 启动失败基本都值得让用户重试一次（CLI 进程问题 / 临时网络等都是瞬态的）
+                err_evt = {"error": err_msg, "needs_retry": True}
                 store.append_event(session_id, err_evt)
-                store.set_status(session_id, STATUS_FAILED, error=err_evt["error"])
+                store.set_status(session_id, STATUS_FAILED, error=err_msg)
                 return
 
         # ─── 4. 主循环：读 CLI 输出 → 解析 → 写 Redis ───
@@ -612,32 +626,40 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 
         proc.wait()
 
-        # 被 abort/kill 的不算异常退出（同上：避免把假错误写进新 worker 复用的 stream）
-        if store.is_aborted(session_id) or proc.returncode in (-15, -9):
+        # self-abort：静默 ABORTED，不写 error（避免下一轮 worker 复用 stream 时假错误重放）
+        if store.is_aborted(session_id):
             logger.info(
-                f"[WORKER] sid={session_id} 主循环结束因 abort/kill "
+                f"[WORKER] sid={session_id} 主循环结束 self-abort "
                 f"(code {proc.returncode})，静默退出"
             )
             _append_cli_log(session_id, "meta", json.dumps({
-                "event": "aborted_in_main_loop",
+                "event": "self_aborted_in_main_loop",
                 "returncode": proc.returncode,
                 "lines": line_count,
             }, ensure_ascii=False))
             store.set_status(session_id, STATUS_ABORTED)
             return
 
-        # ─── 5. 退出码 != 0 → 失败 ───
+        # ─── 5. 退出码 != 0 → 失败（含外部 kill） ───
         if proc.returncode != 0:
-            err = proc.stderr.read().decode("utf-8", errors="replace")
-            _append_cli_log(session_id, "stderr", err)
+            killed_externally = proc.returncode in (-15, -9)
+            err_text = proc.stderr.read().decode("utf-8", errors="replace")
+            err_msg = (
+                f"Claude CLI 被外部信号 {proc.returncode} 终止"
+                if killed_externally
+                else f"Claude CLI 异常退出 (code {proc.returncode}): {err_text}"
+            )
+            _append_cli_log(session_id, "stderr", err_text)
             _append_cli_log(session_id, "meta", json.dumps({
-                "event": "cli_exit_nonzero",
+                "event": "cli_exit_nonzero_or_killed",
                 "returncode": proc.returncode,
+                "killed_externally": killed_externally,
                 "lines": line_count,
             }, ensure_ascii=False))
-            err_evt = {"error": f"Claude CLI 异常退出: {err}"}
+            # needs_retry=True → 客户端 emit needsRetry → UI 弹重试按钮
+            err_evt = {"error": err_msg, "needs_retry": True}
             store.append_event(session_id, err_evt)
-            store.set_status(session_id, STATUS_FAILED, error=err_evt["error"])
+            store.set_status(session_id, STATUS_FAILED, error=err_msg)
             return
 
         # ─── 6. 正常完成 ───

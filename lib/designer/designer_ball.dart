@@ -148,9 +148,10 @@ class _DesignerBallState extends State<DesignerBall>
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
-  Timer? _sessionHeartbeatTimer;
-  DateTime? _lastAiEventAt;
-  bool _streamDone = false;
+  // 老的 5s 独立 heartbeat 已被删掉。新逻辑：
+  // - SSE 内部 20s idle timeout → _checkAliveCarefully 三态探活
+  // - 后端 worker 自身在 CLI 异常退出 / 外部 kill 时主动写 needs_retry 事件
+  // 两条路径都收敛到 needsRetry → UI 弹重试按钮，不再需要独立 timer。
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
   Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
   final List<ChatMessage> _messages = [];
@@ -775,7 +776,6 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _sendTextToAi(String text, {bool skipUserMessage = false}) {
     _cancelCurrentStream();
-    _startSessionHeartbeat();
 
     if (!skipUserMessage) {
       setState(() {
@@ -805,7 +805,6 @@ class _DesignerBallState extends State<DesignerBall>
 
     _streamSub = stream.listen(
       (event) {
-        _markAiEvent();
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
@@ -823,22 +822,33 @@ class _DesignerBallState extends State<DesignerBall>
           _scrollToBottom();
           return;
         }
-        // worker 真死了 / 重连耗尽 → 把空气泡换成"中断"系统消息 + 重试按钮
-        // ⚠️ needsRetry 必须在 error 之前判断（同一事件可能两个字段都有）
+        // worker 真死了 / 重连耗尽 / CLI 被外部 kill / CLI 异常退出
+        // → 把空气泡换成"中断"系统消息 + 重试按钮
+        // ⚠️ needsRetry 必须在 error 之前判断（同一事件常常两个字段都有：
+        //    backend 把 error 和 needs_retry:true 一起塞过来）
         if (event.needsRetry) {
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
             _generatingStatusMessage = '正在生成代码...';
-            // 末尾 assistant 是空的（还没开始流过任何内容）→ 删掉它，否则会留个空气泡
-            if (_messages.isNotEmpty &&
+            // 如果同时有 error 且最后一个 assistant 气泡是空的，先把 error 写进去
+            // 这样用户既能看到"为啥失败了"也能看到下面的重试按钮
+            if (event.error != null &&
+                _messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 _messages.last.content.isEmpty) {
+              _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+            } else if (event.error == null &&
+                _messages.isNotEmpty &&
+                _messages.last.role == 'assistant' &&
+                _messages.last.content.isEmpty) {
+              // 没 error 但有空气泡（idle timeout / 探活检测出来的纯断连）→ 删掉
               _messages.removeLast();
             }
+            // 已有 partial 内容时不动它，让用户看到 AI 已经流过的部分
             _messages.add(ChatMessage(
               role: 'system',
-              content: 'AI 任务被中断（服务器进程异常或网络长时间不通），点击重试',
+              content: 'AI 任务被中断，点击重试',
               action: 'RETRY_LAST_TURN',
             ));
           });
@@ -916,10 +926,7 @@ class _DesignerBallState extends State<DesignerBall>
         }
       },
       onError: (e) {
-        _streamDone = true;
         _streamSub = null;
-        _sessionHeartbeatTimer?.cancel();
-        _sessionHeartbeatTimer = null;
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
@@ -932,10 +939,7 @@ class _DesignerBallState extends State<DesignerBall>
         });
       },
       onDone: () {
-        _streamDone = true;
         _streamSub = null;
-        _sessionHeartbeatTimer?.cancel();
-        _sessionHeartbeatTimer = null;
         setState(() {
           _isGeneratingJson = false;
           _generatingStatusMessage = '正在生成代码...';
@@ -995,7 +999,6 @@ class _DesignerBallState extends State<DesignerBall>
     _scrollToBottom();
 
     _cancelCurrentStream();
-    _startSessionHeartbeat();
     _attachAiStream(_chatService.retryLastTurn());
   }
 
@@ -1030,7 +1033,6 @@ class _DesignerBallState extends State<DesignerBall>
             _generatingStatusMessage = '正在恢复上次对话...';
           });
           _scrollToBottom();
-          _startSessionHeartbeat();
           _attachAiStream(stream);
         case ResumeNeedsRetry(:final userMessage):
           setState(() {
@@ -1403,53 +1405,8 @@ class _DesignerBallState extends State<DesignerBall>
     _sendTextToAi(text, skipUserMessage: true);
   }
 
-  /// 标记最近一次 AI 事件时间，配合心跳判断是否真的卡住
-  void _markAiEvent() {
-    _lastAiEventAt = DateTime.now();
-  }
-
-  /// 启动一个 5 秒心跳，定期问后端 session 是否还活着
-  void _startSessionHeartbeat() {
-    _sessionHeartbeatTimer?.cancel();
-    _lastAiEventAt = DateTime.now();
-    _streamDone = false;
-    _sessionHeartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
-      if (!mounted || _streamDone) return;
-      final last = _lastAiEventAt;
-      if (last == null) return;
-      final silentFor = DateTime.now().difference(last).inSeconds;
-      if (silentFor < 5) return;
-      final alive = await _chatService.isSessionAlive();
-      if (!mounted || _streamDone) return;
-      if (!alive) {
-        debugPrint('[DesignerBall] Session process not alive, stop waiting');
-        _sessionHeartbeatTimer?.cancel();
-        _sessionHeartbeatTimer = null;
-        setState(() {
-          _isThinking = false;
-          _isGeneratingJson = false;
-          _generatingStatusMessage = '正在生成代码...';
-          if (_messages.isNotEmpty &&
-              _messages.last.role == 'assistant' &&
-              _messages.last.content.isEmpty) {
-            _messages.last = ChatMessage(role: 'assistant', content: 'AI 会话已中断，请重试');
-          }
-        });
-      } else if (silentFor >= 10 && mounted) {
-        setState(() {
-          _isGeneratingJson = true;
-          _generatingStatusMessage = 'AI 正在处理...';
-        });
-      }
-    });
-  }
-
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
   void _cancelCurrentStream() {
-    _sessionHeartbeatTimer?.cancel();
-    _sessionHeartbeatTimer = null;
-    _lastAiEventAt = null;
-    _streamDone = true;
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
