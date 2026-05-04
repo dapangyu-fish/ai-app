@@ -42,6 +42,47 @@ from config import (
 logger = logging.getLogger(__name__)
 
 
+# ────────────────────────────── CLI 原始日志（排查用）──────────────────────────────
+# 老 chat() 的 jsonl 日志在新 worker 里也保留：每个 session 一个文件，
+# 包含 meta（起止）+ stdout 原始 stream-json 每行 + stderr。
+# 路径可通过环境变量覆盖；默认 /mnt/storage00/log（生产盘）。
+# 单文件追加，多 worker 并发用 lock 串行化（写入量小，不会成为瓶颈）。
+_CLI_LOG_DIR = os.environ.get("CLAUDE_CLI_LOG_DIR", "/mnt/storage00/log")
+_cli_log_lock = threading.Lock()
+_cli_log_warned = False
+
+
+def _append_cli_log(session_id: str, kind: str, line) -> None:
+    """把 Claude CLI 的原始输出按 session 追加到 JSONL 文件，便于事后排查。
+
+    kind: stdout / stderr / meta，原样写入；stdout 不包 wrapper（CLI 已输出 jsonl）。
+    line: bytes 或 str；不裁剪、不重格式化，最大化保留原始数据。
+    """
+    global _cli_log_warned
+    if not session_id:
+        return
+    try:
+        text = line.decode("utf-8", errors="replace") if isinstance(line, bytes) else str(line)
+        if not text.endswith("\n"):
+            text += "\n"
+        with _cli_log_lock:
+            os.makedirs(_CLI_LOG_DIR, exist_ok=True)
+            path = os.path.join(_CLI_LOG_DIR, f"{session_id}.jsonl")
+            with open(path, "a", encoding="utf-8") as f:
+                if kind == "stdout":
+                    f.write(text)
+                else:
+                    wrapper = json.dumps(
+                        {"_log_kind": kind, "data": text.rstrip("\n")},
+                        ensure_ascii=False,
+                    )
+                    f.write(wrapper + "\n")
+    except Exception as e:
+        if not _cli_log_warned:
+            _cli_log_warned = True
+            logger.warning(f"[CLI_LOG] 写入 CLI 日志失败（仅提示一次）: {e}")
+
+
 # ────────────────────────────── Redis 单例 ──────────────────────────────
 
 _redis_client: Optional[redis.Redis] = None
@@ -460,6 +501,13 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 
         provider, env = _provider_env(provider_id)
 
+        _append_cli_log(session_id, "meta", json.dumps({
+            "event": "worker_start",
+            "provider": provider.get("id"),
+            "user_msg_len": len(last_msg),
+            "ts": int(time.time() * 1000),
+        }, ensure_ascii=False))
+
         # 先尝试 resume
         cmd = _build_cli_cmd(session_id, last_msg, sys_prompt, is_resume=True)
         logger.info(f"[WORKER] sid={session_id} 起 CLI (resume): {cmd[0]}...")
@@ -492,6 +540,10 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                     f"[WORKER] sid={session_id} 启动阶段被 abort/kill "
                     f"(code {proc.returncode})，静默退出"
                 )
+                _append_cli_log(session_id, "meta", json.dumps({
+                    "event": "aborted_during_startup",
+                    "returncode": proc.returncode,
+                }, ensure_ascii=False))
                 store.set_status(session_id, STATUS_ABORTED)
                 return
 
@@ -511,6 +563,11 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 _register_proc(session_id, proc)
                 first_lines = []
             else:
+                _append_cli_log(session_id, "stderr", stderr_text)
+                _append_cli_log(session_id, "meta", json.dumps({
+                    "event": "startup_failed",
+                    "returncode": proc.returncode,
+                }, ensure_ascii=False))
                 err_evt = {"error": f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"}
                 store.append_event(session_id, err_evt)
                 store.set_status(session_id, STATUS_FAILED, error=err_evt["error"])
@@ -519,6 +576,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         # ─── 4. 主循环：读 CLI 输出 → 解析 → 写 Redis ───
         line_count = 0
         for buffered in first_lines:
+            _append_cli_log(session_id, "stdout", buffered)
             line_str = buffered.decode("utf-8", errors="replace")
             for ev in parse_cli_line(line_str):
                 store.append_event(session_id, ev)
@@ -533,6 +591,10 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                     proc.terminate()
                 except Exception:
                     pass
+                _append_cli_log(session_id, "meta", json.dumps({
+                    "event": "aborted_by_flag",
+                    "lines": line_count,
+                }, ensure_ascii=False))
                 store.set_status(session_id, STATUS_ABORTED)
                 return
 
@@ -541,6 +603,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 # CLI 结束
                 break
 
+            _append_cli_log(session_id, "stdout", line)
             line_str = line.decode("utf-8", errors="replace")
             for ev in parse_cli_line(line_str):
                 store.append_event(session_id, ev)
@@ -555,12 +618,23 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 f"[WORKER] sid={session_id} 主循环结束因 abort/kill "
                 f"(code {proc.returncode})，静默退出"
             )
+            _append_cli_log(session_id, "meta", json.dumps({
+                "event": "aborted_in_main_loop",
+                "returncode": proc.returncode,
+                "lines": line_count,
+            }, ensure_ascii=False))
             store.set_status(session_id, STATUS_ABORTED)
             return
 
         # ─── 5. 退出码 != 0 → 失败 ───
         if proc.returncode != 0:
             err = proc.stderr.read().decode("utf-8", errors="replace")
+            _append_cli_log(session_id, "stderr", err)
+            _append_cli_log(session_id, "meta", json.dumps({
+                "event": "cli_exit_nonzero",
+                "returncode": proc.returncode,
+                "lines": line_count,
+            }, ensure_ascii=False))
             err_evt = {"error": f"Claude CLI 异常退出: {err}"}
             store.append_event(session_id, err_evt)
             store.set_status(session_id, STATUS_FAILED, error=err_evt["error"])
@@ -578,6 +652,12 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             final_text=final_text or "",
             final_thinking=final_thinking or "",
         )
+        _append_cli_log(session_id, "meta", json.dumps({
+            "event": "worker_done",
+            "lines": line_count,
+            "final_text_len": len(final_text or ""),
+            "final_thinking_len": len(final_thinking or ""),
+        }, ensure_ascii=False))
         logger.info(
             f"[WORKER] sid={session_id} 完成 lines={line_count} "
             f"final_text_len={len(final_text or '')}"
