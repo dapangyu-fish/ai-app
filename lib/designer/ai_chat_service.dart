@@ -297,10 +297,17 @@ class AiChatService {
       }
 
       // 解析 SSE：id:、data:、:heartbeat
+      // idle timeout：后端每 5s 必发一次 heartbeat (`: heartbeat\n\n`)，
+      // 所以 20s 没收到任何字节 = socket 已死（iOS 切后台再回前台时 TCP 经常这样
+      // 静默断掉，await for 不会自然 throw）→ 关闭流让外层重连。
       String? pendingId;
       await for (final line in response.stream
           .transform(utf8.decoder)
-          .transform(const LineSplitter())) {
+          .transform(const LineSplitter())
+          .timeout(const Duration(seconds: 20), onTimeout: (sink) {
+            debugPrint('[AI_CHAT] SSE 20s 无数据，强制关流走重连');
+            sink.close();
+          })) {
         if (_aborting) {
           state.outcome = _StreamOutcome.done;
           return;
