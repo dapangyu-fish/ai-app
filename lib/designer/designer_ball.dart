@@ -962,29 +962,43 @@ class _DesignerBallState extends State<DesignerBall>
       },
       onDone: () {
         _streamSub = null;
+        debugPrint('[DesignerBall] AI stream onDone: '
+            'pendingRequestAction=$pendingRequestAction, '
+            'pendingJsonUrl=${pendingJsonUrl != null ? "<${pendingJsonUrl!.length} chars>" : "null"}, '
+            'pendingFailedJsonUrl=$pendingFailedJsonUrl, '
+            'pendingJsonApp=${pendingJsonApp != null}');
         setState(() {
           _isGeneratingJson = false;
           _generatingStatusMessage = '正在生成代码...';
 
+          // ⚠️ 这里**必须**用独立 if 而不是 if/else if 链：
+          // AI 一次回复里完全可能同时包含 [request_action]upload_current_app[/request_action]
+          // 和 [json_app_url]…[/json_app_url]（"我需要先看代码 ... 不过链接给你"）。
+          // 老的 else-if 链让 UPLOAD 抢占，下载按钮就消失了——这是 P0 bug。
+          // 各按钮语义独立，应该共存：UPLOAD 让用户提供代码、下载让用户拿 app、
+          // 试运行让用户直接跑、失败重试让用户重下。
           if (pendingRequestAction == 'upload_current_app') {
             _messages.add(ChatMessage(
               role: 'system',
               content: 'AI 需要获取当前应用的代码配置以进行修改：',
               action: 'UPLOAD_CURRENT_APP',
             ));
-          } else if (pendingJsonUrl != null) {
+          }
+          if (pendingJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
               content: 'JSON-APP 已生成，点击下载并运行：',
               jsonUrl: pendingJsonUrl,
             ));
-          } else if (pendingFailedJsonUrl != null) {
+          }
+          if (pendingFailedJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
               content: pendingFailedJsonError ?? '下载 JSON 失败',
               failedJsonUrl: pendingFailedJsonUrl,
             ));
-          } else if (pendingJsonApp != null) {
+          }
+          if (pendingJsonApp != null) {
             _messages.add(ChatMessage(
               role: 'system',
               content: '🚀 点击试运行',
