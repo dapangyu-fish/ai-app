@@ -529,6 +529,9 @@ def chat_start():
     messages = body.get("messages", [])
     session_id = body.get("session_id")
     provider_id = body.get("provider")
+    # force_restart=true：用户输入新消息时用，先杀掉同 session 还在跑的 worker 再起新的
+    # 默认 false：双击 send / 重连等场景幂等返回 resumed:true
+    force_restart = bool(body.get("force_restart", False))
 
     if not messages or not session_id:
         return jsonify({"error": "messages 和 session_id 是必需的"}), 400
@@ -541,17 +544,32 @@ def chat_start():
     if not last_msg:
         return jsonify({"error": "未找到用户消息"}), 400
 
-    # 检查是否已经有同 session_id 的活任务（避免重复起 worker）
     store = ai_session.SessionStore()
     existing = store.get_meta(session_id)
+
     if existing and existing.get("status") == ai_session.STATUS_RUNNING:
-        # 已经在跑，直接返回（client 应该去 /stream 续读）
-        logger.info(f"[CHAT_START] sid={session_id} 已在跑，复用")
-        return jsonify({
-            "session_id": session_id,
-            "status": "running",
-            "resumed": True,
-        })
+        if force_restart:
+            # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的，避免新 worker 立刻被旧 abort 误杀
+            logger.info(f"[CHAT_START] sid={session_id} force_restart：先 abort 旧 worker")
+            ai_session.abort_session(session_id)
+            # 给老 worker 一点时间走 finally → 写 status=aborted
+            for _ in range(20):
+                _time.sleep(0.1)
+                m = store.get_meta(session_id)
+                if not m or m.get("status") in ai_session.TERMINAL_STATUSES:
+                    break
+            # 清掉 abort flag，否则新 worker 启动后立刻退出
+            ai_session.clear_abort(session_id)
+            # 落表里仍是老 stream（client 拿新 last_id 直接读），这里不删 stream，
+            # 让重放包含 "abort 之前的内容"，新 worker 写入会接到后面
+        else:
+            # 同一 session 双连接（前后台切换、重连）：幂等返回，让 client 去 /stream 续读
+            logger.info(f"[CHAT_START] sid={session_id} 已在跑，复用")
+            return jsonify({
+                "session_id": session_id,
+                "status": "running",
+                "resumed": True,
+            })
 
     # 扣配额（沿用老逻辑：先扣，worker 失败损 1 容忍）
     increment_quota(user_id)

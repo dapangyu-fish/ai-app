@@ -94,6 +94,8 @@ class AiChatService {
 
   http.Client? _activeClient;
   bool _aborting = false;
+  // 当前流读到的最后一条 Redis Stream entry id；断线重连传给后端实现"无丢失续读"
+  String _lastEntryId = '0';
 
   String get sessionId => _sessionId;
 
@@ -140,9 +142,26 @@ class AiChatService {
     _aborting = true;
     _activeClient?.close();
     _activeClient = null;
+    // 后端 fire-and-forget abort：让 worker 真的停下来。如果没有 sessionId 也无所谓。
+    _abortBackend(_sessionId);
   }
 
-  /// 检查后端对应 session 的 CLI 进程是否仍然存活
+  void _abortBackend(String sid) {
+    if (sid.isEmpty) return;
+    final token = AuthService.token;
+    if (token == null) return;
+    // 不 await：abort 不能让 UI 卡住
+    http.post(
+      Uri.parse('$_baseUrl/api/ai/chat/$sid/abort'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 3)).catchError((e) {
+      debugPrint('[AI_CHAT] abort backend error (ignored): $e');
+      return http.Response('', 0);
+    });
+  }
+
+  /// 检查后端对应 session 是否仍在跑（新架构：worker 是否还活）
+  /// 等价语义：meta.status == "running" && process 还在
   Future<bool> isSessionAlive() async {
     if (_sessionId.isEmpty) return false;
     try {
@@ -151,364 +170,409 @@ class AiChatService {
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/session_status?session_id=$_sessionId'),
+            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/status'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 404) return false;  // 已过期
       if (resp.statusCode != 200) return false;
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      return data['alive'] == true;
+      // running 状态 + 进程还在（process_alive 是后端 supervisor-side 的真实进程检查）
+      return data['status'] == 'running' && (data['process_alive'] == true);
     } catch (e) {
       debugPrint('[AI_CHAT] isSessionAlive error: $e');
       return false;
     }
   }
 
-  /// 发送用户消息，返回 Stream<ChatEvent>
-  /// 只发送最新消息 + session_id，CLI session 自动维护对话历史
-  /// 支持自动重连：网络中断时自动重试
+  /// 发送用户消息，返回 `Stream<ChatEvent>`。
+  ///
+  /// 新流程（feat/ai-background-push, Phase 1）：
+  ///   1. POST /api/ai/chat/start  -> 后端线程池 spawn worker，立即返回
+  ///   2. GET  /api/ai/chat/{id}/stream?last_id=N  -> SSE 读 Redis Stream
+  ///   3. 网络断 / 切后台 → SSE 自然断 → 客户端拿 _lastEntryId 续读，
+  ///      worker 仍在跑，不丢事件
+  ///   4. 收到 [DONE] → 任务真的完成，退出
   Stream<ChatEvent> sendStream(String userMessage) async* {
+    // 本地中止旧流；force_restart=true 时后端也会杀掉旧 worker
     abort();
     _aborting = false;
-
-    final isNew = !_sessionUsed;
+    _lastEntryId = '0';
 
     debugPrint('[AI_CHAT] ========== 发送消息 ==========');
     debugPrint('[AI_CHAT] 消息内容: $userMessage');
     debugPrint('[AI_CHAT] Session ID: $_sessionId');
     debugPrint('[AI_CHAT] Provider: $_selectedProvider');
-    debugPrint('[AI_CHAT] Is New Session: $isNew');
     debugPrint('[AI_CHAT] ====================================');
 
-    // 自动重连参数
-    const maxRetries = 3;
-    const retryDelay = Duration(seconds: 2);
-    int retryCount = 0;
-
-    while (retryCount <= maxRetries) {
-      if (retryCount > 0) {
-        debugPrint('[AI_CHAT] 第 $retryCount 次重连尝试...');
-        yield ChatEvent(statusMessage: '连接中断，正在重连... ($retryCount/$maxRetries)');
-        await Future.delayed(retryDelay);
-      }
-
-      final client = http.Client();
-      _activeClient = client;
-
-    try {
-      final request = http.Request('POST', Uri.parse('$_baseUrl/chat'));
-      request.headers['Content-Type'] = 'application/json';
-      final token = AuthService.token;
-      if (token != null) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-      request.body = json.encode({
-        'messages': [{'role': 'user', 'content': userMessage}],
-        'session_id': _sessionId,
-        'is_new_session': isNew,
-        'provider': _selectedProvider,
-      });
-
-      var response = await client.send(request).timeout(
-        const Duration(seconds: 300),
-      );
-
-      if (response.statusCode == 401 && AuthService.token != null) {
-        try {
-          await AuthService.refreshSession();
-          final retryRequest = http.Request('POST', Uri.parse('$_baseUrl/chat'));
-          retryRequest.headers['Content-Type'] = 'application/json';
-          final newToken = AuthService.token;
-          if (newToken != null) {
-            retryRequest.headers['Authorization'] = 'Bearer $newToken';
-          }
-          retryRequest.body = json.encode({
-            'messages': [{'role': 'user', 'content': userMessage}],
-            'session_id': _sessionId,
-            'is_new_session': isNew,
-            'provider': _selectedProvider,
-          });
-          response = await client.send(retryRequest).timeout(
-            const Duration(seconds: 300),
-          );
-        } catch (_) {
-          // 刷新失败，保持原 401 response，后续逻辑会处理
-        }
-      }
-
-      if (response.statusCode == 429) {
-        final body = await response.stream.bytesToString();
-        final data = json.decode(body);
-        yield ChatEvent(error: data['error'] ?? '配额已用完', quota: data['quota']);
-        return;
-      }
-
-      if (response.statusCode == 401) {
-        yield ChatEvent(error: '请先登录');
-        return;
-      }
-
-      if (response.statusCode != 200) {
-        final body = await response.stream.bytesToString();
-        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
-        return;
-      }
-
-      // 标记 session 已使用
-      if (!_sessionUsed) {
-        _sessionUsed = true;
-        SharedPreferences.getInstance().then((prefs) {
-          prefs.setBool(_sessionUsedKey, true);
-        });
-      }
-
-      String accumulated = '';
-      String accumulatedThinking = ''; // 累积思考过程
-      int contentEventCount = 0;  // 内容事件计数
-      int thinkingEventCount = 0;  // 思考事件计数
-
-      // 用 LineSplitter 保证跨 TCP chunk 的行完整性
-      await for (final line in response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())) {
-        final trimmed = line.trim();
-
-        // 只记录非内容事件的 SSE 行
-        if (trimmed.isNotEmpty && !trimmed.contains('"content"') && !trimmed.contains('"thinking"')) {
-          debugPrint('[AI_CHAT] <<< SSE: ${trimmed.length > 200 ? trimmed.substring(0, 200) + "..." : trimmed}');
-        }
-
-        if (trimmed.isEmpty) continue;
-        if (trimmed == 'data: [DONE]') {
-          debugPrint('[AI_CHAT] <<< SSE 流结束');
-          debugPrint('[AI_CHAT] 总计: 内容事件 $contentEventCount 次, 思考事件 $thinkingEventCount 次');
-          if (accumulated.isNotEmpty) {
-            debugPrint('[AI_CHAT] === 完整回复内容 ===');
-            debugPrint('[AI_CHAT] $accumulated');
-            debugPrint('[AI_CHAT] === 回复结束 (${accumulated.length} 字符) ===');
-          }
-          if (accumulatedThinking.isNotEmpty) {
-            debugPrint('[AI_CHAT] === 完整思考过程 ===');
-            debugPrint('[AI_CHAT] $accumulatedThinking');
-            debugPrint('[AI_CHAT] === 思考结束 (${accumulatedThinking.length} 字符) ===');
-          }
-          continue;
-        }
-        if (!trimmed.startsWith('data: ')) continue;
-
-          final dataStr = trimmed.substring(6);
-          try {
-            final data = json.decode(dataStr) as Map<String, dynamic>;
-
-            // 只记录非内容/思考事件的解析结果
-            if (!data.containsKey('content') && !data.containsKey('thinking') &&
-                !data.containsKey('final_content') && !data.containsKey('final_thinking')) {
-              debugPrint('[AI_CHAT] >>> 解析事件: ${data.keys.join(", ")}');
-            }
-
-            if (data.containsKey('generating_json') && data['generating_json'] == true) {
-              yield ChatEvent(isGeneratingJson: true);
-              continue;
-            }
-            // 生成结束（失败时后端会发 generating_json: false）
-            if (data.containsKey('generating_json') && data['generating_json'] == false) {
-              continue;
-            }
-
-            // 动作请求 (比如上传当前 app)
-            if (data.containsKey('request_action')) {
-              yield ChatEvent(requestAction: data['request_action'] as String);
-              continue;
-            }
-
-            // 动态状态更新（思考中/阅读文件/写入代码/上传等）
-            if (data.containsKey('status')) {
-              final msg = data['message'] as String? ?? '';
-              yield ChatEvent(statusMessage: msg);
-              continue;
-            }
-
-            // 最终完整内容（用于替换之前的增量累积，修正误差）
-            // 仅在确定下发了完整结果时才覆盖：长度不应小于已累积的内容
-            if (data.containsKey('final_content')) {
-              final finalText = data['final_content'] as String? ?? '';
-              if (finalText.isNotEmpty) {
-                debugPrint('[AI_CHAT] 收到最终完整内容，长度: ${finalText.length}');
-                if (finalText.length >= accumulated.length) {
-                  accumulated = finalText;
-                  yield ChatEvent(content: accumulated);
-                } else {
-                  debugPrint('[AI_CHAT] final_content 比当前累积还短，已忽略以避免字幕回退');
-                }
-              }
-              continue;
-            }
-
-            // assistant_content：resume 流里整块下发的文本，作为追加，不覆盖
-            if (data.containsKey('assistant_content')) {
-              final chunk = data['assistant_content'] as String? ?? '';
-              if (chunk.isNotEmpty) {
-                debugPrint('[AI_CHAT] 收到 assistant 文本块，长度: ${chunk.length}');
-                if (!accumulated.contains(chunk)) {
-                  accumulated += chunk;
-                }
-                yield ChatEvent(content: accumulated);
-              }
-              continue;
-            }
-
-            // 最终完整思考（用于替换之前的增量累积）
-            if (data.containsKey('final_thinking')) {
-              final finalThinking = data['final_thinking'] as String? ?? '';
-              if (finalThinking.isNotEmpty) {
-                debugPrint('[AI_CHAT] 收到最终完整思考，长度: ${finalThinking.length}');
-                if (finalThinking.length >= accumulatedThinking.length) {
-                  accumulatedThinking = finalThinking;
-                  yield ChatEvent(thinking: accumulatedThinking);
-                }
-              }
-              continue;
-            }
-
-            // assistant_thinking：resume 流里的整块思考
-            if (data.containsKey('assistant_thinking')) {
-              final chunk = data['assistant_thinking'] as String? ?? '';
-              if (chunk.isNotEmpty) {
-                if (!accumulatedThinking.contains(chunk)) {
-                  accumulatedThinking += chunk;
-                }
-                yield ChatEvent(thinking: accumulatedThinking);
-              }
-              continue;
-            }
-
-          // JSON-APP 检测
-          if (data.containsKey('has_json') && data['has_json'] == true) {
-            Map<String, dynamic>? parsedApp;
-            if (data.containsKey('json_url') && data['json_url'] != null) {
-              final url = data['json_url'] as String;
-              try {
-                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
-                if (getResp.statusCode == 200) {
-                  final jsonBody = utf8.decode(getResp.bodyBytes);
-                  parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
-                } else {
-                  yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
-                }
-              } catch (e) {
-                yield ChatEvent(failedJsonUrl: url, error: '下载 JSON 异常: $e');
-              }
-            } else {
-              parsedApp = data['json_app'] as Map<String, dynamic>?;
-            }
-            
-            if (parsedApp != null) {
-              yield ChatEvent(jsonApp: parsedApp);
-            }
-            continue;
-          }
-
-          // 配额信息
-          if (data.containsKey('quota')) {
-            yield ChatEvent(
-              quota: data['quota'] as Map<String, dynamic>?,
-            );
-            continue;
-          }
-
-          // 错误
-          if (data.containsKey('error')) {
-            yield ChatEvent(error: data['error'] as String);
-            continue;
-          }
-
-          // 思考过程（增量累积）
-          if (data.containsKey('thinking')) {
-            final thinking = data['thinking'] as String? ?? '';
-            if (thinking.isNotEmpty) {
-              accumulatedThinking += thinking;
-              yield ChatEvent(thinking: accumulatedThinking);
-            }
-            continue;
-          }
-
-          // 普通文本
-          final content = data['content'] as String? ?? '';
-          if (content.isNotEmpty) {
-            accumulated += content;
-            yield ChatEvent(content: accumulated);
-          }
-        } catch (_) {}
-      }
-
-      // 流结束后，统一解析标签指令（避免流式传输过程中重复解析）
-
-      // 1. 检测 [json_app_url] 标记 → 不自动下载，仅通知 UI 显示按钮
-      // AI 偶尔会把 URL 包成 markdown 链接 [json_app_url](URL)[/json_app_url]，
-      // 容错处理：从匹到的内容里抽出真正的 http(s) URL。
-      final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
-      final urlMatch = urlRegex.firstMatch(accumulated);
-      if (urlMatch != null) {
-        final raw = urlMatch.group(1)!.trim();
-        final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
-        final url = httpMatch?.group(0) ?? raw;
-        debugPrint('[AI_CHAT] 流结束，检测到 JSON URL，等待用户确认下载: $url');
-        yield ChatEvent(pendingJsonUrl: url);
-      }
-
-      // 2. 检测 [request_action] 标记
-      final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
-      final actionMatch = actionRegex.firstMatch(accumulated);
-      if (actionMatch != null) {
-        final action = actionMatch.group(1)!;
-        debugPrint('[AI_CHAT] 流结束，检测到请求动作: $action');
-        yield ChatEvent(requestAction: action);
-      }
-
-      // 3. 如果累积的文本包含 JSON 块，则提取并应用
-      final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
-      final match = jsonBlockRegex.firstMatch(accumulated);
-      if (match != null && urlMatch == null) {  // 有 URL 时不再重复处理
-        try {
-          final jsonStr = match.group(1)!;
-          final parsedApp = json.decode(jsonStr) as Map<String, dynamic>;
-          yield ChatEvent(jsonApp: parsedApp);
-        } catch (e) {
-          // JSON 解析失败则忽略
-        }
-      }
-
-      // 流正常结束，跳出重连循环
-      debugPrint('[AI_CHAT] 流正常结束');
+    // ── 1. POST /start：起 worker ──
+    final startResult = await _postStart(userMessage, forceRestart: true);
+    if (startResult.error != null) {
+      yield ChatEvent(error: startResult.error, quota: startResult.quota);
       return;
+    }
+    // start 成功 → 标记 session 已使用
+    if (!_sessionUsed) {
+      _sessionUsed = true;
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setBool(_sessionUsedKey, true);
+      });
+    }
 
-    } on http.ClientException catch (e) {
-      debugPrint('[AI_CHAT] ClientException: $e');
+    // ── 2. SSE 流式读 + 自动重连 ──
+    final state = _StreamState();
+    int reconnectCount = 0;
+    while (true) {
       if (_aborting) {
-        // 只有显式 abort() 才认为是用户主动中止
         debugPrint('[AI_CHAT] 用户主动中止，不重连');
         return;
       }
-      retryCount++;
-      if (retryCount > maxRetries) {
-        yield ChatEvent(error: '连接失败，已达到最大重试次数: $e');
+
+      state.outcome = _StreamOutcome.retry;  // 默认假设需要重连，_readStreamOnce 内部会改
+      await for (final ev in _readStreamOnce(state)) {
+        yield ev;
+      }
+
+      if (state.outcome == _StreamOutcome.done) {
+        debugPrint('[AI_CHAT] 流正常结束 (last_id=$_lastEntryId)');
         return;
       }
-      yield ChatEvent(statusMessage: '网络波动，正在自动重试... ($retryCount/$maxRetries)');
-      // 继续重连循环
+
+      // retry：等一下再连，最多 30 次（指数 backoff，封顶 5s）
+      reconnectCount++;
+      if (reconnectCount > 30) {
+        yield ChatEvent(error: '连接持续不稳定，已停止重试');
+        return;
+      }
+      final delayMs = (500 * (1 << (reconnectCount.clamp(1, 4) - 1))).clamp(500, 5000);
+      debugPrint('[AI_CHAT] 第 $reconnectCount 次重连，${delayMs}ms 后...');
+      await Future.delayed(Duration(milliseconds: delayMs));
+    }
+  }
+
+  /// 内部：读一次 SSE 直到流结束或断线，把事件 yield 出去；
+  /// 流结束后通过 [state.outcome] 告诉调用方下一步该重连还是退出。
+  Stream<ChatEvent> _readStreamOnce(_StreamState state) async* {
+    final client = http.Client();
+    _activeClient = client;
+
+    final token = AuthService.token;
+    final url = '$_baseUrl/api/ai/chat/$_sessionId/stream?last_id=${Uri.encodeQueryComponent(_lastEntryId)}';
+    debugPrint('[AI_CHAT] >>> SSE GET $url');
+
+    try {
+      final request = http.Request('GET', Uri.parse(url));
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'text/event-stream';
+
+      final response = await client.send(request).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 401 && token != null) {
+        try {
+          await AuthService.refreshSession();
+          state.outcome = _StreamOutcome.retry;
+          return;
+        } catch (_) {
+          yield ChatEvent(error: '请先登录');
+          state.outcome = _StreamOutcome.done;
+          return;
+        }
+      }
+      if (response.statusCode == 404) {
+        yield ChatEvent(error: 'Session 已过期，请重新发起对话');
+        state.outcome = _StreamOutcome.done;
+        return;
+      }
+      if (response.statusCode != 200) {
+        final body = await response.stream.bytesToString();
+        debugPrint('[AI_CHAT] SSE HTTP ${response.statusCode}: $body');
+        // 5xx → 重连；4xx → 报错
+        if (response.statusCode >= 500) {
+          state.outcome = _StreamOutcome.retry;
+          return;
+        }
+        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
+        state.outcome = _StreamOutcome.done;
+        return;
+      }
+
+      // 解析 SSE：id:、data:、:heartbeat
+      String? pendingId;
+      await for (final line in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        if (_aborting) {
+          state.outcome = _StreamOutcome.done;
+          return;
+        }
+        final trimmed = line.trimRight();
+
+        if (trimmed.isEmpty) {
+          continue;  // SSE event separator
+        }
+        if (trimmed.startsWith(':')) {
+          continue;  // comment / heartbeat
+        }
+        if (trimmed.startsWith('id:')) {
+          pendingId = trimmed.substring(3).trim();
+          continue;
+        }
+        if (!trimmed.startsWith('data:')) continue;
+
+        final dataStr = trimmed.substring(5).trimLeft();
+
+        if (dataStr == '[DONE]') {
+          debugPrint('[AI_CHAT] <<< SSE [DONE]');
+          // 流结束后兜底解析累积文本里的标签
+          await for (final ev in _emitTrailingTags(state)) {
+            yield ev;
+          }
+          state.outcome = _StreamOutcome.done;
+          return;
+        }
+
+        // 真正业务事件
+        if (!dataStr.contains('"content"') && !dataStr.contains('"thinking"')) {
+          debugPrint('[AI_CHAT] <<< SSE: ${dataStr.length > 200 ? "${dataStr.substring(0, 200)}..." : dataStr}');
+        }
+
+        try {
+          final data = json.decode(dataStr) as Map<String, dynamic>;
+          await for (final ev in _handleEvent(data, state)) {
+            yield ev;
+          }
+          // 推进游标：data 处理成功后才更新（否则下次重连会跳过没处理完的事件）
+          if (pendingId != null) {
+            _lastEntryId = pendingId;
+            pendingId = null;
+          }
+        } catch (e) {
+          debugPrint('[AI_CHAT] 事件 JSON 解析失败: $e');
+        }
+      }
+
+      // 流自然结束（后端 10min cutover 或 keep-alive 超时）但没收到 [DONE]
+      // → 任务可能还在跑，重连续读
+      debugPrint('[AI_CHAT] SSE 流自然结束，无 [DONE]，重连');
+      state.outcome = _StreamOutcome.retry;
+    } on http.ClientException catch (e) {
+      debugPrint('[AI_CHAT] ClientException: $e');
+      if (_aborting) {
+        state.outcome = _StreamOutcome.done;
+        return;
+      }
+      state.outcome = _StreamOutcome.retry;
+    } on TimeoutException catch (_) {
+      debugPrint('[AI_CHAT] SSE 连接超时');
+      if (_aborting) {
+        state.outcome = _StreamOutcome.done;
+        return;
+      }
+      state.outcome = _StreamOutcome.retry;
     } catch (e) {
-      debugPrint('[AI_CHAT] 未知错误: $e');
-      retryCount++;
-      if (retryCount > maxRetries) {
-        yield ChatEvent(error: '网络错误: $e');
-        return;
-      }
-      // 继续重连循环
+      debugPrint('[AI_CHAT] SSE 未知错误: $e');
+      state.outcome = _StreamOutcome.retry;
     } finally {
       if (_activeClient == client) _activeClient = null;
       client.close();
     }
-    }  // while 循环结束
+  }
+
+  /// 处理单条业务事件（JSON shape 与老版本完全一致）
+  Stream<ChatEvent> _handleEvent(Map<String, dynamic> data, _StreamState state) async* {
+    if (data.containsKey('generating_json') && data['generating_json'] == true) {
+      yield ChatEvent(isGeneratingJson: true);
+      return;
+    }
+    if (data.containsKey('generating_json') && data['generating_json'] == false) {
+      return;
+    }
+    if (data.containsKey('request_action')) {
+      yield ChatEvent(requestAction: data['request_action'] as String);
+      return;
+    }
+    if (data.containsKey('status')) {
+      yield ChatEvent(statusMessage: data['message'] as String? ?? '');
+      return;
+    }
+    if (data.containsKey('final_content')) {
+      final finalText = data['final_content'] as String? ?? '';
+      if (finalText.isNotEmpty) {
+        debugPrint('[AI_CHAT] 收到最终完整内容，长度: ${finalText.length}');
+        if (finalText.length >= state.accumulated.length) {
+          state.accumulated = finalText;
+          yield ChatEvent(content: state.accumulated);
+        } else {
+          debugPrint('[AI_CHAT] final_content 比累积还短，忽略避免回退');
+        }
+      }
+      return;
+    }
+    if (data.containsKey('assistant_content')) {
+      final chunk = data['assistant_content'] as String? ?? '';
+      if (chunk.isNotEmpty) {
+        if (!state.accumulated.contains(chunk)) state.accumulated += chunk;
+        yield ChatEvent(content: state.accumulated);
+      }
+      return;
+    }
+    if (data.containsKey('final_thinking')) {
+      final ft = data['final_thinking'] as String? ?? '';
+      if (ft.isNotEmpty && ft.length >= state.accumulatedThinking.length) {
+        state.accumulatedThinking = ft;
+        yield ChatEvent(thinking: state.accumulatedThinking);
+      }
+      return;
+    }
+    if (data.containsKey('assistant_thinking')) {
+      final chunk = data['assistant_thinking'] as String? ?? '';
+      if (chunk.isNotEmpty) {
+        if (!state.accumulatedThinking.contains(chunk)) state.accumulatedThinking += chunk;
+        yield ChatEvent(thinking: state.accumulatedThinking);
+      }
+      return;
+    }
+    if (data.containsKey('has_json') && data['has_json'] == true) {
+      Map<String, dynamic>? parsedApp;
+      if (data['json_url'] != null) {
+        final url = data['json_url'] as String;
+        try {
+          final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+          if (getResp.statusCode == 200) {
+            parsedApp = json.decode(utf8.decode(getResp.bodyBytes)) as Map<String, dynamic>;
+          } else {
+            yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+          }
+        } catch (e) {
+          yield ChatEvent(failedJsonUrl: url, error: '下载 JSON 异常: $e');
+        }
+      } else {
+        parsedApp = data['json_app'] as Map<String, dynamic>?;
+      }
+      if (parsedApp != null) yield ChatEvent(jsonApp: parsedApp);
+      return;
+    }
+    if (data.containsKey('quota')) {
+      yield ChatEvent(quota: data['quota'] as Map<String, dynamic>?);
+      return;
+    }
+    if (data.containsKey('error')) {
+      yield ChatEvent(error: data['error'] as String);
+      return;
+    }
+    if (data.containsKey('thinking')) {
+      final t = data['thinking'] as String? ?? '';
+      if (t.isNotEmpty) {
+        state.accumulatedThinking += t;
+        yield ChatEvent(thinking: state.accumulatedThinking);
+      }
+      return;
+    }
+    final content = data['content'] as String? ?? '';
+    if (content.isNotEmpty) {
+      state.accumulated += content;
+      yield ChatEvent(content: state.accumulated);
+    }
+  }
+
+  /// 流真的结束（[DONE]）后兜底解析累积文本里的 [json_app_url] / [request_action] / ```json``` 标签
+  Stream<ChatEvent> _emitTrailingTags(_StreamState state) async* {
+    final accumulated = state.accumulated;
+
+    // 1. [json_app_url]…[/json_app_url] - 等用户确认下载
+    final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
+    final urlMatch = urlRegex.firstMatch(accumulated);
+    if (urlMatch != null) {
+      final raw = urlMatch.group(1)!.trim();
+      final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
+      final url = httpMatch?.group(0) ?? raw;
+      debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
+      yield ChatEvent(pendingJsonUrl: url);
+    }
+
+    // 2. [request_action]
+    final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
+    final actionMatch = actionRegex.firstMatch(accumulated);
+    if (actionMatch != null) {
+      yield ChatEvent(requestAction: actionMatch.group(1)!);
+    }
+
+    // 3. 内联 ```json``` 块（仅当没有 url 时）
+    if (urlMatch == null) {
+      final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
+      final match = jsonBlockRegex.firstMatch(accumulated);
+      if (match != null) {
+        try {
+          final parsed = json.decode(match.group(1)!) as Map<String, dynamic>;
+          yield ChatEvent(jsonApp: parsed);
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// POST /api/ai/chat/start，处理 401 刷新、429 配额、5xx 重试
+  Future<_StartResult> _postStart(String userMessage, {required bool forceRestart}) async {
+    const maxAttempts = 3;
+    Object? lastError;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1) {
+        await Future.delayed(Duration(seconds: attempt - 1));
+        if (_aborting) return _StartResult.error('已取消');
+      }
+      try {
+        final token = AuthService.token;
+        final headers = <String, String>{'Content-Type': 'application/json'};
+        if (token != null) headers['Authorization'] = 'Bearer $token';
+        final body = json.encode({
+          'messages': [{'role': 'user', 'content': userMessage}],
+          'session_id': _sessionId,
+          'provider': _selectedProvider,
+          'force_restart': forceRestart,
+        });
+        var resp = await http
+            .post(Uri.parse('$_baseUrl/api/ai/chat/start'), headers: headers, body: body)
+            .timeout(const Duration(seconds: 30));
+
+        if (resp.statusCode == 401 && token != null) {
+          try {
+            await AuthService.refreshSession();
+            final newToken = AuthService.token;
+            if (newToken != null) headers['Authorization'] = 'Bearer $newToken';
+            resp = await http
+                .post(Uri.parse('$_baseUrl/api/ai/chat/start'), headers: headers, body: body)
+                .timeout(const Duration(seconds: 30));
+          } catch (_) {
+            return _StartResult.error('请先登录');
+          }
+        }
+
+        if (resp.statusCode == 429) {
+          final data = json.decode(resp.body) as Map<String, dynamic>;
+          return _StartResult.error(data['error'] as String? ?? '配额已用完',
+              quota: data['quota'] as Map<String, dynamic>?);
+        }
+        if (resp.statusCode == 401) return _StartResult.error('请先登录');
+        if (resp.statusCode >= 500) {
+          lastError = 'HTTP ${resp.statusCode}';
+          continue;  // retry
+        }
+        if (resp.statusCode != 200) {
+          return _StartResult.error('服务器错误 (${resp.statusCode}): ${resp.body}');
+        }
+
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        debugPrint('[AI_CHAT] start ok: $data');
+        return _StartResult.ok(data['session_id'] as String? ?? _sessionId);
+      } on TimeoutException {
+        lastError = '连接超时';
+      } on http.ClientException catch (e) {
+        if (_aborting) return _StartResult.error('已取消');
+        lastError = e;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    return _StartResult.error('网络错误: $lastError');
   }
 
   void commitPartial(String partialContent) {
@@ -730,4 +794,26 @@ class AiChatService {
     abort();
     await resetSession();
   }
+}
+
+// ────────────── 内部辅助类型（仅 sendStream 重连循环用）──────────────
+
+enum _StreamOutcome { done, retry }
+
+class _StreamState {
+  String accumulated = '';
+  String accumulatedThinking = '';
+  _StreamOutcome outcome = _StreamOutcome.retry;
+}
+
+class _StartResult {
+  final String? sessionId;
+  final String? error;
+  final Map<String, dynamic>? quota;
+
+  _StartResult._(this.sessionId, this.error, this.quota);
+
+  factory _StartResult.ok(String sid) => _StartResult._(sid, null, null);
+  factory _StartResult.error(String msg, {Map<String, dynamic>? quota}) =>
+      _StartResult._(null, msg, quota);
 }

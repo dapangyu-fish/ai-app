@@ -206,6 +206,10 @@ class SessionStore:
     def is_aborted(self, session_id: str) -> bool:
         return self.r.exists(_abort_key(session_id)) > 0
 
+    def clear_abort(self, session_id: str) -> None:
+        """擦掉 abort 标记。force_restart 时用：旧 worker 已退，新 worker 别误杀。"""
+        self.r.delete(_abort_key(session_id))
+
 
 # ────────────────────────────── CLI 输出解析 ──────────────────────────────
 
@@ -590,3 +594,8 @@ def abort_session(session_id: str) -> None:
     """
     SessionStore().request_abort(session_id)
     _kill_proc(session_id)
+
+
+def clear_abort(session_id: str) -> None:
+    """擦掉 abort 标记。force_restart 重启 worker 时用。"""
+    SessionStore().clear_abort(session_id)
