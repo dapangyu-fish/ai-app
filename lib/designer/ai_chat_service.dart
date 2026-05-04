@@ -717,6 +717,8 @@ class AiChatService {
   /// 流真的结束（[DONE]）后兜底解析累积文本里的 [json_app_url] / [request_action] / ```json``` 标签
   Stream<ChatEvent> _emitTrailingTags(_StreamState state) async* {
     final accumulated = state.accumulated;
+    debugPrint('[AI_CHAT] _emitTrailingTags 入口, accumulated.len=${accumulated.length}, '
+        '末 200 字符: ${accumulated.length > 200 ? accumulated.substring(accumulated.length - 200) : accumulated}');
 
     // 1. [json_app_url]…[/json_app_url] - 等用户确认下载
     final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
@@ -727,6 +729,9 @@ class AiChatService {
       final url = httpMatch?.group(0) ?? raw;
       debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
       yield ChatEvent(pendingJsonUrl: url);
+    } else if (accumulated.contains('json_app_url')) {
+      // 文本里有 json_app_url 字样但 regex 没匹中 → 提示一下，方便排查
+      debugPrint('[AI_CHAT] ⚠️ accumulated 里有 json_app_url 字样但 regex 未匹中，可能格式有变');
     }
 
     // 2. [request_action]
