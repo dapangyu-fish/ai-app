@@ -101,6 +101,16 @@ class SessionStore:
     # ─── meta ───
     def create_meta(self, session_id: str, *, user_id: str, provider: str,
                     quota_used: int, quota_limit: int, quota_remaining: int) -> None:
+        """新一轮 worker 起前调。会清掉旧 stream + 旧 meta（避免上一轮的 final_text /
+        error / 老事件被新一轮的 client 当成本轮内容读到）。"""
+        # 1. 旧 stream 整个删（如果存在）—— 上一轮的事件不能让本轮 client 重放
+        # 2. 旧 meta 整个删（hset 是 merge，不删的话上一轮的 finished_at / final_text /
+        #    error 字段会残留）
+        pipe = self.r.pipeline()
+        pipe.delete(_stream_key(session_id))
+        pipe.delete(_meta_key(session_id))
+        pipe.execute()
+
         meta = {
             "session_id": session_id,
             "user_id": user_id,
@@ -473,6 +483,18 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             pass
 
         if proc.returncode is not None and proc.returncode != 0:
+            # 被 abort 杀的（force_restart 或用户主动 abort）→ 安静收摊
+            # 不能写 error 事件：同一 session_id 的新 worker 会复用这个 stream，
+            # client 重连读 stream 会把这条假错误当真错误显示
+            # SIGTERM=-15, SIGKILL=-9
+            if store.is_aborted(session_id) or proc.returncode in (-15, -9):
+                logger.info(
+                    f"[WORKER] sid={session_id} 启动阶段被 abort/kill "
+                    f"(code {proc.returncode})，静默退出"
+                )
+                store.set_status(session_id, STATUS_ABORTED)
+                return
+
             stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
             stdout_text = b"".join(first_lines).decode("utf-8", errors="replace") + \
                           proc.stdout.read().decode("utf-8", errors="replace")
@@ -526,6 +548,15 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 line_count += 1
 
         proc.wait()
+
+        # 被 abort/kill 的不算异常退出（同上：避免把假错误写进新 worker 复用的 stream）
+        if store.is_aborted(session_id) or proc.returncode in (-15, -9):
+            logger.info(
+                f"[WORKER] sid={session_id} 主循环结束因 abort/kill "
+                f"(code {proc.returncode})，静默退出"
+            )
+            store.set_status(session_id, STATUS_ABORTED)
+            return
 
         # ─── 5. 退出码 != 0 → 失败 ───
         if proc.returncode != 0:
