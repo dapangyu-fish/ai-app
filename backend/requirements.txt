@@ -12,3 +12,6 @@ pyaudio>=0.2.11
 # 生产 WSGI server：ai-app 用 -k eventlet -w 1（SocketIO + SSE），registry 用 -k gthread -w 4 --threads 8
 gunicorn>=21.2.0
 eventlet>=0.36.0
+# AI session 状态存储（Phase 1: ai-background-push）
+# redis-py 5.x 在 eventlet monkey_patch 下走 socket 协程化，不需要单独的 aioredis
+redis>=5.0.0

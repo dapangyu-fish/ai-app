@@ -1,0 +1,591 @@
+"""AI session 状态管理 + Worker 解耦层 (Phase 1: ai-background-push)
+
+设计目标：把 claude CLI 的运行从 HTTP 连接生命周期里抽出来。
+- worker 跑在独立线程（eventlet monkey_patch 后实为 greenlet），把 claude CLI
+  输出实时写到 Redis Stream
+- HTTP 端点 /api/ai/chat/<id>/stream 只是从 Redis 读流，可以随时断重连
+
+Redis 数据：
+    ai:session:<id>:meta    Hash    元信息（status / 起止时间 / 配额 / final_text）
+    ai:session:<id>:stream  Stream  SSE 事件序列；entry id 即"位置"
+    ai:session:<id>:abort   String  存在 = 已请求取消（SETEX 300s 自动失效）
+
+详见 backend/ARCHITECTURE.md §3。
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import subprocess
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional, Tuple
+
+import redis
+
+from config import (
+    AI_PROVIDERS,
+    AI_SESSION_REDIS_HOST,
+    AI_SESSION_REDIS_PASSWORD,
+    AI_SESSION_REDIS_PORT,
+    AI_SESSION_REDIS_TTL_SECONDS,
+    AI_WORKER_MAX_CONCURRENCY,
+    CLAUDE_BIN,
+    DEFAULT_PROVIDER,
+    GENERATE_PROMPT_PATH,
+    PROJECT_ROOT,
+)
+
+logger = logging.getLogger(__name__)
+
+
+# ────────────────────────────── Redis 单例 ──────────────────────────────
+
+_redis_client: Optional[redis.Redis] = None
+_redis_client_lock = threading.Lock()
+
+
+def get_redis() -> redis.Redis:
+    """懒加载 Redis 连接（避免 import 时就连）。线程安全。"""
+    global _redis_client
+    if _redis_client is not None:
+        return _redis_client
+    with _redis_client_lock:
+        if _redis_client is None:
+            _redis_client = redis.Redis(
+                host=AI_SESSION_REDIS_HOST,
+                port=AI_SESSION_REDIS_PORT,
+                password=AI_SESSION_REDIS_PASSWORD or None,
+                socket_connect_timeout=2,
+                socket_keepalive=True,
+                decode_responses=False,
+            )
+    return _redis_client
+
+
+# ────────────────────────────── Key 命名 ──────────────────────────────
+
+def _meta_key(session_id: str) -> str:
+    return f"ai:session:{session_id}:meta"
+
+
+def _stream_key(session_id: str) -> str:
+    return f"ai:session:{session_id}:stream"
+
+
+def _abort_key(session_id: str) -> str:
+    return f"ai:session:{session_id}:abort"
+
+
+# ────────────────────────────── 状态枚举 ──────────────────────────────
+
+STATUS_RUNNING = "running"
+STATUS_DONE = "done"
+STATUS_FAILED = "failed"
+STATUS_ABORTED = "aborted"
+
+TERMINAL_STATUSES = {STATUS_DONE, STATUS_FAILED, STATUS_ABORTED}
+
+
+# ────────────────────────────── SessionStore ──────────────────────────────
+
+class SessionStore:
+    """Redis 层的 session 元信息 + 事件流 CRUD。无业务逻辑。"""
+
+    def __init__(self):
+        self.r = get_redis()
+
+    # ─── meta ───
+    def create_meta(self, session_id: str, *, user_id: str, provider: str,
+                    quota_used: int, quota_limit: int, quota_remaining: int) -> None:
+        meta = {
+            "session_id": session_id,
+            "user_id": user_id,
+            "provider": provider,
+            "status": STATUS_RUNNING,
+            "started_at": str(int(time.time() * 1000)),
+            "event_count": "0",
+            "quota_used": str(quota_used),
+            "quota_limit": str(quota_limit),
+            "quota_remaining": str(quota_remaining),
+        }
+        pipe = self.r.pipeline()
+        pipe.hset(_meta_key(session_id), mapping=meta)
+        pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
+        pipe.execute()
+
+    def get_meta(self, session_id: str) -> dict:
+        raw = self.r.hgetall(_meta_key(session_id))
+        if not raw:
+            return {}
+        return {k.decode(): v.decode() for k, v in raw.items()}
+
+    def set_status(self, session_id: str, status: str, *,
+                   final_text: Optional[str] = None,
+                   final_thinking: Optional[str] = None,
+                   error: Optional[str] = None) -> None:
+        update = {
+            "status": status,
+            "finished_at": str(int(time.time() * 1000)),
+        }
+        if final_text is not None:
+            update["final_text"] = final_text
+        if final_thinking is not None:
+            update["final_thinking"] = final_thinking
+        if error is not None:
+            update["error"] = error
+        pipe = self.r.pipeline()
+        pipe.hset(_meta_key(session_id), mapping=update)
+        pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
+        pipe.execute()
+
+    # ─── stream ───
+    def append_event(self, session_id: str, event: dict) -> None:
+        """append 一个业务事件到 stream。每个 entry 用单字段 'data' 装 JSON。"""
+        try:
+            pipe = self.r.pipeline()
+            pipe.xadd(
+                _stream_key(session_id),
+                {"data": json.dumps(event, ensure_ascii=False).encode()},
+                maxlen=10000,  # 防内存爆炸；正常一次会话不到 1000 条
+                approximate=True,
+            )
+            pipe.hincrby(_meta_key(session_id), "event_count", 1)
+            pipe.expire(_stream_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
+            pipe.execute()
+        except Exception as e:
+            logger.exception(f"[SESSION] append_event 失败 sid={session_id}: {e}")
+
+    def read_events(self, session_id: str, last_id: str = "0",
+                    block_ms: int = 5000, count: int = 100) -> Tuple[List[dict], str]:
+        """从 stream 读事件。
+        - last_id="0"：从头读（重连补齐用）
+        - last_id=<上次返回的 new_last_id>：续读
+        - block_ms 期间没新事件 → 返回空列表 + 同样的 last_id（调用方循环 + 心跳）
+
+        返回 (events, new_last_id)。
+        """
+        try:
+            result = self.r.xread(
+                {_stream_key(session_id): last_id},
+                count=count,
+                block=block_ms,
+            )
+        except redis.exceptions.RedisError as e:
+            logger.warning(f"[SESSION] xread 失败 sid={session_id}: {e}")
+            return [], last_id
+
+        if not result:
+            return [], last_id
+
+        events: List[dict] = []
+        new_last = last_id
+        for _, entries in result:
+            for entry_id, fields in entries:
+                new_last = entry_id.decode() if isinstance(entry_id, bytes) else entry_id
+                raw = fields.get(b"data") if isinstance(list(fields.keys())[0], bytes) else fields.get("data")
+                if not raw:
+                    continue
+                try:
+                    if isinstance(raw, bytes):
+                        raw = raw.decode("utf-8", errors="replace")
+                    events.append(json.loads(raw))
+                except json.JSONDecodeError:
+                    logger.warning(f"[SESSION] event JSON 解析失败 sid={session_id}: {raw[:100] if isinstance(raw, str) else raw}")
+        return events, new_last
+
+    # ─── abort ───
+    def request_abort(self, session_id: str) -> None:
+        # 5 分钟自动过期；正常 worker 几秒内就检测到并退出
+        self.r.set(_abort_key(session_id), b"1", ex=300)
+
+    def is_aborted(self, session_id: str) -> bool:
+        return self.r.exists(_abort_key(session_id)) > 0
+
+
+# ────────────────────────────── CLI 输出解析 ──────────────────────────────
+
+def _tool_status_message(tool_name: str, tool_input: dict) -> str:
+    """工具调用 → 用户友好提示文案。和旧 claude_chat 行为一致。"""
+    if tool_name == "Read":
+        file_path = tool_input.get("file_path", "")
+        return f"正在阅读 {os.path.basename(file_path)}..." if file_path else "正在阅读文件..."
+    elif tool_name == "Write":
+        file_path = tool_input.get("file_path", "")
+        return f"正在写入 {os.path.basename(file_path)}..." if file_path else "正在写入文件..."
+    elif tool_name in ("Grep", "Glob"):
+        return "正在搜索代码..."
+    elif tool_name == "Bash":
+        return "正在运行终端命令..."
+    elif tool_name == "Edit":
+        return "正在编辑文件..."
+    elif tool_name == "WebFetch":
+        return "正在获取网页..."
+    elif tool_name == "WebSearch":
+        return "正在搜索网络..."
+    return f"正在使用工具 {tool_name}..."
+
+
+def parse_cli_line(line_str: str) -> List[dict]:
+    """把 claude CLI 一行 stream-json 解析成业务事件 dict 列表。
+
+    返回的每个 dict 就是 SSE 'data: <json>\\n\\n' 里那个 json 对象。
+
+    旧 /chat 端点也调这个函数（保证两条路径行为完全一致）。
+    """
+    line_str = line_str.strip()
+    if not line_str:
+        return []
+
+    out: List[dict] = []
+    try:
+        event = json.loads(line_str)
+    except json.JSONDecodeError as e:
+        logger.warning(f"[PARSE] JSON 解析失败: {e}, line: {line_str[:100]}...")
+        return []
+
+    evt_type = event.get("type")
+
+    if evt_type == "system":
+        out.append({"status": "init", "message": "AI 引擎已启动"})
+
+    elif evt_type == "stream_event":
+        ev = event.get("event", {})
+        ev_type = ev.get("type")
+
+        if ev_type == "message_start":
+            out.append({"event": "message_start"})
+        elif ev_type == "message_stop":
+            out.append({"event": "message_stop"})
+        elif ev_type == "content_block_start":
+            content_block = ev.get("content_block", {})
+            block_type = content_block.get("type")
+            if block_type == "tool_use":
+                tool_name = content_block.get("name", "")
+                tool_input = content_block.get("input", {})
+                if tool_name:
+                    out.append({
+                        "status": tool_name.lower(),
+                        "message": _tool_status_message(tool_name, tool_input),
+                    })
+            elif block_type == "thinking":
+                out.append({"status": "thinking", "message": "AI 正在思考..."})
+        elif ev_type == "content_block_delta":
+            delta = ev.get("delta", {})
+            delta_type = delta.get("type")
+            if delta_type == "text_delta":
+                text_chunk = delta.get("text", "")
+                if text_chunk:
+                    out.append({"content": text_chunk})
+            elif delta_type == "thinking_delta":
+                think_chunk = delta.get("thinking", "")
+                if think_chunk:
+                    out.append({"thinking": think_chunk})
+            elif delta_type == "input_json_delta":
+                out.append({
+                    "status": "tool_preparing",
+                    "message": "AI 正在构造工具参数...",
+                })
+
+    elif evt_type == "assistant":
+        msg = event.get("message", {})
+        for block in msg.get("content", []):
+            btype = block.get("type")
+            if btype == "tool_use":
+                tool_name = block.get("name", "")
+                tool_input = block.get("input", {})
+                if tool_name:
+                    out.append({
+                        "status": tool_name.lower(),
+                        "message": _tool_status_message(tool_name, tool_input),
+                    })
+            elif btype == "text":
+                text_value = block.get("text", "")
+                if text_value:
+                    out.append({"assistant_content": text_value})
+            elif btype == "thinking":
+                think_value = block.get("thinking", "")
+                if think_value:
+                    out.append({"assistant_thinking": think_value})
+
+    elif evt_type == "result":
+        if event.get("is_error"):
+            res = event.get("result", "")
+            out.append({"error": f"生成中断: {res}"})
+        else:
+            msg = event.get("message", {})
+            for block in msg.get("content", []):
+                if block.get("type") == "text":
+                    final_text = block.get("text", "")
+                    if final_text:
+                        out.append({"final_content": final_text})
+                elif block.get("type") == "thinking":
+                    final_thinking = block.get("thinking", "")
+                    if final_thinking:
+                        out.append({"final_thinking": final_thinking})
+
+    return out
+
+
+def extract_final_texts(events: List[dict]) -> Tuple[Optional[str], Optional[str]]:
+    """从所有事件里提取最终文本和 thinking。给 worker 完工时落 meta 用。"""
+    final_text = None
+    final_thinking = None
+    for ev in events:
+        if "final_content" in ev:
+            final_text = ev["final_content"]
+        elif "final_thinking" in ev:
+            final_thinking = ev["final_thinking"]
+    return final_text, final_thinking
+
+
+# ────────────────────────────── Worker 池 ──────────────────────────────
+
+# eventlet monkey_patch 后 threading.Thread 实为 greenlet，开销低。
+# 这里限制的是同时跑的 claude CLI 进程数（每个进程独立占 RAM）。
+_executor = ThreadPoolExecutor(
+    max_workers=AI_WORKER_MAX_CONCURRENCY,
+    thread_name_prefix="ai-worker",
+)
+
+# session_id -> Popen，给 abort 杀进程用
+_session_procs: dict = {}
+_session_procs_lock = threading.Lock()
+
+
+def _register_proc(session_id: str, proc: subprocess.Popen) -> None:
+    with _session_procs_lock:
+        _session_procs[session_id] = proc
+
+
+def _unregister_proc(session_id: str, proc: Optional[subprocess.Popen] = None) -> None:
+    with _session_procs_lock:
+        current = _session_procs.get(session_id)
+        if proc is None or current is proc:
+            _session_procs.pop(session_id, None)
+
+
+def _kill_proc(session_id: str) -> bool:
+    with _session_procs_lock:
+        proc = _session_procs.get(session_id)
+    if proc is None:
+        return False
+    try:
+        proc.terminate()
+    except Exception as e:
+        logger.warning(f"[WORKER] terminate 失败 sid={session_id}: {e}")
+    return True
+
+
+def is_session_proc_alive(session_id: str) -> bool:
+    with _session_procs_lock:
+        proc = _session_procs.get(session_id)
+    if proc is None:
+        return False
+    return proc.poll() is None
+
+
+def _build_cli_cmd(session_id: str, last_msg: str, sys_prompt: str,
+                   is_resume: bool) -> list:
+    cmd = [
+        CLAUDE_BIN,
+        "--dangerously-skip-permissions",
+        "--output-format", "stream-json",
+        "--include-partial-messages",
+        "--verbose",
+        "-p", f"本轮用户的请求: ‘’‘{last_msg}’‘’，请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户",
+    ]
+    if is_resume:
+        cmd.extend(["-r", session_id])
+    else:
+        cmd.extend(["--session-id", session_id])
+        if sys_prompt:
+            cmd.extend(["--append-system-prompt", sys_prompt])
+    return cmd
+
+
+def _provider_env(provider_id: Optional[str]) -> Tuple[dict, dict]:
+    """返回 (provider_dict, env_dict_for_subprocess)"""
+    pid = provider_id or DEFAULT_PROVIDER
+    provider = AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
+    cli_env = provider.get("cli_env", {})
+    env = os.environ.copy()
+    for k, v in cli_env.items():
+        env[k] = v
+    env.pop("ANTHROPIC_API_KEY", None)
+    env["IS_SANDBOX"] = "1"
+    return provider, env
+
+
+def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
+                 quota_used: int, quota_limit: int, quota_remaining: int) -> None:
+    """线程池 worker 入口。
+    把 claude CLI 输出解析为业务事件 + 写到 Redis stream，
+    完成后落 meta status。
+
+    任何异常都不能让线程崩——否则 status 永远停在 running，client 拉不到结果。
+    """
+    store = SessionStore()
+    proc: Optional[subprocess.Popen] = None
+    final_text: Optional[str] = None
+    final_thinking: Optional[str] = None
+    all_events: List[dict] = []
+
+    try:
+        # ─── 1. 起进程 ───
+        sys_prompt = ""
+        try:
+            with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
+                sys_prompt = f.read()
+        except FileNotFoundError:
+            logger.warning(f"[WORKER] 系统提示词文件未找到: {GENERATE_PROMPT_PATH}")
+
+        provider, env = _provider_env(provider_id)
+
+        # 先尝试 resume
+        cmd = _build_cli_cmd(session_id, last_msg, sys_prompt, is_resume=True)
+        logger.info(f"[WORKER] sid={session_id} 起 CLI (resume): {cmd[0]}...")
+
+        proc = subprocess.Popen(
+            cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL, env=env, bufsize=1,
+        )
+        _register_proc(session_id, proc)
+
+        # ─── 2. 读首行 ───
+        first_lines = []
+        line = proc.stdout.readline()
+        if line:
+            first_lines.append(line)
+
+        # ─── 3. 检查是否是"resume 不存在"错误 → fallback 创建新会话 ───
+        try:
+            proc.wait(timeout=0.1)
+        except subprocess.TimeoutExpired:
+            pass
+
+        if proc.returncode is not None and proc.returncode != 0:
+            stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
+            stdout_text = b"".join(first_lines).decode("utf-8", errors="replace") + \
+                          proc.stdout.read().decode("utf-8", errors="replace")
+            full_err = stderr_text + "\n" + stdout_text
+
+            if "No conversation found" in full_err or "requires a valid session ID" in full_err:
+                logger.info(f"[WORKER] sid={session_id} resume 失败，fallback 新会话")
+                _unregister_proc(session_id, proc)
+                cmd = _build_cli_cmd(session_id, last_msg, sys_prompt, is_resume=False)
+                proc = subprocess.Popen(
+                    cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    stdin=subprocess.DEVNULL, env=env, bufsize=1,
+                )
+                _register_proc(session_id, proc)
+                first_lines = []
+            else:
+                err_evt = {"error": f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"}
+                store.append_event(session_id, err_evt)
+                store.set_status(session_id, STATUS_FAILED, error=err_evt["error"])
+                return
+
+        # ─── 4. 主循环：读 CLI 输出 → 解析 → 写 Redis ───
+        line_count = 0
+        for buffered in first_lines:
+            line_str = buffered.decode("utf-8", errors="replace")
+            for ev in parse_cli_line(line_str):
+                store.append_event(session_id, ev)
+                all_events.append(ev)
+                line_count += 1
+
+        # 然后实时读
+        while True:
+            if store.is_aborted(session_id):
+                logger.info(f"[WORKER] sid={session_id} 收到 abort，杀进程")
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+                store.set_status(session_id, STATUS_ABORTED)
+                return
+
+            line = proc.stdout.readline()
+            if not line:
+                # CLI 结束
+                break
+
+            line_str = line.decode("utf-8", errors="replace")
+            for ev in parse_cli_line(line_str):
+                store.append_event(session_id, ev)
+                all_events.append(ev)
+                line_count += 1
+
+        proc.wait()
+
+        # ─── 5. 退出码 != 0 → 失败 ───
+        if proc.returncode != 0:
+            err = proc.stderr.read().decode("utf-8", errors="replace")
+            err_evt = {"error": f"Claude CLI 异常退出: {err}"}
+            store.append_event(session_id, err_evt)
+            store.set_status(session_id, STATUS_FAILED, error=err_evt["error"])
+            return
+
+        # ─── 6. 正常完成 ───
+        # 配额事件 + DONE 标记保留发到 stream（给老客户端兼容；新客户端从 meta 读）
+        store.append_event(session_id, {"quota": {
+            "used": quota_used, "limit": quota_limit, "remaining": quota_remaining,
+        }})
+
+        final_text, final_thinking = extract_final_texts(all_events)
+        store.set_status(
+            session_id, STATUS_DONE,
+            final_text=final_text or "",
+            final_thinking=final_thinking or "",
+        )
+        logger.info(
+            f"[WORKER] sid={session_id} 完成 lines={line_count} "
+            f"final_text_len={len(final_text or '')}"
+        )
+
+    except Exception as e:
+        logger.exception(f"[WORKER] sid={session_id} 异常: {e}")
+        try:
+            store.append_event(session_id, {"error": f"worker 异常: {e}"})
+            store.set_status(session_id, STATUS_FAILED, error=str(e))
+        except Exception:
+            pass
+
+    finally:
+        if proc is not None:
+            _unregister_proc(session_id, proc)
+            try:
+                # 兜底：如果还没退就再 kill 一次
+                if proc.poll() is None:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+            except Exception:
+                pass
+
+
+def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
+                  *, user_id: str, quota_used: int, quota_limit: int,
+                  quota_remaining: int) -> None:
+    """提交 worker 到线程池。立刻返回，不等任务完成。
+
+    调用前应先 SessionStore.create_meta；这里只负责起 worker。
+    """
+    _executor.submit(
+        _worker_main, session_id, last_msg, provider_id,
+        quota_used, quota_limit, quota_remaining,
+    )
+
+
+def abort_session(session_id: str) -> None:
+    """请求 abort：写 abort 标记 + 主动 kill 进程（双保险）。
+    worker 主循环里下一次 readline 唤醒后会检测到 abort 标记并把 status 设为 aborted。
+    """
+    SessionStore().request_abort(session_id)
+    _kill_proc(session_id)
