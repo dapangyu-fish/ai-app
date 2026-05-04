@@ -623,10 +623,13 @@ def _build_sse_stream(session_id: str, last_id: str):
     - 先回放 last_id 之后的所有事件
     - 然后阻塞读新事件（block 5s 内没新数据 → 心跳）
     - meta.status 进入 terminal 状态后，把剩余事件读完再发 [DONE]
+    - 僵尸 session（status=running 但进程已死，常见于后端重启）→ 主动标 FAILED + needs_retry
     """
     store = ai_session.SessionStore()
     cursor = last_id
     started_at = _time.time()
+    # 僵尸检测：第一次检查在 5s 后（给 worker 注册 _session_procs 留余量），之后每 10s 检查一次
+    next_zombie_check = started_at + 5
 
     while True:
         items = store.read_events(session_id, last_id=cursor, block_ms=5000, count=100)
@@ -650,6 +653,29 @@ def _build_sse_stream(session_id: str, last_id: str):
                 cursor = entry_id
             yield 'data: [DONE]\n\n'
             return
+
+        # 僵尸检测：status 是 running 但进程不在 _session_procs（dict 在内存里，
+        # 后端重启就丢了；worker 线程也可能因 OOM / 异常没写完 status 就崩了）
+        # 客户端 idle timeout 不会触发（心跳还在），所以必须 backend 主动告诉它
+        if status == ai_session.STATUS_RUNNING and _time.time() >= next_zombie_check:
+            next_zombie_check = _time.time() + 10
+            if not ai_session.is_session_proc_alive(session_id):
+                logger.warning(
+                    f"[CHAT_STREAM] sid={session_id} 僵尸 session（running 但 proc 不在）"
+                    f"——大概率后端重启过，标 FAILED + needs_retry"
+                )
+                err_evt = {
+                    "error": "服务器进程异常，任务已中断",
+                    "needs_retry": True,
+                }
+                store.append_event(session_id, err_evt)
+                store.set_status(
+                    session_id,
+                    ai_session.STATUS_FAILED,
+                    error="server process gone (zombie session)",
+                )
+                # 不在这里 return，让下一轮 while 循环走 TERMINAL_STATUSES 分支自然 [DONE]，
+                # 顺便把刚 append 的 needs_retry 事件读出来发给 client
 
         # 防止单次 SSE 连接卡 10 分钟以上（即使心跳还在）
         # 客户端会自动重连续读，没数据丢失
