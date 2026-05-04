@@ -1804,12 +1804,21 @@ class _DesignerBallState extends State<DesignerBall>
       iconColor = defaultFg;
     }
 
+    // 是否有后台 AI 会话（已经攒了消息或正在 stream）→ 给悬浮球加一圈外环表示
+    // 比原来在球内画小红点视觉上更克制
+    final hasBackgroundSession = _messages.isNotEmpty || _streamSub != null;
+    final ringColor = isDark ? const Color(0xFFFFB74D) : const Color(0xFFFB8C00);
+
     Widget ball = Container(
       width: _ballSize,
       height: _ballSize,
       decoration: BoxDecoration(
         color: ballColor,
         shape: BoxShape.circle,
+        // 后台会话指示：在球的边缘画一圈 amber 环
+        border: hasBackgroundSession
+            ? Border.all(color: ringColor, width: 2.5)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
@@ -1835,36 +1844,11 @@ class _DesignerBallState extends State<DesignerBall>
             : _chatMode
                 ? Icon(Icons.chat_bubble_outline,
                     color: iconColor, size: 26)
-                : Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        'D',
-                        style: TextStyle(
-                          color: iconColor,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      if (_messages.isNotEmpty)
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Container(
-                            width: 9,
-                            height: 9,
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.black : Colors.orangeAccent,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isDark ? Colors.white : Colors.black,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+                // 默认：黑白线性麦克风图标（替代原 'D' 字母）
+                : Icon(
+                    Icons.mic_none_outlined,
+                    color: iconColor,
+                    size: 26,
                   ),
       ),
     );
