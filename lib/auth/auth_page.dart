@@ -78,7 +78,8 @@ class _AuthPageState extends State<AuthPage> {
     try {
       if (_isLogin) {
         await AuthService.signIn(email: email, password: password);
-        await _saveLastEmail(email);
+        // signIn 内部已经在同邮箱时把 _lastEmailKey 写好；切账号时则 token 还没落地
+        if (!await _handlePendingAccountSwitch()) return;
         widget.onAuthSuccess();
       } else {
         final result = await AuthService.register(
@@ -99,7 +100,8 @@ class _AuthPageState extends State<AuthPage> {
             ),
           );
         } else {
-          await _saveLastEmail(email);
+          // 自动确认 register（已拿到 token） — 同样要处理切账号
+          if (!await _handlePendingAccountSwitch()) return;
           widget.onAuthSuccess();
         }
       }
@@ -111,10 +113,7 @@ class _AuthPageState extends State<AuthPage> {
             MaterialPageRoute(
               builder: (_) => OtpVerifyPage(
                 email: _emailCtrl.text.trim(),
-                onVerified: () async {
-                  await _saveLastEmail(_emailCtrl.text.trim());
-                  widget.onAuthSuccess();
-                },
+                onVerified: widget.onAuthSuccess,
               ),
             ),
           );
@@ -123,13 +122,43 @@ class _AuthPageState extends State<AuthPage> {
         setState(() => _error = msg);
       }
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _saveLastEmail(String email) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_last_email', email);
+  /// 检查 AuthService 是否有 pending 切账号；有则弹框处理。
+  /// 返回 true：可以继续走"登录成功"后续逻辑（onAuthSuccess）。
+  /// 返回 false：用户取消 / 异常，留在登录页。
+  Future<bool> _handlePendingAccountSwitch() async {
+    final info = AuthService.pendingAccountSwitch;
+    if (info == null) return true;
+
+    if (!mounted) {
+      AuthService.cancelPendingAccountSwitch();
+      return false;
+    }
+
+    final confirmed = await showAccountSwitchDialog(context, info);
+    if (confirmed != true) {
+      AuthService.cancelPendingAccountSwitch();
+      if (mounted) {
+        setState(() {
+          _error = '已取消切换账号';
+        });
+      }
+      return false;
+    }
+
+    try {
+      await AuthService.confirmAccountSwitchAndWipe();
+      return true;
+    } catch (e) {
+      debugPrint('[AuthPage] confirmAccountSwitchAndWipe 失败: $e');
+      if (mounted) {
+        setState(() => _error = '清除本地数据失败：$e');
+      }
+      return false;
+    }
   }
 
   @override
@@ -328,6 +357,34 @@ class _AuthPageState extends State<AuthPage> {
   }
 }
 
+/// 切换账号确认弹窗。返回 true=确认清除并继续，false/null=取消。
+Future<bool?> showAccountSwitchDialog(
+    BuildContext context, AccountSwitchInfo info) {
+  final cs = Theme.of(context).colorScheme;
+  return showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      title: const Text('切换账号'),
+      content: Text(
+        '检测到本次登录的账号（${info.newEmail}）与上次（${info.prevEmail}）不一致。\n\n'
+        '继续将清除本地所有聊天记录、通讯录与本地数据，是否继续？',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: cs.error),
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('确认清除并继续'),
+        ),
+      ],
+    ),
+  );
+}
+
 /// 邮箱 OTP 验证码输入页面
 class OtpVerifyPage extends StatefulWidget {
   final String email;
@@ -369,6 +426,31 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
 
     try {
       await AuthService.verifyOtp(email: widget.email, token: code);
+      // 与 AuthPage._submit 同样的切账号检测
+      final info = AuthService.pendingAccountSwitch;
+      if (info != null) {
+        if (!mounted) {
+          AuthService.cancelPendingAccountSwitch();
+          return;
+        }
+        final confirmed = await showAccountSwitchDialog(context, info);
+        if (confirmed != true) {
+          AuthService.cancelPendingAccountSwitch();
+          if (mounted) {
+            setState(() => _error = '已取消切换账号');
+          }
+          return;
+        }
+        try {
+          await AuthService.confirmAccountSwitchAndWipe();
+        } catch (e) {
+          debugPrint('[OtpVerifyPage] wipe 失败: $e');
+          if (mounted) {
+            setState(() => _error = '清除本地数据失败：$e');
+          }
+          return;
+        }
+      }
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
@@ -377,7 +459,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
       setState(
           () => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

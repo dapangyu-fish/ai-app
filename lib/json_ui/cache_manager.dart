@@ -45,6 +45,14 @@ class CacheManager {
     }
   }
 
+  /// 切换账号时调用：丢弃内存里的索引，下次访问会重新 init / 拉取。
+  /// 注意磁盘上的 dsl_cache 目录由调用方（local_data_wiper）负责删除。
+  Future<void> reset() async {
+    _initialized = false;
+    _indexCache = null;
+    _cacheDir = null;
+  }
+
   Future<void> _saveIndex() async {
     if (_cacheDir == null || _indexCache == null) return;
     try {
