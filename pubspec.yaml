@@ -149,8 +149,8 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/logo-v2/logo2.png"
+  image_path: "assets/logo-v2/logo1.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/logo-v2/logo2.png"
+  adaptive_icon_foreground: "assets/logo-v2/logo1.png"
   # iOS App Store 不接受带 alpha 通道的图标（自动转 RGB + 白底）
   remove_alpha_ios: true
