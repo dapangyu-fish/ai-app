@@ -584,39 +584,45 @@ def chat_start():
 
 def _build_sse_stream(session_id: str, last_id: str):
     """生成器：从 Redis stream 读事件 + 心跳。
+
+    每条事件输出标准 SSE 格式 `id: <entry_id>\\ndata: <json>\\n\\n`，
+    entry_id 是 Redis Stream 的游标，client 重连时用 ?last_id=<entry_id> 续读。
+
     - 先回放 last_id 之后的所有事件
     - 然后阻塞读新事件（block 5s 内没新数据 → 心跳）
     - meta.status 进入 terminal 状态后，把剩余事件读完再发 [DONE]
     """
     store = ai_session.SessionStore()
     cursor = last_id
+    started_at = _time.time()
 
-    last_heartbeat = _time.time()
     while True:
-        events, cursor = store.read_events(session_id, last_id=cursor, block_ms=5000, count=100)
+        items = store.read_events(session_id, last_id=cursor, block_ms=5000, count=100)
 
-        for ev in events:
-            yield f'data: {json.dumps(ev, ensure_ascii=False)}\n\n'
+        for entry_id, ev in items:
+            yield f'id: {entry_id}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n'
+            cursor = entry_id
 
-        if not events:
-            # 5s 没新事件 → 心跳 + 检查是否已结束
+        if not items:
+            # 5s 没新事件 → 心跳保活 nginx / iOS 网络栈
             yield ': heartbeat\n\n'
 
         meta = store.get_meta(session_id)
         status = meta.get("status", "")
 
         if status in ai_session.TERMINAL_STATUSES:
-            # 任务结束。再读一次确保没漏事件
-            tail, cursor = store.read_events(session_id, last_id=cursor, block_ms=0, count=100)
-            for ev in tail:
-                yield f'data: {json.dumps(ev, ensure_ascii=False)}\n\n'
+            # 任务结束。再读一次（不阻塞）确保没漏事件
+            tail = store.read_events(session_id, last_id=cursor, block_ms=0, count=100)
+            for entry_id, ev in tail:
+                yield f'id: {entry_id}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n'
+                cursor = entry_id
             yield 'data: [DONE]\n\n'
             return
 
-        # 防止 client 端长期断线时这边白转
-        if _time.time() - last_heartbeat > 600:
-            logger.info(f"[CHAT_STREAM] sid={session_id} 流持续超过 10 分钟无 client，关闭")
-            yield 'data: [DONE]\n\n'
+        # 防止单次 SSE 连接卡 10 分钟以上（即使心跳还在）
+        # 客户端会自动重连续读，没数据丢失
+        if _time.time() - started_at > 600:
+            logger.info(f"[CHAT_STREAM] sid={session_id} 单次连接超过 10 分钟，主动关闭让 client 重连")
             return
 
 

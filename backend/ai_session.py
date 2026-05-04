@@ -160,13 +160,14 @@ class SessionStore:
             logger.exception(f"[SESSION] append_event 失败 sid={session_id}: {e}")
 
     def read_events(self, session_id: str, last_id: str = "0",
-                    block_ms: int = 5000, count: int = 100) -> Tuple[List[dict], str]:
-        """从 stream 读事件。
-        - last_id="0"：从头读（重连补齐用）
-        - last_id=<上次返回的 new_last_id>：续读
-        - block_ms 期间没新事件 → 返回空列表 + 同样的 last_id（调用方循环 + 心跳）
+                    block_ms: int = 5000, count: int = 100) -> List[Tuple[str, dict]]:
+        """从 stream 读事件，返回 [(entry_id, event_dict), ...]。
 
-        返回 (events, new_last_id)。
+        - last_id="0"：从头读（重连补齐用）
+        - last_id=<上次返回的最后一个 entry_id>：续读
+        - block_ms 期间没新事件 → 返回空 list（调用方循环 + 心跳）
+
+        entry_id 形如 "1714838400000-0"，是 Redis Stream 的天然顺序游标。
         """
         try:
             result = self.r.xread(
@@ -176,26 +177,26 @@ class SessionStore:
             )
         except redis.exceptions.RedisError as e:
             logger.warning(f"[SESSION] xread 失败 sid={session_id}: {e}")
-            return [], last_id
+            return []
 
         if not result:
-            return [], last_id
+            return []
 
-        events: List[dict] = []
-        new_last = last_id
+        out: List[Tuple[str, dict]] = []
         for _, entries in result:
             for entry_id, fields in entries:
-                new_last = entry_id.decode() if isinstance(entry_id, bytes) else entry_id
-                raw = fields.get(b"data") if isinstance(list(fields.keys())[0], bytes) else fields.get("data")
+                eid = entry_id.decode() if isinstance(entry_id, bytes) else entry_id
+                # fields key 在 redis-py 默认是 bytes，但 decode_responses 配置下也可能是 str
+                raw = fields.get(b"data") if b"data" in fields else fields.get("data")
                 if not raw:
                     continue
                 try:
                     if isinstance(raw, bytes):
                         raw = raw.decode("utf-8", errors="replace")
-                    events.append(json.loads(raw))
+                    out.append((eid, json.loads(raw)))
                 except json.JSONDecodeError:
-                    logger.warning(f"[SESSION] event JSON 解析失败 sid={session_id}: {raw[:100] if isinstance(raw, str) else raw}")
-        return events, new_last
+                    logger.warning(f"[SESSION] event JSON 解析失败 sid={session_id}")
+        return out
 
     # ─── abort ───
     def request_abort(self, session_id: str) -> None:
