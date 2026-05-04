@@ -51,9 +51,14 @@ class AuthService {
       // 尝试刷新 token 确保有效
       try {
         await refreshSession();
-      } catch (_) {
-        // 刷新失败 → 清除登录态
-        await _clearLocal();
+      } catch (e) {
+        // refreshSession 内部已经在 token 真无效（HTTP 4xx）时主动 _clearLocal 过了。
+        // 走到这里都是网络 / 解析异常：飞行模式 / DNS 挂 / 服务端短暂不可达。
+        // 此时 token 大概率还有效——保留本地登录态，让用户能进主界面。
+        // 后续真正的 API 调用走 _authRequest，碰到 401 会再触发刷新；只要那时网络
+        // 恢复就能正常衔接。如果网络始终不通，业务调用自己会 fail，但用户体感比
+        // "断网就被踢回登录页"好得多。
+        debugPrint('[Auth] restoreSession 刷新失败但保留登录态（网络/解析错误）: $e');
       }
     }
     authNotifier.value = isLoggedIn;

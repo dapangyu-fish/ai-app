@@ -10,6 +10,7 @@ import 'sherpa_asr_service.dart';
 import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
+import '../auth/auth_service.dart';
 import '../main.dart' show JsonDslApp;
 
 /// 语音识别方式枚举
@@ -196,6 +197,11 @@ class _DesignerBallState extends State<DesignerBall>
     // 不 await，不阻塞 UI 启动
     _chatService.loadSession().then((_) => _maybeResumeUnfinishedSession());
 
+    // DesignerBall 挂在 MaterialApp.builder 里凌驾所有路由，**不会**因为 AuthGate
+    // 切换 (FilePickerPage <-> AuthPage) 而重建。所以"用户掉登录后重新登录"这个
+    // 场景下，initState 不会再跑——必须显式监听登录态切换，重新触发 resume。
+    AuthService.authNotifier.addListener(_onAuthChanged);
+
     // 提前初始化原生语音识别（参照测试应用的成功实践）
     _initNativeSpeech();
 
@@ -303,7 +309,21 @@ class _DesignerBallState extends State<DesignerBall>
     _speech?.stop();
     _scrollController.dispose();
     AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
+    AuthService.authNotifier.removeListener(_onAuthChanged);
     super.dispose();
+  }
+
+  /// 登录态变化：从未登录 → 已登录时，重新检查是否有未完成会话需要恢复。
+  /// 这弥补了 DesignerBall 不会随 AuthGate 切换而重建的问题（它在 MaterialApp.builder 里）。
+  void _onAuthChanged() {
+    if (!mounted) return;
+    if (AuthService.authNotifier.value) {
+      // 重新登录后重新加载本地 session 信息（_lastUserMessage 等可能在断网期间陈旧）
+      // 然后异步触发恢复
+      _chatService.loadSession().then((_) {
+        if (mounted) _maybeResumeUnfinishedSession();
+      });
+    }
   }
 
   void _initPosition(Size screenSize) {
