@@ -67,9 +67,18 @@ def db_execute(sql, params=None):
         conn.close()
 
 
-def get_quota_info(user_id, role, role_quotas):
-    """获取用户配额信息 (used, limit, remaining)"""
+def get_quota_info(user_id, role, role_quotas, app_metadata=None):
+    """获取用户配额信息 (used, limit, remaining)。
+
+    优先级：
+      1. app_metadata.quota_limit_override（user-center 设的 per-user 覆盖，正整数才生效）
+      2. role_quotas[role]（按 role 兜底）
+    """
     limit = role_quotas.get(role, 30)
+    if app_metadata:
+        override = app_metadata.get("quota_limit_override")
+        if isinstance(override, int) and override > 0:
+            limit = override
     today = date.today().isoformat()
     row = db_query(
         "SELECT used_count FROM chat_quotas WHERE user_id = %s AND date = %s",

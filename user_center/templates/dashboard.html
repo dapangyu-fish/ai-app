@@ -83,6 +83,22 @@
     .audit td { padding: 6px 10px; }
     .ts { color: #64748b; white-space: nowrap; }
     .id-mono { font-family: ui-monospace, monospace; color: #64748b; font-size: 11px; }
+    .quota-form { display: inline-flex; gap: 4px; align-items: center; }
+    .quota-form input[type=number] {
+      width: 80px; padding: 4px 6px; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 4px; font-size: 12px; font-family: ui-monospace, monospace;
+    }
+    .quota-form input:focus { outline: none; border-color: #38bdf8; }
+    .quota-form button {
+      padding: 4px 8px; background: #0f172a; border: 1px solid #334155; color: #94a3b8;
+      border-radius: 4px; font-size: 12px; cursor: pointer;
+    }
+    .quota-form button:hover { color: #e2e8f0; border-color: #94a3b8; }
+    .hint { font-size: 10px; color: #38bdf8; margin-top: 2px; letter-spacing: 0.04em; }
+    .badge-warn {
+      display: inline-block; margin-left: 6px; padding: 1px 6px; font-size: 10px;
+      background: #78350f; color: #fde68a; border-radius: 3px; font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -110,6 +126,7 @@
         <tr>
           <th>Email / Username</th>
           <th>Role</th>
+          <th>Quota / 天</th>
           <th>Last sign in</th>
           <th>Created</th>
           <th>Status</th>
@@ -118,15 +135,30 @@
       </thead>
       <tbody>
         {% for u in users %}
+        {% set ov = u | quota_override %}
         <tr>
           <td>
-            <div class="email">{{ u.email or '(无邮箱)' }}</div>
+            <div class="email">
+              {{ u.email or '(无邮箱)' }}
+              {% if not (u | email_confirmed) %}<span class="badge-warn" title="邮箱未确认">⚠ 未验证</span>{% endif %}
+            </div>
             <div class="id-mono">
               {% if u.user_metadata and u.user_metadata.username %}@{{ u.user_metadata.username }} · {% endif %}{{ u.id }}
             </div>
           </td>
           <td>
             <span class="role-badge role-{{ u | role_of }}">{{ u | role_of }}</span>
+          </td>
+          <td>
+            <form method="POST" action="/users/{{ u.id }}/quota_override" class="quota-form">
+              <input type="hidden" name="q" value="{{ q }}">
+              <input type="number" name="limit" min="1" max="10000000"
+                     value="{{ ov if ov is not none else '' }}"
+                     placeholder="role 默认"
+                     title="留空 = 按 role 默认；填正整数 = 强制覆盖">
+              <button type="submit" title="保存">✓</button>
+            </form>
+            {% if ov is not none %}<div class="hint">override</div>{% endif %}
           </td>
           <td class="ts">{{ u.last_sign_in_at | ts }}</td>
           <td class="ts">{{ u.created_at | ts }}</td>
@@ -155,10 +187,17 @@
               <input type="hidden" name="q" value="{{ q }}">
               <button type="submit">发重置邮件</button>
             </form>
+            {% if not (u | email_confirmed) %}
+            <form method="POST" action="/users/{{ u.id }}/confirm_email"
+                  onsubmit="return confirm('强制把 {{ u.email }} 标为已验证（绕过验证邮件）？');">
+              <input type="hidden" name="q" value="{{ q }}">
+              <button type="submit" class="ok">手动验证邮箱</button>
+            </form>
+            {% endif %}
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px;">无用户</td></tr>
+        <tr><td colspan="7" style="text-align:center;color:#64748b;padding:24px;">无用户</td></tr>
         {% endfor %}
       </tbody>
     </table>

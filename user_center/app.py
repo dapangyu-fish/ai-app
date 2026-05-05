@@ -191,6 +191,18 @@ def sb_send_recovery(email: str) -> dict:
     return r.json()
 
 
+def sb_force_email_confirm(user_id: str) -> dict:
+    """手动把 email 标为已验证（绕过验证邮件）。用于"邮件没收到"的客服兜底场景。"""
+    r = requests.put(
+        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        headers=_sb_headers(),
+        json={"email_confirm": True},
+        timeout=10,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 # ────────────────────────────── Auth ──────────────────────────────
 
 serializer = URLSafeTimedSerializer(SESSION_SECRET, salt="user-center-session")
@@ -270,6 +282,18 @@ def _filter_banned(user: dict) -> bool:
     if bu == "none":
         return False
     return True
+
+
+@app.template_filter("quota_override")
+def _filter_quota_override(user: dict):
+    """返回 int 或 None（None = 无 override，按 role 默认）"""
+    v = (user.get("app_metadata") or {}).get("quota_limit_override")
+    return v if isinstance(v, int) and v > 0 else None
+
+
+@app.template_filter("email_confirmed")
+def _filter_email_confirmed(user: dict) -> bool:
+    return bool(user.get("email_confirmed_at"))
 
 
 @app.route("/login", methods=["GET"])
@@ -400,6 +424,71 @@ def send_recovery(user_id):
         log_audit(g.admin_user, user_id, user.get("email"),
                   "send_recovery", None, _client_ip())
         flash(f"已发送密码重置邮件给 {user['email']}")
+    except requests.HTTPError as e:
+        return f"Supabase API 错误: {e}", 502
+    return redirect(url_for("dashboard", q=request.form.get("q", "")))
+
+
+# ── 强制确认邮箱（绕过验证邮件）──
+@app.route("/users/<user_id>/confirm_email", methods=["POST"])
+def confirm_email(user_id):
+    try:
+        before = sb_get_user(user_id)
+        if not before:
+            return "user 不存在", 404
+        if before.get("email_confirmed_at"):
+            flash(f"{before.get('email')} 邮箱已经是已确认状态")
+            return redirect(url_for("dashboard", q=request.form.get("q", "")))
+        sb_force_email_confirm(user_id)
+        log_audit(g.admin_user, user_id, before.get("email"),
+                  "force_confirm_email", None, _client_ip())
+        flash(f"已把 {before.get('email')} 的邮箱标记为已确认")
+    except requests.HTTPError as e:
+        return f"Supabase API 错误: {e}", 502
+    return redirect(url_for("dashboard", q=request.form.get("q", "")))
+
+
+# ── 设/清除 per-user quota override ──
+# 写入 app_metadata.quota_limit_override (int)。后端 get_quota_info 优先读这个字段。
+@app.route("/users/<user_id>/quota_override", methods=["POST"])
+def set_quota_override(user_id):
+    raw = (request.form.get("limit") or "").strip()
+    try:
+        before = sb_get_user(user_id)
+        if not before:
+            return "user 不存在", 404
+        old_override = (before.get("app_metadata") or {}).get("quota_limit_override")
+
+        if raw == "":
+            # 清除 override —— 显式塞 None；sb_update_app_metadata 用 dict merge，None 会保留
+            # 改用读出来手动 pop 然后整个写回
+            current = before.get("app_metadata") or {}
+            new_meta = {k: v for k, v in current.items() if k != "quota_limit_override"}
+            r = requests.put(
+                f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                headers=_sb_headers(),
+                json={"app_metadata": new_meta},
+                timeout=10,
+            )
+            r.raise_for_status()
+            log_audit(g.admin_user, user_id, before.get("email"),
+                      "clear_quota_override",
+                      json.dumps({"was": old_override}, ensure_ascii=False),
+                      _client_ip())
+            flash(f"已清除 {before.get('email')} 的 quota override（恢复 role 默认）")
+        else:
+            try:
+                limit = int(raw)
+            except ValueError:
+                return "limit 必须是正整数", 400
+            if limit <= 0 or limit > 10_000_000:
+                return "limit 必须 > 0 且 ≤ 10000000", 400
+            sb_update_app_metadata(user_id, {"quota_limit_override": limit})
+            log_audit(g.admin_user, user_id, before.get("email"),
+                      "set_quota_override",
+                      json.dumps({"from": old_override, "to": limit}, ensure_ascii=False),
+                      _client_ip())
+            flash(f"已把 {before.get('email')} 的每日 quota 设为 {limit}")
     except requests.HTTPError as e:
         return f"Supabase API 错误: {e}", 502
     return redirect(url_for("dashboard", q=request.form.get("q", "")))

@@ -124,7 +124,10 @@ def chat():
 
     logger.info(f"[CHAT] 收到聊天请求 - user_id: {user_id}, role: {role}")
 
-    used, limit, remaining = get_quota_info(user_id, role, ROLE_QUOTAS)
+    used, limit, remaining = get_quota_info(
+        user_id, role, ROLE_QUOTAS,
+        app_metadata=request.supabase_user.get("app_metadata"),
+    )
     logger.debug(f"[CHAT] 配额信息 - used: {used}, limit: {limit}, remaining: {remaining}")
 
     if remaining <= 0:
@@ -521,7 +524,10 @@ def chat_start():
     user_id = request.supabase_user.get("id")
     role = request.user_role
 
-    used, limit, remaining = get_quota_info(user_id, role, ROLE_QUOTAS)
+    used, limit, remaining = get_quota_info(
+        user_id, role, ROLE_QUOTAS,
+        app_metadata=request.supabase_user.get("app_metadata"),
+    )
     if remaining <= 0:
         return jsonify({"error": "配额已用完", "quota": {"used": used, "limit": limit}}), 429
 
