@@ -8,6 +8,7 @@
   （root 可读；user 可随时改 env 重启服务生效）
 """
 
+import hashlib
 import json
 import os
 import secrets
@@ -17,6 +18,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from flask import Flask, Response, abort, g, redirect, render_template, request, url_for
+from flask_caching import Cache
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 # ── 启动期：读 env ──
@@ -72,6 +74,9 @@ def db_conn():
 
 def init_db() -> None:
     with db_conn() as conn:
+        # WAL 模式：允许 reader 与 writer 并发，admin 写入不阻塞 /api/v1/public 高并发读
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")  # WAL + NORMAL 是社区推荐的安全/性能平衡
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS configs (
@@ -199,6 +204,59 @@ app = Flask(
     template_folder=str(Path(__file__).parent / "templates"),
 )
 
+# 进程内 LRU 缓存。关键不变量：缓存 key 拼了 SQLite 文件 mtime（含 -wal/-shm），
+# admin 一改 → mtime 变 → 所有 worker 同步看到新 key 自动 miss → 重载，不需 Redis。
+# TTL 60s 仅作为兜底（防止极端时间漂移；正常情况下 mtime 永远是新鲜源）。
+cache = Cache(
+    app,
+    config={
+        "CACHE_TYPE": "SimpleCache",
+        "CACHE_DEFAULT_TIMEOUT": 60,
+        "CACHE_THRESHOLD": 32,  # 配置项 mtime 变化频率极低，cache 池小一点足矣
+    },
+)
+
+
+def _db_version() -> float:
+    """SQLite 文件 mtime（含 -wal/-shm）。stat() 是 µs 级开销。"""
+    paths = (DB_PATH, DB_PATH + "-wal", DB_PATH + "-shm")
+    mtimes = []
+    for p in paths:
+        try:
+            mtimes.append(os.path.getmtime(p))
+        except OSError:
+            pass
+    return max(mtimes, default=0.0)
+
+
+def _build_public_payload() -> tuple[bytes, str]:
+    """从 SQLite 拉所有配置，序列化 + 算 ETag。仅 cache miss 时调用。"""
+    with db_conn() as conn:
+        rows = conn.execute(
+            "SELECT key,value,value_type FROM configs ORDER BY key"
+        ).fetchall()
+    out: dict = {}
+    for r in rows:
+        try:
+            out[r["key"]] = json.loads(r["value"])
+        except json.JSONDecodeError:
+            out[r["key"]] = r["value"]
+    body = json.dumps(
+        out, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    etag = '"' + hashlib.sha256(body).hexdigest()[:16] + '"'
+    return body, etag
+
+
+def get_public_payload_cached() -> tuple[bytes, str]:
+    """带 mtime-version 的缓存读取。命中路径：dict 查 + stat()，约 1-2 µs。"""
+    key = f"public:v={_db_version()}"
+    cached = cache.get(key)
+    if cached is None:
+        cached = _build_public_payload()
+        cache.set(key, cached)
+    return cached
+
 
 @app.template_filter("ts_local")
 def ts_local(ts: int | None) -> str:
@@ -220,7 +278,7 @@ def _security_headers(resp: Response) -> Response:
     return resp
 
 
-# ── 公开 API（无鉴权 + CORS + ETag）──
+# ── 公开 API（无鉴权 + CORS + ETag + 进程内缓存）──
 @app.route("/api/v1/public", methods=["GET", "OPTIONS"])
 def public_config():
     if request.method == "OPTIONS":
@@ -230,20 +288,7 @@ def public_config():
         resp.headers["Access-Control-Allow-Headers"] = "If-None-Match, Content-Type"
         return resp
 
-    with db_conn() as conn:
-        rows = conn.execute(
-            "SELECT key,value,value_type FROM configs ORDER BY key"
-        ).fetchall()
-    out: dict = {}
-    for r in rows:
-        try:
-            out[r["key"]] = json.loads(r["value"])
-        except json.JSONDecodeError:
-            out[r["key"]] = r["value"]
-    body = json.dumps(out, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    import hashlib
-
-    etag = '"' + hashlib.sha256(body.encode("utf-8")).hexdigest()[:16] + '"'
+    body, etag = get_public_payload_cached()
 
     if request.headers.get("If-None-Match") == etag:
         resp = Response(status=304)
@@ -414,8 +459,11 @@ def _flash(msg: str, kind: str = "ok"):
     return redirect(url_for("admin", flash=msg, flash_kind=kind))
 
 
-# ── Main ──
+# ── 启动时一次性建表 + 种子；gunicorn / dev 都走同一路径 ──
+init_db()
+
+
+# ── Main: 本地 dev 用 `python app.py`，生产由 gunicorn 通过 `app:app` 接管 ──
 if __name__ == "__main__":
-    init_db()
     # 仅监听 127.0.0.1，外网由 nginx 反代
     app.run(host=LISTEN_HOST, port=LISTEN_PORT, debug=False)
