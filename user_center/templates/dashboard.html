@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Center · 用户管理</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    header {
+      padding: 14px 24px; background: #1e293b; border-bottom: 1px solid #334155;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { margin: 0; font-size: 17px; }
+    header .right { font-size: 13px; color: #94a3b8; display: flex; align-items: center; gap: 12px; }
+    header form { display: inline; }
+    header button {
+      padding: 6px 12px; background: transparent; border: 1px solid #475569;
+      color: #e2e8f0; border-radius: 4px; font-size: 12px; cursor: pointer;
+      font-family: inherit;
+    }
+    header button:hover { border-color: #94a3b8; }
+    main { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .toolbar {
+      display: flex; gap: 12px; align-items: center; margin-bottom: 16px;
+    }
+    .toolbar input[type=text] {
+      flex: 1; padding: 9px 12px; background: #1e293b; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; font-size: 14px; font-family: inherit;
+    }
+    .toolbar input:focus { outline: none; border-color: #38bdf8; }
+    .toolbar a {
+      padding: 9px 14px; background: #1e293b; color: #e2e8f0; text-decoration: none;
+      border-radius: 6px; border: 1px solid #334155; font-size: 13px;
+    }
+    .toolbar a.disabled { opacity: 0.4; pointer-events: none; }
+    .flash {
+      padding: 10px 14px; background: #064e3b; border-left: 3px solid #34d399;
+      margin-bottom: 16px; font-size: 13px; border-radius: 4px;
+    }
+    table {
+      width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 8px;
+      overflow: hidden; font-size: 13px;
+    }
+    th, td {
+      padding: 10px 12px; text-align: left; border-bottom: 1px solid #334155;
+      vertical-align: middle;
+    }
+    th { background: #0f172a; font-weight: 600; color: #94a3b8; font-size: 11px;
+         text-transform: uppercase; letter-spacing: 0.05em; }
+    tr:last-child td { border-bottom: none; }
+    .email { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    .role-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .role-user  { background: #334155; color: #cbd5e1; }
+    .role-pro   { background: #1e3a8a; color: #93c5fd; }
+    .role-admin { background: #7e22ce; color: #f3e8ff; }
+    .ban-yes { color: #f87171; font-weight: 600; }
+    .ban-no { color: #64748b; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .actions form { display: inline; }
+    select, .actions button {
+      padding: 5px 10px; background: #0f172a; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 4px; font-size: 12px; cursor: pointer;
+      font-family: inherit;
+    }
+    .actions button:hover { border-color: #94a3b8; }
+    .actions .danger { background: #7f1d1d; border-color: #991b1b; }
+    .actions .danger:hover { background: #991b1b; }
+    .actions .ok { background: #14532d; border-color: #166534; }
+    .actions .ok:hover { background: #166534; }
+    .pagination { margin-top: 14px; display: flex; gap: 8px; align-items: center; font-size: 13px; color: #94a3b8; }
+    h2 { margin: 32px 0 12px 0; font-size: 14px; color: #94a3b8;
+         font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .audit { font-size: 12px; }
+    .audit td { padding: 6px 10px; }
+    .ts { color: #64748b; white-space: nowrap; }
+    .id-mono { font-family: ui-monospace, monospace; color: #64748b; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>User Center</h1>
+    <div class="right">
+      <span>登录账号：{{ admin_user }}</span>
+      <form method="POST" action="/logout"><button type="submit">登出</button></form>
+    </div>
+  </header>
+  <main>
+    {% with msgs = get_flashed_messages() %}
+      {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
+    {% endwith %}
+
+    <form method="GET" action="/" class="toolbar">
+      <input type="text" name="q" value="{{ q }}" placeholder="按 email / username / id 模糊搜索（仅在当前页内）">
+      <input type="hidden" name="page" value="{{ page }}">
+      <button type="submit" style="padding:9px 14px;background:#38bdf8;color:#0f172a;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">搜索</button>
+      {% if q %}<a href="/?page={{ page }}">清除</a>{% endif %}
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Email / Username</th>
+          <th>Role</th>
+          <th>Last sign in</th>
+          <th>Created</th>
+          <th>Status</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div class="email">{{ u.email or '(无邮箱)' }}</div>
+            <div class="id-mono">
+              {% if u.user_metadata and u.user_metadata.username %}@{{ u.user_metadata.username }} · {% endif %}{{ u.id }}
+            </div>
+          </td>
+          <td>
+            <span class="role-badge role-{{ u | role_of }}">{{ u | role_of }}</span>
+          </td>
+          <td class="ts">{{ u.last_sign_in_at | ts }}</td>
+          <td class="ts">{{ u.created_at | ts }}</td>
+          <td>
+            {% if u | banned %}<span class="ban-yes">已封禁</span>{% else %}<span class="ban-no">正常</span>{% endif %}
+          </td>
+          <td class="actions">
+            <form method="POST" action="/users/{{ u.id }}/role">
+              <input type="hidden" name="q" value="{{ q }}">
+              <select name="role" onchange="if (confirm('把 {{ u.email }} 改为 ' + this.value + '？')) this.form.submit(); else this.value='{{ u | role_of }}';">
+                {% for r in valid_roles %}
+                  <option value="{{ r }}" {% if (u | role_of) == r %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            <form method="POST" action="/users/{{ u.id }}/ban"
+                  onsubmit="return confirm('{% if u | banned %}解禁{% else %}封禁{% endif %} {{ u.email }}？');">
+              <input type="hidden" name="q" value="{{ q }}">
+              <input type="hidden" name="state" value="{% if u | banned %}unban{% else %}ban{% endif %}">
+              <button type="submit" class="{% if u | banned %}ok{% else %}danger{% endif %}">
+                {% if u | banned %}解禁{% else %}封禁{% endif %}
+              </button>
+            </form>
+            <form method="POST" action="/users/{{ u.id }}/send_recovery"
+                  onsubmit="return confirm('给 {{ u.email }} 发送密码重置邮件？');">
+              <input type="hidden" name="q" value="{{ q }}">
+              <button type="submit">发重置邮件</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px;">无用户</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="pagination">
+      <a href="/?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}" class="{% if page <= 1 %}disabled{% endif %}" style="padding:6px 12px;background:#1e293b;color:#e2e8f0;text-decoration:none;border-radius:4px;border:1px solid #334155;">上一页</a>
+      <span>第 {{ page }} 页（每页 {{ per_page }} 条）</span>
+      <a href="/?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}" class="{% if not has_more %}disabled{% endif %}" style="padding:6px 12px;background:#1e293b;color:#e2e8f0;text-decoration:none;border-radius:4px;border:1px solid #334155;">下一页</a>
+    </div>
+
+    <h2>最近 50 条审计日志</h2>
+    <table class="audit">
+      <thead>
+        <tr><th>时间</th><th>操作人</th><th>对象</th><th>动作</th><th>详情</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+        {% for a in audit %}
+        <tr>
+          <td class="ts">{{ a.ts | ts }}</td>
+          <td>{{ a.actor }}</td>
+          <td class="email">{{ a.target_email or a.target_id }}</td>
+          <td><strong>{{ a.action }}</strong></td>
+          <td>{{ a.details or '-' }}</td>
+          <td class="id-mono">{{ a.ip }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:#64748b;padding:16px;">暂无审计记录</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
