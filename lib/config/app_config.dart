@@ -49,6 +49,12 @@ class AppConfig {
     defaultValue: 'wss://myapp-im.dapangyu.work',
   );
 
+  /// 配置中心地址（独立服务，物理隔离于主后端，主后端挂了它仍可下发紧急配置）
+  static const String configCenterUrl = String.fromEnvironment(
+    'CONFIG_CENTER_URL',
+    defaultValue: 'https://config.dapangyu.work',
+  );
+
   // ==================== API端点配置 ====================
 
   /// AI对话API端点

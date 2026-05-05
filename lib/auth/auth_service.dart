@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
+import '../config/remote_config_service.dart';
+import '../i18n/framework_strings.dart';
 import 'local_data_wiper.dart';
 
 /// 检测到切换账号时的信息载体（旧账号 → 新账号）。
@@ -128,6 +130,9 @@ class AuthService {
     required String password,
     String? username,
   }) async {
+    if (RemoteConfigService.instance.pauseRegister) {
+      throw Exception(T.current.errPauseRegister);
+    }
     final resp = await http.post(
       Uri.parse('$_baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
@@ -159,6 +164,9 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    if (RemoteConfigService.instance.pauseLogin) {
+      throw Exception(T.current.errPauseLogin);
+    }
     final resp = await http.post(
       Uri.parse('$_baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
@@ -179,6 +187,9 @@ class AuthService {
     required String email,
     required String token,
   }) async {
+    if (RemoteConfigService.instance.pauseLogin) {
+      throw Exception(T.current.errPauseLogin);
+    }
     final resp = await http.post(
       Uri.parse('$_baseUrl/api/auth/verify'),
       headers: {'Content-Type': 'application/json'},

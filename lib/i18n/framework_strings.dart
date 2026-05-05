@@ -93,6 +93,11 @@ class _Strings {
   final String homePickFileSubtitle; // 从设备导入 JSON 配置
   final String homeImLoginFailed;    // IM 连接失败，请稍后重试
 
+  // ── 配置中心熔断（remote config pause_*）──
+  final String errPauseLogin;        // 服务端压力过大，请稍后重试登录
+  final String errPauseRegister;     // 服务端压力过大，请稍后重试注册
+  final String errPauseRequest;      // 服务端压力过大，请稍后重试
+
   // ── 用户菜单 ──
   final String userMenuProfile;
   final String userMenuLogout;
@@ -413,6 +418,9 @@ class _Strings {
     required this.homePickFile,
     required this.homePickFileSubtitle,
     required this.homeImLoginFailed,
+    required this.errPauseLogin,
+    required this.errPauseRegister,
+    required this.errPauseRequest,
     required this.userMenuProfile,
     required this.userMenuLogout,
     required this.profileTitle,
@@ -688,6 +696,9 @@ const _Strings _zhCN = _Strings(
   homePickFile: '选择本地文件',
   homePickFileSubtitle: '从设备导入 JSON 配置',
   homeImLoginFailed: 'IM 连接失败，请稍后重试',
+  errPauseLogin: '服务端压力过大，请稍后重试登录',
+  errPauseRegister: '服务端压力过大，请稍后重试注册',
+  errPauseRequest: '服务端压力过大，请稍后重试',
   userMenuProfile: '个人资料',
   userMenuLogout: '退出登录',
   profileTitle: '个人资料',
@@ -962,6 +973,9 @@ const _Strings _enUS = _Strings(
   homePickFile: 'Choose local file',
   homePickFileSubtitle: 'Import a JSON config from device',
   homeImLoginFailed: 'IM connection failed, please retry later',
+  errPauseLogin: 'Server is busy, please try signing in again later',
+  errPauseRegister: 'Server is busy, please try signing up again later',
+  errPauseRequest: 'Server is busy, please try again later',
   userMenuProfile: 'Profile',
   userMenuLogout: 'Sign out',
   profileTitle: 'Profile',
