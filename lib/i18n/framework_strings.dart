@@ -93,6 +93,22 @@ class _Strings {
   final String homePickFileSubtitle; // 从设备导入 JSON 配置
   final String homeImLoginFailed;    // IM 连接失败，请稍后重试
 
+  // ── 新手引导（coachmark）──
+  final String onboardingNext;          // 下一步
+  final String onboardingDone;          // 完成
+  final String onboardingSkip;          // 跳过
+  final String onboardingReplayMenu;    // 用户菜单里"再看新手引导"
+  final String onboardingStep1Title;    // 设计师悬浮球
+  final String onboardingStep1Body;
+  final String onboardingStep2Title;    // 用户菜单
+  final String onboardingStep2Body;
+  final String onboardingStep3Title;    // 应用市场
+  final String onboardingStep3Body;
+  final String onboardingStep4Title;    // 我的 APP
+  final String onboardingStep4Body;
+  final String onboardingStep5Title;    // 消息
+  final String onboardingStep5Body;
+
   // ── 用户菜单 ──
   final String userMenuProfile;
   final String userMenuLogout;
@@ -413,6 +429,20 @@ class _Strings {
     required this.homePickFile,
     required this.homePickFileSubtitle,
     required this.homeImLoginFailed,
+    required this.onboardingNext,
+    required this.onboardingDone,
+    required this.onboardingSkip,
+    required this.onboardingReplayMenu,
+    required this.onboardingStep1Title,
+    required this.onboardingStep1Body,
+    required this.onboardingStep2Title,
+    required this.onboardingStep2Body,
+    required this.onboardingStep3Title,
+    required this.onboardingStep3Body,
+    required this.onboardingStep4Title,
+    required this.onboardingStep4Body,
+    required this.onboardingStep5Title,
+    required this.onboardingStep5Body,
     required this.userMenuProfile,
     required this.userMenuLogout,
     required this.profileTitle,
@@ -688,6 +718,20 @@ const _Strings _zhCN = _Strings(
   homePickFile: '选择本地文件',
   homePickFileSubtitle: '从设备导入 JSON 配置',
   homeImLoginFailed: 'IM 连接失败，请稍后重试',
+  onboardingNext: '下一步',
+  onboardingDone: '完成',
+  onboardingSkip: '跳过',
+  onboardingReplayMenu: '再看新手引导',
+  onboardingStep1Title: '让 AI 帮你设计 APP',
+  onboardingStep1Body: '点这个悬浮球跟 AI 说话，一句"做一个todo list"就能生成可用的 APP，还能继续改。可拖动到屏幕任意位置。',
+  onboardingStep2Title: '账号与语言',
+  onboardingStep2Body: '在这里查看个人资料、切换语言，或退出登录。新手引导也能从这里再看一遍。',
+  onboardingStep3Title: '应用市场',
+  onboardingStep3Body: '浏览社区分享的 JSON-APP，一键下载试用。',
+  onboardingStep4Title: '我的 APP',
+  onboardingStep4Body: '你保存或 AI 生成过的 APP 都在这里，离线也能用。',
+  onboardingStep5Title: '私信',
+  onboardingStep5Body: '和好友、客服、小组聊天，支持文字、图片、表情。',
   userMenuProfile: '个人资料',
   userMenuLogout: '退出登录',
   profileTitle: '个人资料',
@@ -962,6 +1006,20 @@ const _Strings _enUS = _Strings(
   homePickFile: 'Choose local file',
   homePickFileSubtitle: 'Import a JSON config from device',
   homeImLoginFailed: 'IM connection failed, please retry later',
+  onboardingNext: 'Next',
+  onboardingDone: 'Done',
+  onboardingSkip: 'Skip',
+  onboardingReplayMenu: 'Replay onboarding',
+  onboardingStep1Title: 'Design apps with AI',
+  onboardingStep1Body: 'Tap this floating ball to chat with AI. Say "make me a todo list" and get a working app you can keep iterating on. Drag the ball anywhere on screen.',
+  onboardingStep2Title: 'Account & language',
+  onboardingStep2Body: 'View your profile, switch language, or sign out here. You can also replay this onboarding from this menu.',
+  onboardingStep3Title: 'App marketplace',
+  onboardingStep3Body: 'Browse community JSON apps and try them in one tap.',
+  onboardingStep4Title: 'My apps',
+  onboardingStep4Body: 'All your saved or AI-generated apps live here, also available offline.',
+  onboardingStep5Title: 'Messages',
+  onboardingStep5Body: 'Chat with friends, support, or groups. Supports text, images and emoji.',
   userMenuProfile: 'Profile',
   userMenuLogout: 'Sign out',
   profileTitle: 'Profile',

@@ -12,6 +12,7 @@ import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
 import '../auth/auth_service.dart';
 import '../main.dart' show JsonDslApp;
+import '../onboarding/onboarding_keys.dart';
 
 /// 语音识别方式枚举
 enum AsrMode {
@@ -1787,7 +1788,11 @@ class _DesignerBallState extends State<DesignerBall>
               child: GestureDetector(
                 onTap: () => _onTap(screenSize),
                 onDoubleTap: _onDoubleTap,
-                child: _buildBall(context),
+                // 把 key 挂在 _buildBall 返回的 widget 上：那才是聚光灯切口要圈的"球"本体
+                child: KeyedSubtree(
+                  key: OnboardingKeys.designerBall,
+                  child: _buildBall(context),
+                ),
               ),
             ),
           ),
