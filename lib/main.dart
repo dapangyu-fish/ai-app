@@ -514,8 +514,9 @@ class _SplashGateState extends State<_SplashGate> {
                   if (txt.isEmpty) return const SizedBox.shrink();
                   return Text(
                     txt,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 18,
                       color: cs.onSurfaceVariant,
                     ),
                   );
