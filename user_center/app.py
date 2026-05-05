@@ -240,8 +240,8 @@ app.secret_key = SESSION_SECRET
 
 @app.before_request
 def _gate():
-    # 登录 / 静态 不拦
-    if request.endpoint in ("login_page", "do_login", "do_logout", "static"):
+    # 登录 / 静态 / 健康检查 不拦
+    if request.endpoint in ("login_page", "do_login", "do_logout", "static", "healthz"):
         return None
     return require_login()
 
