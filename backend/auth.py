@@ -399,7 +399,10 @@ def upload_avatar():
 def get_quota():
     """获取用户配额"""
     user_id = request.supabase_user.get("id")
-    used, limit, remaining = get_quota_info(user_id, request.user_role, ROLE_QUOTAS)
+    used, limit, remaining = get_quota_info(
+        user_id, request.user_role, ROLE_QUOTAS,
+        app_metadata=request.supabase_user.get("app_metadata"),
+    )
     return jsonify({
         "role": request.user_role,
         "used": used,

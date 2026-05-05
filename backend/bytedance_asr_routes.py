@@ -56,7 +56,10 @@ def register_asr_routes(socketio):
         logger.info(f"[ASR] Start recognition - user: {user_id}, role: {role}")
 
         # 检查配额
-        used, limit, remaining = get_quota_info(user_id, role, ROLE_QUOTAS)
+        used, limit, remaining = get_quota_info(
+            user_id, role, ROLE_QUOTAS,
+            app_metadata=request.supabase_user.get("app_metadata"),
+        )
         logger.info(f"[ASR] Quota - used: {used}, limit: {limit}, remaining: {remaining}")
 
         if remaining <= 0:
