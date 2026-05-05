@@ -100,16 +100,25 @@ class IMService {
   ///
   /// 注意：dataDir 必须传可写目录（iOS 沙盒不允许写根目录 / 上）。
   /// 之前传空字符串 → SDK 拼出 `/OpenIM_v3_<userID>.db` → 10006 init database 失败。
+  ///
+  /// ⚠️ 关键：dataDir 创建逻辑必须放在 `if (_initialized) return` 之前。
+  /// 切账号 wipe 会删整个 ${appSupport}/openim/ 目录，但 IMService 单例
+  /// 的 _initialized=true 标记不会被重置（它和磁盘状态无关）。下次
+  /// _doLogin 调 init() 时如果直接 return，SDK 还是用着原来的 dataDir
+  /// 路径，但磁盘上目录已没了 → SDK login 时打开 SQLite "no such file
+  /// or directory" → 10006 init database failed。所以哪怕 SDK 已 init，
+  /// 也要确保目录还在。
   Future<void> init() async {
-    if (_initialized) return;
-
     // OpenIM SDK 内部用 dataDir + 文件名拼绝对路径，所以末尾必须带 /
     final dir = await getApplicationSupportDirectory();
     final imDir = Directory('${dir.path}/openim');
     if (!await imDir.exists()) {
       await imDir.create(recursive: true);
+      debugPrint('[IM] (re)created dataDir: ${imDir.path}');
     }
     final dataDir = '${imDir.path}/'; // 末尾的 / 不能漏，SDK 直接拼
+
+    if (_initialized) return;
 
     try {
       await OpenIM.iMManager.initSDK(
@@ -227,42 +236,55 @@ class IMService {
     }
   }
 
+  /// 实际登录流程。最多重试 3 次（间隔 1s / 2s 退避），兜底以下场景：
+  /// - 首次注册的用户 backend 还在 provision OpenIM 账号，第一次 SDK login
+  ///   会以 user not exists / 类似错误失败
+  /// - SDK 一过性的 init / 网络抖动
+  /// - 偶发的 dataDir 状态不一致（init() 已加保护，但留个兜底无伤大雅）
   Future<bool> _doLogin() async {
-    try {
-      final credentials = await _fetchIMCredentials();
-      if (credentials == null) return false;
+    Object? lastError;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final credentials = await _fetchIMCredentials();
+        if (credentials == null) {
+          lastError = 'fetch credentials returned null';
+        } else {
+          _imUserId = credentials['im_user_id'];
+          _imToken = credentials['im_token'];
+          _wsUrl = credentials['ws_url'];
+          _apiUrl = credentials['api_url'];
+          await _saveCredentials();
 
-      _imUserId = credentials['im_user_id'];
-      _imToken = credentials['im_token'];
-      _wsUrl = credentials['ws_url'];
-      _apiUrl = credentials['api_url'];
+          // init() 内部保证 dataDir 存在（即使 _initialized=true 也会重建目录），
+          // 防止 wipe 删目录后 SDK login 打不开 SQLite
+          await init();
 
-      await _saveCredentials();
+          await OpenIM.iMManager.login(
+            userID: _imUserId!,
+            token: _imToken!,
+          );
 
-      if (!_initialized) {
-        await init();
+          _loggedIn = true;
+          connectionNotifier.value = true;
+          await _updateUnreadCount();
+
+          // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
+          // 模拟器调用不会崩，但拿不到真 token；非 iOS 直接 short-circuit
+          // ignore: unawaited_futures
+          ApnsService.instance.start();
+
+          debugPrint('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
+          return true;
+        }
+      } catch (e) {
+        lastError = e;
       }
-
-      await OpenIM.iMManager.login(
-        userID: _imUserId!,
-        token: _imToken!,
-      );
-
-      _loggedIn = true;
-      connectionNotifier.value = true;
-      await _updateUnreadCount();
-
-      // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
-      // 模拟器调用不会崩，但拿不到真 token；非 iOS 直接 short-circuit
-      // ignore: unawaited_futures
-      ApnsService.instance.start();
-
-      debugPrint('[IM] 登录成功: $_imUserId');
-      return true;
-    } catch (e) {
-      debugPrint('[IM] 登录失败: $e');
-      return false;
+      debugPrint('[IM] 登录失败 (attempt $attempt/3): $lastError');
+      if (attempt < 3) {
+        await Future.delayed(Duration(seconds: attempt));
+      }
     }
+    return false;
   }
 
   /// 登出
