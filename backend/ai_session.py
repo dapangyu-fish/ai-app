@@ -216,7 +216,11 @@ class SessionStore:
 
         - last_id="0"：从头读（重连补齐用）
         - last_id=<上次返回的最后一个 entry_id>：续读
-        - block_ms 期间没新事件 → 返回空 list（调用方循环 + 心跳）
+        - block_ms > 0 期间没新事件 → 返回空 list（调用方循环 + 心跳）
+        - block_ms <= 0：**非阻塞**读取（drain 兜底用）。⚠️ Redis 协议下
+          `XREAD BLOCK 0` 是「无限阻塞」，所以这里必须把 block 参数省掉
+          （redis-py 传 block=None 不发 BLOCK 子命令），否则 SSE handler
+          会在 status=DONE 之后的 drain 阶段死锁，[DONE] 永远不发出。
 
         entry_id 形如 "1714838400000-0"，是 Redis Stream 的天然顺序游标。
         """
@@ -224,7 +228,7 @@ class SessionStore:
             result = self.r.xread(
                 {_stream_key(session_id): last_id},
                 count=count,
-                block=block_ms,
+                block=block_ms if block_ms > 0 else None,
             )
         except redis.exceptions.RedisError as e:
             logger.warning(f"[SESSION] xread 失败 sid={session_id}: {e}")
