@@ -674,6 +674,7 @@ JSON-APP 端只要 `"value": "{{ t('echo') }}"`，变量在不同语言里的位
 | `map` | `FlutterMap` (OSM, 无需 API key) | — | `latitude`, `longitude`, `zoom`, `markers`, `height`, `borderRadius` |
 | `camera` | `CameraPreview` (camera 包) | — | `lensDirection`(back/front), `resolution`(low/medium/high/veryHigh), `height` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
+| `flame_game` | Flame `GameWidget` | `scene` | `params`, `on<EventName>`, `height`（详见 6.42） |
 
 ### 6.4 button 详细属性
 
@@ -1432,6 +1433,61 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 ```
 
 `{{ props.xxx }}` 在渲染时被替换为调用方传入的 `props` 值。
+
+### 6.42 flame_game 控件 — 嵌入小游戏（Flame 引擎）
+
+把一个客户端预编译的 Flame 游戏场景嵌入 JSON 渲染的 widget 树。**用于"别踩白块儿"等需要连续帧循环、纯 JSON 表达不出来的实时小游戏**。
+
+```json
+{
+  "type": "flame_game",
+  "scene": "tap_white_tile",
+  "params": {
+    "columns": 4,
+    "initialSpeed": 180,
+    "speedAccel": 3.5,
+    "maxSpeed": 600,
+    "initialBest": "{{ global.bestScore }}"
+  },
+  "onScoreChanged": {
+    "type": "call",
+    "call": "@set",
+    "args": {"var": "global.currentScore", "value": "{{ event.score }}"}
+  },
+  "onGameOver": {
+    "type": "call",
+    "call": "@global.handleGameOver",
+    "args": {"score": "{{ event.score }}", "best": "{{ event.best }}"}
+  },
+  "height": 600
+}
+```
+
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `scene` | ✅ | 场景名，必须在客户端 `lib/games/game_registry.dart` 中已注册 |
+| `params` | ❌ | 传给场景构造函数的参数，支持 `{{ ... }}` 模板（build 时一次性烤死，运行中变量改了不会反映） |
+| `on<EventName>` | ❌ | 场景回调；事件名首字母大写驼峰，例如场景 emit `'scoreChanged'` 对应 `onScoreChanged` |
+| `height` | ❌ | 游戏区域高度（px）。不写时占满父级（要求父级有约束，比如包在 `expanded` 里） |
+
+**事件作用域 `event.*`**：场景 emit 事件时把 payload 注入临时 `event.*` 命名空间，回调 action 体里 `{{ event.foo }}` 能取到。语义跟 `loop.item` / `params.x` 一致：仅在该 action 执行期间有效，结束后弹出。
+
+**已注册场景**（截至 v3.3）：
+
+| scene 名 | 必填 params | 可选 params | emit 事件 |
+|---|---|---|---|
+| `tap_white_tile` | 无 | `columns` (默认 4)、`initialSpeed` (180)、`speedAccel` (3.5)、`maxSpeed` (600)、`initialBest` (0) | `scoreChanged({score})`、`gameOver({score, best})` |
+
+**版本兼容**：
+- 加新 scene 必须发新版客户端
+- 老客户端遇到未注册的 scene → 渲染红框占位（不崩），列出已知 scene 名方便排查
+- JSON-APP 作者要确保使用的 scene 在目标客户端版本里存在（暂时靠人为约定，未来可能加 `min_app_version`）
+
+**何时 vs 不该用**：
+- ✅ 节奏类（别踩白块儿、Tap Tap Reds）、跑酷、消除
+- ✅ 任何需要 60fps 帧循环 + 自定义 Canvas 渲染的场景
+- ❌ 静态表单 / 列表 / 详情页 —— 用普通 widget 即可
+- ❌ "AI 完全自由生成新游戏玩法" —— 框架不支持，只能选 + 调参
 
 ---
 

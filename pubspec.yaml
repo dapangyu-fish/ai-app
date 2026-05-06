@@ -90,6 +90,9 @@ dependencies:
   # IM messaging (OpenIM)
   flutter_openim_sdk: ^3.8.0
 
+  # Game engine (used by `flame_game` widget for embedded mini games)
+  flame: ^1.18.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
