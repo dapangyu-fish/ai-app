@@ -1,0 +1,146 @@
+{
+  "dsl": "3.3",
+  "appid": "b3f7e201-9c4a-4d2a-bf8b-7e26e3c8d2fc",
+  "meta": {
+    "name": "demo-tap-white-tile",
+    "version": "2.0.0",
+    "type": "app",
+    "description": "别踩白块儿 — 纯 JSON 实现（B 模式 atom 编排示例）",
+    "author": "demo"
+  },
+  "global": {
+    "currentScore": 0,
+    "bestScore": 0,
+    "lastResult": ""
+  },
+  "functions": {
+    "handleGameOver": {
+      "params": ["score", "best"],
+      "logic": [
+        {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
+        {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.best }}"}},
+        {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ params.best }} 分"}}
+      ]
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "别踩白块",
+        "layout": "column",
+        "padding": 0,
+        "children": [
+          {
+            "type": "container",
+            "padding": 12,
+            "color": "#1A1A1A",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "text",
+                "value": "实时分数：{{ global.currentScore }}",
+                "style": {"fontSize": 14, "color": "#FFFFFF", "fontWeight": "bold"},
+                "position": {"type": "flex", "flex": 1}
+              },
+              {
+                "type": "text",
+                "value": "最佳：{{ global.bestScore }}",
+                "style": {"fontSize": 13, "color": "#AAAAAA"}
+              }
+            ]
+          },
+          {
+            "type": "expanded",
+            "child": {
+              "type": "flame_game",
+              "world": {
+                "kind": "pixel",
+                "bg": "#2B2B2B"
+              },
+              "vars": {},
+              "entities": {
+                "rows": {
+                  "kind": "scroll_list",
+                  "direction": "down",
+                  "speed": 180,
+                  "safe_zone_bottom": 2,
+                  "row_spec": {
+                    "cells": 4,
+                    "render_active": {
+                      "shape": "rect",
+                      "color": "#1A1A1A",
+                      "padding": 2,
+                      "radius": 6,
+                      "tapped_color": "#4A4A4A"
+                    },
+                    "render_inactive": {
+                      "shape": "rect",
+                      "color": "#F0F0F0",
+                      "padding": 2,
+                      "radius": 6
+                    }
+                  },
+                  "render": {}
+                }
+              },
+              "input": {
+                "tap": [
+                  {"call": "@set", "args": {
+                    "var": "vars._tap",
+                    "value": {"call": "@scroll_list.tap", "args": {"id": "rows", "x": "{{ event.x }}", "y": "{{ event.y }}"}}
+                  }},
+                  {"call": "@if", "args": {
+                    "cond": {"==": [{"var": "vars._tap"}, "hit"]},
+                    "then": [
+                      {"call": "@score.add", "args": {"n": 1}},
+                      {"call": "@scroll_list.add_speed", "args": {"id": "rows", "by": 4, "max": 600}}
+                    ]
+                  }},
+                  {"call": "@if", "args": {
+                    "cond": {"==": [{"var": "vars._tap"}, "miss"]},
+                    "then": [{"call": "@game_over"}]
+                  }}
+                ]
+              },
+              "frame": {
+                "logic": [
+                  {"call": "@if", "args": {
+                    "cond": {"call": "@scroll_list.first_unhit_below", "args": {
+                      "id": "rows",
+                      "y": {"-": [{"var": "world.height"}, {"var": "entities.rows.rowHeight"}]}
+                    }},
+                    "then": [{"call": "@game_over"}]
+                  }}
+                ]
+              },
+              "on_game_over": {
+                "type": "call",
+                "call": "@global.handleGameOver",
+                "args": {"score": "{{ event.score }}", "best": "{{ event.best }}"}
+              },
+              "on_score_changed": {
+                "type": "call",
+                "call": "@set",
+                "args": {"var": "global.currentScore", "value": "{{ event.score }}"}
+              }
+            }
+          },
+          {
+            "type": "container",
+            "padding": 8,
+            "color": "#0A0A0A",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.lastResult }}",
+                "style": {"fontSize": 12, "color": "#888888"}
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

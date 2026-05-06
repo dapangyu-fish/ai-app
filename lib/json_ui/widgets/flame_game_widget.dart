@@ -1,0 +1,128 @@
+// `flame_game` 控件 —— B 模式：JSON 描述游戏，没有 scene 概念。
+//
+// JSON 形态见 JSON-DSL.md。整个 spec 直接传给 JsonFlameGame。
+//
+// 跟外层 JSON-APP 的桥：
+// - 游戏 emit 'scoreChanged' / 'gameOver' / 'reset' 时，根据 spec 里的
+//   on_score_changed / on_game_over / on_reset 调外层 interpreter.executeActionWithEvent
+// - 外层 JSON-APP 的 vars / global 不能直接被游戏读，但可以在 init 时通过
+//   "{{ global.bestScore }}" 等模板烤进 spec.vars 里
+// - 游戏内部状态（vars / score / entities）不外漏，外层只通过事件回调感知
+
+import 'package:flame/game.dart';
+import 'package:flutter/material.dart';
+
+import '../../games/flame_game_engine.dart';
+import '../interpreter.dart';
+import 'base_widget.dart';
+
+class JsonFlameGameWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    // 把 spec 里的 "{{ global.x }}" 等模板烤一遍（init 时一次性）
+    // —— 注意：游戏内部用的 "{{ vars.x }}" 等仍然由游戏 logic 引擎自己解析
+    final bakedSpec = _bakeOuterTemplates(json, interpreter);
+
+    return _FlameGameMount(
+      spec: bakedSpec,
+      interpreter: interpreter,
+      height: (json['height'] as num?)?.toDouble(),
+    );
+  }
+
+  /// 只烤外层（global.* / loop.*）模板，保留游戏内部命名空间（vars.* / event.* / entities.* / world.*）
+  Map<String, dynamic> _bakeOuterTemplates(
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    dynamic walk(dynamic node) {
+      if (node is String) {
+        // 只匹配 "{{ global.x }}" 或 "{{ loop.x }}" 这类外层模板
+        // 内部 "{{ vars.x }}" / "{{ event.x }}" / "{{ entities.x }}" / "{{ world.x }}" / "{{ score }}" / "{{ best }}" 保留
+        return _resolveOuterOnly(node, interpreter);
+      }
+      if (node is List) {
+        return node.map(walk).toList();
+      }
+      if (node is Map) {
+        return node.map((k, v) => MapEntry(k, walk(v)));
+      }
+      return node;
+    }
+    return walk(json) as Map<String, dynamic>;
+  }
+
+  String _resolveOuterOnly(String s, JsonInterpreter interpreter) {
+    final regex = RegExp(r'\{\{\s*([^}]+?)\s*\}\}');
+    return s.replaceAllMapped(regex, (m) {
+      final expr = m.group(1)!.trim();
+      // 内部命名空间 —— 留给游戏 logic 自己解析
+      if (expr.startsWith('vars.') ||
+          expr.startsWith('event.') ||
+          expr.startsWith('entities.') ||
+          expr.startsWith('world.') ||
+          expr == 'score' ||
+          expr == 'best' ||
+          expr == 'game_over') {
+        return m.group(0)!; // 原样返回
+      }
+      // 外层 —— 用主 interpreter 求值
+      final v = interpreter.getVariable(expr);
+      return v?.toString() ?? '';
+    });
+  }
+}
+
+class _FlameGameMount extends StatefulWidget {
+  final Map<String, dynamic> spec;
+  final JsonInterpreter interpreter;
+  final double? height;
+
+  const _FlameGameMount({
+    required this.spec,
+    required this.interpreter,
+    this.height,
+  });
+
+  @override
+  State<_FlameGameMount> createState() => _FlameGameMountState();
+}
+
+class _FlameGameMountState extends State<_FlameGameMount> {
+  late final JsonFlameGame _game;
+
+  @override
+  void initState() {
+    super.initState();
+    _game = JsonFlameGame(
+      spec: widget.spec,
+      onEvent: _dispatchEvent,
+    );
+  }
+
+  /// 游戏事件 → JSON-APP 的 on_xxx 回调
+  void _dispatchEvent(String event, Map<String, dynamic> data) {
+    if (!mounted) return;
+    final action = widget.spec['on_$event'];
+    if (action is! Map<String, dynamic>) return;
+    widget.interpreter
+        .executeActionWithEvent(action, context, data)
+        .catchError((e, st) {
+      debugPrint('[flame_game] on_$event 抛错: $e');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final core = GameWidget(game: _game);
+    final h = widget.height;
+    if (h != null) {
+      return SizedBox(height: h, child: core);
+    }
+    return core;
+  }
+}

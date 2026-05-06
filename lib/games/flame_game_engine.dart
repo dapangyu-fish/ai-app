@@ -1,0 +1,464 @@
+// JsonFlameGame —— 把 JSON spec 烧成一个可跑的 FlameGame。
+//
+// 跑起来后职责：
+// 1. 维护 world / entities / vars / score / game_over 状态
+// 2. update(dt): 推 entity 自动行为 → 跑 frame.logic → 跑 tick(s).logic
+// 3. render():   背景 → 网格线 → entities → 顶部分数 → game_over 蒙层
+// 4. 输入：tap / pan 按 JSON 注册的 input.tap / input.swipe action 跑
+// 5. emit 事件给外层 widget（onScoreChanged / onGameOver）让 JSON-APP 接
+
+import 'dart:math';
+
+import 'package:flame/events.dart';
+import 'package:flame/game.dart';
+import 'package:flutter/material.dart';
+
+import 'game_entity.dart';
+import 'game_logic.dart';
+import 'game_world.dart';
+
+/// 事件回调签名（跟 A 模式一致，外层 widget 把事件桥到 JSON-DSL action）
+typedef GameEventCallback = void Function(
+    String eventName, Map<String, dynamic> data);
+
+/// tick 循环
+class _TickLoop {
+  /// interval 可能是 "{{ vars.tick_interval }}"，每次重新求值
+  final dynamic intervalSpec;
+  final List<dynamic> logic;
+  double accumulator = 0;
+
+  _TickLoop({required this.intervalSpec, required this.logic});
+}
+
+class JsonFlameGame extends FlameGame
+    with TapDetector, PanDetector {
+  /// 整份 game spec（type=flame_game 节点的全部内容）
+  final Map<String, dynamic> spec;
+
+  /// 外部回调（emit 给 JSON-APP）
+  final GameEventCallback? onEvent;
+
+  // ---- 运行时状态 ----
+  late GameWorld world;
+  final Map<String, GameEntity> entities = {};
+  final Map<String, dynamic> vars = {};
+
+  int score = 0;
+  int bestScore = 0;
+  bool isGameOver = false;
+
+  late GameLogicEngine logic;
+
+  // 输入 / 循环
+  List<dynamic>? _tapAction;
+  List<dynamic>? _swipeAction;
+  List<dynamic>? _frameLogic;
+  final List<_TickLoop> _ticks = [];
+
+  // 内置 overlay 配置
+  bool _showScore = true;
+  String _gameOverTitle = '游戏结束';
+  String _gameOverHint = '点击重新开始';
+
+  JsonFlameGame({required this.spec, this.onEvent});
+
+  bool _ready = false;
+
+  // ---------- 生命周期 ----------
+
+  @override
+  Future<void> onLoad() async {
+    logic = GameLogicEngine(this);
+    _setupFromSpec();
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    world.resize(size.x, size.y);
+    // 第一次拿到有效画布尺寸时才铺 entities（scroll_list 等依赖 size）
+    if (!_ready && size.x > 0 && size.y > 0) {
+      _ready = true;
+      _resetGameState();
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (!_ready) return;
+    if (isGameOver) return;
+
+    // 1. entity 自动行为
+    for (final e in entities.values) {
+      e.update(dt, world);
+    }
+
+    // 2. frame logic
+    if (_frameLogic != null) {
+      logic.runLogic(_frameLogic!);
+      if (isGameOver) return;
+    }
+
+    // 3. tick loops
+    for (final t in _ticks) {
+      t.accumulator += dt;
+      // 每次取 interval（让 "{{ vars.tick_interval }}" 可动态变化）
+      final iv = (logic.resolveExpression(t.intervalSpec) as num?)?.toDouble() ?? 0.16;
+      while (t.accumulator >= iv && !isGameOver) {
+        t.accumulator -= iv;
+        logic.runLogic(t.logic);
+      }
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (!_ready) return;
+
+    // 背景
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.x, size.y),
+      Paint()..color = world.bg,
+    );
+
+    // 网格线（grid 模式 + 配了 grid_lines 才画）
+    if (world.kind == 'grid' && world.gridLines != null) {
+      _drawGridLines(canvas);
+    }
+
+    // entities
+    for (final e in entities.values) {
+      e.render(canvas, world);
+    }
+
+    // 内置 overlay
+    if (_showScore) _drawScoreOverlay(canvas);
+    if (isGameOver) _drawGameOverOverlay(canvas);
+  }
+
+  // ---------- 输入 ----------
+
+  @override
+  void onTapDown(TapDownInfo info) {
+    if (isGameOver) {
+      resetGame();
+      return;
+    }
+    final pos = info.eventPosition.global;
+    if (_tapAction != null) {
+      logic.runLogic(_tapAction!, {
+        'x': pos.x,
+        'y': pos.y,
+      });
+    }
+  }
+
+  @override
+  void onPanUpdate(DragUpdateInfo info) {
+    if (isGameOver) {
+      // 滑动也能重开
+      resetGame();
+      return;
+    }
+    final delta = info.delta.global;
+    if (_swipeAction != null) {
+      final dir = _swipeDirection(delta.x, delta.y);
+      // 没有方向（位移太小）就不触发，避免每个微小抖动都改方向
+      if (dir == null) return;
+      logic.runLogic(_swipeAction!, {
+        'direction': dir,
+        'dx': delta.x,
+        'dy': delta.y,
+      });
+    }
+  }
+
+  String? _swipeDirection(double dx, double dy) {
+    final adx = dx.abs();
+    final ady = dy.abs();
+    if (adx < 0.5 && ady < 0.5) return null;
+    if (adx > ady) {
+      return dx > 0 ? 'right' : 'left';
+    } else {
+      return dy > 0 ? 'down' : 'up';
+    }
+  }
+
+  // ---------- 公开 API（GameActions 调） ----------
+
+  void setScore(int v) {
+    if (v == score) return;
+    score = v;
+    if (score > bestScore) bestScore = score;
+    onEvent?.call('scoreChanged', {'score': score, 'best': bestScore});
+  }
+
+  void triggerGameOver() {
+    if (isGameOver) return;
+    isGameOver = true;
+    if (score > bestScore) bestScore = score;
+    onEvent?.call('gameOver', {'score': score, 'best': bestScore});
+  }
+
+  void resetGame() => _resetGameState();
+
+  // ---------- 解析 spec ----------
+
+  void _setupFromSpec() {
+    world = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
+    if (size.x > 0 && size.y > 0) {
+      world.resize(size.x, size.y);
+    }
+
+    // input
+    final input = spec['input'] as Map<String, dynamic>?;
+    _tapAction = _toLogicList(input?['tap']);
+    _swipeAction = _toLogicList(input?['swipe']);
+
+    // frame
+    final frame = spec['frame'] as Map<String, dynamic>?;
+    _frameLogic = _toLogicList(frame?['logic']);
+
+    // ticks
+    _ticks.clear();
+    final ticksRaw = spec['tick'];
+    if (ticksRaw is Map<String, dynamic>) {
+      _ticks.add(_TickLoop(
+        intervalSpec: ticksRaw['interval'],
+        logic: _toLogicList(ticksRaw['logic']) ?? const [],
+      ));
+    } else if (ticksRaw is List) {
+      for (final t in ticksRaw) {
+        if (t is Map<String, dynamic>) {
+          _ticks.add(_TickLoop(
+            intervalSpec: t['interval'],
+            logic: _toLogicList(t['logic']) ?? const [],
+          ));
+        }
+      }
+    }
+
+    // overlay 配置
+    final ov = spec['overlay'] as Map<String, dynamic>?;
+    if (ov != null) {
+      _showScore = ov['score'] != false;
+      _gameOverTitle = ov['game_over_title']?.toString() ?? _gameOverTitle;
+      _gameOverHint = ov['game_over_hint']?.toString() ?? _gameOverHint;
+    }
+  }
+
+  List<dynamic>? _toLogicList(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is List) return raw;
+    if (raw is Map) return [raw]; // 单个 action 也接受
+    return null;
+  }
+
+  void _resetGameState() {
+    score = 0;
+    isGameOver = false;
+    vars.clear();
+
+    // vars 初始值（spec.vars 里 "{{ ... }}" 用外层 game spec 的 best 等求值
+    // —— 但此时还没玩家分数，先简单 resolve 成原始值即可）
+    final rawVars = (spec['vars'] as Map?)?.cast<String, dynamic>() ?? {};
+    rawVars.forEach((k, v) {
+      vars[k] = logic.resolveExpression(v);
+    });
+
+    // entities
+    entities.clear();
+    final ents = (spec['entities'] as Map?)?.cast<String, dynamic>() ?? {};
+    ents.forEach((id, raw) {
+      final ent = _buildEntity(id, raw as Map<String, dynamic>);
+      if (ent != null) entities[id] = ent;
+    });
+
+    // 重置 tick 累积器
+    for (final t in _ticks) {
+      t.accumulator = 0;
+    }
+
+    onEvent?.call('reset', {'score': 0, 'best': bestScore});
+  }
+
+  GameEntity? _buildEntity(String id, Map<String, dynamic> spec) {
+    final kind = spec['kind']?.toString() ?? 'cell';
+    final renderRaw = (spec['render'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final render = renderRaw.map((k, v) => MapEntry(k, v));
+
+    switch (kind) {
+      case 'cell':
+        {
+          final initRaw = spec['init'];
+          int x = 0, y = 0;
+          if (initRaw is List && initRaw.length == 2) {
+            x = (initRaw[0] as num).toInt();
+            y = (initRaw[1] as num).toInt();
+          }
+          return CellEntity(id: id, renderConfig: render, x: x, y: y);
+        }
+      case 'cell_path':
+        {
+          final initRaw = spec['init'];
+          final cells = <List<int>>[];
+          if (initRaw is List) {
+            for (final c in initRaw) {
+              if (c is List && c.length == 2) {
+                cells.add([(c[0] as num).toInt(), (c[1] as num).toInt()]);
+              }
+            }
+          }
+          return CellPathEntity(id: id, renderConfig: render, cells: cells);
+        }
+      case 'scroll_list':
+        {
+          final scrollDir = spec['direction']?.toString() ?? 'down';
+          final speed = (spec['speed'] as num?)?.toDouble() ?? 180;
+          final rowSpec =
+              (spec['row_spec'] as Map?)?.cast<String, dynamic>() ?? const {};
+          final cellsPerRow = (rowSpec['cells'] as num?)?.toInt() ?? 4;
+          // 默认行高 = 画布宽度 / 列数（方块），用户也可显式 row_height 覆盖
+          final rowHeight = (spec['row_height'] as num?)?.toDouble() ??
+              (size.x > 0 ? size.x / cellsPerRow : 95);
+          final safeBottom = (spec['safe_zone_bottom'] as num?)?.toInt() ?? 2;
+          // 初始铺一些行
+          final rows = <ScrollRow>[];
+          final rand = Random();
+          if (size.x > 0 && size.y > 0) {
+            double y = -rowHeight * 5;
+            while (y < size.y + rowHeight) {
+              final inSafe = (size.y - rowHeight * safeBottom) <= y;
+              rows.add(ScrollRow(
+                y: y,
+                activeIndex: inSafe ? -1 : rand.nextInt(cellsPerRow),
+                cells: cellsPerRow,
+                missedChecked: y >= size.y - rowHeight,
+              ));
+              y += rowHeight;
+            }
+          }
+          return ScrollListEntity(
+            id: id,
+            renderConfig: render,
+            scrollDirection: scrollDir,
+            speed: speed,
+            rowHeight: rowHeight,
+            rowSpec: rowSpec,
+            rows: rows,
+            safeZoneBottom: safeBottom,
+          );
+        }
+    }
+    return null;
+  }
+
+  // ---------- 内置 overlay ----------
+
+  void _drawGridLines(Canvas canvas) {
+    final p = Paint()
+      ..color = world.gridLines!
+      ..strokeWidth = 0.5;
+    for (int i = 1; i < world.cols; i++) {
+      canvas.drawLine(
+        Offset(i * world.cellW, 0),
+        Offset(i * world.cellW, size.y),
+        p,
+      );
+    }
+    for (int j = 1; j < world.rows; j++) {
+      canvas.drawLine(
+        Offset(0, j * world.cellH),
+        Offset(size.x, j * world.cellH),
+        p,
+      );
+    }
+  }
+
+  void _drawScoreOverlay(Canvas canvas) {
+    _drawText(
+      canvas,
+      '$score',
+      36,
+      const Color(0xCCFFFFFF),
+      Offset(size.x / 2, 18),
+      centered: true,
+    );
+    if (bestScore > 0) {
+      _drawText(
+        canvas,
+        '最佳 $bestScore',
+        14,
+        const Color(0x66FFFFFF),
+        Offset(size.x / 2, 52),
+        centered: true,
+      );
+    }
+  }
+
+  void _drawGameOverOverlay(Canvas canvas) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.x, size.y),
+      Paint()..color = const Color(0x88000000),
+    );
+    final boxRect = Rect.fromLTWH(
+      size.x / 2 - 130,
+      size.y / 2 - 100,
+      260,
+      200,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(boxRect, const Radius.circular(16)),
+      Paint()..color = const Color(0xDD333333),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(boxRect, const Radius.circular(16)),
+      Paint()
+        ..color = const Color(0x44FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    _drawText(canvas, _gameOverTitle, 40, const Color(0xFFFF5555),
+        Offset(size.x / 2, size.y / 2 - 60),
+        centered: true);
+    _drawText(canvas, '得分 $score', 26, Colors.white70,
+        Offset(size.x / 2, size.y / 2 - 10),
+        centered: true);
+    if (bestScore > 0) {
+      _drawText(canvas, '最佳 $bestScore', 16, const Color(0x88FFFFFF),
+          Offset(size.x / 2, size.y / 2 + 25),
+          centered: true);
+    }
+    _drawText(canvas, _gameOverHint, 16, const Color(0x66FFFFFF),
+        Offset(size.x / 2, size.y / 2 + 60),
+        centered: true);
+  }
+
+  void _drawText(
+    Canvas canvas,
+    String text,
+    double fontSize,
+    Color color,
+    Offset pos, {
+    bool centered = false,
+  }) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final offset =
+        centered ? pos - Offset(tp.width / 2, tp.height / 2) : pos;
+    tp.paint(canvas, offset);
+  }
+}

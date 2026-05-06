@@ -1449,6 +1449,9 @@ bool _containsListInChildren(List<dynamic> children) {
       if (type == 'list') return true;
       if (type == 'grid' && child['shrinkWrap'] != true) return true;
       if (type == 'refresh') return true;
+      // flame_game 跟 list 一样想吃无限高度（Flame GameWidget 占满父级），
+      // 没显式给 height 时屏幕级要走 Column 而不是 SingleChildScrollView。
+      if (type == 'flame_game' && child['height'] == null) return true;
       // 递归 children 字段
       final subChildren = child['children'] as List<dynamic>?;
       if (subChildren != null && _containsListInChildren(subChildren)) {
