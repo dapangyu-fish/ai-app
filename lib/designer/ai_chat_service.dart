@@ -43,11 +43,13 @@ class ResumeCompleted extends ResumeResult {
   final String assistantText;
   final String? thinking;
   final String? jsonUrl;  // 解析 [json_app_url] 标签得到
+  final String? requestAction; // 解析 [request_action] 标签得到（如 upload_current_app）
   const ResumeCompleted({
     required this.userMessage,
     required this.assistantText,
     this.thinking,
     this.jsonUrl,
+    this.requestAction,
   });
 }
 
@@ -463,11 +465,20 @@ class AiChatService {
         final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
         jsonUrl = httpMatch?.group(0) ?? raw;
       }
+      // 解析 [request_action]xxx[/request_action]（之前漏了 → 杀进程后回来 UPLOAD 不出来 P0 bug）
+      String? requestAction;
+      final actionMatch = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]')
+          .firstMatch(finalText);
+      if (actionMatch != null) {
+        final action = actionMatch.group(1)!.trim();
+        if (action.isNotEmpty) requestAction = action;
+      }
       return ResumeCompleted(
         userMessage: _lastUserMessage,
         assistantText: finalText,
         thinking: thinking.isEmpty ? null : thinking,
         jsonUrl: jsonUrl,
+        requestAction: requestAction,
       );
     } catch (e) {
       debugPrint('[AI_CHAT] _fetchCompletedResult 异常: $e');
@@ -714,11 +725,16 @@ class AiChatService {
     }
   }
 
-  /// 流真的结束（[DONE]）后兜底解析累积文本里的 [json_app_url] / [request_action] / ```json``` 标签
+  /// 流真的结束（[DONE]）后兜底解析累积文本里的 [json_app_url] / [request_action] / ```json``` 标签。
+  /// 这是设计上的唯一解析点 —— 等 Claude 完全输出完毕后再决定客户端要做什么，与下载按钮（[json_app_url]）
+  /// 走完全相同的路。
   Stream<ChatEvent> _emitTrailingTags(_StreamState state) async* {
     final accumulated = state.accumulated;
+    final tail = accumulated.length > 300
+        ? accumulated.substring(accumulated.length - 300)
+        : accumulated;
     debugPrint('[AI_CHAT] _emitTrailingTags 入口, accumulated.len=${accumulated.length}, '
-        '末 200 字符: ${accumulated.length > 200 ? accumulated.substring(accumulated.length - 200) : accumulated}');
+        '末 300 字符: $tail');
 
     // 1. [json_app_url]…[/json_app_url] - 等用户确认下载
     final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
@@ -730,15 +746,28 @@ class AiChatService {
       debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
       yield ChatEvent(pendingJsonUrl: url);
     } else if (accumulated.contains('json_app_url')) {
-      // 文本里有 json_app_url 字样但 regex 没匹中 → 提示一下，方便排查
       debugPrint('[AI_CHAT] ⚠️ accumulated 里有 json_app_url 字样但 regex 未匹中，可能格式有变');
     }
 
-    // 2. [request_action]
+    // 2. [request_action]xxx[/request_action]
+    // .trim() 防 AI 偶尔在 tag 内夹换行/空格，designer_ball 那边走 == 严格比较
     final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
     final actionMatch = actionRegex.firstMatch(accumulated);
     if (actionMatch != null) {
-      yield ChatEvent(requestAction: actionMatch.group(1)!);
+      final action = actionMatch.group(1)!.trim();
+      if (action.isNotEmpty) {
+        debugPrint('[AI_CHAT] 流结束，检测到 request_action: "$action" (len=${action.length})');
+        yield ChatEvent(requestAction: action);
+      } else {
+        debugPrint('[AI_CHAT] ⚠️ request_action regex 匹中但 trim 后为空');
+      }
+    } else if (accumulated.contains('request_action')) {
+      // 诊断：accumulated 里有 request_action 字样但正则没匹中，把闭合标签前后的 100 字节贴出来，方便排查
+      final idx = accumulated.lastIndexOf('request_action');
+      final from = (idx - 50).clamp(0, accumulated.length);
+      final to = (idx + 100).clamp(0, accumulated.length);
+      debugPrint('[AI_CHAT] ⚠️ accumulated 含 request_action 字样但正则没匹中，'
+          '上下文: "${accumulated.substring(from, to)}"');
     }
 
     // 3. 内联 ```json``` 块（仅当没有 url 时）

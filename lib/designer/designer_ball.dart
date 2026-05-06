@@ -1048,10 +1048,23 @@ class _DesignerBallState extends State<DesignerBall>
       switch (result) {
         case ResumeNothing():
           break;
-        case ResumeCompleted(:final userMessage, :final assistantText, :final jsonUrl):
+        case ResumeCompleted(
+            :final userMessage,
+            :final assistantText,
+            :final jsonUrl,
+            :final requestAction,
+          ):
           setState(() {
             _messages.add(ChatMessage(role: 'user', content: userMessage));
             _messages.add(ChatMessage(role: 'assistant', content: assistantText));
+            // 各按钮独立共存（同一回复可能既要 upload 又给 url，参考 6645d35）
+            if (requestAction == 'upload_current_app') {
+              _messages.add(ChatMessage(
+                role: 'system',
+                content: 'AI 需要获取当前应用的代码配置以进行修改：',
+                action: 'UPLOAD_CURRENT_APP',
+              ));
+            }
             if (jsonUrl != null) {
               _messages.add(ChatMessage(
                 role: 'system',
