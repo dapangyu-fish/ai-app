@@ -29,6 +29,8 @@ import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 import 'im/im_service.dart';
 import 'im/conversation_list.dart';
+import 'onboarding/onboarding_keys.dart';
+import 'onboarding/onboarding_service.dart';
 
 // ============================================================
 // Riverpod Providers
@@ -452,6 +454,19 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
   String? _error;
   String? _loadedFileName;
 
+  @override
+  void initState() {
+    super.initState();
+    // 第一次到主页 → 触发新手引导。等两帧让目标 widget 全部 mount + layout 完成
+    // （DesignerBall 在 MaterialApp.builder 里更晚 layout）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        OnboardingService.maybeStart(context);
+      });
+    });
+  }
+
   void _openSettings() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -723,6 +738,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                   ),
                   if (AuthService.isLoggedIn)
                     PopupMenuButton<String>(
+                      key: OnboardingKeys.userMenu,
                       icon: Icon(Icons.account_circle_outlined, color: cs.onSurface),
                       onSelected: (value) async {
                         if (value == 'profile') {
@@ -733,6 +749,12 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           );
                         } else if (value == 'language') {
                           await showLanguagePicker(context);
+                        } else if (value == 'replay_onboarding') {
+                          // 等下一帧 PopupMenu 收起，目标 widget 才能被 hit-test
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            OnboardingService.forceStart(context);
+                          });
                         } else if (value == 'logout') {
                           await IMService.instance.logout();
                           await AuthService.signOut();
@@ -766,6 +788,16 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                               const Icon(Icons.language, size: 18),
                               const SizedBox(width: 8),
                               Text(t.settingsLanguage),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'replay_onboarding',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.help_outline, size: 18),
+                              const SizedBox(width: 8),
+                              Text(t.onboardingReplayMenu),
                             ],
                           ),
                         ),
@@ -810,20 +842,26 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildEntryCard(
-                      icon: Icons.store_outlined,
-                      title: t.homeMarket,
-                      subtitle: t.homeMarketSubtitle,
-                      onTap: _loading ? null : _openMarket,
+                    child: KeyedSubtree(
+                      key: OnboardingKeys.marketCard,
+                      child: _buildEntryCard(
+                        icon: Icons.store_outlined,
+                        title: t.homeMarket,
+                        subtitle: t.homeMarketSubtitle,
+                        onTap: _loading ? null : _openMarket,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildEntryCard(
-                      icon: Icons.apps_outlined,
-                      title: t.homeMyApps,
-                      subtitle: t.homeMyAppsSubtitle,
-                      onTap: _loading ? null : _openMyApps,
+                    child: KeyedSubtree(
+                      key: OnboardingKeys.myAppsCard,
+                      child: _buildEntryCard(
+                        icon: Icons.apps_outlined,
+                        title: t.homeMyApps,
+                        subtitle: t.homeMyAppsSubtitle,
+                        onTap: _loading ? null : _openMyApps,
+                      ),
                     ),
                   ),
                 ],
@@ -836,6 +874,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                 valueListenable: IMService.instance.unreadCountNotifier,
                 builder: (context, unread, _) {
                   return Card(
+                    key: OnboardingKeys.messagesCard,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () async {

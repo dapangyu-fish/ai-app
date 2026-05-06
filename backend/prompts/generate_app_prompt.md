@@ -47,15 +47,17 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 
 当你生成了新的或修改好的 JSON-APP 代码后，你**必须**按顺序执行以下步骤，**任何一步失败都不能跳过/上传**：
 
-1. 使用工具把生成的 JSON 代码写入到临时文件（如 `/tmp/app.json`）。
+**步骤 0（每次生成前必跑，禁止跳过）**：用 `Bash` 执行 `mktemp /tmp/app.XXXXXX.json`，得到本轮唯一的临时文件路径（例如 `/tmp/app.aB3xY7.json`）。**记下这个路径**，下面所有"临时文件"的地方一律用它，**禁止使用 `/tmp/app.json` 之类的固定路径**（多用户并发或同一会话连续生成会互相覆盖，造成上传到错误的内容）。下文用 `<TMPFILE>` 占位代指本轮 mktemp 给出的路径。
+
+1. 使用工具把生成的 JSON 代码写入到 `<TMPFILE>`。
 2. **强制：上传前过一遍合法性校验**（见下"上传前自检 checklist"），任何一条不通过，回去改 JSON，**重新过一遍**，再继续。
-3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh /tmp/app.json`。该命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
+3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh <TMPFILE>`。该命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
 4. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
 5. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
 
 ### 上传前自检 checklist（必跑）
 
-a. **JSON 语法**：`python3 -m json.tool /tmp/app.json > /dev/null && echo OK`
+a. **JSON 语法**：`python3 -m json.tool <TMPFILE> > /dev/null && echo OK`
    - 报错 → 改到 OK 再走 b。
 
 b. **必填字段**：用 `python3 -c "..."` 或 `jq` 确认 `dsl`、`meta.name`、`meta.version`、`meta.type`、`ui.screens` 都齐全且非空（library 例外，可以没有 `ui.screens`）。
