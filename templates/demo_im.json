@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.4.5",
+    "version": "1.4.6",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
@@ -442,11 +442,36 @@
                   "label": "加",
                   "icon": "person_add",
                   "variant": "filled",
+                  "visible": {"and": [
+                    {"!": [{"var": "loop.item.is_friend"}]},
+                    {"!": [{"var": "loop.item.is_self"}]}
+                  ]},
                   "action": {
                     "type": "call",
                     "call": "@global.addFriendByRow",
                     "args": {"userId": "{{ loop.item.im_user_id }}"}
                   }
+                },
+                {
+                  "type": "button",
+                  "label": "发消息",
+                  "icon": "chat_bubble_outline",
+                  "variant": "outlined",
+                  "visible": "{{ loop.item.is_friend }}",
+                  "action": {
+                    "type": "call",
+                    "call": "@global.openChat",
+                    "args": {
+                      "userId": "{{ loop.item.im_user_id }}",
+                      "name": "{{ loop.item.nickname }}"
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "这是你",
+                  "visible": "{{ loop.item.is_self }}",
+                  "style": {"fontSize": 12, "color": "#999999"}
                 }
               ]
             }

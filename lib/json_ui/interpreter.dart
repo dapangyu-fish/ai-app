@@ -1989,9 +1989,29 @@ class JsonInterpreter extends ChangeNotifier {
           final q = (resolvedArgs['q'] as String?) ?? '';
           try {
             final users = await IMService.instance.searchUsers(q);
+
+            // 给每条结果加 is_friend / is_self 标记，方便 JSON-APP 做条件渲染。
+            // 友列走 OpenIM SDK 本地缓存（O(1) 内存读，无网络），currentUserId
+            // 是登录后就有的字段，整体零额外延迟。
+            final friends = await IMService.instance.getFriendList();
+            final friendIds = friends
+                .map((f) => f.userID)
+                .whereType<String>()
+                .toSet();
+            final myId = IMService.instance.currentUserId;
+
+            final enriched = users.map((u) {
+              final uid = u['im_user_id']?.toString() ?? '';
+              return <String, dynamic>{
+                ...u,
+                'is_friend': uid.isNotEmpty && friendIds.contains(uid),
+                'is_self': uid.isNotEmpty && myId != null && uid == myId,
+              };
+            }).toList();
+
             final bindPath = resolvedArgs['bind'] as String?;
-            if (bindPath != null) setVariable(bindPath, users);
-            return users;
+            if (bindPath != null) setVariable(bindPath, enriched);
+            return enriched;
           } catch (e) {
             debugPrint('[JSON DSL] im_search_users 失败: $e');
             return const [];
