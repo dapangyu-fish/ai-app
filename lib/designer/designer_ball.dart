@@ -2122,6 +2122,12 @@ class _EditSheetState extends State<_EditSheet> {
                       height: 1.6,
                     ),
                     decoration: InputDecoration(
+                      // ⚠️ 必须显式 filled:false。Material 3 inputDecorationTheme
+                      // 在 light mode 下默认会给 TextField 灌一个浅灰色 fill，
+                      // 盖在我们外层 0xFF1C1C1E 的深色 Material 上 → 看着是
+                      // "深色弹窗中间一条白色编辑区"。dark mode 下默认 fill 也
+                      // 深色所以察觉不到。这里关掉它，让父级 Material 直接透出来。
+                      filled: false,
                       border: InputBorder.none,
                       hintText: '编辑你的消息...',
                       hintStyle: TextStyle(color: hintColor, fontSize: 16),
