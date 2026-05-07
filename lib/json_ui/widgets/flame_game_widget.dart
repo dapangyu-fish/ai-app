@@ -118,7 +118,13 @@ class _FlameGameMountState extends State<_FlameGameMount> {
 
   @override
   Widget build(BuildContext context) {
-    final core = GameWidget(game: _game);
+    // GestureDetector 把 tap / pan 转给游戏，避免依赖 Flame 不稳定的输入 mixin
+    final core = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (d) => _game.handleTap(d.localPosition.dx, d.localPosition.dy),
+      onPanUpdate: (d) => _game.handleSwipe(d.delta.dx, d.delta.dy),
+      child: GameWidget(game: _game),
+    );
     final h = widget.height;
     if (h != null) {
       return SizedBox(height: h, child: core);

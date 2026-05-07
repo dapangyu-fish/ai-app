@@ -57,7 +57,7 @@ class GameActions {
           if (pathId == null) return null;
           final ent = game.entities[pathId];
           if (ent is! CellPathEntity) return null;
-          return ent.advance(dir, game.world);
+          return ent.advance(dir, game.gameWorld);
         }
       case '@cell_path.grow':
         {
@@ -126,8 +126,8 @@ class GameActions {
             }
           }
           final free = <List<int>>[];
-          for (int x = 0; x < game.world.cols; x++) {
-            for (int y = 0; y < game.world.rows; y++) {
+          for (int x = 0; x < game.gameWorld.cols; x++) {
+            for (int y = 0; y < game.gameWorld.rows; y++) {
               if (excludeCells.any((c) => c[0] == x && c[1] == y)) continue;
               free.add([x, y]);
             }
@@ -199,7 +199,7 @@ class GameActions {
           if (row.tapped) return 'outside';
           if (row.activeIndex < 0) return 'miss';
           final cellsPerRow = row.cells;
-          final col = (px / (game.world.width / cellsPerRow)).floor();
+          final col = (px / (game.gameWorld.width / cellsPerRow)).floor();
           if (col == row.activeIndex) {
             row.tapped = true;
             return 'hit';

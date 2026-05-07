@@ -9,7 +9,6 @@
 
 import 'dart:math';
 
-import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -31,8 +30,10 @@ class _TickLoop {
   _TickLoop({required this.intervalSpec, required this.logic});
 }
 
-class JsonFlameGame extends FlameGame
-    with TapDetector, PanDetector {
+/// JsonFlameGame 不直接 mixin Flame 的 TapDetector / PanDetector ——
+/// 那俩在不同 Flame 版本 API 不稳定（1.37 重构）。改成由外层 widget
+/// 包 GestureDetector，调下面的 [handleTap] / [handleSwipe]。
+class JsonFlameGame extends FlameGame {
   /// 整份 game spec（type=flame_game 节点的全部内容）
   final Map<String, dynamic> spec;
 
@@ -40,7 +41,9 @@ class JsonFlameGame extends FlameGame
   final GameEventCallback? onEvent;
 
   // ---- 运行时状态 ----
-  late GameWorld world;
+  /// 我们的世界定义（命名 gameWorld 避免跟 FlameGame.world 冲突 —— 后者
+  /// 是 camera scene root 的 World 组件，不是我们要的坐标系抽象）
+  late GameWorld gameWorld;
   final Map<String, GameEntity> entities = {};
   final Map<String, dynamic> vars = {};
 
@@ -76,7 +79,7 @@ class JsonFlameGame extends FlameGame
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    world.resize(size.x, size.y);
+    gameWorld.resize(size.x, size.y);
     // 第一次拿到有效画布尺寸时才铺 entities（scroll_list 等依赖 size）
     if (!_ready && size.x > 0 && size.y > 0) {
       _ready = true;
@@ -92,7 +95,7 @@ class JsonFlameGame extends FlameGame
 
     // 1. entity 自动行为
     for (final e in entities.values) {
-      e.update(dt, world);
+      e.update(dt, gameWorld);
     }
 
     // 2. frame logic
@@ -121,17 +124,17 @@ class JsonFlameGame extends FlameGame
     // 背景
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.x, size.y),
-      Paint()..color = world.bg,
+      Paint()..color = gameWorld.bg,
     );
 
     // 网格线（grid 模式 + 配了 grid_lines 才画）
-    if (world.kind == 'grid' && world.gridLines != null) {
+    if (gameWorld.kind == 'grid' && gameWorld.gridLines != null) {
       _drawGridLines(canvas);
     }
 
     // entities
     for (final e in entities.values) {
-      e.render(canvas, world);
+      e.render(canvas, gameWorld);
     }
 
     // 内置 overlay
@@ -139,39 +142,36 @@ class JsonFlameGame extends FlameGame
     if (isGameOver) _drawGameOverOverlay(canvas);
   }
 
-  // ---------- 输入 ----------
+  // ---------- 输入（由外层 widget 的 GestureDetector 调进来） ----------
 
-  @override
-  void onTapDown(TapDownInfo info) {
+  /// 外层 GestureDetector.onTapDown 转过来
+  void handleTap(double x, double y) {
+    if (!_ready) return;
     if (isGameOver) {
       resetGame();
       return;
     }
-    final pos = info.eventPosition.global;
     if (_tapAction != null) {
-      logic.runLogic(_tapAction!, {
-        'x': pos.x,
-        'y': pos.y,
-      });
+      logic.runLogic(_tapAction!, {'x': x, 'y': y});
     }
   }
 
-  @override
-  void onPanUpdate(DragUpdateInfo info) {
+  /// 外层 GestureDetector.onPanUpdate 转过来
+  void handleSwipe(double dx, double dy) {
+    if (!_ready) return;
     if (isGameOver) {
       // 滑动也能重开
       resetGame();
       return;
     }
-    final delta = info.delta.global;
     if (_swipeAction != null) {
-      final dir = _swipeDirection(delta.x, delta.y);
+      final dir = _swipeDirection(dx, dy);
       // 没有方向（位移太小）就不触发，避免每个微小抖动都改方向
       if (dir == null) return;
       logic.runLogic(_swipeAction!, {
         'direction': dir,
-        'dx': delta.x,
-        'dy': delta.y,
+        'dx': dx,
+        'dy': dy,
       });
     }
   }
@@ -208,9 +208,9 @@ class JsonFlameGame extends FlameGame
   // ---------- 解析 spec ----------
 
   void _setupFromSpec() {
-    world = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
+    gameWorld = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
     if (size.x > 0 && size.y > 0) {
-      world.resize(size.x, size.y);
+      gameWorld.resize(size.x, size.y);
     }
 
     // input
@@ -323,20 +323,20 @@ class JsonFlameGame extends FlameGame
           final cellsPerRow = (rowSpec['cells'] as num?)?.toInt() ?? 4;
           // 默认行高 = 画布宽度 / 列数（方块），用户也可显式 row_height 覆盖
           final rowHeight = (spec['row_height'] as num?)?.toDouble() ??
-              (size.x > 0 ? size.x / cellsPerRow : 95);
+              (this.size.x > 0 ? this.size.x / cellsPerRow : 95);
           final safeBottom = (spec['safe_zone_bottom'] as num?)?.toInt() ?? 2;
           // 初始铺一些行
           final rows = <ScrollRow>[];
           final rand = Random();
-          if (size.x > 0 && size.y > 0) {
+          if (this.size.x > 0 && this.size.y > 0) {
             double y = -rowHeight * 5;
-            while (y < size.y + rowHeight) {
-              final inSafe = (size.y - rowHeight * safeBottom) <= y;
+            while (y < this.size.y + rowHeight) {
+              final inSafe = (this.size.y - rowHeight * safeBottom) <= y;
               rows.add(ScrollRow(
                 y: y,
                 activeIndex: inSafe ? -1 : rand.nextInt(cellsPerRow),
                 cells: cellsPerRow,
-                missedChecked: y >= size.y - rowHeight,
+                missedChecked: y >= this.size.y - rowHeight,
               ));
               y += rowHeight;
             }
@@ -360,19 +360,19 @@ class JsonFlameGame extends FlameGame
 
   void _drawGridLines(Canvas canvas) {
     final p = Paint()
-      ..color = world.gridLines!
+      ..color = gameWorld.gridLines!
       ..strokeWidth = 0.5;
-    for (int i = 1; i < world.cols; i++) {
+    for (int i = 1; i < gameWorld.cols; i++) {
       canvas.drawLine(
-        Offset(i * world.cellW, 0),
-        Offset(i * world.cellW, size.y),
+        Offset(i * gameWorld.cellW, 0),
+        Offset(i * gameWorld.cellW, size.y),
         p,
       );
     }
-    for (int j = 1; j < world.rows; j++) {
+    for (int j = 1; j < gameWorld.rows; j++) {
       canvas.drawLine(
-        Offset(0, j * world.cellH),
-        Offset(size.x, j * world.cellH),
+        Offset(0, j * gameWorld.cellH),
+        Offset(size.x, j * gameWorld.cellH),
         p,
       );
     }

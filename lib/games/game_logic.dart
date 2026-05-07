@@ -47,8 +47,9 @@ class GameLogicEngine {
     if (step.containsKey('call')) {
       runAction(step);
     } else {
-      // 纯 jsonlogic 求值（无 side effect）
-      evaluate(step);
+      // 没 call 的 Map 当作 jsonlogic 表达式求值（虽然没 side effect，
+      // 留个口子让 logic 数组里也能写纯表达式）
+      resolveExpression(step);
     }
   }
 
@@ -193,12 +194,12 @@ class GameLogicEngine {
       'entities': entitiesMap,
       'event': _eventStack.isNotEmpty ? _eventStack.last : <String, dynamic>{},
       'world': {
-        'cols': game.world.cols,
-        'rows': game.world.rows,
-        'width': game.world.width,
-        'height': game.world.height,
-        'cell_w': game.world.cellW,
-        'cell_h': game.world.cellH,
+        'cols': game.gameWorld.cols,
+        'rows': game.gameWorld.rows,
+        'width': game.gameWorld.width,
+        'height': game.gameWorld.height,
+        'cell_w': game.gameWorld.cellW,
+        'cell_h': game.gameWorld.cellH,
       },
       'score': game.score,
       'best': game.bestScore,
@@ -234,12 +235,12 @@ class GameLogicEngine {
         return _walkPath(ent.toMap(), rest.skip(1).toList());
       case 'world':
         current = {
-          'cols': game.world.cols,
-          'rows': game.world.rows,
-          'width': game.world.width,
-          'height': game.world.height,
-          'cell_w': game.world.cellW,
-          'cell_h': game.world.cellH,
+          'cols': game.gameWorld.cols,
+          'rows': game.gameWorld.rows,
+          'width': game.gameWorld.width,
+          'height': game.gameWorld.height,
+          'cell_w': game.gameWorld.cellW,
+          'cell_h': game.gameWorld.cellH,
         };
         break;
       case 'score':
