@@ -53,25 +53,28 @@ WHERE channel IS NULL AND platform IS NOT NULL;
 -- 3. channel 设 NOT NULL（回填完成后）
 ALTER TABLE device_tokens ALTER COLUMN channel SET NOT NULL;
 
--- 4. 删旧 unique（按 platform）→ 加新 unique（按 channel）
---    用 DO 块兼容不同环境下 constraint 名称差异（手动建过 / Supabase 自动建过 / 不同版本）
+-- 4. 删旧主键 / 唯一约束（按 platform）→ 加新主键（按 channel）
+--    实测线上 PK 是复合 (user_id, platform, token)，contype='p'；用 DO 块同时兼容
+--    contype='p'（PK）和 contype='u'（unique）两种写法
 DO $$
 DECLARE c text;
 BEGIN
     FOR c IN
         SELECT conname FROM pg_constraint
-        WHERE conrelid = 'device_tokens'::regclass AND contype = 'u'
+        WHERE conrelid = 'device_tokens'::regclass AND contype IN ('p', 'u')
     LOOP
         EXECUTE format('ALTER TABLE device_tokens DROP CONSTRAINT %I', c);
     END LOOP;
 END $$;
 
 ALTER TABLE device_tokens
-    ADD CONSTRAINT device_tokens_user_id_channel_token_key
-    UNIQUE (user_id, channel, token);
+    ADD CONSTRAINT device_tokens_pkey
+    PRIMARY KEY (user_id, channel, token);
 
--- 5. 删旧列
+-- 5. 删旧 platform 列；同时清理早期废弃的 bundle_id 列（若存在）
+--    bundle_id 是上一版的设计，从未被代码读写，所有行都是 NULL，跟着一起清掉
 ALTER TABLE device_tokens DROP COLUMN IF EXISTS platform;
+ALTER TABLE device_tokens DROP COLUMN IF EXISTS bundle_id;
 
 -- 6. 索引（如果之前没有的话，按新 user_id 单列加一个，方便 SELECT WHERE user_id=）
 CREATE INDEX IF NOT EXISTS idx_device_tokens_user_id ON device_tokens(user_id);

@@ -32,14 +32,14 @@ CREATE TABLE IF NOT EXISTS chat_quotas (
 -- 设备推送 token —— 通道无关结构，加新通道(fcm/getui/huawei...)不需要改 schema
 -- channel        : 'apns' | 'fcm' | 'getui' | ...（与 backend/push/ 下注册的 provider 一一对应）
 -- channel_meta   : 通道私有字段，e.g. APNs 的 {"env": "sandbox"|"production"}
+-- user_id 用 TEXT 是历史遗留（早期写的就是 text，没必要为了类型改动一次迁移）
 CREATE TABLE IF NOT EXISTS device_tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
+    user_id TEXT NOT NULL,
     channel VARCHAR(32) NOT NULL,
     token TEXT NOT NULL,
     channel_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE (user_id, channel, token)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, channel, token)
 );
 
 -- Indexes for better performance
