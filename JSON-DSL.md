@@ -1561,7 +1561,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 #### 双向桥
 
-- 游戏 emit 的事件（`scoreChanged` / `gameOver` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调任意 130 个全局 @action（@set 写 global、@http_*、@navigate 等）
+- 游戏 emit 的事件（`score_changed` / `game_over` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调任意 130 个全局 @action（@set 写 global、@http_*、@navigate 等）
 - 游戏内部 logic 用上面 atom @action 集，不能调 @http、@navigate 这种（避免污染游戏循环）
 
 #### 已知限制 / 不在第一版

@@ -3,13 +3,14 @@
   "appid": "c4f8e202-9d4b-4d2a-bf8b-7a26e3c8d3fa",
   "meta": {
     "name": "demo-snake",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "type": "app",
     "description": "贪吃蛇 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
   },
   "dependencies": {
-    "lib_database": "^1.0.0"
+    "lib_database": "^1.0.0",
+    "common-ui": "^1.0.0"
   },
   "global": {
     "variables": {
@@ -94,7 +95,8 @@
             }
           }},
           {"call": "@global.loadHistory", "args": {}},
-          {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ global.bestScore }} 分（共 {{ global.historyCount }} 局）"}}
+          {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ global.bestScore }} 分（共 {{ global.historyCount }} 局）"}},
+          {"call": "@common-ui.showSuccess", "args": {"message": "已保存：{{ params.score }} 分"}}
         ]
       },
       "showHistory": {

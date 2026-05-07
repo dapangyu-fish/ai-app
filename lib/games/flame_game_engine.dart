@@ -220,14 +220,14 @@ class JsonFlameGame extends FlameGame {
     if (v == score) return;
     score = v;
     if (score > bestScore) bestScore = score;
-    onEvent?.call('scoreChanged', {'score': score, 'best': bestScore});
+    onEvent?.call('score_changed', {'score': score, 'best': bestScore});
   }
 
   void triggerGameOver() {
     if (isGameOver) return;
     isGameOver = true;
     if (score > bestScore) bestScore = score;
-    onEvent?.call('gameOver', {'score': score, 'best': bestScore});
+    onEvent?.call('game_over', {'score': score, 'best': bestScore});
   }
 
   void resetGame() => _resetGameState();
