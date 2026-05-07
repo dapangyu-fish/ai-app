@@ -74,8 +74,9 @@ class AppConfig {
   /// 应用名称
   static const String appName = 'AI App';
 
-  /// 应用版本
-  static const String appVersion = '1.1.0';
+  /// 应用版本（要跟 pubspec.yaml 的 version 字段保持一致 —— 包括 +N build
+  /// number。改 pubspec 时记得改这里。主页那个 v 标签读的就是这个常量。）
+  static const String appVersion = '1.1.0+14';
 
   /// 是否为调试模式
   static const bool isDebug = bool.fromEnvironment('DEBUG', defaultValue: false);

@@ -1171,7 +1171,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               // Version
               Center(
                 child: Text(
-                  'v1.1.0',
+                  'v${AppConfig.appVersion}',
                   style: TextStyle(
                     fontSize: 12,
                     color: cs.onSurfaceVariant,

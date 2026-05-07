@@ -3,7 +3,7 @@
   "appid": "e1f9d404-4e7c-4e7a-b8a2-e3c8d5f9e304",
   "meta": {
     "name": "demo-flappy-bird",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "app",
     "description": "Flappy 🐦 — 纯 JSON 实现，物理 + spawn/despawn + 碰撞全部由 JSON 编排",
     "author": "demo"
@@ -297,9 +297,15 @@
                   {"call": "@for_each_entity", "args": {
                     "where_prefix": "pipe_top_",
                     "do": [
+                      {"comment": "PROBE: 每次迭代 +1，验证 for_each 是否在跑"},
+                      {"call": "@score.add", "args": {"n": 1}},
                       {"call": "@if", "args": {
                         "cond": {"call": "@collide.rect", "args": {"a": "bird", "b": "{{ loop.id }}"}},
-                        "then": [{"call": "@game_over"}]
+                        "then": [
+                          {"comment": "PROBE: 检测到碰撞 → 分数暴涨 999"},
+                          {"call": "@score.add", "args": {"n": 999}},
+                          {"call": "@game_over"}
+                        ]
                       }},
                       {"call": "@if", "args": {
                         "cond": {"<": [
@@ -307,8 +313,7 @@
                           0
                         ]},
                         "then": [
-                          {"call": "@despawn", "args": {"id": "{{ loop.id }}"}},
-                          {"call": "@score.add", "args": {"n": 1}}
+                          {"call": "@despawn", "args": {"id": "{{ loop.id }}"}}
                         ]
                       }}
                     ]
