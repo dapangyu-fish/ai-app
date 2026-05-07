@@ -3,7 +3,7 @@
   "appid": "e1f9d404-4e7c-4e7a-b8a2-e3c8d5f9e304",
   "meta": {
     "name": "demo-flappy-bird",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "app",
     "description": "Flappy 🐦 — 纯 JSON 实现，物理 + spawn/despawn + 碰撞全部由 JSON 编排",
     "author": "demo"
@@ -297,13 +297,37 @@
                   {"call": "@for_each_entity", "args": {
                     "where_prefix": "pipe_top_",
                     "do": [
-                      {"comment": "PROBE: 每次迭代 +1，验证 for_each 是否在跑"},
-                      {"call": "@score.add", "args": {"n": 1}},
+                      {"comment": "PROBE-1：把 loop.id 落到 vars 上，验证 loop scope 是否有值"},
+                      {"call": "@set", "args": {"var": "vars._lid", "value": "{{ loop.id }}"}},
+                      {"comment": "PROBE-2：用 vars._lid 绕一道（如果 collide 用 vars 引用 OK 但 loop 直接引用不 OK，就是 loop.id 解析丢了）"},
+                      {"call": "@if", "args": {
+                        "cond": {"call": "@collide.rect", "args": {"a": "bird", "b": "{{ vars._lid }}"}},
+                        "then": [
+                          {"comment": "命中：vars 中转方案有效 → +5000"},
+                          {"call": "@score.add", "args": {"n": 5000}},
+                          {"call": "@game_over"}
+                        ]
+                      }},
+                      {"comment": "PROBE-3：原路 loop.id 直引（之前怀疑出问题的写法）"},
                       {"call": "@if", "args": {
                         "cond": {"call": "@collide.rect", "args": {"a": "bird", "b": "{{ loop.id }}"}},
                         "then": [
-                          {"comment": "PROBE: 检测到碰撞 → 分数暴涨 999"},
+                          {"comment": "命中：loop 直引也 OK → +999"},
                           {"call": "@score.add", "args": {"n": 999}},
+                          {"call": "@game_over"}
+                        ]
+                      }},
+                      {"comment": "PROBE-4：完全绕开 @collide.rect，用 jsonlogic 手算 AABB（验证 loop.entity 字段是否完整）"},
+                      {"call": "@if", "args": {
+                        "cond": {"and": [
+                          {"<": [{"var": "entities.bird.x"}, {"+": [{"var": "loop.entity.x"}, {"var": "vars.pipe_w"}]}]},
+                          {">": [{"+": [{"var": "entities.bird.x"}, 40]}, {"var": "loop.entity.x"}]},
+                          {"<": [{"var": "entities.bird.y"}, {"+": [{"var": "loop.entity.y"}, {"var": "loop.entity.h"}]}]},
+                          {">": [{"+": [{"var": "entities.bird.y"}, 40]}, {"var": "loop.entity.y"}]}
+                        ]},
+                        "then": [
+                          {"comment": "命中：手算 AABB 有效 → +200"},
+                          {"call": "@score.add", "args": {"n": 200}},
                           {"call": "@game_over"}
                         ]
                       }},
