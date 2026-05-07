@@ -41,15 +41,20 @@ class JsonFlameGameWidget extends JsonBaseWidget {
   ) {
     dynamic walk(dynamic node) {
       if (node is String) {
-        // 只匹配 "{{ global.x }}" 或 "{{ loop.x }}" 这类外层模板
-        // 内部 "{{ vars.x }}" / "{{ event.x }}" / "{{ entities.x }}" / "{{ world.x }}" / "{{ score }}" / "{{ best }}" 保留
         return _resolveOuterOnly(node, interpreter);
       }
       if (node is List) {
         return node.map(walk).toList();
       }
       if (node is Map) {
-        return node.map((k, v) => MapEntry(k, walk(v)));
+        // ⚠️ 不能用 node.map((k,v) => MapEntry(k, walk(v))) ——
+        // 推断出来是 Map<dynamic, dynamic>，最后的 as Map<String, dynamic> 会炸。
+        // 显式 forEach 写到一个 typed map 里，保证类型链路。
+        final out = <String, dynamic>{};
+        node.forEach((k, v) {
+          out[k.toString()] = walk(v);
+        });
+        return out;
       }
       return node;
     }
