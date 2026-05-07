@@ -1087,32 +1087,40 @@ class _MarketPageState extends State<_MarketPage> {
   }
 
   Future<void> _fetchApps() async {
-    final t = T.of(context);
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    // ⚠️ 不能用 T.of(context) —— initState 第一次调 _fetchApps 时
+    // InheritedWidget 还没挂上，dependOnInheritedWidgetOfExactType 会同步抛，
+    // 且 throw 发生在 try 之前 → catch 接不到 → _loading 永远 true。
+    // 用 T.current 走 LocaleController，不依赖 context。
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
-      // 根据当前选中的 Tab 获取对应类型的包
       final type = _selectedTabIndex == 0 ? 'app' : 'library';
       final resp = await http
           .get(Uri.parse('${AppConfig.registryUrl}/packages?type=$type'))
           .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
-        throw Exception(T.fmt(t.errorServerWithCode, {'code': resp.statusCode}));
+        throw Exception(
+          T.fmt(T.current.errorServerWithCode, {'code': resp.statusCode}),
+        );
       }
 
       final data = json.decode(resp.body) as Map<String, dynamic>;
       final packages = (data['packages'] as List<dynamic>)
           .cast<Map<String, dynamic>>();
 
+      if (!mounted) return;
       setState(() {
         _apps = packages;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = e.toString();
