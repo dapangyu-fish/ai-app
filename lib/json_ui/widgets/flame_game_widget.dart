@@ -104,6 +104,8 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   double _panDx = 0;
   double _panDy = 0;
 
+  late final void Function() _resetter;
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +113,15 @@ class _FlameGameMountState extends State<_FlameGameMount> {
       spec: widget.spec,
       onEvent: _dispatchEvent,
     );
+    // 注册到 interpreter，让 @flame_game_reset 这个 action 能找到我们
+    _resetter = () => _game.resetGame();
+    widget.interpreter.registerFlameGameResetter(_resetter);
+  }
+
+  @override
+  void dispose() {
+    widget.interpreter.unregisterFlameGameResetter(_resetter);
+    super.dispose();
   }
 
   /// 游戏事件 → JSON-APP 的 on_xxx 回调

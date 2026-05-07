@@ -3,7 +3,7 @@
   "appid": "b3f7e201-9c4a-4d2a-bf8b-7e26e3c8d2fc",
   "meta": {
     "name": "demo-tap-white-tile",
-    "version": "2.3.1",
+    "version": "2.4.0",
     "type": "app",
     "description": "别踩白块儿 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
@@ -21,7 +21,8 @@
       "_b": null,
       "_ts": 0,
       "_date": "",
-      "_id": ""
+      "_id": "",
+      "_choice": null
     },
     "functions": {
       "initDB": {
@@ -94,7 +95,18 @@
             }
           }},
           {"call": "@global.loadHistory", "args": {}},
-          {"call": "@common-ui.showSuccess", "args": {"message": "已保存：{{ params.score }} 分"}}
+          {"call": "@common-ui.choose", "args": {
+            "title": "🎯 本局结束",
+            "message": "得分：{{ params.score }}\n最佳：{{ global.bestScore }}",
+            "buttons": [
+              {"label": "关闭", "value": null, "style": "text"},
+              {"label": "再来一局", "value": "restart"}
+            ]
+          }, "assign": "global._choice"},
+          {"call": "@if", "args": {
+            "condition": {"==": [{"var": "global._choice"}, "restart"]},
+            "then": [{"call": "@flame_game_reset", "args": {}}]
+          }}
         ]
       },
       "showHistory": {
@@ -185,6 +197,7 @@
                 "kind": "pixel",
                 "bg": "#2B2B2B"
               },
+              "overlay": {"game_over": false},
               "vars": {},
               "entities": {
                 "rows": {

@@ -65,6 +65,9 @@ class JsonFlameGame extends FlameGame {
 
   // 内置 overlay 配置
   bool _showScore = true;
+  bool _showGameOver = true; // overlay.game_over=false 时关掉 canvas
+                              // 浮层 + tap/swipe 自动重置，让 JSON-APP 用
+                              // common-ui dialog 接管结算页
   String _gameOverTitle = '游戏结束';
   String _gameOverHint = '点击重新开始';
 
@@ -151,7 +154,7 @@ class JsonFlameGame extends FlameGame {
 
     // 内置 overlay
     if (_showScore) _drawScoreOverlay(canvas);
-    if (isGameOver) _drawGameOverOverlay(canvas);
+    if (isGameOver && _showGameOver) _drawGameOverOverlay(canvas);
   }
 
   // ---------- 输入（由外层 widget 的 GestureDetector 调进来） ----------
@@ -160,6 +163,8 @@ class JsonFlameGame extends FlameGame {
   void handleTap(double x, double y) {
     if (!_ready) return;
     if (isGameOver) {
+      // 关掉内置浮层 = JSON-APP 自己接管结算页，tap 不再自动重置
+      if (!_showGameOver) return;
       resetGame();
       return;
     }
@@ -172,6 +177,7 @@ class JsonFlameGame extends FlameGame {
   void handleSwipe(double dx, double dy) {
     if (!_ready) return;
     if (isGameOver) {
+      if (!_showGameOver) return;
       // 滑动也能重开
       resetGame();
       return;
@@ -272,6 +278,7 @@ class JsonFlameGame extends FlameGame {
     final ov = spec['overlay'] as Map<String, dynamic>?;
     if (ov != null) {
       _showScore = ov['score'] != false;
+      _showGameOver = ov['game_over'] != false;
       _gameOverTitle = ov['game_over_title']?.toString() ?? _gameOverTitle;
       _gameOverHint = ov['game_over_hint']?.toString() ?? _gameOverHint;
     }

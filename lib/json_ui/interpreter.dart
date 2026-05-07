@@ -47,6 +47,19 @@ class JsonInterpreter extends ChangeNotifier {
   /// 跟 loop / params 一样的 push-execute-pop 语义，由 [executeActionWithEvent] 管。
   final List<Map<String, dynamic>> _eventContextStack = [];
 
+  /// 当前挂着的 flame_game widget 注册的 reset 回调。
+  /// 给 @flame_game_reset 这个 action 用 — JSON-APP 层（比如结算 dialog
+  /// 的"再来一局"按钮）能从外面调进去重置游戏。
+  final List<void Function()> _flameGameResetters = [];
+
+  void registerFlameGameResetter(void Function() resetter) {
+    _flameGameResetters.add(resetter);
+  }
+
+  void unregisterFlameGameResetter(void Function() resetter) {
+    _flameGameResetters.remove(resetter);
+  }
+
   final Map<String, TextEditingController> _textControllers = {};
 
   /// 屏幕导航历史栈（不含当前页）。
@@ -948,6 +961,14 @@ class JsonInterpreter extends ChangeNotifier {
       case '@clipboard_paste':
         final data = await Clipboard.getData(Clipboard.kTextPlain);
         return data?.text ?? '';
+      case '@flame_game_reset':
+        // 重置当前挂着的所有 flame_game。一般一个屏幕一个，所以列表
+        // 通常长度为 1。给 JSON-APP 层（比如结算 dialog 的"再来一局"
+        // 按钮）从外面重置游戏用。
+        for (final r in _flameGameResetters) {
+          r();
+        }
+        return null;
       case '@haptic':
         // style: light / medium / heavy / selection / vibrate（默认 light）
         final style = resolvedArgs['style']?.toString() ?? 'light';

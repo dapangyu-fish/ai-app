@@ -364,6 +364,7 @@
 | `@permission_status` | `{ "type": "..." }` | 同 `@request_permission`，但只查不请求 |
 | `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
 | `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
+| `@flame_game_reset` | `{}` | 重置当前屏幕挂着的所有 flame_game。给 JSON-APP 层（结算 dialog 的"再来一局"按钮）从外面重置游戏用，避免依赖 canvas 的 tap-to-reset |
 
 ### 4.10 私信 / 好友（IM）
 
@@ -1466,7 +1467,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
   "on_score_changed": { ... },
   "on_game_over": { ... },
   "on_reset": { ... },
-  "overlay": { "score": true, "game_over_title": "游戏结束", "game_over_hint": "点击重新开始" },
+  "overlay": { "score": true, "game_over": true, "game_over_title": "游戏结束", "game_over_hint": "点击重新开始" },
   "height": 600
 }
 ```
@@ -1544,7 +1545,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@score.add({n})` | 分数 +n，emit `scoreChanged` |
 | `@score.set({value})` | 分数设为 v |
 | `@game_over` | 触发结束，emit `gameOver` |
-| `@game_reset` | 重置（仅清状态，不重新构建结构） |
+| `@game_reset` | 重置（仅清状态，不重新构建结构）。**只能在 flame_game 内部 logic 里用**，外层 JSON-APP 用下面的 `@flame_game_reset` |
 | `@cell_path.advance({path, direction})` | 头按方向走一格（带 wrap）|
 | `@cell_path.grow({path})` | 长一节 |
 | `@cell_path.contains({path, cell, skip_head})` | 是否包含某格（碰撞检测） |
