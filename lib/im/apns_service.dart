@@ -49,9 +49,19 @@ class ApnsService {
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'onDeviceToken':
-          final hex = call.arguments as String?;
+          // 新协议：{token: hex, env: 'development' | 'production'}
+          // env 由 native 从 embedded.mobileprovision 的 aps-environment 读取，
+          // 不能用 kReleaseMode 替代 —— TF 也是 release mode 但 env=production
+          final args = call.arguments;
+          String? hex;
+          String? env;
+          if (args is Map) {
+            hex = args['token']?.toString();
+            env = args['env']?.toString();
+          }
           if (hex != null && hex.isNotEmpty) {
-            await _uploadToken(hex);
+            // env 缺失兜底为 production（兜不到对的话客户端重启时 native 还会再注册一次）
+            await _uploadToken(hex, apsEnv: env ?? 'production');
           }
           break;
         case 'onRegisterError':
@@ -77,8 +87,12 @@ class ApnsService {
     }
   }
 
-  Future<void> _uploadToken(String hexToken) async {
-    if (_lastUploadedToken == hexToken) return; // 同一 token 不重复传
+  // 后端协议：{channel, token, meta} —— 通用结构，未来加 fcm/getui 用同一接口
+  Future<void> _uploadToken(String hexToken, {required String apsEnv}) async {
+    // 后端 meta.env 只认 'sandbox' / 'production'，把 iOS 的 'development' 名规约一下
+    final metaEnv = (apsEnv == 'development') ? 'sandbox' : 'production';
+    final dedupeKey = '$hexToken|$metaEnv';
+    if (_lastUploadedToken == dedupeKey) return; // 同 token+env 不重复传
     final authToken = AuthService.token;
     if (authToken == null) {
       // ignore: avoid_print
@@ -93,14 +107,15 @@ class ApnsService {
           'Authorization': 'Bearer $authToken',
         },
         body: json.encode({
-          'platform': 'ios',
+          'channel': 'apns',
           'token': hexToken,
+          'meta': {'env': metaEnv},
         }),
       ).timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
-        _lastUploadedToken = hexToken;
+        _lastUploadedToken = dedupeKey;
         // ignore: avoid_print
-        print('[APNs] device token 已上传后端');
+        print('[APNs] device token 已上传 (env=$metaEnv)');
       } else {
         // ignore: avoid_print
         print('[APNs] 上传失败 ${resp.statusCode}: ${resp.body}');

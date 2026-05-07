@@ -29,8 +29,22 @@ CREATE TABLE IF NOT EXISTS chat_quotas (
     UNIQUE(user_id, date)
 );
 
+-- 设备推送 token —— 通道无关结构，加新通道(fcm/getui/huawei...)不需要改 schema
+-- channel        : 'apns' | 'fcm' | 'getui' | ...（与 backend/push/ 下注册的 provider 一一对应）
+-- channel_meta   : 通道私有字段，e.g. APNs 的 {"env": "sandbox"|"production"}
+CREATE TABLE IF NOT EXISTS device_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    channel VARCHAR(32) NOT NULL,
+    token TEXT NOT NULL,
+    channel_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id, channel, token)
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_app_registry_type ON app_registry(type);
 CREATE INDEX IF NOT EXISTS idx_app_registry_is_public ON app_registry(is_public);
 CREATE INDEX IF NOT EXISTS idx_app_registry_created_at ON app_registry(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_quotas_user_date ON chat_quotas(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_device_tokens_user_id ON device_tokens(user_id);

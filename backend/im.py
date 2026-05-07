@@ -20,6 +20,7 @@ admin_token 缓存：
   一次签 7 天有效。模块内存缓存 + 兜底过期就重签。
 """
 
+import json
 import time
 import logging
 import threading
@@ -35,7 +36,7 @@ from config import (
     SUPABASE_URL,
 )
 from database import db_execute, db_query
-import apns
+import push
 
 logger = logging.getLogger(__name__)
 
@@ -389,10 +390,16 @@ def upload_push_token():
     """
     POST /api/im/push_token
 
-    Body: { "platform": "ios", "token": "<64 char hex APNs deviceToken>" }
+    Body: {
+      "channel": "apns" | "fcm" | "getui" | ...,
+      "token":   "<token string>",
+      "meta":    { ... }    # 通道私有字段；APNs: {"env": "sandbox"|"production"}
+    }
 
-    客户端拿到 APNs deviceToken 后调；按 (user_id, platform, token) UPSERT
-    一个 user 可有多 token（多设备），共存。
+    UPSERT 主键 (user_id, channel, token)。同 user 可有多 row（多设备 / 多通道并存）。
+
+    后端不维护 channel 白名单——以 push.is_supported() 为准，只允许已注册 provider。
+    新增通道：在 backend/push/ 加 provider 模块即可，本接口不用改。
     """
     user = request.supabase_user
     raw_user_id = str(user.get("id", ""))
@@ -400,23 +407,34 @@ def upload_push_token():
         return jsonify({"error": "no user id"}), 500
 
     body = request.get_json(silent=True) or {}
-    platform = (body.get("platform") or "").strip().lower()
+    channel = (body.get("channel") or "").strip().lower()
     token = (body.get("token") or "").strip()
-    if platform not in ("ios", "android"):
-        return jsonify({"error": "platform 必须是 ios / android"}), 400
+    meta = body.get("meta") or {}
+
+    if not channel:
+        return jsonify({"error": "channel 必填"}), 400
+    if not push.is_supported(channel):
+        return jsonify({
+            "error": f"channel '{channel}' 暂不支持",
+            "supported": push.supported_channels(),
+        }), 400
     if not token or len(token) > 256:
         return jsonify({"error": "token 非法"}), 400
+    if not isinstance(meta, dict):
+        return jsonify({"error": "meta 必须是 object"}), 400
 
     db_execute(
         """
-        INSERT INTO device_tokens (user_id, platform, token, updated_at)
-        VALUES (%s, %s, %s, NOW())
-        ON CONFLICT (user_id, platform, token)
-        DO UPDATE SET updated_at = NOW()
+        INSERT INTO device_tokens (user_id, channel, token, channel_meta, updated_at)
+        VALUES (%s, %s, %s, %s::jsonb, NOW())
+        ON CONFLICT (user_id, channel, token)
+        DO UPDATE SET channel_meta = EXCLUDED.channel_meta, updated_at = NOW()
         """,
-        (raw_user_id, platform, token),
+        (raw_user_id, channel, token, json.dumps(meta)),
     )
-    logger.info(f"[Push] token registered user={raw_user_id[:8]} platform={platform} ...{token[-8:]}")
+    logger.info(
+        f"[Push] token registered user={raw_user_id[:8]} channel={channel} meta={meta} ...{token[-8:]}"
+    )
     return jsonify({"ok": True})
 
 
@@ -473,12 +491,54 @@ def _check_users_online(im_user_ids: list[str]) -> set[str]:
         return set()
 
 
+def _dispatch_to_user(*, sup_id: str, payload: push.PushPayload, log_prefix: str) -> int:
+    """查 device_tokens 按 channel 派发推送，返回成功送达条数。
+
+    expired_token=True → DELETE 掉那条 row（自愈，不需要后台任务清理）
+    其他失败 → 记日志，不动 DB（下次推送会重试）
+
+    通道无关：循环不知道也不关心 channel 是 apns/fcm/getui，全靠 push.dispatch 路由
+    """
+    rows = db_query(
+        "SELECT channel, token, channel_meta FROM device_tokens WHERE user_id = %s",
+        (sup_id,),
+        fetch_all=True,
+    ) or []
+
+    pushed = 0
+    for row in rows:
+        channel = row.get("channel")
+        token = row.get("token")
+        # psycopg2 默认把 JSONB 解码成 dict；防御性兜底空字符串/None
+        meta = row.get("channel_meta") or {}
+        if isinstance(meta, str):
+            try:
+                meta = json.loads(meta) if meta else {}
+            except Exception:
+                meta = {}
+        if not channel or not token:
+            continue
+
+        result = push.dispatch(channel=channel, token=token, meta=meta, payload=payload)
+        if result.ok:
+            pushed += 1
+        elif result.expired_token:
+            db_execute(
+                "DELETE FROM device_tokens WHERE user_id=%s AND channel=%s AND token=%s",
+                (sup_id, channel, token),
+            )
+            logger.info(
+                f"{log_prefix} 已清理失效 token user={sup_id[:8]} channel={channel} ...{token[-8:]}"
+            )
+    return pushed
+
+
 def offline_push_hook():
     """
     POST /api/im/offline_push_hook?secret=<OPENIM_WEBHOOK_SECRET>
 
     OpenIM 在用户离线收到消息时调这个接口（webhooks.yml 配置 beforeOfflinePush.enable=true）
-    我们查 device_tokens，按每个 token 推 APNs 一次。
+    我们查 device_tokens，按每条 row 的 channel 派发到对应 provider（apns / fcm / getui ...）
 
     OpenIM v3.8 webhook payload 结构（实测）：
       {
@@ -521,26 +581,19 @@ def offline_push_hook():
         sup_id = _supabase_id_from_im_id(im_id)
         if not sup_id:
             continue
-        rows = db_query(
-            "SELECT platform, token FROM device_tokens WHERE user_id = %s",
-            (sup_id,),
-            fetch_all=True,
-        ) or []
-        for row in rows:
-            if row.get("platform") != "ios":
-                continue  # 暂只做 iOS
-            ok = apns.push_to_device(
-                device_token=row["token"],
+        pushed_count += _dispatch_to_user(
+            sup_id=sup_id,
+            payload=push.PushPayload(
                 title=title,
                 body=content,
                 custom={
                     "conversation_id": conversation_id,
                     "im_user_id": im_id,
                 },
-                collapse_id=conversation_id or None,  # 同一会话多条合并
-            )
-            if ok:
-                pushed_count += 1
+                collapse_id=conversation_id or None,
+            ),
+            log_prefix="[Push.offline_push_hook]",
+        )
 
     logger.info(f"[Push] offline_push_hook: receivers={len(receiver_im_ids)} pushed={pushed_count}")
     # 返回 errCode=0，让 OpenIM 继续走它的 push 流程（即使我们成功了，OpenIM 内置 push
@@ -663,47 +716,28 @@ def after_send_msg():
         logger.info(f"[Push] after_send_msg: recv={recv_id[:8]} 无法换 supabase id")
         return jsonify({"errCode": 0, "errMsg": ""})
 
-    rows = db_query(
-        "SELECT platform, token FROM device_tokens WHERE user_id = %s",
-        (sup_id,),
-        fetch_all=True,
-    ) or []
-
-    if not rows:
-        logger.info(f"[Push] after_send_msg: recv={recv_id[:8]} 离线但无 device_token")
-        return jsonify({"errCode": 0, "errMsg": ""})
-
     # APNs collapse-id 上限 64 字节。用对话两端 user id 各取前 16 hex 拼，
     # 避免 si_<32hex>_<32hex> 超长被 Apple 拒（InvalidCollapseId）
     a, b = sorted([send_id, recv_id])
     conversation_id = f"si_{a[:16]}_{b[:16]}"   # 3 + 16 + 1 + 16 = 36 chars，安全
 
-    pushed_count = 0
-    for row in rows:
-        platform = row.get("platform")
-        token = row.get("token")
-        if not token:
-            continue
-        if platform == "ios":
-            ok = apns.push_to_device(
-                device_token=token,
-                title=sender_nickname,
-                body=body_text,
-                custom={
-                    "conversation_id": conversation_id,
-                    "sender_id": send_id,
-                    "msg_seq": payload.get("seq"),
-                },
-                collapse_id=conversation_id,
-            )
-            if ok:
-                pushed_count += 1
-        else:
-            # FCM / geTui 待实现，先跳过
-            logger.info(f"[Push] platform={platform} 暂未实现，token=...{token[-8:]} 跳过")
+    pushed_count = _dispatch_to_user(
+        sup_id=sup_id,
+        payload=push.PushPayload(
+            title=sender_nickname,
+            body=body_text,
+            custom={
+                "conversation_id": conversation_id,
+                "sender_id": send_id,
+                "msg_seq": payload.get("seq"),
+            },
+            collapse_id=conversation_id,
+        ),
+        log_prefix="[Push.after_send_msg]",
+    )
 
     logger.info(
         f"[Push] after_send_msg: send={send_id[:8]} recv={recv_id[:8]} "
-        f"type={content_type} pushed={pushed_count}/{len(rows)}"
+        f"type={content_type} pushed={pushed_count}"
     )
     return jsonify({"errCode": 0, "errMsg": ""})

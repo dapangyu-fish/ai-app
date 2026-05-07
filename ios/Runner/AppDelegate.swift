@@ -59,14 +59,42 @@ import UserNotifications
     }
   }
 
-  // APNs 注册成功 —— 把 deviceToken 转 hex 发给 Flutter
+  // APNs 注册成功 —— 把 deviceToken + 真实 aps-environment 发给 Flutter
+  // 为什么要带 env：dev 包的 token 是 sandbox APNs 发的，TF/AppStore 包是 production APNs 发的，
+  //   后端必须按这个 env 选 host (api.sandbox.push.apple.com vs api.push.apple.com)，
+  //   否则跨环境推会被 Apple 拒回 BadDeviceToken。kReleaseMode/#if DEBUG 都不可靠
+  //   （TF 也是 release mode，但 APNs 是 production），所以从 entitlement 读真值
   override func application(
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
-    print("[APNs-iOS] deviceToken: \(hex)")
-    pushChannel?.invokeMethod("onDeviceToken", arguments: hex)
+    let env = AppDelegate.detectApsEnvironment()
+    print("[APNs-iOS] deviceToken=\(hex) env=\(env)")
+    pushChannel?.invokeMethod("onDeviceToken", arguments: ["token": hex, "env": env])
+  }
+
+  // 从 embedded.mobileprovision 读 Entitlements.aps-environment
+  // - dev / ad-hoc / enterprise 签名 → 文件存在，env = "development" 或 "production"
+  // - AppStore 上架后 Apple 重签可能去掉这文件 → 找不到时按 "production" 兜底（合理：上架包不可能是 sandbox）
+  // 模拟器走不到本回调（不会发 APNs token），所以不用考虑
+  private static func detectApsEnvironment() -> String {
+    guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+          let data = try? Data(contentsOf: url) else {
+      return "production"
+    }
+    // mobileprovision 是 CMS-signed PKCS#7 容器，里面 plist 以 ASCII 文本嵌入
+    guard let raw = String(data: data, encoding: .ascii),
+          let s = raw.range(of: "<plist"),
+          let e = raw.range(of: "</plist>", range: s.upperBound..<raw.endIndex),
+          let plistData = String(raw[s.lowerBound..<e.upperBound]).data(using: .utf8),
+          let obj = try? PropertyListSerialization.propertyList(from: plistData, options: [], format: nil),
+          let dict = obj as? [String: Any],
+          let entitlements = dict["Entitlements"] as? [String: Any],
+          let aps = entitlements["aps-environment"] as? String else {
+      return "production"
+    }
+    return aps == "development" ? "development" : "production"
   }
 
   // APNs 注册失败 —— 通知 Flutter
