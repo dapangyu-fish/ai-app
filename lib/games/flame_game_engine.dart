@@ -287,6 +287,13 @@ class JsonFlameGame extends FlameGame {
       t.accumulator = 0;
     }
 
+    // init.logic：entities 建好后跑一次的初始化（典型用途：开局 spawn 几个 tile）
+    final initSpec = spec['init'] as Map<String, dynamic>?;
+    final initLogic = initSpec?['logic'];
+    if (initLogic is List) {
+      logic.runLogic(initLogic);
+    }
+
     onEvent?.call('reset', {'score': 0, 'best': bestScore});
   }
 
@@ -318,6 +325,36 @@ class JsonFlameGame extends FlameGame {
             }
           }
           return CellPathEntity(id: id, renderConfig: render, cells: cells);
+        }
+      case 'value_grid':
+        {
+          final cols = (spec['cols'] as num?)?.toInt() ?? 4;
+          final rows = (spec['rows'] as num?)?.toInt() ?? 4;
+          final fill =
+              (spec['fill'] as num?)?.toInt() ?? 0; // 默认空 (0)
+          final cells = <List<int>>[];
+          final initRaw = spec['init'];
+          for (int r = 0; r < rows; r++) {
+            final row = <int>[];
+            for (int c = 0; c < cols; c++) {
+              int v = fill;
+              if (initRaw is List &&
+                  r < initRaw.length &&
+                  initRaw[r] is List &&
+                  c < (initRaw[r] as List).length) {
+                v = ((initRaw[r] as List)[c] as num?)?.toInt() ?? fill;
+              }
+              row.add(v);
+            }
+            cells.add(row);
+          }
+          return ValueGridEntity(
+            id: id,
+            renderConfig: render,
+            cols: cols,
+            rows: rows,
+            cells: cells,
+          );
         }
       case 'scroll_list':
         {

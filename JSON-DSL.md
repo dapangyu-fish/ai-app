@@ -1466,6 +1466,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `input.swipe` | ❌ | 滑动事件 logic（event 含 `direction`：up/down/left/right、`dx`、`dy`） |
 | `frame.logic` | ❌ | 每帧执行 |
 | `tick` | ❌ | 间隔执行：`{ interval, logic }` 或 `[{...}, {...}]`，`interval` 支持 `"{{ vars.x }}"` 模板（每次 tick 重新求值，所以可以让 snake 加速） |
+| `init.logic` | ❌ | entities 建好之后跑一次的初始化（典型用途：开局先 spawn 几个 tile）；reset 后会再跑 |
 | `on_<event>` | ❌ | 游戏事件回调，由外层 JSON-APP 处理 |
 | `overlay` | ❌ | 内置 overlay 配置 |
 | `height` | ❌ | 不写时占满父级 |
@@ -1499,6 +1500,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `cell` | `init: [x, y]` | 单个网格格子（snake 食物） |
 | `cell_path` | `init: [[x,y], ...]` | 网格上的格子序列（snake 身体）；`render.gradient: true` 启头亮尾暗 |
 | `scroll_list` | `direction: "down"` | 垂直滚动行序列（tap_white_tile）；`speed`, `row_height`(默认 width/cells), `safe_zone_bottom`(默认 2), `row_spec` |
+| `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
 | `static` | `position`, `size` | 像素静态可视（保留接口，第一版未启用） |
 | `pixel` | `position`, `velocity` | 像素自由动 entity（保留接口） |
 
@@ -1539,6 +1541,10 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@scroll_list.add_speed({id, by, max})` | 速度 +by，不超过 max |
 | `@scroll_list.tap({id, x, y})` | 像素 tap 命中检测，返回 `'hit'` / `'miss'` / `'outside'` |
 | `@scroll_list.first_unhit_below({id, y})` | 是否有未点 active 行越过 y（死亡线） |
+| `@value_grid.slide_merge({grid, direction})` | 按方向 slide+merge，返回 `{moved: bool, score: int}`，2048 类用 |
+| `@value_grid.spawn({grid, four_chance: 0.1})` | 随机空格 spawn 一个 2 / 4，返回是否成功 |
+| `@value_grid.can_move({grid})` | 是否还能动（有空格或邻接同值） |
+| `@not({value})` | 通用否定。jsonlogic `!` 不递归 inline action 调用，需要 `@not` 把 inline call 结果取反 |
 
 #### 双向桥
 

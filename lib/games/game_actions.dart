@@ -111,6 +111,99 @@ class GameActions {
           }
           return false;
         }
+      case '@not':
+        {
+          // jsonlogic 的 ! 不会递归 inline action（{call: ...}），
+          // 所以提供 @not 让 JSON 能写 {call: @not, args: {value: {call: @xxx}}}
+          final v = args['value'];
+          if (v == null) return true;
+          if (v is bool) return !v;
+          if (v is num) return v == 0;
+          if (v is String) return v.isEmpty;
+          if (v is List) return v.isEmpty;
+          if (v is Map) return v.isEmpty;
+          return false;
+        }
+
+      // ---------- value_grid（2048 类游戏） ----------
+      case '@value_grid.slide_merge':
+        {
+          final id = args['grid']?.toString();
+          final direction = args['direction']?.toString() ?? 'left';
+          if (id == null) return {'moved': false, 'score': 0};
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return {'moved': false, 'score': 0};
+
+          bool moved = false;
+          int scoreGained = 0;
+
+          if (direction == 'left' || direction == 'right') {
+            for (int r = 0; r < ent.rows; r++) {
+              final original = List<int>.from(ent.cells[r]);
+              final processed = _slideAndMerge(original, direction == 'right');
+              if (processed.moved) moved = true;
+              scoreGained += processed.score;
+              ent.cells[r] = processed.line;
+            }
+          } else {
+            // up / down —— 按列处理
+            for (int c = 0; c < ent.cols; c++) {
+              final original = <int>[];
+              for (int r = 0; r < ent.rows; r++) {
+                original.add(ent.cells[r][c]);
+              }
+              final processed = _slideAndMerge(original, direction == 'down');
+              if (processed.moved) moved = true;
+              scoreGained += processed.score;
+              for (int r = 0; r < ent.rows; r++) {
+                ent.cells[r][c] = processed.line[r];
+              }
+            }
+          }
+          return {'moved': moved, 'score': scoreGained};
+        }
+      case '@value_grid.spawn':
+        {
+          final id = args['grid']?.toString();
+          final fourChance =
+              (args['four_chance'] as num?)?.toDouble() ?? 0.1;
+          if (id == null) return false;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return false;
+          final empty = <List<int>>[];
+          for (int r = 0; r < ent.rows; r++) {
+            for (int c = 0; c < ent.cols; c++) {
+              if (ent.cells[r][c] == 0) empty.add([r, c]);
+            }
+          }
+          if (empty.isEmpty) return false;
+          final picked = empty[_random.nextInt(empty.length)];
+          final value = _random.nextDouble() < fourChance ? 4 : 2;
+          ent.cells[picked[0]][picked[1]] = value;
+          return true;
+        }
+      case '@value_grid.can_move':
+        {
+          final id = args['grid']?.toString();
+          if (id == null) return false;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return false;
+          // 有空格 → 能动
+          for (int r = 0; r < ent.rows; r++) {
+            for (int c = 0; c < ent.cols; c++) {
+              if (ent.cells[r][c] == 0) return true;
+            }
+          }
+          // 任意相邻同值 → 能合并
+          for (int r = 0; r < ent.rows; r++) {
+            for (int c = 0; c < ent.cols; c++) {
+              final v = ent.cells[r][c];
+              if (c + 1 < ent.cols && ent.cells[r][c + 1] == v) return true;
+              if (r + 1 < ent.rows && ent.cells[r + 1][c] == v) return true;
+            }
+          }
+          return false;
+        }
 
       // ---------- grid ----------
       case '@grid.random_empty':
@@ -232,4 +325,57 @@ class GameActions {
     // ignore: avoid_print
     return null;
   }
+
+  // ---------- 私有 helper ----------
+
+  /// 2048 的 slide+merge：把一条线（行或列）按方向滑动并合并
+  /// reverse=true 表示朝右/下（先反转、合并、再反转回来）
+  static _SlideResult _slideAndMerge(List<int> line, bool reverse) {
+    final original = List<int>.from(line);
+    final processed = reverse ? line.reversed.toList() : List<int>.from(line);
+
+    // 过滤 0
+    final compact = processed.where((v) => v != 0).toList();
+
+    // 相邻同值合并（左到右扫描，每对只合并一次）
+    final merged = <int>[];
+    int score = 0;
+    int i = 0;
+    while (i < compact.length) {
+      if (i + 1 < compact.length && compact[i] == compact[i + 1]) {
+        final newVal = compact[i] * 2;
+        merged.add(newVal);
+        score += newVal;
+        i += 2;
+      } else {
+        merged.add(compact[i]);
+        i += 1;
+      }
+    }
+
+    // 后面补 0
+    while (merged.length < line.length) {
+      merged.add(0);
+    }
+
+    // 朝右/下 → 反转回去
+    final result = reverse ? merged.reversed.toList() : merged;
+
+    // 检查 vs 原始有没变
+    bool moved = false;
+    for (int j = 0; j < line.length; j++) {
+      if (result[j] != original[j]) {
+        moved = true;
+        break;
+      }
+    }
+    return _SlideResult(result, score, moved);
+  }
+}
+
+class _SlideResult {
+  final List<int> line;
+  final int score;
+  final bool moved;
+  _SlideResult(this.line, this.score, this.moved);
 }

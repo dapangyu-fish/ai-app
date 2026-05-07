@@ -333,6 +333,80 @@ class ScrollRow {
   });
 }
 
+// ---------- value_grid（2048 类游戏用） ----------
+
+/// 网格里每格存一个 int 值（0=空），按值出不同样式。
+/// renderConfig 形态：
+/// {
+///   "by_value": {
+///     "0": { shape, color, padding, radius },
+///     "2": { shape, color, padding, radius, text: "2", text_color, font_size },
+///     "4": {...}, ...
+///   },
+///   "default": {...}   // 没在 by_value 里的值用这个
+/// }
+/// 文本里 `{{ value }}` 占位会被当前 cell 的值替换。
+class ValueGridEntity extends GameEntity {
+  final int cols;
+  final int rows;
+  final List<List<int>> cells; // [r][c]
+
+  ValueGridEntity({
+    required super.id,
+    required super.renderConfig,
+    required this.cols,
+    required this.rows,
+    required this.cells,
+  });
+
+  @override
+  void render(Canvas canvas, GameWorld world) {
+    if (cols == 0 || rows == 0) return;
+    // 方块化：cellW = cellH = world.width / cols；网格垂直居中
+    final cellSize = world.width / cols;
+    final gridH = cellSize * rows;
+    final yOffset = (world.height - gridH) / 2;
+
+    final byValue =
+        (renderConfig['by_value'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final defaultCfg =
+        (renderConfig['default'] as Map?)?.cast<String, dynamic>();
+
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < cols; c++) {
+        final v = cells[r][c];
+        Map<String, dynamic>? cfg =
+            (byValue[v.toString()] as Map?)?.cast<String, dynamic>() ??
+                defaultCfg;
+        if (cfg == null) continue;
+        // {{ value }} 占位替换
+        if (cfg.containsKey('text')) {
+          final raw = cfg['text']?.toString() ?? '';
+          if (raw.contains('{{')) {
+            cfg = Map<String, dynamic>.from(cfg);
+            cfg['text'] = raw
+                .replaceAll('{{ value }}', v.toString())
+                .replaceAll('{{value}}', v.toString());
+          }
+        }
+        drawShape(
+          canvas,
+          Offset(c * cellSize, r * cellSize + yOffset),
+          Size(cellSize, cellSize),
+          cfg,
+        );
+      }
+    }
+  }
+
+  @override
+  Map<String, dynamic> toMap() => {
+        'cols': cols,
+        'rows': rows,
+        'cells': cells,
+      };
+}
+
 // ---------- 渲染 helper ----------
 
 void drawShape(
@@ -378,6 +452,7 @@ void drawShape(
       );
       break;
     case 'text':
+      // 纯文字模式（现有行为）
       final value = text ?? cfg['value']?.toString() ?? '';
       final fontSize = (cfg['fontSize'] as num?)?.toDouble() ?? 16;
       final tp = TextPainter(
@@ -392,6 +467,33 @@ void drawShape(
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, rect.topLeft);
-      break;
+      return; // text 模式不再画 overlay
+  }
+
+  // shape != 'text' 时，如果 cfg 还有 text 字段，画文字 overlay 在 bg 上层
+  // 用于 value_grid 的"色块 + 数字"组合
+  final overlayText = cfg['text']?.toString();
+  if (overlayText != null && overlayText.isNotEmpty) {
+    final textColor =
+        parseColor(cfg['text_color']) ?? const Color(0xFF000000);
+    final fontSize = (cfg['font_size'] as num?)?.toDouble() ?? 16;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: overlayText,
+        style: TextStyle(
+          color: textColor,
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(
+      canvas,
+      Offset(
+        rect.center.dx - tp.width / 2,
+        rect.center.dy - tp.height / 2,
+      ),
+    );
   }
 }
