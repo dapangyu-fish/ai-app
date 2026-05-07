@@ -674,6 +674,7 @@ JSON-APP 端只要 `"value": "{{ t('echo') }}"`，变量在不同语言里的位
 | `map` | `FlutterMap` (OSM, 无需 API key) | — | `latitude`, `longitude`, `zoom`, `markers`, `height`, `borderRadius` |
 | `camera` | `CameraPreview` (camera 包) | — | `lensDirection`(back/front), `resolution`(low/medium/high/veryHigh), `height` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
+| `flame_game` | Flame `GameWidget` 嵌入 ECS 游戏 | `world` | `vars`, `entities`, `input`, `frame`, `tick`, `on_*`, `overlay`, `height`（详见 6.42） |
 
 ### 6.4 button 详细属性
 
@@ -1432,6 +1433,137 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 ```
 
 `{{ props.xxx }}` 在渲染时被替换为调用方传入的 `props` 值。
+
+### 6.42 flame_game 控件 — 嵌入小游戏（atom + 编排）
+
+`flame_game` 是一个**通用游戏宿主**：JSON 描述游戏的世界、实体、输入、循环规则，框架（Flame 引擎 + 游戏 atom）负责执行。**新加一个游戏不需要改客户端代码**——只要 JSON 用现有 atom 拼出即可。
+
+#### 顶层结构
+
+```json
+{
+  "type": "flame_game",
+  "world": { ... },
+  "vars": { ... },
+  "entities": { "<id>": { ... } },
+  "input": { "tap": [...], "swipe": [...], "pan": [...], "swipe_threshold": 16 },
+  "frame": { "logic": [...] },
+  "tick": { "interval": 0.16, "logic": [...] },
+  "on_score_changed": { ... },
+  "on_game_over": { ... },
+  "on_reset": { ... },
+  "overlay": { "score": true, "game_over_title": "游戏结束", "game_over_hint": "点击重新开始" },
+  "height": 600
+}
+```
+
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `world` | ✅ | 坐标系 |
+| `vars` | ❌ | 游戏内变量初始值（每次 reset 重置） |
+| `entities` | ❌ | 实体声明（id → spec） |
+| `input.tap` | ❌ | 点击事件 logic（event 含 `x`, `y`） |
+| `input.swipe` | ❌ | **离散** swipe：一次手势结束才触发一次（按累积位移决定方向）。event 含 `direction`（up/down/left/right）+ 累积 `dx`/`dy`。适合 2048、贪吃蛇、卡牌这类"一次手势 = 一次事件"的游戏 |
+| `input.pan` | ❌ | **连续** pan：onPanUpdate 每帧（~16ms）触发一次，event 只含本帧增量 `dx`/`dy`（不含 direction）。适合划线、轨迹、拖动、连续蓄力这类需要逐帧位移的游戏 |
+| `input.swipe_threshold` | ❌ | swipe 触发的最小累积位移（像素），默认 16。设大一点可以防抖，设小一点更灵敏 |
+| `frame.logic` | ❌ | 每帧执行 |
+| `tick` | ❌ | 间隔执行：`{ interval, logic }` 或 `[{...}, {...}]`，`interval` 支持 `"{{ vars.x }}"` 模板（每次 tick 重新求值，所以可以让 snake 加速） |
+| `init.logic` | ❌ | entities 建好之后跑一次的初始化（典型用途：开局先 spawn 几个 tile）；reset 后会再跑 |
+| `on_<event>` | ❌ | 游戏事件回调，由外层 JSON-APP 处理 |
+| `overlay` | ❌ | 内置 overlay 配置 |
+| `height` | ❌ | 不写时占满父级 |
+
+#### 内置作用域（在 vars/entities/input/tick/frame 里 `{{ ... }}` 可用）
+
+| 路径 | 含义 |
+|---|---|
+| `{{ vars.x }}` | 当前游戏实例的 vars |
+| `{{ entities.<id>.<field> }}` | 实体快照（如 `entities.snake.head` → `[10, 14]`） |
+| `{{ event.x }}` | 当前事件 payload（仅在 input/tick 等回调里有值） |
+| `{{ world.cols }}` / `{{ world.rows }}` / `{{ world.width }}` / `{{ world.height }}` / `{{ world.cell_w }}` / `{{ world.cell_h }}` | 世界尺寸 |
+| `{{ score }}` / `{{ best }}` / `{{ game_over }}` | 内置标量 |
+
+外层模板（`{{ global.x }}`, `{{ params.x }}`, `{{ loop.x }}`）会在 widget build 时一次性烤进 spec，仅作为初始值用。
+
+#### `world` —— 坐标系
+
+```json
+{ "kind": "grid", "cols": 20, "rows": 30, "bg": "#1A1A2E", "grid_lines": "#222244" }
+{ "kind": "pixel", "bg": "#2B2B2B" }
+```
+
+`grid` 模式：cellW/cellH 自动按画布尺寸算；entity_cell / entity_cell_path 在格子坐标系里操作。
+`pixel` 模式：自由像素。
+
+#### `entities` —— 实体类型
+
+| kind | 必填字段 | 说明 |
+|---|---|---|
+| `cell` | `init: [x, y]` | 单个网格格子（snake 食物） |
+| `cell_path` | `init: [[x,y], ...]` | 网格上的格子序列（snake 身体）；`render.gradient: true` 启头亮尾暗 |
+| `scroll_list` | `direction: "down"` | 垂直滚动行序列（tap_white_tile）；`speed`, `row_height`(默认 width/cells), `safe_zone_bottom`(默认 2), `row_spec` |
+| `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
+| `static` | `position`, `size` | 像素静态可视（保留接口，第一版未启用） |
+| `pixel` | `position`, `velocity` | 像素自由动 entity（保留接口） |
+
+每个 entity 的 `render` 字段：
+
+```json
+{ "shape": "rect", "color": "#00C800", "padding": 2, "radius": 4 }
+{ "shape": "circle", "color": "#FF4444", "padding": 4 }
+```
+
+#### atom @action 集合（仅 flame_game 内可用）
+
+**通用流程控制**（少量复制 JSON-DSL 主 action）：
+
+| @action | 说明 |
+|---|---|
+| `@set` | `{var, value}` 写变量；value 支持模板 / jsonlogic / 内联 `{call: ...}` 调用 |
+| `@if` | `{cond, then, else}` 分支；cond 支持表达式 / 内联 action |
+| `@noop` | 占位 |
+
+**游戏专属**：
+
+| @action | 说明 |
+|---|---|
+| `@score.add({n})` | 分数 +n，emit `scoreChanged` |
+| `@score.set({value})` | 分数设为 v |
+| `@game_over` | 触发结束，emit `gameOver` |
+| `@game_reset` | 重置（仅清状态，不重新构建结构） |
+| `@cell_path.advance({path, direction})` | 头按方向走一格（带 wrap）|
+| `@cell_path.grow({path})` | 长一节 |
+| `@cell_path.contains({path, cell, skip_head})` | 是否包含某格（碰撞检测） |
+| `@cell_path.head({path})` | 返回 `[x, y]` |
+| `@cell_path.head_collides_self({path})` | head 撞到自己身体 |
+| `@cells_equal({a, b})` | 两格深比较（jsonlogic 不一定深比 list） |
+| `@cell.set({id, cell})` | 设置 cell entity 的位置 |
+| `@grid.random_empty({exclude, assign})` | 随机空格；可 `assign: "<entity_id>"` 直接写到该 cell entity |
+| `@scroll_list.set_speed({id, value})` | 设置速度 |
+| `@scroll_list.add_speed({id, by, max})` | 速度 +by，不超过 max |
+| `@scroll_list.tap({id, x, y})` | 像素 tap 命中检测，返回 `'hit'` / `'miss'` / `'outside'` |
+| `@scroll_list.first_unhit_below({id, y})` | 是否有未点 active 行越过 y（死亡线） |
+| `@value_grid.slide_merge({grid, direction})` | 按方向 slide+merge，返回 `{moved: bool, score: int}`，2048 类用 |
+| `@value_grid.spawn({grid, four_chance: 0.1})` | 随机空格 spawn 一个 2 / 4，返回是否成功 |
+| `@value_grid.can_move({grid})` | 是否还能动（有空格或邻接同值） |
+| `@not({value})` | 通用否定。jsonlogic `!` 不递归 inline action 调用，需要 `@not` 把 inline call 结果取反 |
+
+#### 双向桥
+
+- 游戏 emit 的事件（`scoreChanged` / `gameOver` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调任意 130 个全局 @action（@set 写 global、@http_*、@navigate 等）
+- 游戏内部 logic 用上面 atom @action 集，不能调 @http、@navigate 这种（避免污染游戏循环）
+
+#### 已知限制 / 不在第一版
+
+- 没有 sprite / image entity（纯 Canvas 图形）
+- 没有音效
+- 没有动画曲线 / 缓动
+- 没有持久化（高分让 JSON-APP 自己用 `on_game_over` 存）
+- 频繁 jsonlogic 求值无 cache，性能不是瓶颈但 60fps frame.logic 不要塞太多规则
+
+#### 完整示例
+
+参考 `templates/demo_snake.json`（贪吃蛇，grid_world + cell_path + tick）和 `templates/demo_tap_white_tile.json`（别踩白块儿，pixel_world + scroll_list + frame.logic + tap）。
 
 ---
 

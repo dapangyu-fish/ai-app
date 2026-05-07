@@ -1,0 +1,155 @@
+{
+  "dsl": "3.3",
+  "appid": "c4f8e202-9d4b-4d2a-bf8b-7a26e3c8d3fa",
+  "meta": {
+    "name": "demo-snake",
+    "version": "1.0.2",
+    "type": "app",
+    "description": "贪吃蛇 — 纯 JSON 实现（B 模式 atom 编排示例）",
+    "author": "demo"
+  },
+  "global": {
+    "currentScore": 0,
+    "bestScore": 0,
+    "lastResult": ""
+  },
+  "functions": {
+    "handleGameOver": {
+      "params": ["score", "best"],
+      "logic": [
+        {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
+        {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.best }}"}},
+        {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ params.best }} 分"}}
+      ]
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "贪吃蛇",
+        "layout": "column",
+        "padding": 0,
+        "children": [
+          {
+            "type": "container",
+            "padding": 12,
+            "color": "#1A1A2E",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "text",
+                "value": "实时分数：{{ global.currentScore }}",
+                "style": {"fontSize": 14, "color": "#FFFFFF", "fontWeight": "bold"},
+                "position": {"type": "flex", "flex": 1}
+              },
+              {
+                "type": "text",
+                "value": "最佳：{{ global.bestScore }}",
+                "style": {"fontSize": 13, "color": "#AAAAAA"}
+              }
+            ]
+          },
+          {
+            "type": "expanded",
+            "child": {
+              "type": "flame_game",
+              "world": {
+                "kind": "grid",
+                "cols": 20,
+                "rows": 30,
+                "bg": "#1A1A2E"
+              },
+              "vars": {
+                "direction": "up",
+                "next_direction": "up",
+                "tick_interval": 0.16
+              },
+              "entities": {
+                "snake": {
+                  "kind": "cell_path",
+                  "init": [[10, 14], [10, 15], [10, 16]],
+                  "render": {
+                    "shape": "rect",
+                    "color": "#00C800",
+                    "padding": 2,
+                    "radius": 4,
+                    "gradient": true
+                  }
+                },
+                "food": {
+                  "kind": "cell",
+                  "init": [5, 5],
+                  "render": {
+                    "shape": "circle",
+                    "color": "#FF4444",
+                    "padding": 4
+                  }
+                }
+              },
+              "input": {
+                "swipe": [
+                  {"call": "@if", "args": {
+                    "cond": {"!": [{"in": [
+                      {"cat": [{"var": "vars.direction"}, {"var": "event.direction"}]},
+                      ["updown", "downup", "leftright", "rightleft"]
+                    ]}]},
+                    "then": [
+                      {"call": "@set", "args": {"var": "vars.next_direction", "value": "{{ event.direction }}"}}
+                    ]
+                  }}
+                ]
+              },
+              "tick": {
+                "interval": "{{ vars.tick_interval }}",
+                "logic": [
+                  {"call": "@set", "args": {"var": "vars.direction", "value": "{{ vars.next_direction }}"}},
+                  {"call": "@cell_path.advance", "args": {"path": "snake", "direction": "{{ vars.direction }}"}},
+                  {"call": "@if", "args": {
+                    "cond": {"call": "@cell_path.head_collides_self", "args": {"path": "snake"}},
+                    "then": [{"call": "@game_over"}]
+                  }},
+                  {"call": "@if", "args": {
+                    "cond": {"call": "@cells_equal", "args": {
+                      "a": {"var": "entities.snake.head"},
+                      "b": {"var": "entities.food.cell"}
+                    }},
+                    "then": [
+                      {"call": "@score.add", "args": {"n": 1}},
+                      {"call": "@cell_path.grow", "args": {"path": "snake"}},
+                      {"call": "@grid.random_empty", "args": {"exclude": ["snake"], "assign": "food"}},
+                      {"call": "@set", "args": {"var": "vars.tick_interval", "value": {"max": [0.04, {"-": [0.16, {"*": [{"var": "score"}, 0.003]}]}]}}}
+                    ]
+                  }}
+                ]
+              },
+              "on_game_over": {
+                "type": "call",
+                "call": "@global.handleGameOver",
+                "args": {"score": "{{ event.score }}", "best": "{{ event.best }}"}
+              },
+              "on_score_changed": {
+                "type": "call",
+                "call": "@set",
+                "args": {"var": "global.currentScore", "value": "{{ event.score }}"}
+              }
+            }
+          },
+          {
+            "type": "container",
+            "padding": 8,
+            "color": "#0A0A0A",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.lastResult }}",
+                "style": {"fontSize": 12, "color": "#888888"}
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

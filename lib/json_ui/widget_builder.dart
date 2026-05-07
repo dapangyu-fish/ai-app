@@ -51,6 +51,7 @@ import 'widgets/map_widget.dart';
 import 'widgets/camera_widget.dart';
 import 'widgets/skeleton_widget.dart';
 import 'widgets/reorderable_list_widget.dart';
+import 'widgets/flame_game_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -104,6 +105,7 @@ class JsonWidgetBuilder {
     'camera': JsonCameraWidget(),
     'skeleton': JsonSkeletonWidget(),
     'reorderable_list': JsonReorderableListWidget(),
+    'flame_game': JsonFlameGameWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

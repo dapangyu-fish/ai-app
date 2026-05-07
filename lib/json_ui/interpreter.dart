@@ -41,6 +41,12 @@ class JsonInterpreter extends ChangeNotifier {
 
   final List<Map<String, dynamic>> _loopContextStack = [];
   final List<Map<String, dynamic>> _paramsStack = [];
+
+  /// 事件作用域栈：给嵌入控件（如 flame_game）的回调注入临时数据。
+  /// JSON 在 onXxx action 里可以用 `{{ event.foo }}` 拿到事件 payload。
+  /// 跟 loop / params 一样的 push-execute-pop 语义，由 [executeActionWithEvent] 管。
+  final List<Map<String, dynamic>> _eventContextStack = [];
+
   final Map<String, TextEditingController> _textControllers = {};
 
   /// 屏幕导航历史栈（不含当前页）。
@@ -258,6 +264,7 @@ class JsonInterpreter extends ChangeNotifier {
       'global': globalView,
       'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
       'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
+      'event': _eventContextStack.isNotEmpty ? _eventContextStack.last : {},
     };
   }
 
@@ -377,6 +384,7 @@ class JsonInterpreter extends ChangeNotifier {
 
     _loopContextStack.clear();
     _paramsStack.clear();
+    _eventContextStack.clear();
     _navigationHistory.clear();
     _depLoader.clear();
     for (final c in _textControllers.values) {
@@ -458,6 +466,14 @@ class JsonInterpreter extends ChangeNotifier {
       final subPath = path.substring(7);
       if (_paramsStack.isNotEmpty) {
         return _getNestedValue(_paramsStack.last, subPath);
+      }
+      return null;
+    }
+
+    if (path.startsWith('event.')) {
+      final subPath = path.substring(6);
+      if (_eventContextStack.isNotEmpty) {
+        return _getNestedValue(_eventContextStack.last, subPath);
       }
       return null;
     }
@@ -704,6 +720,22 @@ class JsonInterpreter extends ChangeNotifier {
       // 按钮 onPressed 等事件回调里抛错没人接，老代码会被 dart 框架直接吞掉
       // / 走默认 onError。这里兜底路由到 _CrashPage（带 AI 一键修复按钮）。
       onActionCrash?.call(e, st, appName);
+    }
+  }
+
+  /// 跟 [executeAction] 一样跑 action，但先把 [eventData] 推到 event 栈，
+  /// 让 action 体里 `{{ event.xxx }}` 模板能拿到值。
+  /// 用于嵌入控件（flame_game / 未来可能的 webview message 等）回调。
+  Future<void> executeActionWithEvent(
+    Map<String, dynamic> action,
+    BuildContext context,
+    Map<String, dynamic> eventData,
+  ) async {
+    _eventContextStack.add(eventData);
+    try {
+      await executeAction(action, context);
+    } finally {
+      _eventContextStack.removeLast();
     }
   }
 
