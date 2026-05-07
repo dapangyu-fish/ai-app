@@ -3,7 +3,7 @@
   "appid": "c4f8e202-9d4b-4d2a-bf8b-7a26e3c8d3fa",
   "meta": {
     "name": "demo-snake",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "type": "app",
     "description": "贪吃蛇 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
@@ -217,13 +217,33 @@
           },
           {
             "type": "container",
-            "padding": 8,
+            "height": 160,
+            "padding": 10,
             "color": "#0A0A0A",
+            "layout": "column",
+            "crossAxisAlignment": "stretch",
             "children": [
               {
                 "type": "text",
                 "value": "{{ global.lastResult }}",
-                "style": {"fontSize": 12, "color": "#888888"}
+                "style": {"fontSize": 13, "color": "#FFFFFF", "fontWeight": "bold"}
+              },
+              {
+                "type": "text",
+                "value": "📊 历史记录（共 {{ global.historyCount }} 局）",
+                "style": {"fontSize": 11, "color": "#888888"},
+                "padding": 4
+              },
+              {
+                "type": "list",
+                "source": "{{ global.history }}",
+                "emptyText": "尚无历史记录 — 玩一局试试",
+                "item_template": {
+                  "type": "text",
+                  "value": "🐍 {{ loop.item.date }}  →  {{ loop.item.score }} 分",
+                  "style": {"fontSize": 11, "color": "#999999"},
+                  "padding": 2
+                }
               }
             ]
           }
