@@ -3,26 +3,105 @@
   "appid": "c4f8e202-9d4b-4d2a-bf8b-7a26e3c8d3fa",
   "meta": {
     "name": "demo-snake",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "type": "app",
-    "description": "贪吃蛇 — 纯 JSON 实现（B 模式 atom 编排示例）",
+    "description": "贪吃蛇 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
+  },
+  "dependencies": {
+    "lib_database": "^1.0.0"
   },
   "global": {
     "currentScore": 0,
     "bestScore": 0,
-    "lastResult": ""
+    "lastResult": "尚未开始游戏",
+    "history": [],
+    "historyCount": 0,
+    "_b": null,
+    "_ts": 0,
+    "_date": "",
+    "_id": ""
   },
   "functions": {
-    "handleGameOver": {
-      "params": ["score", "best"],
+    "initDB": {
+      "logic": [
+        {"call": "@lib_database.createTable", "args": {
+          "table": "scores",
+          "columns": [
+            {"name": "id", "type": "TEXT", "primary": "true"},
+            {"name": "score", "type": "INTEGER"},
+            {"name": "ts", "type": "INTEGER"},
+            {"name": "date", "type": "TEXT"}
+          ]
+        }}
+      ]
+    },
+    "loadBest": {
+      "logic": [
+        {"call": "@lib_database.kvGet", "args": {"key": "best_score"}, "assign": "global._b"},
+        {"call": "@if", "args": {
+          "condition": {"!=": [{"var": "global._b"}, null]},
+          "then": [
+            {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ global._b }}"}}
+          ]
+        }}
+      ]
+    },
+    "loadHistory": {
+      "logic": [
+        {"call": "@lib_database.query", "args": {
+          "table": "scores",
+          "orderBy": "ts DESC",
+          "limit": 10
+        }, "assign": "global.history"},
+        {"call": "@lib_database.count", "args": {"table": "scores"}, "assign": "global.historyCount"}
+      ]
+    },
+    "handleScoreChanged": {
+      "params": ["score"],
       "logic": [
         {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
-        {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.best }}"}},
-        {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ params.best }} 分"}}
+        {"call": "@if", "args": {
+          "condition": {">": [{"var": "params.score"}, {"var": "global.bestScore"}]},
+          "then": [
+            {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.score }}"}}
+          ]
+        }}
+      ]
+    },
+    "handleGameOver": {
+      "params": ["score"],
+      "logic": [
+        {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
+        {"call": "@if", "args": {
+          "condition": {">": [{"var": "params.score"}, {"var": "global.bestScore"}]},
+          "then": [
+            {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.score }}"}}
+          ]
+        }},
+        {"call": "@lib_database.kvSet", "args": {"key": "best_score", "value": "{{ global.bestScore }}"}},
+        {"call": "@timestamp", "args": {}, "assign": "global._ts"},
+        {"call": "@date_format", "args": {"timestamp": "{{ global._ts }}", "format": "MM-DD HH:mm"}, "assign": "global._date"},
+        {"call": "@uuid", "args": {}, "assign": "global._id"},
+        {"call": "@lib_database.insert", "args": {
+          "table": "scores",
+          "data": {
+            "id": "{{ global._id }}",
+            "score": "{{ params.score }}",
+            "ts": "{{ global._ts }}",
+            "date": "{{ global._date }}"
+          }
+        }},
+        {"call": "@global.loadHistory", "args": {}},
+        {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ global.bestScore }} 分（历史 {{ global.historyCount }} 局）"}}
       ]
     }
   },
+  "steps": [
+    {"call": "@global.initDB", "args": {}},
+    {"call": "@global.loadBest", "args": {}},
+    {"call": "@global.loadHistory", "args": {}}
+  ],
   "ui": {
     "screens": [
       {
@@ -127,12 +206,12 @@
               "on_game_over": {
                 "type": "call",
                 "call": "@global.handleGameOver",
-                "args": {"score": "{{ event.score }}", "best": "{{ event.best }}"}
+                "args": {"score": "{{ event.score }}"}
               },
               "on_score_changed": {
                 "type": "call",
-                "call": "@set",
-                "args": {"var": "global.currentScore", "value": "{{ event.score }}"}
+                "call": "@global.handleScoreChanged",
+                "args": {"score": "{{ event.score }}"}
               }
             }
           },
