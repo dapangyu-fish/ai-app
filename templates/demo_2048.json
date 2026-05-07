@@ -3,7 +3,7 @@
   "appid": "d5f9e303-ae5c-4e3a-bf8b-7a26e3c8d4fb",
   "meta": {
     "name": "demo-2048",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "type": "app",
     "description": "2048 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
@@ -12,89 +12,150 @@
     "lib_database": "^1.0.0"
   },
   "global": {
-    "currentScore": 0,
-    "bestScore": 0,
-    "lastResult": "尚未开始游戏",
-    "history": [],
-    "historyCount": 0,
-    "_b": null,
-    "_ts": 0,
-    "_date": "",
-    "_id": ""
-  },
-  "functions": {
-    "initDB": {
-      "logic": [
-        {"call": "@lib_database.createTable", "args": {
-          "table": "scores",
-          "columns": [
-            {"name": "id", "type": "TEXT", "primary": "true"},
-            {"name": "score", "type": "INTEGER"},
-            {"name": "ts", "type": "INTEGER"},
-            {"name": "date", "type": "TEXT"}
-          ]
-        }}
-      ]
+    "variables": {
+      "currentScore": 0,
+      "bestScore": 0,
+      "lastResult": "尚未开始游戏",
+      "history": [],
+      "historyCount": 0,
+      "_b": null,
+      "_ts": 0,
+      "_date": "",
+      "_id": ""
     },
-    "loadBest": {
-      "logic": [
-        {"call": "@lib_database.kvGet", "args": {"key": "best_score"}, "assign": "global._b"},
-        {"call": "@if", "args": {
-          "condition": {"!=": [{"var": "global._b"}, null]},
-          "then": [
-            {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ global._b }}"}}
-          ]
-        }}
-      ]
-    },
-    "loadHistory": {
-      "logic": [
-        {"call": "@lib_database.query", "args": {
-          "table": "scores",
-          "orderBy": "ts DESC",
-          "limit": 10
-        }, "assign": "global.history"},
-        {"call": "@lib_database.count", "args": {"table": "scores"}, "assign": "global.historyCount"}
-      ]
-    },
-    "handleScoreChanged": {
-      "params": ["score"],
-      "logic": [
-        {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
-        {"call": "@if", "args": {
-          "condition": {">": [{"var": "params.score"}, {"var": "global.bestScore"}]},
-          "then": [
-            {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.score }}"}}
-          ]
-        }}
-      ]
-    },
-    "handleGameOver": {
-      "params": ["score"],
-      "logic": [
-        {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
-        {"call": "@if", "args": {
-          "condition": {">": [{"var": "params.score"}, {"var": "global.bestScore"}]},
-          "then": [
-            {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.score }}"}}
-          ]
-        }},
-        {"call": "@lib_database.kvSet", "args": {"key": "best_score", "value": "{{ global.bestScore }}"}},
-        {"call": "@timestamp", "args": {}, "assign": "global._ts"},
-        {"call": "@date_format", "args": {"timestamp": "{{ global._ts }}", "format": "MM-DD HH:mm"}, "assign": "global._date"},
-        {"call": "@uuid", "args": {}, "assign": "global._id"},
-        {"call": "@lib_database.insert", "args": {
-          "table": "scores",
-          "data": {
-            "id": "{{ global._id }}",
-            "score": "{{ params.score }}",
-            "ts": "{{ global._ts }}",
-            "date": "{{ global._date }}"
-          }
-        }},
-        {"call": "@global.loadHistory", "args": {}},
-        {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ global.bestScore }} 分（历史 {{ global.historyCount }} 局）"}}
-      ]
+    "functions": {
+      "initDB": {
+        "logic": [
+          {"call": "@lib_database.createTable", "args": {
+            "table": "scores",
+            "columns": [
+              {"name": "id", "type": "TEXT", "primary": "true"},
+              {"name": "score", "type": "INTEGER"},
+              {"name": "ts", "type": "INTEGER"},
+              {"name": "date", "type": "TEXT"}
+            ]
+          }}
+        ]
+      },
+      "loadBest": {
+        "logic": [
+          {"call": "@lib_database.kvGet", "args": {"key": "best_score"}, "assign": "global._b"},
+          {"call": "@if", "args": {
+            "condition": {"!=": [{"var": "global._b"}, null]},
+            "then": [
+              {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ global._b }}"}}
+            ]
+          }}
+        ]
+      },
+      "loadHistory": {
+        "logic": [
+          {"call": "@lib_database.query", "args": {
+            "table": "scores",
+            "orderBy": "ts DESC",
+            "limit": 20
+          }, "assign": "global.history"},
+          {"call": "@lib_database.count", "args": {"table": "scores"}, "assign": "global.historyCount"}
+        ]
+      },
+      "handleScoreChanged": {
+        "params": ["score"],
+        "logic": [
+          {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
+          {"call": "@if", "args": {
+            "condition": {">": [{"var": "params.score"}, {"var": "global.bestScore"}]},
+            "then": [
+              {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.score }}"}}
+            ]
+          }}
+        ]
+      },
+      "handleGameOver": {
+        "params": ["score"],
+        "logic": [
+          {"call": "@set", "args": {"var": "global.currentScore", "value": "{{ params.score }}"}},
+          {"call": "@if", "args": {
+            "condition": {">": [{"var": "params.score"}, {"var": "global.bestScore"}]},
+            "then": [
+              {"call": "@set", "args": {"var": "global.bestScore", "value": "{{ params.score }}"}}
+            ]
+          }},
+          {"call": "@lib_database.kvSet", "args": {"key": "best_score", "value": "{{ global.bestScore }}"}},
+          {"call": "@timestamp", "args": {}, "assign": "global._ts"},
+          {"call": "@date_format", "args": {"timestamp": "{{ global._ts }}", "format": "MM-DD HH:mm"}, "assign": "global._date"},
+          {"call": "@uuid", "args": {}, "assign": "global._id"},
+          {"call": "@lib_database.insert", "args": {
+            "table": "scores",
+            "data": {
+              "id": "{{ global._id }}",
+              "score": "{{ params.score }}",
+              "ts": "{{ global._ts }}",
+              "date": "{{ global._date }}"
+            }
+          }},
+          {"call": "@global.loadHistory", "args": {}},
+          {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ global.bestScore }} 分（共 {{ global.historyCount }} 局）"}}
+        ]
+      },
+      "showHistory": {
+        "logic": [
+          {"call": "@global.loadHistory", "args": {}},
+          {"call": "@show_bottom_sheet", "args": {
+            "content": {
+              "type": "container",
+              "height": 480,
+              "layout": "column",
+              "crossAxisAlignment": "stretch",
+              "children": [
+                {
+                  "type": "container",
+                  "padding": 12,
+                  "layout": "row",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "🏆 历史记录",
+                      "style": {"fontSize": 18, "fontWeight": "bold"},
+                      "position": {"type": "flex", "flex": 1}
+                    },
+                    {
+                      "type": "text",
+                      "value": "共 {{ global.historyCount }} 局",
+                      "style": {"fontSize": 13, "color": "#888888"}
+                    }
+                  ]
+                },
+                {"type": "divider"},
+                {
+                  "type": "list",
+                  "source": "{{ global.history }}",
+                  "emptyText": "尚无历史记录 — 玩一局试试",
+                  "item_template": {
+                    "type": "container",
+                    "padding": 12,
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ loop.item.date }}",
+                        "style": {"fontSize": 13, "color": "#666666"},
+                        "position": {"type": "flex", "flex": 1}
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ loop.item.score }} 分",
+                        "style": {"fontSize": 15, "fontWeight": "bold", "color": "#776E65"}
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }}
+        ]
+      }
     }
   },
   "steps": [
@@ -107,6 +168,22 @@
       {
         "id": "home",
         "title": "2048",
+        "appBar": {
+          "title": "2048",
+          "centerTitle": true,
+          "backgroundColor": "#776E65",
+          "color": "#FFFFFF",
+          "actions": [
+            {
+              "icon": "history",
+              "action": {
+                "type": "call",
+                "call": "@global.showHistory",
+                "args": {}
+              }
+            }
+          ]
+        },
         "layout": "column",
         "padding": 0,
         "children": [
@@ -205,33 +282,13 @@
           },
           {
             "type": "container",
-            "height": 160,
-            "padding": 10,
+            "padding": 8,
             "color": "#0A0A0A",
-            "layout": "column",
-            "crossAxisAlignment": "stretch",
             "children": [
               {
                 "type": "text",
                 "value": "{{ global.lastResult }}",
-                "style": {"fontSize": 13, "color": "#FFFFFF", "fontWeight": "bold"}
-              },
-              {
-                "type": "text",
-                "value": "📊 历史记录（共 {{ global.historyCount }} 局）",
-                "style": {"fontSize": 11, "color": "#888888"},
-                "padding": 4
-              },
-              {
-                "type": "list",
-                "source": "{{ global.history }}",
-                "emptyText": "尚无历史记录 — 玩一局试试",
-                "item_template": {
-                  "type": "text",
-                  "value": "🎮 {{ loop.item.date }}  →  {{ loop.item.score }} 分",
-                  "style": {"fontSize": 11, "color": "#999999"},
-                  "padding": 2
-                }
+                "style": {"fontSize": 12, "color": "#888888"}
               }
             ]
           }
