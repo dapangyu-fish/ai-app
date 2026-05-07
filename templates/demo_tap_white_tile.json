@@ -3,7 +3,7 @@
   "appid": "b3f7e201-9c4a-4d2a-bf8b-7e26e3c8d2fc",
   "meta": {
     "name": "demo-tap-white-tile",
-    "version": "2.3.0",
+    "version": "2.3.1",
     "type": "app",
     "description": "别踩白块儿 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
@@ -16,7 +16,6 @@
     "variables": {
       "currentScore": 0,
       "bestScore": 0,
-      "lastResult": "尚未开始游戏",
       "history": [],
       "historyCount": 0,
       "_b": null,
@@ -95,7 +94,6 @@
             }
           }},
           {"call": "@global.loadHistory", "args": {}},
-          {"call": "@set", "args": {"var": "global.lastResult", "value": "本局 {{ params.score }} 分 / 最佳 {{ global.bestScore }} 分（共 {{ global.historyCount }} 局）"}},
           {"call": "@common-ui.showSuccess", "args": {"message": "已保存：{{ params.score }} 分"}}
         ]
       },
@@ -254,18 +252,6 @@
                 "args": {"score": "{{ event.score }}"}
               }
             }
-          },
-          {
-            "type": "container",
-            "padding": 8,
-            "color": "#0A0A0A",
-            "children": [
-              {
-                "type": "text",
-                "value": "{{ global.lastResult }}",
-                "style": {"fontSize": 12, "color": "#888888"}
-              }
-            ]
           }
         ]
       }
