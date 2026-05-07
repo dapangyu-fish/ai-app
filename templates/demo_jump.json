@@ -3,7 +3,7 @@
   "appid": "f3e8a505-5b8d-4a8b-b9c3-d4e9f5a8b9c5",
   "meta": {
     "name": "demo-jump",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "app",
     "description": "跳一跳 — 纯 JSON 实现，蓄力 / 抛物线 / 平台滚动全部由 JSON 编排",
     "author": "demo"
@@ -356,10 +356,10 @@
                           }},
                           {"call": "@set", "args": {
                             "var": "vars._next_x",
-                            "value": {"+": [
-                              {"var": "vars.anchor_x"},
-                              {"call": "@random_int", "args": {"min": 160, "max": 280}}
-                            ]}
+                            "value": {"call": "@random_int", "args": {
+                              "min": {"+": [{"var": "vars.anchor_x"}, 160]},
+                              "max": {"+": [{"var": "vars.anchor_x"}, 280]}
+                            }}
                           }},
                           {"call": "@spawn", "args": {
                             "kind": "pixel",

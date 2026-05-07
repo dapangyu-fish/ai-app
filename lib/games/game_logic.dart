@@ -74,9 +74,21 @@ class GameLogicEngine {
     final call = action['call'] as String?;
     if (call == null) return null;
 
-    // Lazy-eval actions：不预解析 args（否则 then/else 等子分支会被提前执行）
+    // Lazy-eval actions：不预解析 args（否则 then/else / do 等子分支
+    // 里的 inline action 会在 args 解析阶段被当成内联表达式提前 dispatch，
+    // 跑了一次还拿不到正确的 loop / 状态上下文）。
     if (call == '@if') {
       return _doIf(action['args'] as Map<String, dynamic>? ?? {});
+    }
+    if (call == '@for_each_entity') {
+      // do 数组要保持原样，由 dispatch 内部的迭代 case 在每次 push 完
+      // loop 上下文后再 runStep。这里只解析非 do 的部分（where_prefix 等）。
+      final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
+      final partial = <String, dynamic>{};
+      rawArgs.forEach((k, v) {
+        partial[k] = (k == 'do') ? v : resolveExpression(v);
+      });
+      return GameActions.dispatch(game, call, partial, this);
     }
 
     final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
