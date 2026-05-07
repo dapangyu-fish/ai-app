@@ -108,6 +108,10 @@ class _Strings {
   final String onboardingStep4Body;
   final String onboardingStep5Title;    // 消息
   final String onboardingStep5Body;
+  // ── 配置中心熔断（remote config pause_*）──
+  final String errPauseLogin;        // 服务端压力过大，请稍后重试登录
+  final String errPauseRegister;     // 服务端压力过大，请稍后重试注册
+  final String errPauseRequest;      // 服务端压力过大，请稍后重试
 
   // ── 用户菜单 ──
   final String userMenuProfile;
@@ -443,6 +447,9 @@ class _Strings {
     required this.onboardingStep4Body,
     required this.onboardingStep5Title,
     required this.onboardingStep5Body,
+    required this.errPauseLogin,
+    required this.errPauseRegister,
+    required this.errPauseRequest,
     required this.userMenuProfile,
     required this.userMenuLogout,
     required this.profileTitle,
@@ -732,6 +739,9 @@ const _Strings _zhCN = _Strings(
   onboardingStep4Body: '你保存或 AI 生成过的 APP 都在这里，离线也能用。',
   onboardingStep5Title: '私信',
   onboardingStep5Body: '和好友、客服、小组聊天，支持文字、图片、表情。',
+  errPauseLogin: '服务端压力过大，请稍后重试登录',
+  errPauseRegister: '服务端压力过大，请稍后重试注册',
+  errPauseRequest: '服务端压力过大，请稍后重试',
   userMenuProfile: '个人资料',
   userMenuLogout: '退出登录',
   profileTitle: '个人资料',
@@ -1020,6 +1030,9 @@ const _Strings _enUS = _Strings(
   onboardingStep4Body: 'All your saved or AI-generated apps live here, also available offline.',
   onboardingStep5Title: 'Messages',
   onboardingStep5Body: 'Chat with friends, support, or groups. Supports text, images and emoji.',
+  errPauseLogin: 'Server is busy, please try signing in again later',
+  errPauseRegister: 'Server is busy, please try signing up again later',
+  errPauseRequest: 'Server is busy, please try again later',
   userMenuProfile: 'Profile',
   userMenuLogout: 'Sign out',
   profileTitle: 'Profile',

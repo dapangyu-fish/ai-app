@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -9,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'config/app_config.dart';
+import 'config/remote_config_service.dart';
 import 'i18n/framework_strings.dart';
 import 'i18n/locale_controller.dart';
 import 'i18n/language_switcher.dart';
@@ -51,6 +53,10 @@ final ValueNotifier<ThemeMode> appThemeMode =
 /// 解释器订阅这个 notifier 调度对应回调。
 final ValueNotifier<String> appLifecycleEvent = ValueNotifier<String>('init');
 
+/// app 进程启动时刻。splash 用它算"已经过去多久"，决定还要不要再展示一会儿
+/// （达到 RemoteConfigService.splashDuration 才放行）。
+final DateTime appStartTime = DateTime.now();
+
 class _AppLifecycleObserver extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -79,6 +85,10 @@ class _AppLifecycleObserver extends WidgetsBindingObserver {
 // ============================================================
 
 void main() async {
+  // 触发 appStartTime 的 lazy init 到尽可能早。这个时间点决定 splash 至少要
+  // 展示到 t + RemoteConfigService.splashDuration 才能被 dismiss。
+  appStartTime;
+
   WidgetsFlutterBinding.ensureInitialized();
 
   // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
@@ -86,6 +96,14 @@ void main() async {
 
   // 注册 app 生命周期监听（resume / pause / inactive / detached / hidden）
   WidgetsBinding.instance.addObserver(_AppLifecycleObserver());
+
+  // app 切回前台时刷新 remote config（带 ETag，命中 304 几乎零开销）
+  appLifecycleEvent.addListener(() {
+    if (appLifecycleEvent.value == 'resume') {
+      // ignore: unawaited_futures
+      RemoteConfigService.instance.refreshIfStale();
+    }
+  });
 
   // 捕捉全局渲染和布局异常（防止布局越界等导致直接白屏）
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -153,8 +171,13 @@ void main() async {
     ));
   };
 
-  await AuthService.restoreSession();
-  await AiChatService.loadProvider();
+  // 并行：恢复鉴权 + 拉取远程配置（1s 超时，超时 fall back 到缓存/默认值）。
+  // 配置必须早于 splash 渲染拿到，splash_text / splash_duration_ms 才能正确生效。
+  await Future.wait([
+    AuthService.restoreSession(),
+    AiChatService.loadProvider(),
+    RemoteConfigService.instance.bootstrap(),
+  ]);
   // 如果已登录，后台初始化 IM 连接
   if (AuthService.isLoggedIn) {
     IMService.instance.restoreSession();
@@ -411,7 +434,109 @@ class JsonDslApp extends ConsumerWidget {
           },
         );
       },
-      home: const _AuthGate(),
+      home: const _SplashGate(child: _AuthGate()),
+    );
+  }
+}
+
+/// 启动 splash —— 兼顾 "至少展示 splash_duration_ms" 与 "至多展示到 RemoteConfig
+/// 配置的时长"。展示期间显示 splash_text（如 "Welcome"）。
+///
+/// 时序：
+///   appStartTime ─────────────────────────────► splash_dismissed
+///                       max(elapsed, splash_duration_ms)
+///
+/// - 慢机器：bootstrap 已花掉 splash_duration_ms，splash 立刻消失
+/// - 快机器：bootstrap 很快，splash 撑到 splash_duration_ms 才消失
+class _SplashGate extends StatefulWidget {
+  final Widget child;
+  const _SplashGate({required this.child});
+
+  @override
+  State<_SplashGate> createState() => _SplashGateState();
+}
+
+class _SplashGateState extends State<_SplashGate> {
+  bool _showSplash = true;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleDismiss();
+  }
+
+  void _scheduleDismiss() {
+    final elapsed = DateTime.now().difference(appStartTime);
+    final required = RemoteConfigService.instance.splashDuration;
+    final remaining = required - elapsed;
+    if (remaining <= Duration.zero) {
+      _showSplash = false;
+      return;
+    }
+    _timer = Timer(remaining, () {
+      if (mounted) setState(() => _showSplash = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_showSplash) return widget.child;
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surface,
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.auto_awesome, size: 56, color: cs.onSurface),
+              const SizedBox(height: 18),
+              Text(
+                'MyApp',
+                style: GoogleFonts.inter(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // splash_text 实时跟着 RemoteConfigService 走（admin 改了 → resume
+              // 时 refetch → notifyListeners → 这里跟着重建）
+              AnimatedBuilder(
+                animation: RemoteConfigService.instance,
+                builder: (_, __) {
+                  final txt = RemoteConfigService.instance.splashText;
+                  if (txt.isEmpty) return const SizedBox.shrink();
+                  return Text(
+                    txt,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 36),
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

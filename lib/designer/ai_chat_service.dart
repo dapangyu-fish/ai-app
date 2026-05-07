@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
+import '../config/remote_config_service.dart';
+import '../i18n/framework_strings.dart';
 
 /// AI 对话事件
 class ChatEvent {
@@ -260,6 +262,11 @@ class AiChatService {
   ///      worker 仍在跑，不丢事件
   ///   4. 收到 [DONE] → 任务真的完成，退出
   Stream<ChatEvent> sendStream(String userMessage) async* {
+    // 远程熔断：admin 在 config-center 把 pause_request 打开就立刻拒服务
+    if (RemoteConfigService.instance.pauseRequest) {
+      yield ChatEvent(error: T.current.errPauseRequest);
+      return;
+    }
     // 只关本地 SSE，不发 POST /abort：force_restart=true 会让 backend chat_start
     // 自己处理旧 worker。如果这里发 POST /abort，会 fire-and-forget 到达 backend
     // 时新 worker 已经起来了，把新 worker 误杀（实测竞态）
@@ -944,6 +951,10 @@ class AiChatService {
     Map<String, dynamic>? currentApp,
     String? crashLog,
   }) async* {
+    if (RemoteConfigService.instance.pauseRequest) {
+      yield ChatEvent(error: T.current.errPauseRequest);
+      return;
+    }
     abort();
 
     final client = http.Client();
