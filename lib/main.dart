@@ -1633,7 +1633,12 @@ class JsonScreenView extends ConsumerWidget {
       // 历史栈非空时拦截系统返回手势（iOS edge swipe / Android 返回键）
       canPop: !interpreter.canNavigateBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return; // 已被外层 Route pop（栈空时退出 JSON-APP）
+        if (didPop) {
+          // JSON-APP 路由已经 pop，把它推过的 dialog 全清掉，防止飘
+          // 到主页面上（系统返回 / 边缘滑动这种路径走的不是 back action）
+          interpreter.dismissAllModals();
+          return;
+        }
         interpreter.navigateBack();
       },
       child: Scaffold(

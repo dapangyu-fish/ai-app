@@ -3,7 +3,7 @@
   "appid": "c4f8e202-9d4b-4d2a-bf8b-7a26e3c8d3fa",
   "meta": {
     "name": "demo-snake",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "type": "app",
     "description": "贪吃蛇 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
@@ -160,6 +160,10 @@
           "backgroundColor": "#1A1A2E",
           "color": "#FFFFFF",
           "actions": [
+            {
+              "icon": "replay",
+              "action": {"type": "call", "call": "@flame_game_reset", "args": {}}
+            },
             {
               "icon": "history",
               "action": {"type": "call", "call": "@global.showHistory", "args": {}}

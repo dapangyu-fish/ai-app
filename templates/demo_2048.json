@@ -3,7 +3,7 @@
   "appid": "d5f9e303-ae5c-4e3a-bf8b-7a26e3c8d4fb",
   "meta": {
     "name": "demo-2048",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "type": "app",
     "description": "2048 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
@@ -160,6 +160,10 @@
           "backgroundColor": "#776E65",
           "color": "#FFFFFF",
           "actions": [
+            {
+              "icon": "replay",
+              "action": {"type": "call", "call": "@flame_game_reset", "args": {}}
+            },
             {
               "icon": "history",
               "action": {"type": "call", "call": "@global.showHistory", "args": {}}

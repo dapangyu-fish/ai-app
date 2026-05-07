@@ -60,6 +60,25 @@ class JsonInterpreter extends ChangeNotifier {
     _flameGameResetters.remove(resetter);
   }
 
+  /// 当前还活着的 modal route（dialog / bottom sheet / picker）数。
+  /// _showXxxDialog 系列在 push 时 +1，await 完成时 -1。
+  /// 给 [dismissAllModals] 用，退出 JSON-APP 前把残留 dialog 全 pop 掉。
+  int _activeModalCount = 0;
+
+  /// 把 interpreter push 过的、还没 dismiss 的 modal 全部 pop 掉。
+  /// 典型用法：用户点 back action 退出 JSON-APP 时，先清理掉 dialog
+  /// 再 pop screen route，避免 dialog 飘到主页面上。
+  void dismissAllModals() {
+    if (_activeModalCount <= 0) return;
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return;
+    final nav = Navigator.of(ctx, rootNavigator: true);
+    while (_activeModalCount > 0 && nav.canPop()) {
+      nav.pop();
+      _activeModalCount--;
+    }
+  }
+
   final Map<String, TextEditingController> _textControllers = {};
 
   /// 屏幕导航历史栈（不含当前页）。
@@ -740,6 +759,9 @@ class JsonInterpreter extends ChangeNotifier {
           if (canNavigateBack) {
             navigateBack();
           } else if (context.mounted) {
+            // 退出 JSON-APP 前先把还挂着的 dialog 全 pop 掉，
+            // 避免它们飘到主页面上
+            dismissAllModals();
             Navigator.of(context).maybePop();
           }
           break;
@@ -2577,26 +2599,31 @@ class JsonInterpreter extends ChangeNotifier {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return false;
 
-    final result = await showDialog<bool>(
-      context: ctx,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: SelectableText(message),
+    _activeModalCount++;
+    try {
+      final result = await showDialog<bool>(
+        context: ctx,
+        builder: (dialogCtx) => AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: SelectableText(message),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('确定'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(true),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
+      );
+      return result ?? false;
+    } finally {
+      _activeModalCount--;
+    }
   }
 
   /// 自定义按钮对话框 — 返回被点击按钮的 value（关闭返回 null）
@@ -2610,10 +2637,12 @@ class JsonInterpreter extends ChangeNotifier {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
 
-    return await showDialog<dynamic>(
-      context: ctx,
-      barrierDismissible: dismissible,
-      builder: (dialogCtx) {
+    _activeModalCount++;
+    try {
+      return await showDialog<dynamic>(
+        context: ctx,
+        barrierDismissible: dismissible,
+        builder: (dialogCtx) {
         final actions = <Widget>[];
         for (final btn in buttons) {
           if (btn is! Map) continue;
@@ -2657,20 +2686,28 @@ class JsonInterpreter extends ChangeNotifier {
         );
       },
     );
+    } finally {
+      _activeModalCount--;
+    }
   }
 
   Future<String?> _showTextInputDialog(String title, String hint, String defaultValue) async {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
 
-    return await showDialog<String>(
-      context: ctx,
-      builder: (dialogCtx) => _TextInputDialog(
-        title: title,
-        hint: hint,
-        defaultValue: defaultValue,
-      ),
-    );
+    _activeModalCount++;
+    try {
+      return await showDialog<String>(
+        context: ctx,
+        builder: (dialogCtx) => _TextInputDialog(
+          title: title,
+          hint: hint,
+          defaultValue: defaultValue,
+        ),
+      );
+    } finally {
+      _activeModalCount--;
+    }
   }
 
   /// 增强版 SnackBar — 支持操作按钮
@@ -2783,22 +2820,27 @@ class JsonInterpreter extends ChangeNotifier {
     final enableDrag = args['enableDrag'] != false;
     final bg = _parseColorHex(args['backgroundColor']?.toString());
 
-    return await showModalBottomSheet<dynamic>(
-      context: ctx,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
-      backgroundColor: bg,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetCtx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: buildWidget(sheetCtx, content),
+    _activeModalCount++;
+    try {
+      return await showModalBottomSheet<dynamic>(
+        context: ctx,
+        isDismissible: isDismissible,
+        enableDrag: enableDrag,
+        backgroundColor: bg,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
-      ),
-    );
+        builder: (sheetCtx) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: buildWidget(sheetCtx, content),
+          ),
+        ),
+      );
+    } finally {
+      _activeModalCount--;
+    }
   }
 
   /// 解析 #RRGGBB / #AARRGGBB 颜色字符串
