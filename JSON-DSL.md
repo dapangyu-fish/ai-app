@@ -1446,7 +1446,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
   "world": { ... },
   "vars": { ... },
   "entities": { "<id>": { ... } },
-  "input": { "tap": [...], "swipe": [...] },
+  "input": { "tap": [...], "swipe": [...], "pan": [...], "swipe_threshold": 16 },
   "frame": { "logic": [...] },
   "tick": { "interval": 0.16, "logic": [...] },
   "on_score_changed": { ... },
@@ -1463,7 +1463,9 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `vars` | ❌ | 游戏内变量初始值（每次 reset 重置） |
 | `entities` | ❌ | 实体声明（id → spec） |
 | `input.tap` | ❌ | 点击事件 logic（event 含 `x`, `y`） |
-| `input.swipe` | ❌ | 滑动事件 logic（event 含 `direction`：up/down/left/right、`dx`、`dy`） |
+| `input.swipe` | ❌ | **离散** swipe：一次手势结束才触发一次（按累积位移决定方向）。event 含 `direction`（up/down/left/right）+ 累积 `dx`/`dy`。适合 2048、贪吃蛇、卡牌这类"一次手势 = 一次事件"的游戏 |
+| `input.pan` | ❌ | **连续** pan：onPanUpdate 每帧（~16ms）触发一次，event 只含本帧增量 `dx`/`dy`（不含 direction）。适合划线、轨迹、拖动、连续蓄力这类需要逐帧位移的游戏 |
+| `input.swipe_threshold` | ❌ | swipe 触发的最小累积位移（像素），默认 16。设大一点可以防抖，设小一点更灵敏 |
 | `frame.logic` | ❌ | 每帧执行 |
 | `tick` | ❌ | 间隔执行：`{ interval, logic }` 或 `[{...}, {...}]`，`interval` 支持 `"{{ vars.x }}"` 模板（每次 tick 重新求值，所以可以让 snake 加速） |
 | `init.logic` | ❌ | entities 建好之后跑一次的初始化（典型用途：开局先 spawn 几个 tile）；reset 后会再跑 |

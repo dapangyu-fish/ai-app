@@ -138,11 +138,16 @@ class _FlameGameMountState extends State<_FlameGameMount> {
       onPanUpdate: (d) {
         _panDx += d.delta.dx;
         _panDy += d.delta.dy;
+        // 连续模式：每一帧 onPanUpdate 直接喂给游戏
+        if (_game.hasPan) _game.handlePan(d.delta.dx, d.delta.dy);
       },
       onPanEnd: (_) {
-        // 一次完整手势 → 最多触发一次 swipe（按累积位移决定方向）
-        if (_panDx.abs() > 16 || _panDy.abs() > 16) {
-          _game.handleSwipe(_panDx, _panDy);
+        // 离散模式：一次手势结束发一次 swipe
+        if (_game.hasSwipe) {
+          final th = _game.swipeThreshold;
+          if (_panDx.abs() > th || _panDy.abs() > th) {
+            _game.handleSwipe(_panDx, _panDy);
+          }
         }
         _panDx = 0;
         _panDy = 0;

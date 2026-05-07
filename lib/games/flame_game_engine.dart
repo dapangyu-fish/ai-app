@@ -56,7 +56,11 @@ class JsonFlameGame extends FlameGame {
   // 输入 / 循环
   List<dynamic>? _tapAction;
   List<dynamic>? _swipeAction;
+  List<dynamic>? _panAction;
   List<dynamic>? _frameLogic;
+
+  // swipe 的离散触发阈值（像素）—— JSON 可在 input.swipe_threshold 里覆盖
+  double _swipeThreshold = 16;
   final List<_TickLoop> _ticks = [];
 
   // 内置 overlay 配置
@@ -164,7 +168,7 @@ class JsonFlameGame extends FlameGame {
     }
   }
 
-  /// 外层 GestureDetector.onPanUpdate 转过来
+  /// 离散 swipe：一次手势结束时被外层调一次（accumulated dx/dy）
   void handleSwipe(double dx, double dy) {
     if (!_ready) return;
     if (isGameOver) {
@@ -174,7 +178,6 @@ class JsonFlameGame extends FlameGame {
     }
     if (_swipeAction != null) {
       final dir = _swipeDirection(dx, dy);
-      // 没有方向（位移太小）就不触发，避免每个微小抖动都改方向
       if (dir == null) return;
       logic.runLogic(_swipeAction!, {
         'direction': dir,
@@ -183,6 +186,22 @@ class JsonFlameGame extends FlameGame {
       });
     }
   }
+
+  /// 连续 pan：每一帧 onPanUpdate 都被调（per-frame delta）
+  void handlePan(double dx, double dy) {
+    if (!_ready) return;
+    if (isGameOver) return;
+    if (_panAction != null) {
+      logic.runLogic(_panAction!, {
+        'dx': dx,
+        'dy': dy,
+      });
+    }
+  }
+
+  bool get hasSwipe => _swipeAction != null;
+  bool get hasPan => _panAction != null;
+  double get swipeThreshold => _swipeThreshold;
 
   String? _swipeDirection(double dx, double dy) {
     final adx = dx.abs();
@@ -222,6 +241,9 @@ class JsonFlameGame extends FlameGame {
     final input = spec['input'] as Map<String, dynamic>?;
     _tapAction = _toLogicList(input?['tap']);
     _swipeAction = _toLogicList(input?['swipe']);
+    _panAction = _toLogicList(input?['pan']);
+    final th = (input?['swipe_threshold'] as num?)?.toDouble();
+    if (th != null && th > 0) _swipeThreshold = th;
 
     // frame
     final frame = spec['frame'] as Map<String, dynamic>?;
