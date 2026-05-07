@@ -1438,6 +1438,17 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 `flame_game` 是一个**通用游戏宿主**：JSON 描述游戏的世界、实体、输入、循环规则，框架（Flame 引擎 + 游戏 atom）负责执行。**新加一个游戏不需要改客户端代码**——只要 JSON 用现有 atom 拼出即可。
 
+#### 设计原则：游戏 = JSON-APP 的一种用法，不是独立 DSL
+
+`flame_game` 在 DSL 里和 `text` / `list` / `button` 是**同一级公民** —— 它就是 widget builder 注册的一个 widget 类型。意味着：
+
+- **没有"游戏 APP"和"普通 APP"之分**：snake / 2048 这些 demo 都是 `meta.type: "app"` 的普通 JSON-APP，它们恰好顶层放了一个 `flame_game` 占满屏幕而已
+- **任何 JSON-APP 都能嵌 `flame_game`**：例如教学 APP 第 5 章末尾放一个 `value_grid` 当随堂练习；电商 APP 在等待支付时放一个 `cell_path` 让用户消磨时间；签到 APP 用 `flame_game` 做转盘抽奖
+- **能和其他 widget 自由组合**：见 `templates/demo_2048.json` —— 顶部 `container` 显示得分（普通 widget），中间 `expanded > flame_game`（游戏宿主），底部 `container` 显示历史结果（普通 widget），三段全是同一份 JSON
+- **数据双向打通**：游戏内 `vars` / `score` 通过 `on_score_changed` / `on_game_over` 回调，外层用 `@set` 写到 `global.*`，再用 `{{ global.x }}` 在普通 widget 里展示。反过来外层 `{{ global.x }}` 在 build 时也会烤进 `flame_game` spec 作为初始值
+
+简而言之：**flame_game 不是"游戏引擎"——它是"画布上跑 JSON 编排的循环逻辑"的一个原子**。把它当成一个会自己刷新的复杂可交互区域来用即可。
+
 #### 顶层结构
 
 ```json
@@ -1563,7 +1574,11 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 #### 完整示例
 
-参考 `templates/demo_snake.json`（贪吃蛇，grid_world + cell_path + tick）和 `templates/demo_tap_white_tile.json`（别踩白块儿，pixel_world + scroll_list + frame.logic + tap）。
+| 示例 | 涉及原子 | 演示了什么 |
+|---|---|---|
+| `templates/demo_snake.json` | `grid_world` + `cell_path` + `tick.logic` + `swipe` | 网格定时推进、方向键队列、自我碰撞 |
+| `templates/demo_tap_white_tile.json` | `pixel_world` + `scroll_list` + `frame.logic` + `tap` | 像素坐标命中检测、死亡线、滚动加速 |
+| `templates/demo_2048.json` | `pixel_world` + `value_grid` + `init.logic` + `swipe` | **flame_game 与普通 widget 混排**：顶部分数 bar、中间游戏区、底部结果 bar 在同一份 JSON 里 |
 
 ---
 
