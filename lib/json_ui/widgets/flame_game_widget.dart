@@ -104,6 +104,9 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   double _panDx = 0;
   double _panDy = 0;
 
+  // 按住起始时刻 — 给 input.press_end 算 held_ms
+  DateTime? _pressDownTime;
+
   late final void Function() _resetter;
 
   @override
@@ -141,7 +144,20 @@ class _FlameGameMountState extends State<_FlameGameMount> {
     // GestureDetector 把 tap / pan 转给游戏，避免依赖 Flame 不稳定的输入 mixin
     final core = GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (d) => _game.handleTap(d.localPosition.dx, d.localPosition.dy),
+      onTapDown: (d) {
+        _pressDownTime = DateTime.now();
+        _game.handleTap(d.localPosition.dx, d.localPosition.dy);
+      },
+      onTapUp: (d) {
+        if (_pressDownTime != null && _game.hasPressEnd) {
+          final ms = DateTime.now().difference(_pressDownTime!).inMilliseconds;
+          _game.handlePressEnd(d.localPosition.dx, d.localPosition.dy, ms);
+        }
+        _pressDownTime = null;
+      },
+      onTapCancel: () {
+        _pressDownTime = null;
+      },
       onPanStart: (_) {
         _panDx = 0;
         _panDy = 0;

@@ -1481,6 +1481,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `input.swipe` | ❌ | **离散** swipe：一次手势结束才触发一次（按累积位移决定方向）。event 含 `direction`（up/down/left/right）+ 累积 `dx`/`dy`。适合 2048、贪吃蛇、卡牌这类"一次手势 = 一次事件"的游戏 |
 | `input.pan` | ❌ | **连续** pan：onPanUpdate 每帧（~16ms）触发一次，event 只含本帧增量 `dx`/`dy`（不含 direction）。适合划线、轨迹、拖动、连续蓄力这类需要逐帧位移的游戏 |
 | `input.swipe_threshold` | ❌ | swipe 触发的最小累积位移（像素），默认 16。设大一点可以防抖，设小一点更灵敏 |
+| `input.press_end` | ❌ | **按住-释放**语义：onTapDown 时框架记开始时刻，onTapUp 时触发，event 含 `x`/`y` + `held_ms`（按住时长，毫秒）。蓄力跳跃 / 弹弓 / 充能技能等用。注意 `input.tap` 仍然在按下时立刻触发（适合做"按下"动画），press_end 是松手时触发，两个可以共用 |
 | `frame.logic` | ❌ | 每帧执行 |
 | `tick` | ❌ | 间隔执行：`{ interval, logic }` 或 `[{...}, {...}]`，`interval` 支持 `"{{ vars.x }}"` 模板（每次 tick 重新求值，所以可以让 snake 加速） |
 | `init.logic` | ❌ | entities 建好之后跑一次的初始化（典型用途：开局先 spawn 几个 tile）；reset 后会再跑 |
@@ -1594,6 +1595,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `templates/demo_tap_white_tile.json` | `pixel_world` + `scroll_list` + `frame.logic` + `tap` | 像素坐标命中检测、死亡线、滚动加速 |
 | `templates/demo_2048.json` | `pixel_world` + `value_grid` + `init.logic` + `swipe` | **flame_game 与普通 widget 混排**：顶部分数 bar、中间游戏区、底部结果 bar 在同一份 JSON 里 |
 | `templates/demo_flappy_bird.json` | `pixel` entity + `@pixel.add_velocity` + `@spawn`/`@despawn` + `@collide.rect` + `@for_each_entity` | **物理 + 动态生成 + 碰撞**：重力 / 跳跃冲量 / 管道无限生成 / 出屏销毁 / 计分 全在 JSON 里编排，框架零业务逻辑。bird 用 🐦 emoji 渲染 |
+| `templates/demo_jump.json` | `input.press_end` + `pixel` entity + 抛物线物理 + 状态机 | **蓄力跳跃 + 平台滚动**：按住-松手按 `held_ms` 决定 vx，抛物线由重力自然形成；落到目标平台→镜头滚动（platform / player 同时 `set_velocity`)，到位后 despawn / spawn 切换。整套状态机（ready/jumping/rolling）由 JSON `vars.state` 驱动 |
 
 ---
 

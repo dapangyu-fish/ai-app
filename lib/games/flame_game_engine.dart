@@ -57,6 +57,7 @@ class JsonFlameGame extends FlameGame {
   List<dynamic>? _tapAction;
   List<dynamic>? _swipeAction;
   List<dynamic>? _panAction;
+  List<dynamic>? _pressEndAction;
   List<dynamic>? _frameLogic;
 
   // swipe 的离散触发阈值（像素）—— JSON 可在 input.swipe_threshold 里覆盖
@@ -209,6 +210,21 @@ class JsonFlameGame extends FlameGame {
 
   bool get hasSwipe => _swipeAction != null;
   bool get hasPan => _panAction != null;
+  bool get hasPressEnd => _pressEndAction != null;
+
+  /// 按住 - 释放语义。外层 widget 在 onTapDown 记录时刻，onTapUp
+  /// 时算出 held_ms 调进来。蓄力游戏（跳一跳 / 弹弓 / 充能技能）用。
+  void handlePressEnd(double x, double y, int heldMs) {
+    if (!_ready) return;
+    if (isGameOver) return;
+    if (_pressEndAction != null) {
+      logic.runLogic(_pressEndAction!, {
+        'x': x,
+        'y': y,
+        'held_ms': heldMs,
+      });
+    }
+  }
   double get swipeThreshold => _swipeThreshold;
 
   String? _swipeDirection(double dx, double dy) {
@@ -265,6 +281,7 @@ class JsonFlameGame extends FlameGame {
     _tapAction = _toLogicList(input?['tap']);
     _swipeAction = _toLogicList(input?['swipe']);
     _panAction = _toLogicList(input?['pan']);
+    _pressEndAction = _toLogicList(input?['press_end']);
     final th = (input?['swipe_threshold'] as num?)?.toDouble();
     if (th != null && th > 0) _swipeThreshold = th;
 

@@ -222,6 +222,10 @@ class PixelEntity extends GameEntity {
         'velocity': [vx, vy],
         'x': x,
         'y': y,
+        'w': w,
+        'h': h,
+        'vx': vx,
+        'vy': vy,
       };
 }
 
