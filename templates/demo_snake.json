@@ -3,7 +3,7 @@
   "appid": "c4f8e202-9d4b-4d2a-bf8b-7a26e3c8d3fa",
   "meta": {
     "name": "demo-snake",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "app",
     "description": "贪吃蛇 — 纯 JSON 实现（B 模式 atom 编排示例）",
     "author": "demo"
@@ -89,7 +89,15 @@
               },
               "input": {
                 "swipe": [
-                  {"call": "@set", "args": {"var": "vars.direction", "value": "{{ event.direction }}"}}
+                  {"call": "@if", "args": {
+                    "cond": {"!": [{"in": [
+                      {"cat": [{"var": "vars.direction"}, {"var": "event.direction"}]},
+                      ["updown", "downup", "leftright", "rightleft"]
+                    ]}]},
+                    "then": [
+                      {"call": "@set", "args": {"var": "vars.direction", "value": "{{ event.direction }}"}}
+                    ]
+                  }}
                 ]
               },
               "tick": {
