@@ -100,6 +100,10 @@ class _FlameGameMount extends StatefulWidget {
 class _FlameGameMountState extends State<_FlameGameMount> {
   late final JsonFlameGame _game;
 
+  // 一次手势内累积位移，松手时一次性发 swipe
+  double _panDx = 0;
+  double _panDy = 0;
+
   @override
   void initState() {
     super.initState();
@@ -127,7 +131,26 @@ class _FlameGameMountState extends State<_FlameGameMount> {
     final core = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (d) => _game.handleTap(d.localPosition.dx, d.localPosition.dy),
-      onPanUpdate: (d) => _game.handleSwipe(d.delta.dx, d.delta.dy),
+      onPanStart: (_) {
+        _panDx = 0;
+        _panDy = 0;
+      },
+      onPanUpdate: (d) {
+        _panDx += d.delta.dx;
+        _panDy += d.delta.dy;
+      },
+      onPanEnd: (_) {
+        // 一次完整手势 → 最多触发一次 swipe（按累积位移决定方向）
+        if (_panDx.abs() > 16 || _panDy.abs() > 16) {
+          _game.handleSwipe(_panDx, _panDy);
+        }
+        _panDx = 0;
+        _panDy = 0;
+      },
+      onPanCancel: () {
+        _panDx = 0;
+        _panDy = 0;
+      },
       child: GameWidget(game: _game),
     );
     final h = widget.height;
