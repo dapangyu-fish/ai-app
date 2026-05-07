@@ -98,6 +98,17 @@ class IconRegistry {
     'collapse': Icons.expand_less,
     'fullscreen': Icons.fullscreen,
 
+    // 游戏 / 历史
+    'history': Icons.history,
+    'replay': Icons.replay,
+    'restart': Icons.restart_alt,
+    'pause': Icons.pause,
+    'play': Icons.play_arrow,
+    'stop': Icons.stop,
+    'trophy': Icons.emoji_events,
+    'leaderboard': Icons.leaderboard,
+    'timeline': Icons.timeline,
+
     // 其他
     'calendar': Icons.calendar_today,
     'clock': Icons.access_time,

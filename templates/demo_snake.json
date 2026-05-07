@@ -3,14 +3,14 @@
   "appid": "c4f8e202-9d4b-4d2a-bf8b-7a26e3c8d3fa",
   "meta": {
     "name": "demo-snake",
-    "version": "1.2.1",
+    "version": "1.3.0",
     "type": "app",
     "description": "贪吃蛇 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
     "author": "demo"
   },
   "dependencies": {
     "lib_database": "^1.0.0",
-    "common-ui": "^1.0.0"
+    "common-ui": "^1.3.0"
   },
   "global": {
     "variables": {
@@ -102,58 +102,32 @@
       "showHistory": {
         "logic": [
           {"call": "@global.loadHistory", "args": {}},
-          {"call": "@show_bottom_sheet", "args": {
+          {"call": "@common-ui.showSheet", "args": {
+            "title": "🐍 历史记录",
+            "subtitle": "共 {{ global.historyCount }} 局",
             "content": {
-              "type": "container",
-              "height": 480,
-              "layout": "column",
-              "crossAxisAlignment": "stretch",
-              "children": [
-                {
-                  "type": "container",
-                  "padding": 12,
-                  "layout": "row",
-                  "crossAxisAlignment": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "🐍 历史记录",
-                      "style": {"fontSize": 18, "fontWeight": "bold"},
-                      "position": {"type": "flex", "flex": 1}
-                    },
-                    {
-                      "type": "text",
-                      "value": "共 {{ global.historyCount }} 局",
-                      "style": {"fontSize": 13, "color": "#888888"}
-                    }
-                  ]
-                },
-                {"type": "divider"},
-                {
-                  "type": "list",
-                  "source": "{{ global.history }}",
-                  "emptyText": "尚无历史记录 — 玩一局试试",
-                  "item_template": {
-                    "type": "container",
-                    "padding": 12,
-                    "layout": "row",
-                    "crossAxisAlignment": "center",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "{{ loop.item.date }}",
-                        "style": {"fontSize": 13, "color": "#666666"},
-                        "position": {"type": "flex", "flex": 1}
-                      },
-                      {
-                        "type": "text",
-                        "value": "{{ loop.item.score }} 分",
-                        "style": {"fontSize": 15, "fontWeight": "bold", "color": "#00C800"}
-                      }
-                    ]
+              "type": "list",
+              "source": "{{ global.history }}",
+              "emptyText": "尚无历史记录 — 玩一局试试",
+              "item_template": {
+                "type": "container",
+                "padding": 12,
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "{{ loop.item.date }}",
+                    "style": {"fontSize": 13, "color": "#666666"},
+                    "position": {"type": "flex", "flex": 1}
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ loop.item.score }} 分",
+                    "style": {"fontSize": 15, "fontWeight": "bold", "color": "#00C800"}
                   }
-                }
-              ]
+                ]
+              }
             }
           }}
         ]
@@ -178,11 +152,7 @@
           "actions": [
             {
               "icon": "history",
-              "action": {
-                "type": "call",
-                "call": "@global.showHistory",
-                "args": {}
-              }
+              "action": {"type": "call", "call": "@global.showHistory", "args": {}}
             }
           ]
         },

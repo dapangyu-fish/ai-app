@@ -3,9 +3,9 @@
   "appid": "08ad186c-773e-430b-b8d0-7e828eeb00af",
   "meta": {
     "name": "common-ui",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "type": "library",
-    "description": "通用 UI 函数库 — toast / confirm / 自定义对话框 / 数值格式化 / 进度计算",
+    "description": "通用 UI 函数库 — toast / confirm / 自定义对话框 / Modal Bottom Sheet / 数值格式化 / 进度计算",
     "author": "demo",
     "exports": [
       "showSuccess",
@@ -18,7 +18,8 @@
       "progress",
       "percent",
       "confirmDelete",
-      "choose"
+      "choose",
+      "showSheet"
     ]
   },
   "global": {
@@ -200,6 +201,57 @@
               "title": "{{ params.title }}",
               "message": "{{ params.message }}",
               "buttons": "{{ params.buttons }}"
+            }
+          }
+        ]
+      },
+      "showSheet": {
+        "params": [
+          "title",
+          "subtitle",
+          "content"
+        ],
+        "description": "Modal Bottom Sheet（底部模态抽屉）— 标题栏 + divider + 内容槽。content 接任意 widget JSON（list / form / detail card 都行）。title 留空时不画头部。",
+        "logic": [
+          {
+            "call": "@show_bottom_sheet",
+            "args": {
+              "content": {
+                "type": "container",
+                "height": 480,
+                "layout": "column",
+                "crossAxisAlignment": "stretch",
+                "children": [
+                  {
+                    "type": "container",
+                    "padding": 8,
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "visible": "{{ params.title }}",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ params.title }}",
+                        "style": {"fontSize": 18, "fontWeight": "bold"},
+                        "position": {"type": "flex", "flex": 1}
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ params.subtitle }}",
+                        "style": {"fontSize": 13, "color": "#888888"}
+                      }
+                    ]
+                  },
+                  {
+                    "type": "divider",
+                    "visible": "{{ params.title }}"
+                  },
+                  {
+                    "type": "expanded",
+                    "child": "{{ params.content }}"
+                  }
+                ]
+              }
             }
           }
         ]

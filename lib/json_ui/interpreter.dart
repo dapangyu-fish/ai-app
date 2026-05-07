@@ -590,6 +590,11 @@ class JsonInterpreter extends ChangeNotifier {
     final regex = RegExp(r'\{\{\s*(.+?)\s*\}\}');
     return template.replaceAllMapped(regex, (match) {
       final expression = match.group(1)!;
+      // loop / event 作用域没建立时保留模板原文，跟 resolveExpression 一致
+      if ((expression.startsWith('loop.') && _loopContextStack.isEmpty) ||
+          (expression.startsWith('event.') && _eventContextStack.isEmpty)) {
+        return match.group(0)!;
+      }
       final value = _resolveTemplateExpression(expression);
       return value?.toString() ?? '';
     });
@@ -652,7 +657,17 @@ class JsonInterpreter extends ChangeNotifier {
       final regex = RegExp(r'^\{\{\s*(.+?)\s*\}\}$');
       final match = regex.firstMatch(raw);
       if (match != null) {
-        return getVariable(match.group(1)!);
+        final path = match.group(1)!;
+        // 如果引用的是当前没建立的作用域（loop/event），保留模板原文，
+        // 留到真正渲染时（list 给每项建好 loop 上下文 / 事件触发后）
+        // 再解析。否则会被提前烤成 null，比如 widget JSON 通过函数参数
+        // 传给 helper 时，里面的 {{ loop.item.x }} 在 _resolveArgs 阶段
+        // 没 loop 上下文 → 直接变 null → 列表项渲染全空。
+        if ((path.startsWith('loop.') && _loopContextStack.isEmpty) ||
+            (path.startsWith('event.') && _eventContextStack.isEmpty)) {
+          return raw;
+        }
+        return getVariable(path);
       }
       return resolveTemplate(raw);
     }

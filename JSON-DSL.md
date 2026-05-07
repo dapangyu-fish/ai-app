@@ -172,6 +172,9 @@
 - `{ "var": "global.items" }` → 通过 jsonlogic 引擎求值，效果相同但更明确
 - `"总数: {{ global.count }}"` → 返回字符串 `"总数: 5"`（混合文本，强制 String）
 
+**作用域不在时模板原文保留**：
+当模板引用的是 `loop.*` / `event.*`，而当前没有对应作用域（`_loopContextStack` / `_eventContextStack` 为空），引擎会**保留模板原文**而不是返回 null。典型场景：把 widget JSON 通过函数参数传给 helper（如 `@common-ui.showSheet({content: {type: "list", item_template: {... {{ loop.item.x }} ...}}})`），`item_template` 里的 `{{ loop.item.x }}` 在 `_resolveArgs` 阶段还没 loop 上下文，原文留到 `list` 控件给每项建好上下文时再求值，结果正确。`global.*` / `params.*` 仍然在 args 解析时立刻求值（按调用方当时的作用域）。
+
 #### Map 何时被当 jsonlogic 表达式？
 
 引擎只对**单 key + key 在已知 op 集合**的 Map 跑 jsonlogic：
