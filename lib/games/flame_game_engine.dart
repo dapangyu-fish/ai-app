@@ -43,7 +43,7 @@ class JsonFlameGame extends FlameGame {
   // ---- 运行时状态 ----
   /// 我们的世界定义（命名 gameWorld 避免跟 FlameGame.world 冲突 —— 后者
   /// 是 camera scene root 的 World 组件，不是我们要的坐标系抽象）
-  late GameWorld gameWorld;
+  late final GameWorld gameWorld;
   final Map<String, GameEntity> entities = {};
   final Map<String, dynamic> vars = {};
 
@@ -51,7 +51,7 @@ class JsonFlameGame extends FlameGame {
   int bestScore = 0;
   bool isGameOver = false;
 
-  late GameLogicEngine logic;
+  late final GameLogicEngine logic;
 
   // 输入 / 循环
   List<dynamic>? _tapAction;
@@ -64,17 +64,25 @@ class JsonFlameGame extends FlameGame {
   String _gameOverTitle = '游戏结束';
   String _gameOverHint = '点击重新开始';
 
-  JsonFlameGame({required this.spec, this.onEvent});
+  JsonFlameGame({required this.spec, this.onEvent}) {
+    // ⚠️ 必须在构造函数里同步完成所有 spec 解析。
+    //
+    // 原因：Flame 的 onGameResize 可能在 onLoad（async）之前被调，
+    // 那时 late field 没初始化 → LateInitializationError。
+    // 反正 spec 解析全是同步的，挪到构造函数里更稳。
+    gameWorld = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
+    logic = GameLogicEngine(this);
+    _setupFromSpec();
+  }
 
   bool _ready = false;
 
   // ---------- 生命周期 ----------
+  // 所有 spec 解析在构造函数里做完了，onLoad 留空。Entities 在第一次
+  // onGameResize 拿到有效 size 时才铺（scroll_list 等依赖画布尺寸）。
 
   @override
-  Future<void> onLoad() async {
-    logic = GameLogicEngine(this);
-    _setupFromSpec();
-  }
+  Future<void> onLoad() async {}
 
   @override
   void onGameResize(Vector2 size) {
@@ -208,10 +216,7 @@ class JsonFlameGame extends FlameGame {
   // ---------- 解析 spec ----------
 
   void _setupFromSpec() {
-    gameWorld = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
-    if (size.x > 0 && size.y > 0) {
-      gameWorld.resize(size.x, size.y);
-    }
+    // gameWorld 已在构造函数里 init 了，这里只解析剩下的部分
 
     // input
     final input = spec['input'] as Map<String, dynamic>?;
