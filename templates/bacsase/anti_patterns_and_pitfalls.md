@@ -333,3 +333,128 @@ grep -rn "json\['\(label\|title\|placeholder\|emptyText\|hint\|heading\|text\)'\
 仍然是契约——加新 widget 时务必参照已有 widget 的实现。
 
 ---
+
+## 8. inline `{call: ...}` 嵌进 jsonlogic 规则的 operand 位置
+
+### 🚨 表现
+
+一个调用看起来"应该出数"，但下游用到这个值的地方静默失败 / 变成奇怪的值 /
+直接抛 `TypeError: Null is not a num`：
+
+```text
+TypeError: Null check operator used on a null value
+... in _buildEntity / @pixel.set_position / 任何把 list/map 字段强转 num 的地方
+```
+
+更阴险的是：**当帧 frame.logic 的后续步骤被中断**（包括把状态机切回 ready
+那一步），导致 game 卡死在某个中间状态；下一帧 update 又跑同样的逻辑、
+同样炸；连 reset 路径都救不回来（因为 reset 完之后再次进入同样的代码
+路径还是炸）。
+
+### 💔 反面教材分析
+
+DSL 里两种 Map 表达式有完全不同的求值入口（`game_logic.dart` /
+`interpreter.dart` 大同小异）：
+
+```dart
+// resolveExpression 对 Map 的两条互斥分支
+if (m.containsKey('call')) {
+  return runAction(m);          // (A) 框架自己的 dispatch — 走 GameActions / 内置 @action
+}
+if (m.length == 1 && _looksLikeJsonLogic(m.keys.first)) {
+  return _evalJsonLogic(m);     // (B) 整块交给 jsonlogic 库
+}
+```
+
+(A) 和 (B) 互不调用 — 一旦走 (B)，整棵子树由 **jsonlogic 库**自己递归
+解析；jsonlogic 库**不认识 `"call"` 这个 op**，把内层 `{"call": ...}` 当
+unknown op 吃掉，最坏返回 null（实现不同也可能抛，被外层 catch 吞）。
+
+具体场景：
+
+```jsonc
+// ❌ 反面：把 inline action 嵌进 jsonlogic + 的 operand
+{"call": "@set", "args": {
+  "var": "vars._x",
+  "value": {
+    "+": [                                     // 命中分支 (B)，整块进 jsonlogic
+      {"var": "vars.base"},                    // ✓ 标准 var
+      {"call": "@random_int", "args": {...}}   // ✗ 被 jsonlogic 当 unknown op，返回 null
+    ]
+  }
+}}
+// 结果：vars._x = null（或 NaN，看 jsonlogic 实现）
+
+// 一旦下游用 vars._x 做 (pos[0] as num) / 数组下标 / 比较，
+// 大概率沿 runStep → runLogic → game.update 一路抛，整条 logic 链中断。
+```
+
+对比一下能用的写法：
+
+```jsonc
+// ✓ 正面：value 整块就是 inline call → 命中分支 (A) → runAction → 走框架 dispatch
+{"call": "@set", "args": {
+  "var": "vars._x",
+  "value": {"call": "@random_int", "args": {"min": 1, "max": 100}}
+}}
+```
+
+诊断表征：`null as num` / `null as int` / `RangeError (index)` 这类异常出现
+在远离病灶的地方（@spawn / set_position / list 索引等），**而上游某个 @set
+看似无害**——这时候 80% 是踩了这一坑。
+
+### ✅ 正确姿势 / 避坑指南
+
+**铁律**：`{"call": ...}` 只能作为整个 value / cond / arg 表达式的**根节点**，
+不能放进 jsonlogic 规则（`{"+":[]}` / `{"-":[]}` / `{">":[]}` / `{"if":[]}` …）
+的 operand 位置。
+
+**正确套路**：
+
+1. **算术 / 比较的 operand 全是 var / literal**：jsonlogic 自己能处理。
+
+   ```jsonc
+   {"+": [{"var": "vars.a"}, {"var": "vars.b"}]}                ✓
+   {">": [{"var": "vars.score"}, 100]}                           ✓
+   ```
+
+2. **要把 inline action 算出的值喂给 jsonlogic**：先 @set 到一个临时 var，
+   再用 var 引用。
+
+   ```jsonc
+   // ❌
+   {"+": [{"var": "vars.a"}, {"call": "@random_int", "args": {...}}]}
+
+   // ✓
+   {"call": "@set", "args": {"var": "vars._tmp", "value":
+     {"call": "@random_int", "args": {...}}
+   }},
+   {"call": "@set", "args": {"var": "vars.x", "value":
+     {"+": [{"var": "vars.a"}, {"var": "vars._tmp"}]}
+   }}
+   ```
+
+3. **能把"+ offset"推进 inline action 自己 args 的，优先这样**（少一个
+   临时 var）：
+
+   ```jsonc
+   // ✓ random_int 的 args 走的是 _resolveMap，里面再嵌 jsonlogic + 是 OK 的
+   //   （+ 的 operand 都是 var / literal）
+   {"call": "@random_int", "args": {
+     "min": {"+": [{"var": "vars.base"}, 160]},
+     "max": {"+": [{"var": "vars.base"}, 280]}
+   }}
+   ```
+
+4. **怀疑被这一条坑了时**：定位最近一次 @set 是不是在 jsonlogic 规则的
+   operand 里塞了 inline call，验证 vars 拿到的是不是 null。
+
+### 🔧 框架改进备忘
+
+要彻底避免，框架可以在 `_evalJsonLogic` 之前递归预扫描 rule，把所有
+内层 `{"call": ...}` 提前 dispatch、把结果替换回去再丢给 jsonlogic。
+代价是每次 jsonlogic 求值多一遍 walk + 失去懒求值（如 `if-then-else`
+里的 then/else 分支会被双方都执行）。当前选择不做这层：约定 + 文档
+（这一条）成本更低。
+
+---
