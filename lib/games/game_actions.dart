@@ -319,6 +319,112 @@ class GameActions {
           }
           return false;
         }
+
+      // ---------- pixel entity 物理（通用，跟具体游戏无关） ----------
+      case '@pixel.set_position':
+        {
+          final id = args['id']?.toString();
+          final p = args['position'] ?? args['p'];
+          if (id == null || p is! List || p.length < 2) return null;
+          final ent = game.entities[id];
+          if (ent is! PixelEntity) return null;
+          ent.x = (p[0] as num).toDouble();
+          ent.y = (p[1] as num).toDouble();
+          return null;
+        }
+      case '@pixel.set_velocity':
+        {
+          final id = args['id']?.toString();
+          final v = args['velocity'] ?? args['v'];
+          if (id == null || v is! List || v.length < 2) return null;
+          final ent = game.entities[id];
+          if (ent is! PixelEntity) return null;
+          ent.vx = (v[0] as num).toDouble();
+          ent.vy = (v[1] as num).toDouble();
+          return null;
+        }
+      case '@pixel.add_velocity':
+        {
+          final id = args['id']?.toString();
+          final dv = args['dv'] ?? args['delta'];
+          if (id == null || dv is! List || dv.length < 2) return null;
+          final ent = game.entities[id];
+          if (ent is! PixelEntity) return null;
+          ent.vx += (dv[0] as num).toDouble();
+          ent.vy += (dv[1] as num).toDouble();
+          return null;
+        }
+
+      // ---------- 通用 entity 管理 ----------
+      case '@spawn':
+        {
+          // {kind, id, position?, size?, velocity?, render?, ...} — 任意 entity 类型
+          final id = args['id']?.toString();
+          if (id == null) return false;
+          final spec = Map<String, dynamic>.from(args)..remove('id');
+          return game.spawnEntity(id, spec);
+        }
+      case '@despawn':
+        {
+          final id = args['id']?.toString();
+          if (id == null) return false;
+          return game.despawnEntity(id);
+        }
+
+      // ---------- 碰撞检测 ----------
+      case '@collide.rect':
+        {
+          // 两个 entity 的 AABB 重叠检测。两边都得是 PixelEntity（或同样
+          // 暴露 x/y/w/h 的 entity），否则返回 false。
+          final a = game.entities[args['a']?.toString()];
+          final b = game.entities[args['b']?.toString()];
+          if (a is! PixelEntity || b is! PixelEntity) return false;
+          return a.x < b.x + b.w &&
+              a.x + a.w > b.x &&
+              a.y < b.y + b.h &&
+              a.y + a.h > b.y;
+        }
+
+      // ---------- 迭代 ----------
+      case '@for_each_entity':
+        {
+          // 遍历所有 entity，可选用 where_prefix 过滤。每次迭代 push 一个
+          // loop 上下文：{id, entity, index}。do 是 logic 数组，可以在
+          // 子动作里用 {{ loop.id }} / {{ loop.entity.position }} 之类。
+          final wherePrefix = args['where_prefix']?.toString() ?? '';
+          final doSteps = args['do'];
+          if (doSteps is! List) return null;
+          final ids = game.entities.keys
+              .where((k) => wherePrefix.isEmpty || k.startsWith(wherePrefix))
+              .toList(); // 复制一份，子 logic 里 spawn/despawn 不影响本轮迭代
+          int idx = 0;
+          for (final id in ids) {
+            final ent = game.entities[id];
+            if (ent == null) continue; // 子 logic despawn 掉的跳过
+            logic.runLogicWithLoop(doSteps, {
+              'id': id,
+              'entity': ent.toMap(),
+              'index': idx,
+            });
+            idx++;
+          }
+          return null;
+        }
+
+      // ---------- RNG ----------
+      case '@random_int':
+        {
+          final minV = (args['min'] as num?)?.toInt() ?? 0;
+          final maxV = (args['max'] as num?)?.toInt() ?? 100;
+          if (maxV <= minV) return minV;
+          return minV + _random.nextInt(maxV - minV);
+        }
+      case '@random_double':
+        {
+          final minV = (args['min'] as num?)?.toDouble() ?? 0.0;
+          final maxV = (args['max'] as num?)?.toDouble() ?? 1.0;
+          return minV + _random.nextDouble() * (maxV - minV);
+        }
     }
 
     // 未识别的 @action — debug 提示

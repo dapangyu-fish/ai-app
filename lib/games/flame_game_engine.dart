@@ -115,7 +115,9 @@ class JsonFlameGame extends FlameGame {
 
     // 2. frame logic
     if (_frameLogic != null) {
-      logic.runLogic(_frameLogic!);
+      // 传 dt 进 event 作用域，逻辑里需要 FPS-independent 物理时可以用
+      // {{ event.dt }} 乘速度 / 加速度
+      logic.runLogic(_frameLogic!, {'dt': dt});
       if (isGameOver) return;
     }
 
@@ -237,6 +239,21 @@ class JsonFlameGame extends FlameGame {
   }
 
   void resetGame() => _resetGameState();
+
+  /// 动态加 entity（@spawn 用）。spec 跟初始 entities map 里那个 spec 一样：
+  /// {kind, position/init/..., size, velocity, render}
+  bool spawnEntity(String id, Map<String, dynamic> spec) {
+    if (entities.containsKey(id)) return false;
+    final ent = _buildEntity(id, spec);
+    if (ent == null) return false;
+    entities[id] = ent;
+    return true;
+  }
+
+  /// 动态删 entity（@despawn 用）
+  bool despawnEntity(String id) {
+    return entities.remove(id) != null;
+  }
 
   // ---------- 解析 spec ----------
 
@@ -383,6 +400,32 @@ class JsonFlameGame extends FlameGame {
             cols: cols,
             rows: rows,
             cells: cells,
+          );
+        }
+      case 'pixel':
+        {
+          final pos = spec['position'];
+          final size = spec['size'];
+          final vel = spec['velocity'];
+          double x = 0, y = 0;
+          if (pos is List && pos.length >= 2) {
+            x = (pos[0] as num).toDouble();
+            y = (pos[1] as num).toDouble();
+          }
+          double w = 20, h = 20;
+          if (size is List && size.length >= 2) {
+            w = (size[0] as num).toDouble();
+            h = (size[1] as num).toDouble();
+          }
+          double vx = 0, vy = 0;
+          if (vel is List && vel.length >= 2) {
+            vx = (vel[0] as num).toDouble();
+            vy = (vel[1] as num).toDouble();
+          }
+          return PixelEntity(
+            id: id,
+            renderConfig: render,
+            x: x, y: y, w: w, h: h, vx: vx, vy: vy,
           );
         }
       case 'scroll_list':

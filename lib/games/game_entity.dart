@@ -175,6 +175,56 @@ class CellPathEntity extends GameEntity {
       };
 }
 
+// ---------- pixel ----------
+//
+// 自由像素 entity：position + size + velocity。每帧自动 position += velocity * dt。
+// 通用语义，不绑定任何具体游戏。可以做：
+// - 单一角色（玩家、鸟、子弹）—— init velocity=[0,0]，逻辑层动态改
+// - 自动滚动的障碍物 —— init velocity=[-100,0]，自动飘出屏
+// - 抛物运动 —— 逻辑层每帧 add_velocity([0, gravity])
+//
+// render 走 drawShape，支持 rect / circle / text（包括 emoji）。
+
+class PixelEntity extends GameEntity {
+  double x;
+  double y;
+  double w;
+  double h;
+  double vx;
+  double vy;
+
+  PixelEntity({
+    required super.id,
+    required super.renderConfig,
+    required this.x,
+    required this.y,
+    required this.w,
+    required this.h,
+    this.vx = 0,
+    this.vy = 0,
+  });
+
+  @override
+  void update(double dt, GameWorld world) {
+    x += vx * dt;
+    y += vy * dt;
+  }
+
+  @override
+  void render(Canvas canvas, GameWorld world) {
+    drawShape(canvas, Offset(x, y), Size(w, h), renderConfig);
+  }
+
+  @override
+  Map<String, dynamic> toMap() => {
+        'position': [x, y],
+        'size': [w, h],
+        'velocity': [vx, vy],
+        'x': x,
+        'y': y,
+      };
+}
+
 // ---------- scroll_list ----------
 
 class ScrollListEntity extends GameEntity {

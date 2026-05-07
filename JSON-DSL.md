@@ -1494,7 +1494,8 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 |---|---|
 | `{{ vars.x }}` | 当前游戏实例的 vars |
 | `{{ entities.<id>.<field> }}` | 实体快照（如 `entities.snake.head` → `[10, 14]`） |
-| `{{ event.x }}` | 当前事件 payload（仅在 input/tick 等回调里有值） |
+| `{{ event.x }}` | 当前事件 payload（仅在 input/tick/frame 等回调里有值）。`frame.logic` 里 `{{ event.dt }}` 是当前帧时长（秒），用 `gravity * event.dt` 这种乘法做 FPS-independent 物理 |
+| `{{ loop.x }}` | `@for_each_entity` 等迭代原子内可用：`loop.id` / `loop.entity` / `loop.index` |
 | `{{ world.cols }}` / `{{ world.rows }}` / `{{ world.width }}` / `{{ world.height }}` / `{{ world.cell_w }}` / `{{ world.cell_h }}` | 世界尺寸 |
 | `{{ score }}` / `{{ best }}` / `{{ game_over }}` | 内置标量 |
 
@@ -1518,8 +1519,8 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `cell_path` | `init: [[x,y], ...]` | 网格上的格子序列（snake 身体）；`render.gradient: true` 启头亮尾暗 |
 | `scroll_list` | `direction: "down"` | 垂直滚动行序列（tap_white_tile）；`speed`, `row_height`(默认 width/cells), `safe_zone_bottom`(默认 2), `row_spec` |
 | `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
+| `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：每帧自动 `position += velocity * dt`。通用，可做角色 / 子弹 / 障碍物 / 任意运动元素；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
 | `static` | `position`, `size` | 像素静态可视（保留接口，第一版未启用） |
-| `pixel` | `position`, `velocity` | 像素自由动 entity（保留接口） |
 
 每个 entity 的 `render` 字段：
 
@@ -1562,6 +1563,15 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@value_grid.spawn({grid, four_chance: 0.1})` | 随机空格 spawn 一个 2 / 4，返回是否成功 |
 | `@value_grid.can_move({grid})` | 是否还能动（有空格或邻接同值） |
 | `@not({value})` | 通用否定。jsonlogic `!` 不递归 inline action 调用，需要 `@not` 把 inline call 结果取反 |
+| `@pixel.set_position({id, p: [x, y]})` | 写 pixel entity 的位置 |
+| `@pixel.set_velocity({id, v: [vx, vy]})` | 写 pixel entity 的速度（写完每帧自动按 v*dt 更新位置） |
+| `@pixel.add_velocity({id, dv: [dvx, dvy]})` | 累加速度。每帧加 `[0, gravity*dt]` = 重力；加 `[wind, 0]` = 风力；通用语义 |
+| `@spawn({kind, id, position?, size?, velocity?, render?, ...})` | 运行时创建一个新 entity（任何 kind）。typical 用于子弹 / 敌人 / 障碍物等"无限生成"的场景 |
+| `@despawn({id})` | 运行时销毁一个 entity |
+| `@collide.rect({a, b})` | 两个 entity 的 AABB 矩形重叠检测，返回 bool。两边都得是 pixel 类（暴露 x/y/w/h） |
+| `@for_each_entity({where_prefix, do})` | 遍历 id 前缀匹配的所有 entity。子 logic 里 `{{ loop.id }}` / `{{ loop.entity }}` / `{{ loop.index }}` 可用。子 logic 内 spawn/despawn 不影响本轮迭代（用快照） |
+| `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
+| `@random_double({min, max})` | 返回 [min, max) 的随机 double |
 
 #### 双向桥
 
@@ -1583,6 +1593,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `templates/demo_snake.json` | `grid_world` + `cell_path` + `tick.logic` + `swipe` | 网格定时推进、方向键队列、自我碰撞 |
 | `templates/demo_tap_white_tile.json` | `pixel_world` + `scroll_list` + `frame.logic` + `tap` | 像素坐标命中检测、死亡线、滚动加速 |
 | `templates/demo_2048.json` | `pixel_world` + `value_grid` + `init.logic` + `swipe` | **flame_game 与普通 widget 混排**：顶部分数 bar、中间游戏区、底部结果 bar 在同一份 JSON 里 |
+| `templates/demo_flappy_bird.json` | `pixel` entity + `@pixel.add_velocity` + `@spawn`/`@despawn` + `@collide.rect` + `@for_each_entity` | **物理 + 动态生成 + 碰撞**：重力 / 跳跃冲量 / 管道无限生成 / 出屏销毁 / 计分 全在 JSON 里编排，框架零业务逻辑。bird 用 🐦 emoji 渲染 |
 
 ---
 

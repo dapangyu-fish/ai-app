@@ -27,6 +27,10 @@ class GameLogicEngine {
   /// event 作用域栈（嵌套场景：tick 里再触发其他 logic）
   final List<Map<String, dynamic>> _eventStack = [];
 
+  /// loop 作用域栈（@for_each_entity 等迭代原子用，提供 {{ loop.id }} /
+  /// {{ loop.entity }} / {{ loop.index }}）
+  final List<Map<String, dynamic>> _loopStack = [];
+
   GameLogicEngine(this.game);
 
   /// 跑一组 step（actions / 子规则）
@@ -38,6 +42,18 @@ class GameLogicEngine {
       }
     } finally {
       if (eventData != null) _eventStack.removeLast();
+    }
+  }
+
+  /// 跑一组 step，但带 loop 上下文（迭代原子用）
+  void runLogicWithLoop(List<dynamic> steps, Map<String, dynamic> loopData) {
+    _loopStack.add(loopData);
+    try {
+      for (final step in steps) {
+        runStep(step);
+      }
+    } finally {
+      _loopStack.removeLast();
     }
   }
 
@@ -193,6 +209,7 @@ class GameLogicEngine {
       'vars': game.vars,
       'entities': entitiesMap,
       'event': _eventStack.isNotEmpty ? _eventStack.last : <String, dynamic>{},
+      'loop': _loopStack.isNotEmpty ? _loopStack.last : <String, dynamic>{},
       'world': {
         'cols': game.gameWorld.cols,
         'rows': game.gameWorld.rows,
@@ -221,6 +238,9 @@ class GameLogicEngine {
         break;
       case 'event':
         current = _eventStack.isNotEmpty ? _eventStack.last : null;
+        break;
+      case 'loop':
+        current = _loopStack.isNotEmpty ? _loopStack.last : null;
         break;
       case 'entities':
         if (rest.isEmpty) {
