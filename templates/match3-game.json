@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-game",
     "displayName": "宝石消消乐",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "type": "app",
-    "description": "经典消消乐 — 交换相邻宝石，三连即可消除。参考 2048 模板重构。",
+    "description": "经典消消乐 — 交换相邻宝石，三连即可消除。1.1.1: 修 processBoard 不收敛 + cascade 加 500ms 视觉间隔。",
     "author": "AI"
   },
   "dependencies": {
@@ -428,48 +428,27 @@
             "args": {}
           },
           {
-            "call": "@global.removeMatches",
-            "args": {}
-          },
-          {
-            "call": "@global.applyGravityAndFill",
-            "args": {}
-          },
-          {
-            "call": "@global.findMatches",
-            "args": {}
-          },
-          {
-            "call": "@global.removeMatches",
-            "args": {}
-          },
-          {
-            "call": "@global.applyGravityAndFill",
-            "args": {}
-          },
-          {
-            "call": "@global.findMatches",
-            "args": {}
-          },
-          {
-            "call": "@global.removeMatches",
-            "args": {}
-          },
-          {
-            "call": "@global.applyGravityAndFill",
-            "args": {}
-          },
-          {
-            "call": "@global.findMatches",
-            "args": {}
-          },
-          {
-            "call": "@global.removeMatches",
-            "args": {}
-          },
-          {
-            "call": "@global.applyGravityAndFill",
-            "args": {}
+            "call": "@while",
+            "args": {
+              "condition": {
+                "var": "global._hasMatch"
+              },
+              "max_iterations": 50,
+              "body": [
+                {
+                  "call": "@global.removeMatches",
+                  "args": {}
+                },
+                {
+                  "call": "@global.applyGravityAndFill",
+                  "args": {}
+                },
+                {
+                  "call": "@global.findMatches",
+                  "args": {}
+                }
+              ]
+            }
           }
         ]
       },
@@ -484,8 +463,20 @@
               "max_iterations": 50,
               "body": [
                 {
+                  "call": "@delay",
+                  "args": {
+                    "ms": 500
+                  }
+                },
+                {
                   "call": "@global.removeMatches",
                   "args": {}
+                },
+                {
+                  "call": "@delay",
+                  "args": {
+                    "ms": 500
+                  }
                 },
                 {
                   "call": "@global.applyGravityAndFill",
