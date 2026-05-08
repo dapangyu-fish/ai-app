@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.3.0: 修通 swap 滑动动画（绕开 {{ loop.id }} 模板 bug）",
+    "description": "match3 用 flame_game pixel + frame ease。v0.4.0: match 检测 + 消除 + 重力下落 + 顶部补充 + 连锁",
     "author": "AI"
   },
   "dependencies": {},
@@ -149,6 +149,8 @@
                 ],
                 "gem_color": {},
                 "targets": {},
+                "matched": {},
+                "matched_count": 0,
                 "_tmp_idx": 0,
                 "_tmp_r": 0,
                 "_tmp_c": 0,
@@ -184,7 +186,30 @@
                 "_dx": 0,
                 "_dy": 0,
                 "_dx_abs": 0,
-                "_dy_abs": 0
+                "_dy_abs": 0,
+                "_md_r": 0,
+                "_md_c": 0,
+                "_md_i0": 0,
+                "_md_i1": 0,
+                "_md_i2": 0,
+                "_md_u0": "",
+                "_md_u1": "",
+                "_md_u2": "",
+                "_cl_idx": 0,
+                "_cl_uid": "",
+                "_fl_c": 0,
+                "_fl_write_r": 0,
+                "_fl_step": 0,
+                "_fl_read_r": 0,
+                "_fl_read_idx": 0,
+                "_fl_uid": "",
+                "_fl_write_idx": 0,
+                "_fl_spawn_r": 0,
+                "_fl_idx": 0,
+                "_fl_color": 0,
+                "_fl_uid_new": "",
+                "_fl_start_y": 0,
+                "_fl_x": 0
               },
               "init": {
                 "logic": [
@@ -510,50 +535,6 @@
                                   "render": {
                                     "shape": "text",
                                     "value": "🔵",
-                                    "fontSize": 36,
-                                    "color": "#FFFFFF"
-                                  }
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              "==": [
-                                {
-                                  "var": "vars._tmp_color"
-                                },
-                                5
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@spawn",
-                                "args": {
-                                  "id": "{{ vars._tmp_uid }}",
-                                  "kind": "pixel",
-                                  "position": [
-                                    {
-                                      "var": "vars._tmp_x"
-                                    },
-                                    {
-                                      "var": "vars._tmp_y"
-                                    }
-                                  ],
-                                  "size": [
-                                    {
-                                      "var": "vars.cell_size"
-                                    },
-                                    {
-                                      "var": "vars.cell_size"
-                                    }
-                                  ],
-                                  "render": {
-                                    "shape": "text",
-                                    "value": "🟣",
                                     "fontSize": 36,
                                     "color": "#FFFFFF"
                                   }
@@ -1596,6 +1577,1407 @@
                               ]
                             },
                             "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.phase",
+                                  "value": "checking"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.phase"
+                          },
+                          "falling"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._any_moving",
+                            "value": false
+                          }
+                        },
+                        {
+                          "call": "@for_each_entity",
+                          "args": {
+                            "where_prefix": "g",
+                            "do": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._cap",
+                                  "value": {
+                                    "var": "loop.id"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._t",
+                                  "value": {
+                                    "var": "vars.targets.{{ vars._cap }}"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "!=": [
+                                      {
+                                        "var": "vars._t"
+                                      },
+                                      null
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._cur_x",
+                                        "value": {
+                                          "var": "loop.entity.x"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._cur_y",
+                                        "value": {
+                                          "var": "loop.entity.y"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._tx",
+                                        "value": {
+                                          "var": "vars._t.0"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._ty",
+                                        "value": {
+                                          "var": "vars._t.1"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._dx",
+                                        "value": {
+                                          "-": [
+                                            {
+                                              "var": "vars._tx"
+                                            },
+                                            {
+                                              "var": "vars._cur_x"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._dy",
+                                        "value": {
+                                          "-": [
+                                            {
+                                              "var": "vars._ty"
+                                            },
+                                            {
+                                              "var": "vars._cur_y"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._dx_abs",
+                                        "value": {
+                                          "if": [
+                                            {
+                                              "<": [
+                                                {
+                                                  "var": "vars._dx"
+                                                },
+                                                0
+                                              ]
+                                            },
+                                            {
+                                              "-": [
+                                                0,
+                                                {
+                                                  "var": "vars._dx"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "var": "vars._dx"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._dy_abs",
+                                        "value": {
+                                          "if": [
+                                            {
+                                              "<": [
+                                                {
+                                                  "var": "vars._dy"
+                                                },
+                                                0
+                                              ]
+                                            },
+                                            {
+                                              "-": [
+                                                0,
+                                                {
+                                                  "var": "vars._dy"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "var": "vars._dy"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "<": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "vars._dx_abs"
+                                                },
+                                                {
+                                                  "var": "vars._dy_abs"
+                                                }
+                                              ]
+                                            },
+                                            1.5
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@pixel.set_position",
+                                            "args": {
+                                              "id": "{{ vars._cap }}",
+                                              "position": [
+                                                {
+                                                  "var": "vars._tx"
+                                                },
+                                                {
+                                                  "var": "vars._ty"
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.targets.{{ vars._cap }}",
+                                              "value": null
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@pixel.set_position",
+                                            "args": {
+                                              "id": "{{ vars._cap }}",
+                                              "position": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "var": "vars._cur_x"
+                                                    },
+                                                    {
+                                                      "*": [
+                                                        {
+                                                          "var": "vars._dx"
+                                                        },
+                                                        0.25
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "var": "vars._cur_y"
+                                                    },
+                                                    {
+                                                      "*": [
+                                                        {
+                                                          "var": "vars._dy"
+                                                        },
+                                                        0.25
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._any_moving",
+                                              "value": true
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!": [
+                                {
+                                  "var": "vars._any_moving"
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.phase",
+                                  "value": "checking"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.phase"
+                          },
+                          "checking"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.matched",
+                            "value": {}
+                          }
+                        },
+                        {
+                          "call": "@loop_by_num",
+                          "args": {
+                            "count": 8,
+                            "body": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._md_r",
+                                  "value": {
+                                    "var": "loop.index"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@loop_by_num",
+                                "args": {
+                                  "count": 6,
+                                  "body": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_c",
+                                        "value": {
+                                          "var": "loop.index"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_i0",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "var": "vars._md_r"
+                                                },
+                                                8
+                                              ]
+                                            },
+                                            {
+                                              "var": "vars._md_c"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_i1",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars._md_i0"
+                                            },
+                                            1
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_i2",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars._md_i0"
+                                            },
+                                            2
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_u0",
+                                        "value": {
+                                          "var": "vars.board.{{ vars._md_i0 }}"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_u1",
+                                        "value": {
+                                          "var": "vars.board.{{ vars._md_i1 }}"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_u2",
+                                        "value": {
+                                          "var": "vars.board.{{ vars._md_i2 }}"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "and": [
+                                            {
+                                              "!=": [
+                                                {
+                                                  "var": "vars._md_u0"
+                                                },
+                                                ""
+                                              ]
+                                            },
+                                            {
+                                              "!=": [
+                                                {
+                                                  "var": "vars._md_u1"
+                                                },
+                                                ""
+                                              ]
+                                            },
+                                            {
+                                              "!=": [
+                                                {
+                                                  "var": "vars._md_u2"
+                                                },
+                                                ""
+                                              ]
+                                            },
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u0 }}"
+                                                },
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u1 }}"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u0 }}"
+                                                },
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u2 }}"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.matched.{{ vars._md_i0 }}",
+                                              "value": true
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.matched.{{ vars._md_i1 }}",
+                                              "value": true
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.matched.{{ vars._md_i2 }}",
+                                              "value": true
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@loop_by_num",
+                          "args": {
+                            "count": 8,
+                            "body": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._md_c",
+                                  "value": {
+                                    "var": "loop.index"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@loop_by_num",
+                                "args": {
+                                  "count": 6,
+                                  "body": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_r",
+                                        "value": {
+                                          "var": "loop.index"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_i0",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "var": "vars._md_r"
+                                                },
+                                                8
+                                              ]
+                                            },
+                                            {
+                                              "var": "vars._md_c"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_i1",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars._md_i0"
+                                            },
+                                            8
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_i2",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars._md_i0"
+                                            },
+                                            16
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_u0",
+                                        "value": {
+                                          "var": "vars.board.{{ vars._md_i0 }}"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_u1",
+                                        "value": {
+                                          "var": "vars.board.{{ vars._md_i1 }}"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._md_u2",
+                                        "value": {
+                                          "var": "vars.board.{{ vars._md_i2 }}"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "and": [
+                                            {
+                                              "!=": [
+                                                {
+                                                  "var": "vars._md_u0"
+                                                },
+                                                ""
+                                              ]
+                                            },
+                                            {
+                                              "!=": [
+                                                {
+                                                  "var": "vars._md_u1"
+                                                },
+                                                ""
+                                              ]
+                                            },
+                                            {
+                                              "!=": [
+                                                {
+                                                  "var": "vars._md_u2"
+                                                },
+                                                ""
+                                              ]
+                                            },
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u0 }}"
+                                                },
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u1 }}"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u0 }}"
+                                                },
+                                                {
+                                                  "var": "vars.gem_color.{{ vars._md_u2 }}"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.matched.{{ vars._md_i0 }}",
+                                              "value": true
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.matched.{{ vars._md_i1 }}",
+                                              "value": true
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.matched.{{ vars._md_i2 }}",
+                                              "value": true
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.matched_count",
+                            "value": 0
+                          }
+                        },
+                        {
+                          "call": "@loop_by_num",
+                          "args": {
+                            "count": 64,
+                            "body": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._cl_idx",
+                                  "value": {
+                                    "var": "loop.index"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "==": [
+                                      {
+                                        "var": "vars.matched.{{ vars._cl_idx }}"
+                                      },
+                                      true
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.matched_count",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars.matched_count"
+                                            },
+                                            1
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._cl_uid",
+                                        "value": {
+                                          "var": "vars.board.{{ vars._cl_idx }}"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "{{ vars._cl_uid }}"
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.board.{{ vars._cl_idx }}",
+                                        "value": ""
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              ">": [
+                                {
+                                  "var": "vars.matched_count"
+                                },
+                                0
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@score.add",
+                                "args": {
+                                  "n": {
+                                    "*": [
+                                      {
+                                        "var": "vars.matched_count"
+                                      },
+                                      10
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@loop_by_num",
+                                "args": {
+                                  "count": 8,
+                                  "body": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._fl_c",
+                                        "value": {
+                                          "var": "loop.index"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._fl_write_r",
+                                        "value": 7
+                                      }
+                                    },
+                                    {
+                                      "call": "@loop_by_num",
+                                      "args": {
+                                        "count": 8,
+                                        "body": [
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._fl_step",
+                                              "value": {
+                                                "var": "loop.index"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._fl_read_r",
+                                              "value": {
+                                                "-": [
+                                                  7,
+                                                  {
+                                                    "var": "vars._fl_step"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._fl_read_idx",
+                                              "value": {
+                                                "+": [
+                                                  {
+                                                    "*": [
+                                                      {
+                                                        "var": "vars._fl_read_r"
+                                                      },
+                                                      8
+                                                    ]
+                                                  },
+                                                  {
+                                                    "var": "vars._fl_c"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._fl_uid",
+                                              "value": {
+                                                "var": "vars.board.{{ vars._fl_read_idx }}"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "!=": [
+                                                  {
+                                                    "var": "vars._fl_uid"
+                                                  },
+                                                  ""
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars._fl_write_idx",
+                                                    "value": {
+                                                      "+": [
+                                                        {
+                                                          "*": [
+                                                            {
+                                                              "var": "vars._fl_write_r"
+                                                            },
+                                                            8
+                                                          ]
+                                                        },
+                                                        {
+                                                          "var": "vars._fl_c"
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@if",
+                                                  "args": {
+                                                    "cond": {
+                                                      "!=": [
+                                                        {
+                                                          "var": "vars._fl_read_r"
+                                                        },
+                                                        {
+                                                          "var": "vars._fl_write_r"
+                                                        }
+                                                      ]
+                                                    },
+                                                    "then": [
+                                                      {
+                                                        "call": "@set",
+                                                        "args": {
+                                                          "var": "vars.board.{{ vars._fl_write_idx }}",
+                                                          "value": {
+                                                            "var": "vars._fl_uid"
+                                                          }
+                                                        }
+                                                      },
+                                                      {
+                                                        "call": "@set",
+                                                        "args": {
+                                                          "var": "vars.board.{{ vars._fl_read_idx }}",
+                                                          "value": ""
+                                                        }
+                                                      },
+                                                      {
+                                                        "call": "@set",
+                                                        "args": {
+                                                          "var": "vars.targets.{{ vars._fl_uid }}",
+                                                          "value": [
+                                                            {
+                                                              "*": [
+                                                                {
+                                                                  "var": "vars._fl_c"
+                                                                },
+                                                                {
+                                                                  "var": "vars.cell_size"
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "*": [
+                                                                {
+                                                                  "var": "vars._fl_write_r"
+                                                                },
+                                                                {
+                                                                  "var": "vars.cell_size"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars._fl_write_r",
+                                                    "value": {
+                                                      "-": [
+                                                        {
+                                                          "var": "vars._fl_write_r"
+                                                        },
+                                                        1
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "call": "@loop_by_num",
+                                      "args": {
+                                        "count": 8,
+                                        "body": [
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._fl_spawn_r",
+                                              "value": {
+                                                "var": "loop.index"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "<=": [
+                                                  {
+                                                    "var": "vars._fl_spawn_r"
+                                                  },
+                                                  {
+                                                    "var": "vars._fl_write_r"
+                                                  }
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars._fl_idx",
+                                                    "value": {
+                                                      "+": [
+                                                        {
+                                                          "*": [
+                                                            {
+                                                              "var": "vars._fl_spawn_r"
+                                                            },
+                                                            8
+                                                          ]
+                                                        },
+                                                        {
+                                                          "var": "vars._fl_c"
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars._fl_color",
+                                                    "value": {
+                                                      "call": "@random_int",
+                                                      "args": {
+                                                        "min": 0,
+                                                        "max": 5
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars._fl_uid_new",
+                                                    "value": "g{{ vars.next_uid }}"
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars._fl_start_y",
+                                                    "value": {
+                                                      "*": [
+                                                        {
+                                                          "-": [
+                                                            {
+                                                              "var": "vars._fl_spawn_r"
+                                                            },
+                                                            {
+                                                              "+": [
+                                                                {
+                                                                  "var": "vars._fl_write_r"
+                                                                },
+                                                                1
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "var": "vars.cell_size"
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars._fl_x",
+                                                    "value": {
+                                                      "*": [
+                                                        {
+                                                          "var": "vars._fl_c"
+                                                        },
+                                                        {
+                                                          "var": "vars.cell_size"
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@if",
+                                                  "args": {
+                                                    "cond": {
+                                                      "==": [
+                                                        {
+                                                          "var": "vars._fl_color"
+                                                        },
+                                                        0
+                                                      ]
+                                                    },
+                                                    "then": [
+                                                      {
+                                                        "call": "@spawn",
+                                                        "args": {
+                                                          "id": "{{ vars._fl_uid_new }}",
+                                                          "kind": "pixel",
+                                                          "position": [
+                                                            {
+                                                              "var": "vars._fl_x"
+                                                            },
+                                                            {
+                                                              "var": "vars._fl_start_y"
+                                                            }
+                                                          ],
+                                                          "size": [
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            },
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            }
+                                                          ],
+                                                          "render": {
+                                                            "shape": "text",
+                                                            "value": "🔴",
+                                                            "fontSize": 36,
+                                                            "color": "#FFFFFF"
+                                                          }
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@if",
+                                                  "args": {
+                                                    "cond": {
+                                                      "==": [
+                                                        {
+                                                          "var": "vars._fl_color"
+                                                        },
+                                                        1
+                                                      ]
+                                                    },
+                                                    "then": [
+                                                      {
+                                                        "call": "@spawn",
+                                                        "args": {
+                                                          "id": "{{ vars._fl_uid_new }}",
+                                                          "kind": "pixel",
+                                                          "position": [
+                                                            {
+                                                              "var": "vars._fl_x"
+                                                            },
+                                                            {
+                                                              "var": "vars._fl_start_y"
+                                                            }
+                                                          ],
+                                                          "size": [
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            },
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            }
+                                                          ],
+                                                          "render": {
+                                                            "shape": "text",
+                                                            "value": "🟠",
+                                                            "fontSize": 36,
+                                                            "color": "#FFFFFF"
+                                                          }
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@if",
+                                                  "args": {
+                                                    "cond": {
+                                                      "==": [
+                                                        {
+                                                          "var": "vars._fl_color"
+                                                        },
+                                                        2
+                                                      ]
+                                                    },
+                                                    "then": [
+                                                      {
+                                                        "call": "@spawn",
+                                                        "args": {
+                                                          "id": "{{ vars._fl_uid_new }}",
+                                                          "kind": "pixel",
+                                                          "position": [
+                                                            {
+                                                              "var": "vars._fl_x"
+                                                            },
+                                                            {
+                                                              "var": "vars._fl_start_y"
+                                                            }
+                                                          ],
+                                                          "size": [
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            },
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            }
+                                                          ],
+                                                          "render": {
+                                                            "shape": "text",
+                                                            "value": "🟡",
+                                                            "fontSize": 36,
+                                                            "color": "#FFFFFF"
+                                                          }
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@if",
+                                                  "args": {
+                                                    "cond": {
+                                                      "==": [
+                                                        {
+                                                          "var": "vars._fl_color"
+                                                        },
+                                                        3
+                                                      ]
+                                                    },
+                                                    "then": [
+                                                      {
+                                                        "call": "@spawn",
+                                                        "args": {
+                                                          "id": "{{ vars._fl_uid_new }}",
+                                                          "kind": "pixel",
+                                                          "position": [
+                                                            {
+                                                              "var": "vars._fl_x"
+                                                            },
+                                                            {
+                                                              "var": "vars._fl_start_y"
+                                                            }
+                                                          ],
+                                                          "size": [
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            },
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            }
+                                                          ],
+                                                          "render": {
+                                                            "shape": "text",
+                                                            "value": "🟢",
+                                                            "fontSize": 36,
+                                                            "color": "#FFFFFF"
+                                                          }
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@if",
+                                                  "args": {
+                                                    "cond": {
+                                                      "==": [
+                                                        {
+                                                          "var": "vars._fl_color"
+                                                        },
+                                                        4
+                                                      ]
+                                                    },
+                                                    "then": [
+                                                      {
+                                                        "call": "@spawn",
+                                                        "args": {
+                                                          "id": "{{ vars._fl_uid_new }}",
+                                                          "kind": "pixel",
+                                                          "position": [
+                                                            {
+                                                              "var": "vars._fl_x"
+                                                            },
+                                                            {
+                                                              "var": "vars._fl_start_y"
+                                                            }
+                                                          ],
+                                                          "size": [
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            },
+                                                            {
+                                                              "var": "vars.cell_size"
+                                                            }
+                                                          ],
+                                                          "render": {
+                                                            "shape": "text",
+                                                            "value": "🔵",
+                                                            "fontSize": 36,
+                                                            "color": "#FFFFFF"
+                                                          }
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars.gem_color.{{ vars._fl_uid_new }}",
+                                                    "value": {
+                                                      "var": "vars._fl_color"
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars.board.{{ vars._fl_idx }}",
+                                                    "value": {
+                                                      "var": "vars._fl_uid_new"
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars.targets.{{ vars._fl_uid_new }}",
+                                                    "value": [
+                                                      {
+                                                        "var": "vars._fl_x"
+                                                      },
+                                                      {
+                                                        "*": [
+                                                          {
+                                                            "var": "vars._fl_spawn_r"
+                                                          },
+                                                          {
+                                                            "var": "vars.cell_size"
+                                                          }
+                                                        ]
+                                                      }
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars.next_uid",
+                                                    "value": {
+                                                      "+": [
+                                                        {
+                                                          "var": "vars.next_uid"
+                                                        },
+                                                        1
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.phase",
+                                  "value": "falling"
+                                }
+                              }
+                            ],
+                            "else": [
                               {
                                 "call": "@set",
                                 "args": {
