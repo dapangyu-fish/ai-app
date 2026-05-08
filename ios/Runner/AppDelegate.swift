@@ -75,10 +75,14 @@ import UserNotifications
   }
 
   // 从 embedded.mobileprovision 读 Entitlements.aps-environment
-  // - dev / ad-hoc / enterprise 签名 → 文件存在，env = "development" 或 "production"
-  // - AppStore 上架后 Apple 重签可能去掉这文件 → 找不到时按 "production" 兜底（合理：上架包不可能是 sandbox）
-  // 模拟器走不到本回调（不会发 APNs token），所以不用考虑
+  // - dev / ad-hoc / enterprise / AppStore 真机：文件都在，按里头的 aps-environment 走
+  // - 模拟器：iOS 16+ 模拟器能拿真 APNs token 走 sandbox，但 bundle 里没 mobileprovision —
+  //          所以单独短路返 development，不能让兜底落到 production（曾踩此坑：sim 注册成
+  //          production 后 Apple 必返 BadDeviceToken，token 还会被自愈逻辑删掉）
   private static func detectApsEnvironment() -> String {
+    #if targetEnvironment(simulator)
+    return "development"
+    #else
     guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
           let data = try? Data(contentsOf: url) else {
       return "production"
@@ -95,6 +99,7 @@ import UserNotifications
       return "production"
     }
     return aps == "development" ? "development" : "production"
+    #endif
   }
 
   // APNs 注册失败 —— 通知 Flutter
