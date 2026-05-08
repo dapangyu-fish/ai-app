@@ -217,10 +217,22 @@ class GameLogicEngine {
     if (s.contains('{{')) {
       return s.replaceAllMapped(RegExp(r'\{\{\s*(.+?)\s*\}\}'), (m) {
         final v = getVariable(m.group(1)!);
-        return v?.toString() ?? '';
+        return _stringifyForTemplate(v);
       });
     }
     return s;
+  }
+
+  /// 把任意值字符串化用于模板插值。整数值的 double 不带 ".0"——
+  /// jsonlogic 2.0.2 的 + / * 累加器是 0.0/1.0，任何 int+int 算数会升级
+  /// double。模板路径 "vars.board.{{ _i }}" 在 _i=1.0 时变 "vars.board.1.0"
+  /// 多一段 split 出错。详见主解释器 _stringifyForTemplate 同名函数注释。
+  static String _stringifyForTemplate(dynamic value) {
+    if (value == null) return '';
+    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toString();
   }
 
   Map<String, dynamic> _resolveMap(Map<String, dynamic> m) {
@@ -378,19 +390,37 @@ class GameLogicEngine {
     }
   }
 
+  /// 写嵌套路径。支持 Map 和 List 中段穿过 + 末段写入。
+  /// 跟主解释器 _setNestedValue 行为一致：List 越界 / 非数字段静默 no-op。
   void _writePath(Map<String, dynamic> root, List<String> parts, dynamic value) {
-    Map<String, dynamic> cur = root;
+    dynamic cur = root;
     for (int i = 0; i < parts.length - 1; i++) {
       final p = parts[i];
-      final next = cur[p];
-      if (next is Map<String, dynamic>) {
-        cur = next;
+      if (cur is Map<String, dynamic>) {
+        final next = cur[p];
+        if (next is Map<String, dynamic> || next is List) {
+          cur = next;
+        } else {
+          final newMap = <String, dynamic>{};
+          cur[p] = newMap;
+          cur = newMap;
+        }
+      } else if (cur is List) {
+        final idx = int.tryParse(p);
+        if (idx == null || idx < 0 || idx >= cur.length) return;
+        cur = cur[idx];
       } else {
-        final newMap = <String, dynamic>{};
-        cur[p] = newMap;
-        cur = newMap;
+        return;
       }
     }
-    cur[parts.last] = value;
+    final lastKey = parts.last;
+    if (cur is Map<String, dynamic>) {
+      cur[lastKey] = value;
+    } else if (cur is List) {
+      final idx = int.tryParse(lastKey);
+      if (idx != null && idx >= 0 && idx < cur.length) {
+        cur[idx] = value;
+      }
+    }
   }
 }
