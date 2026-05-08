@@ -3,18 +3,34 @@
   "appid": "b0551eb1-6faf-4193-8cb4-72dd0c2b0cc2",
   "meta": {
     "name": "match3-pixel",
-    "displayName": "宝石消消乐 (像素动画版 MVP)",
-    "version": "0.1.0",
+    "displayName": "宝石消消乐 (像素动画版)",
+    "version": "0.2.0",
     "type": "app",
-    "description": "match3 用 flame_game pixel entity + frame ease 实现连续动画。MVP 只做 swap 动画演示。",
+    "description": "match3 用 flame_game pixel + frame ease。v0.2: emoji 渲染 + 格子线 + 选中高亮 + tap 调试计数",
     "author": "AI"
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "score": 0
+      "score": 0,
+      "tap_count": 0
     },
-    "functions": {}
+    "functions": {
+      "handleScore": {
+        "params": [
+          "score"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tap_count",
+              "value": "{{ params.score }}"
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
@@ -35,7 +51,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "Match3 Pixel — 点两个相邻宝石看丝滑 swap",
+                "value": "Tap 触发次数: {{ global.tap_count }}（验证 input 是否生效）",
                 "style": {
                   "fontSize": 14,
                   "color": "#A8DADC"
@@ -52,8 +68,11 @@
             "child": {
               "type": "flame_game",
               "world": {
-                "kind": "pixel",
-                "bg": "#0F3460"
+                "kind": "grid",
+                "cols": 8,
+                "rows": 8,
+                "bg": "#0F3460",
+                "grid_lines": "#2A3F5F"
               },
               "vars": {
                 "phase": "init",
@@ -153,6 +172,8 @@
                 "_a_r": 0,
                 "_b_c": 0,
                 "_b_r": 0,
+                "_mk_c": 0,
+                "_mk_r": 0,
                 "_any_moving": false,
                 "_t": null,
                 "_cur_x": 0,
@@ -166,6 +187,15 @@
               },
               "init": {
                 "logic": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.cell_size",
+                      "value": {
+                        "var": "world.cell_w"
+                      }
+                    }
+                  },
                   {
                     "call": "@loop_by_num",
                     "args": {
@@ -293,12 +323,18 @@
                                     }
                                   ],
                                   "size": [
-                                    50,
-                                    50
+                                    {
+                                      "var": "vars.cell_size"
+                                    },
+                                    {
+                                      "var": "vars.cell_size"
+                                    }
                                   ],
                                   "render": {
-                                    "shape": "circle",
-                                    "color": "#FF6B6B"
+                                    "shape": "text",
+                                    "value": "🔴",
+                                    "fontSize": 36,
+                                    "color": "#FFFFFF"
                                   }
                                 }
                               }
@@ -331,12 +367,18 @@
                                     }
                                   ],
                                   "size": [
-                                    50,
-                                    50
+                                    {
+                                      "var": "vars.cell_size"
+                                    },
+                                    {
+                                      "var": "vars.cell_size"
+                                    }
                                   ],
                                   "render": {
-                                    "shape": "circle",
-                                    "color": "#4ECDC4"
+                                    "shape": "text",
+                                    "value": "🟠",
+                                    "fontSize": 36,
+                                    "color": "#FFFFFF"
                                   }
                                 }
                               }
@@ -369,12 +411,18 @@
                                     }
                                   ],
                                   "size": [
-                                    50,
-                                    50
+                                    {
+                                      "var": "vars.cell_size"
+                                    },
+                                    {
+                                      "var": "vars.cell_size"
+                                    }
                                   ],
                                   "render": {
-                                    "shape": "circle",
-                                    "color": "#FFE66D"
+                                    "shape": "text",
+                                    "value": "🟡",
+                                    "fontSize": 36,
+                                    "color": "#FFFFFF"
                                   }
                                 }
                               }
@@ -407,12 +455,18 @@
                                     }
                                   ],
                                   "size": [
-                                    50,
-                                    50
+                                    {
+                                      "var": "vars.cell_size"
+                                    },
+                                    {
+                                      "var": "vars.cell_size"
+                                    }
                                   ],
                                   "render": {
-                                    "shape": "circle",
-                                    "color": "#95E1D3"
+                                    "shape": "text",
+                                    "value": "🟢",
+                                    "fontSize": 36,
+                                    "color": "#FFFFFF"
                                   }
                                 }
                               }
@@ -445,12 +499,18 @@
                                     }
                                   ],
                                   "size": [
-                                    50,
-                                    50
+                                    {
+                                      "var": "vars.cell_size"
+                                    },
+                                    {
+                                      "var": "vars.cell_size"
+                                    }
                                   ],
                                   "render": {
-                                    "shape": "circle",
-                                    "color": "#A8DADC"
+                                    "shape": "text",
+                                    "value": "🔵",
+                                    "fontSize": 36,
+                                    "color": "#FFFFFF"
                                   }
                                 }
                               }
@@ -483,12 +543,18 @@
                                     }
                                   ],
                                   "size": [
-                                    50,
-                                    50
+                                    {
+                                      "var": "vars.cell_size"
+                                    },
+                                    {
+                                      "var": "vars.cell_size"
+                                    }
                                   ],
                                   "render": {
-                                    "shape": "circle",
-                                    "color": "#F38BA8"
+                                    "shape": "text",
+                                    "value": "🟣",
+                                    "fontSize": 36,
+                                    "color": "#FFFFFF"
                                   }
                                 }
                               }
@@ -541,6 +607,12 @@
               },
               "input": {
                 "tap": [
+                  {
+                    "call": "@score.add",
+                    "args": {
+                      "n": 1
+                    }
+                  },
                   {
                     "call": "@if",
                     "args": {
@@ -706,6 +778,89 @@
                                         "var": "vars.selected",
                                         "value": {
                                           "var": "vars._tap_idx"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "marker"
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._mk_c",
+                                        "value": {
+                                          "%": [
+                                            {
+                                              "var": "vars._tap_idx"
+                                            },
+                                            8
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._mk_r",
+                                        "value": {
+                                          "/": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "var": "vars._tap_idx"
+                                                },
+                                                {
+                                                  "var": "vars._mk_c"
+                                                }
+                                              ]
+                                            },
+                                            8
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@spawn",
+                                      "args": {
+                                        "id": "marker",
+                                        "kind": "pixel",
+                                        "position": [
+                                          {
+                                            "*": [
+                                              {
+                                                "var": "vars._mk_c"
+                                              },
+                                              {
+                                                "var": "vars.cell_size"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "*": [
+                                              {
+                                                "var": "vars._mk_r"
+                                              },
+                                              {
+                                                "var": "vars.cell_size"
+                                              }
+                                            ]
+                                          }
+                                        ],
+                                        "size": [
+                                          {
+                                            "var": "vars.cell_size"
+                                          },
+                                          {
+                                            "var": "vars.cell_size"
+                                          }
+                                        ],
+                                        "render": {
+                                          "shape": "rect",
+                                          "color": "#FFD70044",
+                                          "radius": 8
                                         }
                                       }
                                     }
@@ -1037,6 +1192,12 @@
                                             }
                                           },
                                           {
+                                            "call": "@despawn",
+                                            "args": {
+                                              "id": "marker"
+                                            }
+                                          },
+                                          {
                                             "call": "@set",
                                             "args": {
                                               "var": "vars.phase",
@@ -1051,6 +1212,89 @@
                                               "var": "vars.selected",
                                               "value": {
                                                 "var": "vars._tap_idx"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@despawn",
+                                            "args": {
+                                              "id": "marker"
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._mk_c",
+                                              "value": {
+                                                "%": [
+                                                  {
+                                                    "var": "vars._tap_idx"
+                                                  },
+                                                  8
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._mk_r",
+                                              "value": {
+                                                "/": [
+                                                  {
+                                                    "-": [
+                                                      {
+                                                        "var": "vars._tap_idx"
+                                                      },
+                                                      {
+                                                        "var": "vars._mk_c"
+                                                      }
+                                                    ]
+                                                  },
+                                                  8
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@spawn",
+                                            "args": {
+                                              "id": "marker",
+                                              "kind": "pixel",
+                                              "position": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "var": "vars._mk_c"
+                                                    },
+                                                    {
+                                                      "var": "vars.cell_size"
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "var": "vars._mk_r"
+                                                    },
+                                                    {
+                                                      "var": "vars.cell_size"
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "size": [
+                                                {
+                                                  "var": "vars.cell_size"
+                                                },
+                                                {
+                                                  "var": "vars.cell_size"
+                                                }
+                                              ],
+                                              "render": {
+                                                "shape": "rect",
+                                                "color": "#FFD70044",
+                                                "radius": 8
                                               }
                                             }
                                           }
@@ -1074,31 +1318,11 @@
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "or": [
+                        "==": [
                           {
-                            "==": [
-                              {
-                                "var": "vars.phase"
-                              },
-                              "swapping"
-                            ]
+                            "var": "vars.phase"
                           },
-                          {
-                            "==": [
-                              {
-                                "var": "vars.phase"
-                              },
-                              "swap_back"
-                            ]
-                          },
-                          {
-                            "==": [
-                              {
-                                "var": "vars.phase"
-                              },
-                              "falling"
-                            ]
-                          }
+                          "swapping"
                         ]
                       },
                       "then": [
@@ -1369,25 +1593,10 @@
                             },
                             "then": [
                               {
-                                "call": "@if",
+                                "call": "@set",
                                 "args": {
-                                  "cond": {
-                                    "==": [
-                                      {
-                                        "var": "vars.phase"
-                                      },
-                                      "swapping"
-                                    ]
-                                  },
-                                  "then": [
-                                    {
-                                      "call": "@set",
-                                      "args": {
-                                        "var": "vars.phase",
-                                        "value": "idle"
-                                      }
-                                    }
-                                  ]
+                                  "var": "vars.phase",
+                                  "value": "idle"
                                 }
                               }
                             ]
@@ -1397,6 +1606,13 @@
                     }
                   }
                 ]
+              },
+              "on_score_changed": {
+                "type": "call",
+                "call": "@global.handleScore",
+                "args": {
+                  "score": "{{ event.score }}"
+                }
               }
             }
           }
