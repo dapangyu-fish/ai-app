@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-game",
     "displayName": "宝石消消乐",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "type": "app",
-    "description": "经典消消乐 — 交换相邻宝石，三连即可消除。1.1.2: findMatches 用独立临时变量避免污染 checkGameOver 的循环索引。",
+    "description": "经典消消乐 — 三连消除。1.2.0: gravity 改分帧动画（每帧 70ms 下落一行 + 顶行补随机），看着像水流。",
     "author": "AI"
   },
   "dependencies": {
@@ -38,7 +38,12 @@
       "_fm_i": 0,
       "_fm_i1": 0,
       "_fm_i2": 0,
-      "_fm_v": 0
+      "_fm_v": 0,
+      "_agf_iter": 0,
+      "_agf_i": 0,
+      "_agf_below": 0,
+      "_agf_v": 0,
+      "_agf_done": false
     },
     "functions": {
       "initGame": {
@@ -469,7 +474,7 @@
                 {
                   "call": "@delay",
                   "args": {
-                    "ms": 500
+                    "ms": 250
                   }
                 },
                 {
@@ -479,7 +484,7 @@
                 {
                   "call": "@delay",
                   "args": {
-                    "ms": 500
+                    "ms": 250
                   }
                 },
                 {
@@ -920,7 +925,14 @@
           {
             "call": "@set",
             "args": {
-              "var": "global._col",
+              "var": "global._agf_done",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._agf_iter",
               "value": 0
             }
           },
@@ -928,26 +940,127 @@
             "call": "@while",
             "args": {
               "condition": {
-                "<": [
+                "and": [
                   {
-                    "var": "global._col"
+                    "!": [
+                      {
+                        "var": "global._agf_done"
+                      }
+                    ]
                   },
-                  8
+                  {
+                    "<": [
+                      {
+                        "var": "global._agf_iter"
+                      },
+                      12
+                    ]
+                  }
                 ]
               },
-              "max_iterations": 200,
+              "max_iterations": 20,
               "body": [
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global._colVals",
-                    "value": []
+                    "var": "global._agf_i",
+                    "value": 55
+                  }
+                },
+                {
+                  "call": "@while",
+                  "args": {
+                    "condition": {
+                      ">=": [
+                        {
+                          "var": "global._agf_i"
+                        },
+                        0
+                      ]
+                    },
+                    "max_iterations": 100,
+                    "body": [
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._agf_i"
+                            },
+                            8
+                          ]
+                        },
+                        "assign": "global._agf_below"
+                      },
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "and": [
+                              {
+                                "==": [
+                                  {
+                                    "var": "global.board.{{ global._agf_below }}"
+                                  },
+                                  -1
+                                ]
+                              },
+                              {
+                                "!=": [
+                                  {
+                                    "var": "global.board.{{ global._agf_i }}"
+                                  },
+                                  -1
+                                ]
+                              }
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global._agf_v",
+                                "value": {
+                                  "var": "global.board.{{ global._agf_i }}"
+                                }
+                              }
+                            },
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.board.{{ global._agf_below }}",
+                                "value": {
+                                  "var": "global._agf_v"
+                                }
+                              }
+                            },
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.board.{{ global._agf_i }}",
+                                "value": -1
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "expression": {
+                          "-": [
+                            {
+                              "var": "global._agf_i"
+                            },
+                            1
+                          ]
+                        },
+                        "assign": "global._agf_i"
+                      }
+                    ]
                   }
                 },
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global._row",
+                    "var": "global._agf_i",
                     "value": 0
                   }
                 },
@@ -957,57 +1070,40 @@
                     "condition": {
                       "<": [
                         {
-                          "var": "global._row"
+                          "var": "global._agf_i"
                         },
                         8
                       ]
                     },
-                    "max_iterations": 100,
+                    "max_iterations": 20,
                     "body": [
-                      {
-                        "expression": {
-                          "+": [
-                            {
-                              "var": "global._col"
-                            },
-                            {
-                              "*": [
-                                {
-                                  "var": "global._row"
-                                },
-                                8
-                              ]
-                            }
-                          ]
-                        },
-                        "assign": "global._i"
-                      },
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global._v",
-                          "value": {
-                            "var": "global.board.{{ global._i }}"
-                          }
-                        }
-                      },
                       {
                         "call": "@if",
                         "args": {
                           "condition": {
-                            "!=": [
+                            "==": [
                               {
-                                "var": "global._v"
+                                "var": "global.board.{{ global._agf_i }}"
                               },
                               -1
                             ]
                           },
                           "then": [
                             {
-                              "call": "@list_add",
+                              "call": "@random",
                               "args": {
-                                "var": "global._colVals",
-                                "item": "{{ global._v }}"
+                                "min": 0,
+                                "max": 5
+                              },
+                              "assign": "global._agf_v"
+                            },
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.board.{{ global._agf_i }}",
+                                "value": {
+                                  "var": "global._agf_v"
+                                }
                               }
                             }
                           ]
@@ -1017,40 +1113,33 @@
                         "expression": {
                           "+": [
                             {
-                              "var": "global._row"
+                              "var": "global._agf_i"
                             },
                             1
                           ]
                         },
-                        "assign": "global._row"
+                        "assign": "global._agf_i"
                       }
                     ]
                   }
                 },
                 {
-                  "call": "@list_length",
+                  "call": "@delay",
                   "args": {
-                    "value": {
-                      "var": "global._colVals"
-                    }
-                  },
-                  "assign": "global._colLen"
-                },
-                {
-                  "expression": {
-                    "-": [
-                      8,
-                      {
-                        "var": "global._colLen"
-                      }
-                    ]
-                  },
-                  "assign": "global._emptyCount"
+                    "ms": 70
+                  }
                 },
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global._row",
+                    "var": "global._agf_done",
+                    "value": true
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._agf_i",
                     "value": 0
                   }
                 },
@@ -1060,139 +1149,45 @@
                     "condition": {
                       "<": [
                         {
-                          "var": "global._row"
+                          "var": "global._agf_i"
                         },
-                        {
-                          "var": "global._emptyCount"
-                        }
+                        64
                       ]
                     },
                     "max_iterations": 100,
                     "body": [
                       {
-                        "expression": {
-                          "+": [
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "==": [
+                              {
+                                "var": "global.board.{{ global._agf_i }}"
+                              },
+                              -1
+                            ]
+                          },
+                          "then": [
                             {
-                              "var": "global._col"
-                            },
-                            {
-                              "*": [
-                                {
-                                  "var": "global._row"
-                                },
-                                8
-                              ]
+                              "call": "@set",
+                              "args": {
+                                "var": "global._agf_done",
+                                "value": false
+                              }
                             }
                           ]
-                        },
-                        "assign": "global._i"
-                      },
-                      {
-                        "call": "@random",
-                        "args": {
-                          "min": 0,
-                          "max": 5
-                        },
-                        "assign": "global._v"
-                      },
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global.board.{{ global._i }}",
-                          "value": "{{ global._v }}"
                         }
                       },
                       {
                         "expression": {
                           "+": [
                             {
-                              "var": "global._row"
+                              "var": "global._agf_i"
                             },
                             1
                           ]
                         },
-                        "assign": "global._row"
-                      }
-                    ]
-                  }
-                },
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global._fillIdx",
-                    "value": 0
-                  }
-                },
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global._row",
-                    "value": "{{ global._emptyCount }}"
-                  }
-                },
-                {
-                  "call": "@while",
-                  "args": {
-                    "condition": {
-                      "<": [
-                        {
-                          "var": "global._fillIdx"
-                        },
-                        {
-                          "var": "global._colLen"
-                        }
-                      ]
-                    },
-                    "max_iterations": 100,
-                    "body": [
-                      {
-                        "expression": {
-                          "+": [
-                            {
-                              "var": "global._col"
-                            },
-                            {
-                              "*": [
-                                {
-                                  "var": "global._row"
-                                },
-                                8
-                              ]
-                            }
-                          ]
-                        },
-                        "assign": "global._i"
-                      },
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global.board.{{ global._i }}",
-                          "value": {
-                            "var": "global._colVals.{{ global._fillIdx }}"
-                          }
-                        }
-                      },
-                      {
-                        "expression": {
-                          "+": [
-                            {
-                              "var": "global._row"
-                            },
-                            1
-                          ]
-                        },
-                        "assign": "global._row"
-                      },
-                      {
-                        "expression": {
-                          "+": [
-                            {
-                              "var": "global._fillIdx"
-                            },
-                            1
-                          ]
-                        },
-                        "assign": "global._fillIdx"
+                        "assign": "global._agf_i"
                       }
                     ]
                   }
@@ -1201,12 +1196,12 @@
                   "expression": {
                     "+": [
                       {
-                        "var": "global._col"
+                        "var": "global._agf_iter"
                       },
                       1
                     ]
                   },
-                  "assign": "global._col"
+                  "assign": "global._agf_iter"
                 }
               ]
             }
