@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.2.5: 在 frame 开头读 targets[_uid_a] 跨帧验证 +50000",
+    "description": "match3 用 flame_game pixel + frame ease。v0.2.6: 抓 loop.id 到 vars，bisect 路径模板",
     "author": "AI"
   },
   "dependencies": {},
@@ -178,6 +178,8 @@
                 "_t": null,
                 "_verify": null,
                 "_frame_check": null,
+                "_captured_id": "",
+                "_t_via_cap": null,
                 "_cur_x": 0,
                 "_cur_y": 0,
                 "_tx": 0,
@@ -1451,6 +1453,64 @@
                                       "call": "@score.add",
                                       "args": {
                                         "n": 5
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._captured_id",
+                                  "value": "{{ loop.id }}"
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "!=": [
+                                      {
+                                        "var": "vars._captured_id"
+                                      },
+                                      ""
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@score.add",
+                                      "args": {
+                                        "n": 30
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._t_via_cap",
+                                  "value": {
+                                    "var": "vars.targets.{{ vars._captured_id }}"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "!=": [
+                                      {
+                                        "var": "vars._t_via_cap"
+                                      },
+                                      null
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@score.add",
+                                      "args": {
+                                        "n": 7
                                       }
                                     }
                                   ]
