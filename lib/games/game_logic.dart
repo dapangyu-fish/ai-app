@@ -257,11 +257,29 @@ class GameLogicEngine {
 
   dynamic _evalJsonLogic(Map<String, dynamic> rule) {
     try {
-      return _jsonlogic.apply(rule, _dataScope());
+      // 先把规则里的字符串模板烤一遍，让 {"var": "vars.x.{{ idx }}"} 能 work
+      final preprocessed = _resolveTemplatesInRule(rule);
+      return _jsonlogic.apply(preprocessed, _dataScope());
     } catch (e) {
       // 表达式炸了不能让游戏崩，返回 null 让上游决定
       return null;
     }
+  }
+
+  /// 递归预处理 jsonlogic 规则里的 `{{ x }}` 模板字符串。
+  /// 跟主解释器 _resolveTemplatesInRule 同行为，让 `{"var": "vars.board.{{ _i }}"}`
+  /// 这种动态路径能用。
+  dynamic _resolveTemplatesInRule(dynamic rule) {
+    if (rule is String && rule.contains('{{') && rule.contains('}}')) {
+      return _resolveString(rule);
+    }
+    if (rule is List) {
+      return rule.map((e) => _resolveTemplatesInRule(e)).toList();
+    }
+    if (rule is Map<String, dynamic>) {
+      return rule.map((k, v) => MapEntry(k, _resolveTemplatesInRule(v)));
+    }
+    return rule;
   }
 
   /// 给 jsonlogic / `{{ ... }}` 用的全局数据
