@@ -653,8 +653,29 @@ class JsonInterpreter extends ChangeNotifier {
         return match.group(0)!;
       }
       final value = _resolveTemplateExpression(expression);
-      return value?.toString() ?? '';
+      return _stringifyForTemplate(value);
     });
+  }
+
+  /// 把任意值字符串化用于模板插值。
+  ///
+  /// 关键：**整数值的 double 不带 ".0"**。
+  ///
+  /// 为什么必要：jsonlogic 2.0.2 的 `+` / `*` 算子累加器初值是 `0.0` / `1.0`，
+  /// 任何 `int + int` / `int * int` 都自动升级成 double。AI 写
+  ///   `_i = _i + 1`        → _i 变成 1.0
+  ///   `"global.board.{{ _i }}"` → "global.board.1.0"
+  /// 然后 jsonlogic var op 按 "." 切成 4 段去走数据，到 List 那一步只能访问
+  /// 一层下标，剩下的 ".0" 走不下去 → 返回 null → findMatches 用 null==null
+  /// 误判到处是 match、removeMatches 写路径全断 → 整个 List 索引模型崩盘。
+  ///
+  /// 把 1.0 显示成 "1" 同时也让 UI 友好（"Score: 100" 而不是 "Score: 100.0"）。
+  static String _stringifyForTemplate(dynamic value) {
+    if (value == null) return '';
+    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toString();
   }
 
   /// 解析模板内表达式：
