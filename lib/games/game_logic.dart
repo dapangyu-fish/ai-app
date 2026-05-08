@@ -74,11 +74,17 @@ class GameLogicEngine {
     final call = action['call'] as String?;
     if (call == null) return null;
 
-    // Lazy-eval actions：不预解析 args（否则 then/else / do 等子分支
+    // Lazy-eval actions：不预解析 args（否则 then/else / do / body 等子分支
     // 里的 inline action 会在 args 解析阶段被当成内联表达式提前 dispatch，
     // 跑了一次还拿不到正确的 loop / 状态上下文）。
     if (call == '@if') {
       return _doIf(action['args'] as Map<String, dynamic>? ?? {});
+    }
+    if (call == '@while') {
+      return _doWhile(action['args'] as Map<String, dynamic>? ?? {});
+    }
+    if (call == '@loop_by_num') {
+      return _doLoopByNum(action['args'] as Map<String, dynamic>? ?? {});
     }
     if (call == '@for_each_entity') {
       // do 数组要保持原样，由 dispatch 内部的迭代 case 在每次 push 完
@@ -126,6 +132,39 @@ class GameLogicEngine {
       if (thenRaw is List) runLogic(thenRaw);
     } else {
       if (elseRaw is List) runLogic(elseRaw);
+    }
+  }
+
+  /// @while: { cond, body, max_iterations? }
+  /// 每轮重新求 cond（vars / entities 可能在 body 里被改），body 是 logic 数组
+  /// max_iterations 兜底防死循环，默认 10000 跟主解释器对齐
+  void _doWhile(Map<String, dynamic> rawArgs) {
+    final condRaw = rawArgs['cond'];
+    final bodyRaw = rawArgs['body'];
+    final maxIter =
+        (rawArgs['max_iterations'] as num?)?.toInt() ?? 10000;
+    if (bodyRaw is! List) return;
+
+    int count = 0;
+    while (count < maxIter) {
+      final condValue = resolveExpression(condRaw);
+      if (!_truthy(condValue)) break;
+      runLogic(bodyRaw);
+      count++;
+    }
+  }
+
+  /// @loop_by_num: { count, body }
+  /// body 内通过 {{ loop.index }} / {{ loop.item }} 拿当前迭代序号（0..count-1）
+  /// 跟主解释器同样行为
+  void _doLoopByNum(Map<String, dynamic> rawArgs) {
+    final countRaw = resolveExpression(rawArgs['count']);
+    final count = (countRaw is num) ? countRaw.toInt() : 0;
+    final bodyRaw = rawArgs['body'];
+    if (bodyRaw is! List) return;
+
+    for (int i = 0; i < count; i++) {
+      runLogicWithLoop(bodyRaw, {'index': i, 'item': i});
     }
   }
 
