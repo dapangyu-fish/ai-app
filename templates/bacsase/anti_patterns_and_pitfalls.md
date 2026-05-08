@@ -556,3 +556,66 @@ JSON-APP 自己就能定位到哪一行 cond 真假。
 短路径"就够了。
 
 ---
+
+## 10. 多函数共用 `_i` / `_v` 临时变量，被嵌套调用 clobber
+
+### 🚨 表现
+
+JSON-DSL 的"函数局部变量"是假的——所有 `@set var=global._xxx` 都写的是
+**同一份全局变量**。AI 写多个函数都用 `_i` `_v` `_i1` 当循环临时变量，
+只要 A 函数的循环里调了 B 函数，B 跑完后 `_i` `_v` 早就被改成 B 内部
+退出时的值，A 的循环索引被冲掉，要么 silent 跳出（看着像功能没生效），
+要么用错误索引继续读写（看着像数据莫名其妙变形）。
+
+典型踩坑：消消乐的 `checkGameOver` 外层用 `_i = 0..63` 枚举所有 swap
+候选，里面调 `findMatches` 检测当前 swap 是否产生 match。findMatches
+自己也用 `_i` 跑两个 64-iter 扫描，跑完 `_i = 64`。回到 checkGameOver，
+swap 回去用的是 `_i = 64`（越界），下一轮 outer while 也立即退出，整个
+死局检测只测了第一次 swap 就误报"死局"，玩两步就 GG。
+
+### 💔 为什么这容易踩
+
+1. JSON-DSL 没真正的局部作用域。`global.variables` 里 `_i` `_v` `_i1` 这种
+   下划线开头看着像"内部变量"，但本质就是全局可写
+2. 单个函数里用 `_i` 当循环变量看着挺自然（像 C 的 `int i = 0; i++`），AI
+   不会本能想到"另一个函数调我的时候也在用这个 _i"
+3. 失败现象是 silent —— 没 NPE 没崩，只是行为不对，调试很难定位
+
+### ✅ 正确姿势：函数前缀做"伪局部作用域"
+
+**约定**：函数 `foo` 内部独占的临时变量名前缀 `_foo_`，不跟其他函数共享：
+
+```jsonc
+// findMatches 函数：
+"_set" "global._fm_i"  ...    // 仅 findMatches 内部用
+"_set" "global._fm_i1" ...
+"_set" "global._fm_v"  ...
+
+// checkGameOver 函数：
+"_set" "global._cgo_i" ...    // 仅 checkGameOver 内部用
+"_set" "global._cgo_v" ...
+```
+
+`_matchList` `_hasMatch` 这种**确实需要跨函数共享**的"输出"保留无前缀名字，
+作为 findMatches 的"返回值约定"。
+
+### 🚦 何时可以共享
+
+- **跨函数共享**：函数的"输出"。findMatches 的 `_hasMatch` / `_matchList`
+  就是给调用方读的，留全局名 OK
+- **函数私有**：所有 `for-i`、`temp swap value`、累加器等**循环用、用完就
+  扔**的中间量。这种必须前缀
+
+### 📐 规模标志
+
+只要一个函数里出现 `@while` / `@for_each` 嵌套调用其他函数（不止 `@set`、
+`@list_add` 这种 leaf 操作），就要审视这个函数的循环变量是不是被嵌套调用
+方也用了。**有任何疑问就直接前缀**——多打几个字符，比 silent 数据腐败值得。
+
+### 🔧 框架改进备忘
+
+理想情况下 JSON-DSL 应该有真函数局部作用域（比如调函数自动 push 一个
+临时 vars 栈，函数返回 pop 掉）。但那是大改，跟约定走更便宜：写 JSON 时
+凡是函数私有的临时变量都加 `_<funcname>_` 前缀。
+
+---
