@@ -1,6 +1,6 @@
-# 离线推送架构（APNs / FCM / geTui）
+# 离线推送架构（多通道：APNs / FCM / geTui / ...）
 
-> 当聊天消息送达时收件人不在线，由 **我们的后端** 主动推送到对应平台的推送通道。
+> 当聊天消息送达时收件人不在线，由 **我们的后端** 主动推送到对应推送通道。
 
 ## 整体流程
 
@@ -8,10 +8,10 @@
 ┌────────────────────────┐
 │  发消息的 Flutter 端    │
 └──────────┬─────────────┘
-           │ ① 用户A 发消息给 用户B
+           │ ① 用户 A 发消息给 用户 B
            ▼
 ┌────────────────────────┐
-│  OpenIM 服务器          │  38.76.199.232
+│  OpenIM 服务器          │  myapp-backend.dapangyu.work（与后端同机）
 │  保存消息后立即触发      │
 │  afterSendSingleMsg     │  ──────┐
 │  webhook                │        │ ② HTTP POST
@@ -19,7 +19,7 @@
                                    │     senderNickname, ... }
                                    ▼
                        ┌──────────────────────────┐
-                       │  我们的 Flask 后端        │  myapp-backend.dapangyu.work
+                       │  我们的 Flask 后端         │
                        │  /api/im/after_send_msg   │
                        │                           │
                        │  ③ 查 OpenIM API:         │
@@ -28,38 +28,102 @@
                        │     离线 → 继续           │
                        │                           │
                        │  ④ 查 device_tokens 表：  │
-                       │     B 的 (platform, token) │
+                       │     B 的所有 (channel,    │
+                       │     token, channel_meta)  │
                        │                           │
-                       │  ⑤ 按 platform 分发：      │
-                       │     ios → apns.py         │
-                       │     android-cn → getui.py │
-                       │     android-intl → fcm.py │
+                       │  ⑤ push.dispatch(channel, │
+                       │     token, meta, payload) │
+                       │     按 channel 路由 provider│
                        └────────┬──────────────────┘
                                 │
                   ┌─────────────┼─────────────┐
                   ▼             ▼             ▼
-            ┌──────────┐ ┌──────────┐ ┌──────────┐
-            │  Apple   │ │  geTui   │ │   FCM    │
-            │  APNs    │ │  (国内)  │ │  (Google)│
-            └────┬─────┘ └────┬─────┘ └────┬─────┘
-                 │            │             │
-                 ▼            ▼             ▼
-              iPhone     国内 Android   国际 Android
+           ┌──────────┐  ┌──────────┐  ┌──────────┐
+           │   APNs   │  │   FCM    │  │  geTui   │
+           │  (Apple) │  │ (Google) │  │  (国内)  │
+           └────┬─────┘  └────┬─────┘  └────┬─────┘
+                │             │             │
+                ▼             ▼             ▼
+             iPhone     国际 Android   国内 Android
 ```
 
-## 为什么用 `afterSendSingleMsg`，不用 `beforeOfflinePush`
+## 设计要点
 
-OpenIM v3.8 有 6+ 个 webhook 钩子。我们曾试过 `beforeOfflinePush`，**实测在 v3.8 不会被触发**：
+### 1. 通道无关的 schema
 
-- 这个钩子的代码位置埋在 geTui / fcm / jpush 三个 push provider 内部
-- openim-push.yml 里 `enable: geTui` 但我们没配 geTui 的 appKey/secret，provider 初始化就报 `code 20001 appid invalid` 直接 return
-- 永远走不到 webhook 调用那一步，后端日志全空
+```sql
+CREATE TABLE device_tokens (
+  user_id      TEXT        NOT NULL,
+  channel      VARCHAR(32) NOT NULL,    -- 'apns' | 'fcm' | 'getui' | 'huawei' | ...
+  token        TEXT        NOT NULL,
+  channel_meta JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, channel, token)
+);
+```
 
-`afterSendSingleMsg` 钩子的位置在 message handler 主流程，**只要消息成功保存就触发**，跟 push provider 配置无关。这是 OpenIM 社区里跑通成千上万项目的稳定钩子。
+`channel_meta` 装通道私有字段，加新通道时 schema 不动：
 
-代价：每条消息（不论收件人在线/离线）都会调我们后端，所以后端**必须先查在线状态**再决定是否推。在线就直接 return 不推，避免重复打扰用户。
+| channel | channel_meta 例子 | 说明 |
+|---------|-------------------|------|
+| `apns` | `{"env": "sandbox"}` | dev / Xcode 自动签名 / 模拟器 |
+| `apns` | `{"env": "production"}` | TestFlight / App Store |
+| `fcm` | `{"app_id": "...debug"}` 或 `{}` | 不同 applicationId 用不同 service account |
+| `getui` | `{"app_id": "...", "vendor": "huawei"}` | 厂商通道（华为/小米/OPPO/vivo）|
 
-## 各组件职责
+复合 PK `(user_id, channel, token)` 允许同 user 多设备 + 同设备多通道（如 Android 既走 FCM 又走 geTui）。
+
+### 2. 后端 dispatcher 模式
+
+`backend/push/__init__.py` 提供：
+
+```python
+@dataclass
+class PushPayload:                          # 通用 payload，各 provider 自己映射
+    title: str
+    body: str
+    badge: int | None = None
+    custom: dict | None = None              # 业务字段：conversation_id / sender_id ...
+    collapse_id: str | None = None          # 同会话合并
+
+@dataclass
+class PushResult:
+    ok: bool
+    expired_token: bool = False             # token 失效 → 调用方 DELETE 这条 row
+    retryable: bool = False
+    status_code: int | None = None
+    reason: str | None = None
+
+def register(channel: str, push_fn): ...
+def dispatch(*, channel, token, meta, payload) -> PushResult: ...
+def is_supported(channel: str) -> bool: ...
+```
+
+每个 provider 自注册：
+
+```python
+# backend/push/apns_provider.py 末尾
+register("apns", push)
+```
+
+`backend/push/__init__.py` 末尾把内置 provider 都 import 一下触发注册：
+
+```python
+from . import apns_provider  # noqa
+# from . import fcm_provider  # 加 FCM 时打开
+```
+
+### 3. 加新通道的成本
+
+加 FCM 三步走，**核心代码（im.py / device_tokens schema）一行不改**：
+
+1. 新建 `backend/push/fcm_provider.py`，实现 `def push(*, token, meta, payload) -> PushResult`，文件末尾 `register("fcm", push)`
+2. `backend/push/__init__.py` 末尾加一行 `from . import fcm_provider`
+3. Android 客户端注册时 POST `/api/im/push_token` `{channel: "fcm", token, meta: {}}`
+
+geTui / 华为 / 小米 / VoIP / Live Activity 同理。
+
+## 各组件细节
 
 ### 1. OpenIM webhook 配置（`webhooks.yml`）
 
@@ -73,120 +137,193 @@ afterSendSingleMsg:
   deniedTypes: []
 ```
 
-> 文件不在 host 上，只在 `openim-server` 容器内 `/openim-server/config/webhooks.yml`。改完用 `docker cp` 拷回去 + restart container。
+> 文件不在 host，只在 `openim-server` 容器内 `/openim-server/config/webhooks.yml`。改完用 `docker compose up -d --force-recreate --no-deps openim-server`。
 
 ### 2. 后端 webhook 入口（`backend/im.py`）
 
 `/api/im/after_send_msg` 路由：
 
-1. 校验 query string 里的 `secret`（防止外部伪造）
-2. 解析 OpenIM 推过来的 callback body：
-   - `sendID` 发送方 OpenIM userID
-   - `recvID` 接收方 OpenIM userID（去掉了 hyphen 的 32 位 hex）
-   - `content` 消息正文（JSON 字符串）
-   - `senderNickname` 显示用
-   - `contentType` 消息类型（101=text, 102=image, ...）
-3. 查 OpenIM 在线状态 API（`/user/get_users_online_status`，需要 admin token）
-   - 在线 → return errCode 0，不做任何事
-   - 离线 → 进入分发
-4. 查 `device_tokens WHERE user_id = <supabase uuid>`
-5. 按 platform 分发：
-   - `platform = 'ios'` → `apns.push_to_device(...)`
-   - `platform = 'android'` + 国内（暂未实现）→ `getui.push_to_device(...)`
-   - `platform = 'android-intl'` + 国际（暂未实现）→ `fcm.push_to_device(...)`
-6. 永远 return `{"errCode": 0, "errMsg": ""}`，避免推送失败阻塞 OpenIM 主流程
+1. 校验 `secret`（防伪造）
+2. 解析 OpenIM callback body（`sendID` / `recvID` / `content` / `senderNickname` / `contentType` ...）
+3. 查 OpenIM 在线状态：在线 → return 不推，离线 → 继续
+4. 调 `_dispatch_to_user(sup_id, payload, ...)` 通道无关派发
+5. 永远 return `{"errCode": 0, "errMsg": ""}`，避免推送失败阻塞 IM 主流程
 
-### 3. APNs 实现（`backend/apns.py`） ✅ 已完成
+`_dispatch_to_user` 是核心循环：
+
+```python
+rows = db_query("SELECT channel, token, channel_meta FROM device_tokens WHERE user_id = %s", (sup_id,))
+for row in rows:
+    result = push.dispatch(channel=row.channel, token=row.token, meta=row.channel_meta, payload=payload)
+    if result.expired_token:
+        # 自愈：失效 token 直接 DELETE，下次推送不再尝试
+        db_execute("DELETE FROM device_tokens WHERE user_id=%s AND channel=%s AND token=%s", ...)
+```
+
+### 3. 为什么用 `afterSendSingleMsg`，不用 `beforeOfflinePush`
+
+OpenIM v3.8 有 6+ 个 webhook。我们曾试过 `beforeOfflinePush`，**实测在 v3.8 不会被触发**：
+
+- 这个钩子的代码位置埋在 geTui / fcm / jpush 三个 push provider 内部
+- `openim-push.yml` 里 `enable: geTui` 但我们没配 geTui 的 appKey/secret，provider 初始化报 `code 20001 appid invalid` 直接 return
+- 永远走不到 webhook 调用那一步
+
+`afterSendSingleMsg` 钩子在 message handler 主流程，**只要消息成功保存就触发**，跟 push provider 配置无关。
+
+代价：每条消息（不论收件人在线/离线）都会调我们后端，所以后端**必须先查在线状态**再决定是否推。
+
+### 4. APNs provider（`backend/push/apns_provider.py`）✅ 已实现
 
 - `.p8` 私钥存 `/etc/apns/AuthKey_<KEY_ID>.p8`，权限 600，root 持有
 - ES256 签 provider JWT（缓存 50 分钟）
-- HTTPS POST 到 `api.sandbox.push.apple.com` (dev) / `api.push.apple.com` (prod)
-- 410 / `BadDeviceToken` / `Unregistered` 自动清理 device_tokens 表
+- **按每条 token 的 `meta.env` 选 host**（核心修复 — 之前用全局 flag 导致 dev/TF 不能互推）：
+  - `{"env": "sandbox"}` → `api.sandbox.push.apple.com`
+  - `{"env": "production"}` → `api.push.apple.com`
+- 410 / `BadDeviceToken` / `Unregistered` 返 `expired_token=True`，dispatcher 调用方 DELETE row
 
-### 4. FCM 实现（`backend/fcm.py`） ⏳ 待实现
+### 5. FCM provider（`backend/push/fcm_provider.py`）⏳ 待实现
 
-- 服务账号 JSON 存 `/etc/fcm/service-account.json`，不进 git
-- 用 `google-auth` + `httpx` POST 到 `https://fcm.googleapis.com/v1/projects/<project>/messages:send`
+预期实现：
+- 服务账号 JSON 存 `/etc/fcm/service-account.json`
+- `google-auth` + `httpx` POST 到 `https://fcm.googleapis.com/v1/projects/<project>/messages:send`
 - payload: `{message: {token, notification: {title, body}, data: {...}}}`
+- `meta.app_id` 多 applicationId 时按这个选 service account（dev/release flavor）
 
-### 5. geTui 实现（`backend/getui.py`） ⏳ 待实现
+### 6. geTui provider（`backend/push/getui_provider.py`）⏳ 待实现
 
-- AppID/AppKey/MasterSecret 存 `.env`（geTui 没有像 .p8 那样的高权限私钥，secret 进 .env 即可）
+预期实现：
+- AppID/AppKey/MasterSecret 存 `.env`
 - 先调 `/auth_sign` 拿短期 token（24h）
-- 再调 `/push/single/cid` 推单设备
-- 设备绑定时上报 `clientID`（geTui 自己生成的设备标识，不是 APNs deviceToken）
+- `/push/single/cid` 推单设备，`token` 字段实际是 geTui 自己生成的 `clientID`
+- `meta.vendor` 可指定厂商通道（huawei/xiaomi/oppo/vivo）
 
-### 6. 设备 token 表（`device_tokens`） ✅ 已完成
+### 7. 客户端上报 token（`lib/im/apns_service.dart` + iOS native）
 
-```sql
-CREATE TABLE device_tokens (
-  user_id    TEXT NOT NULL,        -- Supabase user UUID（带 hyphen）
-  platform   TEXT NOT NULL,        -- 'ios' | 'android' | 'android-intl'
-  token      TEXT NOT NULL,        -- APNs hex / FCM token / geTui clientID
-  bundle_id  TEXT,                 -- iOS bundle ID 或 Android package
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (user_id, platform, token)
-);
-CREATE INDEX idx_device_tokens_user_id ON device_tokens (user_id);
+注册流程：
+1. 登录成功后 `IMService` 调 `ApnsService.instance.start()`（iOS only）
+2. 弹通知权限 → `registerForRemoteNotifications`
+3. iOS native `AppDelegate.swift` 在 `didRegisterForRemoteNotificationsWithDeviceToken` 回调里：
+   - hex 化 deviceToken
+   - **调 `detectApsEnvironment()` 真实读 entitlement**（见下文坑）
+   - 用 MethodChannel 把 `{token, env}` 发给 Dart
+4. Dart 把 `'development'` 规约成 `'sandbox'`，POST `/api/im/push_token`：
+   ```json
+   { "channel": "apns", "token": "<hex>", "meta": {"env": "sandbox"|"production"} }
+   ```
+
+注销流程（logout / 切账号）：
+1. `ApnsService.instance.unregister()`：DELETE `/api/im/push_token` 删后端 row + 清 `_started`/`_lastUploadedToken`
+2. 必须在 `AuthService._clearLocal()` / `SharedPreferences.clear()` **之前**做，否则 access_token 没了后端鉴权拒掉
+
+### 8. iOS 端 env 探测的坑（`AppDelegate.swift`）
+
+**不能用 `kReleaseMode` / `#if DEBUG`** —— TF 也是 release mode，但 APNs env 是 production。
+**不能用 sandbox/production receipt URL** —— TF 是 sandbox receipt 但 APNs 要 production。
+
+正确做法分两路：
+
+```swift
+private static func detectApsEnvironment() -> String {
+  #if targetEnvironment(simulator)
+  // iOS 16+ 模拟器能拿真 APNs token 走 sandbox，但 bundle 里没 mobileprovision，
+  // 不能让兜底落到 production（曾踩此坑：sim 注册成 production → BadDeviceToken → 自愈删 row）
+  return "development"
+  #else
+  // 真机：从 embedded.mobileprovision 解 Entitlements.aps-environment
+  // dev/ad-hoc/enterprise/AppStore 都有这文件，里头的 aps-environment 就是 APNs 实际环境
+  // 文件读不到时兜底 "production"（合理：上架包不可能是 sandbox）
+  guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+        let data = try? Data(contentsOf: url) else { return "production" }
+  // 解 PKCS#7 容器里嵌入的 plist，读 Entitlements["aps-environment"]
+  ...
+  #endif
+}
 ```
 
-复合主键 `(user_id, platform, token)` 允许同一用户多设备（一台 iPhone + 一台 Android），UPSERT 幂等。
+### 9. 后端注销接口（`DELETE /api/im/push_token`）
 
-### 7. 客户端上报 token（`lib/im/apns_service.dart` 等）
+```
+DELETE /api/im/push_token
+Authorization: Bearer <access_token>
+Body: { "channel": "apns", "token": "<token>" }
+```
 
-- 登录成功后调 `ApnsService.start()`（iOS）/ `FcmService.start()`（Android，待实现）
-- 拿到 token → POST `/api/im/push_token` `{platform, token}` 入库
-- 已有 `_lastUploadedToken` dedup，同一 token 不重复上传
+精确删 `(user_id, channel, token)` 一行。幂等。`user_id` 来自鉴权，所以**只能删自己 user 的 row**，不会误炸别人。
 
-## 后续扩展点
+为啥需要：之前没接这个，同一台 sim 先后登过两个账号会留下两条 row（同 token + 不同 user_id）。结果 user A 离线时被发消息，本来推到这台设备的 user A 推送，会同时也推到这台设备显示成 user B 的消息（即使 B 早就登出）。
 
-- [ ] 添加 `backend/fcm.py` + Flutter Firebase 集成
-- [ ] 添加 `backend/getui.py` + 客户端 geTui SDK 集成
-- [ ] 推送内容增加业务字段：`{conversation_id, message_id}`，让 iOS Notification Service Extension / Android NotificationListener 能跳转到具体会话
-- [ ] 推送限流：同一对话短时间多条消息合并（用 APNs `apns-collapse-id`，FCM `collapse_key`，geTui `transmissionContent`）—— 已在 `apns.py` 实现 collapse_id，其他两家照做
-- [ ] 推送统计：写一张 `push_log` 表记录每条推送的 status，方便排查 token 失效率
-- [ ] 用户级开关：用户可以在 app 里关闭某些类型的推送（@消息 / 群消息 / 静音对话），后端在 ④ 之后加一层过滤
+## 测试矩阵
+
+每个组合都应该通：
+
+| 发送端 | 接收端 | 预期 |
+|--------|--------|------|
+| Xcode dev sim → | Xcode dev sim | sandbox→sandbox ✅ |
+| Xcode dev sim → | TF 真机 | sandbox→production ✅ |
+| TF 真机 → | Xcode dev sim | production→sandbox ✅ |
+| TF 真机 → | TF 真机 | production→production ✅ |
+| AppStore 真机 → | TF 真机 | production→production ✅ |
+
+发送端的版本/通道**不影响**接收端的推送 —— 后端只看接收端那条 row 的 `meta.env`。
 
 ## 配置参考
 
-`backend/config.py` 里的相关常量：
+`backend/config.py`：
 
 ```python
 # OpenIM webhook 共享密钥
-OPENIM_WEBHOOK_SECRET = os.environ.get("OPENIM_WEBHOOK_SECRET", "openIM_webhook_secret_2026_dev")
+OPENIM_WEBHOOK_SECRET = os.environ.get("OPENIM_WEBHOOK_SECRET", "...")
 
-# APNs（仅 iOS）
+# APNs（iOS）
 APNS_KEY_PATH = "/etc/apns/AuthKey_8NM9U7CJCJ.p8"
 APNS_KEY_ID   = "8NM9U7CJCJ"
 APNS_TEAM_ID  = "5CD2U23TPH"
 APNS_BUNDLE_ID = "dapangyu.fish.myapp"
-APNS_USE_SANDBOX = True   # dev/TestFlight 用 sandbox，App Store 上线版改 false
+
+# 老兜底 flag —— 仅当 device_tokens row 的 meta 里没 env 字段时启用（迁移完成后这条
+# 路径应该走不到，因为新代码注册时一定带 meta.env）
+APNS_USE_SANDBOX = True
 
 # FCM（待加）
-FCM_SERVICE_ACCOUNT_PATH = "/etc/fcm/service-account.json"
-FCM_PROJECT_ID = "..."
+# FCM_SERVICE_ACCOUNT_PATH = "/etc/fcm/service-account.json"
 
 # geTui（待加）
-GETUI_APP_ID = "..."
-GETUI_APP_KEY = "..."
-GETUI_MASTER_SECRET = "..."
+# GETUI_APP_ID = "..."
+# GETUI_APP_KEY = "..."
+# GETUI_MASTER_SECRET = "..."
 ```
 
 ## 排查清单
 
 收件人没收到推送时：
 
-1. 后端日志看有没有 `/api/im/after_send_msg` 请求进来
-   - 没有 → OpenIM 那边问题：
-     - 检查 `webhooks.yml` 里 `afterSendSingleMsg.enable: true`
-     - `docker logs openim-server | grep webhook`
-2. 有请求进来，但分支走了"在线"
-   - 接收方真的离线吗？前台 / 刚划掉几秒内 OpenIM 还判定 online
-   - 划掉 app + 等 30 秒后再发
-3. 走了离线分支，但 device_tokens 表里没记录
-   - 客户端 token 上报流程出问题，看 `[APNs] device token 已上传后端` 日志
-4. 有 token，但 APNs 推送失败
-   - 后端日志会有 `[APNs] ❌ 推送失败 status=...`
-   - 410/BadDeviceToken：token 过期，已自动清理
-   - 403：`.p8` / Team ID / Bundle ID 配置不对
-   - 网络问题：服务器到 `api.sandbox.push.apple.com` 不通
+1. **后端有没有 `/api/im/after_send_msg` 请求进来**
+   - 没有 → OpenIM 那边问题：检查 `webhooks.yml` `afterSendSingleMsg.enable: true`；`docker logs openim-server | grep webhook`
+2. **请求进来了，但走了"在线"分支**
+   - 接收方真的离线吗？前台 / 刚划掉几秒内 OpenIM 还判定 online；划掉 app + 等 30 秒
+3. **走了离线分支，但 `device_tokens` 表里没记录**
+   - 客户端 token 上报失败：看 `[APNs] device token 已上传 (env=...)` 日志，没有就检查 `/api/im/push_token` 请求
+4. **有 token，但推送失败**
+   - 后端日志 `[APNs] ❌ 推送失败 env=... status=... reason=...`
+   - `400 BadDeviceToken` → token 跟 env 对不上（最常见：sim 错注册成 production）；自愈逻辑会删 row，让客户端下次启动重新注册
+   - `403` → `.p8` / Team ID / Bundle ID 配置不对
+   - `410 Unregistered` → token 失效（用户卸载 app 等），自愈删
+5. **DB 里同一 token 出现在多个 user 下**
+   - 历史污染（早期版本登出没清 token）。新版 `unregister()` 已修；存量数据可以用 SQL 按 `updated_at` 取最新者保留：
+   ```sql
+   DELETE FROM device_tokens dt
+   WHERE EXISTS (
+     SELECT 1 FROM device_tokens dt2
+     WHERE dt2.channel = dt.channel AND dt2.token = dt.token
+       AND dt2.user_id <> dt.user_id AND dt2.updated_at > dt.updated_at
+   );
+   ```
+
+## 后续扩展点
+
+- [ ] `backend/push/fcm_provider.py` + Flutter Firebase 集成（Android 海外）
+- [ ] `backend/push/getui_provider.py` + 客户端 geTui SDK 集成（Android 国内）
+- [ ] APNs VoIP / Live Activity（独立 channel，独立 .p8 也独立 push-type）
+- [ ] iOS Notification Service Extension：从 `custom.conversation_id` 跳到具体会话
+- [ ] 用户级开关：app 内可关闭某些类型推送（@消息 / 群消息 / 静音对话）
+- [ ] `push_log` 表记录每条推送的 status，方便查 token 失效率 / 通道送达率

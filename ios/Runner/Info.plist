@@ -24,6 +24,11 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- 加密合规声明：app 只用 HTTPS/TLS 等系统自带的"豁免"加密（exempt encryption），
+	     没有自带任何专有加密算法。声明 false 后 App Store Connect 上传时不再询问加密问题，
+	     也不需要 ERN/CCATS。改动加密能力时记得回来重新审视这个值 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
