@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.2.6",
+    "version": "0.2.7",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.2.6: 抓 loop.id 到 vars，bisect 路径模板",
+    "description": "match3 用 flame_game pixel + frame ease。v0.2.7: 用 jsonlogic var 抓 loop.id 证实模板失效",
     "author": "AI"
   },
   "dependencies": {},
@@ -1462,7 +1462,9 @@
                                 "call": "@set",
                                 "args": {
                                   "var": "vars._captured_id",
-                                  "value": "{{ loop.id }}"
+                                  "value": {
+                                    "var": "loop.id"
+                                  }
                                 }
                               },
                               {
