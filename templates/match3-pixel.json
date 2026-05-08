@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.2: emoji 渲染 + 格子线 + 选中高亮 + tap 调试计数",
+    "description": "match3 用 flame_game pixel + frame ease。v0.2.1: marker 金色修正 + 三段诊断计数",
     "author": "AI"
   },
   "dependencies": {},
@@ -51,9 +51,9 @@
             "children": [
               {
                 "type": "text",
-                "value": "Tap 触发次数: {{ global.tap_count }}（验证 input 是否生效）",
+                "value": "诊断 score: {{ global.tap_count }}（tap+1 / swap-frame+1000 / 命中带 target 的 entity+1）",
                 "style": {
-                  "fontSize": 14,
+                  "fontSize": 13,
                   "color": "#A8DADC"
                 }
               }
@@ -859,7 +859,7 @@
                                         ],
                                         "render": {
                                           "shape": "rect",
-                                          "color": "#FFD70044",
+                                          "color": "#44FFD700",
                                           "radius": 8
                                         }
                                       }
@@ -1293,7 +1293,7 @@
                                               ],
                                               "render": {
                                                 "shape": "rect",
-                                                "color": "#FFD70044",
+                                                "color": "#44FFD700",
                                                 "radius": 8
                                               }
                                             }
@@ -1327,6 +1327,12 @@
                       },
                       "then": [
                         {
+                          "call": "@score.add",
+                          "args": {
+                            "n": 1000
+                          }
+                        },
+                        {
                           "call": "@set",
                           "args": {
                             "var": "vars._any_moving",
@@ -1359,6 +1365,12 @@
                                     ]
                                   },
                                   "then": [
+                                    {
+                                      "call": "@score.add",
+                                      "args": {
+                                        "n": 1
+                                      }
+                                    },
                                     {
                                       "call": "@set",
                                       "args": {
