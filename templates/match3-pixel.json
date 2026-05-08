@@ -4,16 +4,15 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.2.7",
+    "version": "0.3.0",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.2.7: 用 jsonlogic var 抓 loop.id 证实模板失效",
+    "description": "match3 用 flame_game pixel + frame ease。v0.3.0: 修通 swap 滑动动画（绕开 {{ loop.id }} 模板 bug）",
     "author": "AI"
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "score": 0,
-      "tap_count": 0
+      "score": 0
     },
     "functions": {
       "handleScore": {
@@ -24,7 +23,7 @@
           {
             "call": "@set",
             "args": {
-              "var": "global.tap_count",
+              "var": "global.score",
               "value": "{{ params.score }}"
             }
           }
@@ -51,10 +50,11 @@
             "children": [
               {
                 "type": "text",
-                "value": "诊断 score: {{ global.tap_count }}（tap+1 / swap-frame+1000 / 命中带 target 的 entity+1）",
+                "value": "得分: {{ global.score }}",
                 "style": {
-                  "fontSize": 13,
-                  "color": "#A8DADC"
+                  "fontSize": 16,
+                  "color": "#A8DADC",
+                  "fontWeight": "bold"
                 }
               }
             ]
@@ -176,10 +176,7 @@
                 "_mk_r": 0,
                 "_any_moving": false,
                 "_t": null,
-                "_verify": null,
-                "_frame_check": null,
-                "_captured_id": "",
-                "_t_via_cap": null,
+                "_cap": "",
                 "_cur_x": 0,
                 "_cur_y": 0,
                 "_tx": 0,
@@ -612,12 +609,6 @@
               "input": {
                 "tap": [
                   {
-                    "call": "@score.add",
-                    "args": {
-                      "n": 1
-                    }
-                  },
-                  {
                     "call": "@if",
                     "args": {
                       "cond": {
@@ -1045,27 +1036,6 @@
                                             }
                                           },
                                           {
-                                            "call": "@if",
-                                            "args": {
-                                              "cond": {
-                                                "!=": [
-                                                  {
-                                                    "var": "vars._uid_a"
-                                                  },
-                                                  ""
-                                                ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "call": "@score.add",
-                                                  "args": {
-                                                    "n": 100000
-                                                  }
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          {
                                             "call": "@set",
                                             "args": {
                                               "var": "vars._a_c",
@@ -1187,36 +1157,6 @@
                                                       "var": "vars.cell_size"
                                                     }
                                                   ]
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          {
-                                            "call": "@set",
-                                            "args": {
-                                              "var": "vars._verify",
-                                              "value": {
-                                                "var": "vars.targets.{{ vars._uid_a }}"
-                                              }
-                                            }
-                                          },
-                                          {
-                                            "call": "@if",
-                                            "args": {
-                                              "cond": {
-                                                "!=": [
-                                                  {
-                                                    "var": "vars._verify"
-                                                  },
-                                                  null
-                                                ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "call": "@score.add",
-                                                  "args": {
-                                                    "n": 200000
-                                                  }
                                                 }
                                               ]
                                             }
@@ -1382,42 +1322,6 @@
                       },
                       "then": [
                         {
-                          "call": "@score.add",
-                          "args": {
-                            "n": 1000
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars._frame_check",
-                            "value": {
-                              "var": "vars.targets.{{ vars._uid_a }}"
-                            }
-                          }
-                        },
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              "!=": [
-                                {
-                                  "var": "vars._frame_check"
-                                },
-                                null
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@score.add",
-                                "args": {
-                                  "n": 50000
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        {
                           "call": "@set",
                           "args": {
                             "var": "vars._any_moving",
@@ -1430,92 +1334,12 @@
                             "where_prefix": "g",
                             "do": [
                               {
-                                "call": "@score.add",
-                                "args": {
-                                  "n": 10
-                                }
-                              },
-                              {
-                                "call": "@if",
-                                "args": {
-                                  "cond": {
-                                    "==": [
-                                      {
-                                        "var": "loop.id"
-                                      },
-                                      {
-                                        "var": "vars._uid_a"
-                                      }
-                                    ]
-                                  },
-                                  "then": [
-                                    {
-                                      "call": "@score.add",
-                                      "args": {
-                                        "n": 5
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
                                 "call": "@set",
                                 "args": {
-                                  "var": "vars._captured_id",
+                                  "var": "vars._cap",
                                   "value": {
                                     "var": "loop.id"
                                   }
-                                }
-                              },
-                              {
-                                "call": "@if",
-                                "args": {
-                                  "cond": {
-                                    "!=": [
-                                      {
-                                        "var": "vars._captured_id"
-                                      },
-                                      ""
-                                    ]
-                                  },
-                                  "then": [
-                                    {
-                                      "call": "@score.add",
-                                      "args": {
-                                        "n": 30
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars._t_via_cap",
-                                  "value": {
-                                    "var": "vars.targets.{{ vars._captured_id }}"
-                                  }
-                                }
-                              },
-                              {
-                                "call": "@if",
-                                "args": {
-                                  "cond": {
-                                    "!=": [
-                                      {
-                                        "var": "vars._t_via_cap"
-                                      },
-                                      null
-                                    ]
-                                  },
-                                  "then": [
-                                    {
-                                      "call": "@score.add",
-                                      "args": {
-                                        "n": 7
-                                      }
-                                    }
-                                  ]
                                 }
                               },
                               {
@@ -1523,7 +1347,7 @@
                                 "args": {
                                   "var": "vars._t",
                                   "value": {
-                                    "var": "vars.targets.{{ loop.id }}"
+                                    "var": "vars.targets.{{ vars._cap }}"
                                   }
                                 }
                               },
@@ -1539,12 +1363,6 @@
                                     ]
                                   },
                                   "then": [
-                                    {
-                                      "call": "@score.add",
-                                      "args": {
-                                        "n": 1
-                                      }
-                                    },
                                     {
                                       "call": "@set",
                                       "args": {
@@ -1693,7 +1511,7 @@
                                           {
                                             "call": "@pixel.set_position",
                                             "args": {
-                                              "id": "{{ loop.id }}",
+                                              "id": "{{ vars._cap }}",
                                               "position": [
                                                 {
                                                   "var": "vars._tx"
@@ -1707,7 +1525,7 @@
                                           {
                                             "call": "@set",
                                             "args": {
-                                              "var": "vars.targets.{{ loop.id }}",
+                                              "var": "vars.targets.{{ vars._cap }}",
                                               "value": null
                                             }
                                           }
@@ -1716,7 +1534,7 @@
                                           {
                                             "call": "@pixel.set_position",
                                             "args": {
-                                              "id": "{{ loop.id }}",
+                                              "id": "{{ vars._cap }}",
                                               "position": [
                                                 {
                                                   "+": [
