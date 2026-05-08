@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.2.4",
+    "version": "0.2.5",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.2.4: 加 for_each 迭代计数(+10) 和 id 匹配检查(+5)",
+    "description": "match3 用 flame_game pixel + frame ease。v0.2.5: 在 frame 开头读 targets[_uid_a] 跨帧验证 +50000",
     "author": "AI"
   },
   "dependencies": {},
@@ -177,6 +177,7 @@
                 "_any_moving": false,
                 "_t": null,
                 "_verify": null,
+                "_frame_check": null,
                 "_cur_x": 0,
                 "_cur_y": 0,
                 "_tx": 0,
@@ -1382,6 +1383,36 @@
                           "call": "@score.add",
                           "args": {
                             "n": 1000
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._frame_check",
+                            "value": {
+                              "var": "vars.targets.{{ vars._uid_a }}"
+                            }
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!=": [
+                                {
+                                  "var": "vars._frame_check"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@score.add",
+                                "args": {
+                                  "n": 50000
+                                }
+                              }
+                            ]
                           }
                         },
                         {
