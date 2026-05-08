@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-game",
     "displayName": "宝石消消乐",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "type": "app",
-    "description": "经典消消乐 — 交换相邻宝石，三连即可消除。1.1.1: 修 processBoard 不收敛 + cascade 加 500ms 视觉间隔。",
+    "description": "经典消消乐 — 交换相邻宝石，三连即可消除。1.1.2: findMatches 用独立临时变量避免污染 checkGameOver 的循环索引。",
     "author": "AI"
   },
   "dependencies": {
@@ -34,7 +34,11 @@
       "_fillIdx": 0,
       "_diff": 0,
       "_r1": 0,
-      "_r2": 0
+      "_r2": 0,
+      "_fm_i": 0,
+      "_fm_i1": 0,
+      "_fm_i2": 0,
+      "_fm_v": 0
     },
     "functions": {
       "initGame": {
@@ -510,7 +514,7 @@
           {
             "call": "@set",
             "args": {
-              "var": "global._i",
+              "var": "global._fm_i",
               "value": 0
             }
           },
@@ -520,7 +524,7 @@
               "condition": {
                 "<": [
                   {
-                    "var": "global._i"
+                    "var": "global._fm_i"
                   },
                   64
                 ]
@@ -535,7 +539,7 @@
                         {
                           "%": [
                             {
-                              "var": "global._i"
+                              "var": "global._fm_i"
                             },
                             8
                           ]
@@ -547,11 +551,11 @@
                       {
                         "call": "@set",
                         "args": {
-                          "var": "global._i1",
+                          "var": "global._fm_i1",
                           "value": {
                             "+": [
                               {
-                                "var": "global._i"
+                                "var": "global._fm_i"
                               },
                               1
                             ]
@@ -561,11 +565,11 @@
                       {
                         "call": "@set",
                         "args": {
-                          "var": "global._i2",
+                          "var": "global._fm_i2",
                           "value": {
                             "+": [
                               {
-                                "var": "global._i"
+                                "var": "global._fm_i"
                               },
                               2
                             ]
@@ -575,9 +579,9 @@
                       {
                         "call": "@set",
                         "args": {
-                          "var": "global._v",
+                          "var": "global._fm_v",
                           "value": {
-                            "var": "global.board.{{ global._i }}"
+                            "var": "global.board.{{ global._fm_i }}"
                           }
                         }
                       },
@@ -589,7 +593,7 @@
                               {
                                 "!=": [
                                   {
-                                    "var": "global._v"
+                                    "var": "global._fm_v"
                                   },
                                   -1
                                 ]
@@ -597,20 +601,20 @@
                               {
                                 "==": [
                                   {
-                                    "var": "global._v"
+                                    "var": "global._fm_v"
                                   },
                                   {
-                                    "var": "global.board.{{ global._i1 }}"
+                                    "var": "global.board.{{ global._fm_i1 }}"
                                   }
                                 ]
                               },
                               {
                                 "==": [
                                   {
-                                    "var": "global._v"
+                                    "var": "global._fm_v"
                                   },
                                   {
-                                    "var": "global.board.{{ global._i2 }}"
+                                    "var": "global.board.{{ global._fm_i2 }}"
                                   }
                                 ]
                               }
@@ -621,21 +625,21 @@
                               "call": "@list_add",
                               "args": {
                                 "var": "global._matchList",
-                                "item": "{{ global._i }}"
+                                "item": "{{ global._fm_i }}"
                               }
                             },
                             {
                               "call": "@list_add",
                               "args": {
                                 "var": "global._matchList",
-                                "item": "{{ global._i1 }}"
+                                "item": "{{ global._fm_i1 }}"
                               }
                             },
                             {
                               "call": "@list_add",
                               "args": {
                                 "var": "global._matchList",
-                                "item": "{{ global._i2 }}"
+                                "item": "{{ global._fm_i2 }}"
                               }
                             },
                             {
@@ -655,12 +659,12 @@
                   "expression": {
                     "+": [
                       {
-                        "var": "global._i"
+                        "var": "global._fm_i"
                       },
                       1
                     ]
                   },
-                  "assign": "global._i"
+                  "assign": "global._fm_i"
                 }
               ]
             }
@@ -668,7 +672,7 @@
           {
             "call": "@set",
             "args": {
-              "var": "global._i",
+              "var": "global._fm_i",
               "value": 0
             }
           },
@@ -678,7 +682,7 @@
               "condition": {
                 "<": [
                   {
-                    "var": "global._i"
+                    "var": "global._fm_i"
                   },
                   48
                 ]
@@ -688,11 +692,11 @@
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global._i1",
+                    "var": "global._fm_i1",
                     "value": {
                       "+": [
                         {
-                          "var": "global._i"
+                          "var": "global._fm_i"
                         },
                         8
                       ]
@@ -702,11 +706,11 @@
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global._i2",
+                    "var": "global._fm_i2",
                     "value": {
                       "+": [
                         {
-                          "var": "global._i"
+                          "var": "global._fm_i"
                         },
                         16
                       ]
@@ -716,9 +720,9 @@
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global._v",
+                    "var": "global._fm_v",
                     "value": {
-                      "var": "global.board.{{ global._i }}"
+                      "var": "global.board.{{ global._fm_i }}"
                     }
                   }
                 },
@@ -730,7 +734,7 @@
                         {
                           "!=": [
                             {
-                              "var": "global._v"
+                              "var": "global._fm_v"
                             },
                             -1
                           ]
@@ -738,20 +742,20 @@
                         {
                           "==": [
                             {
-                              "var": "global._v"
+                              "var": "global._fm_v"
                             },
                             {
-                              "var": "global.board.{{ global._i1 }}"
+                              "var": "global.board.{{ global._fm_i1 }}"
                             }
                           ]
                         },
                         {
                           "==": [
                             {
-                              "var": "global._v"
+                              "var": "global._fm_v"
                             },
                             {
-                              "var": "global.board.{{ global._i2 }}"
+                              "var": "global.board.{{ global._fm_i2 }}"
                             }
                           ]
                         }
@@ -762,21 +766,21 @@
                         "call": "@list_add",
                         "args": {
                           "var": "global._matchList",
-                          "item": "{{ global._i }}"
+                          "item": "{{ global._fm_i }}"
                         }
                       },
                       {
                         "call": "@list_add",
                         "args": {
                           "var": "global._matchList",
-                          "item": "{{ global._i1 }}"
+                          "item": "{{ global._fm_i1 }}"
                         }
                       },
                       {
                         "call": "@list_add",
                         "args": {
                           "var": "global._matchList",
-                          "item": "{{ global._i2 }}"
+                          "item": "{{ global._fm_i2 }}"
                         }
                       },
                       {
@@ -793,12 +797,12 @@
                   "expression": {
                     "+": [
                       {
-                        "var": "global._i"
+                        "var": "global._fm_i"
                       },
                       1
                     ]
                   },
-                  "assign": "global._i"
+                  "assign": "global._fm_i"
                 }
               ]
             }
