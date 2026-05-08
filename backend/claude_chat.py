@@ -116,9 +116,43 @@ def _tool_status_message(tool_name, tool_input):
         return "正在搜索网络..."
     return f"正在使用工具 {tool_name}..."
 
+
+# ────────── /tmp/ai-uploads 清理 ──────────
+# AI 在每个 session 用 mktemp 在 /tmp/ai-uploads/ 生成随机路径下载 JSON 配置（见
+# generate_app_prompt.md "获取当前应用配置"）。文件不会自己消失，需要清理。
+# 没用 cron / systemd timer——开销极低（listdir + stat 几十微秒），每次 chat 顺手扫一次
+
+_UPLOAD_DIR = "/tmp/ai-uploads"
+_UPLOAD_RETENTION_SECONDS = 86400  # 24h
+
+
+def _cleanup_old_ai_uploads() -> None:
+    """删 /tmp/ai-uploads/ 里 mtime 超过 24h 的文件，幂等且吞所有 OSError"""
+    import time
+    if not os.path.isdir(_UPLOAD_DIR):
+        return
+    cutoff = time.time() - _UPLOAD_RETENTION_SECONDS
+    deleted = 0
+    try:
+        names = os.listdir(_UPLOAD_DIR)
+    except OSError:
+        return
+    for name in names:
+        p = os.path.join(_UPLOAD_DIR, name)
+        try:
+            if os.path.isfile(p) and os.path.getmtime(p) < cutoff:
+                os.unlink(p)
+                deleted += 1
+        except OSError:
+            pass
+    if deleted:
+        logger.info(f"[chat] 清理 {_UPLOAD_DIR} 旧文件 {deleted} 个 (>24h)")
+
+
 @require_auth
 def chat():
     """纯粹的 AI 聊天接口，完全交由 Claude 自主处理（前端负责解析动作或 JSON）。"""
+    _cleanup_old_ai_uploads()
     user_id = request.supabase_user.get("id")
     role = request.user_role
 
@@ -521,6 +555,7 @@ def chat_start():
     Body: {messages, session_id, provider?}
     Resp: {session_id, status: "running"}
     """
+    _cleanup_old_ai_uploads()
     user_id = request.supabase_user.get("id")
     role = request.user_role
 

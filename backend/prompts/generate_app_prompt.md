@@ -6,16 +6,26 @@
 
 **当用户询问关于"当前应用"、"这个应用"、"我的应用"、"修改当前应用"等问题时，你需要先获取应用的配置代码才能回答。（要求每次都必须问）**
 
-用户会提供一个带签名的临时 URL（格式类似：`https://myapp-oss-endpoint.dapangyu.work/ai-chat-temp/xxx.json?X-Amz-Algorithm=...`）。
+用户会在 `[json_app_url]URL[/json_app_url]` 标签里提供一个带签名的临时 URL，
+格式类似：`https://myapp-oss-endpoint.dapangyu.work/ai-chat-temp/xxx.json?X-Amz-Algorithm=...`。
 
-**获取配置的步骤**：
-1. 使用 `Bash` 工具执行 `curl -s "完整URL"` 下载 JSON 配置（URL 包含签名参数，必须用引号包裹）
-2. 或者使用 `Read` 工具读取用户提供的 JSON 内容
+**严格按下面三步走，禁止偏离**（用 `Bash` 工具一条命令跑完整段）：
 
-**重要提示**：
-- 你可以使用 `curl` 命令下载 URL 内容，curl 工具是可用的
-- URL 包含 `?` 和 `&` 等特殊字符，必须用引号包裹：`curl -s "URL"`
-- 不要说"没有 curl"或"无法下载"，直接使用 curl 即可
+```bash
+mkdir -p /tmp/ai-uploads
+TARGET=$(mktemp /tmp/ai-uploads/app.XXXXXX.json) && echo "DOWNLOAD_TO=$TARGET"
+curl -sS --max-time 30 -o "$TARGET" "<完整URL，从 [json_app_url]…[/json_app_url] 标签里取出>"
+```
+
+`mktemp` 输出的具体路径（例如 `/tmp/ai-uploads/app.aB3xY7.json`）就是本轮的本地配置路径。
+**记下它**，后面所有读 / 改 / 校验"当前应用配置"都用这个路径，下载完后用 `Read` 工具读它即可。
+
+**严格禁止**：
+- ❌ **不要使用 `WebFetch` 工具**：这个域名走域名白名单必失败（"Unable to verify domain..."），白白浪费一轮
+- ❌ **不要使用 `wget`**：所有历史 session 实证 curl 工作得好，没必要试 wget
+- ❌ **不要写死 `/tmp/current_app.json` 这类固定路径**：多 session 并发会互相覆盖，读到别人的旧数据
+- ❌ **不要省略 mktemp 自己编随机字符**：你不擅长生成真随机，会重复或可预测
+- ❌ **不要把整段 URL 拆开**：`?` `&` 必须保留并且整个 URL 用双引号包裹
 
 **如果用户没有提供 URL**，请在回复中包含以下标记：
 ```
