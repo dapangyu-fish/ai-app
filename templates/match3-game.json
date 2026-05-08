@@ -1,0 +1,1860 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "match3-game",
+    "displayName": "宝石消消乐",
+    "version": "1.1.0",
+    "type": "app",
+    "description": "经典消消乐 — 交换相邻宝石，三连即可消除。参考 2048 模板重构。",
+    "author": "AI"
+  },
+  "dependencies": {
+    "common-ui": "^1.3.0"
+  },
+  "global": {
+    "variables": {
+      "board": [],
+      "selected": -1,
+      "score": 0,
+      "bestScore": 0,
+      "moves": 0,
+      "gameOver": false,
+      "_i": 0,
+      "_i1": 0,
+      "_i2": 0,
+      "_v": 0,
+      "_hasMatch": false,
+      "_matchList": [],
+      "_col": 0,
+      "_row": 0,
+      "_colVals": [],
+      "_colLen": 0,
+      "_emptyCount": 0,
+      "_fillIdx": 0,
+      "_diff": 0,
+      "_r1": 0,
+      "_r2": 0
+    },
+    "functions": {
+      "initGame": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.selected",
+              "value": -1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.moves",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.gameOver",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.board",
+              "value": []
+            }
+          },
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 64,
+              "body": [
+                {
+                  "call": "@random",
+                  "args": {
+                    "min": 0,
+                    "max": 5
+                  },
+                  "assign": "global._v"
+                },
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.board",
+                    "item": "{{ global._v }}"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@global.processBoard",
+            "args": {}
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.moves",
+              "value": 0
+            }
+          }
+        ]
+      },
+      "onTapGem": {
+        "params": [
+          "idx"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.gameOver"
+              },
+              "then": [],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global.selected"
+                        },
+                        -1
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.selected",
+                          "value": "{{ params.idx }}"
+                        }
+                      },
+                      {
+                        "call": "@common-ui.showInfo",
+                        "args": {
+                          "message": "已选中宝石，点击相邻宝石交换"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "==": [
+                              {
+                                "var": "global.selected"
+                              },
+                              {
+                                "var": "params.idx"
+                              }
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.selected",
+                                "value": -1
+                              }
+                            }
+                          ],
+                          "else": [
+                            {
+                              "call": "@global.trySwap",
+                              "args": {
+                                "a": "{{ global.selected }}",
+                                "b": "{{ params.idx }}"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "trySwap": {
+        "params": [
+          "a",
+          "b"
+        ],
+        "logic": [
+          {
+            "expression": {
+              "abs": [
+                {
+                  "-": [
+                    {
+                      "var": "params.a"
+                    },
+                    {
+                      "var": "params.b"
+                    }
+                  ]
+                }
+              ]
+            },
+            "assign": "global._diff"
+          },
+          {
+            "expression": {
+              "to_int": [
+                {
+                  "/": [
+                    {
+                      "var": "params.a"
+                    },
+                    8
+                  ]
+                }
+              ]
+            },
+            "assign": "global._r1"
+          },
+          {
+            "expression": {
+              "to_int": [
+                {
+                  "/": [
+                    {
+                      "var": "params.b"
+                    },
+                    8
+                  ]
+                }
+              ]
+            },
+            "assign": "global._r2"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._diff"
+                          },
+                          1
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._r1"
+                          },
+                          {
+                            "var": "global._r2"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "==": [
+                      {
+                        "var": "global._diff"
+                      },
+                      8
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@global.doSwap",
+                  "args": {
+                    "a": "{{ params.a }}",
+                    "b": "{{ params.b }}"
+                  }
+                },
+                {
+                  "expression": {
+                    "+": [
+                      {
+                        "var": "global.moves"
+                      },
+                      1
+                    ]
+                  },
+                  "assign": "global.moves"
+                },
+                {
+                  "call": "@global.findMatches",
+                  "args": {}
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "var": "global._hasMatch"
+                    },
+                    "then": [
+                      {
+                        "call": "@global.eliminateCascade",
+                        "args": {}
+                      },
+                      {
+                        "call": "@global.checkGameOver",
+                        "args": {}
+                      },
+                      {
+                        "call": "@common-ui.showSuccess",
+                        "args": {
+                          "message": "消除成功！"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@global.doSwap",
+                        "args": {
+                          "a": "{{ params.a }}",
+                          "b": "{{ params.b }}"
+                        }
+                      },
+                      {
+                        "expression": {
+                          "-": [
+                            {
+                              "var": "global.moves"
+                            },
+                            1
+                          ]
+                        },
+                        "assign": "global.moves"
+                      },
+                      {
+                        "call": "@common-ui.showError",
+                        "args": {
+                          "message": "无法消除，请重新选择"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.selected",
+                    "value": -1
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.selected",
+                    "value": "{{ params.b }}"
+                  }
+                },
+                {
+                  "call": "@common-ui.showInfo",
+                  "args": {
+                    "message": "已选中宝石，点击相邻宝石交换"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "doSwap": {
+        "params": [
+          "a",
+          "b"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._v",
+              "value": {
+                "var": "global.board.{{ params.a }}"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.board.{{ params.a }}",
+              "value": {
+                "var": "global.board.{{ params.b }}"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.board.{{ params.b }}",
+              "value": "{{ global._v }}"
+            }
+          }
+        ]
+      },
+      "processBoard": {
+        "logic": [
+          {
+            "call": "@global.findMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.removeMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.applyGravityAndFill",
+            "args": {}
+          },
+          {
+            "call": "@global.findMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.removeMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.applyGravityAndFill",
+            "args": {}
+          },
+          {
+            "call": "@global.findMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.removeMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.applyGravityAndFill",
+            "args": {}
+          },
+          {
+            "call": "@global.findMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.removeMatches",
+            "args": {}
+          },
+          {
+            "call": "@global.applyGravityAndFill",
+            "args": {}
+          }
+        ]
+      },
+      "eliminateCascade": {
+        "logic": [
+          {
+            "call": "@while",
+            "args": {
+              "condition": {
+                "var": "global._hasMatch"
+              },
+              "max_iterations": 50,
+              "body": [
+                {
+                  "call": "@global.removeMatches",
+                  "args": {}
+                },
+                {
+                  "call": "@global.applyGravityAndFill",
+                  "args": {}
+                },
+                {
+                  "call": "@global.findMatches",
+                  "args": {}
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "findMatches": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._matchList",
+              "value": []
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._hasMatch",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._i",
+              "value": 0
+            }
+          },
+          {
+            "call": "@while",
+            "args": {
+              "condition": {
+                "<": [
+                  {
+                    "var": "global._i"
+                  },
+                  64
+                ]
+              },
+              "max_iterations": 100,
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "<": [
+                        {
+                          "%": [
+                            {
+                              "var": "global._i"
+                            },
+                            8
+                          ]
+                        },
+                        6
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._i1",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global._i"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._i2",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global._i"
+                              },
+                              2
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._v",
+                          "value": {
+                            "var": "global.board.{{ global._i }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "and": [
+                              {
+                                "!=": [
+                                  {
+                                    "var": "global._v"
+                                  },
+                                  -1
+                                ]
+                              },
+                              {
+                                "==": [
+                                  {
+                                    "var": "global._v"
+                                  },
+                                  {
+                                    "var": "global.board.{{ global._i1 }}"
+                                  }
+                                ]
+                              },
+                              {
+                                "==": [
+                                  {
+                                    "var": "global._v"
+                                  },
+                                  {
+                                    "var": "global.board.{{ global._i2 }}"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@list_add",
+                              "args": {
+                                "var": "global._matchList",
+                                "item": "{{ global._i }}"
+                              }
+                            },
+                            {
+                              "call": "@list_add",
+                              "args": {
+                                "var": "global._matchList",
+                                "item": "{{ global._i1 }}"
+                              }
+                            },
+                            {
+                              "call": "@list_add",
+                              "args": {
+                                "var": "global._matchList",
+                                "item": "{{ global._i2 }}"
+                              }
+                            },
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global._hasMatch",
+                                "value": true
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "expression": {
+                    "+": [
+                      {
+                        "var": "global._i"
+                      },
+                      1
+                    ]
+                  },
+                  "assign": "global._i"
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._i",
+              "value": 0
+            }
+          },
+          {
+            "call": "@while",
+            "args": {
+              "condition": {
+                "<": [
+                  {
+                    "var": "global._i"
+                  },
+                  48
+                ]
+              },
+              "max_iterations": 100,
+              "body": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._i1",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global._i"
+                        },
+                        8
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._i2",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global._i"
+                        },
+                        16
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._v",
+                    "value": {
+                      "var": "global.board.{{ global._i }}"
+                    }
+                  }
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "and": [
+                        {
+                          "!=": [
+                            {
+                              "var": "global._v"
+                            },
+                            -1
+                          ]
+                        },
+                        {
+                          "==": [
+                            {
+                              "var": "global._v"
+                            },
+                            {
+                              "var": "global.board.{{ global._i1 }}"
+                            }
+                          ]
+                        },
+                        {
+                          "==": [
+                            {
+                              "var": "global._v"
+                            },
+                            {
+                              "var": "global.board.{{ global._i2 }}"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@list_add",
+                        "args": {
+                          "var": "global._matchList",
+                          "item": "{{ global._i }}"
+                        }
+                      },
+                      {
+                        "call": "@list_add",
+                        "args": {
+                          "var": "global._matchList",
+                          "item": "{{ global._i1 }}"
+                        }
+                      },
+                      {
+                        "call": "@list_add",
+                        "args": {
+                          "var": "global._matchList",
+                          "item": "{{ global._i2 }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._hasMatch",
+                          "value": true
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "expression": {
+                    "+": [
+                      {
+                        "var": "global._i"
+                      },
+                      1
+                    ]
+                  },
+                  "assign": "global._i"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "removeMatches": {
+        "logic": [
+          {
+            "call": "@for_each",
+            "args": {
+              "source": {
+                "var": "global._matchList"
+              },
+              "body": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.board.{{ loop.item }}",
+                    "value": -1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._v",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._i",
+              "value": 0
+            }
+          },
+          {
+            "call": "@while",
+            "args": {
+              "condition": {
+                "<": [
+                  {
+                    "var": "global._i"
+                  },
+                  64
+                ]
+              },
+              "max_iterations": 100,
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global.board.{{ global._i }}"
+                        },
+                        -1
+                      ]
+                    },
+                    "then": [
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._v"
+                            },
+                            1
+                          ]
+                        },
+                        "assign": "global._v"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "expression": {
+                    "+": [
+                      {
+                        "var": "global._i"
+                      },
+                      1
+                    ]
+                  },
+                  "assign": "global._i"
+                }
+              ]
+            }
+          },
+          {
+            "expression": {
+              "+": [
+                {
+                  "var": "global.score"
+                },
+                {
+                  "*": [
+                    {
+                      "var": "global._v"
+                    },
+                    10
+                  ]
+                }
+              ]
+            },
+            "assign": "global.score"
+          }
+        ]
+      },
+      "applyGravityAndFill": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._col",
+              "value": 0
+            }
+          },
+          {
+            "call": "@while",
+            "args": {
+              "condition": {
+                "<": [
+                  {
+                    "var": "global._col"
+                  },
+                  8
+                ]
+              },
+              "max_iterations": 200,
+              "body": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._colVals",
+                    "value": []
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._row",
+                    "value": 0
+                  }
+                },
+                {
+                  "call": "@while",
+                  "args": {
+                    "condition": {
+                      "<": [
+                        {
+                          "var": "global._row"
+                        },
+                        8
+                      ]
+                    },
+                    "max_iterations": 100,
+                    "body": [
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._col"
+                            },
+                            {
+                              "*": [
+                                {
+                                  "var": "global._row"
+                                },
+                                8
+                              ]
+                            }
+                          ]
+                        },
+                        "assign": "global._i"
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._v",
+                          "value": {
+                            "var": "global.board.{{ global._i }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "!=": [
+                              {
+                                "var": "global._v"
+                              },
+                              -1
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@list_add",
+                              "args": {
+                                "var": "global._colVals",
+                                "item": "{{ global._v }}"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._row"
+                            },
+                            1
+                          ]
+                        },
+                        "assign": "global._row"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@list_length",
+                  "args": {
+                    "value": {
+                      "var": "global._colVals"
+                    }
+                  },
+                  "assign": "global._colLen"
+                },
+                {
+                  "expression": {
+                    "-": [
+                      8,
+                      {
+                        "var": "global._colLen"
+                      }
+                    ]
+                  },
+                  "assign": "global._emptyCount"
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._row",
+                    "value": 0
+                  }
+                },
+                {
+                  "call": "@while",
+                  "args": {
+                    "condition": {
+                      "<": [
+                        {
+                          "var": "global._row"
+                        },
+                        {
+                          "var": "global._emptyCount"
+                        }
+                      ]
+                    },
+                    "max_iterations": 100,
+                    "body": [
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._col"
+                            },
+                            {
+                              "*": [
+                                {
+                                  "var": "global._row"
+                                },
+                                8
+                              ]
+                            }
+                          ]
+                        },
+                        "assign": "global._i"
+                      },
+                      {
+                        "call": "@random",
+                        "args": {
+                          "min": 0,
+                          "max": 5
+                        },
+                        "assign": "global._v"
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i }}",
+                          "value": "{{ global._v }}"
+                        }
+                      },
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._row"
+                            },
+                            1
+                          ]
+                        },
+                        "assign": "global._row"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._fillIdx",
+                    "value": 0
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global._row",
+                    "value": "{{ global._emptyCount }}"
+                  }
+                },
+                {
+                  "call": "@while",
+                  "args": {
+                    "condition": {
+                      "<": [
+                        {
+                          "var": "global._fillIdx"
+                        },
+                        {
+                          "var": "global._colLen"
+                        }
+                      ]
+                    },
+                    "max_iterations": 100,
+                    "body": [
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._col"
+                            },
+                            {
+                              "*": [
+                                {
+                                  "var": "global._row"
+                                },
+                                8
+                              ]
+                            }
+                          ]
+                        },
+                        "assign": "global._i"
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i }}",
+                          "value": {
+                            "var": "global._colVals.{{ global._fillIdx }}"
+                          }
+                        }
+                      },
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._row"
+                            },
+                            1
+                          ]
+                        },
+                        "assign": "global._row"
+                      },
+                      {
+                        "expression": {
+                          "+": [
+                            {
+                              "var": "global._fillIdx"
+                            },
+                            1
+                          ]
+                        },
+                        "assign": "global._fillIdx"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "expression": {
+                    "+": [
+                      {
+                        "var": "global._col"
+                      },
+                      1
+                    ]
+                  },
+                  "assign": "global._col"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "checkGameOver": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._i",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.gameOver",
+              "value": true
+            }
+          },
+          {
+            "call": "@while",
+            "args": {
+              "condition": {
+                "and": [
+                  {
+                    "<": [
+                      {
+                        "var": "global._i"
+                      },
+                      64
+                    ]
+                  },
+                  {
+                    "var": "global.gameOver"
+                  }
+                ]
+              },
+              "max_iterations": 200,
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "<": [
+                        {
+                          "%": [
+                            {
+                              "var": "global._i"
+                            },
+                            8
+                          ]
+                        },
+                        7
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._i1",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global._i"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._v",
+                          "value": {
+                            "var": "global.board.{{ global._i }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i }}",
+                          "value": {
+                            "var": "global.board.{{ global._i1 }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i1 }}",
+                          "value": "{{ global._v }}"
+                        }
+                      },
+                      {
+                        "call": "@global.findMatches",
+                        "args": {}
+                      },
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "var": "global._hasMatch"
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.gameOver",
+                                "value": false
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._v",
+                          "value": {
+                            "var": "global.board.{{ global._i }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i }}",
+                          "value": {
+                            "var": "global.board.{{ global._i1 }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i1 }}",
+                          "value": "{{ global._v }}"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "and": [
+                        {
+                          "<": [
+                            {
+                              "var": "global._i"
+                            },
+                            56
+                          ]
+                        },
+                        {
+                          "var": "global.gameOver"
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._i1",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global._i"
+                              },
+                              8
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._v",
+                          "value": {
+                            "var": "global.board.{{ global._i }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i }}",
+                          "value": {
+                            "var": "global.board.{{ global._i1 }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i1 }}",
+                          "value": "{{ global._v }}"
+                        }
+                      },
+                      {
+                        "call": "@global.findMatches",
+                        "args": {}
+                      },
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "var": "global._hasMatch"
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.gameOver",
+                                "value": false
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._v",
+                          "value": {
+                            "var": "global.board.{{ global._i }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i }}",
+                          "value": {
+                            "var": "global.board.{{ global._i1 }}"
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.board.{{ global._i1 }}",
+                          "value": "{{ global._v }}"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "expression": {
+                    "+": [
+                      {
+                        "var": "global._i"
+                      },
+                      1
+                    ]
+                  },
+                  "assign": "global._i"
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.gameOver"
+              },
+              "then": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      ">": [
+                        {
+                          "var": "global.score"
+                        },
+                        {
+                          "var": "global.bestScore"
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.bestScore",
+                          "value": "{{ global.score }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "newGame": {
+        "logic": [
+          {
+            "call": "@global.initGame",
+            "args": {}
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@global.initGame",
+      "args": {}
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "main",
+        "title": "宝石消消乐",
+        "layout": "column",
+        "backgroundColor": "#1A1A2E",
+        "padding": 12,
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 14,
+            "borderRadius": 14,
+            "color": "#16213E",
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "得分",
+                    "style": {
+                      "fontSize": 11,
+                      "color": "#8899AA"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.score }}",
+                    "style": {
+                      "fontSize": 28,
+                      "fontWeight": "bold",
+                      "color": "#FFD700"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "container",
+                "layout": "column",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "最佳",
+                    "style": {
+                      "fontSize": 11,
+                      "color": "#8899AA"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.bestScore }}",
+                    "style": {
+                      "fontSize": 28,
+                      "fontWeight": "bold",
+                      "color": "#FF6B6B"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "container",
+                "layout": "column",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "步数",
+                    "style": {
+                      "fontSize": 11,
+                      "color": "#8899AA"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.moves }}",
+                    "style": {
+                      "fontSize": 28,
+                      "fontWeight": "bold",
+                      "color": "#4ECDC4"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 10
+          },
+          {
+            "type": "grid",
+            "source": "{{ global.board }}",
+            "crossAxisCount": 8,
+            "spacing": 3,
+            "crossAxisSpacing": 3,
+            "mainAxisSpacing": 3,
+            "childAspectRatio": 1,
+            "shrinkWrap": true,
+            "item_template": {
+              "type": "inkwell",
+              "borderRadius": 8,
+              "onTap": {
+                "type": "call",
+                "call": "@global.onTapGem",
+                "args": {
+                  "idx": "{{ loop.index }}"
+                }
+              },
+              "child": {
+                "type": "container",
+                "color": "#252540",
+                "borderRadius": 8,
+                "children": [
+                  {
+                    "type": "center",
+                    "child": {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "container",
+                          "visible": {
+                            "and": [
+                              {
+                                "!=": [
+                                  {
+                                    "var": "global.selected"
+                                  },
+                                  -1
+                                ]
+                              },
+                              {
+                                "==": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  {
+                                    "var": "global.selected"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          "color": "#FFD70033",
+                          "borderRadius": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "🔴",
+                          "style": {
+                            "fontSize": 26
+                          },
+                          "visible": {
+                            "==": [
+                              {
+                                "var": "loop.item"
+                              },
+                              0
+                            ]
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "🟠",
+                          "style": {
+                            "fontSize": 26
+                          },
+                          "visible": {
+                            "==": [
+                              {
+                                "var": "loop.item"
+                              },
+                              1
+                            ]
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "🟡",
+                          "style": {
+                            "fontSize": 26
+                          },
+                          "visible": {
+                            "==": [
+                              {
+                                "var": "loop.item"
+                              },
+                              2
+                            ]
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "🟢",
+                          "style": {
+                            "fontSize": 26
+                          },
+                          "visible": {
+                            "==": [
+                              {
+                                "var": "loop.item"
+                              },
+                              3
+                            ]
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "🔵",
+                          "style": {
+                            "fontSize": 26
+                          },
+                          "visible": {
+                            "==": [
+                              {
+                                "var": "loop.item"
+                              },
+                              4
+                            ]
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "🟣",
+                          "style": {
+                            "fontSize": 26
+                          },
+                          "visible": {
+                            "==": [
+                              {
+                                "var": "loop.item"
+                              },
+                              5
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "container",
+            "visible": "{{ global.gameOver }}",
+            "layout": "column",
+            "padding": 16,
+            "margin": 8,
+            "borderRadius": 14,
+            "color": "#2D1B4E",
+            "children": [
+              {
+                "type": "text",
+                "value": "游戏结束",
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold",
+                  "color": "#FFD700",
+                  "textAlign": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "最终得分: {{ global.score }}",
+                "style": {
+                  "fontSize": 28,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF",
+                  "textAlign": "center"
+                }
+              },
+              {
+                "type": "text",
+                "value": "共 {{ global.moves }} 步",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#AAAAAA",
+                  "textAlign": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "button",
+                "label": "再来一局",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#6C5CE7",
+                  "textColor": "#FFFFFF",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "borderRadius": 24,
+                  "paddingV": 12
+                },
+                "action": {
+                  "type": "call",
+                  "call": "@global.newGame",
+                  "args": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
