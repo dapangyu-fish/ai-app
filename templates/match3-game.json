@@ -1,5 +1,6 @@
 {
   "dsl": "3.3",
+  "appid": "efc8f5c0-6176-4e8b-9c30-62f1a0a51194",
   "meta": {
     "name": "match3-game",
     "displayName": "宝石消消乐",
