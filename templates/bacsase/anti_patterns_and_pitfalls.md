@@ -568,3 +568,35 @@ JSON-DSL 没真函数局部作用域，`global._i` 这种全局可写。两个�
 **触发信号**：函数里有 `@while` / `@for_each` 嵌套调其他函数（不止 `@set` 这种 leaf）时，循环变量必须前缀。silent fail 很难调，多打几个字符值得。
 
 ---
+
+## 11. flame_game `@for_each_entity` body 里直接用 `{{ loop.id }}` 模板路径
+
+在 flame_game 的 `frame.logic` / `tick.logic` 里写 `@for_each_entity`，body 里很自然会想这样写：
+
+```jsonc
+{"call": "@set", "args": {
+  "var": "vars._t",
+  "value": {"var": "vars.targets.{{ loop.id }}"}  // ⚠️ 不可靠
+}}
+```
+
+**踩坑实例**：消消乐 pixel 版 v0.2.0~v0.2.7。tap 写 `vars.targets[uid]`、frame for_each 用 `{{ loop.id }}` 读。tap 端写读都 OK、frame 开头 `vars.targets[_uid_a]` 也读得到、entity id 跟 _uid_a 在 jsonlogic `==` 下能匹配 —— 唯独 `{"var": "vars.targets.{{ loop.id }}"}` 永远返 null。同一份 `_loopStack`，jsonlogic var op 看得到 `loop.id`、`{{ vars.X }}` 模板能解析，唯独 `{{ loop.X }}` 在嵌套 jsonlogic var path 里失效。
+
+**workaround**（不依赖 framework 哪个版本都通）：每个迭代开头先用 jsonlogic var 把 `loop.id` 抓到 vars，所有路径/id 用到 entity id 的地方都改用 `{{ vars._cap }}`：
+
+```jsonc
+{"call": "@for_each_entity", "args": {
+  "where_prefix": "g",
+  "do": [
+    {"call": "@set", "args": {"var": "vars._cap", "value": {"var": "loop.id"}}},  // 先抓
+    {"call": "@set", "args": {"var": "vars._t", "value": {"var": "vars.targets.{{ vars._cap }}"}}},
+    {"call": "@pixel.set_position", "args": {"id": "{{ vars._cap }}", "position": [...]}}
+  ]
+}}
+```
+
+**约定**：在 flame_game 的 `@for_each_entity` body 里，**永远**第一步抓 `loop.id` 到 `vars._cap`（或加函数级前缀），后续路径/id 全用 `{{ vars._cap }}`。`{{ loop.id }}` 直接用是埋雷。
+
+**回归保护**：`test/flame_loop_template_test.dart` 覆盖几条关键路径，framework 改坏会 catch。
+
+---
