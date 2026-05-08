@@ -1697,6 +1697,20 @@ class JsonInterpreter extends ChangeNotifier {
           return false;
         }
 
+      // ── 数字格式化 ──
+      case '@format_number':
+        // args: { value, precision?: int=0 }
+        // 把数字按指定小数位精确格式化（含尾零，比如 100 → "100.00" 当 precision=2）
+        // 用于：金额/百分比/单位等需要固定小数位显示的场景；日常 {{ x }} 已经会
+        // 把整数值 double（1.0）显示成 "1" 不带 ".0"，所以只在需要"强制保留小数位"
+        // 时才用本函数
+        final rawV = resolvedArgs['value'];
+        final precision = _toInt(resolvedArgs['precision'] ?? 0).clamp(0, 20);
+        final num? n =
+            rawV is num ? rawV : double.tryParse(rawV?.toString() ?? '');
+        if (n == null) return rawV?.toString() ?? '';
+        return n.toStringAsFixed(precision);
+
       // ── 随机数 ──
       case '@random':
         final min = _toInt(resolvedArgs['min'] ?? 0);
