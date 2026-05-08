@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-game",
     "displayName": "宝石消消乐",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "type": "app",
-    "description": "经典消消乐 — 三连消除。1.2.0: gravity 改分帧动画（每帧 70ms 下落一行 + 顶行补随机），看着像水流。",
+    "description": "经典消消乐 — 三连消除。1.2.1: gravity 动画放慢到每帧 200ms 便于观察。",
     "author": "AI"
   },
   "dependencies": {
@@ -1126,7 +1126,7 @@
                 {
                   "call": "@delay",
                   "args": {
-                    "ms": 70
+                    "ms": 200
                   }
                 },
                 {
