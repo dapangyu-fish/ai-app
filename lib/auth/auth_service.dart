@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 import '../config/remote_config_service.dart';
 import '../i18n/framework_strings.dart';
 import 'local_data_wiper.dart';
+import '../im/apns_service.dart';
 
 /// 检测到切换账号时的信息载体（旧账号 → 新账号）。
 /// UI 拿到非空对象就意味着 token 还**没有**写入本地，得先弹确认框。
@@ -320,6 +321,11 @@ class AuthService {
 
   /// 登出
   static Future<void> signOut() async {
+    // 先注销 device token 再调 supabase logout —— supabase 那边登出会让 access_token
+    // 失效，到时候我们后端 require_auth 会拒，DELETE 就来不及发了
+    try {
+      await ApnsService.instance.unregister();
+    } catch (_) {}
     try {
       await http.post(
         Uri.parse('$_baseUrl/api/auth/logout'),

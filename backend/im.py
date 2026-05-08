@@ -438,6 +438,38 @@ def upload_push_token():
     return jsonify({"ok": True})
 
 
+@require_auth
+def remove_push_token():
+    """
+    DELETE /api/im/push_token
+
+    Body: { "channel": "apns" | "fcm" | ..., "token": "<token>" }
+
+    精确删 (user_id, channel, token) 这一行；用于客户端 logout / 切账号时清理。
+    幂等：行不存在也返 ok（避免重复 logout 报错）。
+    只删调用者自己的 row（user_id 来自 auth），不影响该 user 其他设备的 token。
+    """
+    user = request.supabase_user
+    raw_user_id = str(user.get("id", ""))
+    if not raw_user_id:
+        return jsonify({"error": "no user id"}), 500
+
+    body = request.get_json(silent=True) or {}
+    channel = (body.get("channel") or "").strip().lower()
+    token = (body.get("token") or "").strip()
+    if not channel or not token:
+        return jsonify({"error": "channel/token 必填"}), 400
+
+    db_execute(
+        "DELETE FROM device_tokens WHERE user_id=%s AND channel=%s AND token=%s",
+        (raw_user_id, channel, token),
+    )
+    logger.info(
+        f"[Push] token unregistered user={raw_user_id[:8]} channel={channel} ...{token[-8:]}"
+    )
+    return jsonify({"ok": True})
+
+
 def _supabase_id_from_im_id(im_user_id: str) -> str | None:
     """OpenIM userID（去 hyphen 后的 32 hex） → Supabase user.id（带 hyphen 的 UUID）
 

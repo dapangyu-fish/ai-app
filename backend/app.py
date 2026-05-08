@@ -87,6 +87,7 @@ def create_app():
     app.add_url_rule("/api/im/users/lookup", methods=["GET"], view_func=im.lookup_user)
     app.add_url_rule("/api/im/users/search", methods=["GET"], view_func=im.search_users)
     app.add_url_rule("/api/im/push_token", methods=["POST"], view_func=im.upload_push_token)
+    app.add_url_rule("/api/im/push_token", methods=["DELETE"], view_func=im.remove_push_token)
     # 当前在用：afterSendSingleMsg webhook → 后端按平台分发（详见 PUSH_ARCHITECTURE.md）
     app.add_url_rule(
         "/api/im/after_send_msg",

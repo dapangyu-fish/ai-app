@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../im/apns_service.dart';
 import '../im/im_service.dart';
 import '../json_ui/cache_manager.dart';
 import '../json_ui/drift_database.dart';
@@ -18,6 +19,16 @@ import '../json_ui/drift_database.dart';
 /// 哪怕有一步失败也要继续清剩下的。
 Future<void> wipeAllLocalAccountData() async {
   debugPrint('[Wipe] ========== 开始清除本地数据 ==========');
+
+  // 0. 注销后端 device token（必须在 SharedPreferences 清空前做，否则 access_token 没了
+  //    后端 DELETE 鉴权会失败）。失败吞掉继续走，token 还能靠后端 BadDeviceToken
+  //    自愈逻辑兜底
+  try {
+    await ApnsService.instance.unregister();
+    debugPrint('[Wipe] ApnsService.unregister OK');
+  } catch (e) {
+    debugPrint('[Wipe] ApnsService.unregister 失败 (忽略): $e');
+  }
 
   // 1. IM logout（清 SDK + im_* prefs；如果 SDK 没初始化会被忽略）
   try {

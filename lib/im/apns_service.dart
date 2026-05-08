@@ -87,6 +87,38 @@ class ApnsService {
     }
   }
 
+  /// logout / 切账号时调：从后端注销当前 device token，并重置内部状态以便下次
+  /// 登录后能重走一次 register 流程（如果不重置 _started/_lastUploadedToken，
+  /// 新账号登录时 dedupe 会跳过上传，造成 token 没绑到新 user）
+  Future<void> unregister() async {
+    if (!isPlatformSupported) return;
+    final cached = _lastUploadedToken;
+    final authToken = AuthService.token;
+    if (cached != null && authToken != null) {
+      // _lastUploadedToken 形如 "<hex>|<env>"，hex 用于 DELETE，env 不需要发后端
+      final hex = cached.split('|').first;
+      try {
+        await http
+            .delete(
+              Uri.parse('${AppConfig.backendUrl}/api/im/push_token'),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $authToken',
+              },
+              body: json.encode({'channel': 'apns', 'token': hex}),
+            )
+            .timeout(const Duration(seconds: 5));
+        // ignore: avoid_print
+        print('[APNs] device token 已从后端注销');
+      } catch (e) {
+        // ignore: avoid_print
+        print('[APNs] 注销 token 失败 (忽略): $e');
+      }
+    }
+    _started = false;
+    _lastUploadedToken = null;
+  }
+
   // 后端协议：{channel, token, meta} —— 通用结构，未来加 fcm/getui 用同一接口
   Future<void> _uploadToken(String hexToken, {required String apsEnv}) async {
     // 后端 meta.env 只认 'sandbox' / 'production'，把 iOS 的 'development' 名规约一下
