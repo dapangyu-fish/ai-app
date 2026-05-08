@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.2.1: marker 金色修正 + 三段诊断计数",
+    "description": "match3 用 flame_game pixel + frame ease。v0.2.2: 加 _uid_a 非空诊断 +100000",
     "author": "AI"
   },
   "dependencies": {},
@@ -1038,6 +1038,27 @@
                                               "value": {
                                                 "var": "vars.board.{{ vars.swap_b }}"
                                               }
+                                            }
+                                          },
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "!=": [
+                                                  {
+                                                    "var": "vars._uid_a"
+                                                  },
+                                                  ""
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@score.add",
+                                                  "args": {
+                                                    "n": 100000
+                                                  }
+                                                }
+                                              ]
                                             }
                                           },
                                           {
