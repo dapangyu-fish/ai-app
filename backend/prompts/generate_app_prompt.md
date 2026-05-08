@@ -140,6 +140,12 @@ g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2
 **只有完成上述步骤后，你才可以开始生成 JSON。**
 **如果你跳过了这些步骤，很可能会生成错误的 JSON，导致用户白屏或崩溃！**
 
+## 选 widget 还是 flame_game
+
+涉及**连续动画 / 60fps / 拖拽过渡 / 物理 / 棋盘类游戏**，先看 `templates/demo_2048.json` / `demo_tap_white_tile.json` / `demo_jump.json` / `demo_flappy_bird.json`——这类应用必须用 `flame_game`。标准 grid/list widget 是"值变就 rebuild"，做不出丝滑动画。
+
+静态 UI / 列表 / 表单才用标准 widget。
+
 ## JSON-APP 骨架
 
 所有 JSON-APP 必须严格按照以下骨架结构：
