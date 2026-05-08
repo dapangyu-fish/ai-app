@@ -573,8 +573,15 @@ class JsonInterpreter extends ChangeNotifier {
     final keys = dotPath.split('.');
     dynamic current = map;
     for (final key in keys) {
-      if (current is Map<String, dynamic> && current.containsKey(key)) {
+      if (current is Map<String, dynamic>) {
+        if (!current.containsKey(key)) return null;
         current = current[key];
+      } else if (current is List) {
+        // List 段：key 必须能解析为合法 int 下标
+        // Map 分支放在前面，避免 Map 里恰好有一个 String 键名是数字时被误判成 List
+        final idx = int.tryParse(key);
+        if (idx == null || idx < 0 || idx >= current.length) return null;
+        current = current[idx];
       } else {
         return null;
       }
@@ -586,8 +593,13 @@ class JsonInterpreter extends ChangeNotifier {
     final keys = dotPath.split('.');
     dynamic current = map;
     for (final key in keys) {
-      if (current is Map<String, dynamic> && current.containsKey(key)) {
+      if (current is Map<String, dynamic>) {
+        if (!current.containsKey(key)) return false;
         current = current[key];
+      } else if (current is List) {
+        final idx = int.tryParse(key);
+        if (idx == null || idx < 0 || idx >= current.length) return false;
+        current = current[idx];
       } else {
         return false;
       }
@@ -607,12 +619,25 @@ class JsonInterpreter extends ChangeNotifier {
       if (current is Map<String, dynamic>) {
         current.putIfAbsent(keys[i], () => <String, dynamic>{});
         current = current[keys[i]];
+      } else if (current is List) {
+        // 走到 List 中段：只能按现有下标穿过，越界不会自动扩展（List 不像 Map 能 putIfAbsent）
+        final idx = int.tryParse(keys[i]);
+        if (idx == null || idx < 0 || idx >= current.length) return;
+        current = current[idx];
       } else {
         return;
       }
     }
+    final lastKey = keys.last;
     if (current is Map<String, dynamic>) {
-      current[keys.last] = value;
+      current[lastKey] = value;
+    } else if (current is List) {
+      // 末段 List 下标：原地 mutate（跟 @list_add 的"创建新 List 替换"模式不同，
+      // 但 setVariable 上层的 notifyListeners 仍会触发整体重建，UI 能看到）
+      final idx = int.tryParse(lastKey);
+      if (idx != null && idx >= 0 && idx < current.length) {
+        current[idx] = value;
+      }
     }
   }
 

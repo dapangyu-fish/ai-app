@@ -153,6 +153,7 @@
 ```
 
 **变量路径支持嵌套**：`global.user.name` 可读写深层属性。
+**支持 List 下标**：路径里的数字段当 List 索引，例如 `global.board.5` 读 `board[5]`，`@set var="global.board.{{ idx }}"` 写 `board[idx]`。读越界 / 不能解析为 int 返回 `null`；写越界静默 no-op（List 不像 Map 会自动扩展）。Map 优先匹配——如果某层是 Map 且有名为 `"5"` 的 key，仍走 Map 分支，不会误判成 List。
 
 ### 3.3 值类型规则（核心约定）
 
