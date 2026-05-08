@@ -4,9 +4,9 @@
   "meta": {
     "name": "match3-pixel",
     "displayName": "宝石消消乐 (像素动画版)",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "type": "app",
-    "description": "match3 用 flame_game pixel + frame ease。v0.2.2: 加 _uid_a 非空诊断 +100000",
+    "description": "match3 用 flame_game pixel + frame ease。v0.2.3: 加 targets 写后回读诊断 +200000",
     "author": "AI"
   },
   "dependencies": {},
@@ -176,6 +176,7 @@
                 "_mk_r": 0,
                 "_any_moving": false,
                 "_t": null,
+                "_verify": null,
                 "_cur_x": 0,
                 "_cur_y": 0,
                 "_tx": 0,
@@ -1183,6 +1184,36 @@
                                                       "var": "vars.cell_size"
                                                     }
                                                   ]
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._verify",
+                                              "value": {
+                                                "var": "vars.targets.{{ vars._uid_a }}"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "!=": [
+                                                  {
+                                                    "var": "vars._verify"
+                                                  },
+                                                  null
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@score.add",
+                                                  "args": {
+                                                    "n": 200000
+                                                  }
                                                 }
                                               ]
                                             }
