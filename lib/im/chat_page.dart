@@ -659,7 +659,7 @@ class _IMChatPageState extends State<IMChatPage> {
     if (!mounted) return;
     setState(() => _messages.insert(0, placeholder));
 
-    final url = await ImMediaUploader.uploadFile(
+    final upload = await ImMediaUploader.uploadFileFull(
       toUpload,
       purpose: ImMediaPurpose.image,
       onProgress: (sent, total) {
@@ -672,14 +672,18 @@ class _IMChatPageState extends State<IMChatPage> {
       },
     );
 
-    if (url == null) {
+    if (upload == null) {
       _markPlaceholderFailed(placeholder, '[图片上传失败]');
       return;
     }
 
-    // 真正发送 picture 消息
+    // 真正发送 picture 消息。sourcePath 必传 —— SDK native 端要本地文件
+    // 计算 MD5 当 message UUID。本地文件可以是压缩后的临时文件，发完即删（OS
+    // 会清 tmpDir）；OpenIM 不会再重新上传到自己的 MinIO，因为我们已经有 url。
     final sent = await IMService.instance.sendImageByUrl(
-      url: url,
+      url: upload.publicUrl,
+      sourcePath: toUpload.absolute.path,
+      uuid: upload.key, // MinIO key 全局唯一，正好做 PictureInfo.uuid
       width: width,
       height: height,
       size: size,

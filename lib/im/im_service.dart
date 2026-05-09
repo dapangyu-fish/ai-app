@@ -441,8 +441,14 @@ class IMService {
   /// 现下载就能算出 aspect ratio，体验更好。size 是字节数。
   /// [thumbUrl] 可选缩略图 URL；不传时用 [url] 顶替（OpenIM 列表会重复请求
   /// 大图当 thumbnail，移动端流量略多但功能正确）。
+  ///
+  /// **重要**：[sourcePath] 必传 —— SDK 会在 native 端用这个本地文件计算 MD5
+  /// 当 message UUID，不传或文件不存在会报 PlatformException 10005。
+  /// [uuid] 是 PictureInfo.uuid 字段，全局唯一即可；推荐用 MinIO 的 object key。
   Future<Message?> sendImageByUrl({
     required String url,
+    required String sourcePath,
+    required String uuid,
     required int width,
     required int height,
     required int size,
@@ -451,6 +457,7 @@ class IMService {
     String? groupID,
   }) async {
     final pic = PictureInfo()
+      ..uuid = uuid
       ..url = url
       ..width = width
       ..height = height
@@ -459,12 +466,14 @@ class IMService {
     final thumbPic = (thumbUrl == null || thumbUrl.isEmpty)
         ? pic
         : (PictureInfo()
+          ..uuid = '${uuid}_thumb'
           ..url = thumbUrl
           ..width = width
           ..height = height
           ..type = 'image/jpeg');
     try {
       final msg = await OpenIM.iMManager.messageManager.createImageMessageByURL(
+        sourcePath: sourcePath,
         sourcePicture: pic,
         bigPicture: pic,
         snapshotPicture: thumbPic,
