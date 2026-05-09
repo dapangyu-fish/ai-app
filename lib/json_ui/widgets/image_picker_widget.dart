@@ -4,6 +4,7 @@
 //       placeholder、width、height、borderRadius
 // 选中图片后自动预览，再次点击可重新选择
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -94,10 +95,10 @@ class JsonImagePickerWidget extends JsonBaseWidget {
 
   Widget _buildImagePreview(String path, BuildContext context) {
     if (kIsWeb || path.startsWith('http://') || path.startsWith('https://')) {
-      return Image.network(
-        path,
+      return CachedNetworkImage(
+        imageUrl: path,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _errorWidget(context),
+        errorWidget: (_, __, ___) => _errorWidget(context),
       );
     }
     return Image.file(

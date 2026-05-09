@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:chewie/chewie.dart';
@@ -385,7 +386,7 @@ class _IMChatPageState extends State<IMChatPage> {
       radius: 18,
       backgroundColor: cs.primaryContainer,
       backgroundImage: faceUrl != null && faceUrl.isNotEmpty
-          ? NetworkImage(faceUrl)
+          ? CachedNetworkImageProvider(faceUrl)
           : null,
       child: faceUrl == null || faceUrl.isEmpty
           ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
@@ -411,19 +412,16 @@ class _IMChatPageState extends State<IMChatPage> {
             onTap: () => _openImageViewer(url),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                url,
+              child: CachedNetworkImage(
+                imageUrl: url,
                 width: 200,
                 fit: BoxFit.cover,
-                loadingBuilder: (_, child, progress) {
-                  if (progress == null) return child;
-                  return SizedBox(
-                    width: 200,
-                    height: 150,
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
+                placeholder: (_, __) => SizedBox(
+                  width: 200,
+                  height: 150,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                errorWidget: (_, __, ___) => Container(
                   width: 200,
                   height: 150,
                   color: cs.surfaceContainerHighest,
@@ -459,11 +457,11 @@ class _IMChatPageState extends State<IMChatPage> {
               alignment: Alignment.center,
               children: [
                 if (snapUrl != null && snapUrl.isNotEmpty)
-                  Image.network(
-                    snapUrl,
+                  CachedNetworkImage(
+                    imageUrl: snapUrl,
                     width: 200,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorWidget: (_, __, ___) => Container(
                       width: 200,
                       height: 150,
                       color: cs.surfaceContainerHighest,
@@ -1292,7 +1290,7 @@ class _ImageViewerPage extends StatelessWidget {
         children: [
           Positioned.fill(
             child: PhotoView(
-              imageProvider: NetworkImage(url),
+              imageProvider: CachedNetworkImageProvider(url),
               backgroundDecoration: const BoxDecoration(color: Colors.black),
               minScale: PhotoViewComputedScale.contained,
               maxScale: PhotoViewComputedScale.covered * 4,
