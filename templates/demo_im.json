@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.4.6",
+    "version": "1.4.7",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
@@ -525,6 +525,7 @@
                 },
                 {
                   "type": "button",
+                  "visible": {"==": [{"var": "loop.item.handle_result"}, 0]},
                   "label": "通过",
                   "variant": "filled",
                   "action": {
@@ -533,9 +534,14 @@
                     "args": {"userId": "{{ loop.item.from_user_id }}"}
                   }
                 },
-                {"type": "spacer", "width": 6},
+                {
+                  "type": "spacer",
+                  "visible": {"==": [{"var": "loop.item.handle_result"}, 0]},
+                  "width": 6
+                },
                 {
                   "type": "button",
+                  "visible": {"==": [{"var": "loop.item.handle_result"}, 0]},
                   "label": "拒",
                   "variant": "outlined",
                   "action": {
@@ -543,6 +549,18 @@
                     "call": "@global.rejectFriend",
                     "args": {"userId": "{{ loop.item.from_user_id }}"}
                   }
+                },
+                {
+                  "type": "text",
+                  "visible": {"==": [{"var": "loop.item.handle_result"}, 1]},
+                  "value": "已同意",
+                  "style": {"fontSize": 14, "color": "#4CAF50"}
+                },
+                {
+                  "type": "text",
+                  "visible": {"==": [{"var": "loop.item.handle_result"}, -1]},
+                  "value": "已拒绝",
+                  "style": {"fontSize": 14, "color": "#999999"}
                 }
               ]
             }
