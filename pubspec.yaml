@@ -56,6 +56,8 @@ dependencies:
   shared_preferences: ^2.5.5
   speech_to_text: ^7.0.0
   http: ^1.2.0
+  mime: ^1.0.5  # IM 富媒体上传时检测 content_type
+  path: ^1.9.0  # IM uploader 路径处理
   record: ^6.2.0
   path_provider: ^2.1.0
   web_socket_channel: ^3.0.0
