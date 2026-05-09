@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:photo_view/photo_view.dart';
 import '../i18n/framework_strings.dart';
+import 'im_media_uploader.dart';
 import 'im_service.dart';
 import 'group_management.dart';
 import 'message_preview.dart';
@@ -394,25 +400,28 @@ class _IMChatPageState extends State<IMChatPage> {
         final url = msg.pictureElem?.bigPicture?.url ??
             msg.pictureElem?.sourcePicture?.url;
         if (url != null && url.isNotEmpty) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              url,
-              width: 200,
-              fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) {
-                if (progress == null) return child;
-                return SizedBox(
+          return GestureDetector(
+            onTap: () => _openImageViewer(url),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                url,
+                width: 200,
+                fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return SizedBox(
+                    width: 200,
+                    height: 150,
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  );
+                },
+                errorBuilder: (_, __, ___) => Container(
                   width: 200,
                   height: 150,
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                );
-              },
-              errorBuilder: (_, __, ___) => Container(
-                width: 200,
-                height: 150,
-                color: cs.surfaceContainerHighest,
-                child: Icon(Icons.broken_image, color: cs.outline),
+                  color: cs.surfaceContainerHighest,
+                  child: Icon(Icons.broken_image, color: cs.outline),
+                ),
               ),
             ),
           );
@@ -605,6 +614,175 @@ class _IMChatPageState extends State<IMChatPage> {
     );
   }
 
+  // ---------- 图片：picker → 高清/普通选择 → 上传 → sendImageByUrl ----------
+
+  /// 从相册或相机选一张图，让用户选高清/普通画质，上传到 MinIO，发送系统图片消息。
+  ///
+  /// 进度处理：
+  ///   - 选完图立刻插一条带 [Sending...] 文案的占位 (status=sending)，clientMsgID 暂存
+  ///   - 上传过程中 setState 把同一占位的进度文字刷成"上传中 30%..."
+  ///   - 上传完拿到 URL，create + send 到 SDK，回填真实 Message 替换占位
+  ///   - 上传失败 / send 失败 → 占位 status 改 failed，让用户看到能重试（重试逻辑后续做）
+  Future<void> _pickAndSendImage({required bool fromCamera}) async {
+    final picker = ImagePicker();
+    final XFile? xfile = await picker.pickImage(
+      source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+      // imageQuality 留 null —— 后面让用户选高清/普通自己控制
+    );
+    if (xfile == null || !mounted) return;
+
+    final file = File(xfile.path);
+    if (!await file.exists()) return;
+
+    // 询问高清 / 普通
+    final hd = await _askHdOrCompressed();
+    if (hd == null) return; // 用户取消
+    if (!mounted) return;
+
+    File toUpload = file;
+    int width = 0;
+    int height = 0;
+    if (!hd) {
+      // 普通：长边 1920、JPEG q=80。对绝大多数手机原图（5~10MB）能压到 ~500KB
+      final compressed = await _compressImage(file);
+      if (compressed != null) toUpload = compressed;
+    }
+    // 读出真实尺寸（OpenIM picture 消息要 w/h，对端列表才能算 aspect ratio）
+    final dim = await _readImageDim(toUpload);
+    width = dim?.$1 ?? 0;
+    height = dim?.$2 ?? 0;
+    final size = await toUpload.length();
+
+    // 占位消息（先不真实 createMessage，临时用一个本地 textMessage 假装；
+    // 等上传完拿到 URL 再替换成真正的 picture 消息）
+    final placeholder = await IMService.instance.createTextMessage('[图片上传中...]');
+    if (!mounted) return;
+    setState(() => _messages.insert(0, placeholder));
+
+    final url = await ImMediaUploader.uploadFile(
+      toUpload,
+      purpose: ImMediaPurpose.image,
+      onProgress: (sent, total) {
+        if (!mounted) return;
+        // 写到占位消息上，每帧不强制刷新（避免抖动）
+        final pct = total > 0 ? (sent * 100 ~/ total) : 0;
+        placeholder.textElem?.content = '[图片上传中 $pct%]';
+        // 触发轻量 rebuild
+        if (sent == total || pct % 10 == 0) setState(() {});
+      },
+    );
+
+    if (url == null) {
+      _markPlaceholderFailed(placeholder, '[图片上传失败]');
+      return;
+    }
+
+    // 真正发送 picture 消息
+    final sent = await IMService.instance.sendImageByUrl(
+      url: url,
+      width: width,
+      height: height,
+      size: size,
+      userID: widget.userID,
+      groupID: widget.groupID,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      if (idx < 0) return;
+      if (sent != null) {
+        _messages[idx] = sent;
+      } else {
+        // sendImageByUrl 失败 —— 把占位标记 failed
+        placeholder.status = MessageStatus.failed;
+        placeholder.textElem?.content = '[图片发送失败]';
+        _messages[idx] = placeholder;
+      }
+    });
+  }
+
+  /// 弹一个简单的 bottom-sheet 让用户选高清 / 普通。返 null 表示取消。
+  Future<bool?> _askHdOrCompressed() {
+    return showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_size_select_actual),
+              title: const Text('普通画质'),
+              subtitle: const Text('自动压缩，长边 1920，发送更快'),
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+            ListTile(
+              leading: const Icon(Icons.high_quality),
+              title: const Text('高清原图'),
+              subtitle: const Text('保留原尺寸和画质'),
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 用 flutter_image_compress 压到长边 1920 / JPEG q=80。失败返 null（fallback 原图）
+  Future<File?> _compressImage(File src) async {
+    try {
+      final tmpDir = await getTemporaryDirectory();
+      final out = '${tmpDir.path}/im_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final result = await FlutterImageCompress.compressAndGetFile(
+        src.absolute.path, out,
+        minWidth: 1920, minHeight: 1920, // 长边 1920，短边按比例
+        quality: 80,
+        format: CompressFormat.jpeg,
+      );
+      if (result == null) return null;
+      return File(result.path);
+    } catch (e) {
+      debugPrint('[IM] 图片压缩失败: $e');
+      return null;
+    }
+  }
+
+  /// 读图片宽高。失败返 null。
+  Future<(int, int)?> _readImageDim(File file) async {
+    try {
+      final completer = Completer<(int, int)?>();
+      final image = Image.file(file);
+      image.image.resolve(const ImageConfiguration()).addListener(
+        ImageStreamListener(
+          (info, _) => completer.complete((info.image.width, info.image.height)),
+          onError: (e, _) => completer.complete(null),
+        ),
+      );
+      return await completer.future.timeout(const Duration(seconds: 5));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void _markPlaceholderFailed(Message placeholder, String text) {
+    if (!mounted) return;
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      if (idx < 0) return;
+      placeholder.status = MessageStatus.failed;
+      placeholder.textElem?.content = text;
+      _messages[idx] = placeholder;
+    });
+  }
+
+  /// 全屏图片查看器（捏合缩放 / 双击放大）。
+  void _openImageViewer(String url) {
+    Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _ImageViewerPage(url: url),
+    ));
+  }
+
   void _showAttachmentOptions() {
     final s = T.of(context);
     showModalBottomSheet(
@@ -620,7 +798,7 @@ class _IMChatPageState extends State<IMChatPage> {
                 label: s.imAttachImage,
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: 集成 image_picker 发送图片
+                  _pickAndSendImage(fromCamera: false);
                 },
               ),
               _buildAttachmentButton(
@@ -628,7 +806,7 @@ class _IMChatPageState extends State<IMChatPage> {
                 label: s.imAttachCamera,
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: 集成 camera 拍照发送
+                  _pickAndSendImage(fromCamera: true);
                 },
               ),
               _buildAttachmentButton(
@@ -636,7 +814,7 @@ class _IMChatPageState extends State<IMChatPage> {
                 label: s.imAttachFile,
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO: 集成 file_picker 发送文件
+                  // TODO(step 4): 集成 file_picker 发送文件
                 },
               ),
             ],
@@ -680,6 +858,46 @@ class _IMChatPageState extends State<IMChatPage> {
           groupID: widget.conversationID,
           groupName: widget.conversationName,
         ),
+      ),
+    );
+  }
+}
+
+/// 全屏图片预览页：黑底 + photo_view 捏合缩放 + 双击放大。
+/// 顶部 close 按钮覆盖在图上。
+class _ImageViewerPage extends StatelessWidget {
+  final String url;
+  const _ImageViewerPage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: PhotoView(
+              imageProvider: NetworkImage(url),
+              backgroundDecoration: const BoxDecoration(color: Colors.black),
+              minScale: PhotoViewComputedScale.contained,
+              maxScale: PhotoViewComputedScale.covered * 4,
+              loadingBuilder: (_, __) => const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
+              ),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 8,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        ],
       ),
     );
   }

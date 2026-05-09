@@ -402,7 +402,9 @@ class IMService {
     );
   }
 
-  /// 发送图片消息
+  /// 发送图片消息（旧路径，让 SDK 自己上传到 OpenIM 自带 MinIO）
+  /// 已不推荐 —— 走 [sendImageByUrl] 用我们自己的 MinIO 桶 (im-media)
+  /// 让存储后端可控、统一 lifecycle。
   /// [userID] / [groupID] 二选一，参见 [sendTextMessage]
   Future<Message?> sendImageMessage({
     required String conversationID,
@@ -427,6 +429,54 @@ class IMService {
       );
     } catch (e) {
       debugPrint('[IM] 发送图片失败: $e');
+      return null;
+    }
+  }
+
+  /// 发送图片消息（推荐路径）：图片已经通过 ImMediaUploader 上传到我们自己的
+  /// MinIO，[url] 是公网可读 URL。这里只调用 SDK 的 createImageMessageByURL
+  /// 把 URL 包成系统 picture 消息，对端走原生 picture 渲染管线。
+  ///
+  /// [width] / [height] / [size] 是图片元数据，对端列表里展示缩略图时不需要
+  /// 现下载就能算出 aspect ratio，体验更好。size 是字节数。
+  /// [thumbUrl] 可选缩略图 URL；不传时用 [url] 顶替（OpenIM 列表会重复请求
+  /// 大图当 thumbnail，移动端流量略多但功能正确）。
+  Future<Message?> sendImageByUrl({
+    required String url,
+    required int width,
+    required int height,
+    required int size,
+    String? thumbUrl,
+    String? userID,
+    String? groupID,
+  }) async {
+    final pic = PictureInfo()
+      ..url = url
+      ..width = width
+      ..height = height
+      ..size = size
+      ..type = 'image/jpeg';
+    final thumbPic = (thumbUrl == null || thumbUrl.isEmpty)
+        ? pic
+        : (PictureInfo()
+          ..url = thumbUrl
+          ..width = width
+          ..height = height
+          ..type = 'image/jpeg');
+    try {
+      final msg = await OpenIM.iMManager.messageManager.createImageMessageByURL(
+        sourcePicture: pic,
+        bigPicture: pic,
+        snapshotPicture: thumbPic,
+      );
+      return sendPreparedMessage(
+        message: msg,
+        previewText: '[图片]',
+        userID: userID,
+        groupID: groupID,
+      );
+    } catch (e) {
+      debugPrint('[IM] sendImageByUrl 失败: $e');
       return null;
     }
   }
