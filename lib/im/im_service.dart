@@ -490,6 +490,58 @@ class IMService {
     }
   }
 
+  /// 发送视频消息（推荐路径）：视频本体和首帧缩略图都已上传到我们 MinIO。
+  /// SDK 把 URL 包成系统 video 消息，对端 picture/video bubble 渲染管线会
+  /// 自动处理缩略图 + 全屏播放。
+  ///
+  /// [videoSourcePath] / [snapshotSourcePath] 必传 —— SDK 在 native 端用
+  /// 它们计算 MD5（同 sendImageByUrl 的踩坑）。
+  Future<Message?> sendVideoByUrl({
+    required String videoUrl,
+    required String videoSourcePath,
+    required String videoUuid,
+    required String videoType, // 'video/mp4' / 'video/quicktime' 等
+    required int videoSize,
+    required int duration,
+    required String snapshotUrl,
+    required String snapshotSourcePath,
+    required String snapshotUuid,
+    required int snapshotSize,
+    required int snapshotWidth,
+    required int snapshotHeight,
+    String? userID,
+    String? groupID,
+  }) async {
+    final elem = VideoElem(
+      videoPath: videoSourcePath,
+      videoUUID: videoUuid,
+      videoUrl: videoUrl,
+      videoType: videoType,
+      videoSize: videoSize,
+      duration: duration,
+      snapshotPath: snapshotSourcePath,
+      snapshotUUID: snapshotUuid,
+      snapshotSize: snapshotSize,
+      snapshotUrl: snapshotUrl,
+      snapshotWidth: snapshotWidth,
+      snapshotHeight: snapshotHeight,
+    );
+    try {
+      final msg = await OpenIM.iMManager.messageManager.createVideoMessageByURL(
+        videoElem: elem,
+      );
+      return sendPreparedMessage(
+        message: msg,
+        previewText: '[视频]',
+        userID: userID,
+        groupID: groupID,
+      );
+    } catch (e) {
+      debugPrint('[IM] sendVideoByUrl 失败: $e');
+      return null;
+    }
+  }
+
   /// 撤回消息
   Future<bool> revokeMessage({
     required String conversationID,

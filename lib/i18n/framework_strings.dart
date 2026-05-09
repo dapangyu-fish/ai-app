@@ -306,6 +306,7 @@ class _Strings {
   final String imToastRevokeExpired;
   final String imAttachImage;
   final String imAttachCamera;
+  final String imAttachVideo;
   final String imAttachFile;
 
   // ── IM 好友页 ──
@@ -604,6 +605,7 @@ class _Strings {
     required this.imToastRevokeExpired,
     required this.imAttachImage,
     required this.imAttachCamera,
+    required this.imAttachVideo,
     required this.imAttachFile,
     required this.imAdd,
     required this.imAddFriend,
@@ -896,6 +898,7 @@ const _Strings _zhCN = _Strings(
   imToastRevokeExpired: '超过 2 分钟无法撤回',
   imAttachImage: '图片',
   imAttachCamera: '拍照',
+  imAttachVideo: '视频',
   imAttachFile: '文件',
   imAdd: '添加',
   imAddFriend: '加好友',
@@ -1187,6 +1190,7 @@ const _Strings _enUS = _Strings(
   imToastRevokeExpired: 'Cannot recall after 2 minutes',
   imAttachImage: 'Image',
   imAttachCamera: 'Camera',
+  imAttachVideo: 'Video',
   imAttachFile: 'File',
   imAdd: 'Add',
   imAddFriend: 'Add friend',

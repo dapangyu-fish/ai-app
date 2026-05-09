@@ -3,11 +3,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:chewie/chewie.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_view/photo_view.dart';
+import 'package:video_player/video_player.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import '../i18n/framework_strings.dart';
 import 'im_media_uploader.dart';
 import 'im_service.dart';
@@ -438,13 +441,61 @@ class _IMChatPageState extends State<IMChatPage> {
           ],
         );
       case MessageType.video:
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.videocam, size: 16, color: textColor),
-            const SizedBox(width: 4),
-            Text(T.of(context).imPreviewVideo, style: TextStyle(color: textColor)),
-          ],
+        final videoUrl = msg.videoElem?.videoUrl;
+        final snapUrl = msg.videoElem?.snapshotUrl;
+        final duration = msg.videoElem?.duration ?? 0;
+        // 缩略图 + 中间播放图标 + 右下时长。点击 → 全屏播放
+        return GestureDetector(
+          onTap: videoUrl != null && videoUrl.isNotEmpty
+              ? () => _openVideoPlayer(videoUrl)
+              : null,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (snapUrl != null && snapUrl.isNotEmpty)
+                  Image.network(
+                    snapUrl,
+                    width: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 200,
+                      height: 150,
+                      color: cs.surfaceContainerHighest,
+                      child: Icon(Icons.movie, color: cs.outline, size: 40),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 200,
+                    height: 150,
+                    color: cs.surfaceContainerHighest,
+                  ),
+                const Icon(
+                  Icons.play_circle_filled,
+                  size: 48,
+                  color: Colors.white70,
+                ),
+                if (duration > 0)
+                  Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _fmtDuration(duration),
+                        style: const TextStyle(color: Colors.white, fontSize: 11),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       case MessageType.file:
         return Row(
@@ -768,6 +819,13 @@ class _IMChatPageState extends State<IMChatPage> {
     }
   }
 
+  static String _fmtDuration(int seconds) {
+    if (seconds < 60) return '${seconds}s';
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
   void _markPlaceholderFailed(Message placeholder, String text) {
     if (!mounted) return;
     setState(() {
@@ -784,6 +842,128 @@ class _IMChatPageState extends State<IMChatPage> {
     Navigator.of(context).push(MaterialPageRoute(
       fullscreenDialog: true,
       builder: (_) => _ImageViewerPage(url: url),
+    ));
+  }
+
+  // ---------- 视频：picker → 抽首帧 → 上传 video + snapshot → sendVideoByUrl ----------
+
+  Future<void> _pickAndSendVideo() async {
+    final picker = ImagePicker();
+    final XFile? xfile = await picker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 3), // 兜底，避免选超长视频
+    );
+    if (xfile == null || !mounted) return;
+
+    final videoFile = File(xfile.path);
+    if (!await videoFile.exists()) return;
+
+    final placeholder = await IMService.instance.createTextMessage('[视频处理中...]');
+    if (!mounted) return;
+    setState(() => _messages.insert(0, placeholder));
+
+    // 1. 抽首帧 + 探测时长 + 探测分辨率
+    final tmpDir = await getTemporaryDirectory();
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final snapshotPath = '${tmpDir.path}/im_video_thumb_$ts.jpg';
+
+    int width = 0, height = 0, durationSec = 0;
+    try {
+      final ctrl = VideoPlayerController.file(videoFile);
+      await ctrl.initialize();
+      width = ctrl.value.size.width.toInt();
+      height = ctrl.value.size.height.toInt();
+      durationSec = ctrl.value.duration.inSeconds;
+      await ctrl.dispose();
+    } catch (e) {
+      debugPrint('[IM] 视频元数据读取失败: $e');
+      // 不致命，继续；OpenIM bubble 没有 w/h 也能播
+    }
+
+    final thumbPath = await VideoThumbnail.thumbnailFile(
+      video: videoFile.absolute.path,
+      thumbnailPath: snapshotPath,
+      imageFormat: ImageFormat.JPEG,
+      maxWidth: 720,
+      quality: 75,
+    );
+    if (thumbPath == null) {
+      _markPlaceholderFailed(placeholder, '[视频首帧抽取失败]');
+      return;
+    }
+    final thumbFile = File(thumbPath);
+
+    // 2. 上传缩略图
+    if (mounted) {
+      placeholder.textElem?.content = '[视频上传中 0%]';
+      setState(() {});
+    }
+
+    final thumbUpload = await ImMediaUploader.uploadFileFull(
+      thumbFile,
+      purpose: ImMediaPurpose.snapshot,
+    );
+    if (thumbUpload == null) {
+      _markPlaceholderFailed(placeholder, '[首帧上传失败]');
+      return;
+    }
+
+    // 3. 上传视频本体（带进度）
+    final videoUpload = await ImMediaUploader.uploadFileFull(
+      videoFile,
+      purpose: ImMediaPurpose.video,
+      onProgress: (sent, total) {
+        if (!mounted) return;
+        final pct = total > 0 ? (sent * 100 ~/ total) : 0;
+        placeholder.textElem?.content = '[视频上传中 $pct%]';
+        if (sent == total || pct % 5 == 0) setState(() {});
+      },
+    );
+    if (videoUpload == null) {
+      _markPlaceholderFailed(placeholder, '[视频上传失败]');
+      return;
+    }
+
+    // 4. 发送
+    final videoSize = await videoFile.length();
+    final thumbSize = await thumbFile.length();
+    final mime = (xfile.mimeType ?? 'video/mp4'); // pickVideo 一般给 mp4
+    final sent = await IMService.instance.sendVideoByUrl(
+      videoUrl: videoUpload.publicUrl,
+      videoSourcePath: videoFile.absolute.path,
+      videoUuid: videoUpload.key,
+      videoType: mime,
+      videoSize: videoSize,
+      duration: durationSec,
+      snapshotUrl: thumbUpload.publicUrl,
+      snapshotSourcePath: thumbFile.absolute.path,
+      snapshotUuid: thumbUpload.key,
+      snapshotSize: thumbSize,
+      snapshotWidth: width,
+      snapshotHeight: height,
+      userID: widget.userID,
+      groupID: widget.groupID,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      if (idx < 0) return;
+      if (sent != null) {
+        _messages[idx] = sent;
+      } else {
+        placeholder.status = MessageStatus.failed;
+        placeholder.textElem?.content = '[视频发送失败]';
+        _messages[idx] = placeholder;
+      }
+    });
+  }
+
+  /// 全屏视频播放器（chewie + video_player）
+  void _openVideoPlayer(String url) {
+    Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _VideoPlayerPage(url: url),
     ));
   }
 
@@ -811,6 +991,14 @@ class _IMChatPageState extends State<IMChatPage> {
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndSendImage(fromCamera: true);
+                },
+              ),
+              _buildAttachmentButton(
+                icon: Icons.videocam,
+                label: s.imAttachVideo,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndSendVideo();
                 },
               ),
               _buildAttachmentButton(
@@ -862,6 +1050,81 @@ class _IMChatPageState extends State<IMChatPage> {
           groupID: widget.conversationID,
           groupName: widget.conversationName,
         ),
+      ),
+    );
+  }
+}
+
+/// 全屏视频播放页：chewie + video_player。autoplay。
+class _VideoPlayerPage extends StatefulWidget {
+  final String url;
+  const _VideoPlayerPage({required this.url});
+
+  @override
+  State<_VideoPlayerPage> createState() => _VideoPlayerPageState();
+}
+
+class _VideoPlayerPageState extends State<_VideoPlayerPage> {
+  VideoPlayerController? _vpc;
+  ChewieController? _cc;
+  String? _err;
+
+  @override
+  void initState() {
+    super.initState();
+    _setup();
+  }
+
+  Future<void> _setup() async {
+    try {
+      _vpc = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      await _vpc!.initialize();
+      _cc = ChewieController(
+        videoPlayerController: _vpc!,
+        autoPlay: true,
+        looping: false,
+        allowFullScreen: false, // 已经全屏了
+        showControlsOnInitialize: true,
+      );
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) setState(() => _err = e.toString());
+    }
+  }
+
+  @override
+  void dispose() {
+    _cc?.dispose();
+    _vpc?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget body;
+    if (_err != null) {
+      body = Center(
+        child: Text('视频加载失败: $_err', style: const TextStyle(color: Colors.white)),
+      );
+    } else if (_cc == null) {
+      body = const Center(child: CircularProgressIndicator(color: Colors.white));
+    } else {
+      body = Center(child: Chewie(controller: _cc!));
+    }
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(child: body),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 8,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        ],
       ),
     );
   }
