@@ -61,6 +61,7 @@ dependencies:
   flutter_image_compress: ^2.3.0  # IM 图片普通画质压缩（长边 1920 / JPEG q=80）
   photo_view: ^0.15.0  # IM 大图查看（捏合缩放）
   video_thumbnail: ^0.5.3  # IM 视频抽首帧
+  open_filex: ^4.5.0  # IM 文件消息：下载到本地 + 调系统默认 app 打开（含 PDF）
   record: ^6.2.0
   path_provider: ^2.1.0
   web_socket_channel: ^3.0.0

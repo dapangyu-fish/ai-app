@@ -542,6 +542,42 @@ class IMService {
     }
   }
 
+  /// 发送文件消息（推荐路径）：文件已上传到我们 MinIO，[url] 公网可读。
+  /// SDK 把 URL 包成系统 file 消息，对端 file bubble 渲染管线会处理点击下载。
+  ///
+  /// [sourcePath] 必传 —— SDK 在 native 端用它算 MD5 当 message UUID。
+  Future<Message?> sendFileByUrl({
+    required String url,
+    required String sourcePath,
+    required String uuid,
+    required String fileName,
+    required int fileSize,
+    String? userID,
+    String? groupID,
+  }) async {
+    final elem = FileElem(
+      filePath: sourcePath,
+      uuid: uuid,
+      sourceUrl: url,
+      fileName: fileName,
+      fileSize: fileSize,
+    );
+    try {
+      final msg = await OpenIM.iMManager.messageManager.createFileMessageByURL(
+        fileElem: elem,
+      );
+      return sendPreparedMessage(
+        message: msg,
+        previewText: '[文件] $fileName',
+        userID: userID,
+        groupID: groupID,
+      );
+    } catch (e) {
+      debugPrint('[IM] sendFileByUrl 失败: $e');
+      return null;
+    }
+  }
+
   /// 撤回消息
   Future<bool> revokeMessage({
     required String conversationID,

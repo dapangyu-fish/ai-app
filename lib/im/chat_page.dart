@@ -4,9 +4,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:chewie/chewie.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
@@ -498,16 +502,43 @@ class _IMChatPageState extends State<IMChatPage> {
           ),
         );
       case MessageType.file:
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.insert_drive_file, size: 16, color: textColor),
-            const SizedBox(width: 4),
-            Text(msg.fileElem?.fileName ?? T.of(context).imPreviewFile,
-                style: TextStyle(color: textColor),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ],
+        final fileName = msg.fileElem?.fileName ?? '文件';
+        final fileSize = msg.fileElem?.fileSize ?? 0;
+        final url = msg.fileElem?.sourceUrl ?? '';
+        return GestureDetector(
+          onTap: url.isNotEmpty
+              ? () => _openFileMessage(url: url, fileName: fileName)
+              : null,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 240),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.insert_drive_file, size: 32, color: textColor),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        fileName,
+                        style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _fmtFileSize(fileSize),
+                        style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       default:
         // 其余罕见类型（card / merger / location / customFace / quote / advancedText / custom 等）
@@ -826,6 +857,13 @@ class _IMChatPageState extends State<IMChatPage> {
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 
+  static String _fmtFileSize(int bytes) {
+    if (bytes < 1024) return '${bytes}B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)}GB';
+  }
+
   void _markPlaceholderFailed(Message placeholder, String text) {
     if (!mounted) return;
     setState(() {
@@ -967,6 +1005,116 @@ class _IMChatPageState extends State<IMChatPage> {
     ));
   }
 
+  // ---------- 文件：file_picker → 上传 → sendFileByUrl ----------
+
+  Future<void> _pickAndSendFile() async {
+    // type=any，不限格式；后端按 ALLOWED_EXT 白名单兜底
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+      withData: false, // 我们要的是路径，不要内存里的字节
+    );
+    if (result == null || result.files.isEmpty) return;
+    final picked = result.files.first;
+    final path = picked.path;
+    if (path == null) return;
+    final file = File(path);
+    if (!await file.exists() || !mounted) return;
+
+    final fileName = picked.name;
+    final placeholder = await IMService.instance.createTextMessage('[文件 $fileName 上传中...]');
+    if (!mounted) return;
+    setState(() => _messages.insert(0, placeholder));
+
+    final upload = await ImMediaUploader.uploadFileFull(
+      file,
+      purpose: ImMediaPurpose.file,
+      onProgress: (sent, total) {
+        if (!mounted) return;
+        final pct = total > 0 ? (sent * 100 ~/ total) : 0;
+        placeholder.textElem?.content = '[文件 $fileName 上传中 $pct%]';
+        if (sent == total || pct % 10 == 0) setState(() {});
+      },
+    );
+
+    if (upload == null) {
+      _markPlaceholderFailed(placeholder, '[文件上传失败：$fileName]');
+      return;
+    }
+
+    final size = await file.length();
+    final sent = await IMService.instance.sendFileByUrl(
+      url: upload.publicUrl,
+      sourcePath: file.absolute.path,
+      uuid: upload.key,
+      fileName: fileName,
+      fileSize: size,
+      userID: widget.userID,
+      groupID: widget.groupID,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      if (idx < 0) return;
+      if (sent != null) {
+        _messages[idx] = sent;
+      } else {
+        placeholder.status = MessageStatus.failed;
+        placeholder.textElem?.content = '[文件发送失败：$fileName]';
+        _messages[idx] = placeholder;
+      }
+    });
+  }
+
+  /// 点击文件气泡：下载到 app 缓存目录后调系统默认 app 打开。
+  /// 同名文件已存在就直接打开（避免每次重新下载）；只用 url 做 cache key 也够了，
+  /// 因为我们的 URL 是 MinIO key 直链，永久不变。
+  Future<void> _openFileMessage({required String url, required String fileName}) async {
+    try {
+      final cacheDir = await getTemporaryDirectory();
+      // 用 url 末段做 cache key + 保留原文件名，让系统能按后缀挑 app
+      final urlSeg = p.basename(Uri.parse(url).path);
+      final cachedDir = Directory('${cacheDir.path}/im_files/$urlSeg');
+      if (!await cachedDir.exists()) {
+        await cachedDir.create(recursive: true);
+      }
+      final localPath = '${cachedDir.path}/$fileName';
+      final f = File(localPath);
+
+      if (!await f.exists()) {
+        if (!mounted) return;
+        // 简单进度：snackbar
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('正在下载...'), duration: Duration(seconds: 30)),
+        );
+        final resp = await http.get(Uri.parse(url));
+        messenger.hideCurrentSnackBar();
+        if (resp.statusCode != 200) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('下载失败 ${resp.statusCode}')),
+          );
+          return;
+        }
+        await f.writeAsBytes(resp.bodyBytes);
+      }
+
+      final r = await OpenFilex.open(localPath);
+      if (r.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('打开失败：${r.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('打开异常：$e')),
+        );
+      }
+    }
+  }
+
   void _showAttachmentOptions() {
     final s = T.of(context);
     showModalBottomSheet(
@@ -1006,7 +1154,7 @@ class _IMChatPageState extends State<IMChatPage> {
                 label: s.imAttachFile,
                 onTap: () {
                   Navigator.pop(ctx);
-                  // TODO(step 4): 集成 file_picker 发送文件
+                  _pickAndSendFile();
                 },
               ),
             ],
