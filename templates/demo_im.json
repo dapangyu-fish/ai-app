@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.4.7",
+    "version": "1.4.8",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
@@ -32,7 +32,11 @@
       "_im": null
     },
     "computed": {
-      "applicationCount": {"length": [{"var": "global.applications"}]},
+      "applicationCount": {
+        "length": [
+          {"filter": [{"var": "global.applications"}, {"==": [{"var": "handle_result"}, 0]}]}
+        ]
+      },
       "friendCount": {"length": [{"var": "global.friends"}]}
     },
     "functions": {
