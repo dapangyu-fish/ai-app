@@ -14,19 +14,14 @@ class JsonButtonWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    // label 显式给了就用，没给且没图标退到默认 "按钮"，
-    // 没给但有图标 → 视为 icon-only 按钮（用 IconButton 渲染，没有文字）
-    final rawLabel = json['label'];
-    final hasLabel = rawLabel != null && rawLabel.toString().isNotEmpty;
-    final label = hasLabel
-        ? interpreter.resolveTemplate(rawLabel.toString())
-        : '按钮';
+    final label = interpreter.resolveTemplate(
+      (json['label'] ?? '按钮').toString(),
+    );
     final action = json['action'] as Map<String, dynamic>?;
     final style = json['style'] as Map<String, dynamic>? ?? {};
     final variant = json['variant']?.toString() ?? 'filled';
     final iconName = json['icon']?.toString();
     final disabled = json['disabled'] == true;
-    final iconOnly = !hasLabel && iconName != null;
 
     // build 阶段预解析 action（用共享 helper —— 会递归 List）
     final resolvedAction = action != null
@@ -68,20 +63,6 @@ class JsonButtonWidget extends JsonBaseWidget {
         : (resolvedAction != null
             ? () => interpreter.executeAction(resolvedAction, context)
             : null);
-
-    // icon-only 按钮：JSON 给了 icon 没给 label，渲染裸 IconButton 而不是
-    // FilledButton.icon（后者会塞 "按钮" 占位文字）。tooltip 沿用 label
-    // 字段（要是用户想给图标按钮带提示就显式 label）—— 但这里 hasLabel=false
-    // 所以没 tooltip，符合直觉。
-    if (iconOnly) {
-      final iconColor = _parseColor(json['iconColor']?.toString()) ?? textColor;
-      return IconButton(
-        onPressed: onPressed,
-        icon: Icon(iconData, color: iconColor, size: fontSize + 6),
-        padding: EdgeInsets.symmetric(horizontal: hPadding * 0.4, vertical: vPadding * 0.4),
-        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-      );
-    }
 
     Widget button;
     switch (variant) {
