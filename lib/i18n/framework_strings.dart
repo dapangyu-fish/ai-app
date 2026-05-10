@@ -308,6 +308,7 @@ class _Strings {
   final String imAttachCamera;
   final String imAttachVideo;
   final String imAttachFile;
+  final String imImageExpired;
 
   // ── IM 好友页 ──
   final String imAdd;
@@ -607,6 +608,7 @@ class _Strings {
     required this.imAttachCamera,
     required this.imAttachVideo,
     required this.imAttachFile,
+    required this.imImageExpired,
     required this.imAdd,
     required this.imAddFriend,
     required this.imCreateGroup,
@@ -900,6 +902,7 @@ const _Strings _zhCN = _Strings(
   imAttachCamera: '拍照',
   imAttachVideo: '视频',
   imAttachFile: '文件',
+  imImageExpired: '图片已过期',
   imAdd: '添加',
   imAddFriend: '加好友',
   imCreateGroup: '建群',
@@ -1192,6 +1195,7 @@ const _Strings _enUS = _Strings(
   imAttachCamera: 'Camera',
   imAttachVideo: 'Video',
   imAttachFile: 'File',
+  imImageExpired: 'Image expired',
   imAdd: 'Add',
   imAddFriend: 'Add friend',
   imCreateGroup: 'New group',

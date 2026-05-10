@@ -17,6 +17,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../i18n/framework_strings.dart';
+import 'im_cache_manager.dart';
 import 'im_media_uploader.dart';
 import 'im_service.dart';
 import 'group_management.dart';
@@ -414,6 +415,7 @@ class _IMChatPageState extends State<IMChatPage> {
               borderRadius: BorderRadius.circular(8),
               child: CachedNetworkImage(
                 imageUrl: url,
+                cacheManager: ImMediaCacheManager.instance,
                 width: 200,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => SizedBox(
@@ -421,12 +423,7 @@ class _IMChatPageState extends State<IMChatPage> {
                   height: 150,
                   child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
-                errorWidget: (_, __, ___) => Container(
-                  width: 200,
-                  height: 150,
-                  color: cs.surfaceContainerHighest,
-                  child: Icon(Icons.broken_image, color: cs.outline),
-                ),
+                errorWidget: (_, __, ___) => _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
               ),
             ),
           );
@@ -459,14 +456,10 @@ class _IMChatPageState extends State<IMChatPage> {
                 if (snapUrl != null && snapUrl.isNotEmpty)
                   CachedNetworkImage(
                     imageUrl: snapUrl,
+                    cacheManager: ImMediaCacheManager.instance,
                     width: 200,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(
-                      width: 200,
-                      height: 150,
-                      color: cs.surfaceContainerHighest,
-                      child: Icon(Icons.movie, color: cs.outline, size: 40),
-                    ),
+                    errorWidget: (_, __, ___) => _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
                   )
                 else
                   Container(
@@ -1201,6 +1194,36 @@ class _IMChatPageState extends State<IMChatPage> {
   }
 }
 
+/// 缩略图加载失败时的"图片已过期"占位（消息气泡里的尺寸）。
+/// 触发：MinIO `im-media` 7 天 lifecycle 已删 + 本地缓存里也没有（比如换了设备 / 清缓存）
+class _ExpiredPlaceholder extends StatelessWidget {
+  final double width;
+  final double height;
+  final ColorScheme cs;
+  const _ExpiredPlaceholder({required this.width, required this.height, required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      color: cs.surfaceContainerHighest,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.history_toggle_off, color: cs.outline, size: 32),
+          const SizedBox(height: 6),
+          Text(
+            T.of(context).imImageExpired,
+            style: TextStyle(color: cs.outline, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 全屏视频播放页：chewie + video_player。autoplay。
 class _VideoPlayerPage extends StatefulWidget {
   final String url;
@@ -1290,15 +1313,28 @@ class _ImageViewerPage extends StatelessWidget {
         children: [
           Positioned.fill(
             child: PhotoView(
-              imageProvider: CachedNetworkImageProvider(url),
+              imageProvider: CachedNetworkImageProvider(
+                url,
+                cacheManager: ImMediaCacheManager.instance,
+              ),
               backgroundDecoration: const BoxDecoration(color: Colors.black),
               minScale: PhotoViewComputedScale.contained,
               maxScale: PhotoViewComputedScale.covered * 4,
               loadingBuilder: (_, __) => const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               ),
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
+              errorBuilder: (_, __, ___) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.history_toggle_off, color: Colors.white54, size: 48),
+                    const SizedBox(height: 8),
+                    Text(
+                      T.of(context).imImageExpired,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
