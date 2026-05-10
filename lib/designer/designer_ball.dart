@@ -116,6 +116,9 @@ class _DesignerBallState extends State<DesignerBall>
   static const Duration _longPressDuration = Duration(milliseconds: 1500);
   Timer? _longPressTimer;
   bool _chatMode = false;
+  // 快捷菜单弹出态。第二次双击（菜单还开着的情况下）应该关掉它，而不是
+  // 再叠一层弹窗
+  bool _quickMenuOpen = false;
   bool _isListening = false;
   bool _isThinking = false;
   bool _isGeneratingJson = false;
@@ -552,8 +555,15 @@ class _DesignerBallState extends State<DesignerBall>
   /// 之前是直接恢复历史会话，但现在需要在这里挂更多入口（截屏、笔记、
   /// 快捷指令等），所以拆成"先弹菜单 → 用户选"两步。
   /// 没历史会话时"恢复会话"按钮灰掉但菜单仍然弹出，让其他入口可用。
+  ///
+  /// 第二次双击（菜单还开着）→ 关掉菜单，而不是叠一层。点击灰幕也能关。
   void _onDoubleTap() {
     if (_chatMode) return;
+    if (_quickMenuOpen) {
+      // 菜单已打开 → 双击 = 关
+      JsonDslApp.navigatorKey.currentState?.pop();
+      return;
+    }
     _showQuickMenu();
   }
 
@@ -579,64 +589,69 @@ class _DesignerBallState extends State<DesignerBall>
     final hasHistory = _messages.isNotEmpty;
     final s = T.of(navContext);
 
-    await showDialog<void>(
-      context: navContext,
-      barrierColor: Colors.black38,
-      barrierDismissible: true,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        // 用 surfaceContainerHigh：M3 专门设计的"需要从背景里凸出"的容器色。
-        // 浅色模式下比 surface 略深、深色模式下比 surface 略浅，跟系统主题
-        // 自动产生对比，不会跟页面底色融成一片。
-        return Dialog(
-          backgroundColor: cs.surfaceContainerHigh,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  s.ballMenuTitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.95,
-                  children: [
-                    _QuickMenuButton(
-                      icon: Icons.history_rounded,
-                      label: s.ballMenuRestoreSession,
-                      enabled: hasHistory,
-                      tooltipDisabled: s.ballMenuRestoreSessionEmpty,
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        _restoreSession();
-                      },
+    _quickMenuOpen = true;
+    try {
+      await showDialog<void>(
+        context: navContext,
+        barrierColor: Colors.black38,
+        barrierDismissible: true,
+        builder: (ctx) {
+          final cs = Theme.of(ctx).colorScheme;
+          // 用 surfaceContainerHigh：M3 专门设计的"需要从背景里凸出"的容器色。
+          // 浅色模式下比 surface 略深、深色模式下比 surface 略浅，跟系统主题
+          // 自动产生对比，不会跟页面底色融成一片。
+          return Dialog(
+            backgroundColor: cs.surfaceContainerHigh,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    s.ballMenuTitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
                     ),
-                    // 后续功能：在这里 append 更多 _QuickMenuButton，比如：
-                    //   _QuickMenuButton(icon: Icons.screenshot, label: '截屏', ...)
-                    //   _QuickMenuButton(icon: Icons.edit_note, label: '记笔记', ...)
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 16),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.95,
+                    children: [
+                      _QuickMenuButton(
+                        icon: Icons.history_rounded,
+                        label: s.ballMenuRestoreSession,
+                        enabled: hasHistory,
+                        tooltipDisabled: s.ballMenuRestoreSessionEmpty,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _restoreSession();
+                        },
+                      ),
+                      // 后续功能：在这里 append 更多 _QuickMenuButton，比如：
+                      //   _QuickMenuButton(icon: Icons.screenshot, label: '截屏', ...)
+                      //   _QuickMenuButton(icon: Icons.edit_note, label: '记笔记', ...)
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    } finally {
+      _quickMenuOpen = false;
+    }
   }
 
   // ════════════════════════════════════════════════════════
