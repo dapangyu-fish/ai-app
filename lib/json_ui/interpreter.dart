@@ -106,6 +106,27 @@ class JsonInterpreter extends ChangeNotifier {
   // 整个 interpreter 生命周期复用同一个订阅，避免重入创建多个 listener。
   StreamSubscription<Message>? _imInboxSub;
 
+  // ============ 嵌套 APP 状态栈 ============
+  //
+  // @launch_app 用于在一个 JSON-APP 内部启动另一个 JSON-APP（典型场景：
+  // 用户自己写的 launcher 通过 @launch_app 跳进市场上的某个 app）。
+  // interpreter 是单例（loadConfig 全量替换 _config / _variables / _functions /
+  // _depLoader / _textControllers 等），嵌套启动必须在 loadConfig 前先把父
+  // app 状态压栈，等子 app 被 pop 后再 popState 恢复，否则父 app 的 widget
+  // 重新渲染时读到的是子 app 的残骸。
+  //
+  // 调用规约（@launch_app 的实现负责）：
+  //   1. interpreter.pushState();              ← 保存父 app 整个状态
+  //   2. interpreter.loadConfig(childConfig);
+  //   3. await interpreter.executeSteps();
+  //   4. push JsonScreenView，挂 .whenComplete(() => interpreter.popState())
+  //
+  // pushState/popState 必须严格一一对应；不做配对校验，由调用方负责。
+  final List<_InterpreterStateSnapshot> _stateStack = [];
+
+  /// 是否处于嵌套 APP（@launch_app 已 pushState 但还没 popState）
+  bool get isNested => _stateStack.isNotEmpty;
+
   // ============ Getters ============
 
   List<dynamic> get screens =>
@@ -443,6 +464,98 @@ class JsonInterpreter extends ChangeNotifier {
 
     // 注册生命周期 hook（resume/pause/...）
     _attachLifecycleListener();
+  }
+
+  /// 把当前 interpreter 状态整体压栈，让调用方接着 [loadConfig] 装载子 APP
+  /// 而不丢失父 APP 的状态。和 [popState] 必须一一对应。
+  ///
+  /// 注意：父 APP 持有的 `TextEditingController` 实例**不会被 dispose**——
+  /// snapshot 持引用，pop 时还要挂回去。后续 [loadConfig] 走"dispose
+  /// _textControllers"路径时，因为 _textControllers 已被清空，不会误伤父。
+  ///
+  /// 父 APP 的 IM inbox 订阅会被**暂停**（pause）而不是取消——这样消息不会
+  /// 丢，等 [popState] 后继续投递。子 APP 自己再调 `@im_subscribe_inbox`
+  /// 不会复用父的，会建一条新的（pop 时被 cancel）。
+  void pushState() {
+    _imInboxSub?.pause();
+    final savedIm = _imInboxSub;
+    _imInboxSub = null;
+
+    _stateStack.add(_InterpreterStateSnapshot(
+      config: _config,
+      variables: _variables,
+      functions: _functions,
+      currentScreenId: _currentScreenId,
+      appId: _appId,
+      navigationHistory: List<String>.of(_navigationHistory),
+      depModules: _depLoader.snapshot(),
+      textControllers:
+          Map<String, TextEditingController>.of(_textControllers),
+      loopContextStack:
+          List<Map<String, dynamic>>.of(_loopContextStack),
+      paramsStack: List<Map<String, dynamic>>.of(_paramsStack),
+      eventContextStack:
+          List<Map<String, dynamic>>.of(_eventContextStack),
+      imInboxSub: savedIm,
+    ));
+
+    // 把"实例 final 的容器"清空（保留同一份 Map/List 实例），由后续 loadConfig
+    // 填充。注意 _textControllers 这里**不能 dispose**——所有控件还活在父 app
+    // widget tree 里持有引用，dispose 会让父 app 的输入框炸。
+    _textControllers.clear();
+    _navigationHistory.clear();
+    _loopContextStack.clear();
+    _paramsStack.clear();
+    _eventContextStack.clear();
+    _currentScreenId = '';
+    _activeModalCount = 0;
+  }
+
+  /// 弹出栈顶状态，恢复到当前 interpreter；和 [pushState] 配对调用。
+  /// 子 APP 自己创建的资源（TextEditingController / IM 订阅）会在这里释放。
+  /// 状态栈空时无操作（防御）。
+  void popState() {
+    if (_stateStack.isEmpty) {
+      debugPrint('[JsonInterpreter] popState 时状态栈为空，忽略');
+      return;
+    }
+    final snapshot = _stateStack.removeLast();
+
+    // 子 app 的 controllers 用完了，dispose 防止泄漏
+    for (final c in _textControllers.values) {
+      c.dispose();
+    }
+    _textControllers
+      ..clear()
+      ..addAll(snapshot.textControllers);
+
+    // 子 app 自己开的 IM 订阅 cancel 掉，再恢复父的（之前是 pause，这里 resume）
+    _imInboxSub?.cancel();
+    _imInboxSub = snapshot.imInboxSub;
+    _imInboxSub?.resume();
+
+    _navigationHistory
+      ..clear()
+      ..addAll(snapshot.navigationHistory);
+    _loopContextStack
+      ..clear()
+      ..addAll(snapshot.loopContextStack);
+    _paramsStack
+      ..clear()
+      ..addAll(snapshot.paramsStack);
+    _eventContextStack
+      ..clear()
+      ..addAll(snapshot.eventContextStack);
+
+    _config = snapshot.config;
+    _variables = snapshot.variables;
+    _functions = snapshot.functions;
+    _currentScreenId = snapshot.currentScreenId;
+    _appId = snapshot.appId;
+
+    _depLoader.restoreFromSnapshot(snapshot.depModules);
+
+    notifyListeners();
   }
 
   /// 把 BCP 47 tag 简化成 JSON-APP 习惯用的语言代码（zh-CN → zh / en-US → en）。
@@ -3428,4 +3541,35 @@ class _TextInputDialogState extends State<_TextInputDialog> {
       ],
     );
   }
+}
+
+/// [JsonInterpreter.pushState] 用的状态快照——见 pushState 注释。
+class _InterpreterStateSnapshot {
+  final Map<String, dynamic> config;
+  final Map<String, dynamic> variables;
+  final Map<String, dynamic> functions;
+  final String currentScreenId;
+  final String appId;
+  final List<String> navigationHistory;
+  final Map<String, LoadedModule> depModules;
+  final Map<String, TextEditingController> textControllers;
+  final List<Map<String, dynamic>> loopContextStack;
+  final List<Map<String, dynamic>> paramsStack;
+  final List<Map<String, dynamic>> eventContextStack;
+  final StreamSubscription<Message>? imInboxSub;
+
+  _InterpreterStateSnapshot({
+    required this.config,
+    required this.variables,
+    required this.functions,
+    required this.currentScreenId,
+    required this.appId,
+    required this.navigationHistory,
+    required this.depModules,
+    required this.textControllers,
+    required this.loopContextStack,
+    required this.paramsStack,
+    required this.eventContextStack,
+    required this.imInboxSub,
+  });
 }
