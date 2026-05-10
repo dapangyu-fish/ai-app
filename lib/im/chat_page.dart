@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:chewie/chewie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
@@ -16,6 +18,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../i18n/framework_strings.dart';
+import 'im_cache_manager.dart';
 import 'im_media_uploader.dart';
 import 'im_service.dart';
 import 'group_management.dart';
@@ -385,7 +388,7 @@ class _IMChatPageState extends State<IMChatPage> {
       radius: 18,
       backgroundColor: cs.primaryContainer,
       backgroundImage: faceUrl != null && faceUrl.isNotEmpty
-          ? NetworkImage(faceUrl)
+          ? CachedNetworkImageProvider(faceUrl)
           : null,
       child: faceUrl == null || faceUrl.isEmpty
           ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
@@ -411,24 +414,17 @@ class _IMChatPageState extends State<IMChatPage> {
             onTap: () => _openImageViewer(url),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                url,
+              child: CachedNetworkImage(
+                imageUrl: url,
+                cacheManager: ImMediaCacheManager.instance,
                 width: 200,
                 fit: BoxFit.cover,
-                loadingBuilder: (_, child, progress) {
-                  if (progress == null) return child;
-                  return SizedBox(
-                    width: 200,
-                    height: 150,
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
+                placeholder: (_, __) => SizedBox(
                   width: 200,
                   height: 150,
-                  color: cs.surfaceContainerHighest,
-                  child: Icon(Icons.broken_image, color: cs.outline),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
+                errorWidget: (_, __, ___) => _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
               ),
             ),
           );
@@ -459,16 +455,12 @@ class _IMChatPageState extends State<IMChatPage> {
               alignment: Alignment.center,
               children: [
                 if (snapUrl != null && snapUrl.isNotEmpty)
-                  Image.network(
-                    snapUrl,
+                  CachedNetworkImage(
+                    imageUrl: snapUrl,
+                    cacheManager: ImMediaCacheManager.instance,
                     width: 200,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 200,
-                      height: 150,
-                      color: cs.surfaceContainerHighest,
-                      child: Icon(Icons.movie, color: cs.outline, size: 40),
-                    ),
+                    errorWidget: (_, __, ___) => _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
                   )
                 else
                   Container(
@@ -1203,6 +1195,36 @@ class _IMChatPageState extends State<IMChatPage> {
   }
 }
 
+/// 缩略图加载失败时的"图片已过期"占位（消息气泡里的尺寸）。
+/// 触发：MinIO `im-media` 7 天 lifecycle 已删 + 本地缓存里也没有（比如换了设备 / 清缓存）
+class _ExpiredPlaceholder extends StatelessWidget {
+  final double width;
+  final double height;
+  final ColorScheme cs;
+  const _ExpiredPlaceholder({required this.width, required this.height, required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      color: cs.surfaceContainerHighest,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.history_toggle_off, color: cs.outline, size: 32),
+          const SizedBox(height: 6),
+          Text(
+            T.of(context).imImageExpired,
+            style: TextStyle(color: cs.outline, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 全屏视频播放页：chewie + video_player。autoplay。
 class _VideoPlayerPage extends StatefulWidget {
   final String url;
@@ -1279,10 +1301,48 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
 }
 
 /// 全屏图片预览页：黑底 + photo_view 捏合缩放 + 双击放大。
-/// 顶部 close 按钮覆盖在图上。
-class _ImageViewerPage extends StatelessWidget {
+/// 顶部 close（左上）+ download（右上）覆盖在图上。
+class _ImageViewerPage extends StatefulWidget {
   final String url;
   const _ImageViewerPage({required this.url});
+
+  @override
+  State<_ImageViewerPage> createState() => _ImageViewerPageState();
+}
+
+class _ImageViewerPageState extends State<_ImageViewerPage> {
+  bool _saving = false;
+
+  Future<void> _saveToAlbum() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final s = T.of(context);
+    try {
+      // gal 在 iOS 第一次会弹相册写入权限；在 Android 13+ 不要权限
+      final granted = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      if (!granted) {
+        messenger.showSnackBar(SnackBar(content: Text(s.imSaveFailed)));
+        return;
+      }
+      // 从 cache_manager 拿本地文件（如果已经缓存过）；没缓存就 http 下一次
+      final fileInfo = await ImMediaCacheManager.instance.getFileFromCache(widget.url);
+      String localPath;
+      if (fileInfo != null) {
+        localPath = fileInfo.file.path;
+      } else {
+        final downloaded = await ImMediaCacheManager.instance.downloadFile(widget.url);
+        localPath = downloaded.file.path;
+      }
+      await Gal.putImage(localPath);
+      messenger.showSnackBar(SnackBar(content: Text(s.imSaveSuccess)));
+    } catch (e) {
+      debugPrint('[IM] 保存到相册失败: $e');
+      messenger.showSnackBar(SnackBar(content: Text(s.imSaveFailed)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1292,15 +1352,28 @@ class _ImageViewerPage extends StatelessWidget {
         children: [
           Positioned.fill(
             child: PhotoView(
-              imageProvider: NetworkImage(url),
+              imageProvider: CachedNetworkImageProvider(
+                widget.url,
+                cacheManager: ImMediaCacheManager.instance,
+              ),
               backgroundDecoration: const BoxDecoration(color: Colors.black),
               minScale: PhotoViewComputedScale.contained,
               maxScale: PhotoViewComputedScale.covered * 4,
               loadingBuilder: (_, __) => const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               ),
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
+              errorBuilder: (_, __, ___) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.history_toggle_off, color: Colors.white54, size: 48),
+                    const SizedBox(height: 8),
+                    Text(
+                      T.of(context).imImageExpired,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1310,6 +1383,20 @@ class _ImageViewerPage extends StatelessWidget {
             child: IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
               onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 8,
+            child: IconButton(
+              icon: _saving
+                  ? const SizedBox(
+                      width: 22, height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.download_rounded, color: Colors.white),
+              tooltip: T.of(context).imSaveToAlbum,
+              onPressed: _saving ? null : _saveToAlbum,
             ),
           ),
         ],

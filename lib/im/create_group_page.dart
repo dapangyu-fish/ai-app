@@ -8,6 +8,7 @@
 //   2. 已选成员数 footer，少于 1 人不允许创建
 //   3. 创建成功后立刻 push 进群聊页面
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import '../i18n/framework_strings.dart';
@@ -183,7 +184,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                                 radius: 20,
                                 backgroundColor: cs.primaryContainer,
                                 backgroundImage: (faceUrl?.isNotEmpty ?? false)
-                                    ? NetworkImage(faceUrl!)
+                                    ? CachedNetworkImageProvider(faceUrl!)
                                     : null,
                                 child: (faceUrl?.isEmpty ?? true)
                                     ? Text(

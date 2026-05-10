@@ -7,6 +7,7 @@
 // 支持属性：url/src, fit, width, height, borderRadius
 import 'dart:convert';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
@@ -103,18 +104,15 @@ class JsonImageWidget extends JsonBaseWidget {
       return _base64Image(src, width, height, fit, context);
     }
 
-    // 2. 网络图片
+    // 2. 网络图片（CachedNetworkImage 带 disk 缓存，冷启动命中）
     if (src.startsWith('http://') || src.startsWith('https://')) {
-      return Image.network(
-        src,
+      return CachedNetworkImage(
+        imageUrl: src,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => _errorWidget(width, height, context),
-        loadingBuilder: (_, child, progress) {
-          if (progress == null) return child;
-          return _loadingWidget(width, height, progress, context);
-        },
+        errorWidget: (_, __, ___) => _errorWidget(width, height, context),
+        placeholder: (_, __) => _loadingWidget(width, height, null, context),
       );
     }
 
@@ -175,7 +173,7 @@ class JsonImageWidget extends JsonBaseWidget {
   Widget _loadingWidget(
     double? width,
     double? height,
-    ImageChunkEvent progress,
+    ImageChunkEvent? progress,
     BuildContext context,
   ) {
     return Container(
@@ -183,8 +181,8 @@ class JsonImageWidget extends JsonBaseWidget {
       height: height ?? 100,
       alignment: Alignment.center,
       child: CircularProgressIndicator(
-        value: progress.expectedTotalBytes != null
-            ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+        value: progress?.expectedTotalBytes != null
+            ? progress!.cumulativeBytesLoaded / progress.expectedTotalBytes!
             : null,
         strokeWidth: 2,
       ),
