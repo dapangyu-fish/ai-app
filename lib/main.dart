@@ -618,40 +618,39 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       setState(() => _bootstrapping = false);
       return;
     }
-    try {
-      switch (cfg.kind) {
-        case DefaultStartupKind.market:
-          if (cfg.marketName != null && cfg.marketVersion != null) {
-            await _loadFromMarket({
-              'name': cfg.marketName,
-              'version': cfg.marketVersion,
-            }, isStartupRoot: true);
+    // 注意：成功 push JsonScreenView 后保持 _bootstrapping=true，等用户从
+    // JSON-APP pop 回来时由 Navigator.push().whenComplete 翻成 false。
+    // 这里要是 finally 里立刻翻 false，FilePickerPage 会赶在 push 转场动画
+    // 期间 rebuild 出 home，从底下露出来"闪一下"。
+    switch (cfg.kind) {
+      case DefaultStartupKind.market:
+        if (cfg.marketName != null && cfg.marketVersion != null) {
+          await _loadFromMarket({
+            'name': cfg.marketName,
+            'version': cfg.marketVersion,
+          }, isStartupRoot: true);
+          return;
+        }
+      case DefaultStartupKind.local:
+        if (cfg.localFileName != null) {
+          final apps = await AppStorage.instance.list();
+          final app = apps.firstWhere(
+            (a) => a.fileName == cfg.localFileName,
+            orElse: () => SavedApp(
+              fileName: '', name: '', description: '', savedAt: '', config: const {},
+            ),
+          );
+          if (app.fileName.isNotEmpty) {
+            await _loadSavedApp(app, isStartupRoot: true);
+            return;
           }
-        case DefaultStartupKind.local:
-          if (cfg.localFileName != null) {
-            final apps = await AppStorage.instance.list();
-            final app = apps.firstWhere(
-              (a) => a.fileName == cfg.localFileName,
-              orElse: () => SavedApp(
-                fileName: '', name: '', description: '', savedAt: '', config: const {},
-              ),
-            );
-            if (app.fileName.isNotEmpty) {
-              await _loadSavedApp(app, isStartupRoot: true);
-            }
-          }
-        case DefaultStartupKind.none:
-          break;
-      }
-    } catch (e) {
-      debugPrint('[DefaultStartup] 自动加载失败: $e');
-      // 不打扰用户，错误已经在 _loadFromMarket / _loadSavedApp 里有 setState(_error)
-    } finally {
-      // JSON-APP 已经 push 在上层；底下的 home 即便在这里 rebuild 也看不见，
-      // 但用户从悬浮球"回到主页"返回时需要看到正常 home 而不是 loading 占位
-      if (mounted) {
-        setState(() => _bootstrapping = false);
-      }
+        }
+      case DefaultStartupKind.none:
+        break;
+    }
+    // 走到这里：配的目标已经不存在（market 字段缺失 / 本地 app 被删）→ 退出占位
+    if (mounted) {
+      setState(() => _bootstrapping = false);
     }
   }
 
@@ -802,11 +801,19 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
             isStartupRoot: isStartupRoot,
           ),
         ),
-      );
+      ).whenComplete(() {
+        // startup root：等用户从 JSON-APP pop 回来才退出占位，让 home 显示。
+        // 之前在 push 之前就翻 false，转场动画期间 home 会从底下被瞄到 → 闪一下。
+        if (isStartupRoot && mounted) {
+          setState(() => _bootstrapping = false);
+        }
+      });
     } catch (e) {
       setState(() {
         _loading = false;
         _error = e.toString();
+        // 加载失败也得退占位，否则用户卡在 spinner 看不到错误
+        if (isStartupRoot) _bootstrapping = false;
       });
     }
   }
@@ -848,11 +855,17 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
             isStartupRoot: isStartupRoot,
           ),
         ),
-      );
+      ).whenComplete(() {
+        // 同 _loadFromMarket：等 pop 回来才退占位，避免转场闪 home
+        if (isStartupRoot && mounted) {
+          setState(() => _bootstrapping = false);
+        }
+      });
     } catch (e) {
       setState(() {
         _loading = false;
         _error = e.toString();
+        if (isStartupRoot) _bootstrapping = false;
       });
     }
   }
