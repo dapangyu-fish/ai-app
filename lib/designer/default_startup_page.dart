@@ -1,20 +1,21 @@
 // 默认启动 App 选择页
 //
-// 三段：
-//   1. 顶部一项：不设置（即默认 MyApp 首页行为）
-//   2. Tab 切到「市场」：从 registry /packages?type=app 拉，过滤掉 lib
-//   3. Tab 切到「本地」：从 AppStorage 拉 SavedApp 列表
+// 风格跟"市场"和"我的 APP"页面一致：
+//   - Card + 48 圆角图标 + 名称 + version chip + 描述 + 作者
+//   - 右侧不是"运行"，而是"设为启动 App"按钮（已选中时显示"当前启动 App"灰禁用）
 //
-// 选中后立即写 SharedPreferences + toast「已设置」+ pop 回设置页
+// 顶部一项是「不设置（启动到 MyApp 首页）」，点击直接清空设置。
+// Tab 切「市场」/「本地」。
 
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import '../i18n/framework_strings.dart';
-import '../i18n/locale_controller.dart';
+import '../i18n/meta_helper.dart';
 import 'app_storage.dart';
 import 'default_startup_prefs.dart';
 
@@ -30,12 +31,10 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
   late TabController _tab;
   DefaultStartupConfig _current = const DefaultStartupConfig.none();
 
-  // market
   bool _marketLoading = true;
   String? _marketError;
   List<Map<String, dynamic>> _marketApps = const [];
 
-  // local
   bool _localLoading = true;
   List<SavedApp> _localApps = const [];
 
@@ -55,10 +54,7 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
   Future<void> _load() async {
     final cur = await DefaultStartupPrefs.read();
     if (mounted) setState(() => _current = cur);
-    // 切到当前选中的 tab，让用户立刻看到自己之前选的那个
-    if (cur.kind == DefaultStartupKind.local) {
-      _tab.animateTo(1);
-    }
+    if (cur.kind == DefaultStartupKind.local) _tab.animateTo(1);
     await Future.wait([_loadMarket(), _loadLocal()]);
   }
 
@@ -71,8 +67,8 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
         throw Exception('HTTP ${resp.statusCode}');
       }
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      final pkgs = (data['packages'] as List<dynamic>).cast<Map<String, dynamic>>();
-      // registry 已经按 type=app 过滤过 lib，这里多保险一层
+      final pkgs =
+          (data['packages'] as List<dynamic>).cast<Map<String, dynamic>>();
       final apps = pkgs.where((p) => (p['type'] ?? 'app') == 'app').toList();
       if (!mounted) return;
       setState(() {
@@ -99,57 +95,38 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
 
   Future<void> _selectNone() async {
     await DefaultStartupPrefs.writeNone();
-    if (!mounted) return;
-    final s = T.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.defaultStartupSavedToast)));
-    Navigator.of(context).pop();
+    await _afterSet();
   }
 
   Future<void> _selectMarket(Map<String, dynamic> app) async {
     final name = app['name'] as String;
     final version = app['version'] as String;
-    // 优先取 displayName（多语言）；否则用 name 兜底
-    final dn = (app['displayName'] is Map<String, dynamic>)
-        ? _pickDisplayName(app['displayName'] as Map<String, dynamic>) ?? name
-        : (app['displayName']?.toString() ?? name);
+    final dn = resolveDisplayName(app, fallback: name);
     await DefaultStartupPrefs.writeMarket(
       name: name,
       version: version,
       displayName: dn,
     );
-    if (!mounted) return;
-    final s = T.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.defaultStartupSavedToast)));
-    Navigator.of(context).pop();
+    await _afterSet();
   }
 
   Future<void> _selectLocal(SavedApp app) async {
+    final meta = app.config['meta'] as Map<String, dynamic>?;
+    final dn = resolveDisplayName(meta, fallback: app.name);
     await DefaultStartupPrefs.writeLocal(
       fileName: app.fileName,
-      displayName: app.name,
+      displayName: dn,
     );
-    if (!mounted) return;
-    final s = T.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.defaultStartupSavedToast)));
-    Navigator.of(context).pop();
+    await _afterSet();
   }
 
-  String? _pickDisplayName(Map<String, dynamic> dn) {
-    // displayName 可以是 {zh: "...", en: "..."} 这种结构（registry 里见过）
-    // 取当前 locale 优先；找不到就第一个非空值
-    final tag = LocaleController.currentLocaleTag(); // e.g. "zh-CN" / "en"
-    final isZh = tag.startsWith('zh');
-    final preferred = isZh ? 'zh' : 'en';
-    final fallback = isZh ? 'en' : 'zh';
-    final v1 = dn[preferred]?.toString();
-    if (v1 != null && v1.isNotEmpty) return v1;
-    final v2 = dn[fallback]?.toString();
-    if (v2 != null && v2.isNotEmpty) return v2;
-    for (final v in dn.values) {
-      final s = v?.toString();
-      if (s != null && s.isNotEmpty) return s;
-    }
-    return null;
+  Future<void> _afterSet() async {
+    if (!mounted) return;
+    final s = T.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(s.defaultStartupSavedToast)),
+    );
+    Navigator.of(context).pop();
   }
 
   @override
@@ -159,18 +136,23 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(s.defaultStartupTitle),
-        bottom: TabBar(
-          controller: _tab,
-          tabs: [
-            Tab(text: s.defaultStartupTabMarket),
-            Tab(text: s.defaultStartupTabLocal),
-          ],
+        title: Text(s.defaultStartupTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: TabBar(
+            controller: _tab,
+            tabs: [
+              Tab(text: s.defaultStartupTabMarket),
+              Tab(text: s.defaultStartupTabLocal),
+            ],
+          ),
         ),
       ),
       body: Column(
         children: [
-          // 顶部说明 + "不设置"项
+          // 顶部说明 + "不设置"卡片
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Text(
@@ -178,16 +160,17 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
             ),
           ),
-          RadioListTile<bool>(
-            value: true,
-            groupValue: _current.kind == DefaultStartupKind.none,
-            onChanged: (_) => _selectNone(),
-            title: Text(s.defaultStartupNoneOption),
-            secondary: const Icon(Icons.home_outlined),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: _NoneCard(
+              isCurrent: _current.kind == DefaultStartupKind.none,
+              onSelect: _selectNone,
+              s: s,
+              cs: cs,
+            ),
           ),
           const Divider(height: 1),
 
-          // Tab 内容
           Expanded(
             child: TabBarView(
               controller: _tab,
@@ -202,62 +185,293 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
     );
   }
 
+  // ─────────── Market ───────────
+
   Widget _buildMarketList(FrameworkStrings s, ColorScheme cs) {
     if (_marketLoading) return const Center(child: CircularProgressIndicator());
     if (_marketError != null) {
-      return Center(child: Text(_marketError!, style: TextStyle(color: cs.error)));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(_marketError!,
+              style: TextStyle(color: cs.error), textAlign: TextAlign.center),
+        ),
+      );
     }
     if (_marketApps.isEmpty) {
-      return Center(child: Text(s.defaultStartupEmptyMarket, style: TextStyle(color: cs.onSurfaceVariant)));
+      return Center(
+        child: Text(s.defaultStartupEmptyMarket,
+            style: TextStyle(color: cs.onSurfaceVariant)),
+      );
     }
-    return ListView.separated(
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
       itemCount: _marketApps.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (_, i) {
         final app = _marketApps[i];
         final name = app['name']?.toString() ?? '';
+        final dn = resolveDisplayName(app, fallback: name);
+        final desc = app['description']?.toString() ?? '';
         final version = app['version']?.toString() ?? '';
-        final dn = (app['displayName'] is Map<String, dynamic>)
-            ? _pickDisplayName(app['displayName'] as Map<String, dynamic>) ?? name
-            : (app['displayName']?.toString() ?? name);
-        final selected = _current.kind == DefaultStartupKind.market &&
+        final author = app['author']?.toString() ?? '';
+        final isCurrent = _current.kind == DefaultStartupKind.market &&
             _current.marketName == name;
-        return RadioListTile<bool>(
-          value: true,
-          groupValue: selected,
-          onChanged: (_) => _selectMarket(app),
-          title: Text(dn),
-          subtitle: Text('$name · v$version', style: const TextStyle(fontSize: 11)),
+
+        return _AppCard(
+          displayName: dn,
+          subtitle: name,
+          description: desc,
+          version: version,
+          author: author,
+          isCurrent: isCurrent,
+          onSelect: () => _selectMarket(app),
+          s: s,
+          cs: cs,
         );
       },
     );
   }
 
+  // ─────────── Local ───────────
+
   Widget _buildLocalList(FrameworkStrings s, ColorScheme cs) {
     if (_localLoading) return const Center(child: CircularProgressIndicator());
     if (_localApps.isEmpty) {
-      return Center(child: Text(s.defaultStartupEmptyLocal, style: TextStyle(color: cs.onSurfaceVariant)));
+      return Center(
+        child: Text(s.defaultStartupEmptyLocal,
+            style: TextStyle(color: cs.onSurfaceVariant)),
+      );
     }
-    return ListView.separated(
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
       itemCount: _localApps.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (_, i) {
         final app = _localApps[i];
-        final selected = _current.kind == DefaultStartupKind.local &&
+        final meta = app.config['meta'] as Map<String, dynamic>?;
+        final dn = resolveDisplayName(meta, fallback: app.name);
+        final version = (meta?['version'])?.toString() ?? '';
+        final author = (meta?['author'])?.toString() ?? '';
+        final isCurrent = _current.kind == DefaultStartupKind.local &&
             _current.localFileName == app.fileName;
-        return RadioListTile<bool>(
-          value: true,
-          groupValue: selected,
-          onChanged: (_) => _selectLocal(app),
-          title: Text(app.name),
-          subtitle: Text(
-            app.fileName,
-            style: const TextStyle(fontSize: 11),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+
+        return _AppCard(
+          displayName: dn,
+          subtitle: app.fileName,
+          description: app.description,
+          version: version,
+          author: author,
+          isCurrent: isCurrent,
+          onSelect: () => _selectLocal(app),
+          s: s,
+          cs: cs,
         );
       },
+    );
+  }
+}
+
+/// 单个 App 卡片：跟市场页 _buildAppCard 同款 layout，右侧加"设为启动 App"按钮
+class _AppCard extends StatelessWidget {
+  final String displayName;
+  final String subtitle;
+  final String description;
+  final String version;
+  final String author;
+  final bool isCurrent;
+  final VoidCallback onSelect;
+  final FrameworkStrings s;
+  final ColorScheme cs;
+
+  const _AppCard({
+    required this.displayName,
+    required this.subtitle,
+    required this.description,
+    required this.version,
+    required this.author,
+    required this.isCurrent,
+    required this.onSelect,
+    required this.s,
+    required this.cs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isCurrent
+            ? BorderSide(color: cs.primary, width: 1.5)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.apps, color: cs.onSurface, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (version.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'v$version',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (author.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      T.fmt(s.marketAuthor, {'author': author}),
+                      style:
+                          TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                    ),
+                  ] else if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                          fontFamily: 'monospace'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: isCurrent
+                        ? OutlinedButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.check_circle_outline,
+                                size: 16),
+                            label: Text(s.defaultStartupCurrent),
+                          )
+                        : FilledButton.tonalIcon(
+                            onPressed: onSelect,
+                            icon: const Icon(Icons.rocket_launch_outlined,
+                                size: 16),
+                            label: Text(s.defaultStartupSetAsStartup),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 顶部"不设置"卡片
+class _NoneCard extends StatelessWidget {
+  final bool isCurrent;
+  final VoidCallback onSelect;
+  final FrameworkStrings s;
+  final ColorScheme cs;
+
+  const _NoneCard({
+    required this.isCurrent,
+    required this.onSelect,
+    required this.s,
+    required this.cs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isCurrent
+            ? BorderSide(color: cs.primary, width: 1.5)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.home_outlined, color: cs.onSurface, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                s.defaultStartupNoneOption,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurface,
+                ),
+              ),
+            ),
+            isCurrent
+                ? OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                    label: Text(s.defaultStartupCurrent),
+                  )
+                : FilledButton.tonalIcon(
+                    onPressed: onSelect,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: Text(s.defaultStartupResetToNone),
+                  ),
+          ],
+        ),
+      ),
     );
   }
 }

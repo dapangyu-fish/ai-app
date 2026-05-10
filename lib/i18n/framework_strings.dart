@@ -339,6 +339,9 @@ class _Strings {
   final String defaultStartupEmptyMarket;
   final String defaultStartupEmptyLocal;
   final String defaultStartupSavedToast;
+  final String defaultStartupSetAsStartup;
+  final String defaultStartupCurrent;
+  final String defaultStartupResetToNone;
 
   // ── IM 好友页 ──
   final String imAdd;
@@ -665,6 +668,9 @@ class _Strings {
     required this.defaultStartupEmptyMarket,
     required this.defaultStartupEmptyLocal,
     required this.defaultStartupSavedToast,
+    required this.defaultStartupSetAsStartup,
+    required this.defaultStartupCurrent,
+    required this.defaultStartupResetToNone,
     required this.imAdd,
     required this.imAddFriend,
     required this.imCreateGroup,
@@ -985,6 +991,9 @@ const _Strings _zhCN = _Strings(
   defaultStartupEmptyMarket: '市场暂无 App',
   defaultStartupEmptyLocal: '本地还没有保存的 App',
   defaultStartupSavedToast: '已设置',
+  defaultStartupSetAsStartup: '设为启动 App',
+  defaultStartupCurrent: '当前启动 App',
+  defaultStartupResetToNone: '取消设置',
   imAdd: '添加',
   imAddFriend: '加好友',
   imCreateGroup: '建群',
@@ -1304,6 +1313,9 @@ const _Strings _enUS = _Strings(
   defaultStartupEmptyMarket: 'No apps in market yet',
   defaultStartupEmptyLocal: 'No saved local apps yet',
   defaultStartupSavedToast: 'Saved',
+  defaultStartupSetAsStartup: 'Set as startup',
+  defaultStartupCurrent: 'Current startup',
+  defaultStartupResetToNone: 'Reset',
   imAdd: 'Add',
   imAddFriend: 'Add friend',
   imCreateGroup: 'New group',
