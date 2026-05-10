@@ -1851,8 +1851,11 @@ class JsonScreenView extends ConsumerWidget {
     }
 
     return PopScope(
-      // 历史栈非空时拦截系统返回手势（iOS edge swipe / Android 返回键）
-      canPop: !interpreter.canNavigateBack,
+      // 拦截系统返回手势（iOS edge swipe / Android 返回键）：
+      //   - 内部 JSON 历史栈非空 → 拦下来走 navigateBack
+      //   - isStartupRoot → 整个就这个 app，没地方退，也拦下来吃掉
+      //   - 都没 → 放行，pop 回 FilePickerPage
+      canPop: !interpreter.canNavigateBack && !isStartupRoot,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           // JSON-APP 路由已经 pop，把它推过的 dialog 全清掉，防止飘
@@ -1860,7 +1863,10 @@ class JsonScreenView extends ConsumerWidget {
           interpreter.dismissAllModals();
           return;
         }
-        interpreter.navigateBack();
+        // 拦下的手势：有内部历史就回退，否则吃掉（startup root 兜底）
+        if (interpreter.canNavigateBack) {
+          interpreter.navigateBack();
+        }
       },
       child: Scaffold(
         backgroundColor: bgColor,
@@ -2103,10 +2109,13 @@ class _TabScreenViewState extends State<_TabScreenView> {
 
     final interpreter = widget.interpreter;
     return PopScope(
-      canPop: !interpreter.canNavigateBack,
+      // 同 JsonScreenView：startup root 时也吃掉系统返回手势
+      canPop: !interpreter.canNavigateBack && !widget.isStartupRoot,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        interpreter.navigateBack();
+        if (interpreter.canNavigateBack) {
+          interpreter.navigateBack();
+        }
       },
       child: Scaffold(
         backgroundColor: tabBgColor ?? bgColor,
