@@ -1,0 +1,50 @@
+{
+  "dsl": "3.3",
+  "appid": "demo-launcher",
+  "meta": {
+    "name": "demo-launcher",
+    "version": "0.1.0",
+    "type": "app",
+    "displayName": {
+      "zh": "我的启动器",
+      "en": "My Launcher"
+    },
+    "description": "基于 launcher 组件库拼出来的启动器 demo —— 设成默认启动 App 就替代了原生主页。",
+    "author": "framework"
+  },
+
+  "dependencies": {
+    "launcher-my-apps": "^1.0.0"
+  },
+
+  "global": {
+    "variables": {}
+  },
+
+  "steps": [
+    { "call": "@launcher-my-apps.init", "args": {} }
+  ],
+
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "我的启动器",
+        "children": [
+          {
+            "type": "expanded",
+            "child": {
+              "type": "ref",
+              "from": "launcher-my-apps",
+              "widget": "myAppsGrid",
+              "props": {
+                "title": "我的 APP",
+                "emptyText": "还没有保存任何 APP，去市场下载或加载 JSON 文件吧"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

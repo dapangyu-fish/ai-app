@@ -33,7 +33,7 @@ class LauncherBridges {
   ) async {
     switch (callTarget) {
       case '@my_apps_list':
-        return (handled: true, value: await _myAppsList());
+        return (handled: true, value: await _myAppsList(resolvedArgs, interpreter));
       case '@my_apps_delete':
         return (handled: true, value: await _myAppsDelete(resolvedArgs));
       case '@my_apps_share':
@@ -49,8 +49,12 @@ class LauncherBridges {
 
   /// 列出本地保存的 JSON-APP，按时间倒序。
   /// 返回字段：fileName / name / displayName / description / savedAt /
-  /// version / author / type （都从 meta 里掘出来，方便 JSON 直接渲染卡片）
-  static Future<List<Map<String, dynamic>>> _myAppsList() async {
+  /// version / author / type （都从 meta 里掘出来，方便 JSON 直接渲染卡片）。
+  /// 调用方用 action 上的 `assign: "global.xxx"` 把结果写进变量。
+  static Future<List<Map<String, dynamic>>> _myAppsList(
+    Map<String, dynamic> args,
+    JsonInterpreter interpreter,
+  ) async {
     final apps = await AppStorage.instance.list();
     return apps.map((app) {
       final meta = app.config['meta'] as Map<String, dynamic>? ?? {};
