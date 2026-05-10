@@ -3,7 +3,7 @@
   "appid": "4891e65a-8527-499b-9cd4-a0f363074e40",
   "meta": {
     "name": "demo-launcher",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "我的启动器",
@@ -14,7 +14,7 @@
   },
 
   "dependencies": {
-    "launcher-my-apps": "^1.0.2"
+    "launcher-my-apps": "^1.0.3"
   },
 
   "global": {
@@ -32,13 +32,19 @@
         "title": "我的启动器",
         "children": [
           {
-            "type": "text",
-            "value": "我的 APP",
-            "style": {
-              "fontSize": 18,
-              "fontWeight": "w600"
-            },
-            "padding": { "top": 12, "bottom": 8, "left": 16, "right": 16 }
+            "type": "padding",
+            "paddingLeft": 16,
+            "paddingRight": 16,
+            "paddingTop": 12,
+            "paddingBottom": 8,
+            "child": {
+              "type": "text",
+              "value": "我的 APP",
+              "style": {
+                "fontSize": 18,
+                "fontWeight": "w600"
+              }
+            }
           },
           {
             "type": "ref",

@@ -3,7 +3,7 @@
   "appid": "8e70e502-7ccb-4c03-92d7-fe14ed9493e9",
   "meta": {
     "name": "launcher-my-apps",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 我的 APP",
@@ -89,7 +89,8 @@
             "type": "card",
             "elevation": 1,
             "borderRadius": 12,
-            "margin": { "top": 0, "bottom": 8, "left": 0, "right": 0 },
+            "margin": 6,
+            "padding": 14,
             "onTap": {
               "call": "@launch_app",
               "args": {
@@ -100,7 +101,6 @@
             "child": {
               "type": "container",
               "layout": "row",
-              "padding": 14,
               "children": [
                 {
                   "type": "container",
@@ -137,6 +137,7 @@
                         "maxLines": 1,
                         "overflow": "ellipsis"
                       },
+                      { "type": "spacer", "height": 4 },
                       {
                         "type": "text",
                         "value": "{{ loop.item.description }}",
@@ -146,13 +147,12 @@
                           "color": "#666666"
                         },
                         "maxLines": 2,
-                        "overflow": "ellipsis",
-                        "padding": { "top": 4 }
+                        "overflow": "ellipsis"
                       },
+                      { "type": "spacer", "height": 6 },
                       {
                         "type": "container",
                         "layout": "row",
-                        "padding": { "top": 6 },
                         "children": [
                           {
                             "type": "text",
