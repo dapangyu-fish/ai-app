@@ -60,6 +60,8 @@
 	<string>需要语音识别权限用于语音输入</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要相册权限用于选择图片</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>保存聊天里的图片和视频到相册</string>
 	<key>NSCameraUsageDescription</key>
 	<string>需要相机权限用于拍照</string>
 	<!-- OpenIM 暂走 IP（无 SSL）；上线再改回 NSAllowsArbitraryLoads=false -->

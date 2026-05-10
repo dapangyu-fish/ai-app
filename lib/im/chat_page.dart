@@ -8,6 +8,7 @@ import 'package:chewie/chewie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
@@ -1300,10 +1301,48 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
 }
 
 /// 全屏图片预览页：黑底 + photo_view 捏合缩放 + 双击放大。
-/// 顶部 close 按钮覆盖在图上。
-class _ImageViewerPage extends StatelessWidget {
+/// 顶部 close（左上）+ download（右上）覆盖在图上。
+class _ImageViewerPage extends StatefulWidget {
   final String url;
   const _ImageViewerPage({required this.url});
+
+  @override
+  State<_ImageViewerPage> createState() => _ImageViewerPageState();
+}
+
+class _ImageViewerPageState extends State<_ImageViewerPage> {
+  bool _saving = false;
+
+  Future<void> _saveToAlbum() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final s = T.of(context);
+    try {
+      // gal 在 iOS 第一次会弹相册写入权限；在 Android 13+ 不要权限
+      final granted = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      if (!granted) {
+        messenger.showSnackBar(SnackBar(content: Text(s.imSaveFailed)));
+        return;
+      }
+      // 从 cache_manager 拿本地文件（如果已经缓存过）；没缓存就 http 下一次
+      final fileInfo = await ImMediaCacheManager.instance.getFileFromCache(widget.url);
+      String localPath;
+      if (fileInfo != null) {
+        localPath = fileInfo.file.path;
+      } else {
+        final downloaded = await ImMediaCacheManager.instance.downloadFile(widget.url);
+        localPath = downloaded.file.path;
+      }
+      await Gal.putImage(localPath);
+      messenger.showSnackBar(SnackBar(content: Text(s.imSaveSuccess)));
+    } catch (e) {
+      debugPrint('[IM] 保存到相册失败: $e');
+      messenger.showSnackBar(SnackBar(content: Text(s.imSaveFailed)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1314,7 +1353,7 @@ class _ImageViewerPage extends StatelessWidget {
           Positioned.fill(
             child: PhotoView(
               imageProvider: CachedNetworkImageProvider(
-                url,
+                widget.url,
                 cacheManager: ImMediaCacheManager.instance,
               ),
               backgroundDecoration: const BoxDecoration(color: Colors.black),
@@ -1344,6 +1383,20 @@ class _ImageViewerPage extends StatelessWidget {
             child: IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
               onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 8,
+            child: IconButton(
+              icon: _saving
+                  ? const SizedBox(
+                      width: 22, height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.download_rounded, color: Colors.white),
+              tooltip: T.of(context).imSaveToAlbum,
+              onPressed: _saving ? null : _saveToAlbum,
             ),
           ),
         ],

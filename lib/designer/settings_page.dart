@@ -8,6 +8,7 @@ import 'ai_chat_service.dart';
 import 'designer_ball.dart' show AsrMode, AsrModePrefs;
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
+import '../im/im_cache_manage_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -166,6 +167,17 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildModelList(cs),
               const SizedBox(height: 16.0),
             ],
+            const SizedBox(height: 8.0),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.storage_outlined),
+                title: Text(t.imCacheEntry),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const IMCacheManagePage()),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -309,6 +309,18 @@ class _Strings {
   final String imAttachVideo;
   final String imAttachFile;
   final String imImageExpired;
+  final String imSaveToAlbum;
+  final String imSaveSuccess;
+  final String imSaveFailed;
+  final String imCacheManageTitle;
+  final String imCacheTotal;
+  final String imCacheSelectAll;
+  final String imCacheDeselectAll;
+  final String imCacheClearSelected;
+  final String imCacheClearedToast;
+  final String imCacheNoSelection;
+  final String imCacheLoading;
+  final String imCacheEntry;
 
   // ── IM 好友页 ──
   final String imAdd;
@@ -609,6 +621,18 @@ class _Strings {
     required this.imAttachVideo,
     required this.imAttachFile,
     required this.imImageExpired,
+    required this.imSaveToAlbum,
+    required this.imSaveSuccess,
+    required this.imSaveFailed,
+    required this.imCacheManageTitle,
+    required this.imCacheTotal,
+    required this.imCacheSelectAll,
+    required this.imCacheDeselectAll,
+    required this.imCacheClearSelected,
+    required this.imCacheClearedToast,
+    required this.imCacheNoSelection,
+    required this.imCacheLoading,
+    required this.imCacheEntry,
     required this.imAdd,
     required this.imAddFriend,
     required this.imCreateGroup,
@@ -903,6 +927,18 @@ const _Strings _zhCN = _Strings(
   imAttachVideo: '视频',
   imAttachFile: '文件',
   imImageExpired: '图片已过期',
+  imSaveToAlbum: '保存到相册',
+  imSaveSuccess: '已保存',
+  imSaveFailed: '保存失败',
+  imCacheManageTitle: '聊天图片缓存管理',
+  imCacheTotal: '总计 {size}',
+  imCacheSelectAll: '全选',
+  imCacheDeselectAll: '取消全选',
+  imCacheClearSelected: '清理选中',
+  imCacheClearedToast: '已清理 {size}',
+  imCacheNoSelection: '请先选择会话',
+  imCacheLoading: '正在统计…',
+  imCacheEntry: '聊天图片缓存',
   imAdd: '添加',
   imAddFriend: '加好友',
   imCreateGroup: '建群',
@@ -1196,6 +1232,18 @@ const _Strings _enUS = _Strings(
   imAttachVideo: 'Video',
   imAttachFile: 'File',
   imImageExpired: 'Image expired',
+  imSaveToAlbum: 'Save to album',
+  imSaveSuccess: 'Saved',
+  imSaveFailed: 'Save failed',
+  imCacheManageTitle: 'Chat media cache',
+  imCacheTotal: 'Total {size}',
+  imCacheSelectAll: 'Select all',
+  imCacheDeselectAll: 'Deselect all',
+  imCacheClearSelected: 'Clear selected',
+  imCacheClearedToast: 'Cleared {size}',
+  imCacheNoSelection: 'Select at least one conversation',
+  imCacheLoading: 'Calculating…',
+  imCacheEntry: 'Chat media cache',
   imAdd: 'Add',
   imAddFriend: 'Add friend',
   imCreateGroup: 'New group',
