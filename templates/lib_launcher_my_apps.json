@@ -3,7 +3,7 @@
   "appid": "8e70e502-7ccb-4c03-92d7-fe14ed9493e9",
   "meta": {
     "name": "launcher-my-apps",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 我的 APP",
@@ -179,16 +179,31 @@
               },
               { "type": "spacer", "width": 8 },
               {
-                "type": "button",
-                "variant": "text",
-                "icon": "delete_outline",
-                "iconColor": "#888888",
-                "action": {
+                "type": "inkwell",
+                "borderRadius": 20,
+                "onTap": {
                   "call": "@launcher-my-apps.deleteApp",
                   "args": {
                     "fileName": "{{ loop.item.fileName }}",
                     "displayName": "{{ loop.item.displayName }}"
                   }
+                },
+                "child": {
+                  "type": "container",
+                  "width": 40,
+                  "height": 40,
+                  "borderRadius": 20,
+                  "children": [
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "icon",
+                        "name": "delete_outline",
+                        "size": 22,
+                        "color": "#888888"
+                      }
+                    }
+                  ]
                 }
               }
             ]
