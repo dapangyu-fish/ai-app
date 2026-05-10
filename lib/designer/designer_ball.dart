@@ -11,6 +11,7 @@ import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
 import '../auth/auth_service.dart';
+import '../i18n/framework_strings.dart';
 import '../main.dart' show JsonDslApp;
 import '../onboarding/onboarding_keys.dart';
 
@@ -546,11 +547,86 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
+  /// 双击悬浮球：弹出快捷菜单（iOS 悬浮球风格）。
+  ///
+  /// 之前是直接恢复历史会话，但现在需要在这里挂更多入口（截屏、笔记、
+  /// 快捷指令等），所以拆成"先弹菜单 → 用户选"两步。
+  /// 没历史会话时"恢复会话"按钮灰掉但菜单仍然弹出，让其他入口可用。
   void _onDoubleTap() {
     if (_chatMode) return;
-    if (_messages.isEmpty) return;
+    _showQuickMenu();
+  }
+
+  /// 真正恢复会话的逻辑（之前 _onDoubleTap 直接干的事）。
+  /// 从快捷菜单的"恢复会话"按钮调过来。
+  void _restoreSession() {
+    if (_chatMode || _messages.isEmpty) return;
     setState(() => _chatMode = true);
     _scrollToBottom();
+  }
+
+  /// 弹出快捷菜单。
+  /// 网格布局，每格是一个 [_QuickMenuButton]（icon + label，可禁用态）。
+  /// 加新功能：在 children 数组里 append 一个 [_QuickMenuButton] 即可。
+  Future<void> _showQuickMenu() async {
+    final hasHistory = _messages.isNotEmpty;
+    final s = T.of(context);
+
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black38,
+      barrierDismissible: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return Dialog(
+          backgroundColor: cs.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  s.ballMenuTitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.95,
+                  children: [
+                    _QuickMenuButton(
+                      icon: Icons.history_rounded,
+                      label: s.ballMenuRestoreSession,
+                      enabled: hasHistory,
+                      tooltipDisabled: s.ballMenuRestoreSessionEmpty,
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _restoreSession();
+                      },
+                    ),
+                    // 后续功能：在这里 append 更多 _QuickMenuButton，比如：
+                    //   _QuickMenuButton(icon: Icons.screenshot, label: '截屏', ...)
+                    //   _QuickMenuButton(icon: Icons.edit_note, label: '记笔记', ...)
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // ════════════════════════════════════════════════════════
@@ -2191,5 +2267,62 @@ class _EditSheetState extends State<_EditSheet> {
         ),
       ),
     );
+  }
+}
+
+/// 快捷菜单单格按钮。圆角方形 + icon + 文字两行布局。
+/// 禁用态用 onSurfaceVariant 灰文字 + 长按 tooltip 解释为啥灰了。
+class _QuickMenuButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool enabled;
+  final VoidCallback onTap;
+  final String? tooltipDisabled;
+
+  const _QuickMenuButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.enabled = true,
+    this.tooltipDisabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final iconColor = enabled ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4);
+    final textColor = enabled ? cs.onSurface : cs.onSurfaceVariant.withValues(alpha: 0.5);
+    final bg = cs.surfaceContainerHighest.withValues(alpha: enabled ? 0.6 : 0.3);
+
+    final btn = Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 26, color: iconColor),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: textColor),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!enabled && tooltipDisabled != null) {
+      return Tooltip(message: tooltipDisabled!, child: btn);
+    }
+    return btn;
   }
 }

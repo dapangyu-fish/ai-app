@@ -322,6 +322,11 @@ class _Strings {
   final String imCacheLoading;
   final String imCacheEntry;
 
+  // ── 悬浮球双击快捷菜单 ──
+  final String ballMenuTitle;
+  final String ballMenuRestoreSession;
+  final String ballMenuRestoreSessionEmpty;
+
   // ── IM 好友页 ──
   final String imAdd;
   final String imAddFriend;
@@ -633,6 +638,9 @@ class _Strings {
     required this.imCacheNoSelection,
     required this.imCacheLoading,
     required this.imCacheEntry,
+    required this.ballMenuTitle,
+    required this.ballMenuRestoreSession,
+    required this.ballMenuRestoreSessionEmpty,
     required this.imAdd,
     required this.imAddFriend,
     required this.imCreateGroup,
@@ -939,6 +947,9 @@ const _Strings _zhCN = _Strings(
   imCacheNoSelection: '请先选择会话',
   imCacheLoading: '正在统计…',
   imCacheEntry: '聊天图片缓存',
+  ballMenuTitle: '快捷菜单',
+  ballMenuRestoreSession: '恢复会话',
+  ballMenuRestoreSessionEmpty: '没有历史会话',
   imAdd: '添加',
   imAddFriend: '加好友',
   imCreateGroup: '建群',
@@ -1244,6 +1255,9 @@ const _Strings _enUS = _Strings(
   imCacheNoSelection: 'Select at least one conversation',
   imCacheLoading: 'Calculating…',
   imCacheEntry: 'Chat media cache',
+  ballMenuTitle: 'Quick menu',
+  ballMenuRestoreSession: 'Restore session',
+  ballMenuRestoreSessionEmpty: 'No previous session',
   imAdd: 'Add',
   imAddFriend: 'Add friend',
   imCreateGroup: 'New group',
