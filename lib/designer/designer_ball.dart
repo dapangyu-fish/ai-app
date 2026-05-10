@@ -568,12 +568,19 @@ class _DesignerBallState extends State<DesignerBall>
   /// 弹出快捷菜单。
   /// 网格布局，每格是一个 [_QuickMenuButton]（icon + label，可禁用态）。
   /// 加新功能：在 children 数组里 append 一个 [_QuickMenuButton] 即可。
+  ///
+  /// 注意：DesignerBall 挂在 MaterialApp.builder 里、自己的 context 没有
+  /// Navigator 祖先（直接 showDialog(context: context) 会抛
+  /// "Navigator operation requested with a context that does not include a
+  /// Navigator"）。所以用根 navigatorKey 的 context。
   Future<void> _showQuickMenu() async {
+    final navContext = JsonDslApp.navigatorKey.currentContext;
+    if (navContext == null) return;
     final hasHistory = _messages.isNotEmpty;
-    final s = T.of(context);
+    final s = T.of(navContext);
 
     await showDialog<void>(
-      context: context,
+      context: navContext,
       barrierColor: Colors.black38,
       barrierDismissible: true,
       builder: (ctx) {
