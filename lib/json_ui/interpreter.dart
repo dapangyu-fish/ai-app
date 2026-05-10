@@ -23,6 +23,7 @@ import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
+import 'builtins/launcher_bridges.dart';
 import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
 import '../im/im_service.dart';
@@ -2526,6 +2527,13 @@ class JsonInterpreter extends ChangeNotifier {
         }
 
       default:
+        // 模块化的内置函数兜底（launcher 桥接等）
+        final bridged = await LauncherBridges.tryDispatch(
+          callTarget,
+          resolvedArgs,
+          this,
+        );
+        if (bridged.handled) return bridged.value;
         debugPrint('[JSON DSL] 未知内置函数: $callTarget');
         return null;
     }
