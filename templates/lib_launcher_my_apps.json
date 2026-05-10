@@ -3,7 +3,7 @@
   "appid": "8e70e502-7ccb-4c03-92d7-fe14ed9493e9",
   "meta": {
     "name": "launcher-my-apps",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 我的 APP",
@@ -93,9 +93,10 @@
               "type": "expanded",
               "child": {
                 "type": "refresh",
-                "onRefresh": [
-                  { "call": "@launcher-my-apps.refresh", "args": {} }
-                ],
+                "onRefresh": {
+                  "call": "@launcher-my-apps.refresh",
+                  "args": {}
+                },
                 "child": {
                   "type": "list",
                   "source": "{{ global._lma.apps }}",
@@ -107,15 +108,13 @@
                     "elevation": 1,
                     "borderRadius": 12,
                     "margin": { "top": 0, "bottom": 8, "left": 0, "right": 0 },
-                    "onTap": [
-                      {
-                        "call": "@launch_app",
-                        "args": {
-                          "kind": "local",
-                          "fileName": "{{ loop.item.fileName }}"
-                        }
+                    "onTap": {
+                      "call": "@launch_app",
+                      "args": {
+                        "kind": "local",
+                        "fileName": "{{ loop.item.fileName }}"
                       }
-                    ],
+                    },
                     "child": {
                       "type": "container",
                       "layout": "row",
@@ -202,15 +201,13 @@
                           "variant": "text",
                           "icon": "delete_outline",
                           "iconColor": "#888888",
-                          "action": [
-                            {
-                              "call": "@launcher-my-apps.deleteApp",
-                              "args": {
-                                "fileName": "{{ loop.item.fileName }}",
-                                "displayName": "{{ loop.item.displayName }}"
-                              }
+                          "action": {
+                            "call": "@launcher-my-apps.deleteApp",
+                            "args": {
+                              "fileName": "{{ loop.item.fileName }}",
+                              "displayName": "{{ loop.item.displayName }}"
                             }
-                          ]
+                          }
                         }
                       ]
                     }
