@@ -3,18 +3,20 @@
   "appid": "4891e65a-8527-499b-9cd4-a0f363074e40",
   "meta": {
     "name": "demo-launcher",
-    "version": "0.1.6",
+    "version": "0.2.0",
     "type": "app",
     "displayName": {
       "zh": "我的启动器",
       "en": "My Launcher"
     },
-    "description": "基于 launcher 组件库拼出来的启动器 demo —— 设成默认启动 App 就替代了原生主页。",
+    "description": "用 launcher 组件库拼出来的三 tab 启动器 demo —— 本地 / 市场 / 设置。设成默认启动 App 就完全替代了原生主页。",
     "author": "framework"
   },
 
   "dependencies": {
-    "launcher-my-apps": "^1.0.6"
+    "launcher-my-apps": "^1.0.6",
+    "launcher-market": "^1.0.0",
+    "launcher-settings": "^1.0.0"
   },
 
   "global": {
@@ -22,7 +24,9 @@
   },
 
   "steps": [
-    { "call": "@launcher-my-apps.init", "args": {} }
+    { "call": "@launcher-my-apps.init", "args": {} },
+    { "call": "@launcher-market.init", "args": {} },
+    { "call": "@launcher-settings.init", "args": {} }
   ],
 
   "ui": {
@@ -30,29 +34,49 @@
       {
         "id": "home",
         "title": "我的启动器",
-        "children": [
+        "tabs": [
           {
-            "type": "padding",
-            "paddingLeft": 16,
-            "paddingRight": 16,
-            "paddingTop": 12,
-            "paddingBottom": 8,
-            "child": {
-              "type": "text",
-              "value": "我的 APP",
-              "style": {
-                "fontSize": 18,
-                "fontWeight": "w600"
+            "label": "本地",
+            "icon": "apps",
+            "title": "本地 App",
+            "children": [
+              {
+                "type": "ref",
+                "from": "launcher-my-apps",
+                "widget": "myAppsGrid",
+                "props": {
+                  "emptyText": "还没有保存任何 APP，去市场逛一下吧"
+                }
               }
-            }
+            ]
           },
           {
-            "type": "ref",
-            "from": "launcher-my-apps",
-            "widget": "myAppsGrid",
-            "props": {
-              "emptyText": "还没有保存任何 APP，去市场下载或加载 JSON 文件吧"
-            }
+            "label": "市场",
+            "icon": "store",
+            "title": "应用市场",
+            "children": [
+              {
+                "type": "ref",
+                "from": "launcher-market",
+                "widget": "marketBrowser",
+                "props": {
+                  "emptyText": "市场暂时没有内容"
+                }
+              }
+            ]
+          },
+          {
+            "label": "设置",
+            "icon": "settings",
+            "title": "设置",
+            "children": [
+              {
+                "type": "ref",
+                "from": "launcher-settings",
+                "widget": "settingsPanel",
+                "props": {}
+              }
+            ]
           }
         ]
       }
