@@ -3,7 +3,7 @@
   "appid": "4891e65a-8527-499b-9cd4-a0f363074e40",
   "meta": {
     "name": "demo-launcher",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "我的启动器",
@@ -14,7 +14,7 @@
   },
 
   "dependencies": {
-    "launcher-my-apps": "^1.0.0"
+    "launcher-my-apps": "^1.0.2"
   },
 
   "global": {
@@ -32,15 +32,20 @@
         "title": "我的启动器",
         "children": [
           {
-            "type": "expanded",
-            "child": {
-              "type": "ref",
-              "from": "launcher-my-apps",
-              "widget": "myAppsGrid",
-              "props": {
-                "title": "我的 APP",
-                "emptyText": "还没有保存任何 APP，去市场下载或加载 JSON 文件吧"
-              }
+            "type": "text",
+            "value": "我的 APP",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "w600"
+            },
+            "padding": { "top": 12, "bottom": 8, "left": 16, "right": 16 }
+          },
+          {
+            "type": "ref",
+            "from": "launcher-my-apps",
+            "widget": "myAppsGrid",
+            "props": {
+              "emptyText": "还没有保存任何 APP，去市场下载或加载 JSON 文件吧"
             }
           }
         ]

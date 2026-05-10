@@ -3,7 +3,7 @@
   "appid": "8e70e502-7ccb-4c03-92d7-fe14ed9493e9",
   "meta": {
     "name": "launcher-my-apps",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 我的 APP",
@@ -74,148 +74,126 @@
   "ui": {
     "templates": {
       "myAppsGrid": {
-        "props": ["title", "emptyText"],
+        "props": ["emptyText"],
         "root": {
-          "type": "container",
-          "layout": "column",
-          "children": [
-            {
-              "type": "text",
-              "value": "{{ props.title }}",
-              "visible": { "!=": [{ "var": "props.title" }, null] },
-              "style": {
-                "fontSize": 18,
-                "fontWeight": "w600"
-              },
-              "padding": { "top": 12, "bottom": 8, "left": 16, "right": 16 }
+          "type": "list",
+          "source": "{{ global._lma.apps }}",
+          "emptyText": "{{ props.emptyText }}",
+          "padding": 12,
+          "separator": "none",
+          "onRefresh": {
+            "call": "@launcher-my-apps.refresh",
+            "args": {}
+          },
+          "item_template": {
+            "type": "card",
+            "elevation": 1,
+            "borderRadius": 12,
+            "margin": { "top": 0, "bottom": 8, "left": 0, "right": 0 },
+            "onTap": {
+              "call": "@launch_app",
+              "args": {
+                "kind": "local",
+                "fileName": "{{ loop.item.fileName }}"
+              }
             },
-            {
-              "type": "expanded",
-              "child": {
-                "type": "refresh",
-                "onRefresh": {
-                  "call": "@launcher-my-apps.refresh",
-                  "args": {}
-                },
-                "child": {
-                  "type": "list",
-                  "source": "{{ global._lma.apps }}",
-                  "emptyText": "{{ props.emptyText }}",
-                  "padding": 12,
-                  "separator": "none",
-                  "item_template": {
-                    "type": "card",
-                    "elevation": 1,
-                    "borderRadius": 12,
-                    "margin": { "top": 0, "bottom": 8, "left": 0, "right": 0 },
-                    "onTap": {
-                      "call": "@launch_app",
-                      "args": {
-                        "kind": "local",
-                        "fileName": "{{ loop.item.fileName }}"
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "padding": 14,
+              "children": [
+                {
+                  "type": "container",
+                  "width": 48,
+                  "height": 48,
+                  "borderRadius": 12,
+                  "color": "#E3F2FD",
+                  "children": [
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "icon",
+                        "name": "apps",
+                        "size": 28,
+                        "color": "#1976D2"
                       }
-                    },
-                    "child": {
-                      "type": "container",
-                      "layout": "row",
-                      "padding": 14,
-                      "children": [
-                        {
-                          "type": "container",
-                          "width": 48,
-                          "height": 48,
-                          "borderRadius": 12,
-                          "color": "#E3F2FD",
-                          "children": [
-                            {
-                              "type": "center",
-                              "child": {
-                                "type": "icon",
-                                "name": "apps",
-                                "size": 28,
-                                "color": "#1976D2"
-                              }
+                    }
+                  ]
+                },
+                { "type": "spacer", "width": 12 },
+                {
+                  "type": "expanded",
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ loop.item.displayName }}",
+                        "style": {
+                          "fontSize": 16,
+                          "fontWeight": "w600"
+                        },
+                        "maxLines": 1,
+                        "overflow": "ellipsis"
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ loop.item.description }}",
+                        "visible": { "!=": [{ "var": "loop.item.description" }, ""] },
+                        "style": {
+                          "fontSize": 13,
+                          "color": "#666666"
+                        },
+                        "maxLines": 2,
+                        "overflow": "ellipsis",
+                        "padding": { "top": 4 }
+                      },
+                      {
+                        "type": "container",
+                        "layout": "row",
+                        "padding": { "top": 6 },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "v{{ loop.item.version }}",
+                            "visible": { "!=": [{ "var": "loop.item.version" }, ""] },
+                            "style": {
+                              "fontSize": 11,
+                              "color": "#999999"
                             }
-                          ]
-                        },
-                        { "type": "spacer", "width": 12 },
-                        {
-                          "type": "expanded",
-                          "child": {
-                            "type": "container",
-                            "layout": "column",
-                            "children": [
-                              {
-                                "type": "text",
-                                "value": "{{ loop.item.displayName }}",
-                                "style": {
-                                  "fontSize": 16,
-                                  "fontWeight": "w600"
-                                },
-                                "maxLines": 1,
-                                "overflow": "ellipsis"
-                              },
-                              {
-                                "type": "text",
-                                "value": "{{ loop.item.description }}",
-                                "visible": { "!=": [{ "var": "loop.item.description" }, ""] },
-                                "style": {
-                                  "fontSize": 13,
-                                  "color": "#666666"
-                                },
-                                "maxLines": 2,
-                                "overflow": "ellipsis",
-                                "padding": { "top": 4 }
-                              },
-                              {
-                                "type": "container",
-                                "layout": "row",
-                                "padding": { "top": 6 },
-                                "children": [
-                                  {
-                                    "type": "text",
-                                    "value": "v{{ loop.item.version }}",
-                                    "visible": { "!=": [{ "var": "loop.item.version" }, ""] },
-                                    "style": {
-                                      "fontSize": 11,
-                                      "color": "#999999"
-                                    }
-                                  },
-                                  {
-                                    "type": "text",
-                                    "value": "  ·  {{ loop.item.author }}",
-                                    "visible": { "!=": [{ "var": "loop.item.author" }, ""] },
-                                    "style": {
-                                      "fontSize": 11,
-                                      "color": "#999999"
-                                    }
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        },
-                        { "type": "spacer", "width": 8 },
-                        {
-                          "type": "button",
-                          "variant": "text",
-                          "icon": "delete_outline",
-                          "iconColor": "#888888",
-                          "action": {
-                            "call": "@launcher-my-apps.deleteApp",
-                            "args": {
-                              "fileName": "{{ loop.item.fileName }}",
-                              "displayName": "{{ loop.item.displayName }}"
+                          },
+                          {
+                            "type": "text",
+                            "value": "  ·  {{ loop.item.author }}",
+                            "visible": { "!=": [{ "var": "loop.item.author" }, ""] },
+                            "style": {
+                              "fontSize": 11,
+                              "color": "#999999"
                             }
                           }
-                        }
-                      ]
+                        ]
+                      }
+                    ]
+                  }
+                },
+                { "type": "spacer", "width": 8 },
+                {
+                  "type": "button",
+                  "variant": "text",
+                  "icon": "delete_outline",
+                  "iconColor": "#888888",
+                  "action": {
+                    "call": "@launcher-my-apps.deleteApp",
+                    "args": {
+                      "fileName": "{{ loop.item.fileName }}",
+                      "displayName": "{{ loop.item.displayName }}"
                     }
                   }
                 }
-              }
+              ]
             }
-          ]
+          }
         }
       }
     }
