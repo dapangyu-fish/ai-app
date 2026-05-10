@@ -585,8 +585,11 @@ class _DesignerBallState extends State<DesignerBall>
       barrierDismissible: true,
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
+        // 用 surfaceContainerHigh：M3 专门设计的"需要从背景里凸出"的容器色。
+        // 浅色模式下比 surface 略深、深色模式下比 surface 略浅，跟系统主题
+        // 自动产生对比，不会跟页面底色融成一片。
         return Dialog(
-          backgroundColor: cs.surface,
+          backgroundColor: cs.surfaceContainerHigh,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           insetPadding: const EdgeInsets.symmetric(horizontal: 32),
           child: Padding(
@@ -2299,7 +2302,11 @@ class _QuickMenuButton extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final iconColor = enabled ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4);
     final textColor = enabled ? cs.onSurface : cs.onSurfaceVariant.withValues(alpha: 0.5);
-    final bg = cs.surfaceContainerHighest.withValues(alpha: enabled ? 0.6 : 0.3);
+    // 按钮要跟 Dialog 背景（surfaceContainerHigh）形成层级。用 surfaceContainerHighest
+    // 提一档；禁用态再降透明度让"灰掉"明显
+    final bg = enabled
+        ? cs.surfaceContainerHighest
+        : cs.surfaceContainerHighest.withValues(alpha: 0.4);
 
     final btn = Material(
       color: bg,
