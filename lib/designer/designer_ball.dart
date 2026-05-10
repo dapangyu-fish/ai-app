@@ -575,6 +575,15 @@ class _DesignerBallState extends State<DesignerBall>
     _scrollToBottom();
   }
 
+  /// 一路 pop 回根路由（FilePickerPage / MyApp 主页）。
+  /// 用途：用户用了"默认启动 App"被锁进某个 JSON-APP，里面没有"切换 App"
+  /// 的功能时，靠悬浮球这个按钮逃出来。
+  void _goHome() {
+    final nav = JsonDslApp.navigatorKey.currentState;
+    if (nav == null) return;
+    nav.popUntil((route) => route.isFirst);
+  }
+
   /// 弹出快捷菜单。
   /// 网格布局，每格是一个 [_QuickMenuButton]（icon + label，可禁用态）。
   /// 加新功能：在 children 数组里 append 一个 [_QuickMenuButton] 即可。
@@ -636,6 +645,17 @@ class _DesignerBallState extends State<DesignerBall>
                         onTap: () {
                           Navigator.of(ctx).pop();
                           _restoreSession();
+                        },
+                      ),
+                      _QuickMenuButton(
+                        icon: Icons.home_rounded,
+                        label: s.ballMenuGoHome,
+                        // 只要根 Navigator 还能 pop 就启用 —— 表示当前栈里有
+                        // push 进来的 JSON-APP / 设置页等，可以一路 pop 回首页
+                        enabled: JsonDslApp.navigatorKey.currentState?.canPop() == true,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _goHome();
                         },
                       ),
                       // 后续功能：在这里 append 更多 _QuickMenuButton，比如：

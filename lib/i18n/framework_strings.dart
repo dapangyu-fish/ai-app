@@ -326,6 +326,19 @@ class _Strings {
   final String ballMenuTitle;
   final String ballMenuRestoreSession;
   final String ballMenuRestoreSessionEmpty;
+  final String ballMenuGoHome;
+
+  // ── 默认启动 App 设置 ──
+  final String defaultStartupEntry;        // 设置页入口标题
+  final String defaultStartupSubtitleNone; // subtitle 没选时的占位
+  final String defaultStartupTitle;        // 选择页标题
+  final String defaultStartupHint;         // 选择页顶部说明
+  final String defaultStartupNoneOption;   // "无（用 MyApp 首页）"
+  final String defaultStartupTabMarket;
+  final String defaultStartupTabLocal;
+  final String defaultStartupEmptyMarket;
+  final String defaultStartupEmptyLocal;
+  final String defaultStartupSavedToast;
 
   // ── IM 好友页 ──
   final String imAdd;
@@ -641,6 +654,17 @@ class _Strings {
     required this.ballMenuTitle,
     required this.ballMenuRestoreSession,
     required this.ballMenuRestoreSessionEmpty,
+    required this.ballMenuGoHome,
+    required this.defaultStartupEntry,
+    required this.defaultStartupSubtitleNone,
+    required this.defaultStartupTitle,
+    required this.defaultStartupHint,
+    required this.defaultStartupNoneOption,
+    required this.defaultStartupTabMarket,
+    required this.defaultStartupTabLocal,
+    required this.defaultStartupEmptyMarket,
+    required this.defaultStartupEmptyLocal,
+    required this.defaultStartupSavedToast,
     required this.imAdd,
     required this.imAddFriend,
     required this.imCreateGroup,
@@ -950,6 +974,17 @@ const _Strings _zhCN = _Strings(
   ballMenuTitle: '快捷菜单',
   ballMenuRestoreSession: '恢复会话',
   ballMenuRestoreSessionEmpty: '没有历史会话',
+  ballMenuGoHome: '回到主页',
+  defaultStartupEntry: '默认启动 App',
+  defaultStartupSubtitleNone: '未设置（启动到 MyApp 首页）',
+  defaultStartupTitle: '默认启动 App',
+  defaultStartupHint: '设置后，打开 App 会直接进入选中的应用；通过悬浮球菜单"回到主页"返回 MyApp 首页',
+  defaultStartupNoneOption: '不设置（启动到 MyApp 首页）',
+  defaultStartupTabMarket: '市场',
+  defaultStartupTabLocal: '本地',
+  defaultStartupEmptyMarket: '市场暂无 App',
+  defaultStartupEmptyLocal: '本地还没有保存的 App',
+  defaultStartupSavedToast: '已设置',
   imAdd: '添加',
   imAddFriend: '加好友',
   imCreateGroup: '建群',
@@ -1258,6 +1293,17 @@ const _Strings _enUS = _Strings(
   ballMenuTitle: 'Quick menu',
   ballMenuRestoreSession: 'Restore session',
   ballMenuRestoreSessionEmpty: 'No previous session',
+  ballMenuGoHome: 'Back to home',
+  defaultStartupEntry: 'Default startup app',
+  defaultStartupSubtitleNone: 'Not set (open to MyApp home)',
+  defaultStartupTitle: 'Default startup app',
+  defaultStartupHint: 'When set, the app launches directly into your chosen app. Use the floating ball menu "Back to home" to return to MyApp home.',
+  defaultStartupNoneOption: 'Unset (open to MyApp home)',
+  defaultStartupTabMarket: 'Market',
+  defaultStartupTabLocal: 'Local',
+  defaultStartupEmptyMarket: 'No apps in market yet',
+  defaultStartupEmptyLocal: 'No saved local apps yet',
+  defaultStartupSavedToast: 'Saved',
   imAdd: 'Add',
   imAddFriend: 'Add friend',
   imCreateGroup: 'New group',

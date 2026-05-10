@@ -27,6 +27,7 @@ import 'designer/designer_ball.dart';
 import 'designer/settings_page.dart';
 import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
+import 'designer/default_startup_prefs.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 import 'im/im_service.dart';
@@ -579,6 +580,10 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
   String? _error;
   String? _loadedFileName;
 
+  // FilePickerPage 已经被 push 过一次默认启动 App 了（同一进程内）；
+  // 避免每次 popUntil 回到 home 时又自动跳走，让"回到主页"真的能停住
+  static bool _autoStartupConsumed = false;
+
   @override
   void initState() {
     super.initState();
@@ -590,6 +595,48 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         OnboardingService.maybeStart(context);
       });
     });
+    // 默认启动 App：冷启动时（未消费过）按用户设置直接 push 进选中应用
+    if (!_autoStartupConsumed) {
+      _autoStartupConsumed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _maybeAutoLoadDefaultStartup();
+      });
+    }
+  }
+
+  Future<void> _maybeAutoLoadDefaultStartup() async {
+    final cfg = await DefaultStartupPrefs.read();
+    if (!mounted || !cfg.hasTarget) return;
+    try {
+      switch (cfg.kind) {
+        case DefaultStartupKind.market:
+          if (cfg.marketName != null && cfg.marketVersion != null) {
+            await _loadFromMarket({
+              'name': cfg.marketName,
+              'version': cfg.marketVersion,
+            });
+          }
+        case DefaultStartupKind.local:
+          if (cfg.localFileName != null) {
+            final apps = await AppStorage.instance.list();
+            final app = apps.firstWhere(
+              (a) => a.fileName == cfg.localFileName,
+              orElse: () => SavedApp(
+                fileName: '', name: '', description: '', savedAt: '', config: const {},
+              ),
+            );
+            if (app.fileName.isNotEmpty) {
+              await _loadSavedApp(app);
+            }
+          }
+        case DefaultStartupKind.none:
+          break;
+      }
+    } catch (e) {
+      debugPrint('[DefaultStartup] 自动加载失败: $e');
+      // 不打扰用户，错误已经在 _loadFromMarket / _loadSavedApp 里有 setState(_error)
+    }
   }
 
   void _openSettings() {

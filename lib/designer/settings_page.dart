@@ -6,6 +6,8 @@ import 'sherpa_asr_service.dart';
 import 'ai_chat_service.dart';
 // AsrMode + AsrModePrefs 共用 designer_ball 定义的，避免两份枚举漂移
 import 'designer_ball.dart' show AsrMode, AsrModePrefs;
+import 'default_startup_page.dart';
+import 'default_startup_prefs.dart';
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
 import '../im/im_cache_manage_page.dart';
@@ -31,12 +33,21 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _downloadingModelId;
   String _downloadProgress = '';
 
+  // 默认启动 App 当前选择（subtitle 展示用，进选择页改完再 reload）
+  DefaultStartupConfig _defaultStartup = const DefaultStartupConfig.none();
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _fetchProviders();
     _loadModelStatuses();
+    _loadDefaultStartup();
+  }
+
+  Future<void> _loadDefaultStartup() async {
+    final cfg = await DefaultStartupPrefs.read();
+    if (mounted) setState(() => _defaultStartup = cfg);
   }
 
   Future<void> _loadSettings() async {
@@ -168,6 +179,24 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 16.0),
             ],
             const SizedBox(height: 8.0),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.rocket_launch_outlined),
+                title: Text(t.defaultStartupEntry),
+                subtitle: Text(
+                  _defaultStartup.displaySummary(noneLabel: t.defaultStartupSubtitleNone),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DefaultStartupPage()),
+                  );
+                  await _loadDefaultStartup(); // 回来后刷新 subtitle
+                },
+              ),
+            ),
             Card(
               child: ListTile(
                 leading: const Icon(Icons.storage_outlined),
