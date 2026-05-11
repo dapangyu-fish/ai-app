@@ -3,7 +3,7 @@
   "appid": "e20ac2b9-11f7-4d51-8f03-d5372b9678e2",
   "meta": {
     "name": "launcher-settings",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 设置",
@@ -11,7 +11,7 @@
     },
     "description": "可嵌入的'设置'组件库——主题/语言/默认启动 App/缓存/账号管理。",
     "author": "framework",
-    "exports": ["settingsPanel", "init", "refresh", "clearStartup", "clearCache", "logout"]
+    "exports": ["settingsPanel", "init", "refresh", "clearStartup", "clearCache", "logout", "_setTheme", "_setLocale"]
   },
 
   "global": {
@@ -19,8 +19,8 @@
       "_ls": {
         "theme": "system",
         "locale": "zh",
-        "user": null,
-        "startup": { "kind": "none", "displayName": "" }
+        "user": { "displayName": "", "email": "", "isLoggedIn": false },
+        "startup": { "kind": "none", "hasTarget": false, "displayName": "" }
       }
     },
     "functions": {
@@ -136,323 +136,275 @@
       "settingsPanel": {
         "props": [],
         "root": {
-          "type": "list",
+          "type": "container",
+          "layout": "column",
           "padding": 12,
-          "separator": "none",
-          "source": [
-            { "id": "user" },
-            { "id": "theme" },
-            { "id": "locale" },
-            { "id": "startup" },
-            { "id": "cache" },
-            { "id": "logout" }
-          ],
-          "item_template": {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "visible": { "==": [{ "var": "loop.item.id" }, "user"] },
-                "children": [
-                  {
-                    "type": "card",
-                    "elevation": 1,
-                    "borderRadius": 12,
-                    "margin": 4,
-                    "padding": 16,
-                    "layout": "row",
-                    "crossAxisAlignment": "center",
-                    "children": [
-                      {
-                        "type": "container",
-                        "width": 48,
-                        "height": 48,
-                        "borderRadius": 24,
-                        "color": "#E8EAF6",
-                        "children": [
-                          {
-                            "type": "center",
-                            "child": {
-                              "type": "icon",
-                              "name": "person",
-                              "size": 28,
-                              "color": "#3F51B5"
-                            }
-                          }
-                        ]
-                      },
-                      { "type": "spacer", "width": 12 },
-                      {
-                        "type": "expanded",
-                        "child": {
-                          "type": "container",
-                          "layout": "column",
-                          "crossAxisAlignment": "start",
-                          "children": [
-                            {
-                              "type": "text",
-                              "value": "{{ global._ls.user.displayName }}",
-                              "style": { "fontSize": 16, "fontWeight": "w600" }
-                            },
-                            { "type": "spacer", "height": 4 },
-                            {
-                              "type": "text",
-                              "value": "{{ global._ls.user.email }}",
-                              "style": { "fontSize": 12, "color": "#888888" }
-                            }
-                          ]
-                        }
+          "children": [
+            {
+              "type": "card",
+              "elevation": 1,
+              "borderRadius": 12,
+              "margin": 4,
+              "padding": 16,
+              "layout": "row",
+              "crossAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "container",
+                  "width": 48,
+                  "height": 48,
+                  "borderRadius": 24,
+                  "color": "#E8EAF6",
+                  "children": [
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "icon",
+                        "name": "person",
+                        "size": 28,
+                        "color": "#3F51B5"
                       }
-                    ]
-                  }
-                ]
-              },
-
-              {
-                "type": "container",
-                "visible": { "==": [{ "var": "loop.item.id" }, "theme"] },
-                "children": [
-                  {
-                    "type": "card",
-                    "elevation": 1,
-                    "borderRadius": 12,
-                    "margin": 4,
-                    "padding": 16,
+                    }
+                  ]
+                },
+                { "type": "spacer", "width": 12 },
+                {
+                  "type": "expanded",
+                  "child": {
+                    "type": "container",
                     "layout": "column",
+                    "crossAxisAlignment": "start",
                     "children": [
                       {
-                        "type": "container",
-                        "layout": "row",
-                        "crossAxisAlignment": "center",
-                        "children": [
-                          {
-                            "type": "icon",
-                            "name": "settings",
-                            "size": 22,
-                            "color": "#666666"
-                          },
-                          { "type": "spacer", "width": 10 },
-                          {
-                            "type": "text",
-                            "value": "主题",
-                            "style": { "fontSize": 15, "fontWeight": "w600" }
-                          }
-                        ]
+                        "type": "text",
+                        "value": "{{ global._ls.user.displayName }}",
+                        "style": { "fontSize": 16, "fontWeight": "w600" }
                       },
-                      { "type": "spacer", "height": 8 },
+                      { "type": "spacer", "height": 4 },
                       {
-                        "type": "dropdown",
-                        "bind": "global._ls.theme",
-                        "options": [
-                          { "label": "跟随系统", "value": "system" },
-                          { "label": "浅色", "value": "light" },
-                          { "label": "深色", "value": "dark" }
-                        ],
-                        "action": {
-                          "call": "@launcher-settings._setTheme",
-                          "args": { "mode": "{{ global._ls.theme }}" }
-                        }
+                        "type": "text",
+                        "value": "{{ global._ls.user.email }}",
+                        "style": { "fontSize": 12, "color": "#888888" }
                       }
                     ]
                   }
-                ]
-              },
+                }
+              ]
+            },
 
-              {
-                "type": "container",
-                "visible": { "==": [{ "var": "loop.item.id" }, "locale"] },
-                "children": [
-                  {
-                    "type": "card",
-                    "elevation": 1,
-                    "borderRadius": 12,
-                    "margin": 4,
-                    "padding": 16,
+            {
+              "type": "card",
+              "elevation": 1,
+              "borderRadius": 12,
+              "margin": 4,
+              "padding": 16,
+              "layout": "column",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "settings",
+                      "size": 22,
+                      "color": "#666666"
+                    },
+                    { "type": "spacer", "width": 10 },
+                    {
+                      "type": "text",
+                      "value": "主题",
+                      "style": { "fontSize": 15, "fontWeight": "w600" }
+                    }
+                  ]
+                },
+                { "type": "spacer", "height": 8 },
+                {
+                  "type": "dropdown",
+                  "bind": "global._ls.theme",
+                  "options": [
+                    { "label": "跟随系统", "value": "system" },
+                    { "label": "浅色", "value": "light" },
+                    { "label": "深色", "value": "dark" }
+                  ],
+                  "action": {
+                    "call": "@launcher-settings._setTheme",
+                    "args": { "mode": "{{ global._ls.theme }}" }
+                  }
+                }
+              ]
+            },
+
+            {
+              "type": "card",
+              "elevation": 1,
+              "borderRadius": 12,
+              "margin": 4,
+              "padding": 16,
+              "layout": "column",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "globe",
+                      "size": 22,
+                      "color": "#666666"
+                    },
+                    { "type": "spacer", "width": 10 },
+                    {
+                      "type": "text",
+                      "value": "语言",
+                      "style": { "fontSize": 15, "fontWeight": "w600" }
+                    }
+                  ]
+                },
+                { "type": "spacer", "height": 8 },
+                {
+                  "type": "dropdown",
+                  "bind": "global._ls.locale",
+                  "options": [
+                    { "label": "中文", "value": "zh" },
+                    { "label": "English", "value": "en" }
+                  ],
+                  "action": {
+                    "call": "@launcher-settings._setLocale",
+                    "args": { "code": "{{ global._ls.locale }}" }
+                  }
+                }
+              ]
+            },
+
+            {
+              "type": "card",
+              "elevation": 1,
+              "borderRadius": 12,
+              "margin": 4,
+              "padding": 16,
+              "layout": "row",
+              "crossAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "play",
+                  "size": 22,
+                  "color": "#666666"
+                },
+                { "type": "spacer", "width": 10 },
+                {
+                  "type": "expanded",
+                  "child": {
+                    "type": "container",
                     "layout": "column",
+                    "crossAxisAlignment": "start",
                     "children": [
                       {
-                        "type": "container",
-                        "layout": "row",
-                        "crossAxisAlignment": "center",
-                        "children": [
-                          {
-                            "type": "icon",
-                            "name": "globe",
-                            "size": 22,
-                            "color": "#666666"
-                          },
-                          { "type": "spacer", "width": 10 },
-                          {
-                            "type": "text",
-                            "value": "语言",
-                            "style": { "fontSize": 15, "fontWeight": "w600" }
-                          }
-                        ]
+                        "type": "text",
+                        "value": "默认启动 App",
+                        "style": { "fontSize": 15, "fontWeight": "w600" }
                       },
-                      { "type": "spacer", "height": 8 },
+                      { "type": "spacer", "height": 4 },
                       {
-                        "type": "dropdown",
-                        "bind": "global._ls.locale",
-                        "options": [
-                          { "label": "中文", "value": "zh" },
-                          { "label": "English", "value": "en" }
-                        ],
-                        "action": {
-                          "call": "@launcher-settings._setLocale",
-                          "args": { "code": "{{ global._ls.locale }}" }
-                        }
+                        "type": "text",
+                        "value": "{{ global._ls.startup.displayName }}",
+                        "visible": "{{ global._ls.startup.hasTarget }}",
+                        "style": { "fontSize": 12, "color": "#888888", "maxLines": 1, "overflow": "ellipsis" }
+                      },
+                      {
+                        "type": "text",
+                        "value": "未设置（保留主页）",
+                        "visible": { "!": [{ "var": "global._ls.startup.hasTarget" }] },
+                        "style": { "fontSize": 12, "color": "#888888" }
                       }
                     ]
                   }
-                ]
-              },
+                },
+                { "type": "spacer", "width": 8 },
+                {
+                  "type": "button",
+                  "label": "重置",
+                  "variant": "outlined",
+                  "visible": "{{ global._ls.startup.hasTarget }}",
+                  "action": {
+                    "call": "@launcher-settings.clearStartup",
+                    "args": {}
+                  }
+                }
+              ]
+            },
 
-              {
-                "type": "container",
-                "visible": { "==": [{ "var": "loop.item.id" }, "startup"] },
-                "children": [
-                  {
-                    "type": "card",
-                    "elevation": 1,
-                    "borderRadius": 12,
-                    "margin": 4,
-                    "padding": 16,
-                    "layout": "row",
-                    "crossAxisAlignment": "center",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "play",
-                        "size": 22,
-                        "color": "#666666"
-                      },
-                      { "type": "spacer", "width": 10 },
-                      {
-                        "type": "expanded",
-                        "child": {
-                          "type": "container",
-                          "layout": "column",
-                          "crossAxisAlignment": "start",
-                          "children": [
-                            {
-                              "type": "text",
-                              "value": "默认启动 App",
-                              "style": { "fontSize": 15, "fontWeight": "w600" }
-                            },
-                            { "type": "spacer", "height": 4 },
-                            {
-                              "type": "text",
-                              "value": "{{ global._ls.startup.displayName }}",
-                              "visible": { "==": [{ "var": "global._ls.startup.hasTarget" }, true] },
-                              "style": { "fontSize": 12, "color": "#888888", "maxLines": 1, "overflow": "ellipsis" }
-                            },
-                            {
-                              "type": "text",
-                              "value": "未设置（保留主页）",
-                              "visible": { "!=": [{ "var": "global._ls.startup.hasTarget" }, true] },
-                              "style": { "fontSize": 12, "color": "#888888" }
-                            }
-                          ]
-                        }
-                      },
-                      { "type": "spacer", "width": 8 },
-                      {
-                        "type": "button",
-                        "label": "重置",
-                        "variant": "outlined",
-                        "visible": { "==": [{ "var": "global._ls.startup.hasTarget" }, true] },
-                        "action": {
-                          "call": "@launcher-settings.clearStartup",
-                          "args": {}
-                        }
-                      }
-                    ]
-                  }
-                ]
+            {
+              "type": "card",
+              "elevation": 1,
+              "borderRadius": 12,
+              "margin": 4,
+              "padding": 16,
+              "layout": "row",
+              "crossAxisAlignment": "center",
+              "onTap": {
+                "call": "@launcher-settings.clearCache",
+                "args": {}
               },
-
-              {
-                "type": "container",
-                "visible": { "==": [{ "var": "loop.item.id" }, "cache"] },
-                "children": [
-                  {
-                    "type": "card",
-                    "elevation": 1,
-                    "borderRadius": 12,
-                    "margin": 4,
-                    "padding": 16,
-                    "layout": "row",
-                    "crossAxisAlignment": "center",
-                    "onTap": {
-                      "call": "@launcher-settings.clearCache",
-                      "args": {}
-                    },
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "folder",
-                        "size": 22,
-                        "color": "#666666"
-                      },
-                      { "type": "spacer", "width": 10 },
-                      {
-                        "type": "expanded",
-                        "child": {
-                          "type": "text",
-                          "value": "清理缓存",
-                          "style": { "fontSize": 15, "fontWeight": "w600" }
-                        }
-                      },
-                      {
-                        "type": "icon",
-                        "name": "right",
-                        "size": 20,
-                        "color": "#888888"
-                      }
-                    ]
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "folder",
+                  "size": 22,
+                  "color": "#666666"
+                },
+                { "type": "spacer", "width": 10 },
+                {
+                  "type": "expanded",
+                  "child": {
+                    "type": "text",
+                    "value": "清理缓存",
+                    "style": { "fontSize": 15, "fontWeight": "w600" }
                   }
-                ]
+                },
+                {
+                  "type": "icon",
+                  "name": "right",
+                  "size": 20,
+                  "color": "#888888"
+                }
+              ]
+            },
+
+            {
+              "type": "card",
+              "elevation": 1,
+              "borderRadius": 12,
+              "margin": 4,
+              "padding": 16,
+              "layout": "row",
+              "crossAxisAlignment": "center",
+              "onTap": {
+                "call": "@launcher-settings.logout",
+                "args": {}
               },
-
-              {
-                "type": "container",
-                "visible": { "==": [{ "var": "loop.item.id" }, "logout"] },
-                "children": [
-                  {
-                    "type": "card",
-                    "elevation": 1,
-                    "borderRadius": 12,
-                    "margin": 4,
-                    "padding": 16,
-                    "layout": "row",
-                    "crossAxisAlignment": "center",
-                    "onTap": {
-                      "call": "@launcher-settings.logout",
-                      "args": {}
-                    },
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "logout",
-                        "size": 22,
-                        "color": "#D32F2F"
-                      },
-                      { "type": "spacer", "width": 10 },
-                      {
-                        "type": "expanded",
-                        "child": {
-                          "type": "text",
-                          "value": "退出登录",
-                          "style": { "fontSize": 15, "fontWeight": "w600", "color": "#D32F2F" }
-                        }
-                      }
-                    ]
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "logout",
+                  "size": 22,
+                  "color": "#D32F2F"
+                },
+                { "type": "spacer", "width": 10 },
+                {
+                  "type": "expanded",
+                  "child": {
+                    "type": "text",
+                    "value": "退出登录",
+                    "style": { "fontSize": 15, "fontWeight": "w600", "color": "#D32F2F" }
                   }
-                ]
-              }
-            ]
-          }
+                }
+              ]
+            }
+          ]
         }
       }
     }
