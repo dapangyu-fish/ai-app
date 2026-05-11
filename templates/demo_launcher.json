@@ -3,7 +3,7 @@
   "appid": "4891e65a-8527-499b-9cd4-a0f363074e40",
   "meta": {
     "name": "demo-launcher",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "type": "app",
     "displayName": {
       "zh": "我的启动器",
@@ -16,7 +16,7 @@
   "dependencies": {
     "launcher-my-apps": "^1.0.6",
     "launcher-market": "^1.0.1",
-    "launcher-settings": "^1.0.1"
+    "launcher-settings": "^1.0.2"
   },
 
   "global": {

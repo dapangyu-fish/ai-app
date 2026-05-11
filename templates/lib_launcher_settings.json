@@ -3,7 +3,7 @@
   "appid": "e20ac2b9-11f7-4d51-8f03-d5372b9678e2",
   "meta": {
     "name": "launcher-settings",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 设置",
@@ -11,7 +11,19 @@
     },
     "description": "可嵌入的'设置'组件库——主题/语言/默认启动 App/缓存/账号管理。",
     "author": "framework",
-    "exports": ["settingsPanel", "init", "refresh", "clearStartup", "clearCache", "logout", "_setTheme", "_setLocale"]
+    "exports": [
+      "settingsPanel",
+      "init",
+      "refresh",
+      "clearStartup",
+      "clearCache",
+      "logout",
+      "editProfile",
+      "_editName",
+      "_editAvatar",
+      "_setTheme",
+      "_setLocale"
+    ]
   },
 
   "global": {
@@ -19,7 +31,7 @@
       "_ls": {
         "theme": "system",
         "locale": "zh",
-        "user": { "displayName": "", "email": "", "isLoggedIn": false },
+        "user": { "displayName": "", "email": "", "avatar": "", "isLoggedIn": false },
         "startup": { "kind": "none", "hasTarget": false, "displayName": "" }
       }
     },
@@ -38,6 +50,120 @@
           { "call": "@get_locale", "args": {}, "assign": "global._ls.locale" },
           { "call": "@auth_current_user", "args": {}, "assign": "global._ls.user" },
           { "call": "@startup_default_get", "args": {}, "assign": "global._ls.startup" }
+        ]
+      },
+
+      "editProfile": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_choice_dialog",
+            "args": {
+              "title": "编辑资料",
+              "message": "选择要修改的项",
+              "buttons": [
+                { "label": "改名",   "value": "name" },
+                { "label": "换头像", "value": "avatar" },
+                { "label": "取消",   "value": null, "style": "text" }
+              ]
+            },
+            "assign": "global._ls._editChoice"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "==": [{ "var": "global._ls._editChoice" }, "name"] },
+              "then": [
+                { "call": "@launcher-settings._editName", "args": {} }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "==": [{ "var": "global._ls._editChoice" }, "avatar"] },
+              "then": [
+                { "call": "@launcher-settings._editAvatar", "args": {} }
+              ]
+            }
+          }
+        ]
+      },
+
+      "_editName": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_input_dialog",
+            "args": {
+              "title": "改名",
+              "hint": "输入新昵称",
+              "defaultValue": "{{ global._ls.user.displayName }}"
+            },
+            "assign": "global._ls._newName"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!=": [{ "var": "global._ls._newName" }, null] },
+              "then": [
+                {
+                  "call": "@update_profile",
+                  "args": { "username": "{{ global._ls._newName }}" }
+                },
+                { "call": "@refresh_user", "args": {} },
+                { "call": "@launcher-settings.refresh", "args": {} },
+                { "call": "@show_toast", "args": { "message": "✅ 已更新" } }
+              ]
+            }
+          }
+        ]
+      },
+
+      "_editAvatar": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@pick_image",
+            "args": {},
+            "assign": "global._ls._imgPath"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "!=": [{ "var": "global._ls._imgPath" }, null] },
+              "then": [
+                {
+                  "call": "@file_to_base64",
+                  "args": { "path": "{{ global._ls._imgPath }}" },
+                  "assign": "global._ls._imgB64"
+                },
+                {
+                  "call": "@upload_avatar",
+                  "args": { "base64": "{{ global._ls._imgB64 }}" },
+                  "assign": "global._ls._imgUrl"
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": { "!=": [{ "var": "global._ls._imgUrl" }, null] },
+                    "then": [
+                      {
+                        "call": "@update_profile",
+                        "args": { "avatar_url": "{{ global._ls._imgUrl }}" }
+                      },
+                      { "call": "@refresh_user", "args": {} },
+                      { "call": "@launcher-settings.refresh", "args": {} },
+                      { "call": "@show_toast", "args": { "message": "✅ 头像已更新" } }
+                    ],
+                    "else": [
+                      { "call": "@show_toast", "args": { "message": "❌ 头像上传失败" } }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
         ]
       },
 
@@ -148,26 +274,40 @@
               "padding": 16,
               "layout": "row",
               "crossAxisAlignment": "center",
+              "onTap": {
+                "call": "@launcher-settings.editProfile",
+                "args": {}
+              },
               "children": [
                 {
                   "type": "container",
-                  "width": 48,
-                  "height": 48,
-                  "borderRadius": 24,
+                  "width": 56,
+                  "height": 56,
+                  "borderRadius": 28,
                   "color": "#E8EAF6",
                   "children": [
                     {
+                      "type": "image",
+                      "url": "{{ global._ls.user.avatar }}",
+                      "visible": "{{ global._ls.user.avatar }}",
+                      "width": 56,
+                      "height": 56,
+                      "borderRadius": 28,
+                      "fit": "cover"
+                    },
+                    {
                       "type": "center",
+                      "visible": { "!": [{ "var": "global._ls.user.avatar" }] },
                       "child": {
                         "type": "icon",
                         "name": "person",
-                        "size": 28,
+                        "size": 32,
                         "color": "#3F51B5"
                       }
                     }
                   ]
                 },
-                { "type": "spacer", "width": 12 },
+                { "type": "spacer", "width": 14 },
                 {
                   "type": "expanded",
                   "child": {
@@ -188,6 +328,12 @@
                       }
                     ]
                   }
+                },
+                {
+                  "type": "icon",
+                  "name": "right",
+                  "size": 20,
+                  "color": "#888888"
                 }
               ]
             },
