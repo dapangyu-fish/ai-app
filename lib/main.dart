@@ -1676,6 +1676,13 @@ bool _containsListInChildren(List<dynamic> children) {
       // flame_game 跟 list 一样想吃无限高度（Flame GameWidget 占满父级），
       // 没显式给 height 时屏幕级要走 Column 而不是 SingleChildScrollView。
       if (type == 'flame_game' && child['height'] == null) return true;
+      // expanded 只在 Flex 父级里有效——出现在屏幕顶层就必须走 Column 布局，
+      // 否则 SingleChildScrollView 给的是 unbounded 高度，Expanded 直接哑火。
+      if (type == 'expanded') return true;
+      // ref 引用的模板里可能塞 list/refresh/expanded（典型：launcher 组件库），
+      // 这边解析阶段没法看进 dep 模板，保守按 Column 处理（拿不到滚动条但不崩；
+      // 如果 ref 出来是个短小的 leaf，组件作者自己负责裹个 SingleChildScrollView）。
+      if (type == 'ref') return true;
       // 递归 children 字段
       final subChildren = child['children'] as List<dynamic>?;
       if (subChildren != null && _containsListInChildren(subChildren)) {

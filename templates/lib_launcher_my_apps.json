@@ -1,0 +1,215 @@
+{
+  "dsl": "3.3",
+  "appid": "8e70e502-7ccb-4c03-92d7-fe14ed9493e9",
+  "meta": {
+    "name": "launcher-my-apps",
+    "version": "1.0.6",
+    "type": "library",
+    "displayName": {
+      "zh": "启动器组件 · 我的 APP",
+      "en": "Launcher Component · My Apps"
+    },
+    "description": "可嵌入的'我的 APP'组件库——从本地 JSON-APP 列表里一键启动。",
+    "author": "framework",
+    "exports": ["myAppsGrid", "init", "refresh", "deleteApp"]
+  },
+
+  "global": {
+    "variables": {
+      "_lma": {
+        "apps": [],
+        "loading": false
+      }
+    },
+    "functions": {
+      "init": {
+        "params": [],
+        "logic": [
+          { "call": "@launcher-my-apps.refresh", "args": {} }
+        ]
+      },
+
+      "refresh": {
+        "params": [],
+        "logic": [
+          { "call": "@set", "args": { "var": "global._lma.loading", "value": true } },
+          {
+            "call": "@my_apps_list",
+            "args": {},
+            "assign": "global._lma.apps"
+          },
+          { "call": "@set", "args": { "var": "global._lma.loading", "value": false } }
+        ]
+      },
+
+      "deleteApp": {
+        "params": ["fileName", "displayName"],
+        "logic": [
+          {
+            "call": "@show_dialog",
+            "args": {
+              "title": "删除确认",
+              "message": "确定要删除「{{ params.displayName }}」吗？此操作不可撤销。"
+            },
+            "assign": "global._lma._confirm"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": { "==": [{ "var": "global._lma._confirm" }, true] },
+              "then": [
+                {
+                  "call": "@my_apps_delete",
+                  "args": { "fileName": "{{ params.fileName }}" }
+                },
+                { "call": "@launcher-my-apps.refresh", "args": {} }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+
+  "ui": {
+    "templates": {
+      "myAppsGrid": {
+        "props": ["emptyText"],
+        "root": {
+          "type": "list",
+          "source": "{{ global._lma.apps }}",
+          "emptyText": "{{ props.emptyText }}",
+          "padding": 12,
+          "separator": "none",
+          "onRefresh": {
+            "call": "@launcher-my-apps.refresh",
+            "args": {}
+          },
+          "item_template": {
+            "type": "card",
+            "elevation": 1,
+            "borderRadius": 12,
+            "margin": 6,
+            "padding": 14,
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "onTap": {
+              "call": "@launch_app",
+              "args": {
+                "kind": "local",
+                "fileName": "{{ loop.item.fileName }}"
+              }
+            },
+            "children": [
+              {
+                "type": "container",
+                "width": 48,
+                "height": 48,
+                "borderRadius": 12,
+                "color": "#E3F2FD",
+                "children": [
+                  {
+                    "type": "center",
+                    "child": {
+                      "type": "icon",
+                      "name": "apps",
+                      "size": 28,
+                      "color": "#1976D2"
+                    }
+                  }
+                ]
+              },
+              { "type": "spacer", "width": 12 },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "column",
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.displayName }}",
+                      "style": {
+                        "fontSize": 16,
+                        "fontWeight": "w600",
+                        "maxLines": 1,
+                        "overflow": "ellipsis"
+                      }
+                    },
+                    { "type": "spacer", "height": 4 },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.description }}",
+                      "visible": { "!=": [{ "var": "loop.item.description" }, ""] },
+                      "style": {
+                        "fontSize": 13,
+                        "color": "#666666",
+                        "maxLines": 2,
+                        "overflow": "ellipsis"
+                      }
+                    },
+                    { "type": "spacer", "height": 6 },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "v{{ loop.item.version }}",
+                          "visible": { "!=": [{ "var": "loop.item.version" }, ""] },
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#999999"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "  ·  {{ loop.item.author }}",
+                          "visible": { "!=": [{ "var": "loop.item.author" }, ""] },
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#999999"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              { "type": "spacer", "width": 8 },
+              {
+                "type": "inkwell",
+                "borderRadius": 20,
+                "onTap": {
+                  "call": "@launcher-my-apps.deleteApp",
+                  "args": {
+                    "fileName": "{{ loop.item.fileName }}",
+                    "displayName": "{{ loop.item.displayName }}"
+                  }
+                },
+                "child": {
+                  "type": "container",
+                  "width": 40,
+                  "height": 40,
+                  "borderRadius": 20,
+                  "children": [
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "icon",
+                        "name": "delete",
+                        "size": 22,
+                        "color": "#888888"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

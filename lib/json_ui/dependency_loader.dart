@@ -106,6 +106,18 @@ class DependencyLoader {
     _loadingStack.clear();
   }
 
+  /// 嵌套 APP 用：保存当前已加载模块（浅拷贝，LoadedModule 本身不可变就够用）。
+  Map<String, LoadedModule> snapshot() =>
+      Map<String, LoadedModule>.from(_loadedModules);
+
+  /// 嵌套 APP 用：从 [snapshot] 还原已加载模块。
+  void restoreFromSnapshot(Map<String, LoadedModule> snapshot) {
+    _loadedModules
+      ..clear()
+      ..addAll(snapshot);
+    _loadingStack.clear();
+  }
+
   /// 解析并加载所有依赖
   Future<void> loadDependencies(Map<String, dynamic>? deps) async {
     if (deps == null || deps.isEmpty) return;

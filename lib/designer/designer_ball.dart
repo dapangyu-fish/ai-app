@@ -557,8 +557,11 @@ class _DesignerBallState extends State<DesignerBall>
   /// 没历史会话时"恢复会话"按钮灰掉但菜单仍然弹出，让其他入口可用。
   ///
   /// 第二次双击（菜单还开着）→ 关掉菜单，而不是叠一层。点击灰幕也能关。
+  ///
+  /// 不再因为 _chatMode/_isListening 屏蔽：之前 `if (_chatMode) return` 把
+  /// 聊天态下双击全 swallow 掉，用户必须先关掉聊天才能用快捷菜单——很反直觉。
+  /// 现在任意状态都能弹菜单（"回到主页"在聊天里也得能用）。
   void _onDoubleTap() {
-    if (_chatMode) return;
     if (_quickMenuOpen) {
       // 菜单已打开 → 双击 = 关
       JsonDslApp.navigatorKey.currentState?.pop();
@@ -1994,15 +1997,15 @@ class _DesignerBallState extends State<DesignerBall>
                 color: iconColor,
                 size: 28,
               )
-            : _chatMode
-                ? Icon(Icons.chat_bubble_outline,
-                    color: iconColor, size: 26)
-                // 默认：黑白线性麦克风图标（替代原 'D' 字母）
-                : Icon(
-                    Icons.mic_none_outlined,
-                    color: iconColor,
-                    size: 26,
-                  ),
+            // 非录音态：永远显示线性麦克风图标。
+            // chatMode（有历史会话/正在聊天）以前会切成 chat_bubble，但聊天态
+            // 是否在线本来就由 ChatOverlay 自身呈现，球本体不需要再多一种态——
+            // 反而会让用户搞不清当前是 mic 默认还是 chat 状态、双击会不会工作
+            : Icon(
+                Icons.mic_none_outlined,
+                color: iconColor,
+                size: 26,
+              ),
       ),
     );
 
