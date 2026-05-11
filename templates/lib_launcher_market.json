@@ -3,11 +3,13 @@
   "appid": "5811ffa0-a901-4c6b-a0b7-ca1de1f16083",
   "meta": {
     "name": "launcher-market",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 市场",
-      "en": "Launcher Component · Market"
+      "en": "Launcher Component · Market",
+      "de": "Launcher-Komponente · Markt",
+      "es": "Componente launcher · Mercado"
     },
     "description": "可嵌入的'市场'组件库——浏览 Registry 上的 JSON-APP / 组件库，一键启动。",
     "author": "framework",

@@ -3,24 +3,220 @@
   "appid": "4891e65a-8527-499b-9cd4-a0f363074e40",
   "meta": {
     "name": "demo-launcher",
-    "version": "0.2.5",
+    "version": "0.3.0",
     "type": "app",
     "displayName": {
       "zh": "我的启动器",
-      "en": "My Launcher"
+      "en": "My Launcher",
+      "de": "Mein Launcher",
+      "es": "Mi launcher"
     },
     "description": "用 launcher 组件库拼出来的三 tab 启动器 demo —— 本地 / 市场 / 设置。设成默认启动 App 就完全替代了原生主页。",
     "author": "framework"
   },
 
   "dependencies": {
-    "launcher-my-apps": "^1.0.6",
-    "launcher-market": "^1.0.1",
-    "launcher-settings": "^1.0.4"
+    "launcher-my-apps": "^1.1.0",
+    "launcher-market": "^1.1.0",
+    "launcher-settings": "^1.1.0"
   },
 
   "global": {
-    "variables": {}
+    "variables": {},
+    "i18n": {
+      "zh": {
+        "title": "我的启动器",
+        "common": {
+          "cancel": "取消"
+        },
+        "tabs": {
+          "local": "本地",
+          "market": "市场",
+          "settings": "设置",
+          "local_title": "本地 App",
+          "market_title": "应用市场",
+          "settings_title": "设置"
+        },
+        "myapps": {
+          "empty": "还没有保存任何 APP，去市场逛一下吧",
+          "delete_title": "删除确认",
+          "delete_msg": "确定要删除「{{ params.displayName }}」吗？此操作不可撤销。"
+        },
+        "market": {
+          "empty": "市场暂时没有内容"
+        },
+        "settings": {
+          "theme": "主题",
+          "theme_system": "跟随系统",
+          "theme_light": "浅色",
+          "theme_dark": "深色",
+          "locale": "语言",
+          "startup": "默认启动 App",
+          "startup_none": "未设置（保留主页）",
+          "startup_reset": "重置",
+          "startup_reset_title": "重置默认启动 App",
+          "startup_reset_msg": "确定要取消默认启动 App 吗？下次冷启动会回到主页。",
+          "startup_reset_toast": "✅ 已重置",
+          "cache": "清理缓存",
+          "cache_msg": "清理后市场/库的本地缓存会被删除，下次启动会重新从服务器拉。继续？",
+          "cache_toast": "✅ 缓存已清理",
+          "logout": "退出登录",
+          "logout_msg": "确定要退出当前账号吗？",
+          "profile_edit": "编辑资料",
+          "profile_edit_msg": "选择要修改的项",
+          "profile_edit_name": "改名",
+          "profile_edit_avatar": "换头像",
+          "name_dialog_title": "改名",
+          "name_dialog_hint": "输入新昵称",
+          "name_toast": "✅ 已更新",
+          "avatar_toast": "✅ 头像已更新"
+        }
+      },
+      "en": {
+        "title": "My Launcher",
+        "common": {
+          "cancel": "Cancel"
+        },
+        "tabs": {
+          "local": "Local",
+          "market": "Market",
+          "settings": "Settings",
+          "local_title": "Local apps",
+          "market_title": "App store",
+          "settings_title": "Settings"
+        },
+        "myapps": {
+          "empty": "No saved apps. Try the market!",
+          "delete_title": "Confirm delete",
+          "delete_msg": "Delete \"{{ params.displayName }}\"? This cannot be undone."
+        },
+        "market": {
+          "empty": "No content in the market yet"
+        },
+        "settings": {
+          "theme": "Theme",
+          "theme_system": "System",
+          "theme_light": "Light",
+          "theme_dark": "Dark",
+          "locale": "Language",
+          "startup": "Default startup app",
+          "startup_none": "Not set (keep home)",
+          "startup_reset": "Reset",
+          "startup_reset_title": "Reset startup app",
+          "startup_reset_msg": "Cancel the default startup app? Next cold start will return to home.",
+          "startup_reset_toast": "✅ Reset",
+          "cache": "Clear cache",
+          "cache_msg": "This will remove the local cache of market/libraries. Next start will re-fetch from the server. Continue?",
+          "cache_toast": "✅ Cache cleared",
+          "logout": "Sign out",
+          "logout_msg": "Sign out of the current account?",
+          "profile_edit": "Edit profile",
+          "profile_edit_msg": "Choose what to change",
+          "profile_edit_name": "Rename",
+          "profile_edit_avatar": "Change avatar",
+          "name_dialog_title": "Rename",
+          "name_dialog_hint": "Enter a new nickname",
+          "name_toast": "✅ Updated",
+          "avatar_toast": "✅ Avatar updated"
+        }
+      },
+      "de": {
+        "title": "Mein Launcher",
+        "common": {
+          "cancel": "Abbrechen"
+        },
+        "tabs": {
+          "local": "Lokal",
+          "market": "Markt",
+          "settings": "Einstellungen",
+          "local_title": "Lokale Apps",
+          "market_title": "App-Store",
+          "settings_title": "Einstellungen"
+        },
+        "myapps": {
+          "empty": "Noch keine gespeicherten Apps. Schau in den Markt!",
+          "delete_title": "Löschen bestätigen",
+          "delete_msg": "„{{ params.displayName }}\" löschen? Dies kann nicht rückgängig gemacht werden."
+        },
+        "market": {
+          "empty": "Im Markt sind noch keine Inhalte"
+        },
+        "settings": {
+          "theme": "Thema",
+          "theme_system": "System",
+          "theme_light": "Hell",
+          "theme_dark": "Dunkel",
+          "locale": "Sprache",
+          "startup": "Standard-Start-App",
+          "startup_none": "Nicht festgelegt (Startseite behalten)",
+          "startup_reset": "Zurücksetzen",
+          "startup_reset_title": "Start-App zurücksetzen",
+          "startup_reset_msg": "Standard-Start-App entfernen? Nächster Kaltstart geht zur Startseite.",
+          "startup_reset_toast": "✅ Zurückgesetzt",
+          "cache": "Cache löschen",
+          "cache_msg": "Der lokale Cache des Markts / der Bibliotheken wird entfernt. Beim nächsten Start wird vom Server neu geladen. Fortfahren?",
+          "cache_toast": "✅ Cache geleert",
+          "logout": "Abmelden",
+          "logout_msg": "Aus dem aktuellen Konto abmelden?",
+          "profile_edit": "Profil bearbeiten",
+          "profile_edit_msg": "Was ändern?",
+          "profile_edit_name": "Umbenennen",
+          "profile_edit_avatar": "Avatar ändern",
+          "name_dialog_title": "Umbenennen",
+          "name_dialog_hint": "Neuen Spitznamen eingeben",
+          "name_toast": "✅ Aktualisiert",
+          "avatar_toast": "✅ Avatar aktualisiert"
+        }
+      },
+      "es": {
+        "title": "Mi launcher",
+        "common": {
+          "cancel": "Cancelar"
+        },
+        "tabs": {
+          "local": "Local",
+          "market": "Mercado",
+          "settings": "Ajustes",
+          "local_title": "Apps locales",
+          "market_title": "Tienda de apps",
+          "settings_title": "Ajustes"
+        },
+        "myapps": {
+          "empty": "Aún no hay apps guardadas. ¡Mira el mercado!",
+          "delete_title": "Confirmar eliminación",
+          "delete_msg": "¿Eliminar «{{ params.displayName }}»? Esta acción no se puede deshacer."
+        },
+        "market": {
+          "empty": "Aún no hay contenido en el mercado"
+        },
+        "settings": {
+          "theme": "Tema",
+          "theme_system": "Sistema",
+          "theme_light": "Claro",
+          "theme_dark": "Oscuro",
+          "locale": "Idioma",
+          "startup": "App de inicio predeterminada",
+          "startup_none": "Sin definir (mantener inicio)",
+          "startup_reset": "Restablecer",
+          "startup_reset_title": "Restablecer app de inicio",
+          "startup_reset_msg": "¿Cancelar la app de inicio predeterminada? El próximo arranque volverá al inicio.",
+          "startup_reset_toast": "✅ Restablecido",
+          "cache": "Limpiar caché",
+          "cache_msg": "Se eliminará la caché local del mercado / bibliotecas. El próximo arranque volverá a descargar del servidor. ¿Continuar?",
+          "cache_toast": "✅ Caché limpiada",
+          "logout": "Cerrar sesión",
+          "logout_msg": "¿Cerrar sesión de la cuenta actual?",
+          "profile_edit": "Editar perfil",
+          "profile_edit_msg": "Qué cambiar",
+          "profile_edit_name": "Cambiar nombre",
+          "profile_edit_avatar": "Cambiar avatar",
+          "name_dialog_title": "Cambiar nombre",
+          "name_dialog_hint": "Introduce un nuevo alias",
+          "name_toast": "✅ Actualizado",
+          "avatar_toast": "✅ Avatar actualizado"
+        }
+      }
+    }
   },
 
   "steps": [
@@ -33,42 +229,42 @@
     "screens": [
       {
         "id": "home",
-        "title": "我的启动器",
+        "title": "{{ t('title') }}",
         "tabs": [
           {
-            "label": "本地",
+            "label": "{{ t('tabs.local') }}",
             "icon": "apps",
-            "title": "本地 App",
+            "title": "{{ t('tabs.local_title') }}",
             "children": [
               {
                 "type": "ref",
                 "from": "launcher-my-apps",
                 "widget": "myAppsGrid",
                 "props": {
-                  "emptyText": "还没有保存任何 APP，去市场逛一下吧"
+                  "emptyText": "{{ t('myapps.empty') }}"
                 }
               }
             ]
           },
           {
-            "label": "市场",
+            "label": "{{ t('tabs.market') }}",
             "icon": "store",
-            "title": "应用市场",
+            "title": "{{ t('tabs.market_title') }}",
             "children": [
               {
                 "type": "ref",
                 "from": "launcher-market",
                 "widget": "marketBrowser",
                 "props": {
-                  "emptyText": "市场暂时没有内容"
+                  "emptyText": "{{ t('market.empty') }}"
                 }
               }
             ]
           },
           {
-            "label": "设置",
+            "label": "{{ t('tabs.settings') }}",
             "icon": "settings",
-            "title": "设置",
+            "title": "{{ t('tabs.settings_title') }}",
             "children": [
               {
                 "type": "ref",

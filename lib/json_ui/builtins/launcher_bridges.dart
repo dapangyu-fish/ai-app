@@ -24,6 +24,7 @@ import '../../auth/auth_service.dart';
 import '../../config/app_config.dart';
 import '../../designer/app_storage.dart';
 import '../../designer/default_startup_prefs.dart';
+import '../../i18n/locale_controller.dart';
 import '../../i18n/meta_helper.dart';
 import '../../im/im_service.dart';
 import '../../main.dart' show JsonDslApp, JsonScreenView;
@@ -55,6 +56,10 @@ class LauncherBridges {
         return (handled: true, value: await _startupDefaultClear());
       case '@cache_clear':
         return (handled: true, value: await _cacheClear());
+      case '@get_framework_locale':
+        return (handled: true, value: _getFrameworkLocale());
+      case '@set_framework_locale':
+        return (handled: true, value: await _setFrameworkLocale(resolvedArgs, interpreter));
       case '@auth_logout':
         return (handled: true, value: await _authLogout());
       default:
@@ -373,6 +378,49 @@ class LauncherBridges {
       return true;
     } catch (e) {
       debugPrint('[@cache_clear] 失败: $e');
+      return false;
+    }
+  }
+
+  // ========== 框架 locale ==========
+  //
+  // 现成的 @set_locale / @get_locale 只动 JSON-APP 自己的 global.locale，
+  // 框架 UI 不会跟着切。launcher 替代了原生主页，用户在 launcher 设置里切
+  // "Deutsch" 期望整个 app（包括框架 UI）一起切，所以另开一对桥接：
+
+  /// @get_framework_locale → 'zh'/'en'/'de'/'es' 或 'system'（跟随系统时）
+  static String _getFrameworkLocale() {
+    final v = appLocale.value;
+    if (v == null) return 'system';
+    return v.languageCode;
+  }
+
+  /// @set_framework_locale({value: 'zh'|'en'|'de'|'es'|'system'}) → bool
+  /// 同步 LocaleController.setLocale + interpreter.global.locale，
+  /// MaterialApp 跟着 appLocale 重建，JSON-APP 模板 {{ t('xxx') }} 也跟着切。
+  static Future<bool> _setFrameworkLocale(
+    Map<String, dynamic> args,
+    JsonInterpreter interpreter,
+  ) async {
+    final v = args['value']?.toString();
+    if (v == null || v.isEmpty) return false;
+    try {
+      if (v == 'system') {
+        await LocaleController.setLocale(null);
+        // 同步 JSON-APP locale 到当前系统简码
+        final tag = LocaleController.currentLocaleTag();
+        final dash = tag.indexOf(RegExp(r'[-_]'));
+        interpreter.setVariable(
+          'global.locale',
+          dash < 0 ? tag : tag.substring(0, dash),
+        );
+      } else {
+        await LocaleController.setLocale(Locale(v));
+        interpreter.setVariable('global.locale', v);
+      }
+      return true;
+    } catch (e) {
+      debugPrint('[@set_framework_locale] 失败: $e');
       return false;
     }
   }
