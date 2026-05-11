@@ -3,7 +3,7 @@
   "appid": "e20ac2b9-11f7-4d51-8f03-d5372b9678e2",
   "meta": {
     "name": "launcher-settings",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 设置",
@@ -24,6 +24,10 @@
       "_setTheme",
       "_setLocale"
     ]
+  },
+
+  "dependencies": {
+    "lib_user": "^1.3.0"
   },
 
   "global": {
@@ -108,10 +112,9 @@
               "condition": { "!=": [{ "var": "global._ls._newName" }, null] },
               "then": [
                 {
-                  "call": "@update_profile",
-                  "args": { "username": "{{ global._ls._newName }}" }
+                  "call": "@lib_user.updateName",
+                  "args": { "newName": "{{ global._ls._newName }}" }
                 },
-                { "call": "@refresh_user", "args": {} },
                 { "call": "@launcher-settings.refresh", "args": {} },
                 { "call": "@show_toast", "args": { "message": "✅ 已更新" } }
               ]
@@ -134,33 +137,11 @@
               "condition": { "!=": [{ "var": "global._ls._imgPath" }, null] },
               "then": [
                 {
-                  "call": "@file_to_base64",
-                  "args": { "path": "{{ global._ls._imgPath }}" },
-                  "assign": "global._ls._imgB64"
+                  "call": "@lib_user.updateAvatar",
+                  "args": { "imagePath": "{{ global._ls._imgPath }}" }
                 },
-                {
-                  "call": "@upload_avatar",
-                  "args": { "base64": "{{ global._ls._imgB64 }}" },
-                  "assign": "global._ls._imgUrl"
-                },
-                {
-                  "call": "@if",
-                  "args": {
-                    "condition": { "!=": [{ "var": "global._ls._imgUrl" }, null] },
-                    "then": [
-                      {
-                        "call": "@update_profile",
-                        "args": { "avatar_url": "{{ global._ls._imgUrl }}" }
-                      },
-                      { "call": "@refresh_user", "args": {} },
-                      { "call": "@launcher-settings.refresh", "args": {} },
-                      { "call": "@show_toast", "args": { "message": "✅ 头像已更新" } }
-                    ],
-                    "else": [
-                      { "call": "@show_toast", "args": { "message": "❌ 头像上传失败" } }
-                    ]
-                  }
-                }
+                { "call": "@launcher-settings.refresh", "args": {} },
+                { "call": "@show_toast", "args": { "message": "✅ 头像已更新" } }
               ]
             }
           }
