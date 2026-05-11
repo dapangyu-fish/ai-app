@@ -3,7 +3,7 @@
   "appid": "e20ac2b9-11f7-4d51-8f03-d5372b9678e2",
   "meta": {
     "name": "launcher-settings",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 设置",
@@ -396,7 +396,9 @@
                   "bind": "global._ls.locale",
                   "options": [
                     { "label": "中文", "value": "zh" },
-                    { "label": "English", "value": "en" }
+                    { "label": "English", "value": "en" },
+                    { "label": "Deutsch", "value": "de" },
+                    { "label": "Español", "value": "es" }
                   ],
                   "action": {
                     "call": "@launcher-settings._setLocale",

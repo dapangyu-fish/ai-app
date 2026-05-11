@@ -36,9 +36,12 @@ class LanguageSwitcher extends StatelessWidget {
         final t = T.of(context);
         final subtitle = locale == null
             ? t.settingsLanguageSystem
-            : (locale.languageCode == 'en'
-                ? t.settingsLanguageEn
-                : t.settingsLanguageZh);
+            : switch (locale.languageCode) {
+                'en' => t.settingsLanguageEn,
+                'de' => t.settingsLanguageDe,
+                'es' => t.settingsLanguageEs,
+                _ => t.settingsLanguageZh,
+              };
         return ListTile(
           leading: const Icon(Icons.language),
           title: Text(t.settingsLanguage),
@@ -99,6 +102,8 @@ Future<void> showLanguagePicker(BuildContext context) async {
                 ),
                 tile(const Locale('zh', 'CN'), t.settingsLanguageZh),
                 tile(const Locale('en', 'US'), t.settingsLanguageEn),
+                tile(const Locale('de', 'DE'), t.settingsLanguageDe),
+                tile(const Locale('es', 'ES'), t.settingsLanguageEs),
                 tile(null, t.settingsLanguageSystem),
                 const SizedBox(height: 8),
               ],
