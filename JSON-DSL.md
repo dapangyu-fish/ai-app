@@ -490,8 +490,13 @@ JSON-APP 端只要 `"value": "{{ t('echo') }}"`，变量在不同语言里的位
 | `@startup_default_set` | `{kind: "market"\|"local", name?, version?, fileName?, displayName?}` | `bool` | 设默认启动 APP（market 必填 name+version；local 必填 fileName） |
 | `@startup_default_clear` | — | `bool` | 清掉默认启动 APP |
 | `@cache_clear` | — | `bool` | 清 dsl_cache 目录（市场/库本地缓存） |
-| `@auth_current_user` | — | `{id, username, email, role, displayName, avatar, isLoggedIn}` 或 `null` | 当前登录用户信息 |
 | `@auth_logout` | — | `bool` | 登出（IM + token） |
+
+读取当前用户信息直接用现有的 `@get_user_info`（native）或 lib_user 的
+`getUserAvatar` / `getUserName` / `getUserEmail`——launcher 这里不重复
+包一份。原始字段名见 `AuthService.currentUser`：`id` / `username` / `email`
+/ `avatar_url` / `role`。
+
 
 **使用示例 — 嵌套启动**
 

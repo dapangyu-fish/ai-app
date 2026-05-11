@@ -55,8 +55,6 @@ class LauncherBridges {
         return (handled: true, value: await _startupDefaultClear());
       case '@cache_clear':
         return (handled: true, value: await _cacheClear());
-      case '@auth_current_user':
-        return (handled: true, value: _authCurrentUser());
       case '@auth_logout':
         return (handled: true, value: await _authLogout());
       default:
@@ -381,29 +379,12 @@ class LauncherBridges {
 
   // ========== Auth ==========
 
-  /// @auth_current_user → Map(user 信息) 或 null
-  /// 字段：id / username / email / role / displayName / avatar
-  ///
-  /// 注意：AuthService.currentUser 原始字段名是 `avatar_url`，这里统一暴露
-  /// 为更直观的 `avatar`。
-  static Map<String, dynamic>? _authCurrentUser() {
-    final user = AuthService.currentUser;
-    if (user == null) return null;
-    return {
-      'id': user['id']?.toString() ?? '',
-      'username': user['username']?.toString() ?? '',
-      'email': user['email']?.toString() ?? '',
-      'role': user['role']?.toString() ?? '',
-      'displayName': (user['username'] ??
-              user['email']?.toString().split('@').first ??
-              '')
-          .toString(),
-      'avatar': user['avatar_url']?.toString() ?? '',
-      'isLoggedIn': AuthService.isLoggedIn,
-    };
-  }
-
   /// @auth_logout → bool；登出 IM + 清 token，AuthGate 会自动跳回登录页
+  //
+  // 注：读取当前用户 / 头像 / 邮箱用现成的 @get_user_info（native）或
+  // lib_user 的 getUserAvatar / getUserName / getUserEmail 即可，不再重复
+  // 包一个 @auth_current_user。
+
   static Future<bool> _authLogout() async {
     try {
       await IMService.instance.logout();

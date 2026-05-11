@@ -3,7 +3,7 @@
   "appid": "e20ac2b9-11f7-4d51-8f03-d5372b9678e2",
   "meta": {
     "name": "launcher-settings",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 设置",
@@ -35,7 +35,7 @@
       "_ls": {
         "theme": "system",
         "locale": "zh",
-        "user": { "displayName": "", "email": "", "avatar": "", "isLoggedIn": false },
+        "user": { "username": "", "email": "", "avatar_url": "" },
         "startup": { "kind": "none", "hasTarget": false, "displayName": "" }
       }
     },
@@ -52,7 +52,7 @@
         "logic": [
           { "call": "@get_theme", "args": {}, "assign": "global._ls.theme" },
           { "call": "@get_locale", "args": {}, "assign": "global._ls.locale" },
-          { "call": "@auth_current_user", "args": {}, "assign": "global._ls.user" },
+          { "call": "@get_user_info", "args": { "bind": "global._ls.user" } },
           { "call": "@startup_default_get", "args": {}, "assign": "global._ls.startup" }
         ]
       },
@@ -102,7 +102,7 @@
             "args": {
               "title": "改名",
               "hint": "输入新昵称",
-              "defaultValue": "{{ global._ls.user.displayName }}"
+              "defaultValue": "{{ global._ls.user.username }}"
             },
             "assign": "global._ls._newName"
           },
@@ -269,8 +269,8 @@
                   "children": [
                     {
                       "type": "image",
-                      "url": "{{ global._ls.user.avatar }}",
-                      "visible": "{{ global._ls.user.avatar }}",
+                      "url": "{{ global._ls.user.avatar_url }}",
+                      "visible": "{{ global._ls.user.avatar_url }}",
                       "width": 56,
                       "height": 56,
                       "borderRadius": 28,
@@ -278,7 +278,7 @@
                     },
                     {
                       "type": "center",
-                      "visible": { "!": [{ "var": "global._ls.user.avatar" }] },
+                      "visible": { "!": [{ "var": "global._ls.user.avatar_url" }] },
                       "child": {
                         "type": "icon",
                         "name": "person",
@@ -298,7 +298,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "{{ global._ls.user.displayName }}",
+                        "value": "{{ global._ls.user.username }}",
                         "style": { "fontSize": 16, "fontWeight": "w600" }
                       },
                       { "type": "spacer", "height": 4 },
