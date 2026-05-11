@@ -3,11 +3,13 @@
   "appid": "8e70e502-7ccb-4c03-92d7-fe14ed9493e9",
   "meta": {
     "name": "launcher-my-apps",
-    "version": "1.0.6",
+    "version": "1.1.0",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 我的 APP",
-      "en": "Launcher Component · My Apps"
+      "en": "Launcher Component · My Apps",
+      "de": "Launcher-Komponente · Meine Apps",
+      "es": "Componente launcher · Mis apps"
     },
     "description": "可嵌入的'我的 APP'组件库——从本地 JSON-APP 列表里一键启动。",
     "author": "framework",
@@ -48,8 +50,8 @@
           {
             "call": "@show_dialog",
             "args": {
-              "title": "删除确认",
-              "message": "确定要删除「{{ params.displayName }}」吗？此操作不可撤销。"
+              "title": "{{ t('myapps.delete_title') }}",
+              "message": "{{ t('myapps.delete_msg') }}"
             },
             "assign": "global._lma._confirm"
           },

@@ -3,13 +3,15 @@
   "appid": "e20ac2b9-11f7-4d51-8f03-d5372b9678e2",
   "meta": {
     "name": "launcher-settings",
-    "version": "1.0.5",
+    "version": "1.1.0",
     "type": "library",
     "displayName": {
       "zh": "启动器组件 · 设置",
-      "en": "Launcher Component · Settings"
+      "en": "Launcher Component · Settings",
+      "de": "Launcher-Komponente · Einstellungen",
+      "es": "Componente launcher · Ajustes"
     },
-    "description": "可嵌入的'设置'组件库——主题/语言/默认启动 App/缓存/账号管理。",
+    "description": "可嵌入的'设置'组件库——主题/语言/默认启动 App/缓存/账号管理。所有 UI 字符串走消费方的 global.i18n（t('settings.xxx')），加语言只改消费方 JSON。",
     "author": "framework",
     "exports": [
       "settingsPanel",
@@ -51,7 +53,7 @@
         "params": [],
         "logic": [
           { "call": "@get_theme", "args": {}, "assign": "global._ls.theme" },
-          { "call": "@get_locale", "args": {}, "assign": "global._ls.locale" },
+          { "call": "@get_framework_locale", "args": {}, "assign": "global._ls.locale" },
           { "call": "@get_user_info", "args": { "bind": "global._ls.user" } },
           { "call": "@startup_default_get", "args": {}, "assign": "global._ls.startup" }
         ]
@@ -63,12 +65,12 @@
           {
             "call": "@show_choice_dialog",
             "args": {
-              "title": "编辑资料",
-              "message": "选择要修改的项",
+              "title": "{{ t('settings.profile_edit') }}",
+              "message": "{{ t('settings.profile_edit_msg') }}",
               "buttons": [
-                { "label": "改名",   "value": "name" },
-                { "label": "换头像", "value": "avatar" },
-                { "label": "取消",   "value": null, "style": "text" }
+                { "label": "{{ t('settings.profile_edit_name') }}",   "value": "name" },
+                { "label": "{{ t('settings.profile_edit_avatar') }}", "value": "avatar" },
+                { "label": "{{ t('common.cancel') }}",                "value": null, "style": "text" }
               ]
             },
             "assign": "global._ls._editChoice"
@@ -77,18 +79,14 @@
             "call": "@if",
             "args": {
               "condition": { "==": [{ "var": "global._ls._editChoice" }, "name"] },
-              "then": [
-                { "call": "@launcher-settings._editName", "args": {} }
-              ]
+              "then": [ { "call": "@launcher-settings._editName", "args": {} } ]
             }
           },
           {
             "call": "@if",
             "args": {
               "condition": { "==": [{ "var": "global._ls._editChoice" }, "avatar"] },
-              "then": [
-                { "call": "@launcher-settings._editAvatar", "args": {} }
-              ]
+              "then": [ { "call": "@launcher-settings._editAvatar", "args": {} } ]
             }
           }
         ]
@@ -100,8 +98,8 @@
           {
             "call": "@show_input_dialog",
             "args": {
-              "title": "改名",
-              "hint": "输入新昵称",
+              "title": "{{ t('settings.name_dialog_title') }}",
+              "hint": "{{ t('settings.name_dialog_hint') }}",
               "defaultValue": "{{ global._ls.user.username }}"
             },
             "assign": "global._ls._newName"
@@ -111,12 +109,9 @@
             "args": {
               "condition": { "!=": [{ "var": "global._ls._newName" }, null] },
               "then": [
-                {
-                  "call": "@lib_user.updateName",
-                  "args": { "newName": "{{ global._ls._newName }}" }
-                },
+                { "call": "@lib_user.updateName", "args": { "newName": "{{ global._ls._newName }}" } },
                 { "call": "@launcher-settings.refresh", "args": {} },
-                { "call": "@show_toast", "args": { "message": "✅ 已更新" } }
+                { "call": "@show_toast", "args": { "message": "{{ t('settings.name_toast') }}" } }
               ]
             }
           }
@@ -126,22 +121,15 @@
       "_editAvatar": {
         "params": [],
         "logic": [
-          {
-            "call": "@pick_image",
-            "args": {},
-            "assign": "global._ls._imgPath"
-          },
+          { "call": "@pick_image", "args": {}, "assign": "global._ls._imgPath" },
           {
             "call": "@if",
             "args": {
               "condition": { "!=": [{ "var": "global._ls._imgPath" }, null] },
               "then": [
-                {
-                  "call": "@lib_user.updateAvatar",
-                  "args": { "imagePath": "{{ global._ls._imgPath }}" }
-                },
+                { "call": "@lib_user.updateAvatar", "args": { "imagePath": "{{ global._ls._imgPath }}" } },
                 { "call": "@launcher-settings.refresh", "args": {} },
-                { "call": "@show_toast", "args": { "message": "✅ 头像已更新" } }
+                { "call": "@show_toast", "args": { "message": "{{ t('settings.avatar_toast') }}" } }
               ]
             }
           }
@@ -154,8 +142,8 @@
           {
             "call": "@show_dialog",
             "args": {
-              "title": "重置默认启动 App",
-              "message": "确定要取消默认启动 App 吗？下次冷启动会回到主页。"
+              "title": "{{ t('settings.startup_reset_title') }}",
+              "message": "{{ t('settings.startup_reset_msg') }}"
             },
             "assign": "global._ls._confirm"
           },
@@ -166,7 +154,7 @@
               "then": [
                 { "call": "@startup_default_clear", "args": {} },
                 { "call": "@launcher-settings.refresh", "args": {} },
-                { "call": "@show_toast", "args": { "message": "✅ 已重置" } }
+                { "call": "@show_toast", "args": { "message": "{{ t('settings.startup_reset_toast') }}" } }
               ]
             }
           }
@@ -179,8 +167,8 @@
           {
             "call": "@show_dialog",
             "args": {
-              "title": "清理缓存",
-              "message": "清理后市场/库的本地缓存会被删除，下次启动会重新从服务器拉。继续？"
+              "title": "{{ t('settings.cache') }}",
+              "message": "{{ t('settings.cache_msg') }}"
             },
             "assign": "global._ls._confirm"
           },
@@ -190,7 +178,7 @@
               "condition": { "==": [{ "var": "global._ls._confirm" }, true] },
               "then": [
                 { "call": "@cache_clear", "args": {} },
-                { "call": "@show_toast", "args": { "message": "✅ 缓存已清理" } }
+                { "call": "@show_toast", "args": { "message": "{{ t('settings.cache_toast') }}" } }
               ]
             }
           }
@@ -203,8 +191,8 @@
           {
             "call": "@show_dialog",
             "args": {
-              "title": "退出登录",
-              "message": "确定要退出当前账号吗？"
+              "title": "{{ t('settings.logout') }}",
+              "message": "{{ t('settings.logout_msg') }}"
             },
             "assign": "global._ls._confirm"
           },
@@ -212,9 +200,7 @@
             "call": "@if",
             "args": {
               "condition": { "==": [{ "var": "global._ls._confirm" }, true] },
-              "then": [
-                { "call": "@auth_logout", "args": {} }
-              ]
+              "then": [ { "call": "@auth_logout", "args": {} } ]
             }
           }
         ]
@@ -231,7 +217,7 @@
       "_setLocale": {
         "params": ["code"],
         "logic": [
-          { "call": "@set_locale", "args": { "value": "{{ params.code }}" } },
+          { "call": "@set_framework_locale", "args": { "value": "{{ params.code }}" } },
           { "call": "@launcher-settings.refresh", "args": {} }
         ]
       }
@@ -255,10 +241,7 @@
               "padding": 16,
               "layout": "row",
               "crossAxisAlignment": "center",
-              "onTap": {
-                "call": "@launcher-settings.editProfile",
-                "args": {}
-              },
+              "onTap": { "call": "@launcher-settings.editProfile", "args": {} },
               "children": [
                 {
                   "type": "container",
@@ -310,12 +293,7 @@
                     ]
                   }
                 },
-                {
-                  "type": "icon",
-                  "name": "right",
-                  "size": 20,
-                  "color": "#888888"
-                }
+                { "type": "icon", "name": "right", "size": 20, "color": "#888888" }
               ]
             },
 
@@ -332,16 +310,11 @@
                   "layout": "row",
                   "crossAxisAlignment": "center",
                   "children": [
-                    {
-                      "type": "icon",
-                      "name": "settings",
-                      "size": 22,
-                      "color": "#666666"
-                    },
+                    { "type": "icon", "name": "settings", "size": 22, "color": "#666666" },
                     { "type": "spacer", "width": 10 },
                     {
                       "type": "text",
-                      "value": "主题",
+                      "value": "{{ t('settings.theme') }}",
                       "style": { "fontSize": 15, "fontWeight": "w600" }
                     }
                   ]
@@ -351,9 +324,9 @@
                   "type": "dropdown",
                   "bind": "global._ls.theme",
                   "options": [
-                    { "label": "跟随系统", "value": "system" },
-                    { "label": "浅色", "value": "light" },
-                    { "label": "深色", "value": "dark" }
+                    { "label": "{{ t('settings.theme_system') }}", "value": "system" },
+                    { "label": "{{ t('settings.theme_light') }}",  "value": "light"  },
+                    { "label": "{{ t('settings.theme_dark') }}",   "value": "dark"   }
                   ],
                   "action": {
                     "call": "@launcher-settings._setTheme",
@@ -376,16 +349,11 @@
                   "layout": "row",
                   "crossAxisAlignment": "center",
                   "children": [
-                    {
-                      "type": "icon",
-                      "name": "globe",
-                      "size": 22,
-                      "color": "#666666"
-                    },
+                    { "type": "icon", "name": "globe", "size": 22, "color": "#666666" },
                     { "type": "spacer", "width": 10 },
                     {
                       "type": "text",
-                      "value": "语言",
+                      "value": "{{ t('settings.locale') }}",
                       "style": { "fontSize": 15, "fontWeight": "w600" }
                     }
                   ]
@@ -395,10 +363,10 @@
                   "type": "dropdown",
                   "bind": "global._ls.locale",
                   "options": [
-                    { "label": "中文", "value": "zh" },
-                    { "label": "English", "value": "en" },
-                    { "label": "Deutsch", "value": "de" },
-                    { "label": "Español", "value": "es" }
+                    { "label": "中文",     "value": "zh" },
+                    { "label": "English",  "value": "en" },
+                    { "label": "Deutsch",  "value": "de" },
+                    { "label": "Español",  "value": "es" }
                   ],
                   "action": {
                     "call": "@launcher-settings._setLocale",
@@ -417,12 +385,7 @@
               "layout": "row",
               "crossAxisAlignment": "center",
               "children": [
-                {
-                  "type": "icon",
-                  "name": "play",
-                  "size": 22,
-                  "color": "#666666"
-                },
+                { "type": "icon", "name": "play", "size": 22, "color": "#666666" },
                 { "type": "spacer", "width": 10 },
                 {
                   "type": "expanded",
@@ -433,7 +396,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "默认启动 App",
+                        "value": "{{ t('settings.startup') }}",
                         "style": { "fontSize": 15, "fontWeight": "w600" }
                       },
                       { "type": "spacer", "height": 4 },
@@ -445,7 +408,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "未设置（保留主页）",
+                        "value": "{{ t('settings.startup_none') }}",
                         "visible": { "!": [{ "var": "global._ls.startup.hasTarget" }] },
                         "style": { "fontSize": 12, "color": "#888888" }
                       }
@@ -455,13 +418,10 @@
                 { "type": "spacer", "width": 8 },
                 {
                   "type": "button",
-                  "label": "重置",
+                  "label": "{{ t('settings.startup_reset') }}",
                   "variant": "outlined",
                   "visible": "{{ global._ls.startup.hasTarget }}",
-                  "action": {
-                    "call": "@launcher-settings.clearStartup",
-                    "args": {}
-                  }
+                  "action": { "call": "@launcher-settings.clearStartup", "args": {} }
                 }
               ]
             },
@@ -474,32 +434,19 @@
               "padding": 16,
               "layout": "row",
               "crossAxisAlignment": "center",
-              "onTap": {
-                "call": "@launcher-settings.clearCache",
-                "args": {}
-              },
+              "onTap": { "call": "@launcher-settings.clearCache", "args": {} },
               "children": [
-                {
-                  "type": "icon",
-                  "name": "folder",
-                  "size": 22,
-                  "color": "#666666"
-                },
+                { "type": "icon", "name": "folder", "size": 22, "color": "#666666" },
                 { "type": "spacer", "width": 10 },
                 {
                   "type": "expanded",
                   "child": {
                     "type": "text",
-                    "value": "清理缓存",
+                    "value": "{{ t('settings.cache') }}",
                     "style": { "fontSize": 15, "fontWeight": "w600" }
                   }
                 },
-                {
-                  "type": "icon",
-                  "name": "right",
-                  "size": 20,
-                  "color": "#888888"
-                }
+                { "type": "icon", "name": "right", "size": 20, "color": "#888888" }
               ]
             },
 
@@ -511,23 +458,15 @@
               "padding": 16,
               "layout": "row",
               "crossAxisAlignment": "center",
-              "onTap": {
-                "call": "@launcher-settings.logout",
-                "args": {}
-              },
+              "onTap": { "call": "@launcher-settings.logout", "args": {} },
               "children": [
-                {
-                  "type": "icon",
-                  "name": "logout",
-                  "size": 22,
-                  "color": "#D32F2F"
-                },
+                { "type": "icon", "name": "logout", "size": 22, "color": "#D32F2F" },
                 { "type": "spacer", "width": 10 },
                 {
                   "type": "expanded",
                   "child": {
                     "type": "text",
-                    "value": "退出登录",
+                    "value": "{{ t('settings.logout') }}",
                     "style": { "fontSize": 15, "fontWeight": "w600", "color": "#D32F2F" }
                   }
                 }
