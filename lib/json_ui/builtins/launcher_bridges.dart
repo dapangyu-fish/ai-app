@@ -383,6 +383,9 @@ class LauncherBridges {
 
   /// @auth_current_user → Map(user 信息) 或 null
   /// 字段：id / username / email / role / displayName / avatar
+  ///
+  /// 注意：AuthService.currentUser 原始字段名是 `avatar_url`，这里统一暴露
+  /// 为更直观的 `avatar`。
   static Map<String, dynamic>? _authCurrentUser() {
     final user = AuthService.currentUser;
     if (user == null) return null;
@@ -395,7 +398,7 @@ class LauncherBridges {
               user['email']?.toString().split('@').first ??
               '')
           .toString(),
-      'avatar': user['avatar']?.toString() ?? '',
+      'avatar': user['avatar_url']?.toString() ?? '',
       'isLoggedIn': AuthService.isLoggedIn,
     };
   }
