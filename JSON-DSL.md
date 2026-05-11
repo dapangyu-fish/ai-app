@@ -201,7 +201,7 @@
 { "call": "@set", "args": { "var": "global.list", "value": { "var": "global.result.data" } } }
 ```
 
-### 3.3 steps（业务逻辑）
+### 3.4 steps（业务逻辑）
 
 ```json
 "steps": [
@@ -216,6 +216,71 @@
 - **表达式**：`{ "expression": {JsonLogic}, "assign": "global.xxx" }`
 
 `assign` 将函数返回值 / 表达式结果存入指定变量。
+
+### 3.5 i18n（JSON 层国际化）
+
+**核心原则：JSON-APP 的所有 UI 字符串归 JSON 自己管，加语言只改 JSON、不改框架。**
+
+框架自身（登录页 / 设置页 / 市场页等原生 UI）的 i18n 走 `lib/i18n/framework_strings.dart`，与 JSON-APP 完全独立。
+
+#### 字典结构
+
+```json
+"global": {
+  "variables": { "locale": "zh" },      // 可选，缺省时框架按 loadConfig 注入当前 appLocale
+  "i18n": {
+    "zh": {
+      "home": { "title": "首页", "greet": "你好, {{ global.user.name }}" },
+      "logout": "退出登录"
+    },
+    "en": { "home": { "title": "Home", "greet": "Hi, {{ global.user.name }}" }, "logout": "Logout" },
+    "de": { "home": { "title": "Startseite", "greet": "Hallo, {{ global.user.name }}" }, "logout": "Abmelden" },
+    "es": { "home": { "title": "Inicio", "greet": "Hola, {{ global.user.name }}" }, "logout": "Cerrar sesión" }
+  }
+}
+```
+
+任意 widget 字段用 `{{ t('home.title') }}` 查表；查不到回退键名本身（**不会崩**，方便调试）。
+
+#### 插值与嵌套
+
+翻译值里允许嵌 `{{ ... }}` —— 命中字符串后框架会再过一次 `resolveTemplate`，把里头的变量 / 嵌套 `t()` 都解开。这是 i18n 标准做法 —— 翻译者控制变量在句子里的位置（不同语言语序不同），调用方不能强切字符串再拼接。
+
+支持递归（`t('A')` → 含 `{{ t('B') }}`），最深 6 层防循环引用。
+
+#### locale 来源
+
+`global.locale` 决定查哪一档：
+
+1. JSON-APP `global.variables.locale` 显式给了 → 用 JSON 的优先（保护 app 内的语言选择）
+2. 没给 → loadConfig 时框架把当前 `appLocale` 简化（`zh-CN` → `zh`）一次性写入
+3. 运行时 `@set_locale({ value: "en" })` 只改 JSON 的 `global.locale`，**不影响框架**
+4. 运行时 `@set_framework_locale({ value: "en" })` **同步**框架 + JSON 的 locale（launcher 等"全局切语言"场景用这个）
+
+#### Fallback 链
+
+`{{ t('key.path') }}` 查找顺序：
+1. 精确匹配 `global.i18n[当前 locale][key.path]`
+2. 找不到 → 返回 `'key.path'` 字符串本身（**不会崩**）
+3. JSON-APP 完全没写 `global.i18n` 块 → 所有 `{{ t('xxx') }}` 都返回 `'xxx'`
+
+#### 组件库（ref）的 i18n 约定
+
+`ref` 加载依赖模块的 widget 模板时，模板里的 `{{ t('xxx') }}` 查的是**消费方**（当前运行的 JSON-APP）的 `global.i18n`——因为框架的 `_i18nLookup` 读的是当前 interpreter 的 `_config.global.i18n`，而 ref 渲染的是同一个 interpreter。
+
+后果：
+- ✅ **lib 内不要硬编码 UI 字符串**，统一写 `{{ t('xxx') }}`
+- ✅ **消费方负责提供翻译**，键名约定由 lib 文档化（例如 `launcher-settings` 用 `settings.theme` / `settings.locale` 等）
+- ⚠️ **lib 自己 `global.i18n` 块** *目前不会被 ref 模板查到*——这是框架现状（lib 的 i18n 表是其模块私有；ref 渲染时 `_config` 仍是消费方）。lib 可以在 README 列清楚自己需要哪些键，消费方按需补齐。
+
+参考实现：
+- `templates/lib_launcher_settings.json`（lib：模板全用 `t()`，无硬编码字符串）
+- `templates/demo_launcher.json`（消费方：`global.i18n.{zh,en,de,es}` 给 launcher-* 三个 lib 用到的所有键提供翻译）
+
+加一种新语言（例如日语）到 launcher：
+1. `demo_launcher.json` 的 `global.i18n` 加一个 `ja` 块（复制现有 zh 块翻译即可）
+2. `launcher-settings` 语言 dropdown 的 options 加 `{ label: "日本語", value: "ja" }`
+3. **零框架代码改动**
 
 ---
 
@@ -409,45 +474,12 @@
 |------|------|------|
 | `@set_theme` | `{ "mode": "light" }` | 运行时切主题。`mode`：`light` / `dark` / `system`（跟随系统） |
 | `@get_theme` | `{}` | 返回当前 `mode` 字符串 |
-| `@set_locale` | `{ "value": "en" }` | 切换语言。等价于 `@set value="global.locale" value="en"`，但额外保证模板里 `t('xxx')` 立即重新查找 |
-| `@get_locale` | `{}` | 返回当前 locale |
+| `@set_locale` | `{ "value": "en" }` | 切 **JSON-APP 自己**的 `global.locale`（不动框架 UI）。等价于 `@set var="global.locale" value="en"`，但顺带触发 `t()` 重查 |
+| `@get_locale` | `{}` | 返回 JSON-APP 当前 locale |
+| `@set_framework_locale` | `{ "value": "en" }` / `"system"` | 同步切框架 + JSON-APP locale（launcher 等"全局切语言"场景）。会调 `LocaleController.setLocale` 触发框架 UI 重建，同时 `setVariable('global.locale', ...)` |
+| `@get_framework_locale` | `{}` | 返回框架当前 locale 简码（`zh` / `en` / `de` / `es`）或 `'system'`（跟随系统时） |
 
-**i18n 字典约定**：
-```json
-"global": {
-  "variables": { "locale": "zh" },
-  "i18n": {
-    "zh": { "home": { "title": "首页" }, "logout": "退出登录" },
-    "en": { "home": { "title": "Home"  }, "logout": "Logout"   }
-  }
-}
-```
-模板里用 `{{ t('home.title') }}` 查表；查不到回退键名本身。
-
-**翻译值里可以再嵌 `{{ }}` 模板**（变量插值 / 嵌套 `t()`）—— 命中字符串后框架会再过一次 `resolveTemplate` 把内部插值解开。这是 i18n 标准用法：翻译者控制变量在句子里的位置，因为不同语言的语序不同。例如：
-```json
-"i18n": {
-  "zh": { "echo": "你输入的是: 「{{ global.input_value }}」" },
-  "en": { "echo": "You typed: 「{{ global.input_value }}」" }
-}
-```
-JSON-APP 端只要 `"value": "{{ t('echo') }}"`，变量在不同语言里的位置由翻译者决定，无需把字符串切碎手动拼接。
-
-嵌套递归最深 6 层防循环引用（`t('A')` → 含 `{{ t('B') }}` → 含 `{{ t('A') }}`）。
-
-**与框架 locale 的协作（重要）**：
-
-框架自身（登录页 / 主页 / 设置页）的 i18n 与 JSON-APP 的 i18n 完全独立，但**单向同步**：
-
-- **框架 → app**：JSON-APP `loadConfig` 时，框架把当前 `appLocale` 简化（`zh-CN` → `zh`）一次性写到 `global.locale`，作为 app 的初始 locale。
-- **JSON-APP 已显式预设 `global.locale` 时跳过注入**——保留 JSON 自己的优先级。
-- **app → 框架**：app 调 `@set_locale` 只写自己的 `global.locale`，**不会影响框架**或别的 app。
-- **框架切语言**：只刷新框架自身 UI；不会回头改正在运行的 app（这是设计选择——避免 app 内的语言选择被框架覆盖）。
-
-**fallback 链**（JSON-APP `t('key.path')` 查找时）：
-1. 精确匹配 `global.i18n[当前 locale][key.path]`
-2. 找不到 → 直接返回 key 字符串本身（**不会崩**，方便快速调试）
-3. JSON-APP **完全没写 `global.i18n`** 时同样不报错——所有 `{{ t('xxx') }}` 都返回 `'xxx'`
+i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组件库 ref 的 i18n 约定 —— 见 §3.5。
 
 **生命周期 hook**：
 ```json
@@ -491,6 +523,8 @@ JSON-APP 端只要 `"value": "{{ t('echo') }}"`，变量在不同语言里的位
 | `@startup_default_clear` | — | `bool` | 清掉默认启动 APP |
 | `@cache_clear` | — | `bool` | 清 dsl_cache 目录（市场/库本地缓存） |
 | `@auth_logout` | — | `bool` | 登出（IM + token） |
+| `@get_framework_locale` | — | `'zh'\|'en'\|'de'\|'es'\|'system'` | 见 §4.11（也归在这里方便 launcher 场景查） |
+| `@set_framework_locale` | `{ value: 'zh'\|'en'\|'de'\|'es'\|'system' }` | `bool` | 见 §4.11 |
 
 读取当前用户信息直接用现有的 `@get_user_info`（native）或 lib_user 的
 `getUserAvatar` / `getUserName` / `getUserEmail`——launcher 这里不重复
