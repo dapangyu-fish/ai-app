@@ -7,6 +7,7 @@
 
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../i18n/framework_strings.dart';
 import 'im_service.dart';
@@ -94,7 +95,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
                       radius: 18,
                       backgroundColor: cs.primary,
                       backgroundImage: (user['face_url'] as String?)?.isNotEmpty == true
-                          ? NetworkImage(user['face_url'])
+                          ? CachedNetworkImageProvider(user['face_url'])
                           : null,
                       child: (user['face_url'] as String? ?? '').isEmpty
                           ? Text(
@@ -258,7 +259,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
           leading: CircleAvatar(
             radius: 22,
             backgroundColor: cs.primaryContainer,
-            backgroundImage: faceUrl.isNotEmpty ? NetworkImage(faceUrl) : null,
+            backgroundImage: faceUrl.isNotEmpty ? CachedNetworkImageProvider(faceUrl) : null,
             child: faceUrl.isEmpty
                 ? Text(nickname.isNotEmpty ? nickname[0].toUpperCase() : '?',
                     style: TextStyle(color: cs.onPrimaryContainer))

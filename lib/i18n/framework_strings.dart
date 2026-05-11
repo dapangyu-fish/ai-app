@@ -306,7 +306,42 @@ class _Strings {
   final String imToastRevokeExpired;
   final String imAttachImage;
   final String imAttachCamera;
+  final String imAttachVideo;
   final String imAttachFile;
+  final String imImageExpired;
+  final String imSaveToAlbum;
+  final String imSaveSuccess;
+  final String imSaveFailed;
+  final String imCacheManageTitle;
+  final String imCacheTotal;
+  final String imCacheSelectAll;
+  final String imCacheDeselectAll;
+  final String imCacheClearSelected;
+  final String imCacheClearedToast;
+  final String imCacheNoSelection;
+  final String imCacheLoading;
+  final String imCacheEntry;
+
+  // ── 悬浮球双击快捷菜单 ──
+  final String ballMenuTitle;
+  final String ballMenuRestoreSession;
+  final String ballMenuRestoreSessionEmpty;
+  final String ballMenuGoHome;
+
+  // ── 默认启动 App 设置 ──
+  final String defaultStartupEntry;        // 设置页入口标题
+  final String defaultStartupSubtitleNone; // subtitle 没选时的占位
+  final String defaultStartupTitle;        // 选择页标题
+  final String defaultStartupHint;         // 选择页顶部说明
+  final String defaultStartupNoneOption;   // "无（用 MyApp 首页）"
+  final String defaultStartupTabMarket;
+  final String defaultStartupTabLocal;
+  final String defaultStartupEmptyMarket;
+  final String defaultStartupEmptyLocal;
+  final String defaultStartupSavedToast;
+  final String defaultStartupSetAsStartup;
+  final String defaultStartupCurrent;
+  final String defaultStartupResetToNone;
 
   // ── IM 好友页 ──
   final String imAdd;
@@ -604,7 +639,38 @@ class _Strings {
     required this.imToastRevokeExpired,
     required this.imAttachImage,
     required this.imAttachCamera,
+    required this.imAttachVideo,
     required this.imAttachFile,
+    required this.imImageExpired,
+    required this.imSaveToAlbum,
+    required this.imSaveSuccess,
+    required this.imSaveFailed,
+    required this.imCacheManageTitle,
+    required this.imCacheTotal,
+    required this.imCacheSelectAll,
+    required this.imCacheDeselectAll,
+    required this.imCacheClearSelected,
+    required this.imCacheClearedToast,
+    required this.imCacheNoSelection,
+    required this.imCacheLoading,
+    required this.imCacheEntry,
+    required this.ballMenuTitle,
+    required this.ballMenuRestoreSession,
+    required this.ballMenuRestoreSessionEmpty,
+    required this.ballMenuGoHome,
+    required this.defaultStartupEntry,
+    required this.defaultStartupSubtitleNone,
+    required this.defaultStartupTitle,
+    required this.defaultStartupHint,
+    required this.defaultStartupNoneOption,
+    required this.defaultStartupTabMarket,
+    required this.defaultStartupTabLocal,
+    required this.defaultStartupEmptyMarket,
+    required this.defaultStartupEmptyLocal,
+    required this.defaultStartupSavedToast,
+    required this.defaultStartupSetAsStartup,
+    required this.defaultStartupCurrent,
+    required this.defaultStartupResetToNone,
     required this.imAdd,
     required this.imAddFriend,
     required this.imCreateGroup,
@@ -896,7 +962,38 @@ const _Strings _zhCN = _Strings(
   imToastRevokeExpired: '超过 2 分钟无法撤回',
   imAttachImage: '图片',
   imAttachCamera: '拍照',
+  imAttachVideo: '视频',
   imAttachFile: '文件',
+  imImageExpired: '图片已过期',
+  imSaveToAlbum: '保存到相册',
+  imSaveSuccess: '已保存',
+  imSaveFailed: '保存失败',
+  imCacheManageTitle: '聊天图片缓存管理',
+  imCacheTotal: '总计 {size}',
+  imCacheSelectAll: '全选',
+  imCacheDeselectAll: '取消全选',
+  imCacheClearSelected: '清理选中',
+  imCacheClearedToast: '已清理 {size}',
+  imCacheNoSelection: '请先选择会话',
+  imCacheLoading: '正在统计…',
+  imCacheEntry: '聊天图片缓存',
+  ballMenuTitle: '快捷菜单',
+  ballMenuRestoreSession: '恢复会话',
+  ballMenuRestoreSessionEmpty: '没有历史会话',
+  ballMenuGoHome: '回到主页',
+  defaultStartupEntry: '默认启动 App',
+  defaultStartupSubtitleNone: '未设置（启动到 MyApp 首页）',
+  defaultStartupTitle: '默认启动 App',
+  defaultStartupHint: '设置后，打开 App 会直接进入选中的应用；通过悬浮球菜单"回到主页"返回 MyApp 首页',
+  defaultStartupNoneOption: '不设置（启动到 MyApp 首页）',
+  defaultStartupTabMarket: '市场',
+  defaultStartupTabLocal: '本地',
+  defaultStartupEmptyMarket: '市场暂无 App',
+  defaultStartupEmptyLocal: '本地还没有保存的 App',
+  defaultStartupSavedToast: '已设置',
+  defaultStartupSetAsStartup: '设为启动 App',
+  defaultStartupCurrent: '当前启动 App',
+  defaultStartupResetToNone: '取消设置',
   imAdd: '添加',
   imAddFriend: '加好友',
   imCreateGroup: '建群',
@@ -1187,7 +1284,38 @@ const _Strings _enUS = _Strings(
   imToastRevokeExpired: 'Cannot recall after 2 minutes',
   imAttachImage: 'Image',
   imAttachCamera: 'Camera',
+  imAttachVideo: 'Video',
   imAttachFile: 'File',
+  imImageExpired: 'Image expired',
+  imSaveToAlbum: 'Save to album',
+  imSaveSuccess: 'Saved',
+  imSaveFailed: 'Save failed',
+  imCacheManageTitle: 'Chat media cache',
+  imCacheTotal: 'Total {size}',
+  imCacheSelectAll: 'Select all',
+  imCacheDeselectAll: 'Deselect all',
+  imCacheClearSelected: 'Clear selected',
+  imCacheClearedToast: 'Cleared {size}',
+  imCacheNoSelection: 'Select at least one conversation',
+  imCacheLoading: 'Calculating…',
+  imCacheEntry: 'Chat media cache',
+  ballMenuTitle: 'Quick menu',
+  ballMenuRestoreSession: 'Restore session',
+  ballMenuRestoreSessionEmpty: 'No previous session',
+  ballMenuGoHome: 'Back to home',
+  defaultStartupEntry: 'Default startup app',
+  defaultStartupSubtitleNone: 'Not set (open to MyApp home)',
+  defaultStartupTitle: 'Default startup app',
+  defaultStartupHint: 'When set, the app launches directly into your chosen app. Use the floating ball menu "Back to home" to return to MyApp home.',
+  defaultStartupNoneOption: 'Unset (open to MyApp home)',
+  defaultStartupTabMarket: 'Market',
+  defaultStartupTabLocal: 'Local',
+  defaultStartupEmptyMarket: 'No apps in market yet',
+  defaultStartupEmptyLocal: 'No saved local apps yet',
+  defaultStartupSavedToast: 'Saved',
+  defaultStartupSetAsStartup: 'Set as startup',
+  defaultStartupCurrent: 'Current startup',
+  defaultStartupResetToNone: 'Reset',
   imAdd: 'Add',
   imAddFriend: 'Add friend',
   imCreateGroup: 'New group',

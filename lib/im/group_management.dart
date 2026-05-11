@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import '../i18n/framework_strings.dart';
@@ -105,7 +106,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
                 radius: 40,
                 backgroundColor: cs.primaryContainer,
                 backgroundImage: _groupInfo?.faceURL != null && _groupInfo!.faceURL!.isNotEmpty
-                    ? NetworkImage(_groupInfo!.faceURL!)
+                    ? CachedNetworkImageProvider(_groupInfo!.faceURL!)
                     : null,
                 child: _groupInfo?.faceURL == null || _groupInfo!.faceURL!.isEmpty
                     ? Icon(Icons.group, size: 40, color: cs.onPrimaryContainer)
@@ -165,7 +166,7 @@ class _GroupManagementPageState extends State<GroupManagementPage> {
                   radius: 18,
                   backgroundColor: cs.secondaryContainer,
                   backgroundImage: member.faceURL != null && member.faceURL!.isNotEmpty
-                      ? NetworkImage(member.faceURL!)
+                      ? CachedNetworkImageProvider(member.faceURL!)
                       : null,
                   child: member.faceURL == null || member.faceURL!.isEmpty
                       ? Text(

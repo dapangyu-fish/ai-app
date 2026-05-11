@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -703,9 +704,9 @@ class _ProfilePageState extends State<ProfilePage> {
     if (avatarUrl.startsWith('http')) {
       avatar = CircleAvatar(
         radius: 48,
-        backgroundImage: NetworkImage(avatarUrl),
+        backgroundImage: CachedNetworkImageProvider(avatarUrl),
         onBackgroundImageError: (e, stack) {
-          debugPrint('[ProfilePage] NetworkImage ERROR: $e');
+          debugPrint('[ProfilePage] CachedNetworkImage ERROR: $e');
         },
         child: const Icon(Icons.person, color: Colors.transparent),
       );

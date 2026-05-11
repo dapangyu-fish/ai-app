@@ -402,7 +402,9 @@ class IMService {
     );
   }
 
-  /// 发送图片消息
+  /// 发送图片消息（旧路径，让 SDK 自己上传到 OpenIM 自带 MinIO）
+  /// 已不推荐 —— 走 [sendImageByUrl] 用我们自己的 MinIO 桶 (im-media)
+  /// 让存储后端可控、统一 lifecycle。
   /// [userID] / [groupID] 二选一，参见 [sendTextMessage]
   Future<Message?> sendImageMessage({
     required String conversationID,
@@ -427,6 +429,151 @@ class IMService {
       );
     } catch (e) {
       debugPrint('[IM] 发送图片失败: $e');
+      return null;
+    }
+  }
+
+  /// 发送图片消息（推荐路径）：图片已经通过 ImMediaUploader 上传到我们自己的
+  /// MinIO，[url] 是公网可读 URL。这里只调用 SDK 的 createImageMessageByURL
+  /// 把 URL 包成系统 picture 消息，对端走原生 picture 渲染管线。
+  ///
+  /// [width] / [height] / [size] 是图片元数据，对端列表里展示缩略图时不需要
+  /// 现下载就能算出 aspect ratio，体验更好。size 是字节数。
+  /// [thumbUrl] 可选缩略图 URL；不传时用 [url] 顶替（OpenIM 列表会重复请求
+  /// 大图当 thumbnail，移动端流量略多但功能正确）。
+  ///
+  /// **重要**：[sourcePath] 必传 —— SDK 会在 native 端用这个本地文件计算 MD5
+  /// 当 message UUID，不传或文件不存在会报 PlatformException 10005。
+  /// [uuid] 是 PictureInfo.uuid 字段，全局唯一即可；推荐用 MinIO 的 object key。
+  Future<Message?> sendImageByUrl({
+    required String url,
+    required String sourcePath,
+    required String uuid,
+    required int width,
+    required int height,
+    required int size,
+    String? thumbUrl,
+    String? userID,
+    String? groupID,
+  }) async {
+    final pic = PictureInfo()
+      ..uuid = uuid
+      ..url = url
+      ..width = width
+      ..height = height
+      ..size = size
+      ..type = 'image/jpeg';
+    final thumbPic = (thumbUrl == null || thumbUrl.isEmpty)
+        ? pic
+        : (PictureInfo()
+          ..uuid = '${uuid}_thumb'
+          ..url = thumbUrl
+          ..width = width
+          ..height = height
+          ..type = 'image/jpeg');
+    try {
+      final msg = await OpenIM.iMManager.messageManager.createImageMessageByURL(
+        sourcePath: sourcePath,
+        sourcePicture: pic,
+        bigPicture: pic,
+        snapshotPicture: thumbPic,
+      );
+      return sendPreparedMessage(
+        message: msg,
+        previewText: '[图片]',
+        userID: userID,
+        groupID: groupID,
+      );
+    } catch (e) {
+      debugPrint('[IM] sendImageByUrl 失败: $e');
+      return null;
+    }
+  }
+
+  /// 发送视频消息（推荐路径）：视频本体和首帧缩略图都已上传到我们 MinIO。
+  /// SDK 把 URL 包成系统 video 消息，对端 picture/video bubble 渲染管线会
+  /// 自动处理缩略图 + 全屏播放。
+  ///
+  /// [videoSourcePath] / [snapshotSourcePath] 必传 —— SDK 在 native 端用
+  /// 它们计算 MD5（同 sendImageByUrl 的踩坑）。
+  Future<Message?> sendVideoByUrl({
+    required String videoUrl,
+    required String videoSourcePath,
+    required String videoUuid,
+    required String videoType, // 'video/mp4' / 'video/quicktime' 等
+    required int videoSize,
+    required int duration,
+    required String snapshotUrl,
+    required String snapshotSourcePath,
+    required String snapshotUuid,
+    required int snapshotSize,
+    required int snapshotWidth,
+    required int snapshotHeight,
+    String? userID,
+    String? groupID,
+  }) async {
+    final elem = VideoElem(
+      videoPath: videoSourcePath,
+      videoUUID: videoUuid,
+      videoUrl: videoUrl,
+      videoType: videoType,
+      videoSize: videoSize,
+      duration: duration,
+      snapshotPath: snapshotSourcePath,
+      snapshotUUID: snapshotUuid,
+      snapshotSize: snapshotSize,
+      snapshotUrl: snapshotUrl,
+      snapshotWidth: snapshotWidth,
+      snapshotHeight: snapshotHeight,
+    );
+    try {
+      final msg = await OpenIM.iMManager.messageManager.createVideoMessageByURL(
+        videoElem: elem,
+      );
+      return sendPreparedMessage(
+        message: msg,
+        previewText: '[视频]',
+        userID: userID,
+        groupID: groupID,
+      );
+    } catch (e) {
+      debugPrint('[IM] sendVideoByUrl 失败: $e');
+      return null;
+    }
+  }
+
+  /// 发送文件消息（推荐路径）：文件已上传到我们 MinIO，[url] 公网可读。
+  /// SDK 把 URL 包成系统 file 消息，对端 file bubble 渲染管线会处理点击下载。
+  ///
+  /// [sourcePath] 必传 —— SDK 在 native 端用它算 MD5 当 message UUID。
+  Future<Message?> sendFileByUrl({
+    required String url,
+    required String sourcePath,
+    required String uuid,
+    required String fileName,
+    required int fileSize,
+    String? userID,
+    String? groupID,
+  }) async {
+    final elem = FileElem(
+      filePath: sourcePath,
+      uuid: uuid,
+      sourceUrl: url,
+      fileName: fileName,
+      fileSize: fileSize,
+    );
+    try {
+      final msg = await OpenIM.iMManager.messageManager.createFileMessageByURL(
+        fileElem: elem,
+      );
+      return sendPreparedMessage(
+        message: msg,
+        previewText: '[文件] $fileName',
+        userID: userID,
+        groupID: groupID,
+      );
+    } catch (e) {
+      debugPrint('[IM] sendFileByUrl 失败: $e');
       return null;
     }
   }

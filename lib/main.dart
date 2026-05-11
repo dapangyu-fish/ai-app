@@ -27,6 +27,7 @@ import 'designer/designer_ball.dart';
 import 'designer/settings_page.dart';
 import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
+import 'designer/default_startup_prefs.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 import 'im/im_service.dart';
@@ -579,6 +580,15 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
   String? _error;
   String? _loadedFileName;
 
+  /// 启动期占位：等读 SharedPreferences + 看有没有默认启动 App。
+  /// 有的话直接 pushReplacement 走，不让 home 闪一下；没的话 setState 改成
+  /// false 进入正常 home UI。
+  bool _bootstrapping = !_FilePickerPageState._autoStartupConsumed;
+
+  // FilePickerPage 已经被 push 过一次默认启动 App 了（同一进程内）；
+  // 避免每次 popUntil 回到 home 时又自动跳走，让"回到主页"真的能停住
+  static bool _autoStartupConsumed = false;
+
   @override
   void initState() {
     super.initState();
@@ -590,6 +600,58 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         OnboardingService.maybeStart(context);
       });
     });
+    // 默认启动 App：冷启动时（未消费过）按用户设置直接 push 进选中应用
+    if (!_autoStartupConsumed) {
+      _autoStartupConsumed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _maybeAutoLoadDefaultStartup();
+      });
+    }
+  }
+
+  Future<void> _maybeAutoLoadDefaultStartup() async {
+    final cfg = await DefaultStartupPrefs.read();
+    if (!mounted) return;
+    if (!cfg.hasTarget) {
+      // 没设默认启动 App → 退出占位、渲染正常 home
+      setState(() => _bootstrapping = false);
+      return;
+    }
+    // 注意：成功 push JsonScreenView 后保持 _bootstrapping=true，等用户从
+    // JSON-APP pop 回来时由 Navigator.push().whenComplete 翻成 false。
+    // 这里要是 finally 里立刻翻 false，FilePickerPage 会赶在 push 转场动画
+    // 期间 rebuild 出 home，从底下露出来"闪一下"。
+    switch (cfg.kind) {
+      case DefaultStartupKind.market:
+        if (cfg.marketName != null && cfg.marketVersion != null) {
+          await _loadFromMarket({
+            'name': cfg.marketName,
+            'version': cfg.marketVersion,
+          }, isStartupRoot: true);
+          return;
+        }
+      case DefaultStartupKind.local:
+        if (cfg.localFileName != null) {
+          final apps = await AppStorage.instance.list();
+          final app = apps.firstWhere(
+            (a) => a.fileName == cfg.localFileName,
+            orElse: () => SavedApp(
+              fileName: '', name: '', description: '', savedAt: '', config: const {},
+            ),
+          );
+          if (app.fileName.isNotEmpty) {
+            await _loadSavedApp(app, isStartupRoot: true);
+            return;
+          }
+        }
+      case DefaultStartupKind.none:
+        break;
+    }
+    // 走到这里：配的目标已经不存在（market 字段缺失 / 本地 app 被删）→ 退出占位
+    if (mounted) {
+      setState(() => _bootstrapping = false);
+    }
   }
 
   void _openSettings() {
@@ -697,7 +759,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     }
   }
 
-  Future<void> _loadFromMarket(Map<String, dynamic> app) async {
+  Future<void> _loadFromMarket(Map<String, dynamic> app, {bool isStartupRoot = false}) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -734,13 +796,24 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => JsonScreenView(fileName: _loadedFileName!),
+          builder: (_) => JsonScreenView(
+            fileName: _loadedFileName!,
+            isStartupRoot: isStartupRoot,
+          ),
         ),
-      );
+      ).whenComplete(() {
+        // startup root：等用户从 JSON-APP pop 回来才退出占位，让 home 显示。
+        // 之前在 push 之前就翻 false，转场动画期间 home 会从底下被瞄到 → 闪一下。
+        if (isStartupRoot && mounted) {
+          setState(() => _bootstrapping = false);
+        }
+      });
     } catch (e) {
       setState(() {
         _loading = false;
         _error = e.toString();
+        // 加载失败也得退占位，否则用户卡在 spinner 看不到错误
+        if (isStartupRoot) _bootstrapping = false;
       });
     }
   }
@@ -761,7 +834,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     );
   }
 
-  Future<void> _loadSavedApp(SavedApp app) async {
+  Future<void> _loadSavedApp(SavedApp app, {bool isStartupRoot = false}) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -777,13 +850,22 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => JsonScreenView(fileName: displayName),
+          builder: (_) => JsonScreenView(
+            fileName: displayName,
+            isStartupRoot: isStartupRoot,
+          ),
         ),
-      );
+      ).whenComplete(() {
+        // 同 _loadFromMarket：等 pop 回来才退占位，避免转场闪 home
+        if (isStartupRoot && mounted) {
+          setState(() => _bootstrapping = false);
+        }
+      });
     } catch (e) {
       setState(() {
         _loading = false;
         _error = e.toString();
+        if (isStartupRoot) _bootstrapping = false;
       });
     }
   }
@@ -831,6 +913,15 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 启动期：只渲染极简占位，不让 home 在用户面前闪一下
+    // （等 _maybeAutoLoadDefaultStartup 决定是 push 进 JSON-APP 还是
+    //  setState(_bootstrapping=false) 切回正常 home）
+    if (_bootstrapping) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     CurrentPageState.instance.setFrameworkPage('home');
     final cs = Theme.of(context).colorScheme;
     final t = T.of(context);
@@ -1585,6 +1676,13 @@ bool _containsListInChildren(List<dynamic> children) {
       // flame_game 跟 list 一样想吃无限高度（Flame GameWidget 占满父级），
       // 没显式给 height 时屏幕级要走 Column 而不是 SingleChildScrollView。
       if (type == 'flame_game' && child['height'] == null) return true;
+      // expanded 只在 Flex 父级里有效——出现在屏幕顶层就必须走 Column 布局，
+      // 否则 SingleChildScrollView 给的是 unbounded 高度，Expanded 直接哑火。
+      if (type == 'expanded') return true;
+      // ref 引用的模板里可能塞 list/refresh/expanded（典型：launcher 组件库），
+      // 这边解析阶段没法看进 dep 模板，保守按 Column 处理（拿不到滚动条但不崩；
+      // 如果 ref 出来是个短小的 leaf，组件作者自己负责裹个 SingleChildScrollView）。
+      if (type == 'ref') return true;
       // 递归 children 字段
       final subChildren = child['children'] as List<dynamic>?;
       if (subChildren != null && _containsListInChildren(subChildren)) {
@@ -1605,7 +1703,16 @@ bool _containsListInChildren(List<dynamic> children) {
 class JsonScreenView extends ConsumerWidget {
   final String fileName;
 
-  const JsonScreenView({super.key, required this.fileName});
+  /// 当前 JSON-APP 是被"默认启动 App"直接拉起来的根路由：
+  /// AppBar 不要再显示返回按钮（顶层就是这个 app，没地方可退），
+  /// JSON-APP 内部 navigate 出来的子 screen 仍然显示返回（看 canNavigateBack）。
+  final bool isStartupRoot;
+
+  const JsonScreenView({
+    super.key,
+    required this.fileName,
+    this.isStartupRoot = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1669,6 +1776,7 @@ class JsonScreenView extends ConsumerWidget {
         screenConfig: screenConfig,
         interpreter: interpreter,
         screens: screens,
+        isStartupRoot: isStartupRoot,
       );
     }
 
@@ -1707,20 +1815,28 @@ class JsonScreenView extends ConsumerWidget {
       // （和自定义 appBar / 普通 text widget 行为一致）
       final rawTitle = screenConfig['title']?.toString() ?? interpreter.appName;
       final titleText = interpreter.resolveTemplate(rawTitle);
+      // 默认启动 App 的根 screen：没地方可退，藏掉 leading（leading=null +
+      // automaticallyImplyLeading=false 才能让 AppBar 完全释放 leading 槽位，
+      // 否则 Navigator 会自动塞 BackButton 进来）。
+      // JSON-APP 内部 navigate 出来的子 screen，canNavigateBack=true 时正常显示返回。
+      final hideLeading = isStartupRoot && !interpreter.canNavigateBack;
       appBar = AppBar(
         title: Text(titleText),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // 优先回退到上一屏；历史栈空时退出整个 JSON-APP
-            if (interpreter.canNavigateBack) {
-              interpreter.navigateBack();
-            } else {
-              Navigator.of(context).maybePop();
-            }
-          },
-        ),
+        automaticallyImplyLeading: !hideLeading,
+        leading: hideLeading
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  // 优先回退到上一屏；历史栈空时退出整个 JSON-APP
+                  if (interpreter.canNavigateBack) {
+                    interpreter.navigateBack();
+                  } else {
+                    Navigator.of(context).maybePop();
+                  }
+                },
+              ),
       );
     }
 
@@ -1755,8 +1871,11 @@ class JsonScreenView extends ConsumerWidget {
     }
 
     return PopScope(
-      // 历史栈非空时拦截系统返回手势（iOS edge swipe / Android 返回键）
-      canPop: !interpreter.canNavigateBack,
+      // 拦截系统返回手势（iOS edge swipe / Android 返回键）：
+      //   - 内部 JSON 历史栈非空 → 拦下来走 navigateBack
+      //   - isStartupRoot → 整个就这个 app，没地方退，也拦下来吃掉
+      //   - 都没 → 放行，pop 回 FilePickerPage
+      canPop: !interpreter.canNavigateBack && !isStartupRoot,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           // JSON-APP 路由已经 pop，把它推过的 dialog 全清掉，防止飘
@@ -1764,7 +1883,10 @@ class JsonScreenView extends ConsumerWidget {
           interpreter.dismissAllModals();
           return;
         }
-        interpreter.navigateBack();
+        // 拦下的手势：有内部历史就回退，否则吃掉（startup root 兜底）
+        if (interpreter.canNavigateBack) {
+          interpreter.navigateBack();
+        }
       },
       child: Scaffold(
         backgroundColor: bgColor,
@@ -1910,11 +2032,13 @@ class _TabScreenView extends StatefulWidget {
   final Map<String, dynamic> screenConfig;
   final JsonInterpreter interpreter;
   final List<dynamic> screens;
+  final bool isStartupRoot;
 
   const _TabScreenView({
     required this.screenConfig,
     required this.interpreter,
     required this.screens,
+    this.isStartupRoot = false,
   });
 
   @override
@@ -2005,10 +2129,13 @@ class _TabScreenViewState extends State<_TabScreenView> {
 
     final interpreter = widget.interpreter;
     return PopScope(
-      canPop: !interpreter.canNavigateBack,
+      // 同 JsonScreenView：startup root 时也吃掉系统返回手势
+      canPop: !interpreter.canNavigateBack && !widget.isStartupRoot,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        interpreter.navigateBack();
+        if (interpreter.canNavigateBack) {
+          interpreter.navigateBack();
+        }
       },
       child: Scaffold(
         backgroundColor: tabBgColor ?? bgColor,
@@ -2016,16 +2143,21 @@ class _TabScreenViewState extends State<_TabScreenView> {
           title: Text(widget.interpreter.resolveTemplate(
               currentTab['title']?.toString() ?? title)),
           centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              if (interpreter.canNavigateBack) {
-                interpreter.navigateBack();
-              } else {
-                Navigator.of(context).maybePop();
-              }
-            },
-          ),
+          // 默认启动 App 的根 screen：没地方可退，藏掉 leading
+          automaticallyImplyLeading:
+              !(widget.isStartupRoot && !interpreter.canNavigateBack),
+          leading: (widget.isStartupRoot && !interpreter.canNavigateBack)
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    if (interpreter.canNavigateBack) {
+                      interpreter.navigateBack();
+                    } else {
+                      Navigator.of(context).maybePop();
+                    }
+                  },
+                ),
         ),
         body: SafeArea(child: body),
         bottomNavigationBar: NavigationBar(

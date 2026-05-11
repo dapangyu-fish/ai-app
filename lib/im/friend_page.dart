@@ -13,6 +13,7 @@
 
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
@@ -252,7 +253,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
         leading: CircleAvatar(
           radius: 22,
           backgroundColor: cs.primaryContainer,
-          backgroundImage: faceUrl != null && faceUrl.isNotEmpty ? NetworkImage(faceUrl) : null,
+          backgroundImage: faceUrl != null && faceUrl.isNotEmpty ? CachedNetworkImageProvider(faceUrl) : null,
           child: faceUrl == null || faceUrl.isEmpty
               ? Text(name[0].toUpperCase(),
                   style: TextStyle(color: cs.onPrimaryContainer))
@@ -359,7 +360,7 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
                       leading: CircleAvatar(
                         backgroundColor: cs.primaryContainer,
                         backgroundImage: (a.fromFaceURL?.isNotEmpty ?? false)
-                            ? NetworkImage(a.fromFaceURL!)
+                            ? CachedNetworkImageProvider(a.fromFaceURL!)
                             : null,
                         child: (a.fromFaceURL?.isEmpty ?? true)
                             ? Text(((a.fromNickname ?? a.fromUserID ?? '?')[0])

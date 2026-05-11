@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import '../i18n/framework_strings.dart';
@@ -209,7 +210,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
           radius: 24,
           backgroundColor: cs.primaryContainer,
           backgroundImage: faceUrl != null && faceUrl.isNotEmpty
-              ? NetworkImage(faceUrl)
+              ? CachedNetworkImageProvider(faceUrl)
               : null,
           child: faceUrl == null || faceUrl.isEmpty
               ? Text(

@@ -56,6 +56,15 @@ dependencies:
   shared_preferences: ^2.5.5
   speech_to_text: ^7.0.0
   http: ^1.2.0
+  mime: ^1.0.5  # IM 富媒体上传时检测 content_type
+  path: ^1.9.0  # IM uploader 路径处理
+  flutter_image_compress: ^2.3.0  # IM 图片普通画质压缩（长边 1920 / JPEG q=80）
+  photo_view: ^0.15.0  # IM 大图查看（捏合缩放）
+  video_thumbnail: ^0.5.3  # IM 视频抽首帧
+  open_filex: ^4.5.0  # IM 文件消息：下载到本地 + 调系统默认 app 打开（含 PDF）
+  cached_network_image: ^3.4.1  # 头像/聊天图片缩略图 disk 缓存
+  flutter_cache_manager: ^3.4.1  # IM 富媒体专用 cache 配置（im_cache_manager.dart）
+  gal: ^2.3.0  # IM 图片预览页"保存到相册"
   record: ^6.2.0
   path_provider: ^2.1.0
   web_socket_channel: ^3.0.0

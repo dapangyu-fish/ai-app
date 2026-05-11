@@ -475,6 +475,71 @@ JSON-APP 端只要 `"value": "{{ t('echo') }}"`，变量在不同语言里的位
 - 真实变量同名时优先（real shadows computed）。
 - 支持嵌套引用 computed→computed，但有递归保护（A→B→A 时返回 null，不会死循环）。
 
+### 4.12 启动器 / 组件市场 / 用户
+
+给"用户自己用 JSON 写启动器（launcher）"准备的桥接函数。配合 `templates/lib_launcher_*` 三个组件库使用，但函数本身可以独立调。
+
+| 函数 | 入参 | 返回 | 说明 |
+|------|------|------|------|
+| `@my_apps_list` | — | `List<{fileName, name, displayName, description, savedAt, version, author, type}>` | 列出本地保存的 JSON-APP（按时间倒序）。配合 `assign: "global.xxx"` 写到变量 |
+| `@my_apps_delete` | `{fileName}` | `bool` | 删一个本地 APP |
+| `@my_apps_share` | `{fileName}` | `bool` | 通过系统分享发出 JSON 文件 |
+| `@market_list` | `{type?: "app"\|"library", search?}` | `List<{name, displayName, description, version, author, type}>` | 从 Registry 拉市场列表，可选客户端搜索过滤（名称/描述/作者任一字段包含子串即命中） |
+| `@launch_app` | `{kind: "local"\|"market", fileName?, name?, version?, isStartupRoot?}` | `bool` | 在当前 JSON-APP 内嵌套启动另一个 JSON-APP。kind=local 必须传 fileName；kind=market 必须传 name（version 缺省任意）。`isStartupRoot=true` 时新 APP 没有返回按钮（启动器场景）。框架会自动 push/pop 状态栈，子 APP pop 时父态恢复 |
+| `@startup_default_get` | — | `{kind, hasTarget, marketName, marketVersion, marketDisplayName, localFileName, localDisplayName, displayName}` | 读默认启动 APP 配置 |
+| `@startup_default_set` | `{kind: "market"\|"local", name?, version?, fileName?, displayName?}` | `bool` | 设默认启动 APP（market 必填 name+version；local 必填 fileName） |
+| `@startup_default_clear` | — | `bool` | 清掉默认启动 APP |
+| `@cache_clear` | — | `bool` | 清 dsl_cache 目录（市场/库本地缓存） |
+| `@auth_logout` | — | `bool` | 登出（IM + token） |
+
+读取当前用户信息直接用现有的 `@get_user_info`（native）或 lib_user 的
+`getUserAvatar` / `getUserName` / `getUserEmail`——launcher 这里不重复
+包一份。原始字段名见 `AuthService.currentUser`：`id` / `username` / `email`
+/ `avatar_url` / `role`。
+
+
+**使用示例 — 嵌套启动**
+
+```json
+{
+  "type": "card",
+  "onTap": {
+    "call": "@launch_app",
+    "args": { "kind": "local", "fileName": "{{ loop.item.fileName }}" }
+  },
+  "children": [...]
+}
+```
+
+**使用示例 — 启动器组件库**
+
+直接 ref 三个 launcher 组件即可拼一个 tab 式启动器，参考 `templates/demo_launcher.json`：
+
+```json
+"dependencies": {
+  "launcher-my-apps": "^1.0.0",
+  "launcher-market": "^1.0.0",
+  "launcher-settings": "^1.0.0"
+},
+"steps": [
+  { "call": "@launcher-my-apps.init", "args": {} },
+  { "call": "@launcher-market.init", "args": {} },
+  { "call": "@launcher-settings.init", "args": {} }
+],
+"ui": {
+  "screens": [{
+    "id": "home",
+    "tabs": [
+      { "label": "本地", "icon": "apps",     "children": [{"type":"ref","from":"launcher-my-apps","widget":"myAppsGrid","props":{}}] },
+      { "label": "市场", "icon": "store",    "children": [{"type":"ref","from":"launcher-market","widget":"marketBrowser","props":{}}] },
+      { "label": "设置", "icon": "settings", "children": [{"type":"ref","from":"launcher-settings","widget":"settingsPanel","props":{}}] }
+    ]
+  }]
+}
+```
+
+每个 lib 各自把状态挂在固定路径（`global._lma.*` / `global._lm.*` / `global._ls.*`）下，避免冲突。同一页面同一个 lib 不能开两份（路径冲突），launcher 这种典型场景用不到。
+
 ---
 
 ## 5. JsonLogic 表达式引擎

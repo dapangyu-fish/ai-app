@@ -11,6 +11,7 @@ import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
 import '../auth/auth_service.dart';
+import '../i18n/framework_strings.dart';
 import '../main.dart' show JsonDslApp;
 import '../onboarding/onboarding_keys.dart';
 
@@ -115,6 +116,9 @@ class _DesignerBallState extends State<DesignerBall>
   static const Duration _longPressDuration = Duration(milliseconds: 1500);
   Timer? _longPressTimer;
   bool _chatMode = false;
+  // 快捷菜单弹出态。第二次双击（菜单还开着的情况下）应该关掉它，而不是
+  // 再叠一层弹窗
+  bool _quickMenuOpen = false;
   bool _isListening = false;
   bool _isThinking = false;
   bool _isGeneratingJson = false;
@@ -546,11 +550,131 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
+  /// 双击悬浮球：弹出快捷菜单（iOS 悬浮球风格）。
+  ///
+  /// 之前是直接恢复历史会话，但现在需要在这里挂更多入口（截屏、笔记、
+  /// 快捷指令等），所以拆成"先弹菜单 → 用户选"两步。
+  /// 没历史会话时"恢复会话"按钮灰掉但菜单仍然弹出，让其他入口可用。
+  ///
+  /// 第二次双击（菜单还开着）→ 关掉菜单，而不是叠一层。点击灰幕也能关。
+  ///
+  /// 不再因为 _chatMode/_isListening 屏蔽：之前 `if (_chatMode) return` 把
+  /// 聊天态下双击全 swallow 掉，用户必须先关掉聊天才能用快捷菜单——很反直觉。
+  /// 现在任意状态都能弹菜单（"回到主页"在聊天里也得能用）。
   void _onDoubleTap() {
-    if (_chatMode) return;
-    if (_messages.isEmpty) return;
+    if (_quickMenuOpen) {
+      // 菜单已打开 → 双击 = 关
+      JsonDslApp.navigatorKey.currentState?.pop();
+      return;
+    }
+    _showQuickMenu();
+  }
+
+  /// 真正恢复会话的逻辑（之前 _onDoubleTap 直接干的事）。
+  /// 从快捷菜单的"恢复会话"按钮调过来。
+  void _restoreSession() {
+    if (_chatMode || _messages.isEmpty) return;
     setState(() => _chatMode = true);
     _scrollToBottom();
+  }
+
+  /// 一路 pop 回根路由（FilePickerPage / MyApp 主页）。
+  /// 用途：用户用了"默认启动 App"被锁进某个 JSON-APP，里面没有"切换 App"
+  /// 的功能时，靠悬浮球这个按钮逃出来。
+  void _goHome() {
+    final nav = JsonDslApp.navigatorKey.currentState;
+    if (nav == null) return;
+    nav.popUntil((route) => route.isFirst);
+  }
+
+  /// 弹出快捷菜单。
+  /// 网格布局，每格是一个 [_QuickMenuButton]（icon + label，可禁用态）。
+  /// 加新功能：在 children 数组里 append 一个 [_QuickMenuButton] 即可。
+  ///
+  /// 注意：DesignerBall 挂在 MaterialApp.builder 里、自己的 context 没有
+  /// Navigator 祖先（直接 showDialog(context: context) 会抛
+  /// "Navigator operation requested with a context that does not include a
+  /// Navigator"）。所以用根 navigatorKey 的 context。
+  Future<void> _showQuickMenu() async {
+    final navContext = JsonDslApp.navigatorKey.currentContext;
+    if (navContext == null) return;
+    final hasHistory = _messages.isNotEmpty;
+    final s = T.of(navContext);
+
+    _quickMenuOpen = true;
+    try {
+      await showDialog<void>(
+        context: navContext,
+        barrierColor: Colors.black38,
+        barrierDismissible: true,
+        builder: (ctx) {
+          final cs = Theme.of(ctx).colorScheme;
+          // 用 surfaceContainerHigh：M3 专门设计的"需要从背景里凸出"的容器色。
+          // 浅色模式下比 surface 略深、深色模式下比 surface 略浅，跟系统主题
+          // 自动产生对比，不会跟页面底色融成一片。
+          return Dialog(
+            backgroundColor: cs.surfaceContainerHigh,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    s.ballMenuTitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.95,
+                    children: [
+                      _QuickMenuButton(
+                        icon: Icons.history_rounded,
+                        label: s.ballMenuRestoreSession,
+                        enabled: hasHistory,
+                        tooltipDisabled: s.ballMenuRestoreSessionEmpty,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _restoreSession();
+                        },
+                      ),
+                      _QuickMenuButton(
+                        icon: Icons.home_rounded,
+                        label: s.ballMenuGoHome,
+                        // 只要根 Navigator 还能 pop 就启用 —— 表示当前栈里有
+                        // push 进来的 JSON-APP / 设置页等，可以一路 pop 回首页
+                        enabled: JsonDslApp.navigatorKey.currentState?.canPop() == true,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _goHome();
+                        },
+                      ),
+                      // 后续功能：在这里 append 更多 _QuickMenuButton，比如：
+                      //   _QuickMenuButton(icon: Icons.screenshot, label: '截屏', ...)
+                      //   _QuickMenuButton(icon: Icons.edit_note, label: '记笔记', ...)
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } finally {
+      _quickMenuOpen = false;
+    }
   }
 
   // ════════════════════════════════════════════════════════
@@ -1873,15 +1997,15 @@ class _DesignerBallState extends State<DesignerBall>
                 color: iconColor,
                 size: 28,
               )
-            : _chatMode
-                ? Icon(Icons.chat_bubble_outline,
-                    color: iconColor, size: 26)
-                // 默认：黑白线性麦克风图标（替代原 'D' 字母）
-                : Icon(
-                    Icons.mic_none_outlined,
-                    color: iconColor,
-                    size: 26,
-                  ),
+            // 非录音态：永远显示线性麦克风图标。
+            // chatMode（有历史会话/正在聊天）以前会切成 chat_bubble，但聊天态
+            // 是否在线本来就由 ChatOverlay 自身呈现，球本体不需要再多一种态——
+            // 反而会让用户搞不清当前是 mic 默认还是 chat 状态、双击会不会工作
+            : Icon(
+                Icons.mic_none_outlined,
+                color: iconColor,
+                size: 26,
+              ),
       ),
     );
 
@@ -2191,5 +2315,66 @@ class _EditSheetState extends State<_EditSheet> {
         ),
       ),
     );
+  }
+}
+
+/// 快捷菜单单格按钮。圆角方形 + icon + 文字两行布局。
+/// 禁用态用 onSurfaceVariant 灰文字 + 长按 tooltip 解释为啥灰了。
+class _QuickMenuButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool enabled;
+  final VoidCallback onTap;
+  final String? tooltipDisabled;
+
+  const _QuickMenuButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.enabled = true,
+    this.tooltipDisabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final iconColor = enabled ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4);
+    final textColor = enabled ? cs.onSurface : cs.onSurfaceVariant.withValues(alpha: 0.5);
+    // 按钮要跟 Dialog 背景（surfaceContainerHigh）形成层级。用 surfaceContainerHighest
+    // 提一档；禁用态再降透明度让"灰掉"明显
+    final bg = enabled
+        ? cs.surfaceContainerHighest
+        : cs.surfaceContainerHighest.withValues(alpha: 0.4);
+
+    final btn = Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 26, color: iconColor),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: textColor),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!enabled && tooltipDisabled != null) {
+      return Tooltip(message: tooltipDisabled!, child: btn);
+    }
+    return btn;
   }
 }

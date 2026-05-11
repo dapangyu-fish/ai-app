@@ -1,5 +1,6 @@
 // Avatar 控件 — 圆形头像
 // 支持: url (图片), text (无图时显示首字母), size (默认 40), color (背景), textColor
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
@@ -34,15 +35,16 @@ class JsonAvatarWidget extends JsonBaseWidget {
     );
 
     if (url != null && url.isNotEmpty) {
-      // 用 Image.network + errorBuilder 实现"加载失败回退到文字"
+      // CachedNetworkImage 带 disk 缓存（200MB/30d LRU），冷启动后命中
       return ClipOval(
         child: SizedBox(
           width: size,
           height: size,
-          child: Image.network(
-            url,
+          child: CachedNetworkImage(
+            imageUrl: url,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => fallback,
+            errorWidget: (_, __, ___) => fallback,
+            placeholder: (_, __) => fallback,
           ),
         ),
       );
