@@ -1582,6 +1582,10 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
+  ///
+  /// 多会话：切换/新建/删除路径都会先调这里。**必须无条件重置所有 stream-related
+  /// UI 状态**，否则会出现：在 session A "正在生成代码" 中途切到 session B（已 done），
+  /// 但 _isGeneratingJson 没被清，B 的视图还在转圈。
   void _cancelCurrentStream() {
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
@@ -1600,8 +1604,13 @@ class _DesignerBallState extends State<DesignerBall>
       // 唯一例外是 _deleteCurrentSessionAndClose（用户点垃圾桶），那条路径走
       // _chatService.deleteSession() → 内部对该 sid 单独发 /abort，不依赖这里
       _chatService.abortLocal();
-      setState(() => _isThinking = false);
     }
+    // 无条件重置，覆盖"没有活跃 stream 但 UI 状态没复位"的情况
+    setState(() {
+      _isThinking = false;
+      _isGeneratingJson = false;
+      _generatingStatusMessage = '正在生成代码...';
+    });
   }
 
   /// 处理崩溃报告 — 自动进入对话模式并发送崩溃信息给 AI

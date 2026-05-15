@@ -219,29 +219,35 @@ class _ChatOverlayState extends State<ChatOverlay> {
         widget.messages.where((m) => m.content.isNotEmpty).toList();
     final hasLive = widget.liveTranscript != null && widget.liveTranscript!.isNotEmpty;
 
-    if (visibleMessages.isEmpty && !hasLive && !widget.isThinking && !widget.isGeneratingJson) {
-      return const SizedBox.shrink();
-    }
+    // 多会话场景下不再因"没消息"就整个 SizedBox.shrink —— 否则空 session 看不到 chip，
+    // 没法切换回有内容的 session。chat overlay 永远渲染至少一条标题栏。
 
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: bottomPadding + 80 + _offsetY,
-      child: Container(
-        constraints: BoxConstraints(maxHeight: screen.height * 0.4),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Stack(
-          children: [
-            // 主体内容（标题栏 + 消息列表）
-            Column(
+    // 顶部锚定：用 top 而非 bottom，content 变短只缩底部不让顶部跳来跳去
+    final maxHeight = screen.height * 0.4;
+    final containerTop =
+        (screen.height - bottomPadding - 80 - maxHeight - _offsetY)
+            .clamp(0.0, screen.height - 60);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 1. 字幕容器（被 hardEdge 裁剪，内容不会跑出来）
+        Positioned(
+          left: 12,
+          right: 12,
+          top: containerTop,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+                width: 1,
+              ),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
             // 标题栏
@@ -361,57 +367,58 @@ class _ChatOverlayState extends State<ChatOverlay> {
                 ),
               ),
             ),
-          ],
+              ],
+            ),
+          ),
         ),
-            // 下拉菜单：作为 Stack 第二层，z-order 在字幕之上；
-            // 跟 chat overlay 容器一起被 Positioned 移动，所以拖动时同步跟随。
-            if (_menuOpen) ...[
-              // 1. 半透明 backdrop：拦截字幕区域的 tap，点空白处关菜单
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 36, // 标题栏高度，菜单不遮挡标题栏（用户可以再点 chip 关菜单）
-                bottom: 0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _closeMenu,
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.3),
-                  ),
-                ),
+        // 2. 下拉菜单：作为 outer Stack 的兄弟节点而不是嵌在字幕容器里；
+        //    这样既不会被 Clip.hardEdge 截掉、也不受字幕容器宽高变化影响
+        if (_menuOpen) ...[
+          // backdrop 覆盖标题栏下方所有屏幕区域，点空白处关菜单
+          Positioned(
+            left: 0,
+            right: 0,
+            top: containerTop + 36,
+            bottom: 0,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _closeMenu,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.3),
               ),
-              // 2. 菜单面板本体
-              Positioned(
-                top: 40,
-                left: 38, // 大致对齐 chip 左缘
-                child: _SessionDropdownPanel(
-                  sessions: widget.getSessions(),
-                  activeSessionId: widget.activeSessionId,
-                  statusProbeFuture: _statusProbeFuture,
-                  maxHeight: screen.height * 0.4 - 48,
-                  onNewSession: () async {
-                    _closeMenu();
-                    await widget.onNewSession?.call();
-                  },
-                  onSwitchSession: (sid) async {
-                    _closeMenu();
-                    if (sid != widget.activeSessionId) {
-                      await widget.onSwitchSession?.call(sid);
-                    }
-                  },
-                  onMoreTap: (sid) async {
-                    _closeMenu();
-                    final navCtx = widget.getNavigatorContext?.call();
-                    if (navCtx != null) {
-                      await _openSessionActions(navCtx, sid);
-                    }
-                  },
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+            ),
+          ),
+          // 菜单面板本体，锚定在标题栏正下方
+          Positioned(
+            top: containerTop + 40,
+            left: 12 + 38, // chat overlay 左缘 12 + chip 在标题栏内的偏移 ~38
+            child: _SessionDropdownPanel(
+              sessions: widget.getSessions(),
+              activeSessionId: widget.activeSessionId,
+              statusProbeFuture: _statusProbeFuture,
+              // 最多顶到屏幕底部留点边界
+              maxHeight: screen.height - containerTop - 40 - bottomPadding - 20,
+              onNewSession: () async {
+                _closeMenu();
+                await widget.onNewSession?.call();
+              },
+              onSwitchSession: (sid) async {
+                _closeMenu();
+                if (sid != widget.activeSessionId) {
+                  await widget.onSwitchSession?.call(sid);
+                }
+              },
+              onMoreTap: (sid) async {
+                _closeMenu();
+                final navCtx = widget.getNavigatorContext?.call();
+                if (navCtx != null) {
+                  await _openSessionActions(navCtx, sid);
+                }
+              },
+            ),
+          ),
+        ],
+      ],
     );
   }
 
