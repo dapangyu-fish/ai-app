@@ -260,7 +260,7 @@ class _DesignerBallState extends State<DesignerBall>
           debugPrint('[DesignerBall] ByteDance ASR error: $error');
           if (mounted) {
             setState(() {
-              _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR错误: $error'));
+              _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrBytedanceWith, {'err': error})));
             });
           }
         };
@@ -706,7 +706,7 @@ class _DesignerBallState extends State<DesignerBall>
     // 检查原生语音识别是否已初始化（已在 initState 中完成）
     if (!_speechInited && _asrMode == AsrMode.online) {
       setState(() {
-        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中切换到离线模式或豆包ASR'));
+        _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrNativeInitWithHint));
       });
       return;
     }
@@ -741,7 +741,7 @@ class _DesignerBallState extends State<DesignerBall>
         setState(() {
           _isThinking = false;
           _liveTranscript = null;
-          _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型加载失败'));
+          _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrOfflineModelLoadFail));
         });
         return;
       }
@@ -755,7 +755,7 @@ class _DesignerBallState extends State<DesignerBall>
         setState(() {
           _chatMode = true;
           _isThinking = true;
-          _liveTranscript = '正在连接豆包ASR...';
+          _liveTranscript = T.current.asrConnectingBytedance;
         });
 
         // 等待最多3秒让豆包ASR连接
@@ -784,7 +784,7 @@ class _DesignerBallState extends State<DesignerBall>
         if (!_bytedanceAsr.isConnected) {
           debugPrint('[DesignerBall] 豆包ASR连接超时，isConnected=${_bytedanceAsr.isConnected}');
           setState(() {
-            _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR连接超时，请检查网络或切换到其他识别方式'));
+            _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrBytedanceTimeoutWithHint));
           });
           return;
         }
@@ -957,7 +957,7 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
-            _generatingStatusMessage = '正在启动 AI 引擎...';
+            _generatingStatusMessage = T.current.chatStatusStartingAi;
           });
           _scrollToBottom();
           return;
@@ -979,7 +979,7 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            _generatingStatusMessage = '正在生成代码...';
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             // 如果同时有 error 且最后一个 assistant 气泡是空的，先把 error 写进去
             // 这样用户既能看到"为啥失败了"也能看到下面的重试按钮
             if (event.error != null &&
@@ -1008,7 +1008,7 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            _generatingStatusMessage = '正在生成代码...';
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
               _messages.last = ChatMessage(role: 'assistant', content: event.error!);
             } else {
@@ -1079,11 +1079,11 @@ class _DesignerBallState extends State<DesignerBall>
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
-          _generatingStatusMessage = '正在生成代码...';
+          _generatingStatusMessage = T.current.chatStatusGenerating;
           if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-            _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+            _messages.last = ChatMessage(role: 'assistant', content: T.fmt(T.current.chatErrorWith, {'err': e}));
           } else {
-            _messages.add(ChatMessage(role: 'assistant', content: '出错了: $e'));
+            _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.chatErrorWith, {'err': e})));
           }
         });
       },
@@ -1096,7 +1096,7 @@ class _DesignerBallState extends State<DesignerBall>
             'pendingJsonApp=${pendingJsonApp != null}');
         setState(() {
           _isGeneratingJson = false;
-          _generatingStatusMessage = '正在生成代码...';
+          _generatingStatusMessage = T.current.chatStatusGenerating;
 
           // ⚠️ 这里**必须**用独立 if 而不是 if/else if 链：
           // AI 一次回复里完全可能同时包含 [request_action]upload_current_app[/request_action]
@@ -1121,7 +1121,7 @@ class _DesignerBallState extends State<DesignerBall>
           if (pendingFailedJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
-              content: pendingFailedJsonError ?? '下载 JSON 失败',
+              content: pendingFailedJsonError ?? T.current.chatJsonDownloadFailed,
               failedJsonUrl: pendingFailedJsonUrl,
             ));
           }
@@ -1206,7 +1206,7 @@ class _DesignerBallState extends State<DesignerBall>
             _messages.add(ChatMessage(role: 'assistant', content: ''));
             _isThinking = true;
             _isGeneratingJson = true;
-            _generatingStatusMessage = '正在恢复上次对话...';
+            _generatingStatusMessage = T.current.chatStatusResumingLast;
           });
           _scrollToBottom();
           _attachAiStream(stream);
@@ -1230,7 +1230,7 @@ class _DesignerBallState extends State<DesignerBall>
     final config = widget.getCurrentConfig?.call();
     if (config == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('当前没有运行的应用配置')),
+        SnackBar(content: Text(T.current.chatNoActiveApp)),
       );
       return;
     }
@@ -1238,7 +1238,7 @@ class _DesignerBallState extends State<DesignerBall>
     setState(() {
       // 移除 UPLOAD 按钮那条消息
       _messages.removeLast();
-      _messages.add(ChatMessage(role: 'system', content: '正在上传当前应用配置...'));
+      _messages.add(ChatMessage(role: 'system', content: T.current.chatUploadingApp));
       _isThinking = true;
     });
     _scrollToBottom();
@@ -1292,7 +1292,7 @@ class _DesignerBallState extends State<DesignerBall>
         _isGeneratingJson = false;
         _messages.add(ChatMessage(
           role: 'assistant',
-          content: '下载重试失败: $e',
+          content: T.fmt(T.current.chatDownloadRetryFailedWith, {'err': e}),
           failedJsonUrl: url,
         ));
       });
@@ -1339,7 +1339,7 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] Native listen error: $e');
       setState(() {
         _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别启动失败，请在设置中开启"强制离线模式"'));
+        _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrNativeStartWithHint));
       });
       _pulseController.stop();
     }
@@ -1362,59 +1362,63 @@ class _DesignerBallState extends State<DesignerBall>
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('网络语音识别不可用'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('检测到网络问题，无法使用在线语音识别。是否切换到离线模型？'),
-              const SizedBox(height: 16),
-              const Text('选择离线模型：', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              ...SherpaAsrService.availableModels.map((model) => RadioListTile<String>(
-                title: Text(model.name),
-                value: model.id,
-                groupValue: selectedModel,
-                onChanged: (value) {
-                  setDialogState(() {
-                    selectedModel = value!;
-                  });
-                },
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              )),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                title: const Text('不再提示'),
-                value: dontShowAgain,
-                onChanged: (value) {
-                  setDialogState(() {
-                    dontShowAgain = value ?? false;
-                  });
-                },
-                dense: true,
-                contentPadding: EdgeInsets.zero,
+      builder: (context) {
+        final t = T.of(context);
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(t.asrDialogTitleOnlineUnavailable),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.asrDialogBodyOnlineUnavailable),
+                const SizedBox(height: 16),
+                Text(t.asrDialogChooseOffline,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...SherpaAsrService.availableModels.map((model) => RadioListTile<String>(
+                  title: Text(model.name),
+                  value: model.id,
+                  groupValue: selectedModel,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedModel = value!;
+                    });
+                  },
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                )),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  title: Text(t.asrDialogDontShowAgain),
+                  value: dontShowAgain,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      dontShowAgain = value ?? false;
+                    });
+                  },
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: Text(t.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, {
+                  'enable': true,
+                  'dontShow': dontShowAgain,
+                  'modelId': selectedModel,
+                }),
+                child: Text(t.asrDialogEnableOfflineButton),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, {
-                'enable': true,
-                'dontShow': dontShowAgain,
-                'modelId': selectedModel,
-              }),
-              child: const Text('开启离线模式'),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
 
     if (result != null && result['enable'] == true) {
@@ -1446,7 +1450,7 @@ class _DesignerBallState extends State<DesignerBall>
         debugPrint('[DesignerBall] sherpa ensureReady failed in _startSherpaAsr');
         setState(() {
           _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型未就绪，请在设置中重新下载'));
+          _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrOfflineModelNotReady));
         });
         _pulseController.stop();
         _pulseController.reset();
@@ -1468,7 +1472,7 @@ class _DesignerBallState extends State<DesignerBall>
           _isListening = false;
           _messages.add(ChatMessage(
             role: 'assistant',
-            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+            content: T.current.asrErrMicPermissionDenied,
           ));
         });
         _pulseController.stop();
@@ -1477,7 +1481,7 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[SherpaASR] Start error: $e');
       setState(() {
         _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: '语音识别启动失败: $e'));
+        _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrStartFailWith, {'err': e})));
       });
       _pulseController.stop();
     }
@@ -1497,7 +1501,7 @@ class _DesignerBallState extends State<DesignerBall>
         debugPrint('[DesignerBall] ByteDance ASR not connected');
         setState(() {
           _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络'));
+          _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrBytedanceNotConnected));
         });
         _pulseController.stop();
         _pulseController.reset();
@@ -1511,7 +1515,7 @@ class _DesignerBallState extends State<DesignerBall>
           _isListening = false;
           _messages.add(ChatMessage(
             role: 'assistant',
-            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+            content: T.current.asrErrMicPermissionDenied,
           ));
         });
         _pulseController.stop();
@@ -1520,7 +1524,7 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[ByteDanceASR] Start error: $e');
       setState(() {
         _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR启动失败: $e'));
+        _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrBytedanceStartFailWith, {'err': e})));
       });
       _pulseController.stop();
     }
@@ -1609,7 +1613,7 @@ class _DesignerBallState extends State<DesignerBall>
     setState(() {
       _isThinking = false;
       _isGeneratingJson = false;
-      _generatingStatusMessage = '正在生成代码...';
+      _generatingStatusMessage = T.current.chatStatusGenerating;
     });
   }
 
@@ -1659,7 +1663,7 @@ class _DesignerBallState extends State<DesignerBall>
       onError: (e) {
         setState(() {
           _isThinking = false;
-          _messages.last = ChatMessage(role: 'assistant', content: '分析失败: $e');
+          _messages.last = ChatMessage(role: 'assistant', content: T.fmt(T.current.chatAnalysisFailedWith, {'err': e}));
         });
       },
     );
@@ -1931,7 +1935,7 @@ class _DesignerBallState extends State<DesignerBall>
                                 size: 28),
                             const SizedBox(height: 6),
                             Text(
-                              '取消',
+                              T.of(context).cancel,
                               style: TextStyle(
                                 color: _dragCancelling ? Colors.white : Colors.white70,
                                 fontSize: 14,
@@ -1957,7 +1961,7 @@ class _DesignerBallState extends State<DesignerBall>
                                 size: 28),
                             const SizedBox(height: 6),
                             Text(
-                              '编辑',
+                              T.of(context).chatEditButton,
                               style: TextStyle(
                                 color: _dragInEditZone ? Colors.white : Colors.white70,
                                 fontSize: 14,
@@ -2273,7 +2277,7 @@ class _EditSheetState extends State<_EditSheet> {
                         color: Colors.white.withValues(alpha: 0.5), size: 18),
                     const SizedBox(width: 6),
                     Text(
-                      '编辑消息',
+                      T.of(context).chatEditMessageTitle,
                       style: TextStyle(
                         color: secondaryTextColor,
                         fontSize: 14,
@@ -2317,7 +2321,7 @@ class _EditSheetState extends State<_EditSheet> {
                       // 深色所以察觉不到。这里关掉它，让父级 Material 直接透出来。
                       filled: false,
                       border: InputBorder.none,
-                      hintText: '编辑你的消息...',
+                      hintText: T.of(context).chatEditMessageHint,
                       hintStyle: TextStyle(color: hintColor, fontSize: 16),
                     ),
                   ),
@@ -2337,7 +2341,7 @@ class _EditSheetState extends State<_EditSheet> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '取消',
+                          T.of(context).cancel,
                           style: TextStyle(
                             color: secondaryTextColor,
                             fontSize: 15,
@@ -2354,14 +2358,14 @@ class _EditSheetState extends State<_EditSheet> {
                           color: Colors.purple,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.send, color: Colors.white, size: 18),
-                            SizedBox(width: 6),
+                            const Icon(Icons.send, color: Colors.white, size: 18),
+                            const SizedBox(width: 6),
                             Text(
-                              '发送',
-                              style: TextStyle(
+                              T.of(context).chatSendButton,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,

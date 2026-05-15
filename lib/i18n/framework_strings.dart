@@ -428,6 +428,36 @@ class _Strings {
   final String chatDownloadStateRun;         // "下载并运行"
   final String chatDownloadStateRetry;       // "重试下载并运行"
 
+  // ── AI 对话错误 / 编辑消息 ──
+  final String chatErrorWith;                // "出错了: {err}"
+  final String chatJsonDownloadFailed;       // "下载 JSON 失败"
+  final String chatNoActiveApp;              // "当前没有运行的应用配置"
+  final String chatUploadingApp;             // "正在上传当前应用配置..."
+  final String chatDownloadRetryFailedWith;  // "下载重试失败: {err}"
+  final String chatAnalysisFailedWith;       // "分析失败: {err}"
+  final String chatEditMessageTitle;         // "编辑消息"
+  final String chatEditMessageHint;          // "编辑你的消息..."
+  final String chatEditButton;               // "编辑"
+  final String chatSendButton;               // "发送"
+
+  // ── 语音识别（ASR）──
+  final String asrErrBytedanceWith;          // "豆包ASR错误: {err}"
+  final String asrErrNativeInitWithHint;     // 原生语音识别初始化失败 + 建议
+  final String asrErrOfflineModelLoadFail;   // "离线语音模型加载失败"
+  final String asrConnectingBytedance;       // "正在连接豆包ASR..."
+  final String asrErrBytedanceTimeoutWithHint; // 豆包ASR连接超时 + 建议
+  final String asrErrNativeStartWithHint;    // 原生 ASR 启动失败 + 建议
+  final String asrDialogTitleOnlineUnavailable;
+  final String asrDialogBodyOnlineUnavailable;
+  final String asrDialogChooseOffline;       // "选择离线模型："
+  final String asrDialogDontShowAgain;       // "不再提示"
+  final String asrDialogEnableOfflineButton; // "开启离线模式"
+  final String asrErrOfflineModelNotReady;
+  final String asrErrMicPermissionDenied;
+  final String asrErrStartFailWith;          // "语音识别启动失败: {err}"
+  final String asrErrBytedanceNotConnected;
+  final String asrErrBytedanceStartFailWith;
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -770,6 +800,32 @@ class _Strings {
     required this.chatDownloadStateDownloading,
     required this.chatDownloadStateRun,
     required this.chatDownloadStateRetry,
+    required this.chatErrorWith,
+    required this.chatJsonDownloadFailed,
+    required this.chatNoActiveApp,
+    required this.chatUploadingApp,
+    required this.chatDownloadRetryFailedWith,
+    required this.chatAnalysisFailedWith,
+    required this.chatEditMessageTitle,
+    required this.chatEditMessageHint,
+    required this.chatEditButton,
+    required this.chatSendButton,
+    required this.asrErrBytedanceWith,
+    required this.asrErrNativeInitWithHint,
+    required this.asrErrOfflineModelLoadFail,
+    required this.asrConnectingBytedance,
+    required this.asrErrBytedanceTimeoutWithHint,
+    required this.asrErrNativeStartWithHint,
+    required this.asrDialogTitleOnlineUnavailable,
+    required this.asrDialogBodyOnlineUnavailable,
+    required this.asrDialogChooseOffline,
+    required this.asrDialogDontShowAgain,
+    required this.asrDialogEnableOfflineButton,
+    required this.asrErrOfflineModelNotReady,
+    required this.asrErrMicPermissionDenied,
+    required this.asrErrStartFailWith,
+    required this.asrErrBytedanceNotConnected,
+    required this.asrErrBytedanceStartFailWith,
   });
 }
 
@@ -1115,6 +1171,32 @@ const _Strings _zhCN = _Strings(
   chatDownloadStateDownloading: '下载中...',
   chatDownloadStateRun: '下载并运行',
   chatDownloadStateRetry: '重试下载并运行',
+  chatErrorWith: '出错了: {err}',
+  chatJsonDownloadFailed: '下载 JSON 失败',
+  chatNoActiveApp: '当前没有运行的应用配置',
+  chatUploadingApp: '正在上传当前应用配置...',
+  chatDownloadRetryFailedWith: '下载重试失败: {err}',
+  chatAnalysisFailedWith: '分析失败: {err}',
+  chatEditMessageTitle: '编辑消息',
+  chatEditMessageHint: '编辑你的消息...',
+  chatEditButton: '编辑',
+  chatSendButton: '发送',
+  asrErrBytedanceWith: '豆包ASR错误: {err}',
+  asrErrNativeInitWithHint: '原生语音识别初始化失败，请在设置中切换到离线模式或豆包ASR',
+  asrErrOfflineModelLoadFail: '离线语音模型加载失败',
+  asrConnectingBytedance: '正在连接豆包ASR...',
+  asrErrBytedanceTimeoutWithHint: '豆包ASR连接超时，请检查网络或切换到其他识别方式',
+  asrErrNativeStartWithHint: '原生语音识别启动失败，请在设置中开启"强制离线模式"',
+  asrDialogTitleOnlineUnavailable: '网络语音识别不可用',
+  asrDialogBodyOnlineUnavailable: '检测到网络问题，无法使用在线语音识别。是否切换到离线模型？',
+  asrDialogChooseOffline: '选择离线模型：',
+  asrDialogDontShowAgain: '不再提示',
+  asrDialogEnableOfflineButton: '开启离线模式',
+  asrErrOfflineModelNotReady: '离线语音模型未就绪，请在设置中重新下载',
+  asrErrMicPermissionDenied: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+  asrErrStartFailWith: '语音识别启动失败: {err}',
+  asrErrBytedanceNotConnected: '豆包ASR未连接，请检查网络',
+  asrErrBytedanceStartFailWith: '豆包ASR启动失败: {err}',
 );
 
 const _Strings _enUS = _Strings(
@@ -1459,6 +1541,32 @@ const _Strings _enUS = _Strings(
   chatDownloadStateDownloading: 'Downloading...',
   chatDownloadStateRun: 'Download & run',
   chatDownloadStateRetry: 'Retry download & run',
+  chatErrorWith: 'Error: {err}',
+  chatJsonDownloadFailed: 'Failed to download JSON',
+  chatNoActiveApp: 'No running app config right now',
+  chatUploadingApp: 'Uploading current app config...',
+  chatDownloadRetryFailedWith: 'Download retry failed: {err}',
+  chatAnalysisFailedWith: 'Analysis failed: {err}',
+  chatEditMessageTitle: 'Edit message',
+  chatEditMessageHint: 'Edit your message...',
+  chatEditButton: 'Edit',
+  chatSendButton: 'Send',
+  asrErrBytedanceWith: 'ByteDance ASR error: {err}',
+  asrErrNativeInitWithHint: 'Native speech recognition failed to initialize. Try switching to offline mode or ByteDance ASR in settings.',
+  asrErrOfflineModelLoadFail: 'Failed to load offline speech model',
+  asrConnectingBytedance: 'Connecting to ByteDance ASR...',
+  asrErrBytedanceTimeoutWithHint: 'ByteDance ASR connection timeout. Check the network or switch to another recognizer.',
+  asrErrNativeStartWithHint: 'Native speech recognition failed to start. Enable "Force offline mode" in settings.',
+  asrDialogTitleOnlineUnavailable: 'Online speech recognition unavailable',
+  asrDialogBodyOnlineUnavailable: 'Network issue detected, online recognition cannot be used. Switch to offline model?',
+  asrDialogChooseOffline: 'Pick an offline model:',
+  asrDialogDontShowAgain: "Don't show again",
+  asrDialogEnableOfflineButton: 'Enable offline',
+  asrErrOfflineModelNotReady: 'Offline speech model is not ready. Re-download it in settings.',
+  asrErrMicPermissionDenied: 'Microphone permission denied. Enable it in Settings → Apps → Permissions and try again.',
+  asrErrStartFailWith: 'Speech recognition failed to start: {err}',
+  asrErrBytedanceNotConnected: 'ByteDance ASR is not connected. Check the network.',
+  asrErrBytedanceStartFailWith: 'ByteDance ASR failed to start: {err}',
 );
 
 const _Strings _deDE = _Strings(
@@ -1803,6 +1911,32 @@ const _Strings _deDE = _Strings(
   chatDownloadStateDownloading: 'Wird geladen...',
   chatDownloadStateRun: 'Herunterladen & starten',
   chatDownloadStateRetry: 'Erneut herunterladen & starten',
+  chatErrorWith: 'Fehler: {err}',
+  chatJsonDownloadFailed: 'JSON konnte nicht heruntergeladen werden',
+  chatNoActiveApp: 'Aktuell läuft keine App-Konfiguration',
+  chatUploadingApp: 'Aktuelle App-Konfiguration wird hochgeladen...',
+  chatDownloadRetryFailedWith: 'Download-Wiederholung fehlgeschlagen: {err}',
+  chatAnalysisFailedWith: 'Analyse fehlgeschlagen: {err}',
+  chatEditMessageTitle: 'Nachricht bearbeiten',
+  chatEditMessageHint: 'Nachricht bearbeiten...',
+  chatEditButton: 'Bearbeiten',
+  chatSendButton: 'Senden',
+  asrErrBytedanceWith: 'ByteDance-ASR-Fehler: {err}',
+  asrErrNativeInitWithHint: 'Native Spracherkennung konnte nicht initialisiert werden. Wechseln Sie in den Einstellungen auf Offline-Modus oder ByteDance ASR.',
+  asrErrOfflineModelLoadFail: 'Offline-Sprachmodell konnte nicht geladen werden',
+  asrConnectingBytedance: 'Verbindung zu ByteDance ASR wird hergestellt...',
+  asrErrBytedanceTimeoutWithHint: 'Zeitüberschreitung bei der Verbindung zu ByteDance ASR. Netzwerk prüfen oder eine andere Erkennung wählen.',
+  asrErrNativeStartWithHint: 'Native Spracherkennung konnte nicht gestartet werden. Aktivieren Sie „Offline-Modus erzwingen" in den Einstellungen.',
+  asrDialogTitleOnlineUnavailable: 'Online-Spracherkennung nicht verfügbar',
+  asrDialogBodyOnlineUnavailable: 'Netzwerkproblem erkannt, Online-Erkennung kann nicht verwendet werden. Auf Offline-Modell wechseln?',
+  asrDialogChooseOffline: 'Offline-Modell wählen:',
+  asrDialogDontShowAgain: 'Nicht mehr anzeigen',
+  asrDialogEnableOfflineButton: 'Offline aktivieren',
+  asrErrOfflineModelNotReady: 'Offline-Sprachmodell ist nicht bereit. Bitte in den Einstellungen erneut herunterladen.',
+  asrErrMicPermissionDenied: 'Mikrofonberechtigung nicht erteilt. Aktivieren Sie sie unter Einstellungen → Apps → Berechtigungen und versuchen Sie es erneut.',
+  asrErrStartFailWith: 'Spracherkennung konnte nicht gestartet werden: {err}',
+  asrErrBytedanceNotConnected: 'ByteDance ASR ist nicht verbunden. Bitte Netzwerk prüfen.',
+  asrErrBytedanceStartFailWith: 'ByteDance ASR konnte nicht gestartet werden: {err}',
 );
 
 const _Strings _esES = _Strings(
@@ -2147,6 +2281,32 @@ const _Strings _esES = _Strings(
   chatDownloadStateDownloading: 'Descargando...',
   chatDownloadStateRun: 'Descargar y ejecutar',
   chatDownloadStateRetry: 'Reintentar descarga y ejecución',
+  chatErrorWith: 'Error: {err}',
+  chatJsonDownloadFailed: 'Error al descargar el JSON',
+  chatNoActiveApp: 'No hay configuración de app activa',
+  chatUploadingApp: 'Subiendo configuración actual...',
+  chatDownloadRetryFailedWith: 'El reintento de descarga falló: {err}',
+  chatAnalysisFailedWith: 'Análisis fallido: {err}',
+  chatEditMessageTitle: 'Editar mensaje',
+  chatEditMessageHint: 'Edita tu mensaje...',
+  chatEditButton: 'Editar',
+  chatSendButton: 'Enviar',
+  asrErrBytedanceWith: 'Error de ASR ByteDance: {err}',
+  asrErrNativeInitWithHint: 'No se pudo inicializar el reconocimiento nativo. Cambia a modo offline o a ASR ByteDance en Ajustes.',
+  asrErrOfflineModelLoadFail: 'No se pudo cargar el modelo de voz offline',
+  asrConnectingBytedance: 'Conectando con ASR ByteDance...',
+  asrErrBytedanceTimeoutWithHint: 'Tiempo agotado al conectar con ASR ByteDance. Revisa la red o cambia de reconocedor.',
+  asrErrNativeStartWithHint: 'El reconocimiento nativo no pudo iniciar. Activa "Forzar modo offline" en Ajustes.',
+  asrDialogTitleOnlineUnavailable: 'Reconocimiento de voz online no disponible',
+  asrDialogBodyOnlineUnavailable: 'Problema de red detectado, no se puede usar el reconocimiento online. ¿Cambiar al modelo offline?',
+  asrDialogChooseOffline: 'Elige un modelo offline:',
+  asrDialogDontShowAgain: 'No mostrar de nuevo',
+  asrDialogEnableOfflineButton: 'Activar offline',
+  asrErrOfflineModelNotReady: 'El modelo de voz offline no está listo. Descárgalo de nuevo en Ajustes.',
+  asrErrMicPermissionDenied: 'Permiso de micrófono denegado. Actívalo en Ajustes → Apps → Permisos e inténtalo de nuevo.',
+  asrErrStartFailWith: 'El reconocimiento de voz no pudo iniciar: {err}',
+  asrErrBytedanceNotConnected: 'ASR ByteDance no está conectado. Revisa la red.',
+  asrErrBytedanceStartFailWith: 'ASR ByteDance no pudo iniciar: {err}',
 );
 
 /// 公开访问点。
