@@ -160,7 +160,14 @@ class _DesignerBallState extends State<DesignerBall>
   // 两条路径都收敛到 needsRetry → UI 弹重试按钮，不再需要独立 timer。
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
   Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
-  final List<ChatMessage> _messages = [];
+  // 多会话：消息按 sid 分桶；getter `_messages` 永远返回当前 active 那一桶。
+  // 切 active session 时 setState 会重 build，自动展示新桶。
+  final Map<String, List<ChatMessage>> _messageBuckets = {};
+  List<ChatMessage> get _messages {
+    final sid = _chatService.sessionId;
+    final key = sid.isEmpty ? '__pending__' : sid;
+    return _messageBuckets.putIfAbsent(key, () => []);
+  }
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -680,11 +687,6 @@ class _DesignerBallState extends State<DesignerBall>
   // ════════════════════════════════════════════════════════
   // 对话模式
   // ════════════════════════════════════════════════════════
-
-  void _onProviderChanged(String providerId) {
-    AiChatService.setProvider(providerId);
-    setState(() {});
-  }
 
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
@@ -1304,7 +1306,7 @@ class _DesignerBallState extends State<DesignerBall>
     widget.onRunJsonApp?.call(parsedApp);
     Future.microtask(() {
       if (mounted) {
-        _clearAndCloseChatMode();
+        _closeChatMode();
       }
     });
   }
@@ -1595,8 +1597,8 @@ class _DesignerBallState extends State<DesignerBall>
       _streamSub = null;
       // 只关本地：本方法的下游通常马上要 sendStream/retryLastTurn（带 force_restart），
       // backend 自己会处理旧 worker。这里发 POST /abort 会和新 worker 起步竞态。
-      // 唯一例外是 _clearAndCloseChatMode (用户点清空)，那条路径走 _chatService.clear()
-      // → resetSession() → 内部用完整 abort()，不依赖这里
+      // 唯一例外是 _deleteCurrentSessionAndClose（用户点垃圾桶），那条路径走
+      // _chatService.deleteSession() → 内部对该 sid 单独发 /abort，不依赖这里
       _chatService.abortLocal();
       setState(() => _isThinking = false);
     }
@@ -1670,10 +1672,56 @@ class _DesignerBallState extends State<DesignerBall>
     });
   }
 
-  void _clearAndCloseChatMode() {
+  /// 顶栏垃圾桶按钮：删除当前 session（会发 /abort 杀后端 worker）+ 关闭浮层
+  void _deleteCurrentSessionAndClose() {
+    final sid = _chatService.sessionId;
+    _cancelCurrentStream();  // 必须先断老流，否则迟到的事件会落进新建占位的桶
     _closeChatMode();
-    _messages.clear();
-    _chatService.clear(); // resetSession is async but fire-and-forget is fine here
+    if (sid.isNotEmpty) {
+      _messageBuckets.remove(sid);
+      _chatService.deleteSession(sid);  // fire-and-forget；内部会处理 active 切换
+    }
+  }
+
+  /// session sheet 顶部 [+ 新建会话]：丢弃旧 active 流，建空占位
+  Future<void> _handleNewSession() async {
+    _cancelCurrentStream();  // 防止老 session 迟到事件流进新桶
+    await _chatService.createNewSession();
+    if (!mounted) return;
+    setState(() {});  // 触发 ChatOverlay 渲染新桶（空列表）
+    _scrollToBottom();
+  }
+
+  /// session sheet 点某一行：切到那条 sid
+  /// 切过去后如果消息桶是空的（冷启 / 第一次切回），调一次 /status / /result 拉历史。
+  Future<void> _handleSwitchSession(String sid) async {
+    _cancelCurrentStream();  // 同上
+    await _chatService.switchToSession(sid);
+    if (!mounted) return;
+    setState(() {});
+    // 如果切过去的桶是空的，尝试恢复最近一轮（与 app 启动时的 resume 走同一条路径）
+    if (_messages.isEmpty) {
+      await _maybeResumeUnfinishedSession();
+    }
+    _scrollToBottom();
+  }
+
+  /// session sheet 滑动删除某条。
+  /// 如果删的是 active，service 内部会切到下一条 / 建占位；同样必须先断老流。
+  Future<void> _handleDeleteSession(String sid) async {
+    if (sid == _chatService.sessionId) {
+      _cancelCurrentStream();
+    }
+    _messageBuckets.remove(sid);
+    await _chatService.deleteSession(sid);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _handleRenameSession(String sid, String title) async {
+    await _chatService.renameSession(sid, title);
+    if (!mounted) return;
+    setState(() {});
   }
 
   /// 双击 heavyImpact，主观上明显比单次更"重"。
@@ -1811,20 +1859,26 @@ class _DesignerBallState extends State<DesignerBall>
             liveTranscript:
                 (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
             onClose: _closeChatMode,
-            onClear: _clearAndCloseChatMode,
+            onClear: _deleteCurrentSessionAndClose,
             scrollController: _scrollController,
-            onProviderChanged: _onProviderChanged,
+            activeSessionId: _chatService.sessionId,
+            getSessions: _chatService.listSessions,
             onUploadCurrentApp: _handleUploadCurrentApp,
             onRetryDownload: _handleRetryDownload,
             onDownloadAndRun: _handleDownloadAndRun,
             onRetryLastTurn: _handleRetryLastTurn,
+            onNewSession: _handleNewSession,
+            onSwitchSession: _handleSwitchSession,
+            onDeleteSession: _handleDeleteSession,
+            onRenameSession: _handleRenameSession,
+            onProbeAllSessionStatus: () => _chatService.probeAllSessionStatus(),
             onRunJsonApp: (jsonConfig) {
-              // 先调用外部回调，再清空聊天
+              // 先调用外部回调，再关闭聊天浮层（保留 session 历史）
               widget.onRunJsonApp?.call(jsonConfig);
-              // 延迟清空，避免 UI 重建冲突
+              // 延迟关闭，避免 UI 重建冲突
               Future.microtask(() {
                 if (mounted) {
-                  _clearAndCloseChatMode();
+                  _closeChatMode();
                 }
               });
             },
