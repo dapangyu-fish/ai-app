@@ -34,17 +34,24 @@ class JsonDropdownWidget extends JsonBaseWidget {
         rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
 
     // options 可以是 [{label, value}] 或 ["a", "b"]（label==value）
+    //
+    // 注意：resolveExpression 对 List 不递归（直接 return raw），所以 list-of-maps
+    // 里的 label 模板必须每个 item 单独再过 resolveTemplate。
+    // 反模式 §7 收录的 dropdown/radio.options[].label 漏 resolveTemplate 就是这个。
     final rawOptions = interpreter.resolveExpression(json['options']);
     final options = <_Option>[];
     if (rawOptions is List) {
       for (final item in rawOptions) {
         if (item is Map) {
-          final lab =
+          final rawLab =
               item['label']?.toString() ?? item['value']?.toString() ?? '';
+          final lab = interpreter.resolveTemplate(rawLab);
           final val = item['value'];
           options.add(_Option(label: lab, value: val));
         } else {
-          options.add(_Option(label: item.toString(), value: item));
+          options.add(
+              _Option(label: interpreter.resolveTemplate(item.toString()),
+                  value: item));
         }
       }
     }

@@ -23,16 +23,21 @@ class JsonRadioWidget extends JsonBaseWidget {
         resolveActionAtBuildTime(json['action'], interpreter)
             as Map<String, dynamic>?;
 
+    // resolveExpression 对 List 不递归，options[].label 里的 {{ t(...) }} 模板
+    // 必须每个 item 单独再过 resolveTemplate（反模式 §7）
     final rawOptions = interpreter.resolveExpression(json['options']);
     final options = <_RadioOption>[];
     if (rawOptions is List) {
       for (final item in rawOptions) {
         if (item is Map) {
-          final lab =
+          final rawLab =
               item['label']?.toString() ?? item['value']?.toString() ?? '';
+          final lab = interpreter.resolveTemplate(rawLab);
           options.add(_RadioOption(label: lab, value: item['value']));
         } else {
-          options.add(_RadioOption(label: item.toString(), value: item));
+          options.add(_RadioOption(
+              label: interpreter.resolveTemplate(item.toString()),
+              value: item));
         }
       }
     }
