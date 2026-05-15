@@ -78,6 +78,12 @@ class ChatOverlay extends StatefulWidget {
 class _ChatOverlayState extends State<ChatOverlay> {
   double _offsetY = 0.0; // 窗口垂直偏移量
 
+  // 下拉菜单 state：菜单作为 chat overlay 自己 Stack 内的一层渲染，
+  // 这样能跟着拖动同步移动、保证 z-order 在字幕上面、再次点 chip 能切回关闭。
+  // 不再用 showMenu (它走 root navigator overlay，物理位置在 chat overlay 下方)。
+  bool _menuOpen = false;
+  Future<Set<String>>? _statusProbeFuture;
+
   String _currentSessionTitle() {
     final sid = widget.activeSessionId;
     if (sid.isEmpty) return '新会话';
@@ -87,95 +93,18 @@ class _ChatOverlayState extends State<ChatOverlay> {
     return '新会话';
   }
 
-  /// 从 chip 位置弹下拉菜单。结构：
-  ///   [+ 新建会话]
-  ///   ─── 分隔线 ───
-  ///   [● Session A   12:34   ⋮]
-  ///   [● Session B   昨天    ⋮]
-  ///   ...
-  /// 点行 → 切换；点 ⋮ → 二级 action（重命名 / 删除）
-  Future<void> _openSessionMenu(BuildContext chipContext) async {
-    final navCtx = widget.getNavigatorContext?.call();
-    if (navCtx == null) {
-      debugPrint('[ChatOverlay] 拿不到 navigator context，无法弹下拉');
-      return;
+  void _toggleMenu() {
+    if (_menuOpen) {
+      setState(() => _menuOpen = false);
+    } else {
+      // 每次打开重发起探活
+      _statusProbeFuture = widget.onProbeAllSessionStatus?.call();
+      setState(() => _menuOpen = true);
     }
-    // 计算 chip 屏幕坐标
-    final box = chipContext.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final origin = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    // 异步发起一次状态探活（菜单内 FutureBuilder 等结果再渲染状态点）
-    final probeFuture = widget.onProbeAllSessionStatus?.call();
+  }
 
-    final sessions = widget.getSessions();
-    final mq = MediaQuery.of(navCtx);
-
-    final menuItems = <PopupMenuEntry<_SessionMenuAction>>[
-      PopupMenuItem<_SessionMenuAction>(
-        value: const _SessionMenuAction.newSession(),
-        height: 40,
-        child: Row(
-          children: [
-            Icon(Icons.add_circle_outline,
-                size: 18, color: Colors.purpleAccent),
-            const SizedBox(width: 10),
-            const Text('新建会话',
-                style: TextStyle(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-      const PopupMenuDivider(height: 1),
-      for (final s in sessions)
-        PopupMenuItem<_SessionMenuAction>(
-          value: _SessionMenuAction.switchTo(s.id),
-          height: 48,
-          padding: EdgeInsets.zero,
-          child: _SessionMenuRow(
-            session: s,
-            isActive: s.id == widget.activeSessionId,
-            probeFuture: probeFuture,
-            onMoreTap: () async {
-              // 关掉外层菜单再开 action sheet，否则两层菜单嵌套 Flutter 会拒
-              Navigator.of(navCtx).pop(_SessionMenuAction.openActions(s.id));
-            },
-          ),
-        ),
-    ];
-
-    final picked = await showMenu<_SessionMenuAction>(
-      context: navCtx,
-      position: RelativeRect.fromLTRB(
-        origin.dx,
-        origin.dy + size.height + 4,
-        mq.size.width - origin.dx - size.width,
-        0,
-      ),
-      constraints: const BoxConstraints(
-        minWidth: 220,
-        maxWidth: 280,
-      ),
-      items: menuItems,
-    );
-
-    if (picked == null) {
-      if (mounted) setState(() {});
-      return;
-    }
-    await picked.when(
-      newSession: () async {
-        await widget.onNewSession?.call();
-      },
-      switchTo: (sid) async {
-        if (sid != widget.activeSessionId) {
-          await widget.onSwitchSession?.call(sid);
-        }
-      },
-      openActions: (sid) async {
-        await _openSessionActions(navCtx, sid);
-      },
-    );
-    if (mounted) setState(() {});
+  void _closeMenu() {
+    if (_menuOpen) setState(() => _menuOpen = false);
   }
 
   /// 二级 action 菜单：重命名 / 删除（从 ⋮ 进入）
@@ -309,9 +238,12 @@ class _ChatOverlayState extends State<ChatOverlay> {
           ),
         ),
         clipBehavior: Clip.hardEdge,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
+            // 主体内容（标题栏 + 消息列表）
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // 标题栏
             Container(
               height: 36,
@@ -338,7 +270,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
                   ],
                   _SessionChip(
                     title: _currentSessionTitle(),
-                    onTap: (chipCtx) => _openSessionMenu(chipCtx),
+                    onTap: _toggleMenu,
                   ),
                   // 可拖动区域
                   Expanded(
@@ -429,6 +361,54 @@ class _ChatOverlayState extends State<ChatOverlay> {
                 ),
               ),
             ),
+          ],
+        ),
+            // 下拉菜单：作为 Stack 第二层，z-order 在字幕之上；
+            // 跟 chat overlay 容器一起被 Positioned 移动，所以拖动时同步跟随。
+            if (_menuOpen) ...[
+              // 1. 半透明 backdrop：拦截字幕区域的 tap，点空白处关菜单
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 36, // 标题栏高度，菜单不遮挡标题栏（用户可以再点 chip 关菜单）
+                bottom: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _closeMenu,
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                  ),
+                ),
+              ),
+              // 2. 菜单面板本体
+              Positioned(
+                top: 40,
+                left: 38, // 大致对齐 chip 左缘
+                child: _SessionDropdownPanel(
+                  sessions: widget.getSessions(),
+                  activeSessionId: widget.activeSessionId,
+                  statusProbeFuture: _statusProbeFuture,
+                  maxHeight: screen.height * 0.4 - 48,
+                  onNewSession: () async {
+                    _closeMenu();
+                    await widget.onNewSession?.call();
+                  },
+                  onSwitchSession: (sid) async {
+                    _closeMenu();
+                    if (sid != widget.activeSessionId) {
+                      await widget.onSwitchSession?.call(sid);
+                    }
+                  },
+                  onMoreTap: (sid) async {
+                    _closeMenu();
+                    final navCtx = widget.getNavigatorContext?.call();
+                    if (navCtx != null) {
+                      await _openSessionActions(navCtx, sid);
+                    }
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -681,22 +661,19 @@ class _NoGlowBehavior extends ScrollBehavior {
   }
 }
 
-/// 会话切换小标签 —— 点击触发 onTap，传入 chip 自己的 BuildContext
-/// 给调用方算屏幕坐标用（findRenderObject）
+/// 会话切换小标签 —— 点击触发 onTap，由调用方控制下拉菜单显隐
 class _SessionChip extends StatelessWidget {
   final String title;
-  final void Function(BuildContext chipContext) onTap;
+  final VoidCallback onTap;
 
   const _SessionChip({required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    // Builder 让 onTap 拿到 InkWell 内部的 context（带 RenderObject）
     return Material(
       color: Colors.transparent,
-      child: Builder(
-        builder: (innerCtx) => InkWell(
-          onTap: () => onTap(innerCtx),
+      child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -734,35 +711,118 @@ class _SessionChip extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
-/// 下拉菜单的 action sealed enum
-class _SessionMenuAction {
-  final String kind;
-  final String? sid;
-  const _SessionMenuAction._(this.kind, this.sid);
-  const _SessionMenuAction.newSession() : this._('new', null);
-  const _SessionMenuAction.switchTo(String sid) : this._('switch', sid);
-  const _SessionMenuAction.openActions(String sid) : this._('actions', sid);
+/// 下拉菜单面板：自渲染，作为 ChatOverlay Stack 的一层
+class _SessionDropdownPanel extends StatelessWidget {
+  final List<SessionMeta> sessions;
+  final String activeSessionId;
+  final Future<Set<String>>? statusProbeFuture;
+  final double maxHeight;
+  final VoidCallback onNewSession;
+  final void Function(String sid) onSwitchSession;
+  final void Function(String sid) onMoreTap;
 
-  Future<void> when({
-    required Future<void> Function() newSession,
-    required Future<void> Function(String sid) switchTo,
-    required Future<void> Function(String sid) openActions,
-  }) {
-    switch (kind) {
-      case 'new':
-        return newSession();
-      case 'switch':
-        return switchTo(sid!);
-      case 'actions':
-        return openActions(sid!);
-      default:
-        return Future.value();
-    }
+  const _SessionDropdownPanel({
+    required this.sessions,
+    required this.activeSessionId,
+    required this.statusProbeFuture,
+    required this.maxHeight,
+    required this.onNewSession,
+    required this.onSwitchSession,
+    required this.onMoreTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      elevation: 8,
+      borderRadius: BorderRadius.circular(10),
+      shadowColor: Colors.black.withValues(alpha: 0.5),
+      child: Container(
+        width: 240,
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C2C2E),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 0.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // + 新建会话
+              InkWell(
+                onTap: onNewSession,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.add_circle_outline,
+                          color: Colors.purpleAccent, size: 18),
+                      const SizedBox(width: 10),
+                      const Text(
+                        '新建会话',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                height: 0.5,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              // 会话列表
+              Flexible(
+                child: sessions.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Text('暂无会话',
+                            style: TextStyle(
+                                color: Colors.white54, fontSize: 12)),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: sessions.length,
+                        itemBuilder: (ctx, i) {
+                          final s = sessions[i];
+                          final isActive = s.id == activeSessionId;
+                          return InkWell(
+                            onTap: () => onSwitchSession(s.id),
+                            child: Container(
+                              color: isActive
+                                  ? Colors.white.withValues(alpha: 0.06)
+                                  : null,
+                              child: _SessionMenuRow(
+                                session: s,
+                                isActive: isActive,
+                                probeFuture: statusProbeFuture,
+                                onMoreTap: () => onMoreTap(s.id),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -786,7 +846,7 @@ class _SessionMenuRow extends StatelessWidget {
       future: probeFuture,
       builder: (ctx, snap) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
           child: Row(
             children: [
               _statusDot(),
@@ -801,30 +861,32 @@ class _SessionMenuRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.92),
                         fontSize: 13,
                         fontWeight:
                             isActive ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 1),
+                    const SizedBox(height: 2),
                     Text(
                       _relativeTime(session.updatedAt),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey,
+                        color: Colors.white.withValues(alpha: 0.45),
                       ),
                     ),
                   ],
                 ),
               ),
-              // ⋮ 按钮：用 GestureDetector + opaque 行为阻止上层 PopupMenuItem 吃掉 tap
+              // ⋮ 按钮：用 GestureDetector + opaque 行为吞掉 tap，
+              // 不让外层 InkWell（切换会话）也跟着响应
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onMoreTap,
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
                   child: Icon(Icons.more_vert,
-                      size: 18, color: Colors.grey.shade600),
+                      size: 18, color: Colors.white54),
                 ),
               ),
             ],
