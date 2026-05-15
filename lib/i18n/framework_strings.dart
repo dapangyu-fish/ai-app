@@ -539,6 +539,38 @@ class _Strings {
   final String widgetUnknownTypeWith;              // "未知控件类型: {type}"
   final String widgetHttpNetworkFailed;            // "网络请求失败"
 
+  // ── Phase 7：ai_chat_service / asr_service / game_engine / interpreter 杂项 ──
+  final String chatErrNoRetryMessage;              // "没有可重试的消息"
+  final String chatErrConnectionUnstableWith;      // "连接持续不稳定（已重试 {n} 次）"
+  final String chatErrPleaseLogin;                 // "请先登录"
+  final String chatErrServerWithBody;              // "服务器错误 ({code}): {body}"
+  final String chatErrDownloadGenJsonWith;         // "下载生成的 JSON 失败 (HTTP {code})"
+  final String chatErrDownloadJsonExceptionWith;
+  final String chatErrCancelled;                   // "已取消"
+  final String chatErrQuotaExceeded;               // "配额已用完"
+  final String chatErrConnectionTimeout;           // "连接超时"
+  final String chatErrNetworkWith;                 // "网络错误: {err}"
+  final String chatErrUploadFailedRetriesWith;     // "上传失败（已重试 {n} 次）：{err}"
+  final String chatUploadSuccessIntro;             // 上传成功后给 AI 的前置介绍语
+  final String asrBytedanceConnected;              // "已连接"
+  final String asrBytedanceDisconnected;           // "连接断开"
+  final String asrErrUnknown;                      // "未知错误"
+  final String asrBytedanceConnectFailedWith;      // "连接失败: {err}"
+  final String asrErrMicPermissionDeniedShort;     // "麦克风权限未授予"
+  final String asrRecordErrorWith;                 // "录音错误: {err}"
+  final String asrRecording;                       // "正在录音..."
+  final String asrRecordStartFailWith;             // "录音启动失败: {err}"
+  final String asrModelDownloadingWith;            // "下载语音模型: {name}"
+  final String gameOver;                           // "游戏结束"
+  final String gameRestartHint;                    // "点击重新开始"
+  final String gameBestScoreWith;                  // "最佳 {score}"
+  final String gameScoreWith;                      // "得分 {score}"
+  final String builtinBiometricDefaultReason;      // "请验证身份"
+  final String builtinInputDialogDefaultTitle;     // "输入"
+  final String imSenderMe;                         // "我"
+  final String relativeDateYesterday;              // "昨天"
+  final String depErrConflictWith;                 // "已加载 {loaded}, 需要 {needed}"
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -980,6 +1012,36 @@ class _Strings {
     required this.widgetRefMissingRootWith,
     required this.widgetUnknownTypeWith,
     required this.widgetHttpNetworkFailed,
+    required this.chatErrNoRetryMessage,
+    required this.chatErrConnectionUnstableWith,
+    required this.chatErrPleaseLogin,
+    required this.chatErrServerWithBody,
+    required this.chatErrDownloadGenJsonWith,
+    required this.chatErrDownloadJsonExceptionWith,
+    required this.chatErrCancelled,
+    required this.chatErrQuotaExceeded,
+    required this.chatErrConnectionTimeout,
+    required this.chatErrNetworkWith,
+    required this.chatErrUploadFailedRetriesWith,
+    required this.chatUploadSuccessIntro,
+    required this.asrBytedanceConnected,
+    required this.asrBytedanceDisconnected,
+    required this.asrErrUnknown,
+    required this.asrBytedanceConnectFailedWith,
+    required this.asrErrMicPermissionDeniedShort,
+    required this.asrRecordErrorWith,
+    required this.asrRecording,
+    required this.asrRecordStartFailWith,
+    required this.asrModelDownloadingWith,
+    required this.gameOver,
+    required this.gameRestartHint,
+    required this.gameBestScoreWith,
+    required this.gameScoreWith,
+    required this.builtinBiometricDefaultReason,
+    required this.builtinInputDialogDefaultTitle,
+    required this.imSenderMe,
+    required this.relativeDateYesterday,
+    required this.depErrConflictWith,
   });
 }
 
@@ -1424,6 +1486,36 @@ const _Strings _zhCN = _Strings(
   widgetRefMissingRootWith: '{ref} 缺少 root 定义',
   widgetUnknownTypeWith: '未知控件类型: {type}',
   widgetHttpNetworkFailed: '网络请求失败',
+  chatErrNoRetryMessage: '没有可重试的消息',
+  chatErrConnectionUnstableWith: '连接持续不稳定（已重试 {n} 次）',
+  chatErrPleaseLogin: '请先登录',
+  chatErrServerWithBody: '服务器错误 ({code}): {body}',
+  chatErrDownloadGenJsonWith: '下载生成的 JSON 失败 (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: '下载 JSON 异常: {err}',
+  chatErrCancelled: '已取消',
+  chatErrQuotaExceeded: '配额已用完',
+  chatErrConnectionTimeout: '连接超时',
+  chatErrNetworkWith: '网络错误: {err}',
+  chatErrUploadFailedRetriesWith: '上传失败（已重试 {n} 次）：{err}',
+  chatUploadSuccessIntro: '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），后续对话请基于这个配置进行修改或分析：\n\n',
+  asrBytedanceConnected: '已连接',
+  asrBytedanceDisconnected: '连接断开',
+  asrErrUnknown: '未知错误',
+  asrBytedanceConnectFailedWith: '连接失败: {err}',
+  asrErrMicPermissionDeniedShort: '麦克风权限未授予',
+  asrRecordErrorWith: '录音错误: {err}',
+  asrRecording: '正在录音...',
+  asrRecordStartFailWith: '录音启动失败: {err}',
+  asrModelDownloadingWith: '下载语音模型: {name}',
+  gameOver: '游戏结束',
+  gameRestartHint: '点击重新开始',
+  gameBestScoreWith: '最佳 {score}',
+  gameScoreWith: '得分 {score}',
+  builtinBiometricDefaultReason: '请验证身份',
+  builtinInputDialogDefaultTitle: '输入',
+  imSenderMe: '我',
+  relativeDateYesterday: '昨天',
+  depErrConflictWith: '已加载 {loaded}, 需要 {needed}',
 );
 
 const _Strings _enUS = _Strings(
@@ -1867,6 +1959,36 @@ const _Strings _enUS = _Strings(
   widgetRefMissingRootWith: '{ref} is missing the root definition',
   widgetUnknownTypeWith: 'Unknown widget type: {type}',
   widgetHttpNetworkFailed: 'Network request failed',
+  chatErrNoRetryMessage: 'No message to retry',
+  chatErrConnectionUnstableWith: 'Connection keeps dropping (already retried {n} times)',
+  chatErrPleaseLogin: 'Please sign in first',
+  chatErrServerWithBody: 'Server error ({code}): {body}',
+  chatErrDownloadGenJsonWith: 'Failed to download generated JSON (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: 'Download JSON error: {err}',
+  chatErrCancelled: 'Cancelled',
+  chatErrQuotaExceeded: 'Quota exceeded',
+  chatErrConnectionTimeout: 'Connection timeout',
+  chatErrNetworkWith: 'Network error: {err}',
+  chatErrUploadFailedRetriesWith: 'Upload failed (retried {n} times): {err}',
+  chatUploadSuccessIntro: 'Here is the full JSON-APP config currently running (already uploaded to temporary storage). Please base any further modifications or analysis on this config:\n\n',
+  asrBytedanceConnected: 'Connected',
+  asrBytedanceDisconnected: 'Disconnected',
+  asrErrUnknown: 'Unknown error',
+  asrBytedanceConnectFailedWith: 'Connection failed: {err}',
+  asrErrMicPermissionDeniedShort: 'Microphone permission denied',
+  asrRecordErrorWith: 'Recording error: {err}',
+  asrRecording: 'Recording...',
+  asrRecordStartFailWith: 'Recording failed to start: {err}',
+  asrModelDownloadingWith: 'Downloading speech model: {name}',
+  gameOver: 'Game Over',
+  gameRestartHint: 'Tap to restart',
+  gameBestScoreWith: 'Best {score}',
+  gameScoreWith: 'Score {score}',
+  builtinBiometricDefaultReason: 'Please verify your identity',
+  builtinInputDialogDefaultTitle: 'Input',
+  imSenderMe: 'Me',
+  relativeDateYesterday: 'Yesterday',
+  depErrConflictWith: 'Loaded {loaded}, but {needed} is required',
 );
 
 const _Strings _deDE = _Strings(
@@ -2310,6 +2432,36 @@ const _Strings _deDE = _Strings(
   widgetRefMissingRootWith: '{ref} fehlt die root-Definition',
   widgetUnknownTypeWith: 'Unbekannter Widget-Typ: {type}',
   widgetHttpNetworkFailed: 'Netzwerkanfrage fehlgeschlagen',
+  chatErrNoRetryMessage: 'Keine Nachricht zum erneuten Versuchen',
+  chatErrConnectionUnstableWith: 'Verbindung bricht ständig ab (bereits {n} Mal versucht)',
+  chatErrPleaseLogin: 'Bitte zuerst anmelden',
+  chatErrServerWithBody: 'Serverfehler ({code}): {body}',
+  chatErrDownloadGenJsonWith: 'Generierte JSON konnte nicht heruntergeladen werden (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: 'Download-JSON-Fehler: {err}',
+  chatErrCancelled: 'Abgebrochen',
+  chatErrQuotaExceeded: 'Kontingent aufgebraucht',
+  chatErrConnectionTimeout: 'Verbindungs-Zeitüberschreitung',
+  chatErrNetworkWith: 'Netzwerkfehler: {err}',
+  chatErrUploadFailedRetriesWith: 'Upload fehlgeschlagen (bereits {n} Versuche): {err}',
+  chatUploadSuccessIntro: 'Hier ist die vollständige JSON-APP-Konfiguration, die gerade läuft (bereits in den temporären Speicher hochgeladen). Bitte basieren Sie weitere Änderungen oder Analysen auf dieser Konfiguration:\n\n',
+  asrBytedanceConnected: 'Verbunden',
+  asrBytedanceDisconnected: 'Verbindung getrennt',
+  asrErrUnknown: 'Unbekannter Fehler',
+  asrBytedanceConnectFailedWith: 'Verbindung fehlgeschlagen: {err}',
+  asrErrMicPermissionDeniedShort: 'Mikrofonberechtigung verweigert',
+  asrRecordErrorWith: 'Aufnahmefehler: {err}',
+  asrRecording: 'Aufnahme läuft...',
+  asrRecordStartFailWith: 'Aufnahme konnte nicht gestartet werden: {err}',
+  asrModelDownloadingWith: 'Sprachmodell wird heruntergeladen: {name}',
+  gameOver: 'Spiel beendet',
+  gameRestartHint: 'Tippen zum Neustart',
+  gameBestScoreWith: 'Beste {score}',
+  gameScoreWith: 'Punkte {score}',
+  builtinBiometricDefaultReason: 'Bitte Identität bestätigen',
+  builtinInputDialogDefaultTitle: 'Eingabe',
+  imSenderMe: 'Ich',
+  relativeDateYesterday: 'Gestern',
+  depErrConflictWith: '{loaded} geladen, aber {needed} erforderlich',
 );
 
 const _Strings _esES = _Strings(
@@ -2753,6 +2905,36 @@ const _Strings _esES = _Strings(
   widgetRefMissingRootWith: 'A {ref} le falta la definición de root',
   widgetUnknownTypeWith: 'Tipo de widget desconocido: {type}',
   widgetHttpNetworkFailed: 'Solicitud de red fallida',
+  chatErrNoRetryMessage: 'No hay mensaje para reintentar',
+  chatErrConnectionUnstableWith: 'La conexión sigue cayendo (ya se reintentó {n} veces)',
+  chatErrPleaseLogin: 'Por favor inicia sesión primero',
+  chatErrServerWithBody: 'Error del servidor ({code}): {body}',
+  chatErrDownloadGenJsonWith: 'Error al descargar el JSON generado (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: 'Error al descargar JSON: {err}',
+  chatErrCancelled: 'Cancelado',
+  chatErrQuotaExceeded: 'Cuota agotada',
+  chatErrConnectionTimeout: 'Tiempo de conexión agotado',
+  chatErrNetworkWith: 'Error de red: {err}',
+  chatErrUploadFailedRetriesWith: 'Subida fallida (ya reintentó {n} veces): {err}',
+  chatUploadSuccessIntro: 'Esta es la configuración completa de la JSON-APP actualmente en ejecución (ya subida al almacenamiento temporal). Por favor basa las modificaciones o el análisis en esta configuración:\n\n',
+  asrBytedanceConnected: 'Conectado',
+  asrBytedanceDisconnected: 'Desconectado',
+  asrErrUnknown: 'Error desconocido',
+  asrBytedanceConnectFailedWith: 'Conexión fallida: {err}',
+  asrErrMicPermissionDeniedShort: 'Permiso de micrófono denegado',
+  asrRecordErrorWith: 'Error de grabación: {err}',
+  asrRecording: 'Grabando...',
+  asrRecordStartFailWith: 'La grabación no pudo iniciar: {err}',
+  asrModelDownloadingWith: 'Descargando modelo de voz: {name}',
+  gameOver: 'Fin del juego',
+  gameRestartHint: 'Toca para reiniciar',
+  gameBestScoreWith: 'Mejor {score}',
+  gameScoreWith: 'Puntuación {score}',
+  builtinBiometricDefaultReason: 'Por favor verifica tu identidad',
+  builtinInputDialogDefaultTitle: 'Entrada',
+  imSenderMe: 'Yo',
+  relativeDateYesterday: 'Ayer',
+  depErrConflictWith: 'Cargado {loaded}, pero se requiere {needed}',
 );
 
 /// 公开访问点。

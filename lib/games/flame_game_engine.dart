@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'game_entity.dart';
 import 'game_logic.dart';
 import 'game_world.dart';
+import '../i18n/framework_strings.dart';
 
 /// 事件回调签名（跟 A 模式一致，外层 widget 把事件桥到 JSON-DSL action）
 typedef GameEventCallback = void Function(
@@ -69,8 +70,9 @@ class JsonFlameGame extends FlameGame {
   bool _showGameOver = true; // overlay.game_over=false 时关掉 canvas
                               // 浮层 + tap/swipe 自动重置，让 JSON-APP 用
                               // common-ui dialog 接管结算页
-  String _gameOverTitle = '游戏结束';
-  String _gameOverHint = '点击重新开始';
+  // 默认值在构造函数里走 T.current（非 const，所以不能放 field 初始化）
+  String _gameOverTitle = '';
+  String _gameOverHint = '';
 
   JsonFlameGame({required this.spec, this.onEvent}) {
     // ⚠️ 必须在构造函数里同步完成所有 spec 解析。
@@ -78,6 +80,8 @@ class JsonFlameGame extends FlameGame {
     // 原因：Flame 的 onGameResize 可能在 onLoad（async）之前被调，
     // 那时 late field 没初始化 → LateInitializationError。
     // 反正 spec 解析全是同步的，挪到构造函数里更稳。
+    _gameOverTitle = T.current.gameOver;
+    _gameOverHint = T.current.gameRestartHint;
     gameWorld = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
     logic = GameLogicEngine(this);
     _setupFromSpec();
@@ -521,7 +525,7 @@ class JsonFlameGame extends FlameGame {
     if (bestScore > 0) {
       _drawText(
         canvas,
-        '最佳 $bestScore',
+        T.fmt(T.current.gameBestScoreWith, {'score': bestScore}),
         14,
         const Color(0x66FFFFFF),
         Offset(size.x / 2, 52),
@@ -556,11 +560,11 @@ class JsonFlameGame extends FlameGame {
     _drawText(canvas, _gameOverTitle, 40, const Color(0xFFFF5555),
         Offset(size.x / 2, size.y / 2 - 60),
         centered: true);
-    _drawText(canvas, '得分 $score', 26, Colors.white70,
+    _drawText(canvas, T.fmt(T.current.gameScoreWith, {'score': score}), 26, Colors.white70,
         Offset(size.x / 2, size.y / 2 - 10),
         centered: true);
     if (bestScore > 0) {
-      _drawText(canvas, '最佳 $bestScore', 16, const Color(0x88FFFFFF),
+      _drawText(canvas, T.fmt(T.current.gameBestScoreWith, {'score': bestScore}), 16, const Color(0x88FFFFFF),
           Offset(size.x / 2, size.y / 2 + 25),
           centered: true);
     }

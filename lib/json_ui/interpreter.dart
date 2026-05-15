@@ -30,6 +30,7 @@ import '../im/im_service.dart';
 import 'drift_database.dart';
 import '../main.dart' show appThemeMode, appLifecycleEvent;
 import '../i18n/locale_controller.dart' show LocaleController;
+import '../i18n/framework_strings.dart';
 
 class JsonInterpreter extends ChangeNotifier {
   // ============ 配置 & 状态 ============
@@ -1259,7 +1260,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@biometric_auth':
         // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
         // 返回 bool：通过 / 失败
-        final reason = resolvedArgs['reason']?.toString() ?? '请验证身份';
+        final reason = resolvedArgs['reason']?.toString() ?? T.current.builtinBiometricDefaultReason;
         try {
           final auth = LocalAuthentication();
           final canCheck = await auth.canCheckBiometrics ||
@@ -1414,7 +1415,7 @@ class JsonInterpreter extends ChangeNotifier {
         );
 
       case '@show_input_dialog':
-        final title = resolvedArgs['title']?.toString() ?? '输入';
+        final title = resolvedArgs['title']?.toString() ?? T.current.builtinInputDialogDefaultTitle;
         final hint = resolvedArgs['hint']?.toString() ?? '';
         final defaultValue = resolvedArgs['defaultValue']?.toString() ?? '';
         final bindPath = resolvedArgs['bind'] as String?;
@@ -2784,22 +2785,25 @@ class JsonInterpreter extends ChangeNotifier {
     try {
       final result = await showDialog<bool>(
         context: ctx,
-        builder: (dialogCtx) => AlertDialog(
-          title: Text(title),
-          content: SingleChildScrollView(
-            child: SelectableText(message),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(false),
-              child: const Text('取消'),
+        builder: (dialogCtx) {
+          final t = T.of(dialogCtx);
+          return AlertDialog(
+            title: Text(title),
+            content: SingleChildScrollView(
+              child: SelectableText(message),
             ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(true),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(false),
+                child: Text(t.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(true),
+                child: Text(t.ok),
+              ),
+            ],
+          );
+        },
       );
       return result ?? false;
     } finally {
@@ -3445,7 +3449,7 @@ class JsonInterpreter extends ChangeNotifier {
       'is_other': !isMe,
       // 预格式化字段：JSON-DSL 不支持条件 / 时间格式表达式，所以在这里算好
       'display_time': _formatChatTime(sendTime),
-      'display_sender': isMe ? '我' : otherDisplay,
+      'display_sender': isMe ? T.current.imSenderMe : otherDisplay,
       // 微信风格气泡配色：自己绿色（#95EC69），他人白色
       'bubble_color': isMe ? '#95EC69' : '#FFFFFF',
       'bubble_text_color': '#000000',
@@ -3489,7 +3493,7 @@ class JsonInterpreter extends ChangeNotifier {
     // 时钟漂移 / 服务器时间快于本地时（diff < 0）也按"今天 HH:mm"渲染，
     // 避免出现 "−1 天前" 之类怪字符串。
     if (diff <= 0) return '${two(dt.hour)}:${two(dt.minute)}';
-    if (diff == 1) return '昨天';
+    if (diff == 1) return T.current.relativeDateYesterday;
     if (diff < 7) return '$diff天前';
     return '${two(dt.month)}-${two(dt.day)}';
   }
@@ -3540,11 +3544,11 @@ class _TextInputDialogState extends State<_TextInputDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('取消'),
+          child: Text(T.of(context).cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('确定'),
+          child: Text(T.of(context).ok),
         ),
       ],
     );

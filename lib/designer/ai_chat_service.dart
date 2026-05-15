@@ -476,7 +476,7 @@ class AiChatService {
   Stream<ChatEvent> retryLastTurn() async* {
     final msg = lastUserMessage;
     if (msg.isEmpty) {
-      yield ChatEvent(error: '没有可重试的消息');
+      yield ChatEvent(error: T.current.chatErrNoRetryMessage);
       return;
     }
     yield* sendStream(msg);
@@ -518,7 +518,7 @@ class AiChatService {
       if (reconnectCount > 30) {
         // 重试 30 次还连不上，stream 端确实出问题了。同时给 error 和 needsRetry：
         // UI 层负责把这俩组合成 "出错了 + 重试按钮" 的系统消息
-        yield ChatEvent(error: '连接持续不稳定（已重试 30 次）');
+        yield ChatEvent(error: T.fmt(T.current.chatErrConnectionUnstableWith, {'n': 30}));
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
         return;
       }
@@ -691,7 +691,7 @@ class AiChatService {
           state.outcome = _StreamOutcome.retry;
           return;
         } catch (_) {
-          yield ChatEvent(error: '请先登录');
+          yield ChatEvent(error: T.current.chatErrPleaseLogin);
           state.outcome = _StreamOutcome.done;
           return;
         }
@@ -709,7 +709,7 @@ class AiChatService {
           state.outcome = _StreamOutcome.retry;
           return;
         }
-        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
+        yield ChatEvent(error: T.fmt(T.current.chatErrServerWithBody, {'code': response.statusCode, 'body': body}));
         state.outcome = _StreamOutcome.done;
         return;
       }
@@ -866,10 +866,10 @@ class AiChatService {
           if (getResp.statusCode == 200) {
             parsedApp = json.decode(utf8.decode(getResp.bodyBytes)) as Map<String, dynamic>;
           } else {
-            yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+            yield ChatEvent(failedJsonUrl: url, error: T.fmt(T.current.chatErrDownloadGenJsonWith, {'code': getResp.statusCode}));
           }
         } catch (e) {
-          yield ChatEvent(failedJsonUrl: url, error: '下载 JSON 异常: $e');
+          yield ChatEvent(failedJsonUrl: url, error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {'err': e}));
         }
       } else {
         parsedApp = data['json_app'] as Map<String, dynamic>?;
@@ -972,7 +972,7 @@ class AiChatService {
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) {
         await Future.delayed(Duration(seconds: attempt - 1));
-        if (_aborting) return _StartResult.error('已取消');
+        if (_aborting) return _StartResult.error(T.current.chatErrCancelled);
       }
       try {
         final token = AuthService.token;
@@ -997,37 +997,37 @@ class AiChatService {
                 .post(Uri.parse('$_baseUrl/api/ai/chat/start'), headers: headers, body: body)
                 .timeout(const Duration(seconds: 30));
           } catch (_) {
-            return _StartResult.error('请先登录');
+            return _StartResult.error(T.current.chatErrPleaseLogin);
           }
         }
 
         if (resp.statusCode == 429) {
           final data = json.decode(resp.body) as Map<String, dynamic>;
-          return _StartResult.error(data['error'] as String? ?? '配额已用完',
+          return _StartResult.error(data['error'] as String? ?? T.current.chatErrQuotaExceeded,
               quota: data['quota'] as Map<String, dynamic>?);
         }
-        if (resp.statusCode == 401) return _StartResult.error('请先登录');
+        if (resp.statusCode == 401) return _StartResult.error(T.current.chatErrPleaseLogin);
         if (resp.statusCode >= 500) {
           lastError = 'HTTP ${resp.statusCode}';
           continue;  // retry
         }
         if (resp.statusCode != 200) {
-          return _StartResult.error('服务器错误 (${resp.statusCode}): ${resp.body}');
+          return _StartResult.error(T.fmt(T.current.chatErrServerWithBody, {'code': resp.statusCode, 'body': resp.body}));
         }
 
         final data = json.decode(resp.body) as Map<String, dynamic>;
         debugPrint('[AI_CHAT] start ok: $data');
         return _StartResult.ok(data['session_id'] as String? ?? _activeSessionId);
       } on TimeoutException {
-        lastError = '连接超时';
+        lastError = T.current.chatErrConnectionTimeout;
       } on http.ClientException catch (e) {
-        if (_aborting) return _StartResult.error('已取消');
+        if (_aborting) return _StartResult.error(T.current.chatErrCancelled);
         lastError = e;
       } catch (e) {
         lastError = e;
       }
     }
-    return _StartResult.error('网络错误: $lastError');
+    return _StartResult.error(T.fmt(T.current.chatErrNetworkWith, {'err': lastError ?? ''}));
   }
 
   void commitPartial(String partialContent) {
@@ -1068,7 +1068,7 @@ class AiChatService {
     debugPrint(
         '[AI_CHAT] ❌ 已重试 $maxAttempts 次仍失败，向上抛出（不再 fallback 到内联 JSON）');
     debugPrint('[AI_CHAT] ==========================================');
-    throw Exception('上传失败（已重试 $maxAttempts 次）：$lastError');
+    throw Exception(T.fmt(T.current.chatErrUploadFailedRetriesWith, {'n': maxAttempts, 'err': lastError ?? ''}));
   }
 
   /// 单次上传尝试（不带重试）。任何失败抛出 Exception 由 uploadCurrentApp 处理重试。
@@ -1113,9 +1113,7 @@ class AiChatService {
           'MinIO PUT failed: HTTP ${uploadResp.statusCode} body=${uploadResp.body}');
     }
 
-    return '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），'
-        '后续对话请基于这个配置进行修改或分析：\n\n'
-        '[json_app_url]$getUrl[/json_app_url]';
+    return '${T.current.chatUploadSuccessIntro}[json_app_url]$getUrl[/json_app_url]';
   }
 
   /// 使用 Claude CLI 生成/修改/修复 JSON-APP
@@ -1156,18 +1154,18 @@ class AiChatService {
       if (response.statusCode == 429) {
         final body = await response.stream.bytesToString();
         final data = json.decode(body);
-        yield ChatEvent(error: data['error'] ?? '配额已用完', quota: data['quota']);
+        yield ChatEvent(error: data['error'] ?? T.current.chatErrQuotaExceeded, quota: data['quota']);
         return;
       }
 
       if (response.statusCode == 401) {
-        yield ChatEvent(error: '请先登录');
+        yield ChatEvent(error: T.current.chatErrPleaseLogin);
         return;
       }
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
+        yield ChatEvent(error: T.fmt(T.current.chatErrServerWithBody, {'code': response.statusCode, 'body': body}));
         return;
       }
 
@@ -1197,7 +1195,7 @@ class AiChatService {
                   parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
                 }
               } catch (e) {
-                yield ChatEvent(error: '下载 JSON 异常: $e');
+                yield ChatEvent(error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {'err': e}));
               }
             } else {
               parsedApp = data['json_app'] as Map<String, dynamic>?;
@@ -1231,7 +1229,7 @@ class AiChatService {
     } on http.ClientException {
       // abort()
     } catch (e) {
-      yield ChatEvent(error: '网络错误: $e');
+      yield ChatEvent(error: T.fmt(T.current.chatErrNetworkWith, {'err': e}));
     } finally {
       if (_activeClient == client) _activeClient = null;
       client.close();

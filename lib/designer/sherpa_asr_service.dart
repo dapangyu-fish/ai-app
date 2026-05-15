@@ -8,6 +8,7 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
+import '../i18n/framework_strings.dart';
 
 class AsrModelInfo {
   final String id;
@@ -250,7 +251,7 @@ class SherpaAsrService {
         await file.parent.create(recursive: true);
         final url = '$_ossBase/${model.ossPath}/${entry.value}';
         debugPrint('[SherpaASR] Downloading ${entry.value} ...');
-        onStatusChange?.call('下载语音模型: ${entry.value}');
+        onStatusChange?.call(T.fmt(T.current.asrModelDownloadingWith, {'name': entry.value}));
 
         await dio.download(
           url,
@@ -258,7 +259,7 @@ class SherpaAsrService {
           onReceiveProgress: (received, total) {
             if (total > 0) {
               final pct = (received / total * 100).toStringAsFixed(0);
-              onStatusChange?.call('下载语音模型: $pct%');
+              onStatusChange?.call(T.fmt(T.current.asrModelDownloadingWith, {'name': '$pct%'}));
             }
           },
         );
