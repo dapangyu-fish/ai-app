@@ -39,6 +39,11 @@ class ChatOverlay extends StatefulWidget {
   /// 打开 sheet 时调一次：对最近的 N 条 committed session 调 /status，
   /// 返回 SessionMeta 已被原地更新过的 sid 集合（不需要用，调完 setState 拿最新就行）
   final Future<Set<String>> Function()? onProbeAllSessionStatus;
+  /// DesignerBall 挂在 MaterialApp.builder 上，ChatOverlay 自身的 context
+  /// 找不到 Navigator 祖先（实测会抛 "Navigator operation requested with a
+  /// context that does not include a Navigator"）。需要由 designer_ball 注入
+  /// 一个能找到 root navigator 的 context（典型是 JsonDslApp.navigatorKey.currentContext）。
+  final BuildContext? Function()? getNavigatorContext;
 
   const ChatOverlay({
     super.key,
@@ -63,6 +68,7 @@ class ChatOverlay extends StatefulWidget {
     this.onDeleteSession,
     this.onRenameSession,
     this.onProbeAllSessionStatus,
+    this.getNavigatorContext,
   });
 
   @override
@@ -81,16 +87,18 @@ class _ChatOverlayState extends State<ChatOverlay> {
     return '新会话';
   }
 
-  Future<void> _openSessionSheet(BuildContext context) async {
+  Future<void> _openSessionSheet(BuildContext fallbackContext) async {
+    // ChatOverlay 自身 context 找不到 Navigator（DesignerBall 在 MaterialApp.builder
+    // 之上），必须用 designer_ball 注入的 navigatorKey context；fallback 只为防御。
+    final navCtx = widget.getNavigatorContext?.call() ?? fallbackContext;
     debugPrint('[ChatOverlay] 点击 SessionChip，准备弹 sheet '
-        '(active=${widget.activeSessionId}, sessions=${widget.getSessions().length})');
-    // 打开瞬间发起批量探活（不 await，sheet 内部用 onProbeAllSessionStatus 拿到结果时再 setState）
+        '(active=${widget.activeSessionId}, sessions=${widget.getSessions().length}, '
+        'navCtxFromInjected=${widget.getNavigatorContext?.call() != null})');
     final probe = widget.onProbeAllSessionStatus?.call();
     try {
       await showModalBottomSheet<void>(
-        context: context,
+        context: navCtx,
         isScrollControlled: true,
-        useRootNavigator: true,  // DesignerBall 挂在 MaterialApp.builder，用 root navigator 更稳
         backgroundColor: Colors.transparent,
         builder: (ctx) => _SessionListSheet(
           activeSessionId: widget.activeSessionId,

@@ -1872,6 +1872,7 @@ class _DesignerBallState extends State<DesignerBall>
             onDeleteSession: _handleDeleteSession,
             onRenameSession: _handleRenameSession,
             onProbeAllSessionStatus: () => _chatService.probeAllSessionStatus(),
+            getNavigatorContext: () => JsonDslApp.navigatorKey.currentContext,
             onRunJsonApp: (jsonConfig) {
               // 先调用外部回调，再关闭聊天浮层（保留 session 历史）
               widget.onRunJsonApp?.call(jsonConfig);
