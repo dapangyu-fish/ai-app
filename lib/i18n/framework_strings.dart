@@ -329,6 +329,7 @@ class _Strings {
   final String ballMenuRestoreSession;
   final String ballMenuRestoreSessionEmpty;
   final String ballMenuGoHome;
+  final String ballMenuNewSession;
 
   // ── 默认启动 App 设置 ──
   final String defaultStartupEntry;        // 设置页入口标题
@@ -662,6 +663,7 @@ class _Strings {
     required this.ballMenuRestoreSession,
     required this.ballMenuRestoreSessionEmpty,
     required this.ballMenuGoHome,
+    required this.ballMenuNewSession,
     required this.defaultStartupEntry,
     required this.defaultStartupSubtitleNone,
     required this.defaultStartupTitle,
@@ -987,6 +989,7 @@ const _Strings _zhCN = _Strings(
   ballMenuRestoreSession: '恢复会话',
   ballMenuRestoreSessionEmpty: '没有历史会话',
   ballMenuGoHome: '回到主页',
+  ballMenuNewSession: '新建会话',
   defaultStartupEntry: '默认启动 App',
   defaultStartupSubtitleNone: '未设置（启动到 MyApp 首页）',
   defaultStartupTitle: '默认启动 App',
@@ -1311,6 +1314,7 @@ const _Strings _enUS = _Strings(
   ballMenuRestoreSession: 'Restore session',
   ballMenuRestoreSessionEmpty: 'No previous session',
   ballMenuGoHome: 'Back to home',
+  ballMenuNewSession: 'New chat',
   defaultStartupEntry: 'Default startup app',
   defaultStartupSubtitleNone: 'Not set (open to MyApp home)',
   defaultStartupTitle: 'Default startup app',
@@ -1635,6 +1639,7 @@ const _Strings _deDE = _Strings(
   ballMenuRestoreSession: 'Sitzung wiederherstellen',
   ballMenuRestoreSessionEmpty: 'Keine vorherige Sitzung',
   ballMenuGoHome: 'Zur Startseite',
+  ballMenuNewSession: 'Neuer Chat',
   defaultStartupEntry: 'Standard-Start-App',
   defaultStartupSubtitleNone: 'Nicht festgelegt (öffnet MyApp-Startseite)',
   defaultStartupTitle: 'Standard-Start-App',
@@ -1959,6 +1964,7 @@ const _Strings _esES = _Strings(
   ballMenuRestoreSession: 'Restaurar sesión',
   ballMenuRestoreSessionEmpty: 'Sin sesión anterior',
   ballMenuGoHome: 'Volver al inicio',
+  ballMenuNewSession: 'Chat nuevo',
   defaultStartupEntry: 'App de inicio predeterminada',
   defaultStartupSubtitleNone: 'Sin definir (abre la página de MyApp)',
   defaultStartupTitle: 'App de inicio predeterminada',

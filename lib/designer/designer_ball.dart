@@ -658,6 +658,18 @@ class _DesignerBallState extends State<DesignerBall>
                         },
                       ),
                       _QuickMenuButton(
+                        icon: Icons.add_comment_outlined,
+                        label: s.ballMenuNewSession,
+                        enabled: true,
+                        onTap: () async {
+                          Navigator.of(ctx).pop();
+                          await _handleNewSession();
+                          if (!mounted) return;
+                          // 顺便直接进对话模式，用户预期是立刻能输入
+                          _enterChatMode();
+                        },
+                      ),
+                      _QuickMenuButton(
                         icon: Icons.home_rounded,
                         label: s.ballMenuGoHome,
                         // 只要根 Navigator 还能 pop 就启用 —— 表示当前栈里有
