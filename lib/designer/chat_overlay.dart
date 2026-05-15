@@ -228,8 +228,11 @@ class _ChatOverlayState extends State<ChatOverlay> {
         (screen.height - bottomPadding - 80 - maxHeight - _offsetY)
             .clamp(0.0, screen.height - 60);
 
-    return Stack(
-      fit: StackFit.expand,
+    // 用 Positioned.fill 强制内部 Stack 占满 DesignerBall 外层 Stack，否则
+    // 仅 Positioned 子节点的 Stack 会塌成 0×0，inner Positioned 的 top
+    // 算出来贴到外层 Stack 顶（被灵动岛挡）
+    return Positioned.fill(
+      child: Stack(
       children: [
         // 1. 字幕容器（被 hardEdge 裁剪，内容不会跑出来）
         Positioned(
@@ -419,6 +422,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
           ),
         ],
       ],
+      ),
     );
   }
 
