@@ -68,7 +68,6 @@ dependencies:
   record: ^6.2.0
   path_provider: ^2.1.0
   web_socket_channel: ^3.0.0
-  sherpa_onnx: ^1.12.36
   google_fonts: ^6.2.1
 
   # Database (Drift / SQLite)

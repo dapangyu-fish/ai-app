@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
-import 'sherpa_asr_service.dart';
 import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
@@ -18,7 +17,6 @@ import '../onboarding/onboarding_keys.dart';
 /// 语音识别方式枚举
 enum AsrMode {
   online,    // 在线识别（speech_to_text）
-  offline,   // 离线识别（sherpa_onnx）
   bytedance, // 豆包ASR
 }
 
@@ -27,7 +25,7 @@ enum AsrMode {
 /// 之前 bug：DesignerBall 在 initState 里读一次 SharedPreferences 就缓存到
 /// `_asrMode` 字段，永远不再刷新。settings_page 写了 prefs，但 DesignerBall
 /// 是 MaterialApp 外层的常驻 widget，永远不会重新 initState，结果用户切到
-/// "离线"或"豆包"，运行时 `_asrMode` 还是启动时的旧值，体感"切了没切成功"。
+/// "豆包"，运行时 `_asrMode` 还是启动时的旧值，体感"切了没切成功"。
 class AsrModePrefs {
   AsrModePrefs._();
 
@@ -35,8 +33,6 @@ class AsrModePrefs {
 
   static AsrMode _decode(String? s) {
     switch (s) {
-      case 'offline':
-        return AsrMode.offline;
       case 'bytedance':
         return AsrMode.bytedance;
       default:
@@ -46,8 +42,6 @@ class AsrModePrefs {
 
   static String _encode(AsrMode m) {
     switch (m) {
-      case AsrMode.offline:
-        return 'offline';
       case AsrMode.bytedance:
         return 'bytedance';
       case AsrMode.online:
@@ -150,7 +144,6 @@ class _DesignerBallState extends State<DesignerBall>
   // ⚠️ 不要直接读这个字段，用 _asrMode getter，永远拿到 AsrModePrefs 最新值。
   // 历史 bug：缓存了 initState 时的旧值，settings 改完不感知。
   AsrMode get _asrMode => AsrModePrefs.notifier.value;
-  final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
@@ -202,9 +195,6 @@ class _DesignerBallState extends State<DesignerBall>
       if (mounted) setState(() {}); // 触发一次 rebuild 让 _asrMode getter 拿到新值
     });
     AsrModePrefs.notifier.addListener(_onAsrModeChanged);
-    _sherpaAsr.loadConfig().then((_) {
-      setState(() {});
-    });
     // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
     // 不 await，不阻塞 UI 启动
     _chatService.loadSession().then((_) => _maybeResumeUnfinishedSession());
@@ -288,9 +278,6 @@ class _DesignerBallState extends State<DesignerBall>
       _speechInited = await _speech!.initialize(
         onError: (error) {
           debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
-          if (error.errorMsg == 'error_network') {
-            _handleNetworkError();
-          }
         },
         onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
       );
@@ -301,17 +288,10 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  /// 切换强制离线模式
-  Future<void> _toggleForceOffline(bool value) async {
-    await _sherpaAsr.setForceOffline(value);
-    setState(() {});
-  }
-
   @override
   void dispose() {
     _longPressTimer?.cancel();
     _streamSub?.cancel();
-    _sherpaAsr.dispose();
     // Plan A 关键：app 关掉 worker 继续在 backend 跑，下次启动 _maybeResumeUnfinishedSession 接回来
     // 所以 dispose 只关本地 SSE，绝不通知 backend abort
     _chatService.abortLocal();
@@ -713,41 +693,6 @@ class _DesignerBallState extends State<DesignerBall>
 
     debugPrint('[DesignerBall] 最终决策: ASR模式=${_asrMode.name}');
 
-    // 如果是离线模式，需要预加载模型
-    if (_asrMode == AsrMode.offline) {
-      setState(() {
-        _chatMode = true;
-        _isThinking = true;
-      });
-      _sherpaAsr.onStatusChange = (status) {
-        setState(() {
-          _liveTranscript = status;
-        });
-      };
-      final ready = await _sherpaAsr.ensureReady();
-      _sherpaAsr.onStatusChange = null;
-
-      // 手已离开 → 中止
-      if (!_pointerDown) {
-        debugPrint('[DesignerBall] Pointer lifted during sherpa init, aborting');
-        setState(() {
-          _isThinking = false;
-          _liveTranscript = null;
-        });
-        return;
-      }
-
-      if (!ready) {
-        setState(() {
-          _isThinking = false;
-          _liveTranscript = null;
-          _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrOfflineModelLoadFail));
-        });
-        return;
-      }
-      setState(() => _isThinking = false);
-    }
-
     // 如果是豆包ASR，检查连接状态
     if (_asrMode == AsrMode.bytedance) {
       if (!_bytedanceAsr.isConnected) {
@@ -820,9 +765,6 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint('[DesignerBall] ASR决策: asrMode=${_asrMode.name}');
 
     switch (_asrMode) {
-      case AsrMode.offline:
-        _startSherpaAsr();
-        break;
       case AsrMode.bytedance:
         _startBytedanceAsr();
         break;
@@ -849,10 +791,6 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint('[DesignerBall] Recording cancelled by drag');
 
     switch (_asrMode) {
-      case AsrMode.offline:
-        _sherpaAsr.stopListening();
-        _sherpaAsr.onResult = null;
-        break;
       case AsrMode.bytedance:
         _bytedanceAsr.stopListening();
         break;
@@ -876,9 +814,6 @@ class _DesignerBallState extends State<DesignerBall>
     _accumulatedTranscript = ''; // 清空累积文本，防止下次录音叠加旧内容
 
     // 编辑模式 = 最高权限：彻底切断所有语音源（停录音 + 清回调）。
-    _sherpaAsr.stopListening();
-    _sherpaAsr.onResult = null;
-    _sherpaAsr.onStatusChange = null;
     _bytedanceAsr.stopListening();
     // 注意：_bytedanceAsr.onResult 不在此处清空（在 _initBytedanceAsr 中一次性注册），
     // 改在回调内用 _editMode 守卫拦截。
@@ -1345,153 +1280,6 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  /// 处理网络错误，引导用户开启离线模式
-  Future<void> _handleNetworkError() async {
-    final prefs = await SharedPreferences.getInstance();
-    final dontShow = prefs.getBool('dont_show_network_error_dialog') ?? false;
-
-    if (dontShow) {
-      debugPrint('[DesignerBall] 用户已选择不再提示网络错误');
-      return;
-    }
-
-    if (!mounted) return;
-
-    bool dontShowAgain = false;
-    String selectedModel = _sherpaAsr.selectedModelId;
-
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) {
-        final t = T.of(context);
-        return StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: Text(t.asrDialogTitleOnlineUnavailable),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(t.asrDialogBodyOnlineUnavailable),
-                const SizedBox(height: 16),
-                Text(t.asrDialogChooseOffline,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...SherpaAsrService.availableModels.map((model) => RadioListTile<String>(
-                  title: Text(model.name),
-                  value: model.id,
-                  groupValue: selectedModel,
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedModel = value!;
-                    });
-                  },
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                )),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  title: Text(t.asrDialogDontShowAgain),
-                  value: dontShowAgain,
-                  onChanged: (value) {
-                    setDialogState(() {
-                      dontShowAgain = value ?? false;
-                    });
-                  },
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, null),
-                child: Text(t.cancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, {
-                  'enable': true,
-                  'dontShow': dontShowAgain,
-                  'modelId': selectedModel,
-                }),
-                child: Text(t.asrDialogEnableOfflineButton),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (result != null && result['enable'] == true) {
-      // 保存"不再提示"设置
-      if (result['dontShow'] == true) {
-        await prefs.setBool('dont_show_network_error_dialog', true);
-      }
-
-      // 保存离线模式设置
-      await _sherpaAsr.setForceOffline(true);
-      await _sherpaAsr.setModel(result['modelId'] as String);
-
-      debugPrint('[DesignerBall] 用户选择开启离线模式，模型: ${result['modelId']}');
-
-      // 停止当前识别，重新开始
-      if (_isListening) {
-        try { await _speech?.stop(); } catch (_) {}
-        _startListening();
-      }
-    }
-  }
-
-  /// sherpa_onnx 离线 ASR：本地录音 + 本地识别
-  Future<void> _startSherpaAsr() async {
-    debugPrint('[DesignerBall] 启动离线语音识别 (sherpa_onnx, model=${_sherpaAsr.selectedModelId})');
-    try {
-      // 确保 recognizer 已初始化（防止 chatMode 下重复按球但 recognizer 还没 ready）
-      if (!await _sherpaAsr.ensureReady()) {
-        debugPrint('[DesignerBall] sherpa ensureReady failed in _startSherpaAsr');
-        setState(() {
-          _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrOfflineModelNotReady));
-        });
-        _pulseController.stop();
-        _pulseController.reset();
-        return;
-      }
-
-      _sherpaAsr.onResult = (text) {
-        // 编辑模式下，迟到的 ASR 结果一律丢弃
-        if (!_isListening || _editMode) return;
-        // 优化：只在文本变化时更新 UI，减少不必要的重建
-        if (_liveTranscript != text) {
-          setState(() => _liveTranscript = text);
-        }
-      };
-
-      final ok = await _sherpaAsr.startListening();
-      if (!ok) {
-        setState(() {
-          _isListening = false;
-          _messages.add(ChatMessage(
-            role: 'assistant',
-            content: T.current.asrErrMicPermissionDenied,
-          ));
-        });
-        _pulseController.stop();
-      }
-    } catch (e) {
-      debugPrint('[SherpaASR] Start error: $e');
-      setState(() {
-        _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrStartFailWith, {'err': e})));
-      });
-      _pulseController.stop();
-    }
-  }
-
-  void _stopSherpaAsr() {
-    _sherpaAsr.stopListening();
-    _sherpaAsr.onResult = null;
-  }
-
   /// 启动豆包ASR识别
   Future<void> _startBytedanceAsr() async {
     debugPrint('[DesignerBall] 启动豆包ASR识别');
@@ -1535,13 +1323,6 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 停止语音识别
     switch (_asrMode) {
-      case AsrMode.offline:
-        _sherpaAsr.onResult = null;
-        final finalText = await _sherpaAsr.stopListening();
-        if (finalText.isNotEmpty) {
-          _liveTranscript = finalText;
-        }
-        break;
       case AsrMode.bytedance:
         await _bytedanceAsr.stopListening();
         break;
@@ -1671,7 +1452,6 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _closeChatMode() {
     try { _speech?.stop(); } catch (_) {}
-    _stopSherpaAsr();
     _cancelCurrentStream();
     _pulseController.stop();
     _pulseController.reset();
