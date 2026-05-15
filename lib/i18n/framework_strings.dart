@@ -475,6 +475,27 @@ class _Strings {
   final String authErrUpdateFailed;               // "更新失败"
   final String authErrAvatarUploadFailed;         // "头像上传失败"
 
+  // ── 设置页 ──
+  final String settingsCleaningProgress;           // "正在清理..."
+  final String settingsModelDownloadSuccess;       // "模型下载完成"
+  final String settingsModelDownloadFailed;        // "模型下载失败，请检查网络"
+  final String settingsSectionAsr;                 // "语音识别"
+  final String settingsSectionSpeechModel;         // "语音模型"
+  final String settingsAsrOnline;                  // "在线识别"
+  final String settingsAsrOnlineSubtitle;
+  final String settingsAsrOffline;                 // "离线识别"
+  final String settingsAsrOfflineSubtitle;
+  final String settingsAsrBytedance;               // "豆包 ASR"
+  final String settingsAsrBytedanceSubtitle;
+  final String settingsProvidersFailed;            // "无法获取供应商列表"
+  final String settingsProvidersFallback;          // "使用默认供应商 DeepSeek"
+  final String settingsModelWith;                  // "模型: {model}"
+  final String settingsModelStatusDownloaded;      // "已下载 · {downloaded}/{total} 文件 · {size}"
+  final String settingsModelStatusIncomplete;      // 同上结构
+  final String settingsModelStatusNotDownloaded;   // "未下载"
+  final String settingsDownloadAgain;              // "重新下载"
+  final String settingsDownload;                   // "下载"
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -858,6 +879,25 @@ class _Strings {
     required this.authErrServerWith,
     required this.authErrUpdateFailed,
     required this.authErrAvatarUploadFailed,
+    required this.settingsCleaningProgress,
+    required this.settingsModelDownloadSuccess,
+    required this.settingsModelDownloadFailed,
+    required this.settingsSectionAsr,
+    required this.settingsSectionSpeechModel,
+    required this.settingsAsrOnline,
+    required this.settingsAsrOnlineSubtitle,
+    required this.settingsAsrOffline,
+    required this.settingsAsrOfflineSubtitle,
+    required this.settingsAsrBytedance,
+    required this.settingsAsrBytedanceSubtitle,
+    required this.settingsProvidersFailed,
+    required this.settingsProvidersFallback,
+    required this.settingsModelWith,
+    required this.settingsModelStatusDownloaded,
+    required this.settingsModelStatusIncomplete,
+    required this.settingsModelStatusNotDownloaded,
+    required this.settingsDownloadAgain,
+    required this.settingsDownload,
   });
 }
 
@@ -1244,6 +1284,25 @@ const _Strings _zhCN = _Strings(
   authErrServerWith: '服务器错误 ({code})',
   authErrUpdateFailed: '更新失败',
   authErrAvatarUploadFailed: '头像上传失败',
+  settingsCleaningProgress: '正在清理...',
+  settingsModelDownloadSuccess: '模型下载完成',
+  settingsModelDownloadFailed: '模型下载失败，请检查网络',
+  settingsSectionAsr: '语音识别',
+  settingsSectionSpeechModel: '语音模型',
+  settingsAsrOnline: '在线识别',
+  settingsAsrOnlineSubtitle: '使用 speech_to_text，需要网络连接',
+  settingsAsrOffline: '离线识别',
+  settingsAsrOfflineSubtitle: '使用 sherpa_onnx 本地模型，无需网络',
+  settingsAsrBytedance: '豆包 ASR',
+  settingsAsrBytedanceSubtitle: '字节跳动语音识别，需要网络和配额',
+  settingsProvidersFailed: '无法获取供应商列表',
+  settingsProvidersFallback: '使用默认供应商 DeepSeek',
+  settingsModelWith: '模型: {model}',
+  settingsModelStatusDownloaded: '已下载 · {downloaded}/{total} 文件 · {size}',
+  settingsModelStatusIncomplete: '不完整 · {downloaded}/{total} 文件 · {size}',
+  settingsModelStatusNotDownloaded: '未下载',
+  settingsDownloadAgain: '重新下载',
+  settingsDownload: '下载',
 );
 
 const _Strings _enUS = _Strings(
@@ -1629,6 +1688,25 @@ const _Strings _enUS = _Strings(
   authErrServerWith: 'Server error ({code})',
   authErrUpdateFailed: 'Update failed',
   authErrAvatarUploadFailed: 'Avatar upload failed',
+  settingsCleaningProgress: 'Cleaning up...',
+  settingsModelDownloadSuccess: 'Model downloaded',
+  settingsModelDownloadFailed: 'Model download failed, check the network',
+  settingsSectionAsr: 'Speech recognition',
+  settingsSectionSpeechModel: 'Speech model',
+  settingsAsrOnline: 'Online recognition',
+  settingsAsrOnlineSubtitle: 'Uses speech_to_text, requires network',
+  settingsAsrOffline: 'Offline recognition',
+  settingsAsrOfflineSubtitle: 'Uses local sherpa_onnx model, no network needed',
+  settingsAsrBytedance: 'ByteDance ASR',
+  settingsAsrBytedanceSubtitle: 'ByteDance speech recognition, requires network and quota',
+  settingsProvidersFailed: 'Failed to fetch providers',
+  settingsProvidersFallback: 'Falling back to default provider DeepSeek',
+  settingsModelWith: 'Model: {model}',
+  settingsModelStatusDownloaded: 'Downloaded · {downloaded}/{total} files · {size}',
+  settingsModelStatusIncomplete: 'Incomplete · {downloaded}/{total} files · {size}',
+  settingsModelStatusNotDownloaded: 'Not downloaded',
+  settingsDownloadAgain: 'Re-download',
+  settingsDownload: 'Download',
 );
 
 const _Strings _deDE = _Strings(
@@ -2014,6 +2092,25 @@ const _Strings _deDE = _Strings(
   authErrServerWith: 'Serverfehler ({code})',
   authErrUpdateFailed: 'Aktualisierung fehlgeschlagen',
   authErrAvatarUploadFailed: 'Avatar-Upload fehlgeschlagen',
+  settingsCleaningProgress: 'Wird bereinigt...',
+  settingsModelDownloadSuccess: 'Modell heruntergeladen',
+  settingsModelDownloadFailed: 'Modell-Download fehlgeschlagen, Netzwerk prüfen',
+  settingsSectionAsr: 'Spracherkennung',
+  settingsSectionSpeechModel: 'Sprachmodell',
+  settingsAsrOnline: 'Online-Erkennung',
+  settingsAsrOnlineSubtitle: 'Nutzt speech_to_text, Netzwerk erforderlich',
+  settingsAsrOffline: 'Offline-Erkennung',
+  settingsAsrOfflineSubtitle: 'Nutzt lokales sherpa_onnx-Modell, kein Netzwerk nötig',
+  settingsAsrBytedance: 'ByteDance ASR',
+  settingsAsrBytedanceSubtitle: 'ByteDance-Spracherkennung, benötigt Netzwerk und Kontingent',
+  settingsProvidersFailed: 'Anbieterliste konnte nicht geladen werden',
+  settingsProvidersFallback: 'Fallback auf Standardanbieter DeepSeek',
+  settingsModelWith: 'Modell: {model}',
+  settingsModelStatusDownloaded: 'Heruntergeladen · {downloaded}/{total} Dateien · {size}',
+  settingsModelStatusIncomplete: 'Unvollständig · {downloaded}/{total} Dateien · {size}',
+  settingsModelStatusNotDownloaded: 'Nicht heruntergeladen',
+  settingsDownloadAgain: 'Erneut herunterladen',
+  settingsDownload: 'Herunterladen',
 );
 
 const _Strings _esES = _Strings(
@@ -2399,6 +2496,25 @@ const _Strings _esES = _Strings(
   authErrServerWith: 'Error del servidor ({code})',
   authErrUpdateFailed: 'Actualización fallida',
   authErrAvatarUploadFailed: 'Error al subir el avatar',
+  settingsCleaningProgress: 'Limpiando...',
+  settingsModelDownloadSuccess: 'Modelo descargado',
+  settingsModelDownloadFailed: 'Falló la descarga del modelo, revisa la red',
+  settingsSectionAsr: 'Reconocimiento de voz',
+  settingsSectionSpeechModel: 'Modelo de voz',
+  settingsAsrOnline: 'Reconocimiento online',
+  settingsAsrOnlineSubtitle: 'Usa speech_to_text, requiere red',
+  settingsAsrOffline: 'Reconocimiento offline',
+  settingsAsrOfflineSubtitle: 'Usa modelo local sherpa_onnx, sin red',
+  settingsAsrBytedance: 'ASR ByteDance',
+  settingsAsrBytedanceSubtitle: 'Reconocimiento de voz de ByteDance, requiere red y cuota',
+  settingsProvidersFailed: 'No se pudo obtener la lista de proveedores',
+  settingsProvidersFallback: 'Usando proveedor predeterminado DeepSeek',
+  settingsModelWith: 'Modelo: {model}',
+  settingsModelStatusDownloaded: 'Descargado · {downloaded}/{total} archivos · {size}',
+  settingsModelStatusIncomplete: 'Incompleto · {downloaded}/{total} archivos · {size}',
+  settingsModelStatusNotDownloaded: 'No descargado',
+  settingsDownloadAgain: 'Volver a descargar',
+  settingsDownload: 'Descargar',
 );
 
 /// 公开访问点。

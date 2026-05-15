@@ -108,7 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _redownloadModel(String modelId) async {
     setState(() {
       _downloadingModelId = modelId;
-      _downloadProgress = '正在清理...';
+      _downloadProgress = T.current.settingsCleaningProgress;
     });
 
     final ok = await _sherpaAsr.cleanAndRedownload(
@@ -131,7 +131,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ok ? '模型下载完成' : '模型下载失败，请检查网络'),
+          content: Text(ok
+              ? T.of(context).settingsModelDownloadSuccess
+              : T.of(context).settingsModelDownloadFailed),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -168,12 +170,12 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 8.0),
             _buildProviderSelector(cs),
             const SizedBox(height: 24.0),
-            _buildSectionTitle('语音识别', cs),
+            _buildSectionTitle(t.settingsSectionAsr, cs),
             const SizedBox(height: 8.0),
             _buildAsrModeSelector(cs),
             const SizedBox(height: 16.0),
             if (_asrMode == AsrMode.offline) ...[
-              _buildSectionTitle('语音模型', cs),
+              _buildSectionTitle(t.settingsSectionSpeechModel, cs),
               const SizedBox(height: 8.0),
               _buildModelList(cs),
               const SizedBox(height: 16.0),
@@ -225,6 +227,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildAsrModeSelector(ColorScheme cs) {
+    final t = T.of(context);
     return Card(
       child: Column(
         children: [
@@ -234,8 +237,8 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (value) {
               if (value != null) _selectAsrMode(value);
             },
-            title: const Text('在线识别'),
-            subtitle: const Text('使用 speech_to_text，需要网络连接'),
+            title: Text(t.settingsAsrOnline),
+            subtitle: Text(t.settingsAsrOnlineSubtitle),
             secondary: Icon(
               Icons.cloud,
               color: _asrMode == AsrMode.online ? cs.primary : cs.outline,
@@ -248,8 +251,8 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (value) {
               if (value != null) _selectAsrMode(value);
             },
-            title: const Text('离线识别'),
-            subtitle: const Text('使用 sherpa_onnx 本地模型，无需网络'),
+            title: Text(t.settingsAsrOffline),
+            subtitle: Text(t.settingsAsrOfflineSubtitle),
             secondary: Icon(
               Icons.offline_bolt,
               color: _asrMode == AsrMode.offline ? cs.primary : cs.outline,
@@ -262,8 +265,8 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (value) {
               if (value != null) _selectAsrMode(value);
             },
-            title: const Text('豆包 ASR'),
-            subtitle: const Text('字节跳动语音识别，需要网络和配额'),
+            title: Text(t.settingsAsrBytedance),
+            subtitle: Text(t.settingsAsrBytedanceSubtitle),
             secondary: Icon(
               Icons.mic_external_on,
               color: _asrMode == AsrMode.bytedance ? cs.primary : cs.outline,
@@ -285,11 +288,12 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     if (_providers.isEmpty) {
+      final t = T.of(context);
       return Card(
         child: ListTile(
           leading: const Icon(Icons.cloud_off),
-          title: const Text('无法获取供应商列表'),
-          subtitle: const Text('使用默认供应商 DeepSeek'),
+          title: Text(t.settingsProvidersFailed),
+          subtitle: Text(t.settingsProvidersFallback),
           trailing: IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchProviders,
@@ -317,7 +321,8 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: Text(
               provider.description.isNotEmpty
                   ? '${provider.description} (${provider.defaultModel})'
-                  : '模型: ${provider.defaultModel}',
+                  : T.fmt(T.of(context).settingsModelWith,
+                      {'model': provider.defaultModel}),
               style: TextStyle(
                 color: cs.onSurfaceVariant,
                 fontSize: 12,
@@ -390,10 +395,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       )
                     : Text(
                         isReady
-                            ? '已下载 · $downloaded/$total 文件 · ${_formatSize(size)}'
+                            ? T.fmt(T.of(context).settingsModelStatusDownloaded,
+                                {'downloaded': downloaded, 'total': total, 'size': _formatSize(size)})
                             : downloaded > 0
-                                ? '不完整 · $downloaded/$total 文件 · ${_formatSize(size)}'
-                                : '未下载',
+                                ? T.fmt(T.of(context).settingsModelStatusIncomplete,
+                                    {'downloaded': downloaded, 'total': total, 'size': _formatSize(size)})
+                                : T.of(context).settingsModelStatusNotDownloaded,
                         style: TextStyle(
                           color: isReady ? cs.onSurfaceVariant : cs.error,
                           fontSize: 12,
@@ -414,7 +421,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           color: cs.onSurfaceVariant,
                           size: 22,
                         ),
-                        tooltip: isReady ? '重新下载' : '下载',
+                        tooltip: isReady
+                            ? T.of(context).settingsDownloadAgain
+                            : T.of(context).settingsDownload,
                         onPressed: _downloadingModelId != null
                             ? null
                             : () => _redownloadModel(model.id),
