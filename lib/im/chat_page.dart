@@ -494,7 +494,7 @@ class _IMChatPageState extends State<IMChatPage> {
           ),
         );
       case MessageType.file:
-        final fileName = msg.fileElem?.fileName ?? '文件';
+        final fileName = msg.fileElem?.fileName ?? T.of(context).imAttachmentFile;
         final fileSize = msg.fileElem?.fileSize ?? 0;
         final url = msg.fileElem?.sourceUrl ?? '';
         return GestureDetector(
@@ -790,14 +790,14 @@ class _IMChatPageState extends State<IMChatPage> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_size_select_actual),
-              title: const Text('普通画质'),
-              subtitle: const Text('自动压缩，长边 1920，发送更快'),
+              title: Text(T.of(ctx).imImageQualityNormal),
+              subtitle: Text(T.of(ctx).imImageQualityNormalSubtitle),
               onTap: () => Navigator.pop(ctx, false),
             ),
             ListTile(
               leading: const Icon(Icons.high_quality),
-              title: const Text('高清原图'),
-              subtitle: const Text('保留原尺寸和画质'),
+              title: Text(T.of(ctx).imImageQualityHd),
+              subtitle: Text(T.of(ctx).imImageQualityHdSubtitle),
               onTap: () => Navigator.pop(ctx, true),
             ),
           ],
@@ -1079,13 +1079,14 @@ class _IMChatPageState extends State<IMChatPage> {
         // 简单进度：snackbar
         final messenger = ScaffoldMessenger.of(context);
         messenger.showSnackBar(
-          const SnackBar(content: Text('正在下载...'), duration: Duration(seconds: 30)),
+          SnackBar(content: Text(T.of(context).imDownloadingMsg), duration: const Duration(seconds: 30)),
         );
         final resp = await http.get(Uri.parse(url));
         messenger.hideCurrentSnackBar();
         if (resp.statusCode != 200) {
+          if (!mounted) return;
           messenger.showSnackBar(
-            SnackBar(content: Text('下载失败 ${resp.statusCode}')),
+            SnackBar(content: Text(T.fmt(T.of(context).imDownloadFailedWith, {'code': resp.statusCode}))),
           );
           return;
         }
@@ -1095,13 +1096,13 @@ class _IMChatPageState extends State<IMChatPage> {
       final r = await OpenFilex.open(localPath);
       if (r.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('打开失败：${r.message}')),
+          SnackBar(content: Text(T.fmt(T.of(context).imOpenFailedWith, {'msg': r.message ?? ''}))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('打开异常：$e')),
+          SnackBar(content: Text(T.fmt(T.of(context).imOpenExceptionWith, {'err': e}))),
         );
       }
     }
@@ -1274,7 +1275,8 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
     Widget body;
     if (_err != null) {
       body = Center(
-        child: Text('视频加载失败: $_err', style: const TextStyle(color: Colors.white)),
+        child: Text(T.fmt(T.of(context).imVideoLoadFailedWith, {'err': _err}),
+            style: const TextStyle(color: Colors.white)),
       );
     } else if (_cc == null) {
       body = const Center(child: CircularProgressIndicator(color: Colors.white));

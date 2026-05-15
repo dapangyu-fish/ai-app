@@ -496,6 +496,27 @@ class _Strings {
   final String settingsDownloadAgain;              // "重新下载"
   final String settingsDownload;                   // "下载"
 
+  // ── IM 剩余字符串（im_models / chat_page / im_service push 文案）──
+  final String imUserUnknown;                      // "未知"
+  final String imMessageRecalled;                  // "撤回了一条消息"
+  final String imAttachmentFile;                   // "文件"
+  final String imImageQualityNormal;
+  final String imImageQualityNormalSubtitle;
+  final String imImageQualityHd;
+  final String imImageQualityHdSubtitle;
+  final String imDownloadingMsg;                   // "正在下载..."
+  final String imDownloadFailedWith;               // "下载失败 {code}"
+  final String imOpenFailedWith;                   // "打开失败：{msg}"
+  final String imOpenExceptionWith;                // "打开异常：{err}"
+  final String imVideoLoadFailedWith;              // "视频加载失败: {err}"
+  final String imPushNewMessage;                   // "新消息"
+  final String imPushImagePreview;                 // "[图片]"
+  final String imMsgPreviewVideo;                  // "[视频]"
+  final String imMsgPreviewVoice;                  // "[语音]"
+  final String imMsgPreviewFile;                   // "[文件]"
+  final String imMsgPreviewLocation;               // "[位置]"
+  final String imMsgPreviewGeneric;                // "[消息]"
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -898,6 +919,25 @@ class _Strings {
     required this.settingsModelStatusNotDownloaded,
     required this.settingsDownloadAgain,
     required this.settingsDownload,
+    required this.imUserUnknown,
+    required this.imMessageRecalled,
+    required this.imAttachmentFile,
+    required this.imImageQualityNormal,
+    required this.imImageQualityNormalSubtitle,
+    required this.imImageQualityHd,
+    required this.imImageQualityHdSubtitle,
+    required this.imDownloadingMsg,
+    required this.imDownloadFailedWith,
+    required this.imOpenFailedWith,
+    required this.imOpenExceptionWith,
+    required this.imVideoLoadFailedWith,
+    required this.imPushNewMessage,
+    required this.imPushImagePreview,
+    required this.imMsgPreviewVideo,
+    required this.imMsgPreviewVoice,
+    required this.imMsgPreviewFile,
+    required this.imMsgPreviewLocation,
+    required this.imMsgPreviewGeneric,
   });
 }
 
@@ -1303,6 +1343,25 @@ const _Strings _zhCN = _Strings(
   settingsModelStatusNotDownloaded: '未下载',
   settingsDownloadAgain: '重新下载',
   settingsDownload: '下载',
+  imUserUnknown: '未知',
+  imMessageRecalled: '撤回了一条消息',
+  imAttachmentFile: '文件',
+  imImageQualityNormal: '普通画质',
+  imImageQualityNormalSubtitle: '自动压缩，长边 1920，发送更快',
+  imImageQualityHd: '高清原图',
+  imImageQualityHdSubtitle: '保留原尺寸和画质',
+  imDownloadingMsg: '正在下载...',
+  imDownloadFailedWith: '下载失败 {code}',
+  imOpenFailedWith: '打开失败：{msg}',
+  imOpenExceptionWith: '打开异常：{err}',
+  imVideoLoadFailedWith: '视频加载失败: {err}',
+  imPushNewMessage: '新消息',
+  imPushImagePreview: '[图片]',
+  imMsgPreviewVideo: '[视频]',
+  imMsgPreviewVoice: '[语音]',
+  imMsgPreviewFile: '[文件]',
+  imMsgPreviewLocation: '[位置]',
+  imMsgPreviewGeneric: '[消息]',
 );
 
 const _Strings _enUS = _Strings(
@@ -1707,6 +1766,25 @@ const _Strings _enUS = _Strings(
   settingsModelStatusNotDownloaded: 'Not downloaded',
   settingsDownloadAgain: 'Re-download',
   settingsDownload: 'Download',
+  imUserUnknown: 'Unknown',
+  imMessageRecalled: 'recalled a message',
+  imAttachmentFile: 'File',
+  imImageQualityNormal: 'Standard quality',
+  imImageQualityNormalSubtitle: 'Auto-compressed, long side 1920, faster to send',
+  imImageQualityHd: 'Original',
+  imImageQualityHdSubtitle: 'Keep the original size and quality',
+  imDownloadingMsg: 'Downloading...',
+  imDownloadFailedWith: 'Download failed {code}',
+  imOpenFailedWith: 'Open failed: {msg}',
+  imOpenExceptionWith: 'Open error: {err}',
+  imVideoLoadFailedWith: 'Failed to load video: {err}',
+  imPushNewMessage: 'New message',
+  imPushImagePreview: '[Image]',
+  imMsgPreviewVideo: '[Video]',
+  imMsgPreviewVoice: '[Voice]',
+  imMsgPreviewFile: '[File]',
+  imMsgPreviewLocation: '[Location]',
+  imMsgPreviewGeneric: '[Message]',
 );
 
 const _Strings _deDE = _Strings(
@@ -2111,6 +2189,25 @@ const _Strings _deDE = _Strings(
   settingsModelStatusNotDownloaded: 'Nicht heruntergeladen',
   settingsDownloadAgain: 'Erneut herunterladen',
   settingsDownload: 'Herunterladen',
+  imUserUnknown: 'Unbekannt',
+  imMessageRecalled: 'hat eine Nachricht zurückgezogen',
+  imAttachmentFile: 'Datei',
+  imImageQualityNormal: 'Standardqualität',
+  imImageQualityNormalSubtitle: 'Automatisch komprimiert, Langseite 1920, schneller versandt',
+  imImageQualityHd: 'Originalqualität',
+  imImageQualityHdSubtitle: 'Originalgröße und Qualität beibehalten',
+  imDownloadingMsg: 'Wird heruntergeladen...',
+  imDownloadFailedWith: 'Download fehlgeschlagen {code}',
+  imOpenFailedWith: 'Öffnen fehlgeschlagen: {msg}',
+  imOpenExceptionWith: 'Öffnen-Fehler: {err}',
+  imVideoLoadFailedWith: 'Video konnte nicht geladen werden: {err}',
+  imPushNewMessage: 'Neue Nachricht',
+  imPushImagePreview: '[Bild]',
+  imMsgPreviewVideo: '[Video]',
+  imMsgPreviewVoice: '[Sprachnachricht]',
+  imMsgPreviewFile: '[Datei]',
+  imMsgPreviewLocation: '[Standort]',
+  imMsgPreviewGeneric: '[Nachricht]',
 );
 
 const _Strings _esES = _Strings(
@@ -2515,6 +2612,25 @@ const _Strings _esES = _Strings(
   settingsModelStatusNotDownloaded: 'No descargado',
   settingsDownloadAgain: 'Volver a descargar',
   settingsDownload: 'Descargar',
+  imUserUnknown: 'Desconocido',
+  imMessageRecalled: 'retiró un mensaje',
+  imAttachmentFile: 'Archivo',
+  imImageQualityNormal: 'Calidad normal',
+  imImageQualityNormalSubtitle: 'Compresión automática, lado largo 1920, envío más rápido',
+  imImageQualityHd: 'Original',
+  imImageQualityHdSubtitle: 'Mantener tamaño y calidad originales',
+  imDownloadingMsg: 'Descargando...',
+  imDownloadFailedWith: 'Descarga fallida {code}',
+  imOpenFailedWith: 'Error al abrir: {msg}',
+  imOpenExceptionWith: 'Error de apertura: {err}',
+  imVideoLoadFailedWith: 'Error al cargar el video: {err}',
+  imPushNewMessage: 'Nuevo mensaje',
+  imPushImagePreview: '[Imagen]',
+  imMsgPreviewVideo: '[Video]',
+  imMsgPreviewVoice: '[Voz]',
+  imMsgPreviewFile: '[Archivo]',
+  imMsgPreviewLocation: '[Ubicación]',
+  imMsgPreviewGeneric: '[Mensaje]',
 );
 
 /// 公开访问点。

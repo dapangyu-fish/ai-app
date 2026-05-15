@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Directory;
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import '../i18n/framework_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:http/http.dart' as http;
@@ -373,7 +374,7 @@ class IMService {
       return await OpenIM.iMManager.messageManager.sendMessage(
         message: message,
         offlinePushInfo: OfflinePushInfo(
-          title: '新消息',
+          title: T.current.imPushNewMessage,
           desc: previewText.length > 50 ? '${previewText.substring(0, 50)}...' : previewText,
         ),
         userID: userID,
@@ -423,7 +424,7 @@ class IMService {
       );
       return await OpenIM.iMManager.messageManager.sendMessage(
         message: msg,
-        offlinePushInfo: OfflinePushInfo(title: '新消息', desc: '[图片]'),
+        offlinePushInfo: OfflinePushInfo(title: T.current.imPushNewMessage, desc: T.current.imPushImagePreview),
         userID: userID,
         groupID: groupID,
       );
