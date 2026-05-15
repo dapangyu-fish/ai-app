@@ -4,6 +4,32 @@
 
 ---
 
+## 快速索引（按症状反查）
+
+写 / 调 JSON-APP 出问题时先在这里找症状，跳到对应章节。
+
+| 你看到的现象 | 看哪节 |
+|------------|--------|
+| 整页白屏 + `RenderFlex ... unbounded` | §1 |
+| 整页白屏 + `Map ... is not a subtype of String?` | §2 |
+| 整页白屏 + `Map ... is not a subtype of num?` | §5 |
+| 整页白屏 + `List ... is not a subtype of Map` | §3 |
+| 整页白屏 + `operator xxx not defined`（jsonlogic） | §6 |
+| 整页白屏 + `Null is not a num` 但上游 `@set` 看似无害 | §8 |
+| 数据查询永远走 else 分支 / 静默 false | §4 |
+| UI 显示 `{{ t('xxx') }}` / `{{ global.xxx }}` 字面量 | §7 |
+| UI 显示 `{op_name: ...}` 字面量（带大括号和冒号） | §12 |
+| `@while` / `@for_each` 嵌套调用后循环索引诡异 | §10 |
+| flame_game 里 `{{ loop.id }}` 拼路径返 null | §11 |
+| atom 用 id 反查不命中 / jsonlogic var 直读 OK | §9 |
+
+如果症状对不上任何一条，往下顺读看类别能否匹配——按类别大致是：布局崩（§1）、
+静态字段类型（§2/§5）、顶层结构（§3）、函数 args 命名（§4）、jsonlogic 求值
+（§6/§8/§12 互相相关）、widget 模板（§7）、数据流模式（§9）、变量命名（§10）、
+flame 专有（§11）。
+
+---
+
 ## 1. 布局约束丢失：默认 Row 嵌套与非法 Flex
 
 ### 🚨 崩溃日志表现
@@ -272,6 +298,8 @@ if (value is Map<String, dynamic>) {
 ### 🔧 框架改进备忘
 
 `_evaluateExpression` 现在用 `_knownJsonLogicOps` 静态白名单判断。未来在 `_createJsonLogic` 里 `jl.add('xxx', ...)` 注册新 op 时，**必须同步把 'xxx' 加到 `_knownJsonLogicOps` 集合**，否则该 op 写法会被当数据 Map，jsonlogic 求值不会触发。
+
+**反向坑 → §12**：白名单解决了"数据 Map 被误判为 op"的崩溃，但**同时引入了反向的静默失败** —— 写一个**没注册**的 op 名（典型 `list_length` 当 jsonlogic op 用），命中不了白名单 → 退化为数据 Map → UI 直接显示 `{xxx: ...}` 字面量、不报任何异常。详见 §12。
 
 ---
 
