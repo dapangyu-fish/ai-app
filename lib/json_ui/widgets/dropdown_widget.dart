@@ -12,6 +12,7 @@ import 'base_widget.dart';
 import 'icon_registry.dart';
 import 'action_helper.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonDropdownWidget extends JsonBaseWidget {
   @override
@@ -23,7 +24,7 @@ class JsonDropdownWidget extends JsonBaseWidget {
     final bindPath = json['bind'] as String?;
     final disabled = json['disabled'] == true;
     final placeholder = interpreter.resolveTemplate(
-        json['placeholder']?.toString() ?? '请选择');
+        json['placeholder']?.toString() ?? T.of(context).widgetDropdownPlaceholder);
     final label = json['label']?.toString();
     final action =
         resolveActionAtBuildTime(json['action'], interpreter)

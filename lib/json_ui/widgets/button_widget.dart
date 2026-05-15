@@ -6,6 +6,7 @@ import 'base_widget.dart';
 import 'action_helper.dart';
 import '../interpreter.dart';
 import 'icon_registry.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonButtonWidget extends JsonBaseWidget {
   @override
@@ -15,7 +16,7 @@ class JsonButtonWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final label = interpreter.resolveTemplate(
-      (json['label'] ?? '按钮').toString(),
+      (json['label'] ?? T.of(context).widgetButtonDefaultLabel).toString(),
     );
     final action = json['action'] as Map<String, dynamic>?;
     final style = json['style'] as Map<String, dynamic>? ?? {};

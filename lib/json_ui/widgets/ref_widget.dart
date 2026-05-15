@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonRefWidget extends JsonBaseWidget {
   @override
@@ -17,19 +18,21 @@ class JsonRefWidget extends JsonBaseWidget {
     final props = json['props'] as Map<String, dynamic>? ?? {};
 
     if (from == null || widgetName == null) {
-      return _errorWidget(context, 'ref 控件需要 from 和 widget 字段');
+      return _errorWidget(context, T.of(context).widgetRefMissingFromOrName);
     }
 
     // 从依赖加载器查找模板
     final template = interpreter.depLoader.findTemplate(from, widgetName);
     if (template == null) {
-      return _errorWidget(context, '未找到: $from.$widgetName');
+      return _errorWidget(context,
+          T.fmt(T.of(context).widgetRefNotFoundWith, {'ref': '$from.$widgetName'}));
     }
 
     // 获取模板的 root 节点
     final root = template['root'] as Map<String, dynamic>?;
     if (root == null) {
-      return _errorWidget(context, '$from.$widgetName 缺少 root 定义');
+      return _errorWidget(context,
+          T.fmt(T.of(context).widgetRefMissingRootWith, {'ref': '$from.$widgetName'}));
     }
 
     // 解析 props 中的模板表达式

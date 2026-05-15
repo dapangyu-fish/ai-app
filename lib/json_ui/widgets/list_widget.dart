@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonListWidget extends JsonBaseWidget {
   @override
@@ -28,7 +29,7 @@ class JsonListWidget extends JsonBaseWidget {
 
     final itemTemplate = json['item_template'] as Map<String, dynamic>?;
     final emptyText = interpreter.resolveTemplate(
-        json['emptyText']?.toString() ?? '暂无数据');
+        json['emptyText']?.toString() ?? T.of(context).empty);
     final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
     final onLoadMore = json['onLoadMore'] as Map<String, dynamic>?;
     // separator: "none" 时不画横线（聊天气泡列表 / 卡片网格用），
@@ -55,7 +56,7 @@ class JsonListWidget extends JsonBaseWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
               const SizedBox(height: 12),
               Text(
-                items.isEmpty ? emptyText : '缺少 item_template',
+                items.isEmpty ? emptyText : T.of(context).widgetMissingItemTemplate,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,
@@ -89,7 +90,7 @@ class JsonListWidget extends JsonBaseWidget {
                               fontSize: 14,
                             )),
                         const SizedBox(height: 8),
-                        Text('下拉刷新',
+                        Text(T.of(context).widgetPullToRefresh,
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                               fontSize: 12,

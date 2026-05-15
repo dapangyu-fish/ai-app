@@ -517,6 +517,28 @@ class _Strings {
   final String imMsgPreviewLocation;               // "[位置]"
   final String imMsgPreviewGeneric;                // "[消息]"
 
+  // ── main 杂项 + JSON-UI 控件默认值 / 内置错误 ──
+  final String mainCantResolveAppConfigError;
+  final String widgetImagePickerPlaceholder;
+  final String widgetImagePickerReselect;
+  final String widgetCameraNoCamera;
+  final String widgetDatePickerPlaceholder;
+  final String widgetTimePickerPlaceholder;
+  final String widgetButtonDefaultLabel;
+  final String widgetMissingItemTemplate;          // "缺少 item_template"
+  final String widgetDropdownPlaceholder;          // "请选择"
+  final String widgetPullToRefresh;                // "下拉刷新"
+  final String widgetVideoNoUrl;                   // "未配置视频地址"
+  final String widgetVideoUnsupportedSource;
+  final String widgetVideoPlaybackFailedWith;      // "播放失败: {err}"
+  final String widgetVideoLoadFailedWith;          // 多行 "视频加载失败\n{err}"
+  final String widgetVideoLoading;
+  final String widgetRefNotFoundWith;              // "未找到: {ref}"
+  final String widgetRefMissingFromOrName;         // "ref 控件需要 from 和 widget 字段"
+  final String widgetRefMissingRootWith;           // "{ref} 缺少 root 定义"
+  final String widgetUnknownTypeWith;              // "未知控件类型: {type}"
+  final String widgetHttpNetworkFailed;            // "网络请求失败"
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -938,6 +960,26 @@ class _Strings {
     required this.imMsgPreviewFile,
     required this.imMsgPreviewLocation,
     required this.imMsgPreviewGeneric,
+    required this.mainCantResolveAppConfigError,
+    required this.widgetImagePickerPlaceholder,
+    required this.widgetImagePickerReselect,
+    required this.widgetCameraNoCamera,
+    required this.widgetDatePickerPlaceholder,
+    required this.widgetTimePickerPlaceholder,
+    required this.widgetButtonDefaultLabel,
+    required this.widgetMissingItemTemplate,
+    required this.widgetDropdownPlaceholder,
+    required this.widgetPullToRefresh,
+    required this.widgetVideoNoUrl,
+    required this.widgetVideoUnsupportedSource,
+    required this.widgetVideoPlaybackFailedWith,
+    required this.widgetVideoLoadFailedWith,
+    required this.widgetVideoLoading,
+    required this.widgetRefNotFoundWith,
+    required this.widgetRefMissingFromOrName,
+    required this.widgetRefMissingRootWith,
+    required this.widgetUnknownTypeWith,
+    required this.widgetHttpNetworkFailed,
   });
 }
 
@@ -1362,6 +1404,26 @@ const _Strings _zhCN = _Strings(
   imMsgPreviewFile: '[文件]',
   imMsgPreviewLocation: '[位置]',
   imMsgPreviewGeneric: '[消息]',
+  mainCantResolveAppConfigError: '无法解析或下载该应用配置',
+  widgetImagePickerPlaceholder: '点击选择图片',
+  widgetImagePickerReselect: '点击重新选择',
+  widgetCameraNoCamera: '无可用相机',
+  widgetDatePickerPlaceholder: '请选择日期',
+  widgetTimePickerPlaceholder: '请选择时间',
+  widgetButtonDefaultLabel: '按钮',
+  widgetMissingItemTemplate: '缺少 item_template',
+  widgetDropdownPlaceholder: '请选择',
+  widgetPullToRefresh: '下拉刷新',
+  widgetVideoNoUrl: '未配置视频地址',
+  widgetVideoUnsupportedSource: '不支持的视频来源',
+  widgetVideoPlaybackFailedWith: '播放失败: {err}',
+  widgetVideoLoadFailedWith: '视频加载失败\n{err}',
+  widgetVideoLoading: '视频加载中...',
+  widgetRefNotFoundWith: '未找到: {ref}',
+  widgetRefMissingFromOrName: 'ref 控件需要 from 和 widget 字段',
+  widgetRefMissingRootWith: '{ref} 缺少 root 定义',
+  widgetUnknownTypeWith: '未知控件类型: {type}',
+  widgetHttpNetworkFailed: '网络请求失败',
 );
 
 const _Strings _enUS = _Strings(
@@ -1785,6 +1847,26 @@ const _Strings _enUS = _Strings(
   imMsgPreviewFile: '[File]',
   imMsgPreviewLocation: '[Location]',
   imMsgPreviewGeneric: '[Message]',
+  mainCantResolveAppConfigError: 'Failed to resolve or download this app config',
+  widgetImagePickerPlaceholder: 'Tap to pick an image',
+  widgetImagePickerReselect: 'Tap to pick again',
+  widgetCameraNoCamera: 'No camera available',
+  widgetDatePickerPlaceholder: 'Pick a date',
+  widgetTimePickerPlaceholder: 'Pick a time',
+  widgetButtonDefaultLabel: 'Button',
+  widgetMissingItemTemplate: 'Missing item_template',
+  widgetDropdownPlaceholder: 'Select',
+  widgetPullToRefresh: 'Pull to refresh',
+  widgetVideoNoUrl: 'No video URL configured',
+  widgetVideoUnsupportedSource: 'Unsupported video source',
+  widgetVideoPlaybackFailedWith: 'Playback failed: {err}',
+  widgetVideoLoadFailedWith: 'Failed to load video\n{err}',
+  widgetVideoLoading: 'Loading video...',
+  widgetRefNotFoundWith: 'Not found: {ref}',
+  widgetRefMissingFromOrName: 'ref widget requires "from" and "widget" fields',
+  widgetRefMissingRootWith: '{ref} is missing the root definition',
+  widgetUnknownTypeWith: 'Unknown widget type: {type}',
+  widgetHttpNetworkFailed: 'Network request failed',
 );
 
 const _Strings _deDE = _Strings(
@@ -2208,6 +2290,26 @@ const _Strings _deDE = _Strings(
   imMsgPreviewFile: '[Datei]',
   imMsgPreviewLocation: '[Standort]',
   imMsgPreviewGeneric: '[Nachricht]',
+  mainCantResolveAppConfigError: 'App-Konfiguration konnte nicht aufgelöst oder heruntergeladen werden',
+  widgetImagePickerPlaceholder: 'Zum Auswählen tippen',
+  widgetImagePickerReselect: 'Zum erneuten Auswählen tippen',
+  widgetCameraNoCamera: 'Keine Kamera verfügbar',
+  widgetDatePickerPlaceholder: 'Datum wählen',
+  widgetTimePickerPlaceholder: 'Uhrzeit wählen',
+  widgetButtonDefaultLabel: 'Schaltfläche',
+  widgetMissingItemTemplate: 'item_template fehlt',
+  widgetDropdownPlaceholder: 'Auswählen',
+  widgetPullToRefresh: 'Zum Aktualisieren ziehen',
+  widgetVideoNoUrl: 'Keine Video-URL konfiguriert',
+  widgetVideoUnsupportedSource: 'Video-Quelle nicht unterstützt',
+  widgetVideoPlaybackFailedWith: 'Wiedergabe fehlgeschlagen: {err}',
+  widgetVideoLoadFailedWith: 'Video konnte nicht geladen werden\n{err}',
+  widgetVideoLoading: 'Video wird geladen...',
+  widgetRefNotFoundWith: 'Nicht gefunden: {ref}',
+  widgetRefMissingFromOrName: 'ref-Widget benötigt „from" und „widget" Felder',
+  widgetRefMissingRootWith: '{ref} fehlt die root-Definition',
+  widgetUnknownTypeWith: 'Unbekannter Widget-Typ: {type}',
+  widgetHttpNetworkFailed: 'Netzwerkanfrage fehlgeschlagen',
 );
 
 const _Strings _esES = _Strings(
@@ -2631,6 +2733,26 @@ const _Strings _esES = _Strings(
   imMsgPreviewFile: '[Archivo]',
   imMsgPreviewLocation: '[Ubicación]',
   imMsgPreviewGeneric: '[Mensaje]',
+  mainCantResolveAppConfigError: 'No se pudo resolver o descargar la configuración de la app',
+  widgetImagePickerPlaceholder: 'Toca para elegir imagen',
+  widgetImagePickerReselect: 'Toca para volver a elegir',
+  widgetCameraNoCamera: 'No hay cámara disponible',
+  widgetDatePickerPlaceholder: 'Elige una fecha',
+  widgetTimePickerPlaceholder: 'Elige una hora',
+  widgetButtonDefaultLabel: 'Botón',
+  widgetMissingItemTemplate: 'Falta item_template',
+  widgetDropdownPlaceholder: 'Seleccionar',
+  widgetPullToRefresh: 'Desliza para actualizar',
+  widgetVideoNoUrl: 'No hay URL de video configurada',
+  widgetVideoUnsupportedSource: 'Fuente de video no compatible',
+  widgetVideoPlaybackFailedWith: 'Reproducción fallida: {err}',
+  widgetVideoLoadFailedWith: 'Error al cargar el video\n{err}',
+  widgetVideoLoading: 'Cargando video...',
+  widgetRefNotFoundWith: 'No encontrado: {ref}',
+  widgetRefMissingFromOrName: 'El widget ref requiere los campos «from» y «widget»',
+  widgetRefMissingRootWith: 'A {ref} le falta la definición de root',
+  widgetUnknownTypeWith: 'Tipo de widget desconocido: {type}',
+  widgetHttpNetworkFailed: 'Solicitud de red fallida',
 );
 
 /// 公开访问点。

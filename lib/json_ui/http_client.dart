@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../i18n/framework_strings.dart';
 
 class DslHttpClient {
   static final DslHttpClient _instance = DslHttpClient._internal();
@@ -119,7 +120,7 @@ class DslHttpClient {
       'status': e.response?.statusCode ?? -1,
       'data': e.response?.data,
       'headers': {},
-      'error': e.message ?? '网络请求失败',
+      'error': e.message ?? T.current.widgetHttpNetworkFailed,
     };
   }
 }

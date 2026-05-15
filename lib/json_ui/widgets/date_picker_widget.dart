@@ -6,6 +6,7 @@ import 'base_widget.dart';
 import 'icon_registry.dart';
 import 'action_helper.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonDatePickerWidget extends JsonBaseWidget {
   @override
@@ -16,7 +17,7 @@ class JsonDatePickerWidget extends JsonBaseWidget {
   ) {
     final bindPath = json['bind'] as String?;
     final placeholder = interpreter.resolveTemplate(
-        json['placeholder']?.toString() ?? '请选择日期');
+        json['placeholder']?.toString() ?? T.of(context).widgetDatePickerPlaceholder);
     final label = json['label']?.toString();
     final prefixIcon = json['prefixIcon']?.toString() ?? 'calendar';
     final action =

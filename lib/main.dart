@@ -777,7 +777,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       );
 
       if (config == null) {
-        throw Exception('无法解析或下载该应用配置');
+        throw Exception(T.current.mainCantResolveAppConfigError);
       }
 
       final interpreter = ref.read(interpreterProvider);
@@ -1111,7 +1111,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           if (!mounted) return;
                           if (!ok) {
                             messenger.showSnackBar(
-                              const SnackBar(content: Text('IM 连接失败，请稍后重试')),
+                              SnackBar(content: Text(T.of(context).homeImLoginFailed)),
                             );
                             return;
                           }
@@ -1156,7 +1156,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '消息',
+                                    T.of(context).homeMessages,
                                     style: GoogleFonts.inter(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -1165,7 +1165,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    unread > 0 ? '$unread 条未读' : '查看会话与好友消息',
+                                    unread > 0
+                                        ? T.fmt(T.of(context).homeUnreadCount, {'n': unread})
+                                        : T.of(context).homeMessagesSubtitle,
                                     style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                                   ),
                                 ],

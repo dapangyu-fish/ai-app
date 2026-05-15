@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonGridWidget extends JsonBaseWidget {
   @override
@@ -36,7 +37,7 @@ class JsonGridWidget extends JsonBaseWidget {
     final padding = (json['padding'] as num?)?.toDouble() ?? 0;
     final shrinkWrap = json['shrinkWrap'] == true;
     final emptyText = interpreter.resolveTemplate(
-        json['emptyText']?.toString() ?? '暂无数据');
+        json['emptyText']?.toString() ?? T.of(context).empty);
     // 跨屏导航时保留滚动位置（同 list 的 key 字段）
     final keyStr = json['key']?.toString();
     final pageKey = keyStr != null && keyStr.isNotEmpty
@@ -58,7 +59,7 @@ class JsonGridWidget extends JsonBaseWidget {
                       .withValues(alpha: 0.5)),
               const SizedBox(height: 8),
               Text(
-                items.isEmpty ? emptyText : '缺少 item_template',
+                items.isEmpty ? emptyText : T.of(context).widgetMissingItemTemplate,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
