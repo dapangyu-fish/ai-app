@@ -87,34 +87,198 @@ class _ChatOverlayState extends State<ChatOverlay> {
     return '新会话';
   }
 
-  Future<void> _openSessionSheet(BuildContext fallbackContext) async {
-    // ChatOverlay 自身 context 找不到 Navigator（DesignerBall 在 MaterialApp.builder
-    // 之上），必须用 designer_ball 注入的 navigatorKey context；fallback 只为防御。
-    final navCtx = widget.getNavigatorContext?.call() ?? fallbackContext;
-    debugPrint('[ChatOverlay] 点击 SessionChip，准备弹 sheet '
-        '(active=${widget.activeSessionId}, sessions=${widget.getSessions().length}, '
-        'navCtxFromInjected=${widget.getNavigatorContext?.call() != null})');
-    final probe = widget.onProbeAllSessionStatus?.call();
-    try {
-      await showModalBottomSheet<void>(
-        context: navCtx,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) => _SessionListSheet(
-          activeSessionId: widget.activeSessionId,
-          getSessions: widget.getSessions,
-          onNewSession: widget.onNewSession,
-          onSwitchSession: widget.onSwitchSession,
-          onDeleteSession: widget.onDeleteSession,
-          onRenameSession: widget.onRenameSession,
-          statusProbeFuture: probe,
-        ),
-      );
-      debugPrint('[ChatOverlay] sheet 关闭');
-    } catch (e, st) {
-      debugPrint('[ChatOverlay] sheet 打开失败: $e\n$st');
+  /// 从 chip 位置弹下拉菜单。结构：
+  ///   [+ 新建会话]
+  ///   ─── 分隔线 ───
+  ///   [● Session A   12:34   ⋮]
+  ///   [● Session B   昨天    ⋮]
+  ///   ...
+  /// 点行 → 切换；点 ⋮ → 二级 action（重命名 / 删除）
+  Future<void> _openSessionMenu(BuildContext chipContext) async {
+    final navCtx = widget.getNavigatorContext?.call();
+    if (navCtx == null) {
+      debugPrint('[ChatOverlay] 拿不到 navigator context，无法弹下拉');
+      return;
     }
-    if (mounted) setState(() {});  // sheet 关闭后刷新 chip 标题
+    // 计算 chip 屏幕坐标
+    final box = chipContext.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final origin = box.localToGlobal(Offset.zero);
+    final size = box.size;
+    // 异步发起一次状态探活（菜单内 FutureBuilder 等结果再渲染状态点）
+    final probeFuture = widget.onProbeAllSessionStatus?.call();
+
+    final sessions = widget.getSessions();
+    final mq = MediaQuery.of(navCtx);
+
+    final menuItems = <PopupMenuEntry<_SessionMenuAction>>[
+      PopupMenuItem<_SessionMenuAction>(
+        value: const _SessionMenuAction.newSession(),
+        height: 40,
+        child: Row(
+          children: [
+            Icon(Icons.add_circle_outline,
+                size: 18, color: Colors.purpleAccent),
+            const SizedBox(width: 10),
+            const Text('新建会话',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+      const PopupMenuDivider(height: 1),
+      for (final s in sessions)
+        PopupMenuItem<_SessionMenuAction>(
+          value: _SessionMenuAction.switchTo(s.id),
+          height: 48,
+          padding: EdgeInsets.zero,
+          child: _SessionMenuRow(
+            session: s,
+            isActive: s.id == widget.activeSessionId,
+            probeFuture: probeFuture,
+            onMoreTap: () async {
+              // 关掉外层菜单再开 action sheet，否则两层菜单嵌套 Flutter 会拒
+              Navigator.of(navCtx).pop(_SessionMenuAction.openActions(s.id));
+            },
+          ),
+        ),
+    ];
+
+    final picked = await showMenu<_SessionMenuAction>(
+      context: navCtx,
+      position: RelativeRect.fromLTRB(
+        origin.dx,
+        origin.dy + size.height + 4,
+        mq.size.width - origin.dx - size.width,
+        0,
+      ),
+      constraints: const BoxConstraints(
+        minWidth: 220,
+        maxWidth: 280,
+      ),
+      items: menuItems,
+    );
+
+    if (picked == null) {
+      if (mounted) setState(() {});
+      return;
+    }
+    await picked.when(
+      newSession: () async {
+        await widget.onNewSession?.call();
+      },
+      switchTo: (sid) async {
+        if (sid != widget.activeSessionId) {
+          await widget.onSwitchSession?.call(sid);
+        }
+      },
+      openActions: (sid) async {
+        await _openSessionActions(navCtx, sid);
+      },
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// 二级 action 菜单：重命名 / 删除（从 ⋮ 进入）
+  Future<void> _openSessionActions(BuildContext navCtx, String sid) async {
+    final s = widget.getSessions().firstWhere(
+          (x) => x.id == sid,
+          orElse: () => SessionMeta(id: ''),
+        );
+    if (s.id.isEmpty) return;
+
+    final action = await showModalBottomSheet<String>(
+      context: navCtx,
+      backgroundColor: const Color(0xFF2C2C2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                s.displayTitle(maxVisualWidth: 22),
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 13),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: Colors.white),
+              title: const Text('重命名',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.of(ctx).pop('rename'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: const Text('删除会话',
+                  style: TextStyle(color: Colors.redAccent)),
+              onTap: () => Navigator.of(ctx).pop('delete'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (action == 'rename') {
+      // ignore: use_build_context_synchronously — navCtx 来自 JsonDslApp.navigatorKey，永远有效
+      await _promptRename(navCtx, s);
+    } else if (action == 'delete') {
+      // ignore: use_build_context_synchronously — 同上
+      final ok = await _confirmDelete(navCtx, s);
+      if (ok == true) await widget.onDeleteSession?.call(sid);
+    }
+  }
+
+  Future<void> _promptRename(BuildContext navCtx, SessionMeta s) async {
+    final controller =
+        TextEditingController(text: s.customTitle ?? s.firstMessage);
+    final newTitle = await showDialog<String>(
+      context: navCtx,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重命名会话'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '新标题'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text),
+              child: const Text('保存')),
+        ],
+      ),
+    );
+    if (newTitle != null) {
+      await widget.onRenameSession?.call(s.id, newTitle);
+    }
+  }
+
+  Future<bool?> _confirmDelete(BuildContext navCtx, SessionMeta s) async {
+    return await showDialog<bool>(
+      context: navCtx,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除会话'),
+        content: Text(
+            '删除「${s.displayTitle(maxVisualWidth: 16)}」？后台正在跑的回答也会被中止。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -174,7 +338,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
                   ],
                   _SessionChip(
                     title: _currentSessionTitle(),
-                    onTap: () => _openSessionSheet(context),
+                    onTap: (chipCtx) => _openSessionMenu(chipCtx),
                   ),
                   // 可拖动区域
                   Expanded(
@@ -517,54 +681,57 @@ class _NoGlowBehavior extends ScrollBehavior {
   }
 }
 
-/// 会话切换小标签 —— 点击弹 _SessionListSheet
+/// 会话切换小标签 —— 点击触发 onTap，传入 chip 自己的 BuildContext
+/// 给调用方算屏幕坐标用（findRenderObject）
 class _SessionChip extends StatelessWidget {
   final String title;
-  final VoidCallback onTap;
+  final void Function(BuildContext chipContext) onTap;
 
   const _SessionChip({required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    // 用 Material+InkWell 给点击反馈，避免之前 ProviderChip "点不动" 的歧义
+    // Builder 让 onTap 拿到 InkWell 内部的 context（带 RenderObject）
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
-              width: 0.5,
+      child: Builder(
+        builder: (innerCtx) => InkWell(
+          onTap: () => onTap(innerCtx),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 0.5,
+              ),
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.forum_outlined,
-                  color: Colors.white.withValues(alpha: 0.7), size: 12),
-              const SizedBox(width: 5),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 110),
-                child: Text(
-                  title,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.forum_outlined,
+                    color: Colors.white.withValues(alpha: 0.7), size: 12),
+                const SizedBox(width: 5),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 110),
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 2),
-              Icon(Icons.expand_more,
-                  color: Colors.white.withValues(alpha: 0.5), size: 14),
-            ],
+                const SizedBox(width: 2),
+                Icon(Icons.expand_more,
+                    color: Colors.white.withValues(alpha: 0.5), size: 14),
+              ],
+            ),
           ),
         ),
       ),
@@ -572,242 +739,122 @@ class _SessionChip extends StatelessWidget {
   }
 }
 
-/// 会话列表 sheet（半屏 bottom sheet）
-/// - 顶部 [+ 新建会话]
-/// - 每行：标题 + 副标题（时间 + 状态）；左侧状态圆点
-/// - 滑动删除；长按重命名；点击切换 active
-class _SessionListSheet extends StatefulWidget {
-  final String activeSessionId;
-  final List<SessionMeta> Function() getSessions;
-  final Future<void> Function()? onNewSession;
-  final Future<void> Function(String sid)? onSwitchSession;
-  final Future<void> Function(String sid)? onDeleteSession;
-  final Future<void> Function(String sid, String newTitle)? onRenameSession;
-  final Future<Set<String>>? statusProbeFuture;
+/// 下拉菜单的 action sealed enum
+class _SessionMenuAction {
+  final String kind;
+  final String? sid;
+  const _SessionMenuAction._(this.kind, this.sid);
+  const _SessionMenuAction.newSession() : this._('new', null);
+  const _SessionMenuAction.switchTo(String sid) : this._('switch', sid);
+  const _SessionMenuAction.openActions(String sid) : this._('actions', sid);
 
-  const _SessionListSheet({
-    required this.activeSessionId,
-    required this.getSessions,
-    required this.onNewSession,
-    required this.onSwitchSession,
-    required this.onDeleteSession,
-    required this.onRenameSession,
-    required this.statusProbeFuture,
+  Future<void> when({
+    required Future<void> Function() newSession,
+    required Future<void> Function(String sid) switchTo,
+    required Future<void> Function(String sid) openActions,
+  }) {
+    switch (kind) {
+      case 'new':
+        return newSession();
+      case 'switch':
+        return switchTo(sid!);
+      case 'actions':
+        return openActions(sid!);
+      default:
+        return Future.value();
+    }
+  }
+}
+
+/// 下拉菜单里一行：状态点 + 标题 + 副标题 + ⋮
+class _SessionMenuRow extends StatelessWidget {
+  final SessionMeta session;
+  final bool isActive;
+  final Future<Set<String>>? probeFuture;
+  final VoidCallback onMoreTap;
+
+  const _SessionMenuRow({
+    required this.session,
+    required this.isActive,
+    required this.probeFuture,
+    required this.onMoreTap,
   });
 
   @override
-  State<_SessionListSheet> createState() => _SessionListSheetState();
-}
-
-class _SessionListSheetState extends State<_SessionListSheet> {
-  @override
-  void initState() {
-    super.initState();
-    // 探活完成后刷新一次列表（拿到最新状态点）
-    widget.statusProbeFuture?.then((_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final sessions = widget.getSessions();
-    final mq = MediaQuery.of(context);
-
-    return Container(
-      width: double.infinity,  // 否则只贴着内容宽度，sheet 会变成一条窄缝看不见
-      constraints: BoxConstraints(
-        maxHeight: mq.size.height * 0.6,
-      ),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // grab handle
-            Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // + 新建会话
-            InkWell(
-              onTap: () async {
-                Navigator.of(context).pop();
-                await widget.onNewSession?.call();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.purple.withValues(alpha: 0.25),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      '新建会话',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-            Flexible(
-              child: sessions.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Center(
-                        child: Text(
-                          '还没有会话',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.only(bottom: 12),
-                      itemCount: sessions.length,
-                      separatorBuilder: (_, __) => Container(
-                        height: 1,
-                        color: Colors.white.withValues(alpha: 0.06),
-                        margin: const EdgeInsets.only(left: 60),
-                      ),
-                      itemBuilder: (ctx, i) {
-                        final s = sessions[i];
-                        return _buildRow(s);
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRow(SessionMeta s) {
-    final isActive = s.id == widget.activeSessionId;
-    return Dismissible(
-      key: ValueKey('session_${s.id}'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        color: Colors.red.withValues(alpha: 0.6),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      confirmDismiss: (_) async {
-        return await _confirmDelete(s);
-      },
-      onDismissed: (_) async {
-        await widget.onDeleteSession?.call(s.id);
-        if (mounted) setState(() {});
-      },
-      child: InkWell(
-        onTap: () async {
-          Navigator.of(context).pop();
-          if (!isActive) {
-            await widget.onSwitchSession?.call(s.id);
-          }
-        },
-        onLongPress: () => _promptRename(s),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: isActive ? Colors.white.withValues(alpha: 0.06) : null,
+    return FutureBuilder<Set<String>>(
+      future: probeFuture,
+      builder: (ctx, snap) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: [
-              _statusDot(s),
-              const SizedBox(width: 12),
+              _statusDot(),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      s.displayTitle(maxVisualWidth: 22),
+                      session.displayTitle(maxVisualWidth: 14),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.95),
-                        fontSize: 14,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 13,
+                        fontWeight:
+                            isActive ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     Text(
-                      _subtitle(s),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 11,
+                      _relativeTime(session.updatedAt),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (isActive)
-                const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Icon(Icons.check, color: Colors.purpleAccent, size: 18),
+              // ⋮ 按钮：用 GestureDetector + opaque 行为阻止上层 PopupMenuItem 吃掉 tap
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onMoreTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(Icons.more_vert,
+                      size: 18, color: Colors.grey.shade600),
                 ),
+              ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _statusDot(SessionMeta s) {
+  Widget _statusDot() {
     Color c;
-    if (s.id == widget.activeSessionId) {
+    if (isActive) {
       c = Colors.purpleAccent;
-    } else if (s.lastKnownStatus == 'running' && s.processAlive) {
-      c = const Color(0xFFFFC107); // yellow: 仍在跑但非 active
-    } else if (s.lastKnownStatus == 'running' && !s.processAlive) {
-      c = const Color(0xFFE53935); // red: worker 死了
-    } else if (s.lastKnownStatus == 'done') {
-      c = Colors.white.withValues(alpha: 0.4);
-    } else if (s.lastKnownStatus == 'failed' || s.lastKnownStatus == 'aborted') {
+    } else if (session.lastKnownStatus == 'running' && session.processAlive) {
+      c = const Color(0xFFFFC107);
+    } else if (session.lastKnownStatus == 'running' && !session.processAlive) {
       c = const Color(0xFFE53935);
+    } else if (session.lastKnownStatus == 'failed' ||
+        session.lastKnownStatus == 'aborted') {
+      c = const Color(0xFFE53935);
+    } else if (session.lastKnownStatus == 'done') {
+      c = Colors.grey.shade400;
     } else {
-      c = Colors.white.withValues(alpha: 0.25);
+      c = Colors.grey.shade300;
     }
     return Container(
-      width: 8,
-      height: 8,
+      width: 7,
+      height: 7,
       decoration: BoxDecoration(color: c, shape: BoxShape.circle),
     );
-  }
-
-  String _subtitle(SessionMeta s) {
-    final parts = <String>[_relativeTime(s.updatedAt)];
-    final st = s.lastKnownStatus;
-    if (st != null && st.isNotEmpty) parts.add(st);
-    return parts.join(' · ');
   }
 
   String _relativeTime(int ms) {
@@ -817,51 +864,8 @@ class _SessionListSheetState extends State<_SessionListSheet> {
     if (diff < 24 * 60 * 60 * 1000) return '${diff ~/ (60 * 60 * 1000)} 小时前';
     return '${diff ~/ (24 * 60 * 60 * 1000)} 天前';
   }
-
-  Future<bool> _confirmDelete(SessionMeta s) async {
-    final res = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('删除会话'),
-        content: Text('删除「${s.displayTitle(maxVisualWidth: 16)}」？后台正在跑的回答也会被中止。'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('取消')),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
-    return res ?? false;
-  }
-
-  Future<void> _promptRename(SessionMeta s) async {
-    final controller = TextEditingController(text: s.customTitle ?? s.firstMessage);
-    final newTitle = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('重命名会话'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '新标题'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('取消')),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-    if (newTitle == null) return;
-    await widget.onRenameSession?.call(s.id, newTitle);
-    if (mounted) setState(() {});
-  }
 }
+
 
 class _DownloadRunButton extends StatefulWidget {
   final String url;
