@@ -149,6 +149,13 @@ class _ChatOverlayState extends State<ChatOverlay> {
                   Icon(Icons.chat_bubble_outline,
                       color: Colors.white.withValues(alpha: 0.5), size: 14),
                   const SizedBox(width: 6),
+                  if (widget.onNewSession != null) ...[
+                    _TitleBarButton(
+                      icon: Icons.add_circle_outline,
+                      onTap: () { widget.onNewSession!(); },
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   _SessionChip(
                     title: _currentSessionTitle(),
                     onTap: () => _openSessionSheet(context),
