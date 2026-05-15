@@ -82,22 +82,30 @@ class _ChatOverlayState extends State<ChatOverlay> {
   }
 
   Future<void> _openSessionSheet(BuildContext context) async {
+    debugPrint('[ChatOverlay] 点击 SessionChip，准备弹 sheet '
+        '(active=${widget.activeSessionId}, sessions=${widget.getSessions().length})');
     // 打开瞬间发起批量探活（不 await，sheet 内部用 onProbeAllSessionStatus 拿到结果时再 setState）
     final probe = widget.onProbeAllSessionStatus?.call();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _SessionListSheet(
-        activeSessionId: widget.activeSessionId,
-        getSessions: widget.getSessions,
-        onNewSession: widget.onNewSession,
-        onSwitchSession: widget.onSwitchSession,
-        onDeleteSession: widget.onDeleteSession,
-        onRenameSession: widget.onRenameSession,
-        statusProbeFuture: probe,
-      ),
-    );
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useRootNavigator: true,  // DesignerBall 挂在 MaterialApp.builder，用 root navigator 更稳
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _SessionListSheet(
+          activeSessionId: widget.activeSessionId,
+          getSessions: widget.getSessions,
+          onNewSession: widget.onNewSession,
+          onSwitchSession: widget.onSwitchSession,
+          onDeleteSession: widget.onDeleteSession,
+          onRenameSession: widget.onRenameSession,
+          statusProbeFuture: probe,
+        ),
+      );
+      debugPrint('[ChatOverlay] sheet 关闭');
+    } catch (e, st) {
+      debugPrint('[ChatOverlay] sheet 打开失败: $e\n$st');
+    }
     if (mounted) setState(() {});  // sheet 关闭后刷新 chip 标题
   }
 
@@ -599,6 +607,7 @@ class _SessionListSheetState extends State<_SessionListSheet> {
     final mq = MediaQuery.of(context);
 
     return Container(
+      width: double.infinity,  // 否则只贴着内容宽度，sheet 会变成一条窄缝看不见
       constraints: BoxConstraints(
         maxHeight: mq.size.height * 0.6,
       ),
