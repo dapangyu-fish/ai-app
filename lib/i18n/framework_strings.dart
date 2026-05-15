@@ -406,6 +406,28 @@ class _Strings {
   final String imLeaveFailedWith;          // "退出失败: {err}"
   final String imConfirmLeave;
 
+  // ── AI 对话浮层（多会话 / 状态消息）──
+  final String chatSessionDefaultTitle;     // chip / sheet 显示用："新会话"
+  final String chatSessionMenuNew;          // 下拉菜单顶部："新建会话"
+  final String chatSessionMenuEmpty;        // 下拉空态："暂无会话"
+  final String chatSessionRenameTitle;      // 重命名 dialog 标题
+  final String chatSessionRenameHint;       // 重命名 textfield hint："新标题"
+  final String chatSessionActionRename;     // action sheet item："重命名"
+  final String chatSessionDeleteTitle;      // 删除 dialog 标题
+  final String chatSessionDeleteContent;    // 删除确认正文，{title} 占位
+  final String chatStatusGenerating;        // "正在生成代码..."
+  final String chatStatusStartingAi;        // "正在启动 AI 引擎..."
+  final String chatStatusResumingLast;      // "正在恢复上次对话..."
+  final String chatActionUploadCurrentApp;  // "上传当前应用配置"
+  final String chatActionRetryDownloadJson; // "重试下载 JSON"
+  final String chatTimeJustNow;             // "刚刚"
+  final String chatTimeMinutesAgo;          // "{n} 分钟前"
+  final String chatTimeHoursAgo;            // "{n} 小时前"
+  final String chatTimeDaysAgo;             // "{n} 天前"
+  final String chatDownloadStateDownloading; // "下载中..."
+  final String chatDownloadStateRun;         // "下载并运行"
+  final String chatDownloadStateRetry;       // "重试下载并运行"
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -728,6 +750,26 @@ class _Strings {
     required this.imLeaveGroupConfirmContent,
     required this.imLeaveFailedWith,
     required this.imConfirmLeave,
+    required this.chatSessionDefaultTitle,
+    required this.chatSessionMenuNew,
+    required this.chatSessionMenuEmpty,
+    required this.chatSessionRenameTitle,
+    required this.chatSessionRenameHint,
+    required this.chatSessionActionRename,
+    required this.chatSessionDeleteTitle,
+    required this.chatSessionDeleteContent,
+    required this.chatStatusGenerating,
+    required this.chatStatusStartingAi,
+    required this.chatStatusResumingLast,
+    required this.chatActionUploadCurrentApp,
+    required this.chatActionRetryDownloadJson,
+    required this.chatTimeJustNow,
+    required this.chatTimeMinutesAgo,
+    required this.chatTimeHoursAgo,
+    required this.chatTimeDaysAgo,
+    required this.chatDownloadStateDownloading,
+    required this.chatDownloadStateRun,
+    required this.chatDownloadStateRetry,
   });
 }
 
@@ -1053,6 +1095,26 @@ const _Strings _zhCN = _Strings(
   imLeaveGroupConfirmContent: '确定退出「{name}」？',
   imLeaveFailedWith: '退出失败: {err}',
   imConfirmLeave: '确定退出',
+  chatSessionDefaultTitle: '新会话',
+  chatSessionMenuNew: '新建会话',
+  chatSessionMenuEmpty: '暂无会话',
+  chatSessionRenameTitle: '重命名会话',
+  chatSessionRenameHint: '新标题',
+  chatSessionActionRename: '重命名',
+  chatSessionDeleteTitle: '删除会话',
+  chatSessionDeleteContent: '删除「{title}」？后台正在跑的回答也会被中止。',
+  chatStatusGenerating: '正在生成代码...',
+  chatStatusStartingAi: '正在启动 AI 引擎...',
+  chatStatusResumingLast: '正在恢复上次对话...',
+  chatActionUploadCurrentApp: '上传当前应用配置',
+  chatActionRetryDownloadJson: '重试下载 JSON',
+  chatTimeJustNow: '刚刚',
+  chatTimeMinutesAgo: '{n} 分钟前',
+  chatTimeHoursAgo: '{n} 小时前',
+  chatTimeDaysAgo: '{n} 天前',
+  chatDownloadStateDownloading: '下载中...',
+  chatDownloadStateRun: '下载并运行',
+  chatDownloadStateRetry: '重试下载并运行',
 );
 
 const _Strings _enUS = _Strings(
@@ -1377,6 +1439,26 @@ const _Strings _enUS = _Strings(
   imLeaveGroupConfirmContent: 'Leave "{name}"?',
   imLeaveFailedWith: 'Leave failed: {err}',
   imConfirmLeave: 'Confirm leave',
+  chatSessionDefaultTitle: 'New chat',
+  chatSessionMenuNew: 'New chat',
+  chatSessionMenuEmpty: 'No chats yet',
+  chatSessionRenameTitle: 'Rename chat',
+  chatSessionRenameHint: 'New title',
+  chatSessionActionRename: 'Rename',
+  chatSessionDeleteTitle: 'Delete chat',
+  chatSessionDeleteContent: 'Delete "{title}"? The reply still running in the background will be aborted.',
+  chatStatusGenerating: 'Generating code...',
+  chatStatusStartingAi: 'Starting AI engine...',
+  chatStatusResumingLast: 'Resuming last conversation...',
+  chatActionUploadCurrentApp: 'Upload current app config',
+  chatActionRetryDownloadJson: 'Retry downloading JSON',
+  chatTimeJustNow: 'just now',
+  chatTimeMinutesAgo: '{n} min ago',
+  chatTimeHoursAgo: '{n} h ago',
+  chatTimeDaysAgo: '{n} d ago',
+  chatDownloadStateDownloading: 'Downloading...',
+  chatDownloadStateRun: 'Download & run',
+  chatDownloadStateRetry: 'Retry download & run',
 );
 
 const _Strings _deDE = _Strings(
@@ -1701,6 +1783,26 @@ const _Strings _deDE = _Strings(
   imLeaveGroupConfirmContent: '„{name}" verlassen?',
   imLeaveFailedWith: 'Verlassen fehlgeschlagen: {err}',
   imConfirmLeave: 'Verlassen bestätigen',
+  chatSessionDefaultTitle: 'Neuer Chat',
+  chatSessionMenuNew: 'Neuer Chat',
+  chatSessionMenuEmpty: 'Noch keine Chats',
+  chatSessionRenameTitle: 'Chat umbenennen',
+  chatSessionRenameHint: 'Neuer Titel',
+  chatSessionActionRename: 'Umbenennen',
+  chatSessionDeleteTitle: 'Chat löschen',
+  chatSessionDeleteContent: '„{title}" löschen? Die im Hintergrund laufende Antwort wird abgebrochen.',
+  chatStatusGenerating: 'Code wird generiert...',
+  chatStatusStartingAi: 'KI-Modul wird gestartet...',
+  chatStatusResumingLast: 'Letzte Unterhaltung wird wiederhergestellt...',
+  chatActionUploadCurrentApp: 'Aktuelle App-Konfiguration hochladen',
+  chatActionRetryDownloadJson: 'JSON-Download wiederholen',
+  chatTimeJustNow: 'gerade eben',
+  chatTimeMinutesAgo: 'vor {n} Min.',
+  chatTimeHoursAgo: 'vor {n} Std.',
+  chatTimeDaysAgo: 'vor {n} T.',
+  chatDownloadStateDownloading: 'Wird geladen...',
+  chatDownloadStateRun: 'Herunterladen & starten',
+  chatDownloadStateRetry: 'Erneut herunterladen & starten',
 );
 
 const _Strings _esES = _Strings(
@@ -2025,6 +2127,26 @@ const _Strings _esES = _Strings(
   imLeaveGroupConfirmContent: '¿Salir de «{name}»?',
   imLeaveFailedWith: 'Error al salir: {err}',
   imConfirmLeave: 'Confirmar salida',
+  chatSessionDefaultTitle: 'Chat nuevo',
+  chatSessionMenuNew: 'Chat nuevo',
+  chatSessionMenuEmpty: 'Aún no hay chats',
+  chatSessionRenameTitle: 'Renombrar chat',
+  chatSessionRenameHint: 'Nuevo título',
+  chatSessionActionRename: 'Renombrar',
+  chatSessionDeleteTitle: 'Eliminar chat',
+  chatSessionDeleteContent: '¿Eliminar «{title}»? La respuesta que se está ejecutando en segundo plano se cancelará.',
+  chatStatusGenerating: 'Generando código...',
+  chatStatusStartingAi: 'Iniciando motor de IA...',
+  chatStatusResumingLast: 'Restaurando conversación anterior...',
+  chatActionUploadCurrentApp: 'Subir configuración actual',
+  chatActionRetryDownloadJson: 'Reintentar descarga del JSON',
+  chatTimeJustNow: 'ahora mismo',
+  chatTimeMinutesAgo: 'hace {n} min',
+  chatTimeHoursAgo: 'hace {n} h',
+  chatTimeDaysAgo: 'hace {n} d',
+  chatDownloadStateDownloading: 'Descargando...',
+  chatDownloadStateRun: 'Descargar y ejecutar',
+  chatDownloadStateRetry: 'Reintentar descarga y ejecución',
 );
 
 /// 公开访问点。

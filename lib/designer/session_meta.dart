@@ -1,3 +1,5 @@
+import '../i18n/framework_strings.dart';
+
 /// 多会话支持的元数据。一条 session 在 prefs 里就是一条 SessionMeta。
 ///
 /// 状态约定：
@@ -5,7 +7,7 @@
 ///   未持久化到 prefs；杀 app 就丢。
 /// - committed=true：首次 POST /start 200 之后才置位 + 写 prefs。
 ///
-/// title 显示优先级：customTitle > 首条 user message 截断 > "新会话"。
+/// title 显示优先级：customTitle > 首条 user message 截断 > T.current.chatSessionDefaultTitle。
 class SessionMeta {
   final String id;
   String? customTitle;
@@ -55,10 +57,13 @@ class SessionMeta {
 
   /// 显示用标题。maxVisualWidth 是"视觉宽度"——中文按 1.0、ASCII 按 0.5 计。
   /// 顶栏 chip 建议 8，sheet 列表行建议 22。
+  /// 不在 widget 树里，i18n 走 T.current（跟随用户当前 locale）。
   String displayTitle({double maxVisualWidth = 8}) {
     final raw = (customTitle?.isNotEmpty ?? false)
         ? customTitle!
-        : (firstMessage.isNotEmpty ? firstMessage : '新会话');
+        : (firstMessage.isNotEmpty
+            ? firstMessage
+            : T.current.chatSessionDefaultTitle);
     return _truncateByVisualWidth(raw, maxVisualWidth);
   }
 

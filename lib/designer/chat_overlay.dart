@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'session_meta.dart';
+import '../i18n/framework_strings.dart';
 
 /// 对话消息
 class ChatMessage {
@@ -19,7 +20,7 @@ class ChatOverlay extends StatefulWidget {
   final bool isListening;
   final bool isThinking;
   final bool isGeneratingJson;
-  final String generatingStatusMessage;
+  final String? generatingStatusMessage;
   final VoidCallback onClose;
   final VoidCallback? onClear;
   final ScrollController scrollController;
@@ -51,7 +52,7 @@ class ChatOverlay extends StatefulWidget {
     required this.isListening,
     required this.isThinking,
     this.isGeneratingJson = false,
-    this.generatingStatusMessage = '正在生成代码...',
+    this.generatingStatusMessage,  // null → i18n 默认值（chatStatusGenerating）
     required this.onClose,
     required this.scrollController,
     required this.activeSessionId,
@@ -85,12 +86,13 @@ class _ChatOverlayState extends State<ChatOverlay> {
   Future<Set<String>>? _statusProbeFuture;
 
   String _currentSessionTitle() {
+    final defaultTitle = T.of(context).chatSessionDefaultTitle;
     final sid = widget.activeSessionId;
-    if (sid.isEmpty) return '新会话';
+    if (sid.isEmpty) return defaultTitle;
     for (final s in widget.getSessions()) {
       if (s.id == sid) return s.displayTitle(maxVisualWidth: 8);
     }
-    return '新会话';
+    return defaultTitle;
   }
 
   void _toggleMenu() {
@@ -136,14 +138,14 @@ class _ChatOverlayState extends State<ChatOverlay> {
             ),
             ListTile(
               leading: const Icon(Icons.edit_outlined, color: Colors.white),
-              title: const Text('重命名',
-                  style: TextStyle(color: Colors.white)),
+              title: Text(T.of(ctx).chatSessionActionRename,
+                  style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.of(ctx).pop('rename'),
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              title: const Text('删除会话',
-                  style: TextStyle(color: Colors.redAccent)),
+              title: Text(T.of(ctx).chatSessionDeleteTitle,
+                  style: const TextStyle(color: Colors.redAccent)),
               onTap: () => Navigator.of(ctx).pop('delete'),
             ),
             const SizedBox(height: 8),
@@ -167,22 +169,25 @@ class _ChatOverlayState extends State<ChatOverlay> {
         TextEditingController(text: s.customTitle ?? s.firstMessage);
     final newTitle = await showDialog<String>(
       context: navCtx,
-      builder: (ctx) => AlertDialog(
-        title: const Text('重命名会话'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '新标题'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('取消')),
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text),
-              child: const Text('保存')),
-        ],
-      ),
+      builder: (ctx) {
+        final t = T.of(ctx);
+        return AlertDialog(
+          title: Text(t.chatSessionRenameTitle),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(hintText: t.chatSessionRenameHint),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(t.cancel)),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(controller.text),
+                child: Text(t.save)),
+          ],
+        );
+      },
     );
     if (newTitle != null) {
       await widget.onRenameSession?.call(s.id, newTitle);
@@ -192,21 +197,24 @@ class _ChatOverlayState extends State<ChatOverlay> {
   Future<bool?> _confirmDelete(BuildContext navCtx, SessionMeta s) async {
     return await showDialog<bool>(
       context: navCtx,
-      builder: (ctx) => AlertDialog(
-        title: const Text('删除会话'),
-        content: Text(
-            '删除「${s.displayTitle(maxVisualWidth: 16)}」？后台正在跑的回答也会被中止。'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('取消')),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final t = T.of(ctx);
+        return AlertDialog(
+          title: Text(t.chatSessionDeleteTitle),
+          content: Text(T.fmt(t.chatSessionDeleteContent,
+              {'title': s.displayTitle(maxVisualWidth: 16)})),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(t.cancel)),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: Text(t.delete),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -348,10 +356,13 @@ class _ChatOverlayState extends State<ChatOverlay> {
                     }
                     final msg = visibleMessages[index];
                     if (msg.action == 'UPLOAD_CURRENT_APP') {
-                      return _buildActionLine(msg.content, '上传当前应用配置', widget.onUploadCurrentApp);
+                      return _buildActionLine(msg.content,
+                          T.of(context).chatActionUploadCurrentApp,
+                          widget.onUploadCurrentApp);
                     }
                     if (msg.action == 'RETRY_LAST_TURN') {
-                      return _buildActionLine(msg.content, '重试', widget.onRetryLastTurn);
+                      return _buildActionLine(msg.content,
+                          T.of(context).retry, widget.onRetryLastTurn);
                     }
                     if (msg.failedJsonUrl != null) {
                       return _buildRetryLine(msg.content, msg.failedJsonUrl!);
@@ -517,9 +528,9 @@ class _ChatOverlayState extends State<ChatOverlay> {
                 children: [
                   const Icon(Icons.refresh, color: Colors.white, size: 18),
                   const SizedBox(width: 6),
-                  const Text(
-                    '重试下载 JSON',
-                    style: TextStyle(
+                  Text(
+                    T.of(context).chatActionRetryDownloadJson,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -624,7 +635,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                widget.generatingStatusMessage,
+                widget.generatingStatusMessage ?? T.of(context).chatStatusGenerating,
                 style: TextStyle(
                   color: Colors.purpleAccent.shade100,
                   fontSize: 13,
@@ -780,9 +791,9 @@ class _SessionDropdownPanel extends StatelessWidget {
                       const Icon(Icons.add_circle_outline,
                           color: Colors.purpleAccent, size: 18),
                       const SizedBox(width: 10),
-                      const Text(
-                        '新建会话',
-                        style: TextStyle(
+                      Text(
+                        T.of(context).chatSessionMenuNew,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -799,10 +810,10 @@ class _SessionDropdownPanel extends StatelessWidget {
               // 会话列表
               Flexible(
                 child: sessions.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Text('暂无会话',
-                            style: TextStyle(
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Text(T.of(context).chatSessionMenuEmpty,
+                            style: const TextStyle(
                                 color: Colors.white54, fontSize: 12)),
                       )
                     : ListView.builder(
@@ -880,7 +891,7 @@ class _SessionMenuRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _relativeTime(session.updatedAt),
+                      _relativeTime(context, session.updatedAt),
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.white.withValues(alpha: 0.45),
@@ -930,12 +941,17 @@ class _SessionMenuRow extends StatelessWidget {
     );
   }
 
-  String _relativeTime(int ms) {
+  String _relativeTime(BuildContext context, int ms) {
+    final t = T.of(context);
     final diff = DateTime.now().millisecondsSinceEpoch - ms;
-    if (diff < 60 * 1000) return '刚刚';
-    if (diff < 60 * 60 * 1000) return '${diff ~/ (60 * 1000)} 分钟前';
-    if (diff < 24 * 60 * 60 * 1000) return '${diff ~/ (60 * 60 * 1000)} 小时前';
-    return '${diff ~/ (24 * 60 * 60 * 1000)} 天前';
+    if (diff < 60 * 1000) return t.chatTimeJustNow;
+    if (diff < 60 * 60 * 1000) {
+      return T.fmt(t.chatTimeMinutesAgo, {'n': diff ~/ (60 * 1000)});
+    }
+    if (diff < 24 * 60 * 60 * 1000) {
+      return T.fmt(t.chatTimeHoursAgo, {'n': diff ~/ (60 * 60 * 1000)});
+    }
+    return T.fmt(t.chatTimeDaysAgo, {'n': diff ~/ (24 * 60 * 60 * 1000)});
   }
 }
 
@@ -981,9 +997,12 @@ class _DownloadRunButtonState extends State<_DownloadRunButton> {
 
   @override
   Widget build(BuildContext context) {
+    final t = T.of(context);
     final buttonLabel = _isLoading
-        ? '下载中...'
-        : (_error == null ? '下载并运行' : '重试下载并运行');
+        ? t.chatDownloadStateDownloading
+        : (_error == null
+            ? t.chatDownloadStateRun
+            : t.chatDownloadStateRetry);
 
     return GestureDetector(
       onTap: _handleTap,
