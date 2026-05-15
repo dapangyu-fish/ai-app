@@ -144,7 +144,7 @@ class _AuthPageState extends State<AuthPage> {
       AuthService.cancelPendingAccountSwitch();
       if (mounted) {
         setState(() {
-          _error = '已取消切换账号';
+          _error = T.current.authSwitchAccountCancelled;
         });
       }
       return false;
@@ -156,7 +156,7 @@ class _AuthPageState extends State<AuthPage> {
     } catch (e) {
       debugPrint('[AuthPage] confirmAccountSwitchAndWipe 失败: $e');
       if (mounted) {
-        setState(() => _error = '清除本地数据失败：$e');
+        setState(() => _error = T.fmt(T.current.authClearLocalFailedWith, {'err': e}));
       }
       return false;
     }
@@ -365,24 +365,27 @@ Future<bool?> showAccountSwitchDialog(
   return showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (ctx) => AlertDialog(
-      title: const Text('切换账号'),
-      content: Text(
-        '检测到本次登录的账号（${info.newEmail}）与上次（${info.prevEmail}）不一致。\n\n'
-        '继续将清除本地所有聊天记录、通讯录与本地数据，是否继续？',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('取消'),
-        ),
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: cs.error),
-          onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('确认清除并继续'),
-        ),
-      ],
-    ),
+    builder: (ctx) {
+      final t = T.of(ctx);
+      return AlertDialog(
+        title: Text(t.authSwitchAccountTitle),
+        content: Text(T.fmt(t.authSwitchAccountContent, {
+          'newEmail': info.newEmail,
+          'prevEmail': info.prevEmail,
+        })),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.cancel),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: cs.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t.authSwitchAccountConfirm),
+          ),
+        ],
+      );
+    },
   );
 }
 
@@ -438,7 +441,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
         if (confirmed != true) {
           AuthService.cancelPendingAccountSwitch();
           if (mounted) {
-            setState(() => _error = '已取消切换账号');
+            setState(() => _error = T.current.authSwitchAccountCancelled);
           }
           return;
         }
@@ -447,7 +450,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
         } catch (e) {
           debugPrint('[OtpVerifyPage] wipe 失败: $e');
           if (mounted) {
-            setState(() => _error = '清除本地数据失败：$e');
+            setState(() => _error = T.fmt(T.current.authClearLocalFailedWith, {'err': e}));
           }
           return;
         }

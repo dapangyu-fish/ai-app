@@ -458,6 +458,23 @@ class _Strings {
   final String asrErrBytedanceNotConnected;
   final String asrErrBytedanceStartFailWith;
 
+  // ── Auth：切换账号 + service 抛错 ──
+  final String authSwitchAccountCancelled;        // "已取消切换账号"
+  final String authClearLocalFailedWith;          // "清除本地数据失败：{err}"
+  final String authSwitchAccountTitle;            // "切换账号"
+  final String authSwitchAccountContent;          // 含 {newEmail}/{prevEmail} 插值
+  final String authSwitchAccountConfirm;          // "确认清除并继续"
+  final String authErrSignupFailed;               // "注册失败"
+  final String authErrLoginFailed;                // "登录失败"
+  final String authErrVerifyFailed;               // "验证失败"
+  final String authErrSendFailed;                 // "发送失败"
+  final String authErrNoRefreshToken;             // "无 refresh token"
+  final String authErrRefreshFailed;              // "刷新失败"
+  final String authErrGetUserInfoFailed;          // "获取用户信息失败"
+  final String authErrServerWith;                 // "服务器错误 ({code})"
+  final String authErrUpdateFailed;               // "更新失败"
+  final String authErrAvatarUploadFailed;         // "头像上传失败"
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -826,6 +843,21 @@ class _Strings {
     required this.asrErrStartFailWith,
     required this.asrErrBytedanceNotConnected,
     required this.asrErrBytedanceStartFailWith,
+    required this.authSwitchAccountCancelled,
+    required this.authClearLocalFailedWith,
+    required this.authSwitchAccountTitle,
+    required this.authSwitchAccountContent,
+    required this.authSwitchAccountConfirm,
+    required this.authErrSignupFailed,
+    required this.authErrLoginFailed,
+    required this.authErrVerifyFailed,
+    required this.authErrSendFailed,
+    required this.authErrNoRefreshToken,
+    required this.authErrRefreshFailed,
+    required this.authErrGetUserInfoFailed,
+    required this.authErrServerWith,
+    required this.authErrUpdateFailed,
+    required this.authErrAvatarUploadFailed,
   });
 }
 
@@ -1197,6 +1229,21 @@ const _Strings _zhCN = _Strings(
   asrErrStartFailWith: '语音识别启动失败: {err}',
   asrErrBytedanceNotConnected: '豆包ASR未连接，请检查网络',
   asrErrBytedanceStartFailWith: '豆包ASR启动失败: {err}',
+  authSwitchAccountCancelled: '已取消切换账号',
+  authClearLocalFailedWith: '清除本地数据失败：{err}',
+  authSwitchAccountTitle: '切换账号',
+  authSwitchAccountContent: '检测到本次登录的账号（{newEmail}）与上次（{prevEmail}）不一致。\n\n继续将清除本地所有聊天记录、通讯录与本地数据，是否继续？',
+  authSwitchAccountConfirm: '确认清除并继续',
+  authErrSignupFailed: '注册失败',
+  authErrLoginFailed: '登录失败',
+  authErrVerifyFailed: '验证失败',
+  authErrSendFailed: '发送失败',
+  authErrNoRefreshToken: '无 refresh token',
+  authErrRefreshFailed: '刷新失败',
+  authErrGetUserInfoFailed: '获取用户信息失败',
+  authErrServerWith: '服务器错误 ({code})',
+  authErrUpdateFailed: '更新失败',
+  authErrAvatarUploadFailed: '头像上传失败',
 );
 
 const _Strings _enUS = _Strings(
@@ -1567,6 +1614,21 @@ const _Strings _enUS = _Strings(
   asrErrStartFailWith: 'Speech recognition failed to start: {err}',
   asrErrBytedanceNotConnected: 'ByteDance ASR is not connected. Check the network.',
   asrErrBytedanceStartFailWith: 'ByteDance ASR failed to start: {err}',
+  authSwitchAccountCancelled: 'Account switch cancelled',
+  authClearLocalFailedWith: 'Failed to clear local data: {err}',
+  authSwitchAccountTitle: 'Switch account',
+  authSwitchAccountContent: 'The signed-in account ({newEmail}) differs from the previous one ({prevEmail}).\n\nContinuing will wipe all local chat history, contacts and local data. Continue?',
+  authSwitchAccountConfirm: 'Wipe and continue',
+  authErrSignupFailed: 'Sign-up failed',
+  authErrLoginFailed: 'Login failed',
+  authErrVerifyFailed: 'Verification failed',
+  authErrSendFailed: 'Send failed',
+  authErrNoRefreshToken: 'No refresh token',
+  authErrRefreshFailed: 'Refresh failed',
+  authErrGetUserInfoFailed: 'Failed to fetch user info',
+  authErrServerWith: 'Server error ({code})',
+  authErrUpdateFailed: 'Update failed',
+  authErrAvatarUploadFailed: 'Avatar upload failed',
 );
 
 const _Strings _deDE = _Strings(
@@ -1937,6 +1999,21 @@ const _Strings _deDE = _Strings(
   asrErrStartFailWith: 'Spracherkennung konnte nicht gestartet werden: {err}',
   asrErrBytedanceNotConnected: 'ByteDance ASR ist nicht verbunden. Bitte Netzwerk prüfen.',
   asrErrBytedanceStartFailWith: 'ByteDance ASR konnte nicht gestartet werden: {err}',
+  authSwitchAccountCancelled: 'Kontowechsel abgebrochen',
+  authClearLocalFailedWith: 'Löschen der lokalen Daten fehlgeschlagen: {err}',
+  authSwitchAccountTitle: 'Konto wechseln',
+  authSwitchAccountContent: 'Das angemeldete Konto ({newEmail}) unterscheidet sich vom vorherigen ({prevEmail}).\n\nBeim Fortfahren werden alle lokalen Chats, Kontakte und Daten gelöscht. Fortfahren?',
+  authSwitchAccountConfirm: 'Löschen und fortfahren',
+  authErrSignupFailed: 'Registrierung fehlgeschlagen',
+  authErrLoginFailed: 'Anmeldung fehlgeschlagen',
+  authErrVerifyFailed: 'Verifizierung fehlgeschlagen',
+  authErrSendFailed: 'Senden fehlgeschlagen',
+  authErrNoRefreshToken: 'Kein Refresh-Token vorhanden',
+  authErrRefreshFailed: 'Aktualisierung fehlgeschlagen',
+  authErrGetUserInfoFailed: 'Abrufen der Benutzerinfo fehlgeschlagen',
+  authErrServerWith: 'Serverfehler ({code})',
+  authErrUpdateFailed: 'Aktualisierung fehlgeschlagen',
+  authErrAvatarUploadFailed: 'Avatar-Upload fehlgeschlagen',
 );
 
 const _Strings _esES = _Strings(
@@ -2307,6 +2384,21 @@ const _Strings _esES = _Strings(
   asrErrStartFailWith: 'El reconocimiento de voz no pudo iniciar: {err}',
   asrErrBytedanceNotConnected: 'ASR ByteDance no está conectado. Revisa la red.',
   asrErrBytedanceStartFailWith: 'ASR ByteDance no pudo iniciar: {err}',
+  authSwitchAccountCancelled: 'Cambio de cuenta cancelado',
+  authClearLocalFailedWith: 'Error al borrar los datos locales: {err}',
+  authSwitchAccountTitle: 'Cambiar de cuenta',
+  authSwitchAccountContent: 'La cuenta actual ({newEmail}) es distinta de la anterior ({prevEmail}).\n\nContinuar borrará todo el historial de chats, contactos y datos locales. ¿Continuar?',
+  authSwitchAccountConfirm: 'Borrar y continuar',
+  authErrSignupFailed: 'Error al registrarse',
+  authErrLoginFailed: 'Error al iniciar sesión',
+  authErrVerifyFailed: 'Verificación fallida',
+  authErrSendFailed: 'Envío fallido',
+  authErrNoRefreshToken: 'Sin refresh token',
+  authErrRefreshFailed: 'Actualización fallida',
+  authErrGetUserInfoFailed: 'Error al obtener la info del usuario',
+  authErrServerWith: 'Error del servidor ({code})',
+  authErrUpdateFailed: 'Actualización fallida',
+  authErrAvatarUploadFailed: 'Error al subir el avatar',
 );
 
 /// 公开访问点。
