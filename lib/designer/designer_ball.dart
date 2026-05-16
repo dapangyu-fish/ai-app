@@ -288,10 +288,13 @@ class _DesignerBallState extends State<DesignerBall>
         },
         onStatus: (status) {
           debugPrint('[DesignerBall] Speech status: $status');
-          if (status == stt.SpeechToText.doneStatus) {
-            // 平台自动结束（15s 超时 / silence endpointing）。若用户还在按着，无感重启。
-            // plugin 源码保证 done 一定在 finalResult 处理之后才 fire。
-            _scheduleRestartNativeSession(reason: 'status_done');
+          // 不能只看 doneStatus —— iOS 上 SFSpeechRecognizer 超时走的是
+          // FinishedReadingAudio 路径，plugin 只发 notListening，doneStatus 永远
+          // 不会 fire（因为它依赖 _notifiedFinal && _notifiedDone 同时为 true）。
+          // 见 SpeechToTextPlugin.swift:731+ 和 csdcorp issue #218。
+          // 凡是不是 listeningStatus 的状态都视为会话结束，尝试重启。
+          if (status != stt.SpeechToText.listeningStatus) {
+            _scheduleRestartNativeSession(reason: 'status_$status');
           }
         },
       );
