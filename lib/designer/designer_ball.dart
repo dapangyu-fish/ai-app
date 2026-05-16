@@ -320,7 +320,18 @@ class _DesignerBallState extends State<DesignerBall>
       if (_asrMode != AsrMode.online) return;
       if (!_pointerDown) return;
       if (_speech == null || _speech!.isListening) return;
-      debugPrint('[DesignerBall] Restarting native ASR segment ($reason)');
+
+      // 关键：iOS partial-freeze 场景下 finalResult 可能从未 fire，
+      // _liveTranscript 里有段 1 的可见文本但没并入 _accumulatedTranscript。
+      // restart 前抢救：如果 live > accumulated，证明有 partial 没被并入，立刻并入。
+      // 否则 restart 后下一段第一个 onResult 会把 _liveTranscript 清空。
+      final live = _liveTranscript?.trim() ?? '';
+      if (live.length > _accumulatedTranscript.length) {
+        debugPrint('[DesignerBall] Rescuing live partial → accumulated: "$live"');
+        _accumulatedTranscript = live;
+      }
+
+      debugPrint('[DesignerBall] Restarting native ASR segment ($reason), accumulated.len=${_accumulatedTranscript.length}');
       _doStartNativeSession();
     });
   }
