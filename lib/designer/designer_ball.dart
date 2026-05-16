@@ -141,6 +141,10 @@ class _DesignerBallState extends State<DesignerBall>
   stt.SpeechToText? _speech;
   bool _speechInited = false;
   bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
+  // 平台（Android SpeechRecognizer / iOS SFSpeechRecognizer）单次会话有 10-60s
+  // 上限，用户按着球时长按下去到 done/error 时要无感重启。这个 flag 在主动 stop
+  // 之前置 true，防止主动停止被识别为"该重启"。
+  bool _intentionalNativeStop = false;
   // ⚠️ 不要直接读这个字段，用 _asrMode getter，永远拿到 AsrModePrefs 最新值。
   // 历史 bug：缓存了 initState 时的旧值，settings 改完不感知。
   AsrMode get _asrMode => AsrModePrefs.notifier.value;
@@ -277,15 +281,45 @@ class _DesignerBallState extends State<DesignerBall>
       _speech = stt.SpeechToText();
       _speechInited = await _speech!.initialize(
         onError: (error) {
-          debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
+          // 不在这里 restart——csdcorp/speech_to_text issue #253 显示在 onError 里
+          // restart 会触发 error_busy 级联。errors 不 cancel 引擎（cancelOnError:false），
+          // 平台后续会自然给 done status，统一走 onStatus 路径重启。
+          debugPrint('[DesignerBall] Speech error: ${error.errorMsg} permanent=${error.permanent}');
         },
-        onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
+        onStatus: (status) {
+          debugPrint('[DesignerBall] Speech status: $status');
+          if (status == stt.SpeechToText.doneStatus) {
+            // 平台自动结束（15s 超时 / silence endpointing）。若用户还在按着，无感重启。
+            // plugin 源码保证 done 一定在 finalResult 处理之后才 fire。
+            _scheduleRestartNativeSession(reason: 'status_done');
+          }
+        },
       );
       debugPrint('[DesignerBall] Native speech initialized in initState: $_speechInited');
     } catch (e) {
       debugPrint('[DesignerBall] Native speech init failed: $e');
       _speechInited = false;
     }
+  }
+
+  /// 在平台自动停掉一段会话后，检查是否还需要继续录下一段。
+  /// 加 ~120ms 延迟让 Android SpeechRecognizer 把上一段彻底释放，避免立刻 listen
+  /// 撞上 "already listening" / error_busy（becjit gist 用 50ms，Android 实测
+  /// 120ms 更稳）。
+  void _scheduleRestartNativeSession({required String reason}) {
+    Future.delayed(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      if (_intentionalNativeStop) {
+        debugPrint('[DesignerBall] Skip native restart (intentional stop): $reason');
+        return;
+      }
+      if (!_isListening || _editMode) return;
+      if (_asrMode != AsrMode.online) return;
+      if (!_pointerDown) return;
+      if (_speech == null || _speech!.isListening) return;
+      debugPrint('[DesignerBall] Restarting native ASR segment ($reason)');
+      _doStartNativeSession();
+    });
   }
 
   @override
@@ -298,6 +332,7 @@ class _DesignerBallState extends State<DesignerBall>
     _animController.dispose();
     _pulseController.dispose();
     _countdownController.dispose();
+    _intentionalNativeStop = true;
     _speech?.stop();
     _scrollController.dispose();
     AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
@@ -795,6 +830,7 @@ class _DesignerBallState extends State<DesignerBall>
         _bytedanceAsr.stopListening();
         break;
       default:
+        _intentionalNativeStop = true;
         try { _speech?.stop(); } catch (_) {}
     }
 
@@ -817,6 +853,7 @@ class _DesignerBallState extends State<DesignerBall>
     _bytedanceAsr.stopListening();
     // 注意：_bytedanceAsr.onResult 不在此处清空（在 _initBytedanceAsr 中一次性注册），
     // 改在回调内用 _editMode 守卫拦截。
+    _intentionalNativeStop = true;
     try { _speech?.stop(); } catch (_) {}
 
     _pulseController.stop();
@@ -1246,9 +1283,18 @@ class _DesignerBallState extends State<DesignerBall>
     });
   }
 
-  /// 原生语音识别 (Apple/Google) — 参照 speech_to_text 官方 demo 的最小实现，
-  /// 不做任何 finalResult 自动重启，避免反复申请/释放麦克风。
+  /// 原生语音识别 (Apple/Google) — Android SpeechRecognizer / iOS SFSpeechRecognizer
+  /// 单次会话有 ~10-60s 上限，靠 onStatus:done / onError 触发自动重启实现"无限录制"。
+  ///
+  /// 累加规则：每段 partial → 显示 `_accumulatedTranscript + 当前段`；finalResult
+  /// 触发时，把这段并入 `_accumulatedTranscript`，下一段从 0 开始。
   void _startNativeSpeech() {
+    if (_speech == null) return;
+    _intentionalNativeStop = false;
+    _doStartNativeSession();
+  }
+
+  void _doStartNativeSession() {
     if (_speech == null) return;
     try {
       _speech!.listen(
@@ -1256,14 +1302,23 @@ class _DesignerBallState extends State<DesignerBall>
           // 编辑模式下，stop() 后迟到的 final 结果一律丢弃
           if (!_isListening || _editMode) return;
           _nativeSpeechReceivedCallback = true;
-          final text = result.recognizedWords;
-          if (_liveTranscript != text) {
-            setState(() => _liveTranscript = text);
+          final segment = result.recognizedWords;
+          // 中文段间直接拼，不加空格（之前 '类似于 鸟' 的 bug）。
+          // 英文场景这里也凑合，最终落到聊天框时不会有大问题。
+          final combined = '$_accumulatedTranscript$segment';
+          if (_liveTranscript != combined) {
+            setState(() => _liveTranscript = combined);
+          }
+          // 这一段平台判定结束，立刻并入累积；下一段（自动 restart）从 0 开始
+          if (result.finalResult && segment.isNotEmpty) {
+            _accumulatedTranscript = combined;
           }
         },
         localeId: 'zh_CN',
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 5),
+        // listenFor / pauseFor 都给平台上限，让平台自然 endpointing。
+        // 一旦它停了，我们在 onStatus:done 里立刻重启下一段。
+        listenFor: const Duration(seconds: 60),
+        pauseFor: const Duration(seconds: 10),
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
           cancelOnError: false,
@@ -1327,6 +1382,7 @@ class _DesignerBallState extends State<DesignerBall>
         await _bytedanceAsr.stopListening();
         break;
       default:
+        _intentionalNativeStop = true;
         try { await _speech?.stop(); } catch (e) {
           debugPrint('[DesignerBall] speech.stop error: $e');
         }
@@ -1451,6 +1507,7 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _closeChatMode() {
+    _intentionalNativeStop = true;
     try { _speech?.stop(); } catch (_) {}
     _cancelCurrentStream();
     _pulseController.stop();
