@@ -306,11 +306,18 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   /// 在平台自动停掉一段会话后，检查是否还需要继续录下一段。
-  /// 加 ~120ms 延迟让 Android SpeechRecognizer 把上一段彻底释放，避免立刻 listen
-  /// 撞上 "already listening" / error_busy（becjit gist 用 50ms，Android 实测
-  /// 120ms 更稳）。
+  ///
+  /// iOS 上 SFSpeechRecognizer 超时走 speechRecognitionTaskFinishedReadingAudio
+  /// 这条 delegate 路径只发 notListening 状态，**不**调 audioEngine.stop() / removeTap()
+  /// / audioSession.setActive(false)，currentTask 也不清空。如果直接 listen()，
+  /// AVAudioEngine 会越叠越脏，第二次 restart 时撞 `nullptr == Tap()` 崩溃
+  /// （issue #118、#241、#481 都是这个家族）。
+  ///
+  /// 所以这里**显式 await _speech.stop()** 强制走 Swift 那条完整 cleanup
+  /// （SpeechToTextPlugin.swift:425-468），再等 300ms 让 AVAudioSession 异步
+  /// 去激活落定，再 listen。
   void _scheduleRestartNativeSession({required String reason}) {
-    Future.delayed(const Duration(milliseconds: 120), () {
+    Future.delayed(const Duration(milliseconds: 80), () async {
       if (!mounted) return;
       if (_intentionalNativeStop) {
         debugPrint('[DesignerBall] Skip native restart (intentional stop): $reason');
@@ -319,18 +326,35 @@ class _DesignerBallState extends State<DesignerBall>
       if (!_isListening || _editMode) return;
       if (_asrMode != AsrMode.online) return;
       if (!_pointerDown) return;
-      if (_speech == null || _speech!.isListening) return;
+      if (_speech == null) return;
 
-      // 关键：iOS partial-freeze 场景下 finalResult 可能从未 fire，
+      // iOS partial-freeze 场景下 finalResult 可能从未 fire，
       // _liveTranscript 里有段 1 的可见文本但没并入 _accumulatedTranscript。
-      // restart 前抢救：如果 live > accumulated，证明有 partial 没被并入，立刻并入。
-      // 否则 restart 后下一段第一个 onResult 会把 _liveTranscript 清空。
+      // restart 前抢救：如果 live > accumulated，立刻并入。
       final live = _liveTranscript?.trim() ?? '';
       if (live.length > _accumulatedTranscript.length) {
         debugPrint('[DesignerBall] Rescuing live partial → accumulated: "$live"');
         _accumulatedTranscript = live;
       }
 
+      // 显式 stop 强制完整 cleanup（关键，否则 30s 第二次 restart 必崩）
+      debugPrint('[DesignerBall] Force stop before restart ($reason)');
+      _intentionalNativeStop = true;
+      try {
+        await _speech!.stop();
+      } catch (e) {
+        debugPrint('[DesignerBall] Force stop error: $e');
+      }
+      // 给 AVAudioSession.setActive(false) 异步落定的时间
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      if (!mounted) return;
+      if (!_isListening || _editMode || !_pointerDown) {
+        debugPrint('[DesignerBall] User released during restart cleanup, abort');
+        return;
+      }
+
+      _intentionalNativeStop = false;
       debugPrint('[DesignerBall] Restarting native ASR segment ($reason), accumulated.len=${_accumulatedTranscript.length}');
       _doStartNativeSession();
     });
