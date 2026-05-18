@@ -66,9 +66,6 @@ class AppConfig {
   /// 豆包ASR WebSocket端点
   static String get bytedanceAsrUrl => backendUrl;
 
-  /// OSS模型下载基础URL
-  static String get ossModelsBaseUrl => '$minioUrl/models';
-
   // ==================== 应用配置 ====================
 
   /// 应用名称
