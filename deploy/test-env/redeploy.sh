@@ -18,9 +18,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 REPO_ROOT="$(cd ../.. && pwd)"
 
+# 先解析 --force，再把剩下的位置参数当服务名（否则 --force 会被当成服务名喂给 docker compose）
+FORCE=0
+ARGS=()
+for arg in "$@"; do
+  if [[ "$arg" == "--force" ]]; then
+    FORCE=1
+  else
+    ARGS+=("$arg")
+  fi
+done
+
 # 默认重建全部三个吃同一份 Dockerfile.backend 的服务，免得改 config.py 这种共用模块时漏掉
 SERVICES=("backend" "registry" "config-center")
-[[ $# -gt 0 ]] && SERVICES=("$@")
+[[ ${#ARGS[@]} -gt 0 ]] && SERVICES=("${ARGS[@]}")
 
 B="\033[1m"; G="\033[32m"; Y="\033[33m"; R="\033[31m"; N="\033[0m"
 
@@ -30,13 +41,12 @@ OLD_HEAD=$(git rev-parse HEAD)
 git pull --ff-only
 NEW_HEAD=$(git rev-parse HEAD)
 if [[ "$OLD_HEAD" == "$NEW_HEAD" ]]; then
-  echo -e "${Y}没有新提交。如果就想 rebuild 现有代码，加 --force：${N}"
-  echo -e "${Y}  ./redeploy.sh --force [service...]${N}"
-  if [[ "${1:-}" != "--force" ]]; then
+  if [[ "$FORCE" -eq 0 ]]; then
+    echo -e "${Y}没有新提交。如果就想 rebuild 现有代码，加 --force：${N}"
+    echo -e "${Y}  ./redeploy.sh --force [service...]${N}"
     exit 0
   fi
-  shift || true
-  [[ $# -gt 0 ]] && SERVICES=("$@")
+  echo -e "${Y}没有新提交，--force 强制 rebuild${N}"
 else
   echo -e "${G}更新: $OLD_HEAD → $NEW_HEAD${N}"
   git log --oneline "$OLD_HEAD..$NEW_HEAD"
