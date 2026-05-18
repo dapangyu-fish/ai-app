@@ -150,3 +150,24 @@ curl http://$HOST_IP:19000/minio/health/ready
 - HTTPS 没启（纯 HTTP + IP）；客户端 ATS 必须放行明文
 - Supabase 邮件验证关了（`ENABLE_EMAIL_AUTOCONFIRM=true`），账号注册即生效
 - 老 docker-compose v1 不支持，需要 docker compose v2（`docker compose` 是 plugin，不是 `docker-compose`）
+
+## 已验证过的环境（实战记录）
+
+2026-05-18 在一台全新 Ubuntu 24.04 / 11G RAM / 6c VPS 上完整跑通。
+全程蹚出来的坑（已修在 git 历史）：
+
+| # | 现象 | 根因 | 修法 |
+|---|------|------|------|
+| 1 | docker pull cloudflare 网络重置 | IPv6 出口 + cloudflare CDN 不稳 | `/etc/docker/daemon.json` 配 `docker.m.daocloud.io` 国内镜像 |
+| 2 | `ghcr.io/openimsdk/openim-server:v3.8: not found` | tag 不存在 | 改用 `openim/openim-server:v3.8.3-patch.15` (dockerhub) |
+| 3 | `docker.1panel.live/v2/bitnami/kafka/manifests/3.7: 403 Forbidden` | bitnami 删了 kafka:3.7 | 换 `bitnamilegacy/kafka:3.7`（bitnami 把老镜像迁过去了）|
+| 4 | Supabase 起不来 `Bind for 0.0.0.0:15432 failed: port is already allocated` | override 给 db 加端口和 supavisor 撞 | 删 override 里 db 端口，supavisor 才是外部入口 |
+| 5 | Kong `init_by_lua error: ... keyauth_credentials uniqueness violation` | kong.yml 给 anon/service_role 两个 consumer 各注册了 2 个相同 key | 删 kong.yml 里 PUBLISHABLE_KEY/SECRET_KEY 那两条（supabase 2026 新流程，本地用不上）|
+| 6 | GoTrue 启动 fatal `converting '' to type int` (SMTP_PORT) | .env 里 SMTP_PORT 留空 | 必须给数字（587），即使不发邮件 |
+| 7 | Bootstrap auth healthcheck 一直 401 | Kong 的 `/auth/v1/*` 路由开了 keyauth 插件，必须带 apikey | curl 加 `-H "apikey: $SUPABASE_ANON_KEY"` |
+| 8 | pyaudio wheel build 失败 | repo 的 requirements.txt 收了 pyaudio>=0.2.11，但 backend 代码并不用 | Dockerfile 装 portaudio19-dev + build-essential 让它编译过 |
+| 9 | backend 启动 `ModuleNotFoundError: No module named 'jwt'` | repo requirements.txt 漏了 pyjwt（prod 单独 venv 装的）；同样漏 httpx | Dockerfile 加 pip install pyjwt httpx flask-caching |
+| 10 | `mc: ERROR sh is not a recognized command` | minio/mc 镜像默认 ENTRYPOINT 是 mc | docker run 加 `--entrypoint sh` |
+| 11 | bootstrap 最后 `JSONAPP_DB_USER: unbound variable` | set -u 抓住没 export 的变量 | summary 里写硬编码 jsonapp 即可 |
+| 12 | openim-chat 无限重启 `too many arguments in call to mageutil.Build` | openim-chat v1.8 跟 server v3.8 的 mageutil 版本不兼容 | 直接删掉 openim-chat（backend 用不上，只用 openim-server）|
+| 13 | OpenIM API 不监听 10002，日志狂报 `Fail to connect Mongo localhost:37017` | v3.8 镜像**不读 env**，只读 `/openim-server/config/*.yml`，env 设的 MONGO_ADDRESS 全被忽略 | bootstrap 从镜像 docker cp 出 config → sed 替换 mongodb/redis/kafka/etcd/minio 的 address+凭据 → mount 进容器 |
