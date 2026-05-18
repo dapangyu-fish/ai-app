@@ -312,7 +312,7 @@ cat > test-env-info.txt <<EOF
      http://${HOST_IP}:${APP_MINIO_CONSOLE_PORT}
      账号: ${APP_MINIO_ROOT_USER} / ${APP_MINIO_ROOT_PASSWORD}
   jsonapp Postgres:
-     psql postgresql://${JSONAPP_DB_USER}:${JSONAPP_DB_PASSWORD}@${HOST_IP}:${JSONAPP_DB_PORT}/jsonapp
+     psql postgresql://jsonapp:${JSONAPP_DB_PASSWORD}@${HOST_IP}:${JSONAPP_DB_PORT}/jsonapp
   Config Center 后台:
      http://${HOST_IP}:${CONFIG_CENTER_PORT}/login
      账号: admin / ${CONFIG_CENTER_ADMIN_PASSWORD}
