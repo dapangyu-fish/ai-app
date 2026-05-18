@@ -62,7 +62,7 @@ services:
       retries: 5
 
   kafka:
-    image: bitnami/kafka:3.7
+    image: bitnamilegacy/kafka:3.7  # bitnami/kafka:3.7 已从 dockerhub 移除，bitnami 把老镜像迁到了 bitnamilegacy/ 命名空间
     container_name: testenv-openim-kafka
     restart: unless-stopped
     environment:
