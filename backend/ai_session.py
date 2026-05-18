@@ -37,6 +37,7 @@ from config import (
     DEFAULT_PROVIDER,
     GENERATE_PROMPT_PATH,
     PROJECT_ROOT,
+    load_generate_prompt,
 )
 
 logger = logging.getLogger(__name__)
@@ -505,10 +506,11 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 
     try:
         # ─── 1. 起进程 ───
+        # load_generate_prompt() 在生产是 no-op，测试环境会把 prompt 里硬编码的
+        # 生产 URL 替换成实际环境 URL，避免 AI 生成的 JSON-APP 嵌入生产域名
         sys_prompt = ""
         try:
-            with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
-                sys_prompt = f.read()
+            sys_prompt = load_generate_prompt()
         except FileNotFoundError:
             logger.warning(f"[WORKER] 系统提示词文件未找到: {GENERATE_PROMPT_PATH}")
 

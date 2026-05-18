@@ -121,13 +121,13 @@ def _increment_version(version_str):
 def store_apps():
     """
     [已废弃] 列出所有公开 APP
-    请使用新的 Registry 服务: GET https://myapp-registry.dapangyu.work/packages?type=app
+    请使用新的 Registry 服务: GET {REGISTRY_BASE_URL}/packages?type=app
     """
-    # 返回废弃警告
+    from config import REGISTRY_BASE_URL
     return jsonify({
         "deprecated": True,
         "message": "此接口已废弃，请使用 Registry 服务",
-        "new_endpoint": "https://myapp-registry.dapangyu.work/packages?type=app",
+        "new_endpoint": f"{REGISTRY_BASE_URL}/packages?type=app",
         "apps": []
     }), 410  # 410 Gone
 
@@ -174,12 +174,13 @@ def new_appid():
 def store_publish():
     """
     [已废弃] 发布 JSON-APP/组件到市场
-    请使用新的 Registry 服务: POST https://myapp-registry.dapangyu.work/publish
+    请使用新的 Registry 服务: POST {REGISTRY_BASE_URL}/publish
     """
+    from config import REGISTRY_BASE_URL
     return jsonify({
         "deprecated": True,
         "message": "此接口已废弃，请使用 Registry 服务",
-        "new_endpoint": "https://myapp-registry.dapangyu.work/publish",
+        "new_endpoint": f"{REGISTRY_BASE_URL}/publish",
         "migration_guide": "请参考 REGISTRY_README.md 了解如何迁移到新的发布流程"
     }), 410  # 410 Gone
 

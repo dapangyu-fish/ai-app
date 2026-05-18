@@ -4,7 +4,7 @@ import subprocess
 import logging
 import threading
 from flask import request, jsonify, Response, stream_with_context
-from config import AI_PROVIDERS, DEFAULT_PROVIDER, PROJECT_ROOT, GENERATE_PROMPT_PATH, CLAUDE_BIN
+from config import AI_PROVIDERS, DEFAULT_PROVIDER, PROJECT_ROOT, GENERATE_PROMPT_PATH, CLAUDE_BIN, load_generate_prompt
 from auth import require_auth
 from database import get_quota_info, increment_quota
 from config import ROLE_QUOTAS
@@ -209,9 +209,10 @@ def chat():
     logger.info(f"[CHAT] 配额已扣除，剩余: {new_remaining}")
 
     def run_cli(is_resume=True):
-        sys_prompt = ""
-        with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
-            sys_prompt = f.read()
+        # 走 config.load_generate_prompt() 而不是直接 open() —— 它会把硬编码的
+        # 生产 URL（myapp-registry / myapp-oss-endpoint）替换成当前环境的 URL，
+        # 否则测试环境跑出来的 JSON-APP 会嵌入生产域名
+        sys_prompt = load_generate_prompt()
                     
         cmd = [
             CLAUDE_BIN,
