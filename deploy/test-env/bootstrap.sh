@@ -121,7 +121,18 @@ DEFAULT_PASSWORD="Test$(openssl rand -hex 4)"
 TEST_USER_PASSWORD=$(ask_secret   "  密码" "$DEFAULT_PASSWORD")
 
 echo
-say "[4/4] 端口偏移（同机并行多 env 时用，默认 0）"
+say "[4/5] Registry mirror（可选）"
+echo "  本实例可以镜像另一个 Registry 的公开包索引，每 N 秒同步一次。"
+echo "  上游 URL 留空 = 不开 mirror，本实例独立运行。"
+REGISTRY_UPSTREAM=$(ask "  上游 Registry URL（如 https://myapp-registry.dapangyu.work）" "")
+if [[ -n "$REGISTRY_UPSTREAM" ]]; then
+  REGISTRY_MIRROR_SYNC_INTERVAL_SEC=$(ask "  同步间隔（秒，<=0 = 只首启一次）" "600")
+else
+  REGISTRY_MIRROR_SYNC_INTERVAL_SEC="0"
+fi
+
+echo
+say "[5/5] 端口偏移（同机并行多 env 时用，默认 0）"
 PORT_OFFSET=$(ask "  端口偏移" "0")
 [[ "$PORT_OFFSET" =~ ^[0-9]+$ ]] || die "端口偏移必须是数字"
 
@@ -210,6 +221,7 @@ export OPENIM_MYSQL_ROOT_PASSWORD OPENIM_MYSQL_PASSWORD OPENIM_MONGO_PASSWORD OP
 export OPENIM_MYSQL_PORT OPENIM_MONGO_PORT OPENIM_REDIS_PORT OPENIM_MINIO_PORT OPENIM_MINIO_CONSOLE_PORT
 export FLASK_SECRET_KEY REGISTRY_ADMIN_TOKEN BACKEND_PORT REGISTRY_PORT CONFIG_CENTER_PORT
 export CONFIG_CENTER_ADMIN_PASSWORD CONFIG_CENTER_SESSION_SECRET
+export REGISTRY_UPSTREAM REGISTRY_MIRROR_SYNC_INTERVAL_SEC
 
 envsubst < .env.template          > .env
 envsubst < supabase/.env.template > supabase/.env
@@ -336,7 +348,13 @@ cat > test-env-info.txt <<EOF
      账号: admin / ${CONFIG_CENTER_ADMIN_PASSWORD}
   Registry admin token: ${REGISTRY_ADMIN_TOKEN}
 
+【Registry Mirror】
+  Upstream: ${REGISTRY_UPSTREAM:-（未配置，本实例独立运行）}
+  同步间隔: ${REGISTRY_MIRROR_SYNC_INTERVAL_SEC}s（0 = 仅首启同步一次）
+  手动触发: curl -X POST -H "Authorization: Bearer <REGISTRY_ADMIN_TOKEN>" http://${HOST_IP}:${REGISTRY_PORT}/mirror/sync
+
 【常用命令】
+  ./redeploy.sh      只更新后端代码（git pull + rebuild 3 个 backend 镜像，不动数据）
   ./reset-data.sh    清空所有数据卷但保留容器配置
   ./teardown.sh      彻底销毁本环境（删容器 + 数据卷 + .env）
   docker compose --env-file .env logs -f backend          实时看 backend 日志

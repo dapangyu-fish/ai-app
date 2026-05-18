@@ -110,6 +110,12 @@ DEFAULT_PROVIDER = "deepseek"
 # 测试环境 docker compose 会注入 http://IP:port 覆盖；生产保持默认即可。
 REGISTRY_BASE_URL = os.environ.get("REGISTRY_BASE_URL", "https://myapp-registry.dapangyu.work")
 
+# Registry Mirror —— 上游 registry 地址。空字符串表示不开 mirror（独立运行）。
+# 开启后：每 REGISTRY_MIRROR_SYNC_INTERVAL_SEC 秒拉一次上游 /mirror/manifest，
+# 合并到本地索引；客户端请求镜像版本的文件时按需代理到上游 /mirror/file 并缓存到本地 MinIO。
+REGISTRY_UPSTREAM = os.environ.get("REGISTRY_UPSTREAM", "").rstrip("/")
+REGISTRY_MIRROR_SYNC_INTERVAL_SEC = int(os.environ.get("REGISTRY_MIRROR_SYNC_INTERVAL_SEC", "600"))
+
 # MinIO 配置
 MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "https://myapp-oss-endpoint.dapangyu.work")
 _minio_url_parts = MINIO_PUBLIC_URL.split("://")
