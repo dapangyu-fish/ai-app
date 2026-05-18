@@ -158,26 +158,9 @@ services:
     volumes:
       - openim_logs:/app/logs
 
-  openim-chat:
-    image: openim/openim-chat:v1.8.4-patch.3   # 跟 openim-server v3.8 配套
-    container_name: testenv-openim-chat
-    restart: unless-stopped
-    depends_on:
-      - openim-server
-      - mysql
-      - redis
-    environment:
-      MYSQL_ADDRESS: mysql:3306
-      MYSQL_USERNAME: openim
-      MYSQL_PASSWORD: "${OPENIM_MYSQL_PASSWORD}"
-      REDIS_ADDRESS: redis:6379
-      REDIS_PASSWORD: "${OPENIM_REDIS_PASSWORD}"
-      OPENIM_SERVER_ADDRESS: http://openim-server:10002
-      OPENIM_SECRET: "${OPENIM_SECRET}"
-      CHAT_API_PORT: "10008"
-      ADMIN_API_PORT: "10009"
-    ports:
-      - "${OPENIM_CHAT_PORT}:10008"
+  # 已删 openim-chat：backend/im.py 只用 openim-server（端口 10002）直接走 token / 用户接口，
+  # 不依赖 openim-chat 的注册/登录/好友模块。openim-chat v1.8.4-patch.3 还跟 v3.8 server
+  # 的 mageutil 版本不兼容，会 'too many arguments in call to mageutil.Build' 重启循环。
 
 volumes:
   openim_mysql_data:
