@@ -29,8 +29,8 @@ for arg in "$@"; do
   fi
 done
 
-# 默认重建全部三个吃同一份 Dockerfile.backend 的服务，免得改 config.py 这种共用模块时漏掉
-SERVICES=("backend" "registry" "config-center")
+# 默认重建全部四个吃同一份 Dockerfile.backend 的服务，免得改 config.py / database.py 这种共用模块时漏掉
+SERVICES=("backend" "registry" "config-center" "user-center")
 [[ ${#ARGS[@]} -gt 0 ]] && SERVICES=("${ARGS[@]}")
 
 B="\033[1m"; G="\033[32m"; Y="\033[33m"; R="\033[31m"; N="\033[0m"
