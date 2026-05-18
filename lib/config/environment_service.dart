@@ -126,4 +126,10 @@ class EnvironmentService extends ChangeNotifier {
     await prefs.setString(_activeKey, _activeId);
   }
 
+  /// 给 wipeAllLocalAccountData 用：prefs.clear() 之后把内存里的环境写回，
+  /// 否则换号确认那一路会把环境一起冲掉
+  Future<void> persistCurrent() async {
+    if (!_loaded) return;
+    await _persistAll();
+  }
 }

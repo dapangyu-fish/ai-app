@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../designer/app_storage.dart';
+import '../designer/hidden_env_entry.dart';
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
 import 'auth_service.dart';
@@ -193,13 +194,15 @@ class _AuthPageState extends State<AuthPage> {
                 Icon(Icons.auto_awesome, size: 48, color: cs.onSurface),
                 const SizedBox(height: 20),
 
-                // Brand name
-                Text(
-                  'MyApp',
-                  style: GoogleFonts.inter(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: cs.onSurface,
+                // Brand name —— 隐藏入口：登录前连点 7 下进入服务环境页
+                HiddenEnvEntry(
+                  child: Text(
+                    'MyApp',
+                    style: GoogleFonts.inter(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
