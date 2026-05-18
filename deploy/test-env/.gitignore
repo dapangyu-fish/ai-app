@@ -1,0 +1,12 @@
+# 运行时生成，包含敏感信息
+.env
+supabase/.env
+openim/.env
+test-env-info.txt
+
+# 数据卷
+data/
+
+# 临时
+*.log
+*.tmp

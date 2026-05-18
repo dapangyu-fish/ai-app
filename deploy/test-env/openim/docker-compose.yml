@@ -1,0 +1,191 @@
+# OpenIM 全栈 —— 测试环境用，**只关推送 webhook，不阉割任何服务**
+#
+# 与生产差异：
+# 1. 容器名加 testenv- 前缀，避免和生产 docker daemon 上的 OpenIM 冲突
+# 2. 端口跟 PORT_OFFSET 走，bootstrap.sh 渲染
+# 3. afterSendSingleMsg / beforeOfflinePush webhook URL 留空 → push 链路自然
+#    断掉，但消息收发完全正常
+# 4. Kafka heap 限制到 512m，2GB 小机能跑
+
+name: testenv-openim
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: testenv-openim-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${OPENIM_MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: openim_v3
+      MYSQL_USER: openim
+      MYSQL_PASSWORD: "${OPENIM_MYSQL_PASSWORD}"
+    volumes:
+      - openim_mysql_data:/var/lib/mysql
+    ports:
+      - "${OPENIM_MYSQL_PORT}:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:7.0
+    container_name: testenv-openim-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: openim
+      MONGO_INITDB_ROOT_PASSWORD: "${OPENIM_MONGO_PASSWORD}"
+    volumes:
+      - openim_mongo_data:/data/db
+    ports:
+      - "${OPENIM_MONGO_PORT}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: testenv-openim-redis
+    restart: unless-stopped
+    command: redis-server --requirepass "${OPENIM_REDIS_PASSWORD}" --appendonly yes
+    volumes:
+      - openim_redis_data:/data
+    ports:
+      - "${OPENIM_REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${OPENIM_REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: testenv-openim-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_CFG_NODE_ID: 0
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # 小机省内存
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+    volumes:
+      - openim_kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.13
+    container_name: testenv-openim-etcd
+    restart: unless-stopped
+    environment:
+      ETCD_NAME: node1
+      ETCD_DATA_DIR: /etcd-data
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_INITIAL_CLUSTER: node1=http://etcd:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: openim-etcd
+    volumes:
+      - openim_etcd_data:/etcd-data
+
+  minio:
+    image: minio/minio:latest
+    container_name: testenv-openim-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: "${OPENIM_MINIO_ACCESS_KEY}"
+      MINIO_ROOT_PASSWORD: "${OPENIM_MINIO_SECRET_KEY}"
+    command: server /data --console-address ":9090"
+    volumes:
+      - openim_minio_data:/data
+    ports:
+      - "${OPENIM_MINIO_PORT}:9000"
+      - "${OPENIM_MINIO_CONSOLE_PORT}:9090"
+
+  openim-server:
+    image: ghcr.io/openimsdk/openim-server:v3.8
+    container_name: testenv-openim-server
+    restart: unless-stopped
+    depends_on:
+      mysql:    { condition: service_healthy }
+      mongodb:  { condition: service_healthy }
+      redis:    { condition: service_healthy }
+      kafka:    { condition: service_healthy }
+      etcd:     { condition: service_started }
+      minio:    { condition: service_started }
+    environment:
+      MYSQL_ADDRESS: mysql:3306
+      MYSQL_USERNAME: openim
+      MYSQL_PASSWORD: "${OPENIM_MYSQL_PASSWORD}"
+      MYSQL_DATABASE: openim_v3
+      MONGO_ADDRESS: mongodb:27017
+      MONGO_USERNAME: openim
+      MONGO_PASSWORD: "${OPENIM_MONGO_PASSWORD}"
+      MONGO_DATABASE: openim_v3
+      REDIS_ADDRESS: redis:6379
+      REDIS_PASSWORD: "${OPENIM_REDIS_PASSWORD}"
+      KAFKA_ADDRESS: kafka:9092
+      ETCD_ADDRESS: etcd:2379
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY_ID: "${OPENIM_MINIO_ACCESS_KEY}"
+      MINIO_SECRET_ACCESS_KEY: "${OPENIM_MINIO_SECRET_KEY}"
+      MINIO_BUCKET: openim
+      API_OPENIM_PORT: "10002"
+      OPENIM_WS_PORT: "10001"
+      MINIO_EXTERNAL_ADDRESS: "http://${HOST_IP}:${OPENIM_MINIO_PORT}"
+      SECRET: "${OPENIM_SECRET}"
+      # ───── 关键：push webhook 留空，测试环境不走 push ─────
+      # 这两个 URL 留空，OpenIM 不会回调 backend；backend 的 push 模块完全不被触发
+      WEBHOOKS_URL: ""
+      WEBHOOKS_BEFORE_OFFLINE_PUSH_ENABLE: "false"
+      WEBHOOKS_AFTER_SEND_SINGLE_MSG_ENABLE: "false"
+      # 推送 provider 一律不配，OpenIM push module 启动后无法初始化任何渠道（warning 即可）
+    ports:
+      - "${OPENIM_WS_PORT}:10001"      # WebSocket Gateway → 客户端 imWsUrl
+      - "${OPENIM_API_PORT}:10002"     # HTTP API → 客户端 imApiUrl
+      - "${OPENIM_ADMIN_PORT}:10009"   # Admin API（后端建用户/查用户用）
+    volumes:
+      - openim_logs:/app/logs
+
+  openim-chat:
+    image: ghcr.io/openimsdk/openim-chat:v1.8
+    container_name: testenv-openim-chat
+    restart: unless-stopped
+    depends_on:
+      - openim-server
+      - mysql
+      - redis
+    environment:
+      MYSQL_ADDRESS: mysql:3306
+      MYSQL_USERNAME: openim
+      MYSQL_PASSWORD: "${OPENIM_MYSQL_PASSWORD}"
+      REDIS_ADDRESS: redis:6379
+      REDIS_PASSWORD: "${OPENIM_REDIS_PASSWORD}"
+      OPENIM_SERVER_ADDRESS: http://openim-server:10002
+      OPENIM_SECRET: "${OPENIM_SECRET}"
+      CHAT_API_PORT: "10008"
+      ADMIN_API_PORT: "10009"
+    ports:
+      - "${OPENIM_CHAT_PORT}:10008"
+
+volumes:
+  openim_mysql_data:
+  openim_mongo_data:
+  openim_redis_data:
+  openim_kafka_data:
+  openim_etcd_data:
+  openim_minio_data:
+  openim_logs:

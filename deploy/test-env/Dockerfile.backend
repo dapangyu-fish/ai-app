@@ -1,0 +1,29 @@
+# 后端 + Registry + Config center 共用镜像。
+# 通过 compose 的 command 字段区分入口（python app.py / registry_server.py / config_center/app.py）。
+#
+# 跟生产保持一致：Python 3.11 (生产 supervisor 跑的也是 3.11)，pip 装 requirements.txt
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 系统依赖：libpq-dev 给 psycopg2，curl 给 healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 依赖先装，命中缓存
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# 拷代码
+COPY backend/ /app/backend/
+COPY config_center/ /app/config_center/
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 5566 3254 5567
+
+# 默认命令（compose 会覆盖）
+CMD ["python", "/app/backend/app.py"]
