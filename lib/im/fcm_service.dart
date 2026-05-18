@@ -12,6 +12,7 @@
 //   - FCM 没有 sandbox/production 区分，meta 留空即可
 //   - Android 13+ 必须运行时申请 POST_NOTIFICATIONS（plugin 内置 requestPermission()）
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
@@ -28,6 +29,10 @@ class FcmService {
 
   bool _started = false;
   String? _lastUploadedToken;
+  // start() 里订阅的两个 stream 句柄 —— unregister 时必须 cancel 掉，
+  // 否则下次 start() 会再挂一组 listener（dedupe 救了网络调用，但 listener 越积越多）
+  StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<RemoteMessage>? _onMessageSub;
 
   /// 平台支持？只有 Android 真机有意义。
   /// iOS 走 [ApnsService]；Web / 桌面这版不支持。
@@ -76,13 +81,13 @@ class FcmService {
     }
 
     // 3. token 刷新时再传一次（Firebase 不定时换 token，比如重装/清数据）
-    messaging.onTokenRefresh.listen((newToken) {
+    _tokenRefreshSub = messaging.onTokenRefresh.listen((newToken) {
       _lastUploadedToken = null;  // 重置 dedupe，下次必传
       _uploadToken(newToken);
     });
 
     // 4. 前台收到推送的回调（仅 log；UI 提示走 OpenIM 现有逻辑，不在此处弹）
-    FirebaseMessaging.onMessage.listen((msg) {
+    _onMessageSub = FirebaseMessaging.onMessage.listen((msg) {
       // ignore: avoid_print
       print('[FCM] foreground message: ${msg.messageId}  data=${msg.data}');
     });
@@ -117,6 +122,10 @@ class FcmService {
       // ignore: avoid_print
       print('[FCM] deleteToken 失败 (忽略): $e');
     }
+    await _tokenRefreshSub?.cancel();
+    await _onMessageSub?.cancel();
+    _tokenRefreshSub = null;
+    _onMessageSub = null;
     _started = false;
     _lastUploadedToken = null;
   }

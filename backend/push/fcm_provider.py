@@ -166,7 +166,10 @@ def push(*, token: str, meta: dict, payload: PushPayload) -> PushResult:
     )
 
     # 这些错误码意味着 token 永久失效，应该删 DB
-    expired_codes = {"UNREGISTERED", "INVALID_ARGUMENT", "SENDER_ID_MISMATCH"}
+    # 故意不含 INVALID_ARGUMENT：那个码语义太宽（也可能是 message body 字段错），
+    # 我们如果改 payload 构造时引入 bug 会把所有 token 一次性误删。让它进可重试
+    # 路径，先靠日志看到，再人为修
+    expired_codes = {"UNREGISTERED", "SENDER_ID_MISMATCH"}
     expired = fcm_error_code in expired_codes or resp.status_code == 404
 
     # 5xx + QUOTA_EXCEEDED 值得重试
