@@ -2,6 +2,13 @@
 # 只更新后端代码：git pull + 重建 backend / registry / config-center 镜像
 # 数据卷（Postgres / Redis / MinIO）一律不动 —— 它们挂在其他容器上
 #
+# === git 和容器的边界（看脚本前先理清楚）===
+# 1) git pull 跑在 *宿主机* 的 /root/ai-app（bootstrap.sh 时已经 clone 过），
+#    用宿主机的 ssh key 拉私有仓库，容器里没有 git、也不需要 git 凭据
+# 2) rebuild 时 Dockerfile 用 `context: ../../`，docker daemon 把 *宿主机*
+#    刚 pull 下来的 backend/ 目录 COPY 进新镜像
+# 3) 新容器从新镜像启，代码就是最新的；整个过程容器都不联网拉代码
+#
 # 用法:
 #   ./redeploy.sh                     # 三个共用 Dockerfile.backend 的服务都重建
 #   ./redeploy.sh backend             # 只重建 backend
