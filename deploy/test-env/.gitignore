@@ -2,6 +2,7 @@
 .env
 supabase/.env
 openim/.env
+openim/config-rendered/
 test-env-info.txt
 
 # 数据卷

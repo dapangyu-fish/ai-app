@@ -22,5 +22,7 @@ read -r -p "$(printf "${R}!! 这将删除所有容器和数据卷（不可恢复
 
 # Supabase 的 db PGDATA 是 bind mount 不是 named volume，down -v 删不掉
 rm -rf supabase/volumes/db/data
+# OpenIM bootstrap 时从镜像提取的 config 也清掉
+rm -rf openim/config-rendered
 rm -f .env supabase/.env openim/.env test-env-info.txt
 printf "${G}✔ 已销毁${N}\n"

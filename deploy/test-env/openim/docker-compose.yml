@@ -147,16 +147,18 @@ services:
       OPENIM_WS_PORT: "10001"
       MINIO_EXTERNAL_ADDRESS: "http://${HOST_IP}:${OPENIM_MINIO_PORT}"
       SECRET: "${OPENIM_SECRET}"
-      # 推送通道一律不配，**也不显式 disable webhooks**：
-      # OpenIM v3.8 默认 webhooks.*.enable=false，env override 走的是 OPENIM_*
-      # 的内部 envsubst 路径（我们不动 config 目录所以保持默认）。
-      # 客户端 APNs 注册不到，后端 push 模块 supported_channels() 返回 []，全链路自然降级。
+      # 推送通道一律不配；客户端 APNs 注册不到，后端 push 模块 supported_channels()
+      # 返回 []，全链路自然降级。
     ports:
       - "${OPENIM_WS_PORT}:10001"      # WebSocket Gateway → 客户端 imWsUrl
       - "${OPENIM_API_PORT}:10002"     # HTTP API → 客户端 imApiUrl
       - "${OPENIM_ADMIN_PORT}:10009"   # Admin API（后端建用户/查用户用）
     volumes:
-      - openim_logs:/app/logs
+      - openim_logs:/openim-server/logs
+      # OpenIM v3.8 不读 env 变量，只读 /openim-server/config/*.yml
+      # bootstrap.sh 从镜像 extract 默认 config 到 config-rendered/，然后 sed 替换
+      # 关键字段（mongodb/redis/kafka/etcd/minio 的 address + 凭据）→ mount 进来
+      - ./config-rendered:/openim-server/config:ro
 
   # 已删 openim-chat：backend/im.py 只用 openim-server（端口 10002）直接走 token / 用户接口，
   # 不依赖 openim-chat 的注册/登录/好友模块。openim-chat v1.8.4-patch.3 还跟 v3.8 server

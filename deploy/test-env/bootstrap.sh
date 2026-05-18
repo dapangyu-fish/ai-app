@@ -240,6 +240,25 @@ for i in {1..60}; do
   [[ $i -eq 60 ]] && die "Supabase auth 等 120s 还没起来 (last HTTP $code)，docker logs supabase-auth"
 done
 
+# ───────── 渲染 OpenIM config（v3.8 镜像不读 env，只读 /openim-server/config/*.yml）─────────
+say "从 OpenIM 镜像提取默认 config 并打补丁..."
+OPENIM_CFG_DIR="$SCRIPT_DIR/openim/config-rendered"
+rm -rf "$OPENIM_CFG_DIR" && mkdir -p "$OPENIM_CFG_DIR"
+docker run --rm --entrypoint sh -v "$OPENIM_CFG_DIR":/host \
+  openim/openim-server:v3.8.3-patch.15 \
+  -c "cp -a /openim-server/config/. /host/ && chmod -R a+r /host/"
+
+# sed 替换关键字段（用 | 当分隔符避开 password 里的 / + =）
+cd "$OPENIM_CFG_DIR"
+sed -i "s|localhost:37017|mongodb:27017|g; s|^username: openIM$|username: openim|; s|^password: openIM123$|password: ${OPENIM_MONGO_PASSWORD}|; s|^authSource: openim_v3$|authSource: admin|" mongodb.yml
+sed -i "s|localhost:16379|redis:6379|g; s|^password: openIM123$|password: ${OPENIM_REDIS_PASSWORD}|" redis.yml
+sed -i "s|localhost:19094|kafka:9092|g" kafka.yml
+sed -i "s|localhost:12379|etcd:2379|g" discovery.yml
+sed -i "s|^accessKeyID: root$|accessKeyID: ${OPENIM_MINIO_ACCESS_KEY}|; s|^secretAccessKey: openIM123$|secretAccessKey: ${OPENIM_MINIO_SECRET_KEY}|; s|localhost:10005|minio:9000|g; s|http://external_ip:10005|http://${HOST_IP}:${OPENIM_MINIO_PORT}|g" minio.yml
+sed -i "s|^secret: openIM123$|secret: ${OPENIM_SECRET}|" share.yml
+cd "$SCRIPT_DIR"
+ok "OpenIM config 渲染完毕（mongodb/redis/kafka/etcd/minio/share）"
+
 # ───────── 启动 OpenIM ─────────
 say "启动 OpenIM（8 服务，首次起约 1-2 分钟）..."
 docker compose --env-file openim/.env -f openim/docker-compose.yml up -d
