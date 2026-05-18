@@ -24,10 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
     pip install --no-cache-dir \
-        flask-caching>=2.1.0 \
-        eventlet>=0.36.0
-# flask-caching: config_center/app.py 需要（prod 上是单独 venv 装的，repo 里 requirements.txt 没收）
-# eventlet: backend/app.py 一开始就 monkey_patch，repo requirements.txt 也没收
+        pyjwt>=2.8.0 \
+        httpx>=0.27.0 \
+        flask-caching>=2.1.0
+# 以下 3 个 repo 的 requirements.txt 里都没收，prod 上是单独 venv 装的：
+# - pyjwt:        backend/push/apns_provider.py: import jwt
+# - httpx:        backend/claude_chat.py 等用
+# - flask-caching: config_center/app.py 用
 
 # 拷代码
 COPY backend/ /app/backend/

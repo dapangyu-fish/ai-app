@@ -14,8 +14,9 @@ set -euo pipefail
 docker run --rm \
   --network testenv-app_default \
   -e MC_HOST_app="http://${APP_MINIO_ROOT_USER}:${APP_MINIO_ROOT_PASSWORD}@app-minio:9000" \
+  --entrypoint sh \
   minio/mc:latest \
-  sh -c '
+  -c '
     set -e
     until mc alias list app >/dev/null 2>&1; do sleep 1; done
     for b in json-app json-component models ai-chat-temp; do
