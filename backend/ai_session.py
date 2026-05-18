@@ -466,7 +466,7 @@ def _build_cli_cmd(session_id: str, last_msg: str, sys_prompt: str,
         "--output-format", "stream-json",
         "--include-partial-messages",
         "--verbose",
-        "-p", f"本轮用户的请求: ‘’‘{last_msg}’‘’，请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户",
+        "-p", f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户",
     ]
     if is_resume:
         cmd.extend(["-r", session_id])
