@@ -25,7 +25,8 @@ from minio import Minio
 
 from config import (
     SUPABASE_URL, SUPABASE_ANON_KEY,
-    MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_PUBLIC_URL, MINIO_SECURE
+    MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_PUBLIC_URL, MINIO_SECURE,
+    REGISTRY_BASE_URL, REGISTRY_UPSTREAM, REGISTRY_MIRROR_SYNC_INTERVAL_SEC,
 )
 from database import (
     create_namespace, get_namespace_by_name, get_user_namespaces,
@@ -33,6 +34,13 @@ from database import (
     check_namespace_permission, update_namespace_member_role
 )
 from auth import find_user_by_email, find_user_by_phone
+from registry_mirror import (
+    index_lock, build_manifest, sync_once,
+    proxy_fetch_and_cache, file_exists_in_minio,
+    get_version_source, is_local_version,
+    start_background_sync,
+)
+from flask import redirect, Response
 
 BUCKET_APP = "json-app"
 BUCKET_COMPONENT = "json-component"
@@ -119,7 +127,7 @@ def _load_index():
 
 
 def _save_index(index_data):
-    """保存全局索引文件到 MinIO"""
+    """保存全局索引文件到 MinIO。**只在 index_lock 内调用**"""
     index_data["updated_at"] = datetime.utcnow().isoformat() + "Z"
     data_bytes = json.dumps(index_data, ensure_ascii=False, indent=2).encode('utf-8')
 
@@ -130,6 +138,16 @@ def _save_index(index_data):
         len(data_bytes),
         content_type="application/json",
     )
+
+
+def _download_url_for_version(name, version, package_info, path):
+    """根据 version_sources 决定 download URL。
+    本地版本：MinIO 直链（最快）；镜像版本：本地代理端点（按需缓存）"""
+    filename = f"{name.split('/')[-1]}-{version}.json"
+    if is_local_version(package_info, version):
+        return f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{path}/{filename}"
+    # 镜像版本走本地 /mirror/file，触发按需缓存
+    return f"{REGISTRY_BASE_URL.rstrip('/')}/mirror/file/{name}/{version}"
 
 
 def _validate_namespace_name(name):
@@ -312,17 +330,17 @@ def resolve():
             "available_versions": package_info['versions']
         }), 404
 
-    # 构造下载 URL
+    # 构造下载 URL（local vs mirrored 走不同路径）
     path = package_info['path']
-    filename = f"{name.split('/')[-1]}-{best_version}.json"
-    download_url = f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{path}/{filename}"
+    download_url = _download_url_for_version(name, best_version, package_info, path)
 
     return jsonify({
         "name": name,
         "version": best_version,
         "download_url": download_url,
         "type": package_info.get('type', 'user'),
-        "latest": package_info.get('latest')
+        "latest": package_info.get('latest'),
+        "source": get_version_source(package_info, best_version),
     })
 
 
@@ -343,23 +361,26 @@ def list_packages():
         latest_version = info.get('latest', info['versions'][0] if info['versions'] else '1.0.0')
         path = info['path']
         filename = f"{name.split('/')[-1]}-{latest_version}.json"
-        download_url = f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{path}/{filename}"
+        download_url = _download_url_for_version(name, latest_version, info, path)
 
         # 尝试从 MinIO 读取完整的包信息（包含 description 等）
+        # 镜像版本可能还没缓存到本地 → stat 不到就跳过，避免阻塞列表接口
         description = ''
         author = ''
         package_type = info.get('type', 'library')
 
-        try:
-            oss_key = f"{path}/{filename}"
-            response = minio_client.get_object(BUCKET_COMPONENT, oss_key)
-            content = json.loads(response.read().decode('utf-8'))
-            meta = content.get('meta', {})
-            description = meta.get('description', '')
-            author = meta.get('author', '')
-            package_type = meta.get('type', 'library')
-        except Exception:
-            pass
+        if is_local_version(info, latest_version) or file_exists_in_minio(
+            minio_client, BUCKET_COMPONENT, f"{path}/{filename}"
+        ):
+            try:
+                response = minio_client.get_object(BUCKET_COMPONENT, f"{path}/{filename}")
+                content = json.loads(response.read().decode('utf-8'))
+                meta = content.get('meta', {})
+                description = meta.get('description', '')
+                author = meta.get('author', '')
+                package_type = meta.get('type', 'library')
+            except Exception:
+                pass
 
         # 类型过滤
         if filter_type and package_type != filter_type:
@@ -373,7 +394,8 @@ def list_packages():
             "type": package_type,
             "download_url": download_url,
             "created_at": info.get('created_at'),
-            "registry_type": info.get('type', 'user')  # official/user
+            "registry_type": info.get('type', 'user'),  # official/user
+            "source": get_version_source(info, latest_version),
         })
 
     return jsonify({
@@ -528,29 +550,30 @@ def delete_package(name):
     if request.user_role != 'admin':
         return jsonify({"error": "只有管理员可以删除包"}), 403
 
-    # 2. 加载索引，检查包是否存在
-    index = _load_index()
-    if name not in index['packages']:
-        return jsonify({"error": f"包 '{name}' 不存在"}), 404
+    # 2-4. 索引读+改+写 + MinIO 文件清理，整段需要在锁内（同 publish）
+    with index_lock:
+        index = _load_index()
+        if name not in index['packages']:
+            return jsonify({"error": f"包 '{name}' 不存在"}), 404
 
-    package_info = index['packages'][name]
+        package_info = index['packages'][name]
 
-    # 3. 从 MinIO 删除所有版本的文件
-    path = package_info['path']
-    deleted_files = []
-    for version in package_info['versions']:
-        filename = f"{name.split('/')[-1]}-{version}.json"
-        oss_key = f"{path}/{filename}"
-        try:
-            minio_client.remove_object(BUCKET_COMPONENT, oss_key)
-            deleted_files.append(oss_key)
-            print(f"[Registry] 已删除文件: {oss_key}")
-        except Exception as e:
-            print(f"[Registry] 删除文件失败: {oss_key}, {e}")
+        # 3. 从 MinIO 删除所有版本的文件（含 mirror 缓存到本地的文件）
+        path = package_info['path']
+        deleted_files = []
+        for version in package_info['versions']:
+            filename = f"{name.split('/')[-1]}-{version}.json"
+            oss_key = f"{path}/{filename}"
+            try:
+                minio_client.remove_object(BUCKET_COMPONENT, oss_key)
+                deleted_files.append(oss_key)
+                print(f"[Registry] 已删除文件: {oss_key}")
+            except Exception as e:
+                print(f"[Registry] 删除文件失败: {oss_key}, {e}")
 
-    # 4. 从索引中删除包信息
-    del index['packages'][name]
-    _save_index(index)
+        # 4. 从索引中删除包信息
+        del index['packages'][name]
+        _save_index(index)
 
     print(f"[Registry] 包 '{name}' 已从索引中删除")
 
@@ -655,92 +678,103 @@ def publish():
             print(f"[Registry] Error checking namespace permission: {e}")
             return jsonify({"error": "权限检查失败"}), 500
 
-    # 加载索引（用于包信息管理）
-    index = _load_index()
+    # ── 索引读+改+写 必须在同一把 index_lock 内，否则会和 mirror sync 抢写 ──
+    with index_lock:
+        index = _load_index()
 
-    # ── ★ UUID 交叉检测 ──
-    for existing_name, existing_pkg in index.get('packages', {}).items():
-        existing_appid = existing_pkg.get('appid', '')
-        if existing_appid == appid:
-            if existing_name == full_name:
-                # 情况 B：同一个包，同一个 appid → 更新操作
-                break
-            else:
-                # 情况 A：appid 被其他包占用 → 拦截
+        # ── ★ UUID 交叉检测 ──
+        for existing_name, existing_pkg in index.get('packages', {}).items():
+            existing_appid = existing_pkg.get('appid', '')
+            if existing_appid == appid:
+                if existing_name == full_name:
+                    # 情况 B：同一个包，同一个 appid → 更新操作
+                    break
+                else:
+                    # 情况 A：appid 被其他包占用 → 拦截
+                    return jsonify({
+                        "error": "UUID 已被其他包使用，请点击「随机生成」获取新的 UUID",
+                        "uuid_conflict": True,
+                        "conflicting_package": existing_name
+                    }), 409
+
+        # ── 版本号校验 ──
+        if full_name in index.get('packages', {}):
+            existing_pkg = index['packages'][full_name]
+            existing_versions = existing_pkg.get('versions', [])
+
+            if version in existing_versions:
+                src = get_version_source(existing_pkg, version)
+                if src != "local":
+                    return jsonify({
+                        "error": f"版本 {version} 已被上游 mirror 占用（来源 {src}），请用更高的版本号",
+                        "existing_versions": existing_versions,
+                        "version_source": src,
+                    }), 409
                 return jsonify({
-                    "error": "UUID 已被其他包使用，请点击「随机生成」获取新的 UUID",
-                    "uuid_conflict": True,
-                    "conflicting_package": existing_name
+                    "error": f"版本 {version} 已存在，版本号不能重复",
+                    "existing_versions": existing_versions
                 }), 409
 
-    # ── 版本号校验 ──
-    if full_name in index.get('packages', {}):
-        existing_pkg = index['packages'][full_name]
-        existing_versions = existing_pkg.get('versions', [])
+            # 检查版本号是否递增
+            latest = existing_pkg.get('latest', '0.0.0')
+            def _parse_ver(v):
+                return tuple(int(p) for p in v.split('.'))
+            if _parse_ver(version) <= _parse_ver(latest):
+                return jsonify({
+                    "error": f"版本号必须大于当前最新版本 {latest}",
+                    "latest_version": latest
+                }), 409
 
-        if version in existing_versions:
-            return jsonify({
-                "error": f"版本 {version} 已存在，版本号不能重复",
-                "existing_versions": existing_versions
-            }), 409
+        # ── 将用户确认的 meta 写回 json_content ──
+        if 'meta' not in json_content:
+            json_content['meta'] = {}
+        json_content['meta']['name'] = full_name
+        json_content['meta']['version'] = version
+        json_content['meta']['description'] = description
+        json_content['meta']['type'] = package_type
+        json_content['appid'] = appid
 
-        # 检查版本号是否递增
-        latest = existing_pkg.get('latest', '0.0.0')
-        def _parse_ver(v):
-            return tuple(int(p) for p in v.split('.'))
-        if _parse_ver(version) <= _parse_ver(latest):
-            return jsonify({
-                "error": f"版本号必须大于当前最新版本 {latest}",
-                "latest_version": latest
-            }), 409
+        # ── 上传到 MinIO ──
+        path = full_name
+        filename = f"{full_name.split('/')[-1]}-{version}.json"
+        oss_key = f"{path}/{filename}"
 
-    # ── 将用户确认的 meta 写回 json_content ──
-    if 'meta' not in json_content:
-        json_content['meta'] = {}
-    json_content['meta']['name'] = full_name
-    json_content['meta']['version'] = version
-    json_content['meta']['description'] = description
-    json_content['meta']['type'] = package_type
-    json_content['appid'] = appid
+        try:
+            data_bytes = json.dumps(json_content, ensure_ascii=False, indent=2).encode('utf-8')
+            minio_client.put_object(
+                BUCKET_COMPONENT,
+                oss_key,
+                io.BytesIO(data_bytes),
+                len(data_bytes),
+                content_type="application/json",
+            )
+        except Exception as e:
+            return jsonify({"error": f"上传失败: {str(e)}"}), 502
 
-    # ── 上传到 MinIO ──
-    path = full_name
-    filename = f"{full_name.split('/')[-1]}-{version}.json"
-    oss_key = f"{path}/{filename}"
+        # ── 更新索引 ──
+        slash_count = full_name.count('/')
+        if full_name not in index['packages']:
+            index['packages'][full_name] = {
+                "type": "official" if slash_count == 0 else "user",
+                "latest": version,
+                "versions": [version],
+                "path": path,
+                "author_id": user_id,
+                "appid": appid,
+                "created_at": datetime.utcnow().isoformat() + "Z",
+                "version_sources": {version: "local"},
+            }
+        else:
+            pkg = index['packages'][full_name]
+            if version not in pkg['versions']:
+                pkg['versions'].append(version)
+            pkg['versions'].sort(key=lambda v: tuple(int(p) for p in v.split('.')), reverse=True)
+            pkg['latest'] = pkg['versions'][0]
+            pkg['appid'] = appid  # 更新 appid（允许用户改 name 但保持 appid）
+            # 新版本一定是本地发的（已经通过上面的同号检查）
+            pkg.setdefault("version_sources", {})[version] = "local"
 
-    try:
-        data_bytes = json.dumps(json_content, ensure_ascii=False, indent=2).encode('utf-8')
-        minio_client.put_object(
-            BUCKET_COMPONENT,
-            oss_key,
-            io.BytesIO(data_bytes),
-            len(data_bytes),
-            content_type="application/json",
-        )
-    except Exception as e:
-        return jsonify({"error": f"上传失败: {str(e)}"}), 502
-
-    # ── 更新索引 ──
-    slash_count = full_name.count('/')
-    if full_name not in index['packages']:
-        index['packages'][full_name] = {
-            "type": "official" if slash_count == 0 else "user",
-            "latest": version,
-            "versions": [version],
-            "path": path,
-            "author_id": user_id,
-            "appid": appid,
-            "created_at": datetime.utcnow().isoformat() + "Z"
-        }
-    else:
-        pkg = index['packages'][full_name]
-        if version not in pkg['versions']:
-            pkg['versions'].append(version)
-        pkg['versions'].sort(key=lambda v: tuple(int(p) for p in v.split('.')), reverse=True)
-        pkg['latest'] = pkg['versions'][0]
-        pkg['appid'] = appid  # 更新 appid（允许用户改 name 但保持 appid）
-
-    _save_index(index)
+        _save_index(index)
 
     download_url = f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{oss_key}"
 
@@ -903,11 +937,101 @@ def update_member_role(namespace_id, user_id):
 
 
 # ═══════════════════════════════════════════════════════════
+# Mirror API —— 上游曝露给下游同步的接口
+# ═══════════════════════════════════════════════════════════
+
+@app.route('/mirror/manifest', methods=['GET'])
+def mirror_manifest():
+    """对外的 mirror 清单。公开访问，无 token。
+    URL 全指向 REGISTRY_BASE_URL（自己），下游 mirror 我时 source 永远是我，
+    chain mirror 自然成立"""
+    with index_lock:
+        index = _load_index()
+    return jsonify(build_manifest(index, REGISTRY_BASE_URL))
+
+
+@app.route('/mirror/file/<path:name>/<version>', methods=['GET'])
+def mirror_file(name, version):
+    """按需文件代理：本地有就 302 到本地 MinIO；没有就先去 source 拉、缓存、再 302。
+    name 是包全名（含 namespace 斜杠），version 是 x.y.z。"""
+    # 加载索引，确认包/版本存在
+    with index_lock:
+        index = _load_index()
+        pkg = index.get('packages', {}).get(name)
+    if not pkg:
+        return jsonify({"error": f"包 '{name}' 不存在"}), 404
+    if version not in pkg.get('versions', []):
+        return jsonify({"error": f"包 '{name}' 没有版本 {version}"}), 404
+
+    filename = f"{name.split('/')[-1]}-{version}.json"
+    path = pkg.get('path', name)
+    oss_key = f"{path}/{filename}"
+
+    # 本地（或已缓存）→ 直接 302 到 MinIO 公开 URL（json-component 是 anonymous download）
+    if file_exists_in_minio(minio_client, BUCKET_COMPONENT, oss_key):
+        return redirect(f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{oss_key}", code=302)
+
+    # 镜像版本未缓存 → 去 source 拉
+    source = get_version_source(pkg, version)
+    if source == "local":
+        # 标记是 local 但 MinIO 里没文件？数据不一致，404 兜底
+        return jsonify({"error": f"包 '{name}@{version}' 标记为本地但文件不存在"}), 404
+
+    ok = proxy_fetch_and_cache(
+        source, name, version,
+        minio_client, BUCKET_COMPONENT, oss_key,
+    )
+    if not ok:
+        return jsonify({"error": f"从上游 {source} 拉取失败"}), 502
+
+    return redirect(f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{oss_key}", code=302)
+
+
+@app.route('/mirror/sync', methods=['POST'])
+@require_auth
+def mirror_sync_trigger():
+    """手动触发一次同步（仅 admin）"""
+    if request.user_role != 'admin':
+        return jsonify({"error": "只有管理员可以触发 mirror sync"}), 403
+    if not REGISTRY_UPSTREAM:
+        return jsonify({"error": "本实例未配置 REGISTRY_UPSTREAM"}), 400
+
+    result = sync_once(
+        REGISTRY_UPSTREAM, minio_client, BUCKET_COMPONENT,
+        _load_index, _save_index,
+    )
+    if result is None:
+        return jsonify({"error": "sync 失败，看 server 日志"}), 502
+    added, replaced = result
+    return jsonify({
+        "message": "sync 完成",
+        "upstream": REGISTRY_UPSTREAM,
+        "added": added,
+        "replaced": replaced,
+    })
+
+
+# ═══════════════════════════════════════════════════════════
 # 启动服务
 # ═══════════════════════════════════════════════════════════
+
+def _maybe_start_mirror_sync():
+    """如果配了 REGISTRY_UPSTREAM 就起后台同步线程"""
+    if not REGISTRY_UPSTREAM:
+        print("[Registry] REGISTRY_UPSTREAM 未配置，跳过 mirror 同步")
+        return
+    print(f"[Registry] Mirror 模式开启，上游 = {REGISTRY_UPSTREAM}, "
+          f"间隔 = {REGISTRY_MIRROR_SYNC_INTERVAL_SEC}s")
+    start_background_sync(
+        REGISTRY_UPSTREAM, REGISTRY_MIRROR_SYNC_INTERVAL_SEC,
+        minio_client, BUCKET_COMPONENT,
+        _load_index, _save_index,
+    )
+
 
 if __name__ == '__main__':
     print(f"[Registry] 启动 JSON-DSL Registry 服务，端口 {PORT}")
     print(f"[Registry] MinIO: {MINIO_ENDPOINT}")
     print(f"[Registry] Bucket: {BUCKET_COMPONENT}")
+    _maybe_start_mirror_sync()
     app.run(host='0.0.0.0', port=PORT, debug=False)

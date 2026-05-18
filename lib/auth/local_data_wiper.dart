@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/environment_service.dart';
 import '../im/apns_service.dart';
 import '../im/im_service.dart';
 import '../json_ui/cache_manager.dart';
@@ -105,6 +106,15 @@ Future<void> wipeAllLocalAccountData() async {
     debugPrint('[Wipe] SharedPreferences cleared');
   } catch (e) {
     debugPrint('[Wipe] 清 prefs 失败 (忽略): $e');
+  }
+
+  // 6. 环境配置不属于"账号本地数据"，prefs.clear() 把它顺带冲了 → 写回来。
+  //    EnvironmentService 单例内存里仍有 active env，直接持久化即可
+  try {
+    await EnvironmentService.instance.persistCurrent();
+    debugPrint('[Wipe] EnvironmentService.persistCurrent OK');
+  } catch (e) {
+    debugPrint('[Wipe] env 写回失败 (忽略): $e');
   }
 
   debugPrint('[Wipe] ========== 清除完成 ==========');

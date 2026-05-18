@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonImagePickerWidget extends JsonBaseWidget {
   @override
@@ -20,7 +21,7 @@ class JsonImagePickerWidget extends JsonBaseWidget {
   ) {
     final bindPath = json['bind'] as String?;
     final placeholder = interpreter.resolveTemplate(
-        json['placeholder']?.toString() ?? '点击选择图片');
+        json['placeholder']?.toString() ?? T.of(context).widgetImagePickerPlaceholder);
     final width = (json['width'] as num?)?.toDouble() ?? double.infinity;
     final height = (json['height'] as num?)?.toDouble() ?? 200;
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 12;
@@ -61,10 +62,10 @@ class JsonImagePickerWidget extends JsonBaseWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         color: Colors.black45,
-                        child: const Text(
-                          '点击重新选择',
+                        child: Text(
+                          T.of(context).widgetImagePickerReselect,
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
                         ),
                       ),
                     ),

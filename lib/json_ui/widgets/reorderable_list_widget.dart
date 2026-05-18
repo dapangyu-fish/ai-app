@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'action_helper.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonReorderableListWidget extends JsonBaseWidget {
   @override
@@ -37,7 +38,7 @@ class JsonReorderableListWidget extends JsonBaseWidget {
     final itemTemplate = json['item_template'] as Map<String, dynamic>?;
     final bindPath = json['bind']?.toString();
     final emptyText = interpreter.resolveTemplate(
-        json['emptyText']?.toString() ?? '暂无数据');
+        json['emptyText']?.toString() ?? T.of(context).empty);
     final padding = (json['padding'] as num?)?.toDouble() ?? 0;
     final itemKeyField = json['itemKey']?.toString() ?? 'id';
 
@@ -61,7 +62,7 @@ class JsonReorderableListWidget extends JsonBaseWidget {
                         .withValues(alpha: 0.5)),
                 const SizedBox(height: 8),
                 Text(
-                  items.isEmpty ? emptyText : '缺少 item_template',
+                  items.isEmpty ? emptyText : T.of(context).widgetMissingItemTemplate,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,

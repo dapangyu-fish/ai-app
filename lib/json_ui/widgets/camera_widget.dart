@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonCameraWidget extends JsonBaseWidget {
   @override
@@ -105,7 +106,7 @@ class _CameraPreviewState extends State<_CameraPreview> {
     try {
       final cams = await availableCameras();
       if (cams.isEmpty) {
-        setState(() => _error = '无可用相机');
+        setState(() => _error = T.current.widgetCameraNoCamera);
         return;
       }
       final selected = cams.firstWhere(

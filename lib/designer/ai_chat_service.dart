@@ -8,6 +8,7 @@ import '../auth/auth_service.dart';
 import '../config/app_config.dart';
 import '../config/remote_config_service.dart';
 import '../i18n/framework_strings.dart';
+import 'session_meta.dart';
 
 /// AI 对话事件
 class ChatEvent {
@@ -97,11 +98,13 @@ class AiChatService {
   // 使用统一配置管理的后端地址
   static String get _baseUrl => AppConfig.backendUrl;
   static const String _providerKey = 'ai_provider';
-  static const String _sessionKey = 'ai_session_id';
-  static const String _sessionUsedKey = 'ai_session_used';
-  // 持久化最后一条用户消息：(1) 重试按钮要重发；(2) app 启动恢复时显示
-  // 关键不变量：只有在 POST /start 成功之后才更新这个值，保证 prefs 永远 ≤ backend 上的状态
-  static const String _lastUserMessageKey = 'ai_last_user_message';
+  // 多会话存储：列表 + 当前 active sid
+  static const String _sessionsListKey = 'ai_sessions_list';
+  static const String _activeSessionKey = 'ai_active_session_id';
+  // 老 keys（仅用于一次性迁移）
+  static const String _legacySessionKey = 'ai_session_id';
+  static const String _legacySessionUsedKey = 'ai_session_used';
+  static const String _legacyLastUserMessageKey = 'ai_last_user_message';
 
   static String _selectedProvider = 'deepseek';
   static List<AiProvider> _providers = [];
@@ -136,48 +139,185 @@ class AiChatService {
     return _providers;
   }
 
-  // ── Session 管理 ──
-  String _sessionId = '';
-  bool _sessionUsed = false;  // 该 session 是否已发过消息（用于判断 is_new_session）
+  // ── 多会话状态 ──
+  // 列表里只包含 committed=true 的 session（持久化时过滤）+ 当前未提交的 active 占位（内存）
+  final List<SessionMeta> _sessions = [];
+  String _activeSessionId = '';
 
   http.Client? _activeClient;
   bool _aborting = false;
-  // 当前流读到的最后一条 Redis Stream entry id；断线重连传给后端实现"无丢失续读"
+  // 当前活跃流读到的最后一条 Redis Stream entry id；断线重连传给后端实现"无丢失续读"
   String _lastEntryId = '0';
-  // 最后一条用户消息（已经被 backend 接受了的那条）；空字符串 = 没有
-  String _lastUserMessage = '';
 
-  String get sessionId => _sessionId;
-  String get lastUserMessage => _lastUserMessage;
-
-  /// 初始化/加载 session（app 启动时调用）
-  Future<void> loadSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? cachedId = prefs.getString(_sessionKey);
-    // 验证缓存的 UUID 长度是否合法 (36字符)
-    if (cachedId == null || cachedId.length != 36) {
-      _sessionId = _generateSessionId();
-      _sessionUsed = false;
-      _lastUserMessage = '';
-    } else {
-      _sessionId = cachedId;
-      _sessionUsed = prefs.getBool(_sessionUsedKey) ?? false;
-      _lastUserMessage = prefs.getString(_lastUserMessageKey) ?? '';
+  /// 当前 active 的 SessionMeta；如果列表为空 / sid 不匹配返回 null
+  SessionMeta? get _active {
+    if (_activeSessionId.isEmpty) return null;
+    for (final s in _sessions) {
+      if (s.id == _activeSessionId) return s;
     }
-    await prefs.setString(_sessionKey, _sessionId);
-    await prefs.setBool(_sessionUsedKey, _sessionUsed);
+    return null;
   }
 
-  /// 重置 session（用户点击清除按钮）
-  Future<void> resetSession() async {
-    abort();
-    _sessionId = _generateSessionId();
-    _sessionUsed = false;
-    _lastUserMessage = '';
+  /// 对外暴露当前 active sid（后兼容老 designer_ball 调用）
+  String get sessionId => _activeSessionId;
+  String get lastUserMessage => _active?.lastUserMessage ?? '';
+
+  /// 当前所有 session（含未提交的内存占位），按 updatedAt 倒序
+  List<SessionMeta> listSessions() {
+    final copy = List<SessionMeta>.from(_sessions);
+    copy.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return copy;
+  }
+
+  /// 初始化/加载 session 列表（app 启动 / 登录态切换时调用）
+  ///
+  /// 优先读新 keys；如果不存在但老 ai_session_id 存在，一次性迁移成单元素列表。
+  Future<void> loadSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_sessionKey, _sessionId);
-    await prefs.setBool(_sessionUsedKey, false);
-    await prefs.remove(_lastUserMessageKey);
+    _sessions.clear();
+
+    final listJson = prefs.getString(_sessionsListKey);
+    if (listJson != null && listJson.isNotEmpty) {
+      try {
+        final arr = json.decode(listJson) as List<dynamic>;
+        for (final e in arr) {
+          _sessions.add(SessionMeta.fromJson(e as Map<String, dynamic>));
+        }
+      } catch (e) {
+        debugPrint('[AI_CHAT] sessions list 解析失败，忽略: $e');
+      }
+    } else {
+      // 一次性迁移：把老的单 session 当作 committed=true 的初始记录
+      final legacyId = prefs.getString(_legacySessionKey);
+      if (legacyId != null && legacyId.length == 36) {
+        final used = prefs.getBool(_legacySessionUsedKey) ?? false;
+        final lastMsg = prefs.getString(_legacyLastUserMessageKey) ?? '';
+        if (used) {
+          _sessions.add(SessionMeta(
+            id: legacyId,
+            firstMessage: lastMsg,  // 老数据不知道首条是啥，拿 lastUserMessage 凑数
+            lastUserMessage: lastMsg,
+            committed: true,
+          ));
+        }
+        // 清理老 keys，迁移只跑一次
+        await prefs.remove(_legacySessionKey);
+        await prefs.remove(_legacySessionUsedKey);
+        await prefs.remove(_legacyLastUserMessageKey);
+      }
+    }
+
+    // 确定 active sid
+    final savedActive = prefs.getString(_activeSessionKey) ?? '';
+    if (savedActive.isNotEmpty && _sessions.any((s) => s.id == savedActive)) {
+      _activeSessionId = savedActive;
+    } else if (_sessions.isNotEmpty) {
+      _sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      _activeSessionId = _sessions.first.id;
+    } else {
+      _activeSessionId = '';
+    }
+
+    // 不变量：loadSession 返回后 sessionId 一定非空。调用方（designer_ball
+    // _sendTextToAi 等）写 _messageBuckets 时直接拿 sessionId 作 key，不用兜底。
+    if (_activeSessionId.isEmpty) {
+      final placeholder = SessionMeta(id: _generateSessionId());
+      _sessions.add(placeholder);
+      _activeSessionId = placeholder.id;
+    }
+
+    await _persistSessions();
+    debugPrint('[AI_CHAT] loadSession: ${_sessions.length} 条，active=$_activeSessionId');
+  }
+
+  /// 把 committed=true 的 session 写回 prefs（占位的不持久化）
+  Future<void> _persistSessions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final committed = _sessions.where((s) => s.committed).toList();
+    await prefs.setString(_sessionsListKey,
+        json.encode(committed.map((s) => s.toJson()).toList()));
+    await prefs.setString(_activeSessionKey, _activeSessionId);
+  }
+
+  /// 新建会话（占位，未持久化；首次成功 sendStream 才 commit）。
+  /// 内部：abortLocal 老流；如果当前 active 是另一条未 committed 占位，先丢弃它。
+  Future<SessionMeta> createNewSession() async {
+    abortLocal();
+    _aborting = false;
+    _lastEntryId = '0';
+    // 丢弃旧的未提交占位（最多只能存在一个）
+    _sessions.removeWhere((s) => !s.committed);
+    final fresh = SessionMeta(id: _generateSessionId());
+    _sessions.add(fresh);
+    _activeSessionId = fresh.id;
+    await _persistSessions();
+    debugPrint('[AI_CHAT] createNewSession: sid=${fresh.id}');
+    return fresh;
+  }
+
+  /// 切换 active session。老流只关本地，不杀后端 worker。
+  Future<void> switchToSession(String sid) async {
+    if (sid == _activeSessionId) return;
+    if (!_sessions.any((s) => s.id == sid)) {
+      debugPrint('[AI_CHAT] switchToSession: 未知 sid=$sid，忽略');
+      return;
+    }
+    abortLocal();
+    _aborting = false;
+    _lastEntryId = '0';
+    _activeSessionId = sid;
+    await _persistSessions();
+    debugPrint('[AI_CHAT] switchToSession: sid=$sid');
+  }
+
+  /// 删除 session。会向后端发 /abort 杀 worker（用户主动放弃这条 session）。
+  /// 如果删的是 active，切到最近的另一条；列表空则置空 active（下次 sendStream 自动建新）。
+  Future<void> deleteSession(String sid) async {
+    final idx = _sessions.indexWhere((s) => s.id == sid);
+    if (idx < 0) return;
+    final wasActive = sid == _activeSessionId;
+    final wasCommitted = _sessions[idx].committed;
+    _sessions.removeAt(idx);
+
+    // 只对 committed 的发 /abort，未提交的占位 backend 上根本没记录
+    if (wasCommitted) {
+      _abortBackend(sid);
+    }
+
+    if (wasActive) {
+      abortLocal();
+      _aborting = false;
+      _lastEntryId = '0';
+      if (_sessions.isNotEmpty) {
+        _sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        _activeSessionId = _sessions.first.id;
+      } else {
+        // 保持不变量：sessionId 永远非空。删完所有会话自动垫一条占位。
+        final placeholder = SessionMeta(id: _generateSessionId());
+        _sessions.add(placeholder);
+        _activeSessionId = placeholder.id;
+      }
+    }
+    await _persistSessions();
+    debugPrint('[AI_CHAT] deleteSession: sid=$sid wasActive=$wasActive');
+  }
+
+  /// 重命名 session（用户手动覆盖 auto title）。
+  Future<void> renameSession(String sid, String title) async {
+    final s = _sessions.firstWhere((x) => x.id == sid, orElse: () => SessionMeta(id: ''));
+    if (s.id.isEmpty) return;
+    s.customTitle = title.trim().isEmpty ? null : title.trim();
+    await _persistSessions();
+  }
+
+  /// 后兼容老的"清空"语义。多会话下等价于：删除当前 active session（用户主动放弃）。
+  Future<void> resetSession() async {
+    final sid = _activeSessionId;
+    if (sid.isEmpty) {
+      abort();
+      return;
+    }
+    await deleteSession(sid);
   }
 
   String _generateSessionId() {
@@ -211,7 +351,7 @@ class AiChatService {
   /// 用户主动"清空对话"/手动"停止"才用。app 后台 / 关浮层 / 发新消息都不该用。
   void abort() {
     abortLocal();
-    _abortBackend(_sessionId);
+    if (_activeSessionId.isNotEmpty) _abortBackend(_activeSessionId);
   }
 
   void _abortBackend(String sid) {
@@ -231,26 +371,51 @@ class AiChatService {
   /// 检查后端对应 session 是否仍在跑（新架构：worker 是否还活）
   /// 等价语义：meta.status == "running" && process 还在
   Future<bool> isSessionAlive() async {
-    if (_sessionId.isEmpty) return false;
+    if (_activeSessionId.isEmpty) return false;
+    final data = await _probeSessionStatus(_activeSessionId);
+    if (data == null) return false;
+    return data['status'] == 'running' && data['process_alive'] == true;
+  }
+
+  /// 探一条 session 的 /status；返回原始 JSON 或 null（任何失败都视为 null）。
+  /// session list sheet 批量探活和 isSessionAlive / tryResume 共用这条路径。
+  Future<Map<String, dynamic>?> _probeSessionStatus(String sid) async {
+    if (sid.isEmpty) return null;
     try {
       final token = AuthService.token;
       final headers = <String, String>{};
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/status'),
+            Uri.parse('$_baseUrl/api/ai/chat/$sid/status'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 5));
-      if (resp.statusCode == 404) return false;  // 已过期
-      if (resp.statusCode != 200) return false;
-      final data = json.decode(resp.body) as Map<String, dynamic>;
-      // running 状态 + 进程还在（process_alive 是后端 supervisor-side 的真实进程检查）
-      return data['status'] == 'running' && (data['process_alive'] == true);
+      if (resp.statusCode != 200) return null;
+      return json.decode(resp.body) as Map<String, dynamic>;
     } catch (e) {
-      debugPrint('[AI_CHAT] isSessionAlive error: $e');
-      return false;
+      debugPrint('[AI_CHAT] _probeSessionStatus($sid) error: $e');
+      return null;
     }
+  }
+
+  /// 批量对最多 [limit] 条 committed session 调 /status，把 lastKnownStatus
+  /// / processAlive 写回 SessionMeta。sheet 打开时调一次。
+  /// 返回更新过的 sid 集合。
+  Future<Set<String>> probeAllSessionStatus({int limit = 10}) async {
+    final committed = _sessions.where((s) => s.committed).toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final targets = committed.take(limit).toList();
+    final updated = <String>{};
+    await Future.wait(targets.map((s) async {
+      final data = await _probeSessionStatus(s.id);
+      if (data == null) return;
+      s.lastKnownStatus = data['status'] as String?;
+      s.processAlive = data['process_alive'] == true;
+      updated.add(s.id);
+    }));
+    if (updated.isNotEmpty) await _persistSessions();
+    return updated;
   }
 
   /// 发送用户消息，返回 `Stream<ChatEvent>`。
@@ -274,9 +439,15 @@ class AiChatService {
     _aborting = false;
     _lastEntryId = '0';
 
+    // 没有 active session 就自动建一条占位（首次安装 / 删完所有 session 的场景）
+    if (_active == null) {
+      await createNewSession();
+    }
+    final active = _active!;
+
     debugPrint('[AI_CHAT] ========== 发送消息 ==========');
     debugPrint('[AI_CHAT] 消息内容: $userMessage');
-    debugPrint('[AI_CHAT] Session ID: $_sessionId');
+    debugPrint('[AI_CHAT] Session ID: ${active.id}');
     debugPrint('[AI_CHAT] Provider: $_selectedProvider');
     debugPrint('[AI_CHAT] ====================================');
 
@@ -286,28 +457,29 @@ class AiChatService {
       yield ChatEvent(error: startResult.error, quota: startResult.quota);
       return;
     }
-    // ⚠️ 关键时机：先持久化 lastUserMessage 再开 SSE
+    // ⚠️ 关键时机：先把 SessionMeta 标记 committed + 持久化，再开 SSE
     // 不变量：prefs 永远 ≤ backend，所以"持久化"必须发生在 backend 已经接受这条消息之后
-    _lastUserMessage = userMessage;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastUserMessageKey, userMessage);
-    if (!_sessionUsed) {
-      _sessionUsed = true;
-      await prefs.setBool(_sessionUsedKey, true);
+    active.lastUserMessage = userMessage;
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    if (!active.committed) {
+      active.committed = true;
+      active.firstMessage = userMessage;  // 首条消息冻结为标题来源
     }
+    await _persistSessions();
 
     // ── 2. SSE 流式读 + 自动重连 ──
     yield* _streamWithReconnect();
   }
 
-  /// 重试上一轮（worker 死了 / 用户主动重试）。复用同一个 session_id，
+  /// 重试上一轮（worker 死了 / 用户主动重试）。复用 active session 的 sid，
   /// CLI 通过 -r 参数继承对话上下文，所以不丢历史。
   Stream<ChatEvent> retryLastTurn() async* {
-    if (_lastUserMessage.isEmpty) {
-      yield ChatEvent(error: '没有可重试的消息');
+    final msg = lastUserMessage;
+    if (msg.isEmpty) {
+      yield ChatEvent(error: T.current.chatErrNoRetryMessage);
       return;
     }
-    yield* sendStream(_lastUserMessage);
+    yield* sendStream(msg);
   }
 
   /// SSE 主循环：连 → 读 → 断了 → 探活 → 重连 / 报错。
@@ -337,7 +509,7 @@ class AiChatService {
       final alive = await _checkAliveCarefully();
       if (alive == _AliveCheck.confirmedDead) {
         debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
-        yield ChatEvent(needsRetry: true, retryUserMessage: _lastUserMessage);
+        yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
         return;
       }
       // alive 或 unknown → 继续重连（真活着 / 网络问题；都不该烧重试按钮）
@@ -346,8 +518,8 @@ class AiChatService {
       if (reconnectCount > 30) {
         // 重试 30 次还连不上，stream 端确实出问题了。同时给 error 和 needsRetry：
         // UI 层负责把这俩组合成 "出错了 + 重试按钮" 的系统消息
-        yield ChatEvent(error: '连接持续不稳定（已重试 30 次）');
-        yield ChatEvent(needsRetry: true, retryUserMessage: _lastUserMessage);
+        yield ChatEvent(error: T.fmt(T.current.chatErrConnectionUnstableWith, {'n': 30}));
+        yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
         return;
       }
       final delayMs = (500 * (1 << (reconnectCount.clamp(1, 4) - 1))).clamp(500, 5000);
@@ -359,14 +531,14 @@ class AiChatService {
   /// 探活三态：confirmed dead / alive or finished / unknown。
   /// 只有 confirmedDead 才是"worker 真死了"的可信信号。
   Future<_AliveCheck> _checkAliveCarefully() async {
-    if (_sessionId.isEmpty) return _AliveCheck.unknown;
+    if (_activeSessionId.isEmpty) return _AliveCheck.unknown;
     try {
       final token = AuthService.token;
       final headers = <String, String>{};
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/status'),
+            Uri.parse('$_baseUrl/api/ai/chat/$_activeSessionId/status'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 8));
@@ -396,7 +568,8 @@ class AiChatService {
   ///  - ResumeStreaming：注入 user 气泡 + 空 assistant 气泡 + listen stream
   ///  - ResumeNeedsRetry：注入 user 气泡 + "已中断，点击重试" 系统消息
   Future<ResumeResult> tryResumeUnfinished() async {
-    if (_sessionId.isEmpty || _lastUserMessage.isEmpty) {
+    final active = _active;
+    if (active == null || active.lastUserMessage.isEmpty) {
       return const ResumeNothing();
     }
     // 防御：确保还没有正在跑的 stream
@@ -409,7 +582,7 @@ class AiChatService {
       if (token == null) return const ResumeNothing();
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/status'),
+            Uri.parse('$_baseUrl/api/ai/chat/${active.id}/status'),
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(const Duration(seconds: 8));
@@ -429,13 +602,13 @@ class AiChatService {
       }
       if (status == 'running') {
         if (!procAlive) {
-          return ResumeNeedsRetry(_lastUserMessage);
+          return ResumeNeedsRetry(active.lastUserMessage);
         }
         // worker 还在跑：续 SSE，不调 /start
         _aborting = false;
         _lastEntryId = '0';  // backend stream 是这一轮的，从头读没问题
         return ResumeStreaming(
-          userMessage: _lastUserMessage,
+          userMessage: active.lastUserMessage,
           stream: _streamWithReconnect(),
         );
       }
@@ -448,12 +621,14 @@ class AiChatService {
 
   /// 从 /result 拿到上一轮完成的最终文本，并解析其中的 [json_app_url] 标签
   Future<ResumeResult> _fetchCompletedResult() async {
+    final active = _active;
+    if (active == null) return const ResumeNothing();
     try {
       final token = AuthService.token;
       if (token == null) return const ResumeNothing();
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/$_sessionId/result'),
+            Uri.parse('$_baseUrl/api/ai/chat/${active.id}/result'),
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(const Duration(seconds: 8));
@@ -481,7 +656,7 @@ class AiChatService {
         if (action.isNotEmpty) requestAction = action;
       }
       return ResumeCompleted(
-        userMessage: _lastUserMessage,
+        userMessage: active.lastUserMessage,
         assistantText: finalText,
         thinking: thinking.isEmpty ? null : thinking,
         jsonUrl: jsonUrl,
@@ -500,7 +675,7 @@ class AiChatService {
     _activeClient = client;
 
     final token = AuthService.token;
-    final url = '$_baseUrl/api/ai/chat/$_sessionId/stream?last_id=${Uri.encodeQueryComponent(_lastEntryId)}';
+    final url = '$_baseUrl/api/ai/chat/$_activeSessionId/stream?last_id=${Uri.encodeQueryComponent(_lastEntryId)}';
     debugPrint('[AI_CHAT] >>> SSE GET $url');
 
     try {
@@ -516,7 +691,7 @@ class AiChatService {
           state.outcome = _StreamOutcome.retry;
           return;
         } catch (_) {
-          yield ChatEvent(error: '请先登录');
+          yield ChatEvent(error: T.current.chatErrPleaseLogin);
           state.outcome = _StreamOutcome.done;
           return;
         }
@@ -534,7 +709,7 @@ class AiChatService {
           state.outcome = _StreamOutcome.retry;
           return;
         }
-        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
+        yield ChatEvent(error: T.fmt(T.current.chatErrServerWithBody, {'code': response.statusCode, 'body': body}));
         state.outcome = _StreamOutcome.done;
         return;
       }
@@ -691,10 +866,10 @@ class AiChatService {
           if (getResp.statusCode == 200) {
             parsedApp = json.decode(utf8.decode(getResp.bodyBytes)) as Map<String, dynamic>;
           } else {
-            yield ChatEvent(failedJsonUrl: url, error: '下载生成的 JSON 失败 (HTTP ${getResp.statusCode})');
+            yield ChatEvent(failedJsonUrl: url, error: T.fmt(T.current.chatErrDownloadGenJsonWith, {'code': getResp.statusCode}));
           }
         } catch (e) {
-          yield ChatEvent(failedJsonUrl: url, error: '下载 JSON 异常: $e');
+          yield ChatEvent(failedJsonUrl: url, error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {'err': e}));
         }
       } else {
         parsedApp = data['json_app'] as Map<String, dynamic>?;
@@ -713,7 +888,7 @@ class AiChatService {
       yield ChatEvent(
         error: data['error'] as String,
         needsRetry: shouldRetry,
-        retryUserMessage: shouldRetry ? _lastUserMessage : null,
+        retryUserMessage: shouldRetry ? lastUserMessage : null,
       );
       return;
     }
@@ -797,7 +972,7 @@ class AiChatService {
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) {
         await Future.delayed(Duration(seconds: attempt - 1));
-        if (_aborting) return _StartResult.error('已取消');
+        if (_aborting) return _StartResult.error(T.current.chatErrCancelled);
       }
       try {
         final token = AuthService.token;
@@ -805,7 +980,7 @@ class AiChatService {
         if (token != null) headers['Authorization'] = 'Bearer $token';
         final body = json.encode({
           'messages': [{'role': 'user', 'content': userMessage}],
-          'session_id': _sessionId,
+          'session_id': _activeSessionId,
           'provider': _selectedProvider,
           'force_restart': forceRestart,
         });
@@ -822,37 +997,37 @@ class AiChatService {
                 .post(Uri.parse('$_baseUrl/api/ai/chat/start'), headers: headers, body: body)
                 .timeout(const Duration(seconds: 30));
           } catch (_) {
-            return _StartResult.error('请先登录');
+            return _StartResult.error(T.current.chatErrPleaseLogin);
           }
         }
 
         if (resp.statusCode == 429) {
           final data = json.decode(resp.body) as Map<String, dynamic>;
-          return _StartResult.error(data['error'] as String? ?? '配额已用完',
+          return _StartResult.error(data['error'] as String? ?? T.current.chatErrQuotaExceeded,
               quota: data['quota'] as Map<String, dynamic>?);
         }
-        if (resp.statusCode == 401) return _StartResult.error('请先登录');
+        if (resp.statusCode == 401) return _StartResult.error(T.current.chatErrPleaseLogin);
         if (resp.statusCode >= 500) {
           lastError = 'HTTP ${resp.statusCode}';
           continue;  // retry
         }
         if (resp.statusCode != 200) {
-          return _StartResult.error('服务器错误 (${resp.statusCode}): ${resp.body}');
+          return _StartResult.error(T.fmt(T.current.chatErrServerWithBody, {'code': resp.statusCode, 'body': resp.body}));
         }
 
         final data = json.decode(resp.body) as Map<String, dynamic>;
         debugPrint('[AI_CHAT] start ok: $data');
-        return _StartResult.ok(data['session_id'] as String? ?? _sessionId);
+        return _StartResult.ok(data['session_id'] as String? ?? _activeSessionId);
       } on TimeoutException {
-        lastError = '连接超时';
+        lastError = T.current.chatErrConnectionTimeout;
       } on http.ClientException catch (e) {
-        if (_aborting) return _StartResult.error('已取消');
+        if (_aborting) return _StartResult.error(T.current.chatErrCancelled);
         lastError = e;
       } catch (e) {
         lastError = e;
       }
     }
-    return _StartResult.error('网络错误: $lastError');
+    return _StartResult.error(T.fmt(T.current.chatErrNetworkWith, {'err': lastError ?? ''}));
   }
 
   void commitPartial(String partialContent) {
@@ -893,7 +1068,7 @@ class AiChatService {
     debugPrint(
         '[AI_CHAT] ❌ 已重试 $maxAttempts 次仍失败，向上抛出（不再 fallback 到内联 JSON）');
     debugPrint('[AI_CHAT] ==========================================');
-    throw Exception('上传失败（已重试 $maxAttempts 次）：$lastError');
+    throw Exception(T.fmt(T.current.chatErrUploadFailedRetriesWith, {'n': maxAttempts, 'err': lastError ?? ''}));
   }
 
   /// 单次上传尝试（不带重试）。任何失败抛出 Exception 由 uploadCurrentApp 处理重试。
@@ -938,9 +1113,7 @@ class AiChatService {
           'MinIO PUT failed: HTTP ${uploadResp.statusCode} body=${uploadResp.body}');
     }
 
-    return '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），'
-        '后续对话请基于这个配置进行修改或分析：\n\n'
-        '[json_app_url]$getUrl[/json_app_url]';
+    return '${T.current.chatUploadSuccessIntro}[json_app_url]$getUrl[/json_app_url]';
   }
 
   /// 使用 Claude CLI 生成/修改/修复 JSON-APP
@@ -981,18 +1154,18 @@ class AiChatService {
       if (response.statusCode == 429) {
         final body = await response.stream.bytesToString();
         final data = json.decode(body);
-        yield ChatEvent(error: data['error'] ?? '配额已用完', quota: data['quota']);
+        yield ChatEvent(error: data['error'] ?? T.current.chatErrQuotaExceeded, quota: data['quota']);
         return;
       }
 
       if (response.statusCode == 401) {
-        yield ChatEvent(error: '请先登录');
+        yield ChatEvent(error: T.current.chatErrPleaseLogin);
         return;
       }
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        yield ChatEvent(error: '服务器错误 (${response.statusCode}): $body');
+        yield ChatEvent(error: T.fmt(T.current.chatErrServerWithBody, {'code': response.statusCode, 'body': body}));
         return;
       }
 
@@ -1022,7 +1195,7 @@ class AiChatService {
                   parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
                 }
               } catch (e) {
-                yield ChatEvent(error: '下载 JSON 异常: $e');
+                yield ChatEvent(error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {'err': e}));
               }
             } else {
               parsedApp = data['json_app'] as Map<String, dynamic>?;
@@ -1056,7 +1229,7 @@ class AiChatService {
     } on http.ClientException {
       // abort()
     } catch (e) {
-      yield ChatEvent(error: '网络错误: $e');
+      yield ChatEvent(error: T.fmt(T.current.chatErrNetworkWith, {'err': e}));
     } finally {
       if (_activeClient == client) _activeClient = null;
       client.close();

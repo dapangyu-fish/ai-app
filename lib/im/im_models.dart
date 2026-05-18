@@ -1,4 +1,5 @@
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+import '../i18n/framework_strings.dart';
 
 /// IM 连接状态
 enum IMConnectionState {
@@ -41,7 +42,7 @@ class ConversationSummary {
   factory ConversationSummary.fromConversationInfo(ConversationInfo info) {
     return ConversationSummary(
       conversationID: info.conversationID,
-      name: info.showName ?? '未知',
+      name: info.showName ?? T.current.imUserUnknown,
       faceURL: info.faceURL,
       lastMessage: _extractLastMessage(info.latestMsg),
       lastMessageTime: info.latestMsgSendTime ?? 0,
@@ -53,23 +54,24 @@ class ConversationSummary {
 
   static String _extractLastMessage(Message? msg) {
     if (msg == null) return '';
+    final t = T.current;
     switch (msg.contentType) {
       case MessageType.text:
         return msg.textElem?.content ?? '';
       case MessageType.picture:
-        return '[图片]';
+        return t.imPushImagePreview;
       case MessageType.video:
-        return '[视频]';
+        return t.imMsgPreviewVideo;
       case MessageType.voice:
-        return '[语音]';
+        return t.imMsgPreviewVoice;
       case MessageType.file:
-        return '[文件]';
+        return t.imMsgPreviewFile;
       case MessageType.location:
-        return '[位置]';
+        return t.imMsgPreviewLocation;
       case MessageType.revokeMessageNotification:
-        return '撤回了一条消息';
+        return t.imMessageRecalled;
       default:
-        return '[消息]';
+        return t.imMsgPreviewGeneric;
     }
   }
 }

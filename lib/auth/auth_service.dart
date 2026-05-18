@@ -146,7 +146,7 @@ class AuthService {
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '注册失败');
+      throw Exception(data['error'] ?? T.current.authErrSignupFailed);
     }
 
     // 如果已自动确认（拿到 token），按账号切换规则处理
@@ -176,7 +176,7 @@ class AuthService {
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '登录失败');
+      throw Exception(data['error'] ?? T.current.authErrLoginFailed);
     }
 
     await _commitOrStashAuth(data, email);
@@ -199,7 +199,7 @@ class AuthService {
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '验证失败');
+      throw Exception(data['error'] ?? T.current.authErrVerifyFailed);
     }
 
     // 验证成功，按账号切换规则处理 token
@@ -287,13 +287,13 @@ class AuthService {
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '发送失败');
+      throw Exception(data['error'] ?? T.current.authErrSendFailed);
     }
   }
 
   /// 刷新 token
   static Future<void> refreshSession() async {
-    if (_refreshToken == null) throw Exception('无 refresh token');
+    if (_refreshToken == null) throw Exception(T.current.authErrNoRefreshToken);
 
     try {
       final resp = await http.post(
@@ -306,7 +306,7 @@ class AuthService {
       if (resp.statusCode >= 400) {
         // 明确被服务器拒绝（如过期/无效），清理本地状态
         await _clearLocal();
-        throw Exception(data['error'] ?? '刷新失败');
+        throw Exception(data['error'] ?? T.current.authErrRefreshFailed);
       }
 
       _accessToken = data['access_token'];
@@ -364,7 +364,7 @@ class AuthService {
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '获取用户信息失败');
+      throw Exception(data['error'] ?? T.current.authErrGetUserInfoFailed);
     }
 
     _user = data;
@@ -391,11 +391,11 @@ class AuthService {
     ).timeout(const Duration(seconds: 10)));
 
     if (resp.statusCode >= 400 && !resp.body.trimLeft().startsWith('{')) {
-      throw Exception('服务器错误 (${resp.statusCode})');
+      throw Exception(T.fmt(T.current.authErrServerWith, {'code': resp.statusCode}));
     }
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '更新失败');
+      throw Exception(data['error'] ?? T.current.authErrUpdateFailed);
     }
 
     _user = data['user'];
@@ -416,7 +416,7 @@ class AuthService {
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
-      throw Exception(data['error'] ?? '头像上传失败');
+      throw Exception(data['error'] ?? T.current.authErrAvatarUploadFailed);
     }
 
     String avatarUrl = data['avatar_url'];

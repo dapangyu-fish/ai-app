@@ -9,6 +9,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonVideoWidget extends JsonBaseWidget {
   @override
@@ -28,13 +29,13 @@ class JsonVideoWidget extends JsonBaseWidget {
       return _fixedSizeBox(
         aspectRatio,
         borderRadius,
-        const Column(
+        Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.videocam_off, size: 40, color: Colors.white54),
-            SizedBox(height: 8),
-            Text('未配置视频地址',
-                style: TextStyle(color: Colors.white54, fontSize: 13)),
+            const Icon(Icons.videocam_off, size: 40, color: Colors.white54),
+            const SizedBox(height: 8),
+            Text(T.of(context).widgetVideoNoUrl,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
           ],
         ),
       );
@@ -125,7 +126,7 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
       } else if (!kIsWeb) {
         controller = VideoPlayerController.file(File(src));
       } else {
-        if (mounted) setState(() => _error = '不支持的视频来源');
+        if (mounted) setState(() => _error = T.current.widgetVideoUnsupportedSource);
         return;
       }
 
@@ -156,7 +157,7 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
               children: [
                 const Icon(Icons.error, color: Colors.redAccent, size: 36),
                 const SizedBox(height: 8),
-                Text('播放失败: $errorMessage',
+                Text(T.fmt(T.of(context).widgetVideoPlaybackFailedWith, {'err': errorMessage}),
                     style: const TextStyle(
                         color: Colors.white70, fontSize: 12)),
               ],
@@ -193,7 +194,7 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                '视频加载失败\n$_error',
+                T.fmt(T.of(context).widgetVideoLoadFailedWith, {'err': _error ?? ''}),
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
                 textAlign: TextAlign.center,
                 maxLines: 3,
@@ -214,8 +215,8 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
                 _initPlayer();
               },
               icon: const Icon(Icons.refresh, color: Colors.white70, size: 16),
-              label: const Text('重试',
-                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+              label: Text(T.of(context).retry,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ),
           ],
         ),
@@ -223,14 +224,14 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
     }
 
     if (!_isInitialized || _chewieController == null) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
-            SizedBox(height: 12),
-            Text('视频加载中...',
-                style: TextStyle(color: Colors.white54, fontSize: 13)),
+            const CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+            const SizedBox(height: 12),
+            Text(T.of(context).widgetVideoLoading,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
           ],
         ),
       );

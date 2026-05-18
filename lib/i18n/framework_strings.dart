@@ -406,6 +406,152 @@ class _Strings {
   final String imLeaveFailedWith;          // "退出失败: {err}"
   final String imConfirmLeave;
 
+  // ── AI 对话浮层（多会话 / 状态消息）──
+  final String chatSessionDefaultTitle;     // chip / sheet 显示用："新会话"
+  final String chatSessionMenuNew;          // 下拉菜单顶部："新建会话"
+  final String chatSessionMenuEmpty;        // 下拉空态："暂无会话"
+  final String chatSessionRenameTitle;      // 重命名 dialog 标题
+  final String chatSessionRenameHint;       // 重命名 textfield hint："新标题"
+  final String chatSessionActionRename;     // action sheet item："重命名"
+  final String chatSessionDeleteTitle;      // 删除 dialog 标题
+  final String chatSessionDeleteContent;    // 删除确认正文，{title} 占位
+  final String chatStatusGenerating;        // "正在生成代码..."
+  final String chatStatusStartingAi;        // "正在启动 AI 引擎..."
+  final String chatStatusResumingLast;      // "正在恢复上次对话..."
+  final String chatActionUploadCurrentApp;  // "上传当前应用配置"
+  final String chatActionRetryDownloadJson; // "重试下载 JSON"
+  final String chatTimeJustNow;             // "刚刚"
+  final String chatTimeMinutesAgo;          // "{n} 分钟前"
+  final String chatTimeHoursAgo;            // "{n} 小时前"
+  final String chatTimeDaysAgo;             // "{n} 天前"
+  final String chatDownloadStateDownloading; // "下载中..."
+  final String chatDownloadStateRun;         // "下载并运行"
+  final String chatDownloadStateRetry;       // "重试下载并运行"
+
+  // ── AI 对话错误 / 编辑消息 ──
+  final String chatErrorWith;                // "出错了: {err}"
+  final String chatJsonDownloadFailed;       // "下载 JSON 失败"
+  final String chatNoActiveApp;              // "当前没有运行的应用配置"
+  final String chatUploadingApp;             // "正在上传当前应用配置..."
+  final String chatDownloadRetryFailedWith;  // "下载重试失败: {err}"
+  final String chatAnalysisFailedWith;       // "分析失败: {err}"
+  final String chatEditMessageTitle;         // "编辑消息"
+  final String chatEditMessageHint;          // "编辑你的消息..."
+  final String chatEditButton;               // "编辑"
+  final String chatSendButton;               // "发送"
+
+  // ── 语音识别（ASR）──
+  final String asrErrBytedanceWith;          // "豆包ASR错误: {err}"
+  final String asrErrNativeInitWithHint;     // 原生语音识别初始化失败 + 建议
+  final String asrConnectingBytedance;       // "正在连接豆包ASR..."
+  final String asrErrBytedanceTimeoutWithHint; // 豆包ASR连接超时 + 建议
+  final String asrErrNativeStartWithHint;    // 原生 ASR 启动失败 + 建议
+  final String asrErrMicPermissionDenied;
+  final String asrErrStartFailWith;          // "语音识别启动失败: {err}"
+  final String asrErrBytedanceNotConnected;
+  final String asrErrBytedanceStartFailWith;
+
+  // ── Auth：切换账号 + service 抛错 ──
+  final String authSwitchAccountCancelled;        // "已取消切换账号"
+  final String authClearLocalFailedWith;          // "清除本地数据失败：{err}"
+  final String authSwitchAccountTitle;            // "切换账号"
+  final String authSwitchAccountContent;          // 含 {newEmail}/{prevEmail} 插值
+  final String authSwitchAccountConfirm;          // "确认清除并继续"
+  final String authErrSignupFailed;               // "注册失败"
+  final String authErrLoginFailed;                // "登录失败"
+  final String authErrVerifyFailed;               // "验证失败"
+  final String authErrSendFailed;                 // "发送失败"
+  final String authErrNoRefreshToken;             // "无 refresh token"
+  final String authErrRefreshFailed;              // "刷新失败"
+  final String authErrGetUserInfoFailed;          // "获取用户信息失败"
+  final String authErrServerWith;                 // "服务器错误 ({code})"
+  final String authErrUpdateFailed;               // "更新失败"
+  final String authErrAvatarUploadFailed;         // "头像上传失败"
+
+  // ── 设置页 ──
+  final String settingsSectionAsr;                 // "语音识别"
+  final String settingsAsrOnline;                  // "在线识别"
+  final String settingsAsrOnlineSubtitle;
+  final String settingsAsrBytedance;               // "豆包 ASR"
+  final String settingsAsrBytedanceSubtitle;
+  final String settingsProvidersFailed;            // "无法获取供应商列表"
+  final String settingsProvidersFallback;          // "使用默认供应商 DeepSeek"
+  final String settingsModelWith;                  // "模型: {model}"
+
+  // ── IM 剩余字符串（im_models / chat_page / im_service push 文案）──
+  final String imUserUnknown;                      // "未知"
+  final String imMessageRecalled;                  // "撤回了一条消息"
+  final String imAttachmentFile;                   // "文件"
+  final String imImageQualityNormal;
+  final String imImageQualityNormalSubtitle;
+  final String imImageQualityHd;
+  final String imImageQualityHdSubtitle;
+  final String imDownloadingMsg;                   // "正在下载..."
+  final String imDownloadFailedWith;               // "下载失败 {code}"
+  final String imOpenFailedWith;                   // "打开失败：{msg}"
+  final String imOpenExceptionWith;                // "打开异常：{err}"
+  final String imVideoLoadFailedWith;              // "视频加载失败: {err}"
+  final String imPushNewMessage;                   // "新消息"
+  final String imPushImagePreview;                 // "[图片]"
+  final String imMsgPreviewVideo;                  // "[视频]"
+  final String imMsgPreviewVoice;                  // "[语音]"
+  final String imMsgPreviewFile;                   // "[文件]"
+  final String imMsgPreviewLocation;               // "[位置]"
+  final String imMsgPreviewGeneric;                // "[消息]"
+
+  // ── main 杂项 + JSON-UI 控件默认值 / 内置错误 ──
+  final String mainCantResolveAppConfigError;
+  final String widgetImagePickerPlaceholder;
+  final String widgetImagePickerReselect;
+  final String widgetCameraNoCamera;
+  final String widgetDatePickerPlaceholder;
+  final String widgetTimePickerPlaceholder;
+  final String widgetButtonDefaultLabel;
+  final String widgetMissingItemTemplate;          // "缺少 item_template"
+  final String widgetDropdownPlaceholder;          // "请选择"
+  final String widgetPullToRefresh;                // "下拉刷新"
+  final String widgetVideoNoUrl;                   // "未配置视频地址"
+  final String widgetVideoUnsupportedSource;
+  final String widgetVideoPlaybackFailedWith;      // "播放失败: {err}"
+  final String widgetVideoLoadFailedWith;          // 多行 "视频加载失败\n{err}"
+  final String widgetVideoLoading;
+  final String widgetRefNotFoundWith;              // "未找到: {ref}"
+  final String widgetRefMissingFromOrName;         // "ref 控件需要 from 和 widget 字段"
+  final String widgetRefMissingRootWith;           // "{ref} 缺少 root 定义"
+  final String widgetUnknownTypeWith;              // "未知控件类型: {type}"
+  final String widgetHttpNetworkFailed;            // "网络请求失败"
+
+  // ── Phase 7：ai_chat_service / asr_service / game_engine / interpreter 杂项 ──
+  final String chatErrNoRetryMessage;              // "没有可重试的消息"
+  final String chatErrConnectionUnstableWith;      // "连接持续不稳定（已重试 {n} 次）"
+  final String chatErrPleaseLogin;                 // "请先登录"
+  final String chatErrServerWithBody;              // "服务器错误 ({code}): {body}"
+  final String chatErrDownloadGenJsonWith;         // "下载生成的 JSON 失败 (HTTP {code})"
+  final String chatErrDownloadJsonExceptionWith;
+  final String chatErrCancelled;                   // "已取消"
+  final String chatErrQuotaExceeded;               // "配额已用完"
+  final String chatErrConnectionTimeout;           // "连接超时"
+  final String chatErrNetworkWith;                 // "网络错误: {err}"
+  final String chatErrUploadFailedRetriesWith;     // "上传失败（已重试 {n} 次）：{err}"
+  final String chatUploadSuccessIntro;             // 上传成功后给 AI 的前置介绍语
+  final String asrBytedanceConnected;              // "已连接"
+  final String asrBytedanceDisconnected;           // "连接断开"
+  final String asrErrUnknown;                      // "未知错误"
+  final String asrBytedanceConnectFailedWith;      // "连接失败: {err}"
+  final String asrErrMicPermissionDeniedShort;     // "麦克风权限未授予"
+  final String asrRecordErrorWith;                 // "录音错误: {err}"
+  final String asrRecording;                       // "正在录音..."
+  final String asrRecordStartFailWith;             // "录音启动失败: {err}"
+  final String gameOver;                           // "游戏结束"
+  final String gameRestartHint;                    // "点击重新开始"
+  final String gameBestScoreWith;                  // "最佳 {score}"
+  final String gameScoreWith;                      // "得分 {score}"
+  final String builtinBiometricDefaultReason;      // "请验证身份"
+  final String builtinInputDialogDefaultTitle;     // "输入"
+  final String imSenderMe;                         // "我"
+  final String relativeDateYesterday;              // "昨天"
+  final String depErrConflictWith;                 // "已加载 {loaded}, 需要 {needed}"
+
   const _Strings({
     required this.ok,
     required this.cancel,
@@ -728,6 +874,136 @@ class _Strings {
     required this.imLeaveGroupConfirmContent,
     required this.imLeaveFailedWith,
     required this.imConfirmLeave,
+    required this.chatSessionDefaultTitle,
+    required this.chatSessionMenuNew,
+    required this.chatSessionMenuEmpty,
+    required this.chatSessionRenameTitle,
+    required this.chatSessionRenameHint,
+    required this.chatSessionActionRename,
+    required this.chatSessionDeleteTitle,
+    required this.chatSessionDeleteContent,
+    required this.chatStatusGenerating,
+    required this.chatStatusStartingAi,
+    required this.chatStatusResumingLast,
+    required this.chatActionUploadCurrentApp,
+    required this.chatActionRetryDownloadJson,
+    required this.chatTimeJustNow,
+    required this.chatTimeMinutesAgo,
+    required this.chatTimeHoursAgo,
+    required this.chatTimeDaysAgo,
+    required this.chatDownloadStateDownloading,
+    required this.chatDownloadStateRun,
+    required this.chatDownloadStateRetry,
+    required this.chatErrorWith,
+    required this.chatJsonDownloadFailed,
+    required this.chatNoActiveApp,
+    required this.chatUploadingApp,
+    required this.chatDownloadRetryFailedWith,
+    required this.chatAnalysisFailedWith,
+    required this.chatEditMessageTitle,
+    required this.chatEditMessageHint,
+    required this.chatEditButton,
+    required this.chatSendButton,
+    required this.asrErrBytedanceWith,
+    required this.asrErrNativeInitWithHint,
+    required this.asrConnectingBytedance,
+    required this.asrErrBytedanceTimeoutWithHint,
+    required this.asrErrNativeStartWithHint,
+    required this.asrErrMicPermissionDenied,
+    required this.asrErrStartFailWith,
+    required this.asrErrBytedanceNotConnected,
+    required this.asrErrBytedanceStartFailWith,
+    required this.authSwitchAccountCancelled,
+    required this.authClearLocalFailedWith,
+    required this.authSwitchAccountTitle,
+    required this.authSwitchAccountContent,
+    required this.authSwitchAccountConfirm,
+    required this.authErrSignupFailed,
+    required this.authErrLoginFailed,
+    required this.authErrVerifyFailed,
+    required this.authErrSendFailed,
+    required this.authErrNoRefreshToken,
+    required this.authErrRefreshFailed,
+    required this.authErrGetUserInfoFailed,
+    required this.authErrServerWith,
+    required this.authErrUpdateFailed,
+    required this.authErrAvatarUploadFailed,
+    required this.settingsSectionAsr,
+    required this.settingsAsrOnline,
+    required this.settingsAsrOnlineSubtitle,
+    required this.settingsAsrBytedance,
+    required this.settingsAsrBytedanceSubtitle,
+    required this.settingsProvidersFailed,
+    required this.settingsProvidersFallback,
+    required this.settingsModelWith,
+    required this.imUserUnknown,
+    required this.imMessageRecalled,
+    required this.imAttachmentFile,
+    required this.imImageQualityNormal,
+    required this.imImageQualityNormalSubtitle,
+    required this.imImageQualityHd,
+    required this.imImageQualityHdSubtitle,
+    required this.imDownloadingMsg,
+    required this.imDownloadFailedWith,
+    required this.imOpenFailedWith,
+    required this.imOpenExceptionWith,
+    required this.imVideoLoadFailedWith,
+    required this.imPushNewMessage,
+    required this.imPushImagePreview,
+    required this.imMsgPreviewVideo,
+    required this.imMsgPreviewVoice,
+    required this.imMsgPreviewFile,
+    required this.imMsgPreviewLocation,
+    required this.imMsgPreviewGeneric,
+    required this.mainCantResolveAppConfigError,
+    required this.widgetImagePickerPlaceholder,
+    required this.widgetImagePickerReselect,
+    required this.widgetCameraNoCamera,
+    required this.widgetDatePickerPlaceholder,
+    required this.widgetTimePickerPlaceholder,
+    required this.widgetButtonDefaultLabel,
+    required this.widgetMissingItemTemplate,
+    required this.widgetDropdownPlaceholder,
+    required this.widgetPullToRefresh,
+    required this.widgetVideoNoUrl,
+    required this.widgetVideoUnsupportedSource,
+    required this.widgetVideoPlaybackFailedWith,
+    required this.widgetVideoLoadFailedWith,
+    required this.widgetVideoLoading,
+    required this.widgetRefNotFoundWith,
+    required this.widgetRefMissingFromOrName,
+    required this.widgetRefMissingRootWith,
+    required this.widgetUnknownTypeWith,
+    required this.widgetHttpNetworkFailed,
+    required this.chatErrNoRetryMessage,
+    required this.chatErrConnectionUnstableWith,
+    required this.chatErrPleaseLogin,
+    required this.chatErrServerWithBody,
+    required this.chatErrDownloadGenJsonWith,
+    required this.chatErrDownloadJsonExceptionWith,
+    required this.chatErrCancelled,
+    required this.chatErrQuotaExceeded,
+    required this.chatErrConnectionTimeout,
+    required this.chatErrNetworkWith,
+    required this.chatErrUploadFailedRetriesWith,
+    required this.chatUploadSuccessIntro,
+    required this.asrBytedanceConnected,
+    required this.asrBytedanceDisconnected,
+    required this.asrErrUnknown,
+    required this.asrBytedanceConnectFailedWith,
+    required this.asrErrMicPermissionDeniedShort,
+    required this.asrRecordErrorWith,
+    required this.asrRecording,
+    required this.asrRecordStartFailWith,
+    required this.gameOver,
+    required this.gameRestartHint,
+    required this.gameBestScoreWith,
+    required this.gameScoreWith,
+    required this.builtinBiometricDefaultReason,
+    required this.builtinInputDialogDefaultTitle,
+    required this.imSenderMe,
+    required this.relativeDateYesterday,
+    required this.depErrConflictWith,
   });
 }
 
@@ -1053,6 +1329,136 @@ const _Strings _zhCN = _Strings(
   imLeaveGroupConfirmContent: '确定退出「{name}」？',
   imLeaveFailedWith: '退出失败: {err}',
   imConfirmLeave: '确定退出',
+  chatSessionDefaultTitle: '新会话',
+  chatSessionMenuNew: '新建会话',
+  chatSessionMenuEmpty: '暂无会话',
+  chatSessionRenameTitle: '重命名会话',
+  chatSessionRenameHint: '新标题',
+  chatSessionActionRename: '重命名',
+  chatSessionDeleteTitle: '删除会话',
+  chatSessionDeleteContent: '删除「{title}」？后台正在跑的回答也会被中止。',
+  chatStatusGenerating: '正在生成代码...',
+  chatStatusStartingAi: '正在启动 AI 引擎...',
+  chatStatusResumingLast: '正在恢复上次对话...',
+  chatActionUploadCurrentApp: '上传当前应用配置',
+  chatActionRetryDownloadJson: '重试下载 JSON',
+  chatTimeJustNow: '刚刚',
+  chatTimeMinutesAgo: '{n} 分钟前',
+  chatTimeHoursAgo: '{n} 小时前',
+  chatTimeDaysAgo: '{n} 天前',
+  chatDownloadStateDownloading: '下载中...',
+  chatDownloadStateRun: '下载并运行',
+  chatDownloadStateRetry: '重试下载并运行',
+  chatErrorWith: '出错了: {err}',
+  chatJsonDownloadFailed: '下载 JSON 失败',
+  chatNoActiveApp: '当前没有运行的应用配置',
+  chatUploadingApp: '正在上传当前应用配置...',
+  chatDownloadRetryFailedWith: '下载重试失败: {err}',
+  chatAnalysisFailedWith: '分析失败: {err}',
+  chatEditMessageTitle: '编辑消息',
+  chatEditMessageHint: '编辑你的消息...',
+  chatEditButton: '编辑',
+  chatSendButton: '发送',
+  asrErrBytedanceWith: '豆包ASR错误: {err}',
+  asrErrNativeInitWithHint: '原生语音识别初始化失败，请在设置中切换到豆包ASR',
+  asrConnectingBytedance: '正在连接豆包ASR...',
+  asrErrBytedanceTimeoutWithHint: '豆包ASR连接超时，请检查网络或切换到其他识别方式',
+  asrErrNativeStartWithHint: '原生语音识别启动失败，请在设置中切换到豆包ASR',
+  asrErrMicPermissionDenied: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+  asrErrStartFailWith: '语音识别启动失败: {err}',
+  asrErrBytedanceNotConnected: '豆包ASR未连接，请检查网络',
+  asrErrBytedanceStartFailWith: '豆包ASR启动失败: {err}',
+  authSwitchAccountCancelled: '已取消切换账号',
+  authClearLocalFailedWith: '清除本地数据失败：{err}',
+  authSwitchAccountTitle: '切换账号',
+  authSwitchAccountContent: '检测到本次登录的账号（{newEmail}）与上次（{prevEmail}）不一致。\n\n继续将清除本地所有聊天记录、通讯录与本地数据，是否继续？',
+  authSwitchAccountConfirm: '确认清除并继续',
+  authErrSignupFailed: '注册失败',
+  authErrLoginFailed: '登录失败',
+  authErrVerifyFailed: '验证失败',
+  authErrSendFailed: '发送失败',
+  authErrNoRefreshToken: '无 refresh token',
+  authErrRefreshFailed: '刷新失败',
+  authErrGetUserInfoFailed: '获取用户信息失败',
+  authErrServerWith: '服务器错误 ({code})',
+  authErrUpdateFailed: '更新失败',
+  authErrAvatarUploadFailed: '头像上传失败',
+  settingsSectionAsr: '语音识别',
+  settingsAsrOnline: '在线识别',
+  settingsAsrOnlineSubtitle: '使用 speech_to_text，需要网络连接',
+  settingsAsrBytedance: '豆包 ASR',
+  settingsAsrBytedanceSubtitle: '字节跳动语音识别，需要网络和配额',
+  settingsProvidersFailed: '无法获取供应商列表',
+  settingsProvidersFallback: '使用默认供应商 DeepSeek',
+  settingsModelWith: '模型: {model}',
+  imUserUnknown: '未知',
+  imMessageRecalled: '撤回了一条消息',
+  imAttachmentFile: '文件',
+  imImageQualityNormal: '普通画质',
+  imImageQualityNormalSubtitle: '自动压缩，长边 1920，发送更快',
+  imImageQualityHd: '高清原图',
+  imImageQualityHdSubtitle: '保留原尺寸和画质',
+  imDownloadingMsg: '正在下载...',
+  imDownloadFailedWith: '下载失败 {code}',
+  imOpenFailedWith: '打开失败：{msg}',
+  imOpenExceptionWith: '打开异常：{err}',
+  imVideoLoadFailedWith: '视频加载失败: {err}',
+  imPushNewMessage: '新消息',
+  imPushImagePreview: '[图片]',
+  imMsgPreviewVideo: '[视频]',
+  imMsgPreviewVoice: '[语音]',
+  imMsgPreviewFile: '[文件]',
+  imMsgPreviewLocation: '[位置]',
+  imMsgPreviewGeneric: '[消息]',
+  mainCantResolveAppConfigError: '无法解析或下载该应用配置',
+  widgetImagePickerPlaceholder: '点击选择图片',
+  widgetImagePickerReselect: '点击重新选择',
+  widgetCameraNoCamera: '无可用相机',
+  widgetDatePickerPlaceholder: '请选择日期',
+  widgetTimePickerPlaceholder: '请选择时间',
+  widgetButtonDefaultLabel: '按钮',
+  widgetMissingItemTemplate: '缺少 item_template',
+  widgetDropdownPlaceholder: '请选择',
+  widgetPullToRefresh: '下拉刷新',
+  widgetVideoNoUrl: '未配置视频地址',
+  widgetVideoUnsupportedSource: '不支持的视频来源',
+  widgetVideoPlaybackFailedWith: '播放失败: {err}',
+  widgetVideoLoadFailedWith: '视频加载失败\n{err}',
+  widgetVideoLoading: '视频加载中...',
+  widgetRefNotFoundWith: '未找到: {ref}',
+  widgetRefMissingFromOrName: 'ref 控件需要 from 和 widget 字段',
+  widgetRefMissingRootWith: '{ref} 缺少 root 定义',
+  widgetUnknownTypeWith: '未知控件类型: {type}',
+  widgetHttpNetworkFailed: '网络请求失败',
+  chatErrNoRetryMessage: '没有可重试的消息',
+  chatErrConnectionUnstableWith: '连接持续不稳定（已重试 {n} 次）',
+  chatErrPleaseLogin: '请先登录',
+  chatErrServerWithBody: '服务器错误 ({code}): {body}',
+  chatErrDownloadGenJsonWith: '下载生成的 JSON 失败 (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: '下载 JSON 异常: {err}',
+  chatErrCancelled: '已取消',
+  chatErrQuotaExceeded: '配额已用完',
+  chatErrConnectionTimeout: '连接超时',
+  chatErrNetworkWith: '网络错误: {err}',
+  chatErrUploadFailedRetriesWith: '上传失败（已重试 {n} 次）：{err}',
+  chatUploadSuccessIntro: '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），后续对话请基于这个配置进行修改或分析：\n\n',
+  asrBytedanceConnected: '已连接',
+  asrBytedanceDisconnected: '连接断开',
+  asrErrUnknown: '未知错误',
+  asrBytedanceConnectFailedWith: '连接失败: {err}',
+  asrErrMicPermissionDeniedShort: '麦克风权限未授予',
+  asrRecordErrorWith: '录音错误: {err}',
+  asrRecording: '正在录音...',
+  asrRecordStartFailWith: '录音启动失败: {err}',
+  gameOver: '游戏结束',
+  gameRestartHint: '点击重新开始',
+  gameBestScoreWith: '最佳 {score}',
+  gameScoreWith: '得分 {score}',
+  builtinBiometricDefaultReason: '请验证身份',
+  builtinInputDialogDefaultTitle: '输入',
+  imSenderMe: '我',
+  relativeDateYesterday: '昨天',
+  depErrConflictWith: '已加载 {loaded}, 需要 {needed}',
 );
 
 const _Strings _enUS = _Strings(
@@ -1377,6 +1783,136 @@ const _Strings _enUS = _Strings(
   imLeaveGroupConfirmContent: 'Leave "{name}"?',
   imLeaveFailedWith: 'Leave failed: {err}',
   imConfirmLeave: 'Confirm leave',
+  chatSessionDefaultTitle: 'New chat',
+  chatSessionMenuNew: 'New chat',
+  chatSessionMenuEmpty: 'No chats yet',
+  chatSessionRenameTitle: 'Rename chat',
+  chatSessionRenameHint: 'New title',
+  chatSessionActionRename: 'Rename',
+  chatSessionDeleteTitle: 'Delete chat',
+  chatSessionDeleteContent: 'Delete "{title}"? The reply still running in the background will be aborted.',
+  chatStatusGenerating: 'Generating code...',
+  chatStatusStartingAi: 'Starting AI engine...',
+  chatStatusResumingLast: 'Resuming last conversation...',
+  chatActionUploadCurrentApp: 'Upload current app config',
+  chatActionRetryDownloadJson: 'Retry downloading JSON',
+  chatTimeJustNow: 'just now',
+  chatTimeMinutesAgo: '{n} min ago',
+  chatTimeHoursAgo: '{n} h ago',
+  chatTimeDaysAgo: '{n} d ago',
+  chatDownloadStateDownloading: 'Downloading...',
+  chatDownloadStateRun: 'Download & run',
+  chatDownloadStateRetry: 'Retry download & run',
+  chatErrorWith: 'Error: {err}',
+  chatJsonDownloadFailed: 'Failed to download JSON',
+  chatNoActiveApp: 'No running app config right now',
+  chatUploadingApp: 'Uploading current app config...',
+  chatDownloadRetryFailedWith: 'Download retry failed: {err}',
+  chatAnalysisFailedWith: 'Analysis failed: {err}',
+  chatEditMessageTitle: 'Edit message',
+  chatEditMessageHint: 'Edit your message...',
+  chatEditButton: 'Edit',
+  chatSendButton: 'Send',
+  asrErrBytedanceWith: 'ByteDance ASR error: {err}',
+  asrErrNativeInitWithHint: 'Native speech recognition failed to initialize. Try switching to ByteDance ASR in settings.',
+  asrConnectingBytedance: 'Connecting to ByteDance ASR...',
+  asrErrBytedanceTimeoutWithHint: 'ByteDance ASR connection timeout. Check the network or switch to another recognizer.',
+  asrErrNativeStartWithHint: 'Native speech recognition failed to start. Try switching to ByteDance ASR in settings.',
+  asrErrMicPermissionDenied: 'Microphone permission denied. Enable it in Settings → Apps → Permissions and try again.',
+  asrErrStartFailWith: 'Speech recognition failed to start: {err}',
+  asrErrBytedanceNotConnected: 'ByteDance ASR is not connected. Check the network.',
+  asrErrBytedanceStartFailWith: 'ByteDance ASR failed to start: {err}',
+  authSwitchAccountCancelled: 'Account switch cancelled',
+  authClearLocalFailedWith: 'Failed to clear local data: {err}',
+  authSwitchAccountTitle: 'Switch account',
+  authSwitchAccountContent: 'The signed-in account ({newEmail}) differs from the previous one ({prevEmail}).\n\nContinuing will wipe all local chat history, contacts and local data. Continue?',
+  authSwitchAccountConfirm: 'Wipe and continue',
+  authErrSignupFailed: 'Sign-up failed',
+  authErrLoginFailed: 'Login failed',
+  authErrVerifyFailed: 'Verification failed',
+  authErrSendFailed: 'Send failed',
+  authErrNoRefreshToken: 'No refresh token',
+  authErrRefreshFailed: 'Refresh failed',
+  authErrGetUserInfoFailed: 'Failed to fetch user info',
+  authErrServerWith: 'Server error ({code})',
+  authErrUpdateFailed: 'Update failed',
+  authErrAvatarUploadFailed: 'Avatar upload failed',
+  settingsSectionAsr: 'Speech recognition',
+  settingsAsrOnline: 'Online recognition',
+  settingsAsrOnlineSubtitle: 'Uses speech_to_text, requires network',
+  settingsAsrBytedance: 'ByteDance ASR',
+  settingsAsrBytedanceSubtitle: 'ByteDance speech recognition, requires network and quota',
+  settingsProvidersFailed: 'Failed to fetch providers',
+  settingsProvidersFallback: 'Falling back to default provider DeepSeek',
+  settingsModelWith: 'Model: {model}',
+  imUserUnknown: 'Unknown',
+  imMessageRecalled: 'recalled a message',
+  imAttachmentFile: 'File',
+  imImageQualityNormal: 'Standard quality',
+  imImageQualityNormalSubtitle: 'Auto-compressed, long side 1920, faster to send',
+  imImageQualityHd: 'Original',
+  imImageQualityHdSubtitle: 'Keep the original size and quality',
+  imDownloadingMsg: 'Downloading...',
+  imDownloadFailedWith: 'Download failed {code}',
+  imOpenFailedWith: 'Open failed: {msg}',
+  imOpenExceptionWith: 'Open error: {err}',
+  imVideoLoadFailedWith: 'Failed to load video: {err}',
+  imPushNewMessage: 'New message',
+  imPushImagePreview: '[Image]',
+  imMsgPreviewVideo: '[Video]',
+  imMsgPreviewVoice: '[Voice]',
+  imMsgPreviewFile: '[File]',
+  imMsgPreviewLocation: '[Location]',
+  imMsgPreviewGeneric: '[Message]',
+  mainCantResolveAppConfigError: 'Failed to resolve or download this app config',
+  widgetImagePickerPlaceholder: 'Tap to pick an image',
+  widgetImagePickerReselect: 'Tap to pick again',
+  widgetCameraNoCamera: 'No camera available',
+  widgetDatePickerPlaceholder: 'Pick a date',
+  widgetTimePickerPlaceholder: 'Pick a time',
+  widgetButtonDefaultLabel: 'Button',
+  widgetMissingItemTemplate: 'Missing item_template',
+  widgetDropdownPlaceholder: 'Select',
+  widgetPullToRefresh: 'Pull to refresh',
+  widgetVideoNoUrl: 'No video URL configured',
+  widgetVideoUnsupportedSource: 'Unsupported video source',
+  widgetVideoPlaybackFailedWith: 'Playback failed: {err}',
+  widgetVideoLoadFailedWith: 'Failed to load video\n{err}',
+  widgetVideoLoading: 'Loading video...',
+  widgetRefNotFoundWith: 'Not found: {ref}',
+  widgetRefMissingFromOrName: 'ref widget requires "from" and "widget" fields',
+  widgetRefMissingRootWith: '{ref} is missing the root definition',
+  widgetUnknownTypeWith: 'Unknown widget type: {type}',
+  widgetHttpNetworkFailed: 'Network request failed',
+  chatErrNoRetryMessage: 'No message to retry',
+  chatErrConnectionUnstableWith: 'Connection keeps dropping (already retried {n} times)',
+  chatErrPleaseLogin: 'Please sign in first',
+  chatErrServerWithBody: 'Server error ({code}): {body}',
+  chatErrDownloadGenJsonWith: 'Failed to download generated JSON (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: 'Download JSON error: {err}',
+  chatErrCancelled: 'Cancelled',
+  chatErrQuotaExceeded: 'Quota exceeded',
+  chatErrConnectionTimeout: 'Connection timeout',
+  chatErrNetworkWith: 'Network error: {err}',
+  chatErrUploadFailedRetriesWith: 'Upload failed (retried {n} times): {err}',
+  chatUploadSuccessIntro: 'Here is the full JSON-APP config currently running (already uploaded to temporary storage). Please base any further modifications or analysis on this config:\n\n',
+  asrBytedanceConnected: 'Connected',
+  asrBytedanceDisconnected: 'Disconnected',
+  asrErrUnknown: 'Unknown error',
+  asrBytedanceConnectFailedWith: 'Connection failed: {err}',
+  asrErrMicPermissionDeniedShort: 'Microphone permission denied',
+  asrRecordErrorWith: 'Recording error: {err}',
+  asrRecording: 'Recording...',
+  asrRecordStartFailWith: 'Recording failed to start: {err}',
+  gameOver: 'Game Over',
+  gameRestartHint: 'Tap to restart',
+  gameBestScoreWith: 'Best {score}',
+  gameScoreWith: 'Score {score}',
+  builtinBiometricDefaultReason: 'Please verify your identity',
+  builtinInputDialogDefaultTitle: 'Input',
+  imSenderMe: 'Me',
+  relativeDateYesterday: 'Yesterday',
+  depErrConflictWith: 'Loaded {loaded}, but {needed} is required',
 );
 
 const _Strings _deDE = _Strings(
@@ -1701,6 +2237,136 @@ const _Strings _deDE = _Strings(
   imLeaveGroupConfirmContent: '„{name}" verlassen?',
   imLeaveFailedWith: 'Verlassen fehlgeschlagen: {err}',
   imConfirmLeave: 'Verlassen bestätigen',
+  chatSessionDefaultTitle: 'Neuer Chat',
+  chatSessionMenuNew: 'Neuer Chat',
+  chatSessionMenuEmpty: 'Noch keine Chats',
+  chatSessionRenameTitle: 'Chat umbenennen',
+  chatSessionRenameHint: 'Neuer Titel',
+  chatSessionActionRename: 'Umbenennen',
+  chatSessionDeleteTitle: 'Chat löschen',
+  chatSessionDeleteContent: '„{title}" löschen? Die im Hintergrund laufende Antwort wird abgebrochen.',
+  chatStatusGenerating: 'Code wird generiert...',
+  chatStatusStartingAi: 'KI-Modul wird gestartet...',
+  chatStatusResumingLast: 'Letzte Unterhaltung wird wiederhergestellt...',
+  chatActionUploadCurrentApp: 'Aktuelle App-Konfiguration hochladen',
+  chatActionRetryDownloadJson: 'JSON-Download wiederholen',
+  chatTimeJustNow: 'gerade eben',
+  chatTimeMinutesAgo: 'vor {n} Min.',
+  chatTimeHoursAgo: 'vor {n} Std.',
+  chatTimeDaysAgo: 'vor {n} T.',
+  chatDownloadStateDownloading: 'Wird geladen...',
+  chatDownloadStateRun: 'Herunterladen & starten',
+  chatDownloadStateRetry: 'Erneut herunterladen & starten',
+  chatErrorWith: 'Fehler: {err}',
+  chatJsonDownloadFailed: 'JSON konnte nicht heruntergeladen werden',
+  chatNoActiveApp: 'Aktuell läuft keine App-Konfiguration',
+  chatUploadingApp: 'Aktuelle App-Konfiguration wird hochgeladen...',
+  chatDownloadRetryFailedWith: 'Download-Wiederholung fehlgeschlagen: {err}',
+  chatAnalysisFailedWith: 'Analyse fehlgeschlagen: {err}',
+  chatEditMessageTitle: 'Nachricht bearbeiten',
+  chatEditMessageHint: 'Nachricht bearbeiten...',
+  chatEditButton: 'Bearbeiten',
+  chatSendButton: 'Senden',
+  asrErrBytedanceWith: 'ByteDance-ASR-Fehler: {err}',
+  asrErrNativeInitWithHint: 'Native Spracherkennung konnte nicht initialisiert werden. Wechseln Sie in den Einstellungen auf ByteDance ASR.',
+  asrConnectingBytedance: 'Verbindung zu ByteDance ASR wird hergestellt...',
+  asrErrBytedanceTimeoutWithHint: 'Zeitüberschreitung bei der Verbindung zu ByteDance ASR. Netzwerk prüfen oder eine andere Erkennung wählen.',
+  asrErrNativeStartWithHint: 'Native Spracherkennung konnte nicht gestartet werden. Wechseln Sie in den Einstellungen auf ByteDance ASR.',
+  asrErrMicPermissionDenied: 'Mikrofonberechtigung nicht erteilt. Aktivieren Sie sie unter Einstellungen → Apps → Berechtigungen und versuchen Sie es erneut.',
+  asrErrStartFailWith: 'Spracherkennung konnte nicht gestartet werden: {err}',
+  asrErrBytedanceNotConnected: 'ByteDance ASR ist nicht verbunden. Bitte Netzwerk prüfen.',
+  asrErrBytedanceStartFailWith: 'ByteDance ASR konnte nicht gestartet werden: {err}',
+  authSwitchAccountCancelled: 'Kontowechsel abgebrochen',
+  authClearLocalFailedWith: 'Löschen der lokalen Daten fehlgeschlagen: {err}',
+  authSwitchAccountTitle: 'Konto wechseln',
+  authSwitchAccountContent: 'Das angemeldete Konto ({newEmail}) unterscheidet sich vom vorherigen ({prevEmail}).\n\nBeim Fortfahren werden alle lokalen Chats, Kontakte und Daten gelöscht. Fortfahren?',
+  authSwitchAccountConfirm: 'Löschen und fortfahren',
+  authErrSignupFailed: 'Registrierung fehlgeschlagen',
+  authErrLoginFailed: 'Anmeldung fehlgeschlagen',
+  authErrVerifyFailed: 'Verifizierung fehlgeschlagen',
+  authErrSendFailed: 'Senden fehlgeschlagen',
+  authErrNoRefreshToken: 'Kein Refresh-Token vorhanden',
+  authErrRefreshFailed: 'Aktualisierung fehlgeschlagen',
+  authErrGetUserInfoFailed: 'Abrufen der Benutzerinfo fehlgeschlagen',
+  authErrServerWith: 'Serverfehler ({code})',
+  authErrUpdateFailed: 'Aktualisierung fehlgeschlagen',
+  authErrAvatarUploadFailed: 'Avatar-Upload fehlgeschlagen',
+  settingsSectionAsr: 'Spracherkennung',
+  settingsAsrOnline: 'Online-Erkennung',
+  settingsAsrOnlineSubtitle: 'Nutzt speech_to_text, Netzwerk erforderlich',
+  settingsAsrBytedance: 'ByteDance ASR',
+  settingsAsrBytedanceSubtitle: 'ByteDance-Spracherkennung, benötigt Netzwerk und Kontingent',
+  settingsProvidersFailed: 'Anbieterliste konnte nicht geladen werden',
+  settingsProvidersFallback: 'Fallback auf Standardanbieter DeepSeek',
+  settingsModelWith: 'Modell: {model}',
+  imUserUnknown: 'Unbekannt',
+  imMessageRecalled: 'hat eine Nachricht zurückgezogen',
+  imAttachmentFile: 'Datei',
+  imImageQualityNormal: 'Standardqualität',
+  imImageQualityNormalSubtitle: 'Automatisch komprimiert, Langseite 1920, schneller versandt',
+  imImageQualityHd: 'Originalqualität',
+  imImageQualityHdSubtitle: 'Originalgröße und Qualität beibehalten',
+  imDownloadingMsg: 'Wird heruntergeladen...',
+  imDownloadFailedWith: 'Download fehlgeschlagen {code}',
+  imOpenFailedWith: 'Öffnen fehlgeschlagen: {msg}',
+  imOpenExceptionWith: 'Öffnen-Fehler: {err}',
+  imVideoLoadFailedWith: 'Video konnte nicht geladen werden: {err}',
+  imPushNewMessage: 'Neue Nachricht',
+  imPushImagePreview: '[Bild]',
+  imMsgPreviewVideo: '[Video]',
+  imMsgPreviewVoice: '[Sprachnachricht]',
+  imMsgPreviewFile: '[Datei]',
+  imMsgPreviewLocation: '[Standort]',
+  imMsgPreviewGeneric: '[Nachricht]',
+  mainCantResolveAppConfigError: 'App-Konfiguration konnte nicht aufgelöst oder heruntergeladen werden',
+  widgetImagePickerPlaceholder: 'Zum Auswählen tippen',
+  widgetImagePickerReselect: 'Zum erneuten Auswählen tippen',
+  widgetCameraNoCamera: 'Keine Kamera verfügbar',
+  widgetDatePickerPlaceholder: 'Datum wählen',
+  widgetTimePickerPlaceholder: 'Uhrzeit wählen',
+  widgetButtonDefaultLabel: 'Schaltfläche',
+  widgetMissingItemTemplate: 'item_template fehlt',
+  widgetDropdownPlaceholder: 'Auswählen',
+  widgetPullToRefresh: 'Zum Aktualisieren ziehen',
+  widgetVideoNoUrl: 'Keine Video-URL konfiguriert',
+  widgetVideoUnsupportedSource: 'Video-Quelle nicht unterstützt',
+  widgetVideoPlaybackFailedWith: 'Wiedergabe fehlgeschlagen: {err}',
+  widgetVideoLoadFailedWith: 'Video konnte nicht geladen werden\n{err}',
+  widgetVideoLoading: 'Video wird geladen...',
+  widgetRefNotFoundWith: 'Nicht gefunden: {ref}',
+  widgetRefMissingFromOrName: 'ref-Widget benötigt „from" und „widget" Felder',
+  widgetRefMissingRootWith: '{ref} fehlt die root-Definition',
+  widgetUnknownTypeWith: 'Unbekannter Widget-Typ: {type}',
+  widgetHttpNetworkFailed: 'Netzwerkanfrage fehlgeschlagen',
+  chatErrNoRetryMessage: 'Keine Nachricht zum erneuten Versuchen',
+  chatErrConnectionUnstableWith: 'Verbindung bricht ständig ab (bereits {n} Mal versucht)',
+  chatErrPleaseLogin: 'Bitte zuerst anmelden',
+  chatErrServerWithBody: 'Serverfehler ({code}): {body}',
+  chatErrDownloadGenJsonWith: 'Generierte JSON konnte nicht heruntergeladen werden (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: 'Download-JSON-Fehler: {err}',
+  chatErrCancelled: 'Abgebrochen',
+  chatErrQuotaExceeded: 'Kontingent aufgebraucht',
+  chatErrConnectionTimeout: 'Verbindungs-Zeitüberschreitung',
+  chatErrNetworkWith: 'Netzwerkfehler: {err}',
+  chatErrUploadFailedRetriesWith: 'Upload fehlgeschlagen (bereits {n} Versuche): {err}',
+  chatUploadSuccessIntro: 'Hier ist die vollständige JSON-APP-Konfiguration, die gerade läuft (bereits in den temporären Speicher hochgeladen). Bitte basieren Sie weitere Änderungen oder Analysen auf dieser Konfiguration:\n\n',
+  asrBytedanceConnected: 'Verbunden',
+  asrBytedanceDisconnected: 'Verbindung getrennt',
+  asrErrUnknown: 'Unbekannter Fehler',
+  asrBytedanceConnectFailedWith: 'Verbindung fehlgeschlagen: {err}',
+  asrErrMicPermissionDeniedShort: 'Mikrofonberechtigung verweigert',
+  asrRecordErrorWith: 'Aufnahmefehler: {err}',
+  asrRecording: 'Aufnahme läuft...',
+  asrRecordStartFailWith: 'Aufnahme konnte nicht gestartet werden: {err}',
+  gameOver: 'Spiel beendet',
+  gameRestartHint: 'Tippen zum Neustart',
+  gameBestScoreWith: 'Beste {score}',
+  gameScoreWith: 'Punkte {score}',
+  builtinBiometricDefaultReason: 'Bitte Identität bestätigen',
+  builtinInputDialogDefaultTitle: 'Eingabe',
+  imSenderMe: 'Ich',
+  relativeDateYesterday: 'Gestern',
+  depErrConflictWith: '{loaded} geladen, aber {needed} erforderlich',
 );
 
 const _Strings _esES = _Strings(
@@ -2025,6 +2691,136 @@ const _Strings _esES = _Strings(
   imLeaveGroupConfirmContent: '¿Salir de «{name}»?',
   imLeaveFailedWith: 'Error al salir: {err}',
   imConfirmLeave: 'Confirmar salida',
+  chatSessionDefaultTitle: 'Chat nuevo',
+  chatSessionMenuNew: 'Chat nuevo',
+  chatSessionMenuEmpty: 'Aún no hay chats',
+  chatSessionRenameTitle: 'Renombrar chat',
+  chatSessionRenameHint: 'Nuevo título',
+  chatSessionActionRename: 'Renombrar',
+  chatSessionDeleteTitle: 'Eliminar chat',
+  chatSessionDeleteContent: '¿Eliminar «{title}»? La respuesta que se está ejecutando en segundo plano se cancelará.',
+  chatStatusGenerating: 'Generando código...',
+  chatStatusStartingAi: 'Iniciando motor de IA...',
+  chatStatusResumingLast: 'Restaurando conversación anterior...',
+  chatActionUploadCurrentApp: 'Subir configuración actual',
+  chatActionRetryDownloadJson: 'Reintentar descarga del JSON',
+  chatTimeJustNow: 'ahora mismo',
+  chatTimeMinutesAgo: 'hace {n} min',
+  chatTimeHoursAgo: 'hace {n} h',
+  chatTimeDaysAgo: 'hace {n} d',
+  chatDownloadStateDownloading: 'Descargando...',
+  chatDownloadStateRun: 'Descargar y ejecutar',
+  chatDownloadStateRetry: 'Reintentar descarga y ejecución',
+  chatErrorWith: 'Error: {err}',
+  chatJsonDownloadFailed: 'Error al descargar el JSON',
+  chatNoActiveApp: 'No hay configuración de app activa',
+  chatUploadingApp: 'Subiendo configuración actual...',
+  chatDownloadRetryFailedWith: 'El reintento de descarga falló: {err}',
+  chatAnalysisFailedWith: 'Análisis fallido: {err}',
+  chatEditMessageTitle: 'Editar mensaje',
+  chatEditMessageHint: 'Edita tu mensaje...',
+  chatEditButton: 'Editar',
+  chatSendButton: 'Enviar',
+  asrErrBytedanceWith: 'Error de ASR ByteDance: {err}',
+  asrErrNativeInitWithHint: 'No se pudo inicializar el reconocimiento nativo. Cambia a ASR ByteDance en Ajustes.',
+  asrConnectingBytedance: 'Conectando con ASR ByteDance...',
+  asrErrBytedanceTimeoutWithHint: 'Tiempo agotado al conectar con ASR ByteDance. Revisa la red o cambia de reconocedor.',
+  asrErrNativeStartWithHint: 'El reconocimiento nativo no pudo iniciar. Cambia a ASR ByteDance en Ajustes.',
+  asrErrMicPermissionDenied: 'Permiso de micrófono denegado. Actívalo en Ajustes → Apps → Permisos e inténtalo de nuevo.',
+  asrErrStartFailWith: 'El reconocimiento de voz no pudo iniciar: {err}',
+  asrErrBytedanceNotConnected: 'ASR ByteDance no está conectado. Revisa la red.',
+  asrErrBytedanceStartFailWith: 'ASR ByteDance no pudo iniciar: {err}',
+  authSwitchAccountCancelled: 'Cambio de cuenta cancelado',
+  authClearLocalFailedWith: 'Error al borrar los datos locales: {err}',
+  authSwitchAccountTitle: 'Cambiar de cuenta',
+  authSwitchAccountContent: 'La cuenta actual ({newEmail}) es distinta de la anterior ({prevEmail}).\n\nContinuar borrará todo el historial de chats, contactos y datos locales. ¿Continuar?',
+  authSwitchAccountConfirm: 'Borrar y continuar',
+  authErrSignupFailed: 'Error al registrarse',
+  authErrLoginFailed: 'Error al iniciar sesión',
+  authErrVerifyFailed: 'Verificación fallida',
+  authErrSendFailed: 'Envío fallido',
+  authErrNoRefreshToken: 'Sin refresh token',
+  authErrRefreshFailed: 'Actualización fallida',
+  authErrGetUserInfoFailed: 'Error al obtener la info del usuario',
+  authErrServerWith: 'Error del servidor ({code})',
+  authErrUpdateFailed: 'Actualización fallida',
+  authErrAvatarUploadFailed: 'Error al subir el avatar',
+  settingsSectionAsr: 'Reconocimiento de voz',
+  settingsAsrOnline: 'Reconocimiento online',
+  settingsAsrOnlineSubtitle: 'Usa speech_to_text, requiere red',
+  settingsAsrBytedance: 'ASR ByteDance',
+  settingsAsrBytedanceSubtitle: 'Reconocimiento de voz de ByteDance, requiere red y cuota',
+  settingsProvidersFailed: 'No se pudo obtener la lista de proveedores',
+  settingsProvidersFallback: 'Usando proveedor predeterminado DeepSeek',
+  settingsModelWith: 'Modelo: {model}',
+  imUserUnknown: 'Desconocido',
+  imMessageRecalled: 'retiró un mensaje',
+  imAttachmentFile: 'Archivo',
+  imImageQualityNormal: 'Calidad normal',
+  imImageQualityNormalSubtitle: 'Compresión automática, lado largo 1920, envío más rápido',
+  imImageQualityHd: 'Original',
+  imImageQualityHdSubtitle: 'Mantener tamaño y calidad originales',
+  imDownloadingMsg: 'Descargando...',
+  imDownloadFailedWith: 'Descarga fallida {code}',
+  imOpenFailedWith: 'Error al abrir: {msg}',
+  imOpenExceptionWith: 'Error de apertura: {err}',
+  imVideoLoadFailedWith: 'Error al cargar el video: {err}',
+  imPushNewMessage: 'Nuevo mensaje',
+  imPushImagePreview: '[Imagen]',
+  imMsgPreviewVideo: '[Video]',
+  imMsgPreviewVoice: '[Voz]',
+  imMsgPreviewFile: '[Archivo]',
+  imMsgPreviewLocation: '[Ubicación]',
+  imMsgPreviewGeneric: '[Mensaje]',
+  mainCantResolveAppConfigError: 'No se pudo resolver o descargar la configuración de la app',
+  widgetImagePickerPlaceholder: 'Toca para elegir imagen',
+  widgetImagePickerReselect: 'Toca para volver a elegir',
+  widgetCameraNoCamera: 'No hay cámara disponible',
+  widgetDatePickerPlaceholder: 'Elige una fecha',
+  widgetTimePickerPlaceholder: 'Elige una hora',
+  widgetButtonDefaultLabel: 'Botón',
+  widgetMissingItemTemplate: 'Falta item_template',
+  widgetDropdownPlaceholder: 'Seleccionar',
+  widgetPullToRefresh: 'Desliza para actualizar',
+  widgetVideoNoUrl: 'No hay URL de video configurada',
+  widgetVideoUnsupportedSource: 'Fuente de video no compatible',
+  widgetVideoPlaybackFailedWith: 'Reproducción fallida: {err}',
+  widgetVideoLoadFailedWith: 'Error al cargar el video\n{err}',
+  widgetVideoLoading: 'Cargando video...',
+  widgetRefNotFoundWith: 'No encontrado: {ref}',
+  widgetRefMissingFromOrName: 'El widget ref requiere los campos «from» y «widget»',
+  widgetRefMissingRootWith: 'A {ref} le falta la definición de root',
+  widgetUnknownTypeWith: 'Tipo de widget desconocido: {type}',
+  widgetHttpNetworkFailed: 'Solicitud de red fallida',
+  chatErrNoRetryMessage: 'No hay mensaje para reintentar',
+  chatErrConnectionUnstableWith: 'La conexión sigue cayendo (ya se reintentó {n} veces)',
+  chatErrPleaseLogin: 'Por favor inicia sesión primero',
+  chatErrServerWithBody: 'Error del servidor ({code}): {body}',
+  chatErrDownloadGenJsonWith: 'Error al descargar el JSON generado (HTTP {code})',
+  chatErrDownloadJsonExceptionWith: 'Error al descargar JSON: {err}',
+  chatErrCancelled: 'Cancelado',
+  chatErrQuotaExceeded: 'Cuota agotada',
+  chatErrConnectionTimeout: 'Tiempo de conexión agotado',
+  chatErrNetworkWith: 'Error de red: {err}',
+  chatErrUploadFailedRetriesWith: 'Subida fallida (ya reintentó {n} veces): {err}',
+  chatUploadSuccessIntro: 'Esta es la configuración completa de la JSON-APP actualmente en ejecución (ya subida al almacenamiento temporal). Por favor basa las modificaciones o el análisis en esta configuración:\n\n',
+  asrBytedanceConnected: 'Conectado',
+  asrBytedanceDisconnected: 'Desconectado',
+  asrErrUnknown: 'Error desconocido',
+  asrBytedanceConnectFailedWith: 'Conexión fallida: {err}',
+  asrErrMicPermissionDeniedShort: 'Permiso de micrófono denegado',
+  asrRecordErrorWith: 'Error de grabación: {err}',
+  asrRecording: 'Grabando...',
+  asrRecordStartFailWith: 'La grabación no pudo iniciar: {err}',
+  gameOver: 'Fin del juego',
+  gameRestartHint: 'Toca para reiniciar',
+  gameBestScoreWith: 'Mejor {score}',
+  gameScoreWith: 'Puntuación {score}',
+  builtinBiometricDefaultReason: 'Por favor verifica tu identidad',
+  builtinInputDialogDefaultTitle: 'Entrada',
+  imSenderMe: 'Yo',
+  relativeDateYesterday: 'Ayer',
+  depErrConflictWith: 'Cargado {loaded}, pero se requiere {needed}',
 );
 
 /// 公开访问点。

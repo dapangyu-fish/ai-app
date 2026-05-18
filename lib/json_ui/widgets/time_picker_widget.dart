@@ -5,6 +5,7 @@ import 'base_widget.dart';
 import 'icon_registry.dart';
 import 'action_helper.dart';
 import '../interpreter.dart';
+import '../../i18n/framework_strings.dart';
 
 class JsonTimePickerWidget extends JsonBaseWidget {
   @override
@@ -15,7 +16,7 @@ class JsonTimePickerWidget extends JsonBaseWidget {
   ) {
     final bindPath = json['bind'] as String?;
     final placeholder = interpreter.resolveTemplate(
-        json['placeholder']?.toString() ?? '请选择时间');
+        json['placeholder']?.toString() ?? T.of(context).widgetTimePickerPlaceholder);
     final label = json['label']?.toString();
     final prefixIcon = json['prefixIcon']?.toString() ?? 'clock';
     final action =

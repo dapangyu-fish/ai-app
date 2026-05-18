@@ -106,6 +106,16 @@ AI_PROVIDERS = {
 
 DEFAULT_PROVIDER = "deepseek"
 
+# Registry 配置 —— 给 store.py 和 AI prompt 渲染用。
+# 测试环境 docker compose 会注入 http://IP:port 覆盖；生产保持默认即可。
+REGISTRY_BASE_URL = os.environ.get("REGISTRY_BASE_URL", "https://myapp-registry.dapangyu.work")
+
+# Registry Mirror —— 上游 registry 地址。空字符串表示不开 mirror（独立运行）。
+# 开启后：每 REGISTRY_MIRROR_SYNC_INTERVAL_SEC 秒拉一次上游 /mirror/manifest，
+# 合并到本地索引；客户端请求镜像版本的文件时按需代理到上游 /mirror/file 并缓存到本地 MinIO。
+REGISTRY_UPSTREAM = os.environ.get("REGISTRY_UPSTREAM", "").rstrip("/")
+REGISTRY_MIRROR_SYNC_INTERVAL_SEC = int(os.environ.get("REGISTRY_MIRROR_SYNC_INTERVAL_SEC", "600"))
+
 # MinIO 配置
 MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "https://myapp-oss-endpoint.dapangyu.work")
 _minio_url_parts = MINIO_PUBLIC_URL.split("://")
@@ -136,6 +146,22 @@ TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
 DSL_SPEC_PATH = os.path.join(PROJECT_ROOT, "JSON-DSL.md")
 PROMPTS_DIR = os.path.join(BASE_DIR, "prompts")
 GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
+
+
+def load_generate_prompt() -> str:
+    """读取系统 prompt，**运行时**把硬编码的生产域名替换成当前环境实际地址。
+
+    生产：REGISTRY_BASE_URL / MINIO_PUBLIC_URL 都是 dapangyu.work，replace 是 no-op
+    测试环境：env 注入 http://IP:port，prompt 里 AI 看到的引用就指向测试服了
+    （否则 AI 生成的 JSON-APP 会硬塞生产 URL，跑起来仍然访问生产）。
+    """
+    with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
+        content = f.read()
+    return (
+        content
+        .replace("https://myapp-registry.dapangyu.work", REGISTRY_BASE_URL)
+        .replace("https://myapp-oss-endpoint.dapangyu.work", MINIO_PUBLIC_URL)
+    )
 
 # Claude CLI 路径（可通过环境变量覆盖）
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "/root/.nvm/versions/node/v22.22.2/bin/claude")

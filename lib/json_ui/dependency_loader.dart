@@ -7,18 +7,9 @@ import 'semver.dart';
 import 'cache_manager.dart';
 import '../config/app_config.dart';
 
-/// Registry 配置
+/// Registry 配置 —— 单 source，跟着 [AppConfig.registryUrl] 走（受环境切换控制）
 class RegistryConfig {
-  // 使用统一配置管理的Registry地址
-  static String get defaultRegistry => AppConfig.registryUrl;
-
-  // 支持多源（未来扩展）
-  static Map<String, String> get registries => {
-    'default': AppConfig.registryUrl,
-    'local': 'http://localhost:3254',
-  };
-
-  static String get registryUrl => registries['default']!;
+  static String get registryUrl => AppConfig.registryUrl;
 }
 
 /// 已加载的模块信息

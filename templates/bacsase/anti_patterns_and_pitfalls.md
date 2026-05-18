@@ -4,6 +4,32 @@
 
 ---
 
+## 快速索引（按症状反查）
+
+写 / 调 JSON-APP 出问题时先在这里找症状，跳到对应章节。
+
+| 你看到的现象 | 看哪节 |
+|------------|--------|
+| 整页白屏 + `RenderFlex ... unbounded` | §1 |
+| 整页白屏 + `Map ... is not a subtype of String?` | §2 |
+| 整页白屏 + `Map ... is not a subtype of num?` | §5 |
+| 整页白屏 + `List ... is not a subtype of Map` | §3 |
+| 整页白屏 + `operator xxx not defined`（jsonlogic） | §6 |
+| 整页白屏 + `Null is not a num` 但上游 `@set` 看似无害 | §8 |
+| 数据查询永远走 else 分支 / 静默 false | §4 |
+| UI 显示 `{{ t('xxx') }}` / `{{ global.xxx }}` 字面量 | §7 |
+| UI 显示 `{op_name: ...}` 字面量（带大括号和冒号） | §12 |
+| `@while` / `@for_each` 嵌套调用后循环索引诡异 | §10 |
+| flame_game 里 `{{ loop.id }}` 拼路径返 null | §11 |
+| atom 用 id 反查不命中 / jsonlogic var 直读 OK | §9 |
+
+如果症状对不上任何一条，往下顺读看类别能否匹配——按类别大致是：布局崩（§1）、
+静态字段类型（§2/§5）、顶层结构（§3）、函数 args 命名（§4）、jsonlogic 求值
+（§6/§8/§12 互相相关）、widget 模板（§7）、数据流模式（§9）、变量命名（§10）、
+flame 专有（§11）。
+
+---
+
 ## 1. 布局约束丢失：默认 Row 嵌套与非法 Flex
 
 ### 🚨 崩溃日志表现
@@ -273,6 +299,8 @@ if (value is Map<String, dynamic>) {
 
 `_evaluateExpression` 现在用 `_knownJsonLogicOps` 静态白名单判断。未来在 `_createJsonLogic` 里 `jl.add('xxx', ...)` 注册新 op 时，**必须同步把 'xxx' 加到 `_knownJsonLogicOps` 集合**，否则该 op 写法会被当数据 Map，jsonlogic 求值不会触发。
 
+**反向坑 → §12**：白名单解决了"数据 Map 被误判为 op"的崩溃，但**同时引入了反向的静默失败** —— 写一个**没注册**的 op 名（典型 `list_length` 当 jsonlogic op 用），命中不了白名单 → 退化为数据 Map → UI 直接显示 `{xxx: ...}` 字面量、不报任何异常。详见 §12。
+
 ---
 
 ## 7. 字符串字段塞模板，Widget 端却没跑 resolveTemplate
@@ -294,7 +322,7 @@ build 时跑一遍 `interpreter.resolveTemplate(...)`**，把 `{{ ... }}` 解析
 `appBar.title` 都自己调，没有集中处理。
 
 历史上这块写得很乱：button / chip / app_bar 的 `label`/`title` 走 resolveTemplate，
-但**同样性质的字段**漏调的不少（一次复审找出 8 处）：
+但**同样性质的字段**漏调的不少（一次复审找出 8 处 + i18n 重构后又揪出 2 处）：
 
 - `screen.title`（默认 AppBar，不是自定义 appBar）
 - `screen.tabs[].title`（tab 内层 AppBar）
@@ -302,10 +330,37 @@ build 时跑一遍 `interpreter.resolveTemplate(...)`**，把 `{{ ... }}` 解析
 - `input.placeholder`、`dropdown.placeholder`、`date_picker.placeholder`、
   `time_picker.placeholder`、`image_picker.placeholder`
 - `list.emptyText`、`grid.emptyText`、`reorderable_list.emptyText`
+- `dropdown.options[].label`、`radio.options[].label`（**嵌套坑**：见下）
 
 判断的根因是：写 widget 代码的人脑子里"label / title / heading 是给人看的文本 →
 模板"是直觉，但"placeholder / emptyText / tab 标签"在直觉里更像"配置"，
 就忘了走 resolveTemplate。
+
+#### 嵌套坑 — list-of-maps 里的 label
+
+`dropdown.options` / `radio.options` 这种 `[{label, value}]` 结构特别容易漏，因为
+widget 代码通常这么写：
+
+```dart
+final rawOptions = interpreter.resolveExpression(json['options']);  // ← 看上去解过了
+for (final item in rawOptions) {
+  final lab = item['label']?.toString() ?? '';  // ← 实际没解
+  ...
+}
+```
+
+**`resolveExpression` 对 List 是 `return raw` 不递归**（interpreter.dart `resolveExpression`），
+里面每个 item 的 label 字符串原样保留。要么在循环里对 label 单独调
+`interpreter.resolveTemplate(lab)`，要么改走能递归的 `_resolveValue`（但那是私有方法）。
+
+i18n 重构（commit `1a2496e`）把 `lib_launcher_settings.json` 里的下拉 options 从
+硬编码"系统/浅色/深色"改成 `{{ t('settings.theme_xxx') }}` 之后才暴露 —— 在那之前
+硬编码字符串根本不需要解模板，bug 一直存在但没人撞上。这是典型的"潜伏 N 个月、
+i18n 重构当晚出问题"。
+
+**对比**：action args 走的 `_resolveArgs → _resolveValue` 是递归处理 List 的，
+所以 `@show_choice_dialog` 的 `args.options` 同样形状不会踩这个坑。问题只在
+widget 自己取 `json['options']` 这条路径上。
 
 ### ✅ 正确姿势 / 避坑指南
 
@@ -598,5 +653,103 @@ JSON-DSL 没真函数局部作用域，`global._i` 这种全局可写。两个�
 **约定**：在 flame_game 的 `@for_each_entity` body 里，**永远**第一步抓 `loop.id` 到 `vars._cap`（或加函数级前缀），后续路径/id 全用 `{{ vars._cap }}`。`{{ loop.id }}` 直接用是埋雷。
 
 **回归保护**：`test/flame_loop_template_test.dart` 覆盖几条关键路径，framework 改坏会 catch。
+
+---
+
+## 12. 误用未注册的 jsonlogic op 名 → 静默退化为数据 Map → 字面量显示
+
+### 🚨 表现
+
+UI 上某个本该显示数字 / 字符串的位置，直接显示 **Dart Map 的 toString 形态**：
+
+```text
+共 {list_length: []} 次记录
+共 {count: []} 条
+得分 {sum: []} 分
+```
+
+注意是 **`{op_name: ...}` 的字面量形式**（带大括号和冒号），不是 `{{ }}` 模板。
+没有任何运行时异常，UI 看上去就是渲染错了。
+
+### 💔 反面教材分析
+
+`@list_length` 是 builtin **函数**（走 `{call: "@list_length", args: {...}}` 路径，
+用在 steps / actions 里）。jsonlogic **运算符**叫 `length`（不带 `list_` 前缀）。
+AI 经常把两个混了，在 text 模板里写：
+
+```jsonc
+{
+  "type": "text",
+  "value": "共 {{ {list_length: [{var: 'global.history'}]} }} 次记录"  // ❌
+}
+```
+
+**根因**：jsonlogic 的求值入口（interpreter `_evaluateExpression`）现在用白名单
+判断（见 §6）：
+
+```dart
+if (value is Map<String, dynamic>) {
+  if (_looksLikeJsonLogic(value)) {  // 单 key + key 在 _knownJsonLogicOps 白名单
+    return _jl.apply(...);
+  }
+  // 数据 Map 分支：递归 evaluate 内部值，整体当数据 Map 返回
+  return { for (var e in value.entries) e.key: _evaluateExpression(e.value) };
+}
+```
+
+`list_length` 不在白名单里 → 命中**数据 Map 分支** → 整块 Map 原样保留。
+text 模板 `{{ ... }}` 拿到这个 Map → `.toString()` 拼字符串 → 显示成
+`{list_length: []}`（`[]` 是内层 args 求值后的空数组）。
+
+**没异常**意味着排查全靠肉眼 —— 看到 `{xxx: ...}` 字面量时第一反应应该是
+"我用错 op 名了"。
+
+### ✅ 正确姿势 / 避坑指南
+
+**当前框架已注册的 jsonlogic op 名（不带 `@` 前缀）**：
+
+| 想做的事 | jsonlogic op | builtin function（带 @） |
+|---------|--------------|--------------------------|
+| 取列表长度 | `length` | `@list_length` |
+| 字符串长度 | `str_len` | `@str_len`（如有） |
+| 字符串拼接 | `cat`（jsonlogic 内置） | `@str_concat`（如有） |
+| 取下标 | `at` | `@list_get`（如有） |
+| 数组切片 | `slice` | `@list_slice`（如有） |
+| 字符串大写 | `str_upper` | （同名） |
+| 排序 / 反转 | `sort` / `reverse` | （同名） |
+| 类型转换 | `to_string` / `to_int` / `to_double` | （同名） |
+
+**铁律**：
+1. 在 text 模板 / `value` / `bind` 等表达式位置，用 **jsonlogic op 名**（无 `@`）
+2. 在 `{call: "@xxx"}` 函数调用位置，用 **builtin function 名**（带 `@`）
+3. 不要假设两套命名一致 —— `length` ≠ `@list_length`，虽然功能等价
+
+**典型修法**：
+
+```jsonc
+// ❌ 错：list_length 不是 jsonlogic op
+"value": "共 {{ {list_length: [{var: 'global.history'}]} }} 次"
+
+// ✓ 对：用 jsonlogic 的 length
+"value": "共 {{ {length: [{var: 'global.history'}]} }} 次"
+
+// ✓ 对：或在 steps 里预先用 @list_length 算到 var，再 {{ var }}
+{ "call": "@list_length", "args": { "value": "{{ global.history }}" },
+  "assign": "global.historyCount" },
+// text: "共 {{ global.historyCount }} 次"
+```
+
+### 🔍 自检 / 排查
+
+- UI 上出现 `{xxx: ...}` 字面量 → 立刻去 `interpreter.dart` 搜 `jl.add('` 看注册了哪些 op
+- 看不到对应 op 名 → 要么改 JSON 用正确的 op 名、要么把这个 op 注册成 alias
+  （只在确认 AI / 用户高频写错某个名时考虑加 alias，不要无脑膨胀白名单）
+
+### 🔧 框架改进备忘
+
+可选改进：让 `_evaluateExpression` 在 unknown op 名命中数据 Map 分支时，
+开发模式下打 warning（`debugPrint('[JSON DSL] 警告：{xxx: ...} 看起来像 jsonlogic
+表达式但 xxx 不是已注册的 op，按数据 Map 处理'）`）。**不建议**抛异常 —— 数据
+Map 是合法场景（§6），抛了会破坏 `@list_add args.item` 等正常用法。
 
 ---

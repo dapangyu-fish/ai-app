@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'ai_chat_service.dart';
 import 'chat_overlay.dart';
-import 'sherpa_asr_service.dart';
 import 'bytedance_asr_service.dart';
 import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
@@ -18,7 +17,6 @@ import '../onboarding/onboarding_keys.dart';
 /// 语音识别方式枚举
 enum AsrMode {
   online,    // 在线识别（speech_to_text）
-  offline,   // 离线识别（sherpa_onnx）
   bytedance, // 豆包ASR
 }
 
@@ -27,7 +25,7 @@ enum AsrMode {
 /// 之前 bug：DesignerBall 在 initState 里读一次 SharedPreferences 就缓存到
 /// `_asrMode` 字段，永远不再刷新。settings_page 写了 prefs，但 DesignerBall
 /// 是 MaterialApp 外层的常驻 widget，永远不会重新 initState，结果用户切到
-/// "离线"或"豆包"，运行时 `_asrMode` 还是启动时的旧值，体感"切了没切成功"。
+/// "豆包"，运行时 `_asrMode` 还是启动时的旧值，体感"切了没切成功"。
 class AsrModePrefs {
   AsrModePrefs._();
 
@@ -35,8 +33,6 @@ class AsrModePrefs {
 
   static AsrMode _decode(String? s) {
     switch (s) {
-      case 'offline':
-        return AsrMode.offline;
       case 'bytedance':
         return AsrMode.bytedance;
       default:
@@ -46,8 +42,6 @@ class AsrModePrefs {
 
   static String _encode(AsrMode m) {
     switch (m) {
-      case AsrMode.offline:
-        return 'offline';
       case AsrMode.bytedance:
         return 'bytedance';
       case AsrMode.online:
@@ -147,10 +141,13 @@ class _DesignerBallState extends State<DesignerBall>
   stt.SpeechToText? _speech;
   bool _speechInited = false;
   bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
+  // 平台（Android SpeechRecognizer / iOS SFSpeechRecognizer）单次会话有 10-60s
+  // 上限，用户按着球时长按下去到 done/error 时要无感重启。这个 flag 在主动 stop
+  // 之前置 true，防止主动停止被识别为"该重启"。
+  bool _intentionalNativeStop = false;
   // ⚠️ 不要直接读这个字段，用 _asrMode getter，永远拿到 AsrModePrefs 最新值。
   // 历史 bug：缓存了 initState 时的旧值，settings 改完不感知。
   AsrMode get _asrMode => AsrModePrefs.notifier.value;
-  final SherpaAsrService _sherpaAsr = SherpaAsrService.instance;
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
@@ -160,7 +157,14 @@ class _DesignerBallState extends State<DesignerBall>
   // 两条路径都收敛到 needsRetry → UI 弹重试按钮，不再需要独立 timer。
   Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
   Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
-  final List<ChatMessage> _messages = [];
+  // 多会话：消息按 sid 分桶；getter `_messages` 永远返回当前 active 那一桶。
+  // 切 active session 时 setState 会重 build，自动展示新桶。
+  final Map<String, List<ChatMessage>> _messageBuckets = {};
+  List<ChatMessage> get _messages {
+    final sid = _chatService.sessionId;
+    final key = sid.isEmpty ? '__pending__' : sid;
+    return _messageBuckets.putIfAbsent(key, () => []);
+  }
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -195,9 +199,6 @@ class _DesignerBallState extends State<DesignerBall>
       if (mounted) setState(() {}); // 触发一次 rebuild 让 _asrMode getter 拿到新值
     });
     AsrModePrefs.notifier.addListener(_onAsrModeChanged);
-    _sherpaAsr.loadConfig().then((_) {
-      setState(() {});
-    });
     // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
     // 不 await，不阻塞 UI 启动
     _chatService.loadSession().then((_) => _maybeResumeUnfinishedSession());
@@ -253,7 +254,7 @@ class _DesignerBallState extends State<DesignerBall>
           debugPrint('[DesignerBall] ByteDance ASR error: $error');
           if (mounted) {
             setState(() {
-              _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR错误: $error'));
+              _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrBytedanceWith, {'err': error})));
             });
           }
         };
@@ -280,12 +281,22 @@ class _DesignerBallState extends State<DesignerBall>
       _speech = stt.SpeechToText();
       _speechInited = await _speech!.initialize(
         onError: (error) {
-          debugPrint('[DesignerBall] Speech error: ${error.errorMsg}');
-          if (error.errorMsg == 'error_network') {
-            _handleNetworkError();
+          // 不在这里 restart——csdcorp/speech_to_text issue #253 显示在 onError 里
+          // restart 会触发 error_busy 级联。errors 不 cancel 引擎（cancelOnError:false），
+          // 平台后续会自然给 done status，统一走 onStatus 路径重启。
+          debugPrint('[DesignerBall] Speech error: ${error.errorMsg} permanent=${error.permanent}');
+        },
+        onStatus: (status) {
+          debugPrint('[DesignerBall] Speech status: $status');
+          // 不能只看 doneStatus —— iOS 上 SFSpeechRecognizer 超时走的是
+          // FinishedReadingAudio 路径，plugin 只发 notListening，doneStatus 永远
+          // 不会 fire（因为它依赖 _notifiedFinal && _notifiedDone 同时为 true）。
+          // 见 SpeechToTextPlugin.swift:731+ 和 csdcorp issue #218。
+          // 凡是不是 listeningStatus 的状态都视为会话结束，尝试重启。
+          if (status != stt.SpeechToText.listeningStatus) {
+            _scheduleRestartNativeSession(reason: 'status_$status');
           }
         },
-        onStatus: (status) => debugPrint('[DesignerBall] Speech status: $status'),
       );
       debugPrint('[DesignerBall] Native speech initialized in initState: $_speechInited');
     } catch (e) {
@@ -294,23 +305,72 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  /// 切换强制离线模式
-  Future<void> _toggleForceOffline(bool value) async {
-    await _sherpaAsr.setForceOffline(value);
-    setState(() {});
+  /// 在平台自动停掉一段会话后，检查是否还需要继续录下一段。
+  ///
+  /// iOS 上 SFSpeechRecognizer 超时走 speechRecognitionTaskFinishedReadingAudio
+  /// 这条 delegate 路径只发 notListening 状态，**不**调 audioEngine.stop() / removeTap()
+  /// / audioSession.setActive(false)，currentTask 也不清空。如果直接 listen()，
+  /// AVAudioEngine 会越叠越脏，第二次 restart 时撞 `nullptr == Tap()` 崩溃
+  /// （issue #118、#241、#481 都是这个家族）。
+  ///
+  /// 所以这里**显式 await _speech.stop()** 强制走 Swift 那条完整 cleanup
+  /// （SpeechToTextPlugin.swift:425-468），再等 300ms 让 AVAudioSession 异步
+  /// 去激活落定，再 listen。
+  void _scheduleRestartNativeSession({required String reason}) {
+    Future.delayed(const Duration(milliseconds: 80), () async {
+      if (!mounted) return;
+      if (_intentionalNativeStop) {
+        debugPrint('[DesignerBall] Skip native restart (intentional stop): $reason');
+        return;
+      }
+      if (!_isListening || _editMode) return;
+      if (_asrMode != AsrMode.online) return;
+      if (!_pointerDown) return;
+      if (_speech == null) return;
+
+      // iOS partial-freeze 场景下 finalResult 可能从未 fire，
+      // _liveTranscript 里有段 1 的可见文本但没并入 _accumulatedTranscript。
+      // restart 前抢救：如果 live > accumulated，立刻并入。
+      final live = _liveTranscript?.trim() ?? '';
+      if (live.length > _accumulatedTranscript.length) {
+        debugPrint('[DesignerBall] Rescuing live partial → accumulated: "$live"');
+        _accumulatedTranscript = live;
+      }
+
+      // 显式 stop 强制完整 cleanup（关键，否则 30s 第二次 restart 必崩）
+      debugPrint('[DesignerBall] Force stop before restart ($reason)');
+      _intentionalNativeStop = true;
+      try {
+        await _speech!.stop();
+      } catch (e) {
+        debugPrint('[DesignerBall] Force stop error: $e');
+      }
+      // 给 AVAudioSession.setActive(false) 异步落定的时间
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      if (!mounted) return;
+      if (!_isListening || _editMode || !_pointerDown) {
+        debugPrint('[DesignerBall] User released during restart cleanup, abort');
+        return;
+      }
+
+      _intentionalNativeStop = false;
+      debugPrint('[DesignerBall] Restarting native ASR segment ($reason), accumulated.len=${_accumulatedTranscript.length}');
+      _doStartNativeSession();
+    });
   }
 
   @override
   void dispose() {
     _longPressTimer?.cancel();
     _streamSub?.cancel();
-    _sherpaAsr.dispose();
     // Plan A 关键：app 关掉 worker 继续在 backend 跑，下次启动 _maybeResumeUnfinishedSession 接回来
     // 所以 dispose 只关本地 SSE，绝不通知 backend abort
     _chatService.abortLocal();
     _animController.dispose();
     _pulseController.dispose();
     _countdownController.dispose();
+    _intentionalNativeStop = true;
     _speech?.stop();
     _scrollController.dispose();
     AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
@@ -681,11 +741,6 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
-  void _onProviderChanged(String providerId) {
-    AiChatService.setProvider(providerId);
-    setState(() {});
-  }
-
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
 
@@ -704,47 +759,12 @@ class _DesignerBallState extends State<DesignerBall>
     // 检查原生语音识别是否已初始化（已在 initState 中完成）
     if (!_speechInited && _asrMode == AsrMode.online) {
       setState(() {
-        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别初始化失败，请在设置中切换到离线模式或豆包ASR'));
+        _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrNativeInitWithHint));
       });
       return;
     }
 
     debugPrint('[DesignerBall] 最终决策: ASR模式=${_asrMode.name}');
-
-    // 如果是离线模式，需要预加载模型
-    if (_asrMode == AsrMode.offline) {
-      setState(() {
-        _chatMode = true;
-        _isThinking = true;
-      });
-      _sherpaAsr.onStatusChange = (status) {
-        setState(() {
-          _liveTranscript = status;
-        });
-      };
-      final ready = await _sherpaAsr.ensureReady();
-      _sherpaAsr.onStatusChange = null;
-
-      // 手已离开 → 中止
-      if (!_pointerDown) {
-        debugPrint('[DesignerBall] Pointer lifted during sherpa init, aborting');
-        setState(() {
-          _isThinking = false;
-          _liveTranscript = null;
-        });
-        return;
-      }
-
-      if (!ready) {
-        setState(() {
-          _isThinking = false;
-          _liveTranscript = null;
-          _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型加载失败'));
-        });
-        return;
-      }
-      setState(() => _isThinking = false);
-    }
 
     // 如果是豆包ASR，检查连接状态
     if (_asrMode == AsrMode.bytedance) {
@@ -753,7 +773,7 @@ class _DesignerBallState extends State<DesignerBall>
         setState(() {
           _chatMode = true;
           _isThinking = true;
-          _liveTranscript = '正在连接豆包ASR...';
+          _liveTranscript = T.current.asrConnectingBytedance;
         });
 
         // 等待最多3秒让豆包ASR连接
@@ -782,7 +802,7 @@ class _DesignerBallState extends State<DesignerBall>
         if (!_bytedanceAsr.isConnected) {
           debugPrint('[DesignerBall] 豆包ASR连接超时，isConnected=${_bytedanceAsr.isConnected}');
           setState(() {
-            _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR连接超时，请检查网络或切换到其他识别方式'));
+            _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrBytedanceTimeoutWithHint));
           });
           return;
         }
@@ -818,9 +838,6 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint('[DesignerBall] ASR决策: asrMode=${_asrMode.name}');
 
     switch (_asrMode) {
-      case AsrMode.offline:
-        _startSherpaAsr();
-        break;
       case AsrMode.bytedance:
         _startBytedanceAsr();
         break;
@@ -847,14 +864,11 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint('[DesignerBall] Recording cancelled by drag');
 
     switch (_asrMode) {
-      case AsrMode.offline:
-        _sherpaAsr.stopListening();
-        _sherpaAsr.onResult = null;
-        break;
       case AsrMode.bytedance:
         _bytedanceAsr.stopListening();
         break;
       default:
+        _intentionalNativeStop = true;
         try { _speech?.stop(); } catch (_) {}
     }
 
@@ -874,12 +888,10 @@ class _DesignerBallState extends State<DesignerBall>
     _accumulatedTranscript = ''; // 清空累积文本，防止下次录音叠加旧内容
 
     // 编辑模式 = 最高权限：彻底切断所有语音源（停录音 + 清回调）。
-    _sherpaAsr.stopListening();
-    _sherpaAsr.onResult = null;
-    _sherpaAsr.onStatusChange = null;
     _bytedanceAsr.stopListening();
     // 注意：_bytedanceAsr.onResult 不在此处清空（在 _initBytedanceAsr 中一次性注册），
     // 改在回调内用 _editMode 守卫拦截。
+    _intentionalNativeStop = true;
     try { _speech?.stop(); } catch (_) {}
 
     _pulseController.stop();
@@ -955,7 +967,7 @@ class _DesignerBallState extends State<DesignerBall>
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
-            _generatingStatusMessage = '正在启动 AI 引擎...';
+            _generatingStatusMessage = T.current.chatStatusStartingAi;
           });
           _scrollToBottom();
           return;
@@ -977,7 +989,7 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            _generatingStatusMessage = '正在生成代码...';
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             // 如果同时有 error 且最后一个 assistant 气泡是空的，先把 error 写进去
             // 这样用户既能看到"为啥失败了"也能看到下面的重试按钮
             if (event.error != null &&
@@ -1006,7 +1018,7 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            _generatingStatusMessage = '正在生成代码...';
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
               _messages.last = ChatMessage(role: 'assistant', content: event.error!);
             } else {
@@ -1077,11 +1089,11 @@ class _DesignerBallState extends State<DesignerBall>
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
-          _generatingStatusMessage = '正在生成代码...';
+          _generatingStatusMessage = T.current.chatStatusGenerating;
           if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-            _messages.last = ChatMessage(role: 'assistant', content: '出错了: $e');
+            _messages.last = ChatMessage(role: 'assistant', content: T.fmt(T.current.chatErrorWith, {'err': e}));
           } else {
-            _messages.add(ChatMessage(role: 'assistant', content: '出错了: $e'));
+            _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.chatErrorWith, {'err': e})));
           }
         });
       },
@@ -1094,7 +1106,7 @@ class _DesignerBallState extends State<DesignerBall>
             'pendingJsonApp=${pendingJsonApp != null}');
         setState(() {
           _isGeneratingJson = false;
-          _generatingStatusMessage = '正在生成代码...';
+          _generatingStatusMessage = T.current.chatStatusGenerating;
 
           // ⚠️ 这里**必须**用独立 if 而不是 if/else if 链：
           // AI 一次回复里完全可能同时包含 [request_action]upload_current_app[/request_action]
@@ -1119,7 +1131,7 @@ class _DesignerBallState extends State<DesignerBall>
           if (pendingFailedJsonUrl != null) {
             _messages.add(ChatMessage(
               role: 'system',
-              content: pendingFailedJsonError ?? '下载 JSON 失败',
+              content: pendingFailedJsonError ?? T.current.chatJsonDownloadFailed,
               failedJsonUrl: pendingFailedJsonUrl,
             ));
           }
@@ -1204,7 +1216,7 @@ class _DesignerBallState extends State<DesignerBall>
             _messages.add(ChatMessage(role: 'assistant', content: ''));
             _isThinking = true;
             _isGeneratingJson = true;
-            _generatingStatusMessage = '正在恢复上次对话...';
+            _generatingStatusMessage = T.current.chatStatusResumingLast;
           });
           _scrollToBottom();
           _attachAiStream(stream);
@@ -1228,7 +1240,7 @@ class _DesignerBallState extends State<DesignerBall>
     final config = widget.getCurrentConfig?.call();
     if (config == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('当前没有运行的应用配置')),
+        SnackBar(content: Text(T.current.chatNoActiveApp)),
       );
       return;
     }
@@ -1236,7 +1248,7 @@ class _DesignerBallState extends State<DesignerBall>
     setState(() {
       // 移除 UPLOAD 按钮那条消息
       _messages.removeLast();
-      _messages.add(ChatMessage(role: 'system', content: '正在上传当前应用配置...'));
+      _messages.add(ChatMessage(role: 'system', content: T.current.chatUploadingApp));
       _isThinking = true;
     });
     _scrollToBottom();
@@ -1290,7 +1302,7 @@ class _DesignerBallState extends State<DesignerBall>
         _isGeneratingJson = false;
         _messages.add(ChatMessage(
           role: 'assistant',
-          content: '下载重试失败: $e',
+          content: T.fmt(T.current.chatDownloadRetryFailedWith, {'err': e}),
           failedJsonUrl: url,
         ));
       });
@@ -1304,14 +1316,23 @@ class _DesignerBallState extends State<DesignerBall>
     widget.onRunJsonApp?.call(parsedApp);
     Future.microtask(() {
       if (mounted) {
-        _clearAndCloseChatMode();
+        _closeChatMode();
       }
     });
   }
 
-  /// 原生语音识别 (Apple/Google) — 参照 speech_to_text 官方 demo 的最小实现，
-  /// 不做任何 finalResult 自动重启，避免反复申请/释放麦克风。
+  /// 原生语音识别 (Apple/Google) — Android SpeechRecognizer / iOS SFSpeechRecognizer
+  /// 单次会话有 ~10-60s 上限，靠 onStatus:done / onError 触发自动重启实现"无限录制"。
+  ///
+  /// 累加规则：每段 partial → 显示 `_accumulatedTranscript + 当前段`；finalResult
+  /// 触发时，把这段并入 `_accumulatedTranscript`，下一段从 0 开始。
   void _startNativeSpeech() {
+    if (_speech == null) return;
+    _intentionalNativeStop = false;
+    _doStartNativeSession();
+  }
+
+  void _doStartNativeSession() {
     if (_speech == null) return;
     try {
       _speech!.listen(
@@ -1319,14 +1340,23 @@ class _DesignerBallState extends State<DesignerBall>
           // 编辑模式下，stop() 后迟到的 final 结果一律丢弃
           if (!_isListening || _editMode) return;
           _nativeSpeechReceivedCallback = true;
-          final text = result.recognizedWords;
-          if (_liveTranscript != text) {
-            setState(() => _liveTranscript = text);
+          final segment = result.recognizedWords;
+          // 中文段间直接拼，不加空格（之前 '类似于 鸟' 的 bug）。
+          // 英文场景这里也凑合，最终落到聊天框时不会有大问题。
+          final combined = '$_accumulatedTranscript$segment';
+          if (_liveTranscript != combined) {
+            setState(() => _liveTranscript = combined);
+          }
+          // 这一段平台判定结束，立刻并入累积；下一段（自动 restart）从 0 开始
+          if (result.finalResult && segment.isNotEmpty) {
+            _accumulatedTranscript = combined;
           }
         },
         localeId: 'zh_CN',
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 5),
+        // listenFor / pauseFor 都给平台上限，让平台自然 endpointing。
+        // 一旦它停了，我们在 onStatus:done 里立刻重启下一段。
+        listenFor: const Duration(seconds: 60),
+        pauseFor: const Duration(seconds: 10),
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
           cancelOnError: false,
@@ -1337,153 +1367,10 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] Native listen error: $e');
       setState(() {
         _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: '原生语音识别启动失败，请在设置中开启"强制离线模式"'));
+        _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrNativeStartWithHint));
       });
       _pulseController.stop();
     }
-  }
-
-  /// 处理网络错误，引导用户开启离线模式
-  Future<void> _handleNetworkError() async {
-    final prefs = await SharedPreferences.getInstance();
-    final dontShow = prefs.getBool('dont_show_network_error_dialog') ?? false;
-
-    if (dontShow) {
-      debugPrint('[DesignerBall] 用户已选择不再提示网络错误');
-      return;
-    }
-
-    if (!mounted) return;
-
-    bool dontShowAgain = false;
-    String selectedModel = _sherpaAsr.selectedModelId;
-
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('网络语音识别不可用'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('检测到网络问题，无法使用在线语音识别。是否切换到离线模型？'),
-              const SizedBox(height: 16),
-              const Text('选择离线模型：', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              ...SherpaAsrService.availableModels.map((model) => RadioListTile<String>(
-                title: Text(model.name),
-                value: model.id,
-                groupValue: selectedModel,
-                onChanged: (value) {
-                  setDialogState(() {
-                    selectedModel = value!;
-                  });
-                },
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              )),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                title: const Text('不再提示'),
-                value: dontShowAgain,
-                onChanged: (value) {
-                  setDialogState(() {
-                    dontShowAgain = value ?? false;
-                  });
-                },
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, {
-                'enable': true,
-                'dontShow': dontShowAgain,
-                'modelId': selectedModel,
-              }),
-              child: const Text('开启离线模式'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (result != null && result['enable'] == true) {
-      // 保存"不再提示"设置
-      if (result['dontShow'] == true) {
-        await prefs.setBool('dont_show_network_error_dialog', true);
-      }
-
-      // 保存离线模式设置
-      await _sherpaAsr.setForceOffline(true);
-      await _sherpaAsr.setModel(result['modelId'] as String);
-
-      debugPrint('[DesignerBall] 用户选择开启离线模式，模型: ${result['modelId']}');
-
-      // 停止当前识别，重新开始
-      if (_isListening) {
-        try { await _speech?.stop(); } catch (_) {}
-        _startListening();
-      }
-    }
-  }
-
-  /// sherpa_onnx 离线 ASR：本地录音 + 本地识别
-  Future<void> _startSherpaAsr() async {
-    debugPrint('[DesignerBall] 启动离线语音识别 (sherpa_onnx, model=${_sherpaAsr.selectedModelId})');
-    try {
-      // 确保 recognizer 已初始化（防止 chatMode 下重复按球但 recognizer 还没 ready）
-      if (!await _sherpaAsr.ensureReady()) {
-        debugPrint('[DesignerBall] sherpa ensureReady failed in _startSherpaAsr');
-        setState(() {
-          _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: '离线语音模型未就绪，请在设置中重新下载'));
-        });
-        _pulseController.stop();
-        _pulseController.reset();
-        return;
-      }
-
-      _sherpaAsr.onResult = (text) {
-        // 编辑模式下，迟到的 ASR 结果一律丢弃
-        if (!_isListening || _editMode) return;
-        // 优化：只在文本变化时更新 UI，减少不必要的重建
-        if (_liveTranscript != text) {
-          setState(() => _liveTranscript = text);
-        }
-      };
-
-      final ok = await _sherpaAsr.startListening();
-      if (!ok) {
-        setState(() {
-          _isListening = false;
-          _messages.add(ChatMessage(
-            role: 'assistant',
-            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
-          ));
-        });
-        _pulseController.stop();
-      }
-    } catch (e) {
-      debugPrint('[SherpaASR] Start error: $e');
-      setState(() {
-        _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: '语音识别启动失败: $e'));
-      });
-      _pulseController.stop();
-    }
-  }
-
-  void _stopSherpaAsr() {
-    _sherpaAsr.stopListening();
-    _sherpaAsr.onResult = null;
   }
 
   /// 启动豆包ASR识别
@@ -1495,7 +1382,7 @@ class _DesignerBallState extends State<DesignerBall>
         debugPrint('[DesignerBall] ByteDance ASR not connected');
         setState(() {
           _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR未连接，请检查网络'));
+          _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrBytedanceNotConnected));
         });
         _pulseController.stop();
         _pulseController.reset();
@@ -1509,7 +1396,7 @@ class _DesignerBallState extends State<DesignerBall>
           _isListening = false;
           _messages.add(ChatMessage(
             role: 'assistant',
-            content: '麦克风权限未授予，请在手机「设置 → 应用 → 权限」中开启麦克风权限后重试',
+            content: T.current.asrErrMicPermissionDenied,
           ));
         });
         _pulseController.stop();
@@ -1518,7 +1405,7 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[ByteDanceASR] Start error: $e');
       setState(() {
         _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: '豆包ASR启动失败: $e'));
+        _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrBytedanceStartFailWith, {'err': e})));
       });
       _pulseController.stop();
     }
@@ -1529,17 +1416,11 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 停止语音识别
     switch (_asrMode) {
-      case AsrMode.offline:
-        _sherpaAsr.onResult = null;
-        final finalText = await _sherpaAsr.stopListening();
-        if (finalText.isNotEmpty) {
-          _liveTranscript = finalText;
-        }
-        break;
       case AsrMode.bytedance:
         await _bytedanceAsr.stopListening();
         break;
       default:
+        _intentionalNativeStop = true;
         try { await _speech?.stop(); } catch (e) {
           debugPrint('[DesignerBall] speech.stop error: $e');
         }
@@ -1580,6 +1461,10 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   /// 取消正在进行的 AI 流式回复，保留已收到的部分内容
+  ///
+  /// 多会话：切换/新建/删除路径都会先调这里。**必须无条件重置所有 stream-related
+  /// UI 状态**，否则会出现：在 session A "正在生成代码" 中途切到 session B（已 done），
+  /// 但 _isGeneratingJson 没被清，B 的视图还在转圈。
   void _cancelCurrentStream() {
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
@@ -1595,11 +1480,16 @@ class _DesignerBallState extends State<DesignerBall>
       _streamSub = null;
       // 只关本地：本方法的下游通常马上要 sendStream/retryLastTurn（带 force_restart），
       // backend 自己会处理旧 worker。这里发 POST /abort 会和新 worker 起步竞态。
-      // 唯一例外是 _clearAndCloseChatMode (用户点清空)，那条路径走 _chatService.clear()
-      // → resetSession() → 内部用完整 abort()，不依赖这里
+      // 唯一例外是 _deleteCurrentSessionAndClose（用户点垃圾桶），那条路径走
+      // _chatService.deleteSession() → 内部对该 sid 单独发 /abort，不依赖这里
       _chatService.abortLocal();
-      setState(() => _isThinking = false);
     }
+    // 无条件重置，覆盖"没有活跃 stream 但 UI 状态没复位"的情况
+    setState(() {
+      _isThinking = false;
+      _isGeneratingJson = false;
+      _generatingStatusMessage = T.current.chatStatusGenerating;
+    });
   }
 
   /// 处理崩溃报告 — 自动进入对话模式并发送崩溃信息给 AI
@@ -1648,15 +1538,15 @@ class _DesignerBallState extends State<DesignerBall>
       onError: (e) {
         setState(() {
           _isThinking = false;
-          _messages.last = ChatMessage(role: 'assistant', content: '分析失败: $e');
+          _messages.last = ChatMessage(role: 'assistant', content: T.fmt(T.current.chatAnalysisFailedWith, {'err': e}));
         });
       },
     );
   }
 
   void _closeChatMode() {
+    _intentionalNativeStop = true;
     try { _speech?.stop(); } catch (_) {}
-    _stopSherpaAsr();
     _cancelCurrentStream();
     _pulseController.stop();
     _pulseController.reset();
@@ -1670,10 +1560,56 @@ class _DesignerBallState extends State<DesignerBall>
     });
   }
 
-  void _clearAndCloseChatMode() {
+  /// 顶栏垃圾桶按钮：删除当前 session（会发 /abort 杀后端 worker）+ 关闭浮层
+  void _deleteCurrentSessionAndClose() {
+    final sid = _chatService.sessionId;
+    _cancelCurrentStream();  // 必须先断老流，否则迟到的事件会落进新建占位的桶
     _closeChatMode();
-    _messages.clear();
-    _chatService.clear(); // resetSession is async but fire-and-forget is fine here
+    if (sid.isNotEmpty) {
+      _messageBuckets.remove(sid);
+      _chatService.deleteSession(sid);  // fire-and-forget；内部会处理 active 切换
+    }
+  }
+
+  /// session sheet 顶部 [+ 新建会话]：丢弃旧 active 流，建空占位
+  Future<void> _handleNewSession() async {
+    _cancelCurrentStream();  // 防止老 session 迟到事件流进新桶
+    await _chatService.createNewSession();
+    if (!mounted) return;
+    setState(() {});  // 触发 ChatOverlay 渲染新桶（空列表）
+    _scrollToBottom();
+  }
+
+  /// session sheet 点某一行：切到那条 sid
+  /// 切过去后如果消息桶是空的（冷启 / 第一次切回），调一次 /status / /result 拉历史。
+  Future<void> _handleSwitchSession(String sid) async {
+    _cancelCurrentStream();  // 同上
+    await _chatService.switchToSession(sid);
+    if (!mounted) return;
+    setState(() {});
+    // 如果切过去的桶是空的，尝试恢复最近一轮（与 app 启动时的 resume 走同一条路径）
+    if (_messages.isEmpty) {
+      await _maybeResumeUnfinishedSession();
+    }
+    _scrollToBottom();
+  }
+
+  /// session sheet 滑动删除某条。
+  /// 如果删的是 active，service 内部会切到下一条 / 建占位；同样必须先断老流。
+  Future<void> _handleDeleteSession(String sid) async {
+    if (sid == _chatService.sessionId) {
+      _cancelCurrentStream();
+    }
+    _messageBuckets.remove(sid);
+    await _chatService.deleteSession(sid);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _handleRenameSession(String sid, String title) async {
+    await _chatService.renameSession(sid, title);
+    if (!mounted) return;
+    setState(() {});
   }
 
   /// 双击 heavyImpact，主观上明显比单次更"重"。
@@ -1811,20 +1747,27 @@ class _DesignerBallState extends State<DesignerBall>
             liveTranscript:
                 (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
             onClose: _closeChatMode,
-            onClear: _clearAndCloseChatMode,
+            onClear: _deleteCurrentSessionAndClose,
             scrollController: _scrollController,
-            onProviderChanged: _onProviderChanged,
+            activeSessionId: _chatService.sessionId,
+            getSessions: _chatService.listSessions,
             onUploadCurrentApp: _handleUploadCurrentApp,
             onRetryDownload: _handleRetryDownload,
             onDownloadAndRun: _handleDownloadAndRun,
             onRetryLastTurn: _handleRetryLastTurn,
+            onNewSession: _handleNewSession,
+            onSwitchSession: _handleSwitchSession,
+            onDeleteSession: _handleDeleteSession,
+            onRenameSession: _handleRenameSession,
+            onProbeAllSessionStatus: () => _chatService.probeAllSessionStatus(),
+            getNavigatorContext: () => JsonDslApp.navigatorKey.currentContext,
             onRunJsonApp: (jsonConfig) {
-              // 先调用外部回调，再清空聊天
+              // 先调用外部回调，再关闭聊天浮层（保留 session 历史）
               widget.onRunJsonApp?.call(jsonConfig);
-              // 延迟清空，避免 UI 重建冲突
+              // 延迟关闭，避免 UI 重建冲突
               Future.microtask(() {
                 if (mounted) {
-                  _clearAndCloseChatMode();
+                  _closeChatMode();
                 }
               });
             },
@@ -1867,7 +1810,7 @@ class _DesignerBallState extends State<DesignerBall>
                                 size: 28),
                             const SizedBox(height: 6),
                             Text(
-                              '取消',
+                              T.of(context).cancel,
                               style: TextStyle(
                                 color: _dragCancelling ? Colors.white : Colors.white70,
                                 fontSize: 14,
@@ -1893,7 +1836,7 @@ class _DesignerBallState extends State<DesignerBall>
                                 size: 28),
                             const SizedBox(height: 6),
                             Text(
-                              '编辑',
+                              T.of(context).chatEditButton,
                               style: TextStyle(
                                 color: _dragInEditZone ? Colors.white : Colors.white70,
                                 fontSize: 14,
@@ -2209,7 +2152,7 @@ class _EditSheetState extends State<_EditSheet> {
                         color: Colors.white.withValues(alpha: 0.5), size: 18),
                     const SizedBox(width: 6),
                     Text(
-                      '编辑消息',
+                      T.of(context).chatEditMessageTitle,
                       style: TextStyle(
                         color: secondaryTextColor,
                         fontSize: 14,
@@ -2253,7 +2196,7 @@ class _EditSheetState extends State<_EditSheet> {
                       // 深色所以察觉不到。这里关掉它，让父级 Material 直接透出来。
                       filled: false,
                       border: InputBorder.none,
-                      hintText: '编辑你的消息...',
+                      hintText: T.of(context).chatEditMessageHint,
                       hintStyle: TextStyle(color: hintColor, fontSize: 16),
                     ),
                   ),
@@ -2273,7 +2216,7 @@ class _EditSheetState extends State<_EditSheet> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '取消',
+                          T.of(context).cancel,
                           style: TextStyle(
                             color: secondaryTextColor,
                             fontSize: 15,
@@ -2290,14 +2233,14 @@ class _EditSheetState extends State<_EditSheet> {
                           color: Colors.purple,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.send, color: Colors.white, size: 18),
-                            SizedBox(width: 6),
+                            const Icon(Icons.send, color: Colors.white, size: 18),
+                            const SizedBox(width: 6),
                             Text(
-                              '发送',
-                              style: TextStyle(
+                              T.of(context).chatSendButton,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,

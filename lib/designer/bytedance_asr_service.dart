@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import '../i18n/framework_strings.dart';
 
 /// 豆包ASR服务 - 字节跳动语音识别
 class ByteDanceAsrService {
@@ -55,13 +56,13 @@ class ByteDanceAsrService {
       _socket!.onConnect((_) {
         debugPrint('[ByteDanceASR] Connected to server');
         _isConnected = true;
-        onStatusChange?.call('已连接');
+        onStatusChange?.call(T.current.asrBytedanceConnected);
       });
 
       _socket!.onDisconnect((_) {
         debugPrint('[ByteDanceASR] Disconnected from server');
         _isConnected = false;
-        onStatusChange?.call('连接断开');
+        onStatusChange?.call(T.current.asrBytedanceDisconnected);
       });
 
       _socket!.on('asr_connected', (data) {
@@ -85,7 +86,7 @@ class ByteDanceAsrService {
       _socket!.on('asr_error', (data) {
         debugPrint('[ByteDanceASR] Error: $data');
         if (data is Map) {
-          final message = data['message'] ?? data['error'] ?? '未知错误';
+          final message = data['message'] ?? data['error'] ?? T.current.asrErrUnknown;
           onError?.call(message);
 
           // 如果有配额信息，也更新
@@ -101,7 +102,7 @@ class ByteDanceAsrService {
       return _isConnected;
     } catch (e) {
       debugPrint('[ByteDanceASR] Connect error: $e');
-      onError?.call('连接失败: $e');
+      onError?.call(T.fmt(T.current.asrBytedanceConnectFailedWith, {'err': e}));
       return false;
     }
   }
@@ -117,7 +118,7 @@ class ByteDanceAsrService {
 
     // 检查麦克风权限
     if (!await _recorder.hasPermission()) {
-      onError?.call('麦克风权限未授予');
+      onError?.call(T.current.asrErrMicPermissionDeniedShort);
       return false;
     }
 
@@ -144,7 +145,7 @@ class ByteDanceAsrService {
         },
         onError: (e) {
           debugPrint('[ByteDanceASR] Audio stream error: $e');
-          onError?.call('录音错误: $e');
+          onError?.call(T.fmt(T.current.asrRecordErrorWith, {'err': e}));
         },
       );
 
@@ -154,13 +155,13 @@ class ByteDanceAsrService {
       });
 
       _isRecording = true;
-      onStatusChange?.call('正在录音...');
+      onStatusChange?.call(T.current.asrRecording);
 
       debugPrint('[ByteDanceASR] Recording started');
       return true;
     } catch (e) {
       debugPrint('[ByteDanceASR] Start recording error: $e');
-      onError?.call('录音启动失败: $e');
+      onError?.call(T.fmt(T.current.asrRecordStartFailWith, {'err': e}));
       return false;
     }
   }
@@ -223,7 +224,7 @@ class ByteDanceAsrService {
     await _recorder.stop();
 
     _isRecording = false;
-    onStatusChange?.call('已连接');
+    onStatusChange?.call(T.current.asrBytedanceConnected);
 
     debugPrint('[ByteDanceASR] Recording stopped');
   }

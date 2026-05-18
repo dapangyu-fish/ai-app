@@ -2,6 +2,7 @@
 // 根据 JSON 节点的 type 字段分发到对应的控件构建器
 import 'package:flutter/material.dart';
 import 'interpreter.dart';
+import '../i18n/framework_strings.dart';
 import 'widgets/text_widget.dart';
 import 'widgets/button_widget.dart';
 import 'widgets/input_widget.dart';
@@ -134,7 +135,7 @@ class JsonWidgetBuilder {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        '未知控件类型: $type',
+        T.fmt(T.of(context).widgetUnknownTypeWith, {'type': type}),
         style: TextStyle(
           color: Theme.of(context).colorScheme.error,
           fontSize: 12,

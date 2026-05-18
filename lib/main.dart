@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'config/app_config.dart';
+import 'config/environment_service.dart';
 import 'config/remote_config_service.dart';
 import 'i18n/framework_strings.dart';
 import 'i18n/locale_controller.dart';
@@ -91,6 +92,10 @@ void main() async {
   appStartTime;
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 加载服务环境配置 —— 必须在任何 HTTP 请求之前，否则会用错地址。
+  // 失败 fail-open 回退到生产，绝不阻塞启动。
+  await EnvironmentService.instance.load();
 
   // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
   await LocaleController.loadFromPrefs();
@@ -777,7 +782,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       );
 
       if (config == null) {
-        throw Exception('无法解析或下载该应用配置');
+        throw Exception(T.current.mainCantResolveAppConfigError);
       }
 
       final interpreter = ref.read(interpreterProvider);
@@ -1111,7 +1116,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           if (!mounted) return;
                           if (!ok) {
                             messenger.showSnackBar(
-                              const SnackBar(content: Text('IM 连接失败，请稍后重试')),
+                              SnackBar(content: Text(T.of(context).homeImLoginFailed)),
                             );
                             return;
                           }
@@ -1156,7 +1161,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '消息',
+                                    T.of(context).homeMessages,
                                     style: GoogleFonts.inter(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -1165,7 +1170,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    unread > 0 ? '$unread 条未读' : '查看会话与好友消息',
+                                    unread > 0
+                                        ? T.fmt(T.of(context).homeUnreadCount, {'n': unread})
+                                        : T.of(context).homeMessagesSubtitle,
                                     style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                                   ),
                                 ],
@@ -2360,7 +2367,9 @@ class _PublishDialog extends StatefulWidget {
 }
 
 class _PublishDialogState extends State<_PublishDialog> {
-  final _registryUrl = AppConfig.registryUrl;
+  // getter 而非 final，确保环境切换后能拿到新 URL（虽然切环境会强制登出
+  // 把这个 dialog 也销毁，但写法上更稳）
+  String get _registryUrl => AppConfig.registryUrl;
 
   List<Map<String, dynamic>>? _namespaces;
   String? _selectedNamespace;

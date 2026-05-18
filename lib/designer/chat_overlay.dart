@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'ai_chat_service.dart';
+import 'session_meta.dart';
+import '../i18n/framework_strings.dart';
 
 /// 对话消息
 class ChatMessage {
@@ -19,16 +20,31 @@ class ChatOverlay extends StatefulWidget {
   final bool isListening;
   final bool isThinking;
   final bool isGeneratingJson;
-  final String generatingStatusMessage;
+  final String? generatingStatusMessage;
   final VoidCallback onClose;
   final VoidCallback? onClear;
   final ScrollController scrollController;
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
-  final void Function(String providerId)? onProviderChanged;
   final VoidCallback? onUploadCurrentApp;
   final void Function(String url)? onRetryDownload;
   final Future<void> Function(String url)? onDownloadAndRun;
   final VoidCallback? onRetryLastTurn;  // worker 死了时的重试按钮
+
+  // 多会话回调（由 designer_ball 注入；service 完成实际状态变更）
+  final String activeSessionId;
+  final List<SessionMeta> Function() getSessions;
+  final Future<void> Function()? onNewSession;
+  final Future<void> Function(String sid)? onSwitchSession;
+  final Future<void> Function(String sid)? onDeleteSession;
+  final Future<void> Function(String sid, String newTitle)? onRenameSession;
+  /// 打开 sheet 时调一次：对最近的 N 条 committed session 调 /status，
+  /// 返回 SessionMeta 已被原地更新过的 sid 集合（不需要用，调完 setState 拿最新就行）
+  final Future<Set<String>> Function()? onProbeAllSessionStatus;
+  /// DesignerBall 挂在 MaterialApp.builder 上，ChatOverlay 自身的 context
+  /// 找不到 Navigator 祖先（实测会抛 "Navigator operation requested with a
+  /// context that does not include a Navigator"）。需要由 designer_ball 注入
+  /// 一个能找到 root navigator 的 context（典型是 JsonDslApp.navigatorKey.currentContext）。
+  final BuildContext? Function()? getNavigatorContext;
 
   const ChatOverlay({
     super.key,
@@ -36,17 +52,24 @@ class ChatOverlay extends StatefulWidget {
     required this.isListening,
     required this.isThinking,
     this.isGeneratingJson = false,
-    this.generatingStatusMessage = '正在生成代码...',
+    this.generatingStatusMessage,  // null → i18n 默认值（chatStatusGenerating）
     required this.onClose,
     required this.scrollController,
+    required this.activeSessionId,
+    required this.getSessions,
     this.liveTranscript,
     this.onRunJsonApp,
     this.onClear,
-    this.onProviderChanged,
     this.onUploadCurrentApp,
     this.onRetryDownload,
     this.onDownloadAndRun,
     this.onRetryLastTurn,
+    this.onNewSession,
+    this.onSwitchSession,
+    this.onDeleteSession,
+    this.onRenameSession,
+    this.onProbeAllSessionStatus,
+    this.getNavigatorContext,
   });
 
   @override
@@ -55,6 +78,145 @@ class ChatOverlay extends StatefulWidget {
 
 class _ChatOverlayState extends State<ChatOverlay> {
   double _offsetY = 0.0; // 窗口垂直偏移量
+
+  // 下拉菜单 state：菜单作为 chat overlay 自己 Stack 内的一层渲染，
+  // 这样能跟着拖动同步移动、保证 z-order 在字幕上面、再次点 chip 能切回关闭。
+  // 不再用 showMenu (它走 root navigator overlay，物理位置在 chat overlay 下方)。
+  bool _menuOpen = false;
+  Future<Set<String>>? _statusProbeFuture;
+
+  String _currentSessionTitle() {
+    final defaultTitle = T.of(context).chatSessionDefaultTitle;
+    final sid = widget.activeSessionId;
+    if (sid.isEmpty) return defaultTitle;
+    for (final s in widget.getSessions()) {
+      if (s.id == sid) return s.displayTitle(maxVisualWidth: 8);
+    }
+    return defaultTitle;
+  }
+
+  void _toggleMenu() {
+    if (_menuOpen) {
+      setState(() => _menuOpen = false);
+    } else {
+      // 每次打开重发起探活
+      _statusProbeFuture = widget.onProbeAllSessionStatus?.call();
+      setState(() => _menuOpen = true);
+    }
+  }
+
+  void _closeMenu() {
+    if (_menuOpen) setState(() => _menuOpen = false);
+  }
+
+  /// 二级 action 菜单：重命名 / 删除（从 ⋮ 进入）
+  Future<void> _openSessionActions(BuildContext navCtx, String sid) async {
+    final s = widget.getSessions().firstWhere(
+          (x) => x.id == sid,
+          orElse: () => SessionMeta(id: ''),
+        );
+    if (s.id.isEmpty) return;
+
+    final action = await showModalBottomSheet<String>(
+      context: navCtx,
+      backgroundColor: const Color(0xFF2C2C2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                s.displayTitle(maxVisualWidth: 22),
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 13),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: Colors.white),
+              title: Text(T.of(ctx).chatSessionActionRename,
+                  style: const TextStyle(color: Colors.white)),
+              onTap: () => Navigator.of(ctx).pop('rename'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: Text(T.of(ctx).chatSessionDeleteTitle,
+                  style: const TextStyle(color: Colors.redAccent)),
+              onTap: () => Navigator.of(ctx).pop('delete'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (action == 'rename') {
+      // ignore: use_build_context_synchronously — navCtx 来自 JsonDslApp.navigatorKey，永远有效
+      await _promptRename(navCtx, s);
+    } else if (action == 'delete') {
+      // ignore: use_build_context_synchronously — 同上
+      final ok = await _confirmDelete(navCtx, s);
+      if (ok == true) await widget.onDeleteSession?.call(sid);
+    }
+  }
+
+  Future<void> _promptRename(BuildContext navCtx, SessionMeta s) async {
+    final controller =
+        TextEditingController(text: s.customTitle ?? s.firstMessage);
+    final newTitle = await showDialog<String>(
+      context: navCtx,
+      builder: (ctx) {
+        final t = T.of(ctx);
+        return AlertDialog(
+          title: Text(t.chatSessionRenameTitle),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(hintText: t.chatSessionRenameHint),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(t.cancel)),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(controller.text),
+                child: Text(t.save)),
+          ],
+        );
+      },
+    );
+    if (newTitle != null) {
+      await widget.onRenameSession?.call(s.id, newTitle);
+    }
+  }
+
+  Future<bool?> _confirmDelete(BuildContext navCtx, SessionMeta s) async {
+    return await showDialog<bool>(
+      context: navCtx,
+      builder: (ctx) {
+        final t = T.of(ctx);
+        return AlertDialog(
+          title: Text(t.chatSessionDeleteTitle),
+          content: Text(T.fmt(t.chatSessionDeleteContent,
+              {'title': s.displayTitle(maxVisualWidth: 16)})),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(t.cancel)),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: Text(t.delete),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,28 +227,40 @@ class _ChatOverlayState extends State<ChatOverlay> {
         widget.messages.where((m) => m.content.isNotEmpty).toList();
     final hasLive = widget.liveTranscript != null && widget.liveTranscript!.isNotEmpty;
 
-    if (visibleMessages.isEmpty && !hasLive && !widget.isThinking && !widget.isGeneratingJson) {
-      return const SizedBox.shrink();
-    }
+    // 多会话场景下不再因"没消息"就整个 SizedBox.shrink —— 否则空 session 看不到 chip，
+    // 没法切换回有内容的 session。chat overlay 永远渲染至少一条标题栏。
 
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: bottomPadding + 80 + _offsetY,
-      child: Container(
-        constraints: BoxConstraints(maxHeight: screen.height * 0.4),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    // 顶部锚定：用 top 而非 bottom，content 变短只缩底部不让顶部跳来跳去
+    final maxHeight = screen.height * 0.4;
+    final containerTop =
+        (screen.height - bottomPadding - 80 - maxHeight - _offsetY)
+            .clamp(0.0, screen.height - 60);
+
+    // 用 Positioned.fill 强制内部 Stack 占满 DesignerBall 外层 Stack，否则
+    // 仅 Positioned 子节点的 Stack 会塌成 0×0，inner Positioned 的 top
+    // 算出来贴到外层 Stack 顶（被灵动岛挡）
+    return Positioned.fill(
+      child: Stack(
+      children: [
+        // 1. 字幕容器（被 hardEdge 裁剪，内容不会跑出来）
+        Positioned(
+          left: 12,
+          right: 12,
+          top: containerTop,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+                width: 1,
+              ),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // 标题栏
             Container(
               height: 36,
@@ -104,22 +278,17 @@ class _ChatOverlayState extends State<ChatOverlay> {
                   Icon(Icons.chat_bubble_outline,
                       color: Colors.white.withValues(alpha: 0.5), size: 14),
                   const SizedBox(width: 6),
-                  Text(
-                    '对话',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                  if (widget.onNewSession != null) ...[
+                    _TitleBarButton(
+                      icon: Icons.add_circle_outline,
+                      onTap: () { widget.onNewSession!(); },
                     ),
-                  ),
-                  if (AiChatService.providers.length > 1) ...[
-                    const SizedBox(width: 8),
-                    _ProviderChip(
-                      providers: AiChatService.providers,
-                      selectedId: AiChatService.selectedProvider,
-                      onChanged: widget.onProviderChanged,
-                    ),
+                    const SizedBox(width: 4),
                   ],
+                  _SessionChip(
+                    title: _currentSessionTitle(),
+                    onTap: _toggleMenu,
+                  ),
                   // 可拖动区域
                   Expanded(
                     child: GestureDetector(
@@ -187,10 +356,13 @@ class _ChatOverlayState extends State<ChatOverlay> {
                     }
                     final msg = visibleMessages[index];
                     if (msg.action == 'UPLOAD_CURRENT_APP') {
-                      return _buildActionLine(msg.content, '上传当前应用配置', widget.onUploadCurrentApp);
+                      return _buildActionLine(msg.content,
+                          T.of(context).chatActionUploadCurrentApp,
+                          widget.onUploadCurrentApp);
                     }
                     if (msg.action == 'RETRY_LAST_TURN') {
-                      return _buildActionLine(msg.content, '重试', widget.onRetryLastTurn);
+                      return _buildActionLine(msg.content,
+                          T.of(context).retry, widget.onRetryLastTurn);
                     }
                     if (msg.failedJsonUrl != null) {
                       return _buildRetryLine(msg.content, msg.failedJsonUrl!);
@@ -209,8 +381,58 @@ class _ChatOverlayState extends State<ChatOverlay> {
                 ),
               ),
             ),
-          ],
+              ],
+            ),
+          ),
         ),
+        // 2. 下拉菜单：作为 outer Stack 的兄弟节点而不是嵌在字幕容器里；
+        //    这样既不会被 Clip.hardEdge 截掉、也不受字幕容器宽高变化影响
+        if (_menuOpen) ...[
+          // backdrop 覆盖标题栏下方所有屏幕区域，点空白处关菜单
+          Positioned(
+            left: 0,
+            right: 0,
+            top: containerTop + 36,
+            bottom: 0,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _closeMenu,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.3),
+              ),
+            ),
+          ),
+          // 菜单面板本体，锚定在标题栏正下方
+          Positioned(
+            top: containerTop + 40,
+            left: 12 + 38, // chat overlay 左缘 12 + chip 在标题栏内的偏移 ~38
+            child: _SessionDropdownPanel(
+              sessions: widget.getSessions(),
+              activeSessionId: widget.activeSessionId,
+              statusProbeFuture: _statusProbeFuture,
+              // 最多顶到屏幕底部留点边界
+              maxHeight: screen.height - containerTop - 40 - bottomPadding - 20,
+              onNewSession: () async {
+                _closeMenu();
+                await widget.onNewSession?.call();
+              },
+              onSwitchSession: (sid) async {
+                _closeMenu();
+                if (sid != widget.activeSessionId) {
+                  await widget.onSwitchSession?.call(sid);
+                }
+              },
+              onMoreTap: (sid) async {
+                _closeMenu();
+                final navCtx = widget.getNavigatorContext?.call();
+                if (navCtx != null) {
+                  await _openSessionActions(navCtx, sid);
+                }
+              },
+            ),
+          ),
+        ],
+      ],
       ),
     );
   }
@@ -306,9 +528,9 @@ class _ChatOverlayState extends State<ChatOverlay> {
                 children: [
                   const Icon(Icons.refresh, color: Colors.white, size: 18),
                   const SizedBox(width: 6),
-                  const Text(
-                    '重试下载 JSON',
-                    style: TextStyle(
+                  Text(
+                    T.of(context).chatActionRetryDownloadJson,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -413,7 +635,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                widget.generatingStatusMessage,
+                widget.generatingStatusMessage ?? T.of(context).chatStatusGenerating,
                 style: TextStyle(
                   color: Colors.purpleAccent.shade100,
                   fontSize: 13,
@@ -461,95 +683,278 @@ class _NoGlowBehavior extends ScrollBehavior {
   }
 }
 
-/// 供应商选择小标签 — 点击弹出切换菜单
-class _ProviderChip extends StatelessWidget {
-  final List<AiProvider> providers;
-  final String selectedId;
-  final void Function(String providerId)? onChanged;
+/// 会话切换小标签 —— 点击触发 onTap，由调用方控制下拉菜单显隐
+class _SessionChip extends StatelessWidget {
+  final String title;
+  final VoidCallback onTap;
 
-  const _ProviderChip({
-    required this.providers,
-    required this.selectedId,
-    this.onChanged,
+  const _SessionChip({required this.title, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.forum_outlined,
+                    color: Colors.white.withValues(alpha: 0.7), size: 12),
+                const SizedBox(width: 5),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 110),
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.expand_more,
+                    color: Colors.white.withValues(alpha: 0.5), size: 14),
+              ],
+            ),
+          ),
+        ),
+      );
+  }
+}
+
+/// 下拉菜单面板：自渲染，作为 ChatOverlay Stack 的一层
+class _SessionDropdownPanel extends StatelessWidget {
+  final List<SessionMeta> sessions;
+  final String activeSessionId;
+  final Future<Set<String>>? statusProbeFuture;
+  final double maxHeight;
+  final VoidCallback onNewSession;
+  final void Function(String sid) onSwitchSession;
+  final void Function(String sid) onMoreTap;
+
+  const _SessionDropdownPanel({
+    required this.sessions,
+    required this.activeSessionId,
+    required this.statusProbeFuture,
+    required this.maxHeight,
+    required this.onNewSession,
+    required this.onSwitchSession,
+    required this.onMoreTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final current = providers
-        .where((p) => p.id == selectedId)
-        .firstOrNull;
-    final label = current?.name ?? selectedId;
-
-    return Builder(
-      builder: (builderContext) => GestureDetector(
-        onTap: () => _showMenu(builderContext),
-        child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    return Material(
+      color: Colors.transparent,
+      elevation: 8,
+      borderRadius: BorderRadius.circular(10),
+      shadowColor: Colors.black.withValues(alpha: 0.5),
+      child: Container(
+        width: 240,
+        constraints: BoxConstraints(maxHeight: maxHeight),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
+          color: const Color(0xFF2C2C2E),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withValues(alpha: 0.15),
             width: 0.5,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.smart_toy,
-                color: Colors.white.withValues(alpha: 0.6), size: 11),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // + 新建会话
+              InkWell(
+                onTap: onNewSession,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.add_circle_outline,
+                          color: Colors.purpleAccent, size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        T.of(context).chatSessionMenuNew,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 2),
-            Icon(Icons.expand_more,
-                color: Colors.white.withValues(alpha: 0.4), size: 12),
-          ],
+              Container(
+                height: 0.5,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              // 会话列表
+              Flexible(
+                child: sessions.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Text(T.of(context).chatSessionMenuEmpty,
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: sessions.length,
+                        itemBuilder: (ctx, i) {
+                          final s = sessions[i];
+                          final isActive = s.id == activeSessionId;
+                          return InkWell(
+                            onTap: () => onSwitchSession(s.id),
+                            child: Container(
+                              color: isActive
+                                  ? Colors.white.withValues(alpha: 0.06)
+                                  : null,
+                              child: _SessionMenuRow(
+                                session: s,
+                                isActive: isActive,
+                                probeFuture: statusProbeFuture,
+                                onMoreTap: () => onMoreTap(s.id),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
+}
 
-  void _showMenu(BuildContext context) {
-    final RenderBox box = context.findRenderObject() as RenderBox;
-    final offset = box.localToGlobal(Offset.zero);
+/// 下拉菜单里一行：状态点 + 标题 + 副标题 + ⋮
+class _SessionMenuRow extends StatelessWidget {
+  final SessionMeta session;
+  final bool isActive;
+  final Future<Set<String>>? probeFuture;
+  final VoidCallback onMoreTap;
 
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        offset.dx,
-        offset.dy + box.size.height + 4,
-        offset.dx + box.size.width,
-        0,
-      ),
-      items: providers.map((p) {
-        return PopupMenuItem<String>(
-          value: p.id,
+  const _SessionMenuRow({
+    required this.session,
+    required this.isActive,
+    required this.probeFuture,
+    required this.onMoreTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Set<String>>(
+      future: probeFuture,
+      builder: (ctx, snap) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
           child: Row(
             children: [
-              if (p.id == selectedId)
-                const Icon(Icons.check, size: 16, color: Colors.green)
-              else
-                const SizedBox(width: 16),
-              const SizedBox(width: 8),
-              Text(p.name),
+              _statusDot(),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      session.displayTitle(maxVisualWidth: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontSize: 13,
+                        fontWeight:
+                            isActive ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _relativeTime(context, session.updatedAt),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // ⋮ 按钮：用 GestureDetector + opaque 行为吞掉 tap，
+              // 不让外层 InkWell（切换会话）也跟着响应
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onMoreTap,
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(Icons.more_vert,
+                      size: 18, color: Colors.white54),
+                ),
+              ),
             ],
           ),
         );
-      }).toList(),
-    ).then((value) {
-      if (value != null && value != selectedId) {
-        onChanged?.call(value);
-      }
-    });
+      },
+    );
+  }
+
+  Widget _statusDot() {
+    Color c;
+    if (isActive) {
+      c = Colors.purpleAccent;
+    } else if (session.lastKnownStatus == 'running' && session.processAlive) {
+      c = const Color(0xFFFFC107);
+    } else if (session.lastKnownStatus == 'running' && !session.processAlive) {
+      c = const Color(0xFFE53935);
+    } else if (session.lastKnownStatus == 'failed' ||
+        session.lastKnownStatus == 'aborted') {
+      c = const Color(0xFFE53935);
+    } else if (session.lastKnownStatus == 'done') {
+      c = Colors.grey.shade400;
+    } else {
+      c = Colors.grey.shade300;
+    }
+    return Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+    );
+  }
+
+  String _relativeTime(BuildContext context, int ms) {
+    final t = T.of(context);
+    final diff = DateTime.now().millisecondsSinceEpoch - ms;
+    if (diff < 60 * 1000) return t.chatTimeJustNow;
+    if (diff < 60 * 60 * 1000) {
+      return T.fmt(t.chatTimeMinutesAgo, {'n': diff ~/ (60 * 1000)});
+    }
+    if (diff < 24 * 60 * 60 * 1000) {
+      return T.fmt(t.chatTimeHoursAgo, {'n': diff ~/ (60 * 60 * 1000)});
+    }
+    return T.fmt(t.chatTimeDaysAgo, {'n': diff ~/ (24 * 60 * 60 * 1000)});
   }
 }
+
 
 class _DownloadRunButton extends StatefulWidget {
   final String url;
@@ -592,9 +997,12 @@ class _DownloadRunButtonState extends State<_DownloadRunButton> {
 
   @override
   Widget build(BuildContext context) {
+    final t = T.of(context);
     final buttonLabel = _isLoading
-        ? '下载中...'
-        : (_error == null ? '下载并运行' : '重试下载并运行');
+        ? t.chatDownloadStateDownloading
+        : (_error == null
+            ? t.chatDownloadStateRun
+            : t.chatDownloadStateRetry);
 
     return GestureDetector(
       onTap: _handleTap,
