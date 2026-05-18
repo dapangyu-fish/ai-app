@@ -1,13 +1,12 @@
 # 测试环境覆盖：
 # - kong 直接绑 0.0.0.0:${KONG_HTTP_PORT}，让局域网其他设备也能访问（生产是 127.0.0.1 + nginx）
-# - 关掉 studio / analytics / vector / supavisor 之类**纯运维 UI**？—— 不关，按用户要求"不阉割"全保留
+#
+# db 不要再额外暴露端口 —— supavisor 已经把 db 通过 ${POSTGRES_PORT}:5432 暴出来了；
+# 这是 Supabase self-hosted 标准做法：外部 psql 连 pooler，pooler 再转发到 db。
+# 如果 override 里再给 db 加同样 host port，会和 pooler 端口冲突。
 
 services:
   kong:
     ports: !override
       - "0.0.0.0:${KONG_HTTP_PORT}:8000/tcp"
       - "0.0.0.0:${KONG_HTTPS_PORT}:8443/tcp"
-  # db 端口也暴一下，方便 psql 调试
-  db:
-    ports:
-      - "0.0.0.0:${POSTGRES_PORT}:5432/tcp"
