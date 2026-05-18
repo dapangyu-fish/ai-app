@@ -2367,7 +2367,9 @@ class _PublishDialog extends StatefulWidget {
 }
 
 class _PublishDialogState extends State<_PublishDialog> {
-  final _registryUrl = AppConfig.registryUrl;
+  // getter 而非 final，确保环境切换后能拿到新 URL（虽然切环境会强制登出
+  // 把这个 dialog 也销毁，但写法上更稳）
+  String get _registryUrl => AppConfig.registryUrl;
 
   List<Map<String, dynamic>>? _namespaces;
   String? _selectedNamespace;
