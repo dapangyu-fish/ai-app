@@ -106,12 +106,12 @@ say "[1/4] 客户端访问 IP"
 HOST_IP=$(ask "  客户端访问的 IP（局域网测试就填本机内网 IP）" "$DETECTED_IP")
 
 echo
-say "[2/4] AI 供应商"
-DEEPSEEK_API_KEY=$(ask_required "  DeepSeek API Key（必填，至少一个供应商）" "${DEEPSEEK_API_KEY:-}")
-OPENAI_API_KEY=$(ask     "  OpenAI API Key（可选）" "")
-ANTHROPIC_API_KEY=$(ask  "  Anthropic Key（可选）" "")
-GLM_API_KEY=$(ask        "  GLM Key（可选）" "")
-DOUBAO_API_KEY=$(ask     "  豆包 Key（可选）" "")
+say "[2/4] AI 供应商（backend/config.py 实际识别这几个）"
+DEEPSEEK_KEY=$(ask_required "  DeepSeek API Key（必填）" "${DEEPSEEK_KEY:-${DEEPSEEK_API_KEY:-}}")
+GLM_ANTHROPIC_AUTH_TOKEN=$(ask    "  GLM (Anthropic-compatible) Auth Token（可选）" "")
+GLM_ANTHROPIC_BASE_URL=$(ask      "  GLM Base URL（可选）" "")
+CC_ANTHROPIC_AUTH_TOKEN=$(ask     "  Claude Code Anthropic Token（可选）" "")
+CC_ANTHROPIC_BASE_URL=$(ask       "  Claude Code Base URL（可选）" "")
 
 echo
 say "[3/4] 测试账号（部署完后用来登录客户端）"
@@ -180,6 +180,9 @@ OPENIM_WEBHOOK_SECRET=$(rand_hex 32)
 
 FLASK_SECRET_KEY=$(rand_hex 32)
 REGISTRY_ADMIN_TOKEN=$(rand_hex 32)
+BACKEND_REDIS_PASSWORD=$(rand_b64 30 24)
+CONFIG_CENTER_ADMIN_PASSWORD=$(rand_b64 30 16)
+CONFIG_CENTER_SESSION_SECRET=$(rand_hex 32)
 
 BYTEDANCE_ASR_APP_KEY=""
 BYTEDANCE_ASR_ACCESS_KEY=""
@@ -196,9 +199,10 @@ ok "Supabase keys 已签发"
 say "渲染 .env 文件..."
 export HOST_IP PORT_OFFSET
 export TEST_USER_EMAIL TEST_USER_PASSWORD TEST_USER_USERNAME
-export DEEPSEEK_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY GLM_API_KEY DOUBAO_API_KEY
+export DEEPSEEK_KEY GLM_ANTHROPIC_AUTH_TOKEN GLM_ANTHROPIC_BASE_URL CC_ANTHROPIC_AUTH_TOKEN CC_ANTHROPIC_BASE_URL
 export BYTEDANCE_ASR_APP_KEY BYTEDANCE_ASR_ACCESS_KEY BYTEDANCE_ASR_RESOURCE_ID
 export JSONAPP_DB_PASSWORD JSONAPP_DB_PORT
+export BACKEND_REDIS_PASSWORD
 export APP_MINIO_ROOT_USER APP_MINIO_ROOT_PASSWORD APP_MINIO_ACCESS_KEY APP_MINIO_SECRET_KEY APP_MINIO_PORT APP_MINIO_CONSOLE_PORT
 export KONG_HTTP_PORT KONG_HTTPS_PORT JWT_SECRET SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY
 export SUPABASE_DB_PASSWORD SUPABASE_DB_PORT SUPABASE_DASHBOARD_PASSWORD SUPABASE_SECRET_KEY_BASE SUPABASE_VAULT_ENC_KEY SUPABASE_PG_META_CRYPTO_KEY SUPABASE_LOGFLARE_PUBLIC SUPABASE_LOGFLARE_PRIVATE SUPABASE_POOLER_TENANT_ID SUPABASE_POOLER_PORT
@@ -206,6 +210,7 @@ export OPENIM_SECRET OPENIM_WEBHOOK_SECRET OPENIM_WS_PORT OPENIM_API_PORT OPENIM
 export OPENIM_MYSQL_ROOT_PASSWORD OPENIM_MYSQL_PASSWORD OPENIM_MONGO_PASSWORD OPENIM_REDIS_PASSWORD OPENIM_MINIO_ACCESS_KEY OPENIM_MINIO_SECRET_KEY
 export OPENIM_MYSQL_PORT OPENIM_MONGO_PORT OPENIM_REDIS_PORT OPENIM_MINIO_PORT OPENIM_MINIO_CONSOLE_PORT
 export FLASK_SECRET_KEY REGISTRY_ADMIN_TOKEN BACKEND_PORT REGISTRY_PORT CONFIG_CENTER_PORT
+export CONFIG_CENTER_ADMIN_PASSWORD CONFIG_CENTER_SESSION_SECRET
 
 envsubst < .env.template          > .env
 envsubst < supabase/.env.template > supabase/.env
@@ -249,7 +254,7 @@ say "构建 + 启动 app 自有服务（backend / registry / config-center / jso
 docker compose --env-file .env -f docker-compose.yml up -d --build
 say "等 backend 健康检查..."
 for i in {1..40}; do
-  if curl -fsS "http://${HOST_IP}:${BACKEND_PORT}/health" >/dev/null 2>&1; then
+  if curl -fsS "http://${HOST_IP}:${BACKEND_PORT}/api/ai/providers" >/dev/null 2>&1; then
     ok "backend ready (${i}s)"; break
   fi
   sleep 2
@@ -300,7 +305,10 @@ cat > test-env-info.txt <<EOF
      http://${HOST_IP}:${APP_MINIO_CONSOLE_PORT}
      账号: ${APP_MINIO_ROOT_USER} / ${APP_MINIO_ROOT_PASSWORD}
   jsonapp Postgres:
-     psql postgresql://${JSONAPP_DB_USER}:${JSONAPP_DB_PASSWORD}@${HOST_IP}:${JSONAPP_DB_PORT}/${JSONAPP_DB_NAME:-jsonapp}
+     psql postgresql://${JSONAPP_DB_USER}:${JSONAPP_DB_PASSWORD}@${HOST_IP}:${JSONAPP_DB_PORT}/jsonapp
+  Config Center 后台:
+     http://${HOST_IP}:${CONFIG_CENTER_PORT}/login
+     账号: admin / ${CONFIG_CENTER_ADMIN_PASSWORD}
   Registry admin token: ${REGISTRY_ADMIN_TOKEN}
 
 【常用命令】
