@@ -9,11 +9,12 @@ consumers:
   - username: anon
     keyauth_credentials:
       - key: $SUPABASE_ANON_KEY
-      - key: $SUPABASE_PUBLISHABLE_KEY
+      # PUBLISHABLE_KEY 是 supabase 2026+ 的新对称密钥流程；测试环境 .env 把它
+      # 映射成跟 ANON_KEY 同值，kong 会报 uniqueness violation → 去掉
   - username: service_role
     keyauth_credentials:
       - key: $SUPABASE_SERVICE_KEY
-      - key: $SUPABASE_SECRET_KEY
+      # 同理 SECRET_KEY 去掉
 
 ###
 ### Access Control List
