@@ -363,24 +363,28 @@ def list_packages():
         filename = f"{name.split('/')[-1]}-{latest_version}.json"
         download_url = _download_url_for_version(name, latest_version, info, path)
 
-        # 尝试从 MinIO 读取完整的包信息（包含 description 等）
-        # 镜像版本可能还没缓存到本地 → stat 不到就跳过，避免阻塞列表接口
-        description = ''
-        author = ''
-        package_type = info.get('type', 'library')
+        # 拿 meta（type/description/author）顺序：
+        # 1. index 里有 meta_type 直接用（publish 时存的 / mirror sync 拷来的）
+        # 2. 否则去 MinIO 读文件（local 版本必有；mirror 版本只在缓存命中时才能读到）
+        # 3. 读不到就默认 library
+        meta_type = info.get('meta_type')
+        description = info.get('description', '')
+        author = info.get('author', '')
 
-        if is_local_version(info, latest_version) or file_exists_in_minio(
+        if meta_type is None and (is_local_version(info, latest_version) or file_exists_in_minio(
             minio_client, BUCKET_COMPONENT, f"{path}/{filename}"
-        ):
+        )):
             try:
                 response = minio_client.get_object(BUCKET_COMPONENT, f"{path}/{filename}")
                 content = json.loads(response.read().decode('utf-8'))
                 meta = content.get('meta', {})
-                description = meta.get('description', '')
-                author = meta.get('author', '')
-                package_type = meta.get('type', 'library')
+                meta_type = meta.get('type', 'library')
+                description = description or meta.get('description', '')
+                author = author or meta.get('author', '')
             except Exception:
                 pass
+
+        package_type = meta_type or 'library'
 
         # 类型过滤
         if filter_type and package_type != filter_type:
@@ -763,6 +767,9 @@ def publish():
                 "appid": appid,
                 "created_at": datetime.utcnow().isoformat() + "Z",
                 "version_sources": {version: "local"},
+                # 存 latest 视角的 meta，避免 /packages?type 还要去读文件
+                "meta_type": package_type,
+                "description": description,
             }
         else:
             pkg = index['packages'][full_name]
@@ -773,6 +780,10 @@ def publish():
             pkg['appid'] = appid  # 更新 appid（允许用户改 name 但保持 appid）
             # 新版本一定是本地发的（已经通过上面的同号检查）
             pkg.setdefault("version_sources", {})[version] = "local"
+            # 如果这次 publish 的就是 latest，刷新 meta
+            if version == pkg['latest']:
+                pkg["meta_type"] = package_type
+                pkg["description"] = description
 
         _save_index(index)
 
@@ -947,7 +958,9 @@ def mirror_manifest():
     chain mirror 自然成立"""
     with index_lock:
         index = _load_index()
-    return jsonify(build_manifest(index, REGISTRY_BASE_URL))
+    # 传 minio_client + bucket 让 build_manifest 能读文件抽 meta.type / description / author
+    # 否则下游 sync 后 /packages?type=app 永远只匹配本地缓存过的包（mirror 文件没缓存=没 meta=过滤失败）
+    return jsonify(build_manifest(index, REGISTRY_BASE_URL, minio_client, BUCKET_COMPONENT))
 
 
 @app.route('/mirror/file/<path:name>/<version>', methods=['GET'])

@@ -59,11 +59,21 @@ def is_local_version(pkg_info: Dict[str, Any], version: str) -> bool:
 # Manifest 构造（自己作为 upstream 给别人看）
 # ═════════════════════════════════════════════════════════════
 
-def build_manifest(index_data: Dict[str, Any], my_base_url: str) -> Dict[str, Any]:
+def build_manifest(
+    index_data: Dict[str, Any],
+    my_base_url: str,
+    minio_client: Optional[Minio] = None,
+    bucket: Optional[str] = None,
+) -> Dict[str, Any]:
     """把本地 _index.json 转成对外的 mirror manifest。
 
     URL 全部指回 my_base_url —— 这样别人 mirror 我，看到的 source 就是我，
     递归代理的链路自动成立（不暴露我的更上游）。
+
+    如果传了 minio_client/bucket，会读每个包 latest 版本的 JSON 抽取 meta.type /
+    description / author 一并塞进 manifest。否则字段缺失，下游 fallback 到本地兜底。
+    必须传，否则下游过滤 `?type=app` 会失效（manifest 没 meta_type，sync 完
+    本地索引也没，filter 用了不存在的字段 → 永远不匹配）
     """
     my_base_url = my_base_url.rstrip("/")
     packages = []
@@ -75,11 +85,35 @@ def build_manifest(index_data: Dict[str, Any], my_base_url: str) -> Dict[str, An
                 "filename": f"{name.split('/')[-1]}-{v}.json",
                 "download_url": f"{my_base_url}/mirror/file/{name}/{v}",
             })
+
+        # 读 latest 文件抽 meta（如果本地有这个文件 & 客户端传了 minio）
+        meta_type = info.get("meta_type")     # 优先用 index 缓存
+        description = info.get("description", "")
+        author = info.get("author", "")
+        latest = info.get("latest")
+
+        if meta_type is None and minio_client and bucket and latest:
+            # index 没存 meta —— 现读现填（建 manifest 时一次性，缓存住）
+            path = info.get("path", name)
+            filename = f"{name.split('/')[-1]}-{latest}.json"
+            try:
+                resp = minio_client.get_object(bucket, f"{path}/{filename}")
+                content = json.loads(resp.read().decode("utf-8"))
+                m = content.get("meta", {})
+                meta_type = m.get("type", "library")
+                description = description or m.get("description", "")
+                author = author or m.get("author", "")
+            except Exception:
+                meta_type = "library"  # 默认值
+
         packages.append({
             "name": name,
             "type": info.get("type", "user"),
+            "meta_type": meta_type or "library",
+            "description": description,
+            "author": author,
             "appid": info.get("appid"),
-            "latest": info.get("latest"),
+            "latest": latest,
             "created_at": info.get("created_at"),
             "versions": versions_out,
         })
@@ -139,6 +173,12 @@ def merge_manifest_into_index(
             local_pkg["version_sources"] = {v: "local" for v in local_pkg.get("versions", [])}
         if "versions" not in local_pkg:
             local_pkg["versions"] = []
+
+        # 拷贝 upstream 的 meta 字段进本地 index，让 /packages?type 过滤不需要去读文件
+        # 这些字段是"latest 版本视角"的（manifest 也是按 latest 取的），随每次 sync 刷新
+        for meta_field in ("meta_type", "description", "author"):
+            if up_pkg.get(meta_field):
+                local_pkg[meta_field] = up_pkg[meta_field]
 
         for v in up_versions:
             existing_source = local_pkg["version_sources"].get(v)
