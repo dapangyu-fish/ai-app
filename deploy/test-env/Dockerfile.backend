@@ -8,17 +8,26 @@ WORKDIR /app
 
 # 系统依赖：
 # - libpq5      给 psycopg2-binary 运行时
-# - curl        给 healthcheck
-# - gcc + portaudio19-dev + libasound2-dev  给 pyaudio 编译（backend 里没人用但 requirements.txt 收了）
-# - build-essential 给其他 C-extension（如 cryptography 偶尔需要）
+# - curl + ca-certificates  给 healthcheck + node 装包
+# - gcc + portaudio19-dev + libasound2-dev  给 pyaudio 编译
+# - build-essential 给其他 C-extension
+# - nodejs + npm  给装 claude CLI（backend/claude_chat.py 调用它转发 LLM 请求）
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
+        ca-certificates \
         gcc \
         build-essential \
         portaudio19-dev \
         libasound2-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g @anthropic-ai/claude-code \
+    && ln -sf "$(which claude)" /usr/local/bin/claude \
+    && rm -rf /var/lib/apt/lists/* /root/.npm
+
+# 让 backend/config.py 默认 CLAUDE_BIN 路径能命中
+ENV CLAUDE_BIN=/usr/local/bin/claude
 
 # 依赖先装，命中缓存
 COPY backend/requirements.txt /tmp/requirements.txt
