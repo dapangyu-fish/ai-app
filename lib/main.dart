@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'config/app_config.dart';
+import 'config/environment_service.dart';
 import 'config/remote_config_service.dart';
 import 'i18n/framework_strings.dart';
 import 'i18n/locale_controller.dart';
@@ -91,6 +92,10 @@ void main() async {
   appStartTime;
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 加载服务环境配置 —— 必须在任何 HTTP 请求之前，否则会用错地址。
+  // 失败 fail-open 回退到生产，绝不阻塞启动。
+  await EnvironmentService.instance.load();
 
   // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
   await LocaleController.loadFromPrefs();

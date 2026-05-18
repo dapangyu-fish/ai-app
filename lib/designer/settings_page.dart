@@ -6,6 +6,7 @@ import 'ai_chat_service.dart';
 import 'designer_ball.dart' show AsrMode, AsrModePrefs;
 import 'default_startup_page.dart';
 import 'default_startup_prefs.dart';
+import 'environment_page.dart';
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
 import '../im/im_cache_manage_page.dart';
@@ -25,6 +26,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // 默认启动 App 当前选择（subtitle 展示用，进选择页改完再 reload）
   DefaultStartupConfig _defaultStartup = const DefaultStartupConfig.none();
+
+  // 隐藏入口：标题连点 7 下解锁服务环境页（开发者用）
+  static const int _envUnlockTaps = 7;
+  static const Duration _envTapResetWindow = Duration(seconds: 3);
+  int _envTapCount = 0;
+  DateTime? _envFirstTapAt;
 
   @override
   void initState() {
@@ -81,7 +88,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.settingsTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _onTitleTap,
+          child: Text(t.settingsTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        ),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -132,6 +143,36 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  void _onTitleTap() {
+    final now = DateTime.now();
+    // 超出连点窗口 → 重新计数
+    if (_envFirstTapAt == null || now.difference(_envFirstTapAt!) > _envTapResetWindow) {
+      _envFirstTapAt = now;
+      _envTapCount = 1;
+      return;
+    }
+    _envTapCount++;
+    final remaining = _envUnlockTaps - _envTapCount;
+    if (remaining <= 0) {
+      // 解锁，跳转环境页
+      _envTapCount = 0;
+      _envFirstTapAt = null;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const EnvironmentPage()),
+      );
+      return;
+    }
+    if (remaining <= 3) {
+      // 最后 3 下给点提示
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text('再点 $remaining 下解锁服务环境'),
+          duration: const Duration(milliseconds: 800),
+        ));
+    }
   }
 
   Widget _buildSectionTitle(String title, ColorScheme cs) {
