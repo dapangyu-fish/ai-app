@@ -116,7 +116,7 @@ services:
       - "${OPENIM_MINIO_CONSOLE_PORT}:9090"
 
   openim-server:
-    image: ghcr.io/openimsdk/openim-server:v3.8
+    image: openim/openim-server:v3.8.3-patch.15  # ghcr.io/openimsdk/openim-server:v3.8 不存在，用 dockerhub 实际可拉的 tag
     container_name: testenv-openim-server
     restart: unless-stopped
     depends_on:
@@ -159,7 +159,7 @@ services:
       - openim_logs:/app/logs
 
   openim-chat:
-    image: ghcr.io/openimsdk/openim-chat:v1.8
+    image: openim/openim-chat:v1.8.4-patch.3   # 跟 openim-server v3.8 配套
     container_name: testenv-openim-chat
     restart: unless-stopped
     depends_on:
