@@ -20,9 +20,9 @@ Registry Mirror —— 跨实例的索引同步 + 按需文件代理缓存。
 
 import io
 import json
-import logging
 import threading
 import time
+import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 
@@ -31,7 +31,9 @@ from minio import Minio
 from minio.error import S3Error
 
 
-logger = logging.getLogger(__name__)
+# 这个模块所有日志走 print() —— 跟 registry_server.py / store.py 等其他后端模块风格一致。
+# 历史教训：本来用 logging.getLogger(__name__).info(...)，但项目没全局 basicConfig，
+# 默认 WARNING+，sync 进度全被吞，ops 时啥也看不见
 
 # 进程级 RLock：所有 _load_index → 改 → _save_index 的临界区都要持有它。
 # RLock 是因为有些场景嵌套（比如 publish 内部又走 helper 加锁），保持简单
@@ -149,10 +151,7 @@ def merge_manifest_into_index(
                 # 同号冲突：upstream 赢。文件在本地 MinIO 留着但被影响（孤儿，不删）
                 local_pkg["version_sources"][v] = upstream_url
                 replaced += 1
-                logger.warning(
-                    "[Mirror] %s@%s: local 版本被 upstream(%s) 覆盖",
-                    name, v, upstream_url,
-                )
+                print(f"[Mirror] WARN: {name}@{v} 本地版本被 upstream({upstream_url}) 覆盖")
             else:
                 # 已经是某个 upstream 来的（可能是同一个 upstream 刷新，也可能换了 upstream）
                 if existing_source != upstream_url:
@@ -195,7 +194,7 @@ def sync_once(
         resp.raise_for_status()
         manifest = resp.json()
     except Exception as e:
-        logger.error("[Mirror] 拉 upstream manifest 失败: %s", e)
+        print(f"[Mirror] ERROR 拉 upstream manifest 失败: {e}")
         return None
 
     with index_lock:
@@ -203,10 +202,7 @@ def sync_once(
         added, replaced = merge_manifest_into_index(local_index, manifest, upstream_url)
         save_index_fn(local_index)
 
-    logger.info(
-        "[Mirror] sync 完成: upstream=%s, +%d 新版本, %d 替换",
-        upstream_url, added, replaced,
-    )
+    print(f"[Mirror] sync 完成: upstream={upstream_url}, +{added} 新版本, {replaced} 替换")
     return added, replaced
 
 
@@ -241,11 +237,11 @@ def proxy_fetch_and_cache(
     try:
         resp = requests.get(fetch_url, timeout=timeout_sec, allow_redirects=True)
         if resp.status_code != 200:
-            logger.error("[Mirror] 拉 %s 失败: HTTP %d", fetch_url, resp.status_code)
+            print(f"[Mirror] ERROR 拉 {fetch_url} 失败: HTTP {resp.status_code}")
             return False
         content = resp.content
     except Exception as e:
-        logger.error("[Mirror] 拉 %s 失败: %s", fetch_url, e)
+        print(f"[Mirror] ERROR 拉 {fetch_url} 失败: {e}")
         return False
 
     try:
@@ -254,10 +250,10 @@ def proxy_fetch_and_cache(
             io.BytesIO(content), len(content),
             content_type="application/json",
         )
-        logger.info("[Mirror] 缓存 %s → %s/%s (%d bytes)", fetch_url, bucket, oss_key, len(content))
+        print(f"[Mirror] 缓存 {fetch_url} → {bucket}/{oss_key} ({len(content)} bytes)")
         return True
     except Exception as e:
-        logger.error("[Mirror] 写本地 MinIO 失败 %s/%s: %s", bucket, oss_key, e)
+        print(f"[Mirror] ERROR 写本地 MinIO 失败 {bucket}/{oss_key}: {e}")
         return False
 
 
@@ -285,15 +281,15 @@ def start_background_sync(
                 sync_once(upstream_url, minio_client, bucket,
                           load_index_fn, save_index_fn)
             except Exception as e:
-                logger.exception("[Mirror] sync 循环异常: %s", e)
+                print(f"[Mirror] ERROR sync 循环异常: {e}")
+                traceback.print_exc()
             if interval_sec <= 0 and first:
-                logger.info("[Mirror] interval<=0，仅同步一次")
+                print("[Mirror] interval<=0，仅同步一次")
                 return
             first = False
             time.sleep(max(interval_sec, 30))   # 30s 下限防误配
 
     t = threading.Thread(target=loop, name="registry-mirror-sync", daemon=True)
     t.start()
-    logger.info("[Mirror] 后台同步线程已起，upstream=%s, interval=%ds",
-                upstream_url, interval_sec)
+    print(f"[Mirror] 后台同步线程已起，upstream={upstream_url}, interval={interval_sec}s")
     return t
