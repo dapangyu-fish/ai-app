@@ -219,6 +219,8 @@ services:
       LISTEN_HOST: "0.0.0.0"
       LISTEN_PORT: "8089"
       DB_PATH: "/data/audit.db"
+      # 测试环境裸 HTTP；secure cookie 会被浏览器丢弃 → 登录看似无错但跳回登录页
+      COOKIE_SECURE: "false"
       # 通过 Kong 调 Supabase Admin API（GoTrue 在 Kong 后面）
       SUPABASE_URL: "http://${HOST_IP}:${KONG_HTTP_PORT}"
       SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"

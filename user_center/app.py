@@ -54,6 +54,9 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
 
 COOKIE_NAME = "uc_session"
 COOKIE_MAX_AGE = 7 * 24 * 3600  # 7 天
+# 默认 True（prod 走 HTTPS）。测试环境裸 http://IP:PORT 必须 false，否则
+# 浏览器直接丢掉 session cookie → 登录看似无错但跳回登录页
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() not in ("false", "0", "no")
 LOGIN_RATELIMIT_WINDOW = 15 * 60
 LOGIN_RATELIMIT_MAX = 5
 
@@ -321,7 +324,7 @@ def do_login():
         nxt = "/"
     resp = redirect(nxt)
     resp.set_cookie(COOKIE_NAME, cookie_val,
-                    max_age=COOKIE_MAX_AGE, httponly=True, secure=True, samesite="Lax")
+                    max_age=COOKIE_MAX_AGE, httponly=True, secure=COOKIE_SECURE, samesite="Lax")
     return resp
 
 
