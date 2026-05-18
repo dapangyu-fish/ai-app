@@ -80,3 +80,4 @@ def dispatch(*, channel: str, token: str, meta: dict, payload: PushPayload) -> P
 # ── 注册所有内置 provider ──
 # 每个 provider 模块在 import 时调 register() 自己；新增通道在这里加一行 import 即可
 from . import apns_provider  # noqa: E402,F401
+from . import fcm_provider   # noqa: E402,F401

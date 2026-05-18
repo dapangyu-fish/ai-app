@@ -202,3 +202,10 @@ APNS_BUNDLE_ID = os.environ.get("APNS_BUNDLE_ID", "dapangyu.fish.myapp")
 # Sandbox & Production 共用同一把 .p8 key，host 不同
 # 开发版 / TestFlight 默认走 sandbox；App Store 上线版走 production
 APNS_USE_SANDBOX = os.environ.get("APNS_USE_SANDBOX", "true").lower() in ("1", "true", "yes")
+
+# FCM 配置（Android 推送）
+# service-account.json 不进 git，存在服务器 /etc/fcm/，权限 600 给 root
+# 从 Firebase Console → Project Settings → Service Accounts 下载
+FCM_SERVICE_ACCOUNT_PATH = os.environ.get("FCM_SERVICE_ACCOUNT_PATH", "/etc/fcm/service-account.json")
+# Firebase 项目 ID（如 myapp-4b49d）。空字符串时 fcm provider 推送会返回错误
+FCM_PROJECT_ID = os.environ.get("FCM_PROJECT_ID", "")

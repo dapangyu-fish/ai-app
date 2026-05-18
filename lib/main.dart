@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_core/firebase_core.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -92,6 +95,18 @@ void main() async {
   appStartTime;
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase Core 初始化 —— FirebaseMessaging 等所有 firebase_xxx 插件都依赖它。
+  // Android 自动从 android/app/google-services.json 读配置；其他平台暂时不开 FCM 跳过。
+  // 失败吞掉：FCM 不可用不应阻塞 app 启动（iOS 走 APNs 也用不上 Firebase）
+  if (!kIsWeb && Platform.isAndroid) {
+    try {
+      await Firebase.initializeApp();
+    } catch (e) {
+      // ignore: avoid_print
+      print('[main] Firebase.initializeApp 失败 (FCM 推送不可用): $e');
+    }
+  }
 
   // 加载服务环境配置 —— 必须在任何 HTTP 请求之前，否则会用错地址。
   // 失败 fail-open 回退到生产，绝不阻塞启动。

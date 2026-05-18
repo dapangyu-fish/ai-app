@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/environment_service.dart';
 import '../im/apns_service.dart';
+import '../im/fcm_service.dart';
 import '../im/im_service.dart';
 import '../json_ui/cache_manager.dart';
 import '../json_ui/drift_database.dart';
@@ -29,6 +30,12 @@ Future<void> wipeAllLocalAccountData() async {
     debugPrint('[Wipe] ApnsService.unregister OK');
   } catch (e) {
     debugPrint('[Wipe] ApnsService.unregister 失败 (忽略): $e');
+  }
+  try {
+    await FcmService.instance.unregister();
+    debugPrint('[Wipe] FcmService.unregister OK');
+  } catch (e) {
+    debugPrint('[Wipe] FcmService.unregister 失败 (忽略): $e');
   }
 
   // 1. IM logout（清 SDK + im_* prefs；如果 SDK 没初始化会被忽略）

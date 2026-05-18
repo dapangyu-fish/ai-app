@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
 import 'apns_service.dart';
+import 'fcm_service.dart';
 
 /// IMService.friendshipStream 推的事件类型
 enum FriendshipEventKind {
@@ -270,9 +271,12 @@ class IMService {
           await _updateUnreadCount();
 
           // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
-          // 模拟器调用不会崩，但拿不到真 token；非 iOS 直接 short-circuit
+          // Android：启动 FCM（同样流程，走 Firebase Messaging）
+          // 两个都是 noop-safe on unsupported platforms（kIsWeb / 桌面 / 不匹配的 OS）
           // ignore: unawaited_futures
           ApnsService.instance.start();
+          // ignore: unawaited_futures
+          FcmService.instance.start();
 
           debugPrint('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
           return true;
@@ -338,6 +342,8 @@ class IMService {
         await _updateUnreadCount();
         // ignore: unawaited_futures
         ApnsService.instance.start();
+        // ignore: unawaited_futures
+        FcmService.instance.start();
         return true;
       } catch (e) {
         debugPrint('[IM] 恢复会话失败, 尝试重新获取 token: $e');

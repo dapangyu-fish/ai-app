@@ -3,6 +3,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Firebase —— 在编译期读 google-services.json 注入 BuildConfig；
+    // 没这个文件 build 会 fail，所以同 contributor 必须自己建 Firebase 项目下一份
+    id("com.google.gms.google-services")
 }
 
 android {
