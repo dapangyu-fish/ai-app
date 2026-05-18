@@ -102,7 +102,7 @@ services:
       - openim_etcd_data:/etcd-data
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z   # 跟 app-minio 同版本，避免镜像 drift
     container_name: testenv-openim-minio
     restart: unless-stopped
     environment:
@@ -147,12 +147,10 @@ services:
       OPENIM_WS_PORT: "10001"
       MINIO_EXTERNAL_ADDRESS: "http://${HOST_IP}:${OPENIM_MINIO_PORT}"
       SECRET: "${OPENIM_SECRET}"
-      # ───── 关键：push webhook 留空，测试环境不走 push ─────
-      # 这两个 URL 留空，OpenIM 不会回调 backend；backend 的 push 模块完全不被触发
-      WEBHOOKS_URL: ""
-      WEBHOOKS_BEFORE_OFFLINE_PUSH_ENABLE: "false"
-      WEBHOOKS_AFTER_SEND_SINGLE_MSG_ENABLE: "false"
-      # 推送 provider 一律不配，OpenIM push module 启动后无法初始化任何渠道（warning 即可）
+      # 推送通道一律不配，**也不显式 disable webhooks**：
+      # OpenIM v3.8 默认 webhooks.*.enable=false，env override 走的是 OPENIM_*
+      # 的内部 envsubst 路径（我们不动 config 目录所以保持默认）。
+      # 客户端 APNs 注册不到，后端 push 模块 supported_channels() 返回 []，全链路自然降级。
     ports:
       - "${OPENIM_WS_PORT}:10001"      # WebSocket Gateway → 客户端 imWsUrl
       - "${OPENIM_API_PORT}:10002"     # HTTP API → 客户端 imApiUrl

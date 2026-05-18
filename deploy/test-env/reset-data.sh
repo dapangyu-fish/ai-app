@@ -16,5 +16,7 @@ read -r -p "$(printf "${R}!! 这将清空所有数据库 / OSS / IM 数据，输
 docker compose --env-file .env          -f docker-compose.yml           down -v
 docker compose --env-file openim/.env   -f openim/docker-compose.yml    down -v
 docker compose --env-file supabase/.env -f supabase/docker-compose.yml  -f supabase/docker-compose.override.yml down -v
+# Supabase 的 db PGDATA 是 bind mount，down -v 不动它，必须手动 rm
+rm -rf supabase/volumes/db/data
 
 printf "${G}✔ 数据卷已清空。重新 bootstrap.sh 即可（密钥/账号信息会被覆盖；要保留可直接 'docker compose up -d' 起回来）${N}\n"

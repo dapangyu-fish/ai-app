@@ -20,5 +20,7 @@ read -r -p "$(printf "${R}!! 这将删除所有容器和数据卷（不可恢复
   docker compose --env-file supabase/.env -f supabase/docker-compose.yml  -f supabase/docker-compose.override.yml down -v --remove-orphans || true
 }
 
+# Supabase 的 db PGDATA 是 bind mount 不是 named volume，down -v 删不掉
+rm -rf supabase/volumes/db/data
 rm -f .env supabase/.env openim/.env test-env-info.txt
 printf "${G}✔ 已销毁${N}\n"

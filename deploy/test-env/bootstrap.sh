@@ -241,12 +241,14 @@ say "启动 OpenIM（8 服务，首次起约 1-2 分钟）..."
 docker compose --env-file openim/.env -f openim/docker-compose.yml up -d
 say "等 OpenIM server 就绪..."
 for i in {1..60}; do
-  # OpenIM admin API 8 字段健康检查走根路径
-  if curl -fsS "http://${HOST_IP}:${OPENIM_API_PORT}" -o /dev/null -m 2 -w '%{http_code}' 2>/dev/null | grep -qE '^(200|404)$'; then
-    ok "OpenIM API ready (${i}s)"; break
+  # OpenIM 根路径会返 404（没注册）；用 -o /dev/null 拿 status code，**不**用 -f
+  # 否则 curl 4xx 即 exit 22，永远拿不到 status，循环等死
+  code=$(curl -sS -o /dev/null -m 2 -w '%{http_code}' "http://${HOST_IP}:${OPENIM_API_PORT}/" 2>/dev/null || echo "000")
+  if [[ "$code" =~ ^(200|400|401|403|404)$ ]]; then
+    ok "OpenIM API ready (${i}s, HTTP $code)"; break
   fi
   sleep 2
-  [[ $i -eq 60 ]] && warn "OpenIM 等 120s 没就绪，继续；可能是慢启动，docker compose logs openim-server 看看"
+  [[ $i -eq 60 ]] && warn "OpenIM 等 120s 没就绪，继续；docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
 done
 
 # ───────── 启动 app 自有服务 ─────────

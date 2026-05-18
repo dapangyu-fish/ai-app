@@ -1,0 +1,47 @@
+# 防止 deploy/test-env/Dockerfile.backend build 时把 repo 全量打包传给 docker daemon
+# 同时防止本地 backend/.env / secrets 文件意外进入镜像
+#
+# 注意：这是 repo 根的 .dockerignore，影响 build context 为 repo 根的所有 Dockerfile
+
+# Flutter 客户端构建产物
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# 平台目录（后端 docker build 完全用不上）
+ios/
+android/
+macos/
+linux/
+windows/
+web/
+
+# 大目录
+node_modules/
+.pub-cache/
+**/Pods/
+**/DerivedData/
+
+# secrets - 关键，避免本机的 backend/.env 进镜像
+**/.env
+**/.env.local
+
+# Python 缓存
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# 日志、临时
+*.log
+*.tmp
+.DS_Store
+.idea/
+.vscode/
+
+# git
+.git/
+.gitignore
+
+# 部署相关（test-env 自己除外，但因为我们用 context: ../../ 时不需要把 test-env 自己拷进去；
+# Dockerfile.backend 的 COPY 只指定 backend/ 和 config_center/，安全）
