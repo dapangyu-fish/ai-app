@@ -6,10 +6,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 系统依赖：libpq-dev 给 psycopg2，curl 给 healthcheck
+# 系统依赖：
+# - libpq5      给 psycopg2-binary 运行时
+# - curl        给 healthcheck
+# - gcc + portaudio19-dev + libasound2-dev  给 pyaudio 编译（backend 里没人用但 requirements.txt 收了）
+# - build-essential 给其他 C-extension（如 cryptography 偶尔需要）
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
+        gcc \
+        build-essential \
+        portaudio19-dev \
+        libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 依赖先装，命中缓存
