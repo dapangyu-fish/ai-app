@@ -245,7 +245,7 @@ say "从 OpenIM 镜像提取默认 config 并打补丁..."
 OPENIM_CFG_DIR="$SCRIPT_DIR/openim/config-rendered"
 rm -rf "$OPENIM_CFG_DIR" && mkdir -p "$OPENIM_CFG_DIR"
 docker run --rm --entrypoint sh -v "$OPENIM_CFG_DIR":/host \
-  openim/openim-server:v3.8.3-patch.15 \
+  openim/openim-server:v3.8.3-patch.12 \
   -c "cp -a /openim-server/config/. /host/ && chmod -R a+r /host/"
 
 # sed 替换关键字段（用 | 当分隔符避开 password 里的 / + =）

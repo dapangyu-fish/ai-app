@@ -52,14 +52,14 @@ cd deploy/test-env
 | Vector | `timberio/vector:0.53.0-alpine` |
 | imgproxy | `darthsim/imgproxy:v3.30.1` |
 | jsonapp Postgres | `postgres:15.8` |
-| App MinIO | `minio/minio:RELEASE.2024-12-18T13-15-44Z` |
-| OpenIM Server | `ghcr.io/openimsdk/openim-server:v3.8` |
-| OpenIM Chat | `ghcr.io/openimsdk/openim-chat:v1.8` |
+| App MinIO | `minio/minio:RELEASE.2025-04-22T22-12-26Z` |
+| Backend Redis (AI session) | `redis:7.4-alpine` |
+| OpenIM Server | `openim/openim-server:v3.8.3-patch.12` |
 | OpenIM MySQL | `mysql:8.0` |
 | OpenIM Mongo | `mongo:7.0` |
-| OpenIM Redis | `redis:7-alpine` |
-| OpenIM Kafka | `bitnami/kafka:3.7` |
-| OpenIM Etcd | `quay.io/coreos/etcd:v3.5.13` |
+| OpenIM Redis | `redis:7.0.0` |
+| OpenIM Kafka | `bitnamilegacy/kafka:3.5.1` |
+| OpenIM Etcd | `bitnamilegacy/etcd:3.5.13` |
 
 ## 已禁用的功能
 

@@ -29,7 +29,8 @@ services:
   backend-redis:
     # backend 用来缓存 AI 会话状态（config.py: AI_SESSION_REDIS_*）
     # 跟 OpenIM redis 分开，避免相互踩 key 空间
-    image: redis:7-alpine
+    # 镜像版本跟 prod ai-session-redis 容器一致
+    image: redis:7.4-alpine
     container_name: testenv-backend-redis
     restart: unless-stopped
     command: redis-server --requirepass "${BACKEND_REDIS_PASSWORD}" --appendonly yes
@@ -42,7 +43,7 @@ services:
       retries: 5
 
   app-minio:
-    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z   # 与 prod app-minio 一致
     container_name: testenv-app-minio
     restart: unless-stopped
     environment:
