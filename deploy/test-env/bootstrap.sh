@@ -229,11 +229,16 @@ say "启动 Supabase（13 服务，首次起约 1-2 分钟）..."
 docker compose --env-file supabase/.env -f supabase/docker-compose.yml -f supabase/docker-compose.override.yml up -d
 say "等 Supabase auth 服务就绪..."
 for i in {1..60}; do
-  if curl -fsS "http://${HOST_IP}:${KONG_HTTP_PORT}/auth/v1/health" >/dev/null 2>&1; then
+  # Kong 的 /auth/v1/* 路由有 keyauth 插件保护，必须带 apikey；
+  # 带 apikey 后：auth 健康返回 200；auth 挂了 Kong 返 502/503
+  code=$(curl -sS -o /dev/null -m 2 -w '%{http_code}' \
+    -H "apikey: ${SUPABASE_ANON_KEY}" \
+    "http://${HOST_IP}:${KONG_HTTP_PORT}/auth/v1/health" 2>/dev/null || echo "000")
+  if [[ "$code" == "200" ]]; then
     ok "Supabase auth ready (${i}s)"; break
   fi
   sleep 2
-  [[ $i -eq 60 ]] && die "Supabase auth 等 120s 还没起来，docker compose logs -f supabase-auth 看看"
+  [[ $i -eq 60 ]] && die "Supabase auth 等 120s 还没起来 (last HTTP $code)，docker logs supabase-auth"
 done
 
 # ───────── 启动 OpenIM ─────────
