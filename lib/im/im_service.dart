@@ -221,13 +221,19 @@ class IMService {
   /// 幂等：已登录时直接返回 true；进行中时返回同一个 future，避免 `_AuthGate`
   /// 重 build 时多次发起登录请求。
   Future<bool> login() async {
+    // ignore: avoid_print
+    print('[IM] login() called; supported=$isPlatformSupported authLoggedIn=${AuthService.isLoggedIn} _loggedIn=$_loggedIn _loginInFlight=${_loginInFlight != null}');
     if (!isPlatformSupported) {
       // macOS / Web / Windows / Linux —— SDK 不支持，直接 short-circuit
       return false;
     }
     if (!AuthService.isLoggedIn) return false;
     if (_loggedIn) return true;
-    if (_loginInFlight != null) return _loginInFlight!;
+    if (_loginInFlight != null) {
+      // ignore: avoid_print
+      print('[IM] login() returning cached _loginInFlight (可能从启动 restoreSession 卡死残留)');
+      return _loginInFlight!;
+    }
 
     final future = _doLogin();
     _loginInFlight = future;
@@ -336,19 +342,29 @@ class IMService {
   }
 
   Future<bool> _doRestoreSession() async {
+    // ignore: avoid_print
+    print('[IM] _doRestoreSession start');
     final prefs = await SharedPreferences.getInstance();
     _imToken = prefs.getString(_imTokenKey);
     _imUserId = prefs.getString(_imUserIdKey);
     _wsUrl = prefs.getString(_imWsUrlKey);
     _apiUrl = prefs.getString(_imApiUrlKey);
+    // ignore: avoid_print
+    print('[IM] _doRestoreSession prefs: imToken=${_imToken != null}, imUserId=$_imUserId');
 
     if (_imToken != null && _imUserId != null) {
       try {
+        // ignore: avoid_print
+        print('[IM] _doRestoreSession calling init()');
         await init();
+        // ignore: avoid_print
+        print('[IM] _doRestoreSession calling OpenIM.iMManager.login()');
         await OpenIM.iMManager.login(
           userID: _imUserId!,
           token: _imToken!,
         );
+        // ignore: avoid_print
+        print('[IM] _doRestoreSession SDK login OK');
         _loggedIn = true;
         connectionNotifier.value = true;
         await _updateUnreadCount();
