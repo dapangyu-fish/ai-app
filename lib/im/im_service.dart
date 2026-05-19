@@ -246,6 +246,8 @@ class IMService {
   Future<bool> _doLogin() async {
     Object? lastError;
     for (var attempt = 1; attempt <= 3; attempt++) {
+      // ignore: avoid_print
+      print('[IM] _doLogin attempt $attempt/3');
       try {
         final credentials = await _fetchIMCredentials();
         if (credentials == null) {
@@ -256,15 +258,21 @@ class IMService {
           _wsUrl = credentials['ws_url'];
           _apiUrl = credentials['api_url'];
           await _saveCredentials();
+          // ignore: avoid_print
+          print('[IM] credentials OK userID=$_imUserId, calling init()');
 
           // init() 内部保证 dataDir 存在（即使 _initialized=true 也会重建目录），
           // 防止 wipe 删目录后 SDK login 打不开 SQLite
           await init();
+          // ignore: avoid_print
+          print('[IM] init() OK, calling OpenIM.iMManager.login()');
 
           await OpenIM.iMManager.login(
             userID: _imUserId!,
             token: _imToken!,
           );
+          // ignore: avoid_print
+          print('[IM] OpenIM.iMManager.login() OK');
 
           _loggedIn = true;
           connectionNotifier.value = true;
@@ -278,13 +286,17 @@ class IMService {
           // ignore: unawaited_futures
           FcmService.instance.start();
 
-          debugPrint('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
+          // ignore: avoid_print
+          print('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
           return true;
         }
-      } catch (e) {
+      } catch (e, st) {
         lastError = e;
+        // ignore: avoid_print
+        print('[IM] _doLogin attempt $attempt 异常: $e\n$st');
       }
-      debugPrint('[IM] 登录失败 (attempt $attempt/3): $lastError');
+      // ignore: avoid_print
+      print('[IM] 登录失败 (attempt $attempt/3): $lastError');
       if (attempt < 3) {
         await Future.delayed(Duration(seconds: attempt));
       }
@@ -895,6 +907,9 @@ class IMService {
   // ---------- 内部方法 ----------
 
   Future<Map<String, dynamic>?> _fetchIMCredentials() async {
+    // 用 print 不用 debugPrint —— release 下 debugPrintThrottled 可能被微任务调度吞掉
+    // ignore: avoid_print
+    print('[IM] _fetchIMCredentials POST $_backendUrl/api/im/token');
     try {
       final resp = await http.post(
         Uri.parse('$_backendUrl/api/im/token'),
@@ -905,13 +920,17 @@ class IMService {
         body: json.encode({'platform': _getPlatformID()}),
       ).timeout(const Duration(seconds: 15));
 
+      // ignore: avoid_print
+      print('[IM] _fetchIMCredentials resp.status=${resp.statusCode}');
       if (resp.statusCode != 200) {
-        debugPrint('[IM] 获取凭证失败: ${resp.body}');
+        // ignore: avoid_print
+        print('[IM] 获取凭证失败 body=${resp.body}');
         return null;
       }
       return json.decode(resp.body) as Map<String, dynamic>;
     } catch (e) {
-      debugPrint('[IM] 获取凭证异常: $e');
+      // ignore: avoid_print
+      print('[IM] 获取凭证异常: $e');
       return null;
     }
   }
