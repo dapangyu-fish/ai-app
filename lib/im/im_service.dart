@@ -111,32 +111,21 @@ class IMService {
   /// or directory" → 10006 init database failed。所以哪怕 SDK 已 init，
   /// 也要确保目录还在。
   Future<void> init() async {
-    // ignore: avoid_print
-    print('[IM] init() entered, _initialized=$_initialized');
     // OpenIM SDK 内部用 dataDir + 文件名拼绝对路径，所以末尾必须带 /
     final dir = await getApplicationSupportDirectory();
-    // ignore: avoid_print
-    print('[IM] init() got applicationSupportDir: ${dir.path}');
     final imDir = Directory('${dir.path}/openim');
     if (!await imDir.exists()) {
       await imDir.create(recursive: true);
-      // ignore: avoid_print
-      print('[IM] init() (re)created dataDir: ${imDir.path}');
+      debugPrint('[IM] (re)created dataDir: ${imDir.path}');
     }
     final dataDir = '${imDir.path}/'; // 末尾的 / 不能漏，SDK 直接拼
 
-    if (_initialized) {
-      // ignore: avoid_print
-      print('[IM] init() already initialized, return early');
-      return;
-    }
+    if (_initialized) return;
 
     try {
-      // ignore: avoid_print
-      print('[IM] init() calling OpenIM.iMManager.initSDK(apiAddr=${_apiUrl ?? AppConfig.imApiUrl}, wsAddr=${_wsUrl ?? AppConfig.imWsUrl})');
-      // 兜底超时 —— flutter_openim_sdk 在 Android release 下偶发 initSDK 永不 return
-      // （JNI 绑定问题，详见 ProGuard rules）。超时后让上层重试或 fallback，不要让
-      // _loginInFlight 永远占着死 future 把 UI 卡住
+      // 兜底超时 —— flutter_openim_sdk 在 Android release 下若缺 ACCESS_NETWORK_STATE
+      // 权限 / Go runtime 异常 时 initSDK 会永不返回，导致 _loginInFlight 锁死、UI
+      // 后续点击全部无反应。这里 15s 超时让上层能感知到失败并重试
       await OpenIM.iMManager.initSDK(
         platformID: _getPlatformID(),
         apiAddr: _apiUrl ?? AppConfig.imApiUrl,
@@ -171,16 +160,12 @@ class IMService {
         ),
       ).timeout(const Duration(seconds: 15));
 
-      // ignore: avoid_print
-      print('[IM] initSDK returned, setting up listeners');
       _setupListeners();
       _initialized = true;
-      // ignore: avoid_print
-      print('[IM] initSDK ok, dataDir=$dataDir');
-    } catch (e, st) {
+      debugPrint('[IM] initSDK ok, dataDir=$dataDir');
+    } catch (e) {
       // init 失败时**不**置 _initialized=true，让下次 login 能重新 init
-      // ignore: avoid_print
-      print('[IM] initSDK 失败: $e\n$st');
+      debugPrint('[IM] initSDK 失败: $e');
       rethrow;
     }
   }
@@ -239,19 +224,13 @@ class IMService {
   /// 幂等：已登录时直接返回 true；进行中时返回同一个 future，避免 `_AuthGate`
   /// 重 build 时多次发起登录请求。
   Future<bool> login() async {
-    // ignore: avoid_print
-    print('[IM] login() called; supported=$isPlatformSupported authLoggedIn=${AuthService.isLoggedIn} _loggedIn=$_loggedIn _loginInFlight=${_loginInFlight != null}');
     if (!isPlatformSupported) {
       // macOS / Web / Windows / Linux —— SDK 不支持，直接 short-circuit
       return false;
     }
     if (!AuthService.isLoggedIn) return false;
     if (_loggedIn) return true;
-    if (_loginInFlight != null) {
-      // ignore: avoid_print
-      print('[IM] login() returning cached _loginInFlight (可能从启动 restoreSession 卡死残留)');
-      return _loginInFlight!;
-    }
+    if (_loginInFlight != null) return _loginInFlight!;
 
     final future = _doLogin();
     _loginInFlight = future;
@@ -270,8 +249,6 @@ class IMService {
   Future<bool> _doLogin() async {
     Object? lastError;
     for (var attempt = 1; attempt <= 3; attempt++) {
-      // ignore: avoid_print
-      print('[IM] _doLogin attempt $attempt/3');
       try {
         final credentials = await _fetchIMCredentials();
         if (credentials == null) {
@@ -282,21 +259,15 @@ class IMService {
           _wsUrl = credentials['ws_url'];
           _apiUrl = credentials['api_url'];
           await _saveCredentials();
-          // ignore: avoid_print
-          print('[IM] credentials OK userID=$_imUserId, calling init()');
 
           // init() 内部保证 dataDir 存在（即使 _initialized=true 也会重建目录），
           // 防止 wipe 删目录后 SDK login 打不开 SQLite
           await init();
-          // ignore: avoid_print
-          print('[IM] init() OK, calling OpenIM.iMManager.login()');
 
           await OpenIM.iMManager.login(
             userID: _imUserId!,
             token: _imToken!,
           );
-          // ignore: avoid_print
-          print('[IM] OpenIM.iMManager.login() OK');
 
           _loggedIn = true;
           connectionNotifier.value = true;
@@ -310,17 +281,13 @@ class IMService {
           // ignore: unawaited_futures
           FcmService.instance.start();
 
-          // ignore: avoid_print
-          print('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
+          debugPrint('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
           return true;
         }
-      } catch (e, st) {
+      } catch (e) {
         lastError = e;
-        // ignore: avoid_print
-        print('[IM] _doLogin attempt $attempt 异常: $e\n$st');
       }
-      // ignore: avoid_print
-      print('[IM] 登录失败 (attempt $attempt/3): $lastError');
+      debugPrint('[IM] 登录失败 (attempt $attempt/3): $lastError');
       if (attempt < 3) {
         await Future.delayed(Duration(seconds: attempt));
       }
@@ -360,29 +327,19 @@ class IMService {
   }
 
   Future<bool> _doRestoreSession() async {
-    // ignore: avoid_print
-    print('[IM] _doRestoreSession start');
     final prefs = await SharedPreferences.getInstance();
     _imToken = prefs.getString(_imTokenKey);
     _imUserId = prefs.getString(_imUserIdKey);
     _wsUrl = prefs.getString(_imWsUrlKey);
     _apiUrl = prefs.getString(_imApiUrlKey);
-    // ignore: avoid_print
-    print('[IM] _doRestoreSession prefs: imToken=${_imToken != null}, imUserId=$_imUserId');
 
     if (_imToken != null && _imUserId != null) {
       try {
-        // ignore: avoid_print
-        print('[IM] _doRestoreSession calling init()');
         await init();
-        // ignore: avoid_print
-        print('[IM] _doRestoreSession calling OpenIM.iMManager.login()');
         await OpenIM.iMManager.login(
           userID: _imUserId!,
           token: _imToken!,
         );
-        // ignore: avoid_print
-        print('[IM] _doRestoreSession SDK login OK');
         _loggedIn = true;
         connectionNotifier.value = true;
         await _updateUnreadCount();
@@ -941,9 +898,6 @@ class IMService {
   // ---------- 内部方法 ----------
 
   Future<Map<String, dynamic>?> _fetchIMCredentials() async {
-    // 用 print 不用 debugPrint —— release 下 debugPrintThrottled 可能被微任务调度吞掉
-    // ignore: avoid_print
-    print('[IM] _fetchIMCredentials POST $_backendUrl/api/im/token');
     try {
       final resp = await http.post(
         Uri.parse('$_backendUrl/api/im/token'),
@@ -954,17 +908,13 @@ class IMService {
         body: json.encode({'platform': _getPlatformID()}),
       ).timeout(const Duration(seconds: 15));
 
-      // ignore: avoid_print
-      print('[IM] _fetchIMCredentials resp.status=${resp.statusCode}');
       if (resp.statusCode != 200) {
-        // ignore: avoid_print
-        print('[IM] 获取凭证失败 body=${resp.body}');
+        debugPrint('[IM] 获取凭证失败: ${resp.body}');
         return null;
       }
       return json.decode(resp.body) as Map<String, dynamic>;
     } catch (e) {
-      // ignore: avoid_print
-      print('[IM] 获取凭证异常: $e');
+      debugPrint('[IM] 获取凭证异常: $e');
       return null;
     }
   }

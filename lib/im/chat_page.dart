@@ -81,9 +81,6 @@ class _IMChatPageState extends State<IMChatPage> {
   @override
   void initState() {
     super.initState();
-    // 诊断 release-only "点消息无反应"：能进 initState 说明 build 没 throw
-    // ignore: avoid_print
-    print('[ChatPage] initState conv=${widget.conversationID} type=${widget.conversationType} userID=${widget.userID}');
     _seedOwnAvatar();
     _loadMessages();
     _markRead();
