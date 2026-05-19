@@ -1115,6 +1115,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                       borderRadius: BorderRadius.circular(16),
                       onTap: () async {
                         // 捕获 across-async 用到的对象，避免 use_build_context_synchronously
+                        // 诊断 release-only 进不去 IM 的问题
+                        // ignore: avoid_print
+                        print('[Home/IM-Entry] tap, supported=${IMService.isPlatformSupported}, loggedIn=${IMService.instance.isLoggedIn}');
                         final messenger = ScaffoldMessenger.of(context);
                         final navigator = Navigator.of(context);
                         if (!IMService.isPlatformSupported) {
@@ -1127,7 +1130,11 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           return;
                         }
                         if (!IMService.instance.isLoggedIn) {
+                          // ignore: avoid_print
+                          print('[Home/IM-Entry] not logged in, calling login()');
                           final ok = await IMService.instance.login();
+                          // ignore: avoid_print
+                          print('[Home/IM-Entry] login result=$ok, mounted=$mounted');
                           if (!mounted) return;
                           if (!ok) {
                             messenger.showSnackBar(
@@ -1137,6 +1144,8 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           }
                         }
                         if (!mounted) return;
+                        // ignore: avoid_print
+                        print('[Home/IM-Entry] pushing IMConversationPage');
                         navigator.push(
                           MaterialPageRoute(
                               builder: (_) => const IMConversationPage()),
