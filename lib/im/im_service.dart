@@ -111,18 +111,29 @@ class IMService {
   /// or directory" → 10006 init database failed。所以哪怕 SDK 已 init，
   /// 也要确保目录还在。
   Future<void> init() async {
+    // ignore: avoid_print
+    print('[IM] init() entered, _initialized=$_initialized');
     // OpenIM SDK 内部用 dataDir + 文件名拼绝对路径，所以末尾必须带 /
     final dir = await getApplicationSupportDirectory();
+    // ignore: avoid_print
+    print('[IM] init() got applicationSupportDir: ${dir.path}');
     final imDir = Directory('${dir.path}/openim');
     if (!await imDir.exists()) {
       await imDir.create(recursive: true);
-      debugPrint('[IM] (re)created dataDir: ${imDir.path}');
+      // ignore: avoid_print
+      print('[IM] init() (re)created dataDir: ${imDir.path}');
     }
     final dataDir = '${imDir.path}/'; // 末尾的 / 不能漏，SDK 直接拼
 
-    if (_initialized) return;
+    if (_initialized) {
+      // ignore: avoid_print
+      print('[IM] init() already initialized, return early');
+      return;
+    }
 
     try {
+      // ignore: avoid_print
+      print('[IM] init() calling OpenIM.iMManager.initSDK(apiAddr=${_apiUrl ?? AppConfig.imApiUrl}, wsAddr=${_wsUrl ?? AppConfig.imWsUrl})');
       await OpenIM.iMManager.initSDK(
         platformID: _getPlatformID(),
         apiAddr: _apiUrl ?? AppConfig.imApiUrl,
@@ -157,12 +168,16 @@ class IMService {
         ),
       );
 
+      // ignore: avoid_print
+      print('[IM] initSDK returned, setting up listeners');
       _setupListeners();
       _initialized = true;
-      debugPrint('[IM] initSDK ok, dataDir=$dataDir');
-    } catch (e) {
+      // ignore: avoid_print
+      print('[IM] initSDK ok, dataDir=$dataDir');
+    } catch (e, st) {
       // init 失败时**不**置 _initialized=true，让下次 login 能重新 init
-      debugPrint('[IM] initSDK 失败: $e');
+      // ignore: avoid_print
+      print('[IM] initSDK 失败: $e\n$st');
       rethrow;
     }
   }
