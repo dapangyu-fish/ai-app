@@ -38,9 +38,16 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
-            // ⚠️ 不开 isMinifyEnabled。OpenIM SDK 的 gomobile JNI 绑定 + Firebase
-            // 反射都很容易被 R8 误裁。proguard-rules.pro 已写好 keep 规则备用，
-            // 真要开 minify 时改 true 即可
+            // R8 在最新的 AGP/Flutter 是默认 enable 的，但是不指定 proguardFiles
+            // 就只用 default rules（不保 OpenIM 的 JNI 类）→ release 下 initSDK
+            // 卡死。这里把 proguardFiles 显式挂上去，让 proguard-rules.pro 生效。
+            // OpenIM 官方文档也说要加这几个 -keep（见 proguard-rules.pro 注释）
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
