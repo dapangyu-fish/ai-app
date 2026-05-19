@@ -2,6 +2,10 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- OpenIM Go runtime 用来查 DNS resolver / 网络可达性。release 下没这个权限
+         go runtime 内部的 DNS 解析会失败，报 "dial tcp: lookup xxx: no such host" -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <!-- FCM 推送：Android 13+ 显示通知必须运行时申请这个权限，低版本自动授予 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application

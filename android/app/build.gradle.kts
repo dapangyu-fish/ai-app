@@ -38,16 +38,12 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
-            // R8 在最新的 AGP/Flutter 是默认 enable 的，但是不指定 proguardFiles
-            // 就只用 default rules（不保 OpenIM 的 JNI 类）→ release 下 initSDK
-            // 卡死。这里把 proguardFiles 显式挂上去，让 proguard-rules.pro 生效。
-            // OpenIM 官方文档也说要加这几个 -keep（见 proguard-rules.pro 注释）
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // 先关 minify 做对照实验 —— 验证 release 下 OpenIM DNS 失败是否
+            // 是 R8 引起。如果关了之后 IM 能连上，就肯定是 keep 规则还差几条；
+            // 如果关了仍然挂，问题在别处（native lib / 网络栈等）。
+            // proguard-rules.pro 留着备用
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
