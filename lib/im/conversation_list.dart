@@ -260,18 +260,33 @@ class _IMConversationPageState extends State<IMConversationPage> {
           ],
         ),
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => IMChatPage(
-                conversationID: conv.conversationID,
-                conversationName: name,
-                faceURL: faceUrl,
-                conversationType: conv.conversationType ?? 1,
-                userID: conv.userID,
-                groupID: conv.groupID,
+          // 诊断 release-only "点消息无反应" 用，日志路径走 print 保证 release 也输出
+          // ignore: avoid_print
+          print('[ConvList] tap conv=${conv.conversationID} userID=${conv.userID} groupID=${conv.groupID} type=${conv.conversationType}');
+          try {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) {
+                  // ignore: avoid_print
+                  print('[ConvList] building IMChatPage for ${conv.conversationID}');
+                  return IMChatPage(
+                    conversationID: conv.conversationID,
+                    conversationName: name,
+                    faceURL: faceUrl,
+                    conversationType: conv.conversationType ?? 1,
+                    userID: conv.userID,
+                    groupID: conv.groupID,
+                  );
+                },
               ),
-            ),
-          ).then((_) => _loadConversations());
+            ).then((_) => _loadConversations());
+          } catch (e, st) {
+            // ignore: avoid_print
+            print('[ConvList] push 异常: $e\n$st');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('打开聊天失败: $e')),
+            );
+          }
         },
         onLongPress: () => _showConversationActions(conv),
       ),
