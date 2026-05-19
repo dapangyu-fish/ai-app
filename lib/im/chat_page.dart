@@ -17,6 +17,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import '../auth/auth_service.dart';
 import '../i18n/framework_strings.dart';
 import 'im_cache_manager.dart';
 import 'im_media_uploader.dart';
@@ -66,13 +67,68 @@ class _IMChatPageState extends State<IMChatPage> {
   StreamSubscription<RevokedInfo>? _revokedSub;
   StreamSubscription<List<ReadReceiptInfo>>? _receiptSub;
 
+  // userId → face_url 缓存。
+  // - 命中 String 值：用这个 URL
+  // - 命中 null：查过了 Supabase 但没头像（避免重复查）
+  // - 不在 map 里：还没查过
+  // OpenIM 的 Message.senderFaceUrl 几乎永远是空（OpenIM 只在注册时写一次 faceURL，
+  // 之后 Supabase 改头像不会回流），所以必须自己去 Supabase 拉真实头像。demo-im
+  // JSON-APP 是用同样的 @im_get_user_info 内置函数实现的
+  final Map<String, String?> _avatarCache = {};
+  // 正在查的 userId，避免短时间内同一个 ID 被并发 lookup
+  final Set<String> _avatarInFlight = {};
+
   @override
   void initState() {
     super.initState();
+    _seedOwnAvatar();
     _loadMessages();
     _markRead();
     _subscribe();
     _scrollController.addListener(_onScroll);
+  }
+
+  /// 自己头像直接从 AuthService 取（已经在内存），不用走 Supabase 查
+  void _seedOwnAvatar() {
+    final myImId = IMService.instance.currentUserId;
+    if (myImId == null) return;
+    final myAvatar = AuthService.currentUser?['avatar_url']?.toString();
+    _avatarCache[myImId] = (myAvatar != null && myAvatar.isNotEmpty) ? myAvatar : null;
+  }
+
+  /// 批量拉头像到 _avatarCache，重复 / in-flight 自动跳过。
+  /// 调用方负责传入所有需要确保的 userIDs（一般是消息列表里所有 sendID）
+  Future<void> _ensureAvatars(Iterable<String> userIds) async {
+    final missing = userIds
+        .where((id) => id.isNotEmpty &&
+            !_avatarCache.containsKey(id) &&
+            !_avatarInFlight.contains(id))
+        .toSet();
+    if (missing.isEmpty) return;
+    _avatarInFlight.addAll(missing);
+    try {
+      final result = await IMService.instance
+          .lookupUsersFromSupabase(missing.toList());
+      if (!mounted) return;
+      setState(() {
+        for (final id in missing) {
+          final face = result[id]?['face_url']?.toString();
+          _avatarCache[id] = (face != null && face.isNotEmpty) ? face : null;
+        }
+      });
+    } catch (e) {
+      debugPrint('[ChatPage] lookup avatars failed: $e');
+      // 失败也写 null 占位，防止无限重试。下次用户进出聊天页会重建 state 重试
+      if (mounted) {
+        setState(() {
+          for (final id in missing) {
+            _avatarCache.putIfAbsent(id, () => null);
+          }
+        });
+      }
+    } finally {
+      _avatarInFlight.removeAll(missing);
+    }
   }
 
   @override
@@ -107,6 +163,11 @@ class _IMChatPageState extends State<IMChatPage> {
       if (!mounted || !_isForThisConversation(msg)) return;
       setState(() => _messages.insert(0, msg));
       _markRead();
+      // 新消息发送者可能是没缓存过的（群聊新成员），按需补
+      final sid = msg.sendID;
+      if (sid != null && sid.isNotEmpty) {
+        _ensureAvatars([sid]);
+      }
     });
     _revokedSub = IMService.instance.revokedStream.listen((info) {
       if (!mounted) return;
@@ -154,6 +215,8 @@ class _IMChatPageState extends State<IMChatPage> {
         _loading = false;
         _hasMore = messages.length >= 20;
       });
+      // 拉初始消息后，把所有出现过的 senderID 头像一次性预热
+      _ensureAvatars(_messages.map((m) => m.sendID ?? ''));
     }
   }
 
@@ -175,6 +238,8 @@ class _IMChatPageState extends State<IMChatPage> {
         _hasMore = older.length >= 20;
         _loadingMore = false;
       });
+      // 翻历史可能引入新的 senderID（旧群成员），补头像
+      _ensureAvatars(older.map((m) => m.sendID ?? ''));
     }
   }
 
@@ -382,7 +447,13 @@ class _IMChatPageState extends State<IMChatPage> {
   }
 
   Widget _buildAvatar(Message msg, ColorScheme cs) {
-    final faceUrl = msg.senderFaceUrl;
+    // 取头像优先级：本地 Supabase 缓存 > OpenIM 自带 senderFaceUrl（基本是空）> null
+    // 不在缓存表里：可能 _ensureAvatars 还没回，显示首字母兜底，回来后 setState 会重绘
+    final senderId = msg.sendID ?? '';
+    final cached = senderId.isNotEmpty && _avatarCache.containsKey(senderId)
+        ? _avatarCache[senderId]
+        : null;
+    final faceUrl = (cached != null && cached.isNotEmpty) ? cached : msg.senderFaceUrl;
     final name = msg.senderNickname ?? '?';
     return CircleAvatar(
       radius: 18,
