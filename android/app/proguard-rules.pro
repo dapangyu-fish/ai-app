@@ -23,6 +23,15 @@
 -keep class io.flutter.plugins.** { *; }
 -keep class io.flutter.embedding.** { *; }
 
+# ── Flutter Play Core deferred components ──
+# Flutter embedding 静态引用了 com.google.android.play.core.*（动态特性模块用），
+# 但我们没用 deferred components，也没引这个库 → R8 报 "missing class" 编译失败。
+# 既然根本不会真的调到这些类，让 R8 闭嘴，dangling 引用没人会去链接
+-dontwarn com.google.android.play.core.**
+-dontwarn com.google.android.play.core.splitcompat.**
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+
 # ── 通用：native 方法 + 反射 ──
 -keepclasseswithmembernames class * {
     native <methods>;
