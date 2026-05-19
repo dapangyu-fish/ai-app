@@ -1,0 +1,21 @@
+# Release signing 配置模板。拷贝成 key.properties 后填实际值。
+# ⚠️ key.properties / *.jks / *.keystore 都在 android/.gitignore，绝不进 git。
+#
+# 怎么生成 keystore（一次性）：
+#   keytool -genkey -v -keystore ~/upload-keystore.jks \
+#     -keyalg RSA -keysize 2048 -validity 18250 \
+#     -alias upload
+#   会问 keystore 密码 + key 密码（可以填同一个）+ 你的姓名等信息。
+#   密码记到密码管理器（如 1Password），丢了上传不了 Play。
+#
+# 怎么用：
+#   1. cp key.properties.example key.properties
+#   2. 填下面四行
+#   3. flutter build appbundle --release
+#   4. 把生成的 build/app/outputs/bundle/release/app-release.aab 传 Play Console
+
+storePassword=<keystore 密码>
+keyPassword=<key 密码>
+keyAlias=upload
+# 绝对路径（推荐放仓库外，比如 ~/upload-keystore.jks）
+storeFile=/Users/你/upload-keystore.jks
