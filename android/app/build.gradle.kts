@@ -38,6 +38,9 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // ⚠️ 不开 isMinifyEnabled。OpenIM SDK 的 gomobile JNI 绑定 + Firebase
+            // 反射都很容易被 R8 误裁。proguard-rules.pro 已写好 keep 规则备用，
+            // 真要开 minify 时改 true 即可
         }
     }
 }

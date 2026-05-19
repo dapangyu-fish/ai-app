@@ -134,6 +134,9 @@ class IMService {
     try {
       // ignore: avoid_print
       print('[IM] init() calling OpenIM.iMManager.initSDK(apiAddr=${_apiUrl ?? AppConfig.imApiUrl}, wsAddr=${_wsUrl ?? AppConfig.imWsUrl})');
+      // 兜底超时 —— flutter_openim_sdk 在 Android release 下偶发 initSDK 永不 return
+      // （JNI 绑定问题，详见 ProGuard rules）。超时后让上层重试或 fallback，不要让
+      // _loginInFlight 永远占着死 future 把 UI 卡住
       await OpenIM.iMManager.initSDK(
         platformID: _getPlatformID(),
         apiAddr: _apiUrl ?? AppConfig.imApiUrl,
@@ -166,7 +169,7 @@ class IMService {
             _loggedIn = false;
           },
         ),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       // ignore: avoid_print
       print('[IM] initSDK returned, setting up listeners');
