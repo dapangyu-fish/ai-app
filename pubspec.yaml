@@ -80,7 +80,7 @@ dependencies:
   # QR code generation
   qr_flutter: ^4.1.0
   # QR / barcode scanning
-  mobile_scanner: ^5.2.3
+  mobile_scanner: ^6.0.0
   # Charts
   fl_chart: ^0.69.0
   # Map (OpenStreetMap based, no API key needed)
