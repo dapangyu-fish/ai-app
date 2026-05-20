@@ -14,10 +14,14 @@
 
 import json
 import psycopg2
+import requests
 from psycopg2.extras import Json, RealDictCursor
 from typing import Optional
 
-from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+from config import (
+    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD,
+    SUPABASE_URL, SUPABASE_SERVICE_KEY,
+)
 
 # summary prompt 版本 —— 改了 enrich 的 prompt / schema 就 +1，全量自动重排
 SUMMARY_PROMPT_VERSION = 1
@@ -163,16 +167,21 @@ def parse_capture(json_content: dict) -> dict:
 # DB 操作
 # ═══════════════════════════════════════════════════════════
 
-def upsert_capture(name: str, capture: dict) -> None:
-    """publish / mirror sync 时调：写结构化字段 + 标 pending（触发后续 enrich）。
+def upsert_capture(name: str, capture: dict,
+                   author_id: Optional[str] = None,
+                   author_name: Optional[str] = None) -> None:
+    """publish / mirror sync 时调：写结构化字段 + author + 标 pending（触发后续 enrich）。
     富化字段（summary 等）不动；status 重置 pending 让 worker 重新生成。
+    author_id/name 传 None 时保留原值（COALESCE），避免 mirror 覆盖本地作者。
     """
     sql = """
         INSERT INTO registry_packages
-          (name, exports, dependencies, widgets_used, builtins_used, tech_stack,
-           status, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, 'pending', NOW())
+          (name, author_id, author_name, exports, dependencies, widgets_used,
+           builtins_used, tech_stack, status, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending', NOW())
         ON CONFLICT (name) DO UPDATE SET
+          author_id      = COALESCE(EXCLUDED.author_id, registry_packages.author_id),
+          author_name    = COALESCE(EXCLUDED.author_name, registry_packages.author_name),
           exports        = EXCLUDED.exports,
           dependencies   = EXCLUDED.dependencies,
           widgets_used   = EXCLUDED.widgets_used,
@@ -186,7 +195,7 @@ def upsert_capture(name: str, capture: dict) -> None:
     try:
         with conn.cursor() as cur:
             cur.execute(sql, [
-                name,
+                name, author_id, author_name,
                 Json(capture["exports"]), Json(capture["dependencies"]),
                 Json(capture["widgets_used"]), Json(capture["builtins_used"]),
                 Json(capture["tech_stack"]),
@@ -304,13 +313,16 @@ def upsert_from_mirror(name: str, pkg: dict) -> None:
     不重新跑 LLM（信任上游，省钱）。pkg 是 manifest 里的包条目。"""
     sql = """
         INSERT INTO registry_packages
-          (name, exports, dependencies, widgets_used, builtins_used, tech_stack,
+          (name, author_id, author_name,
+           exports, dependencies, widgets_used, builtins_used, tech_stack,
            summary_zh, summary_en, category, domains, capabilities,
            use_case_zh, use_case_en, search_text,
            status, summary_model, summary_prompt_version, indexed_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 'done', %s, %s, NOW(), NOW())
         ON CONFLICT (name) DO UPDATE SET
+          author_id=COALESCE(EXCLUDED.author_id, registry_packages.author_id),
+          author_name=COALESCE(EXCLUDED.author_name, registry_packages.author_name),
           exports=EXCLUDED.exports, dependencies=EXCLUDED.dependencies,
           widgets_used=EXCLUDED.widgets_used, builtins_used=EXCLUDED.builtins_used,
           tech_stack=EXCLUDED.tech_stack,
@@ -327,7 +339,7 @@ def upsert_from_mirror(name: str, pkg: dict) -> None:
     try:
         with conn.cursor() as cur:
             cur.execute(sql, [
-                name,
+                name, pkg.get("author_id"), pkg.get("author_name"),
                 Json(pkg.get("exports") or []), Json(pkg.get("dependencies") or []),
                 Json(pkg.get("widgets_used") or []), Json(pkg.get("builtins_used") or []),
                 Json(pkg.get("tech_stack") or []),
@@ -349,7 +361,8 @@ def catalog_map() -> dict:
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT name, exports, dependencies, widgets_used, builtins_used, tech_stack,
+                SELECT name, author_id, author_name,
+                       exports, dependencies, widgets_used, builtins_used, tech_stack,
                        summary_zh, summary_en, category, domains, capabilities,
                        use_case_zh, use_case_en, search_text, summary_model, summary_prompt_version
                 FROM registry_packages WHERE status = 'done'
@@ -375,5 +388,163 @@ def get_catalog(names: Optional[list] = None) -> list:
             else:
                 cur.execute(base)
             return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+# ═══════════════════════════════════════════════════════════
+# 作者解析（按 author_id 实时查 Supabase 头像/用户名，带进程内缓存）
+# ═══════════════════════════════════════════════════════════
+
+_author_cache: dict = {}  # user_id -> {nickname, avatar_url}（进程内缓存，避免每次详情页都打 Supabase）
+
+
+def resolve_author(author_id: Optional[str], fallback_name: Optional[str] = None) -> dict:
+    """user_id → {id, nickname, avatar_url}。查不到用 fallback_name（存的 author_name）兜底。
+    跨实例场景：mirror 来的包 author_id 是上游 Supabase 的，下游自己 Supabase 查不到，
+    这时 nickname 退到 fallback_name，avatar 为空。"""
+    if not author_id:
+        return {"id": None, "nickname": fallback_name or "", "avatar_url": ""}
+    if author_id in _author_cache:
+        c = _author_cache[author_id]
+        return {"id": author_id, "nickname": c["nickname"] or fallback_name or "",
+                "avatar_url": c["avatar_url"]}
+    info = {"nickname": "", "avatar_url": ""}
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/admin/users/{author_id}",
+            headers={"apikey": SUPABASE_SERVICE_KEY,
+                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
+            timeout=8,
+        )
+        if resp.status_code == 200:
+            u = resp.json()
+            um = u.get("user_metadata", {}) or {}
+            info["nickname"] = um.get("username") or (u.get("email") or "").split("@")[0]
+            info["avatar_url"] = um.get("avatar_url") or ""
+            _author_cache[author_id] = info
+    except Exception as e:
+        print(f"[Catalog] resolve_author {author_id} 失败: {e}")
+    return {
+        "id": author_id,
+        "nickname": info["nickname"] or fallback_name or "",
+        "avatar_url": info["avatar_url"],
+    }
+
+
+# ═══════════════════════════════════════════════════════════
+# 点赞 / 下载
+# ═══════════════════════════════════════════════════════════
+
+def record_install(name: str, user_id: str) -> None:
+    """记一次下载（per-user 去重）。"""
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO package_installs (package_name, user_id) VALUES (%s, %s) "
+                "ON CONFLICT (package_name, user_id) DO NOTHING",
+                [name, user_id],
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def set_like(name: str, user_id: str, liked: bool) -> None:
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            if liked:
+                cur.execute(
+                    "INSERT INTO package_likes (package_name, user_id) VALUES (%s, %s) "
+                    "ON CONFLICT DO NOTHING", [name, user_id])
+            else:
+                cur.execute(
+                    "DELETE FROM package_likes WHERE package_name=%s AND user_id=%s",
+                    [name, user_id])
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _counts(cur, name: str) -> tuple:
+    cur.execute("SELECT count(*) FROM package_likes WHERE package_name=%s", [name])
+    likes = cur.fetchone()[0]
+    cur.execute("SELECT count(*) FROM package_installs WHERE package_name=%s", [name])
+    installs = cur.fetchone()[0]
+    return likes, installs
+
+
+def get_app_detail(name: str, viewer_id: Optional[str] = None) -> Optional[dict]:
+    """单 app 详情：catalog 富化 + author + 点赞/下载量 + (登录则)我点没点。"""
+    conn = _conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT name, author_id, author_name, exports, dependencies, tech_stack,
+                       summary_zh, summary_en, category, domains, capabilities,
+                       use_case_zh, use_case_en, status
+                FROM registry_packages WHERE name=%s
+            """, [name])
+            row = cur.fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            likes, installs = _counts(cur, name)
+            d["like_count"] = likes
+            d["install_count"] = installs
+            d["liked_by_me"] = False
+            if viewer_id:
+                cur.execute(
+                    "SELECT 1 FROM package_likes WHERE package_name=%s AND user_id=%s",
+                    [name, viewer_id])
+                d["liked_by_me"] = cur.fetchone() is not None
+        d["author"] = resolve_author(d.get("author_id"), d.get("author_name"))
+        return d
+    finally:
+        conn.close()
+
+
+def get_user_profile(author_id: str) -> dict:
+    """用户主页：作者信息 + 总下载/总点赞（名下所有 app 之和）+ app 列表。"""
+    conn = _conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 名下所有包 + 各自点赞/下载量
+            cur.execute("""
+                SELECT p.name, p.author_name, p.category, p.summary_zh, p.summary_en, p.tech_stack,
+                       (SELECT count(*) FROM package_likes l WHERE l.package_name=p.name)    AS like_count,
+                       (SELECT count(*) FROM package_installs i WHERE i.package_name=p.name) AS install_count
+                FROM registry_packages p
+                WHERE p.author_id = %s
+                ORDER BY p.name
+            """, [author_id])
+            apps = [dict(r) for r in cur.fetchall()]
+        total_likes = sum(a["like_count"] for a in apps)
+        total_installs = sum(a["install_count"] for a in apps)
+        fallback_name = apps[0]["author_name"] if apps else None
+        return {
+            "author": resolve_author(author_id, fallback_name),
+            "total_likes": total_likes,
+            "total_installs": total_installs,
+            "app_count": len(apps),
+            "apps": apps,
+        }
+    finally:
+        conn.close()
+
+
+def set_all_authors(author_id: str, author_name: str) -> int:
+    """一次性把所有包的作者刷成指定用户（修历史乱作者用）。返回影响行数。"""
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE registry_packages SET author_id=%s, author_name=%s, updated_at=NOW()",
+                [author_id, author_name])
+            n = cur.rowcount
+        conn.commit()
+        return n
     finally:
         conn.close()

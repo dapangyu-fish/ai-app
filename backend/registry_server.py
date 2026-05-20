@@ -657,6 +657,9 @@ def publish():
     user = request.supabase_user
     user_id = user.get('id')
     user_role = request.user_role
+    # 作者展示名：优先 username，退到 email 前缀
+    author_name = (user.get('user_metadata', {}) or {}).get('username') \
+        or (user.get('email') or '').split('@')[0] or None
 
     if namespace:
         # 用户包：full_name = namespace/pkg_name
@@ -793,7 +796,11 @@ def publish():
     # worker 异步补，这里只 capture + 标 pending
     try:
         capture = registry_catalog.parse_capture(json_content)
-        registry_catalog.upsert_capture(full_name, capture)
+        registry_catalog.upsert_capture(
+            full_name, capture,
+            author_id=user_id,
+            author_name=author_name,
+        )
     except Exception as e:
         print(f"[Registry] capture 失败（忽略，不影响发布）: {full_name}: {e}")
 
@@ -1003,6 +1010,7 @@ def catalog_backfill():
         index = _load_index()
     names = list((index.get("packages") or {}).keys())
 
+    pkgs = index.get("packages") or {}
     captured, failed = 0, 0
     for name in names:
         try:
@@ -1011,7 +1019,9 @@ def catalog_backfill():
                 failed += 1
                 continue
             cap = registry_catalog.parse_capture(content)
-            registry_catalog.upsert_capture(name, cap)
+            # author_id 从 _index.json 取（历史归属）；author_name 后面刷作者时统一改
+            author_id = (pkgs.get(name) or {}).get("author_id")
+            registry_catalog.upsert_capture(name, cap, author_id=author_id)
             captured += 1
         except Exception as e:
             print(f"[Registry] backfill {name} 失败: {e}")
@@ -1023,6 +1033,68 @@ def catalog_backfill():
         "captured": captured,
         "failed": failed,
     })
+
+
+@app.route('/admin/set_all_authors', methods=['POST'])
+@require_auth
+def admin_set_all_authors():
+    """一次性把所有包作者刷成指定用户（修历史乱作者）。仅 admin。
+    Body: {"author_id": "...", "author_name": "..."}"""
+    if request.user_role != 'admin':
+        return jsonify({"error": "只有管理员可以刷作者"}), 403
+    body = request.get_json(silent=True) or {}
+    author_id = (body.get("author_id") or "").strip()
+    author_name = (body.get("author_name") or "").strip()
+    if not author_id or not author_name:
+        return jsonify({"error": "author_id 和 author_name 必填"}), 400
+    n = registry_catalog.set_all_authors(author_id, author_name)
+    return jsonify({"message": "已刷新所有包作者", "updated": n,
+                    "author_id": author_id, "author_name": author_name})
+
+
+@app.route('/packages/<path:name>/detail', methods=['GET'])
+def package_detail(name):
+    """app 详情：富化 + 作者(头像) + 点赞/下载量 + (登录则)我点没点。
+    可选 ?viewer=<user_id> 传当前用户拿点赞态（或走 Authorization）。"""
+    viewer = request.args.get('viewer')
+    if not viewer:
+        # 也支持从 Bearer token 解析（登录用户）
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            try:
+                r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
+                                 headers=_supabase_headers(auth[7:]), timeout=8)
+                if r.status_code == 200:
+                    viewer = r.json().get("id")
+            except Exception:
+                pass
+    detail = registry_catalog.get_app_detail(name, viewer)
+    if not detail:
+        return jsonify({"error": f"包 '{name}' 不存在"}), 404
+    return jsonify(detail)
+
+
+@app.route('/users/<author_id>/profile', methods=['GET'])
+def user_profile(author_id):
+    """用户主页：头像/名字 + 总下载/总点赞 + 他发布的 app 列表。公开只读。"""
+    return jsonify(registry_catalog.get_user_profile(author_id))
+
+
+@app.route('/packages/<path:name>/install', methods=['POST'])
+@require_auth
+def package_install(name):
+    """下载埋点（per-user 去重）。客户端运行/下载时调。"""
+    registry_catalog.record_install(name, request.supabase_user.get("id"))
+    return jsonify({"ok": True})
+
+
+@app.route('/packages/<path:name>/like', methods=['POST', 'DELETE'])
+@require_auth
+def package_like(name):
+    """点赞 / 取消。"""
+    registry_catalog.set_like(name, request.supabase_user.get("id"),
+                              liked=(request.method == 'POST'))
+    return jsonify({"ok": True, "liked": request.method == 'POST'})
 
 
 @app.route('/mirror/file/<path:name>/<version>', methods=['GET'])

@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 -- 附加表，不替代 MinIO _index.json；详见 migrations/003_registry_packages.sql + LAUNCH_NOTES Part 8
 CREATE TABLE IF NOT EXISTS registry_packages (
     name             TEXT PRIMARY KEY,
+    author_id        TEXT,
+    author_name      TEXT,
     exports          JSONB DEFAULT '[]'::jsonb,
     dependencies     JSONB DEFAULT '[]'::jsonb,
     widgets_used     JSONB DEFAULT '[]'::jsonb,
@@ -68,6 +70,20 @@ CREATE TABLE IF NOT EXISTS registry_packages (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 包点赞 / 下载（per-user，本地互动指标，不随 mirror 传播）
+CREATE TABLE IF NOT EXISTS package_likes (
+    package_name TEXT NOT NULL,
+    user_id      TEXT NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (package_name, user_id)
+);
+CREATE TABLE IF NOT EXISTS package_installs (
+    package_name TEXT NOT NULL,
+    user_id      TEXT NOT NULL,
+    first_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (package_name, user_id)
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_app_registry_type ON app_registry(type);
 CREATE INDEX IF NOT EXISTS idx_app_registry_is_public ON app_registry(is_public);
@@ -76,3 +92,6 @@ CREATE INDEX IF NOT EXISTS idx_chat_quotas_user_date ON chat_quotas(user_id, dat
 CREATE INDEX IF NOT EXISTS idx_device_tokens_user_id ON device_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_registry_packages_status ON registry_packages(status);
 CREATE INDEX IF NOT EXISTS idx_registry_packages_category ON registry_packages(category);
+CREATE INDEX IF NOT EXISTS idx_registry_packages_author ON registry_packages(author_id);
+CREATE INDEX IF NOT EXISTS idx_package_likes_name ON package_likes(package_name);
+CREATE INDEX IF NOT EXISTS idx_package_installs_name ON package_installs(package_name);

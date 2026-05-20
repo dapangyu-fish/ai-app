@@ -121,7 +121,8 @@ def build_manifest(
         # 富化字段（summary/tags/tech_stack）随 manifest 传给下游，下游直接拷不用重跑 LLM
         cat = (catalog or {}).get(name)
         if cat:
-            for k in ("exports", "dependencies", "widgets_used", "builtins_used",
+            for k in ("author_id", "author_name",
+                      "exports", "dependencies", "widgets_used", "builtins_used",
                       "tech_stack", "summary_zh", "summary_en", "category", "domains",
                       "capabilities", "use_case_zh", "use_case_en", "search_text",
                       "summary_model", "summary_prompt_version"):
