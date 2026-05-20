@@ -991,6 +991,40 @@ def catalog():
     return jsonify({"packages": rows, "total": len(rows)})
 
 
+@app.route('/catalog/backfill', methods=['POST'])
+@require_auth
+def catalog_backfill():
+    """给现有包补 capture（exports/deps/widgets/tech_stack）+ 标 pending，
+    让 enrich worker 后续生成 summary。仅 admin。首次上线 / migration 后跑一次。"""
+    if request.user_role != 'admin':
+        return jsonify({"error": "只有管理员可以 backfill"}), 403
+
+    with index_lock:
+        index = _load_index()
+    names = list((index.get("packages") or {}).keys())
+
+    captured, failed = 0, 0
+    for name in names:
+        try:
+            content = _load_package_json(name)
+            if not content:
+                failed += 1
+                continue
+            cap = registry_catalog.parse_capture(content)
+            registry_catalog.upsert_capture(name, cap)
+            captured += 1
+        except Exception as e:
+            print(f"[Registry] backfill {name} 失败: {e}")
+            failed += 1
+
+    return jsonify({
+        "message": "backfill 完成，enrich worker 会异步生成 summary",
+        "total": len(names),
+        "captured": captured,
+        "failed": failed,
+    })
+
+
 @app.route('/mirror/file/<path:name>/<version>', methods=['GET'])
 def mirror_file(name, version):
     """按需文件代理：本地有就 302 到本地 MinIO；没有就先去 source 拉、缓存、再 302。
