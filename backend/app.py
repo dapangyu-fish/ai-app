@@ -23,6 +23,7 @@ import claude_chat
 import store
 import im
 import im_media
+import ai_summary
 from bytedance_asr_routes import register_asr_routes
 
 # 配置日志
@@ -75,6 +76,8 @@ def create_app():
     app.add_url_rule("/api/ai/chat/<session_id>/abort", methods=["POST"], view_func=claude_chat.chat_abort)
     app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=claude_chat.list_providers)
     app.add_url_rule("/api/ai/upload_url", methods=["GET"], view_func=store.get_ai_upload_url)
+    # Registry 富化用的单次结构化摘要（内部接口，registry enrich worker 调，REGISTRY_ADMIN_TOKEN 鉴权）
+    app.add_url_rule("/api/ai/summarize", methods=["POST"], view_func=ai_summary.summarize_endpoint)
 
     # 注册 Store 路由
     app.add_url_rule("/api/store/apps", methods=["GET"], view_func=store.store_apps)

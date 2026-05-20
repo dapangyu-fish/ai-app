@@ -177,6 +177,10 @@ AI_SESSION_REDIS_TTL_SECONDS = int(os.environ.get("AI_SESSION_REDIS_TTL_SECONDS"
 # eventlet monkey_patch 后 thread 实际是 greenlet，开销低；瓶颈是同时跑的 claude CLI 进程数 + RAM
 AI_WORKER_MAX_CONCURRENCY = int(os.environ.get("AI_WORKER_MAX_CONCURRENCY", "200"))
 
+# Registry summary 富化：后台批量摘要的 CLI 小池（跟生成的大池隔离，饿不死用户生成）
+SUMMARY_MAX_CONCURRENCY = int(os.environ.get("SUMMARY_MAX_CONCURRENCY", "3"))
+SUMMARY_CLI_TIMEOUT = int(os.environ.get("SUMMARY_CLI_TIMEOUT", "120"))
+
 
 # 角色配额
 ROLE_QUOTAS = {"user": 30, "pro": 60, "admin": 999999}
