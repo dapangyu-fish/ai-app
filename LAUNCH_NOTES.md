@@ -391,3 +391,44 @@ PyPI 是分两层的（查证过 warehouse.pypa.io/architecture.html）：
 - **别往 `_index.json` 塞 exports/dependencies** —— 会让单文件问题更早爆发，是反方向
 - 35 个包，monolithic JSON 完全够用，**啥都不动**
 - 真要 catalog 带 library API 签名喂 AI，那是触发 Postgres 迁移的理由，不是 fatten JSON 的理由
+
+---
+
+### 元数据 / summary / 检索策略（2026-05-20 最终结论，覆盖本节前面的"富化推迟"说法）
+
+**背景痛点**：现在挑参考模板就费劲 —— 标题太薄、全文太重（10k 行 JSON）。所以"密集摘要 summary"**不是向量检索的增强，是让目录可被挑选的本体**，现在就需要。
+
+**三层分离（capture / enrich / search 互相独立，别捆一起）**：
+
+| 层 | 干啥 | 成本 | 何时做 | 存哪 |
+|---|---|---|---|---|
+| ① 捕获 capture | 解析 JSON 提 exports/deps/widgets/builtins | 几乎零（纯解析） | 迁 Postgres 时 | DB |
+| ② 富化 enrich | LLM 写 summary + tags + 拼 search_text | 贵（LLM） | **现在就该有**（解决挑选痛点） | **DB，不进 JSON** |
+| ③ 检索 search | query → top-K | 看方案 | 推迟（先全量 catalog → 全文 → 向量） | — |
+
+**关键决策 1：summary 放 DB，不放 `meta` / 不进 package JSON。**
+- 跟 PyPI 一致：包文件保持纯净（= wheel），检索元数据在 catalog DB（= Warehouse Postgres），从包派生但分离
+- 好处：包 immutable 不被污染；summary 可随时重算不产生新版本；内容走文件同步、目录元数据走目录同步
+- 连带后果：「生成 AI 顺手写进 meta」这条免费路径**不用了**
+
+**关键决策 2：summary 由异步 enrich worker LLM 生成（方案 A）。**
+- publish 只写结构化字段 + 标 `needs_reindex=true`，**不卡 LLM**，立刻返回
+- 独立 worker 扫 `needs_reindex` 行 → 读包全文 → LLM 写 summary + tags → 写回 DB、清 flag
+- 覆盖所有包（含老包/手工包），逻辑统一，无"AI 漏写"边界
+- backfill = 全表 `needs_reindex=true`；改富化逻辑 = 同样翻 flag 重跑
+- 以后加 embedding 也在同一个 worker 里顺手做
+- （优化备选，现在不做：publish 请求带 summary 字段复用 AI 的活 / 复用 AI 给用户的"我做了啥"那段话 —— 等 worker LLM 成本肉疼再加）
+
+**关键决策 3：embedding（向量）仍然推迟。**
+- summary 现在做；embedding 等几百个包再 backfill，embed 现成的 search_text
+- summary 不依赖 embedding：向量阶段直接 embed `search_text`（= summary + exports + deps 拼接），不用重写 summary
+- 这就是"summary 现在做、向量推迟"不矛盾的原因：summary 是地基，被每一级挑选方式（全量 catalog → 全文 → 向量）复用
+
+**关键决策 4：mirror 通过 manifest 传 summary，不通过文件。**
+- `/mirror/manifest` 多带 summary/tags 字段 → 下游 sync 写进自己 DB
+- 包文件照旧走 `/mirror/file`
+- 干净分离：内容走文件同步，目录元数据走目录同步（同 bandersnatch：simple index 元数据 + release files 内容分开拉）
+
+**挑选体验（有了 summary，现在就能用，不等任何检索基建）**：catalog 注入变成「每包 2-4 行：name + meta_type + summary + tags + exports/deps」，AI 扫一眼挑相关的 → 只对选中的 curl 全文。包多到 catalog 塞不下 prompt 时，再加"关键词/全文过滤 summary → 注入 top-K"，最后才向量。summary 让每一级都成立。
+
+**schema 补充**（在前面 schema 草图基础上明确）：`summary` / `tags` / `search_text` 是 enrich worker 填，**数据来源是包全文，存储位置是 DB，绝不回写进 package JSON**。`needs_reindex BOOLEAN` + `indexed_at` 是重建队列的核心。
