@@ -339,3 +339,55 @@ Happy to answer questions about the DSL design, AI prompt engineering, or the
 下一步建议：**这个文档读完后，做唯一一件事 —— 录第一个视频**。其他都晚于这件。
 
 — Claude（读了 41k 行代码后的诚实意见）
+
+---
+
+## Part 8 — Registry 扩展架构待办（规模点触发，现在别做）
+
+> 2026-05-20 讨论记录。触发条件：registry 包数到 **几百个**。今天 35 个，下面全部不用动。
+
+### 现状
+
+- 现役 `registry_server.py` 用 **MinIO 上单个 `_index.json`** 存全部包目录
+- 每次 publish / mirror sync 都 **load 整个文件 → 改 → 写回整个文件**（在 `index_lock` 里）
+- Postgres `app_registry` 表是**老 store.py（已废弃，410）**用的，新 registry 不碰
+- 历史：当初主动从 Postgres 迁到了 MinIO json（`registry_init.py` 是迁移脚本）
+
+### 三个会同时爆发的问题（同一个根因 + 同一个解）
+
+1. **单文件读写低效**：几百个包后，每个 `/packages` `/resolve` 请求反序列化几 MB；每次 publish 写几 MB 串行化
+2. **富元数据没地方放**：exports / dependencies / widgets_used 想存进索引做检索，但塞进单 JSON 会让上面更糟
+3. **检索**：包多了要按相关度召回（关键词→pgvector）
+
+→ **三个都指向同一个解：目录搬进 Postgres。** 同一个规模点（几百包）同时触发。
+
+### 正确目标架构（实证：照抄 PyPI / Warehouse，别自己发明）
+
+PyPI 是分两层的（查证过 warehouse.pypa.io/architecture.html）：
+
+| 层 | PyPI 用什么 | 我们对应 |
+|---|---|---|
+| 权威服务端（写/查/搜索） | **PostgreSQL** + OpenSearch + Redis | Postgres `registry_packages` 表（已有 jsonapp-postgres 容器）|
+| 分发/镜像层（给安装器+镜像读） | **静态可缓存文件**，**per-project 粒度**，走 CDN | per-package 静态文件，可从 DB 生成+缓存 |
+| 包文件 | 对象存储 B2/S3 | MinIO（不变）|
+| 搜索 | OpenSearch | 先 Postgres 全文 → 后 pgvector（Supabase 自带）|
+
+**关键纠正**：问题不是"用 JSON 文件"（PyPI 也用 JSON，PEP 691），而是"用了一个 **monolithic** 文件"。PyPI 是**一个包一个索引文件**，根目录只列包名。bandersnatch 镜像就是拉这些 per-package 静态文件，镜像端不需要 DB。
+
+我们的 mirror（`/mirror/file` per-package 代理+缓存）**已经踩在正确的 PEP 503 / bandersnatch 路线上**，只差把"目录"（`/mirror/manifest` 那个大 JSON）也拆成 per-package 粒度。
+
+### 迁移时要做的（到规模点再做，约 1 天）
+
+1. 建 Postgres `registry_packages` 表：name / type / latest / versions(JSONB) / appid / description / meta_type / **exports(JSONB)** / **dependencies(JSONB)** / **widgets_used(JSONB)** / created_at / author_id / source / （未来）embedding(vector)
+2. publish 时：解析包 JSON 提取 exports/dependencies/widgets_used，写 1 行（不再 load 整个 index）
+3. `_load_index`/`_save_index` → 改成查/写 Postgres；`_index.json` 退役或降级成生成的快照缓存
+4. `/packages` `/resolve` `/mirror/manifest` → 查 Postgres 吐 JSON（对外格式不变，下游/客户端无感）
+5. `/mirror/manifest` 拆成"根列表（只名字+版本）+ per-package 详情"
+6. backfill 脚本：把现有包重新解析一遍灌进表
+7. 检索（可选，更晚）：Postgres 全文 → pgvector hybrid + LLM 重排，详见 Part（之前对话）
+
+### 现在的纪律
+
+- **别往 `_index.json` 塞 exports/dependencies** —— 会让单文件问题更早爆发，是反方向
+- 35 个包，monolithic JSON 完全够用，**啥都不动**
+- 真要 catalog 带 library API 签名喂 AI，那是触发 Postgres 迁移的理由，不是 fatten JSON 的理由
