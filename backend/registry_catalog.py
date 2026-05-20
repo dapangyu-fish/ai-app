@@ -469,10 +469,11 @@ def set_like(name: str, user_id: str, liked: bool) -> None:
 
 
 def _counts(cur, name: str) -> tuple:
-    cur.execute("SELECT count(*) FROM package_likes WHERE package_name=%s", [name])
-    likes = cur.fetchone()[0]
-    cur.execute("SELECT count(*) FROM package_installs WHERE package_name=%s", [name])
-    installs = cur.fetchone()[0]
+    # cur 可能是 RealDictCursor（fetchone 返 dict），用列别名按 key 取，别用 [0]
+    cur.execute("SELECT count(*) AS c FROM package_likes WHERE package_name=%s", [name])
+    likes = cur.fetchone()["c"]
+    cur.execute("SELECT count(*) AS c FROM package_installs WHERE package_name=%s", [name])
+    installs = cur.fetchone()["c"]
     return likes, installs
 
 
