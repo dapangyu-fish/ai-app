@@ -965,12 +965,30 @@ def update_member_role(namespace_id, user_id):
 def mirror_manifest():
     """对外的 mirror 清单。公开访问，无 token。
     URL 全指向 REGISTRY_BASE_URL（自己），下游 mirror 我时 source 永远是我，
-    chain mirror 自然成立"""
+    chain mirror 自然成立。带富化数据（summary/tags/tech_stack），下游直接拷不重跑 LLM。"""
     with index_lock:
         index = _load_index()
-    # 传 minio_client + bucket 让 build_manifest 能读文件抽 meta.type / description / author
-    # 否则下游 sync 后 /packages?type=app 永远只匹配本地缓存过的包（mirror 文件没缓存=没 meta=过滤失败）
-    return jsonify(build_manifest(index, REGISTRY_BASE_URL, minio_client, BUCKET_COMPONENT))
+    # catalog 富化数据从 registry_packages 取，拼进 manifest 让下游免 LLM 拷过去
+    try:
+        catalog = registry_catalog.catalog_map()
+    except Exception as e:
+        print(f"[Registry] catalog_map 失败（manifest 不带富化）: {e}")
+        catalog = {}
+    return jsonify(build_manifest(index, REGISTRY_BASE_URL, minio_client, BUCKET_COMPONENT, catalog))
+
+
+@app.route('/catalog', methods=['GET'])
+def catalog():
+    """富化目录 —— 给 AI 生成挑参考包用。每个包带 summary/tags/tech_stack/exports/deps。
+    公开只读。可选 ?status=done 只看已富化的。"""
+    only_done = request.args.get('status') == 'done'
+    try:
+        rows = registry_catalog.get_catalog()
+    except Exception as e:
+        return jsonify({"error": f"catalog 读取失败: {e}", "packages": []}), 500
+    if only_done:
+        rows = [r for r in rows if r.get('status') == 'done']
+    return jsonify({"packages": rows, "total": len(rows)})
 
 
 @app.route('/mirror/file/<path:name>/<version>', methods=['GET'])

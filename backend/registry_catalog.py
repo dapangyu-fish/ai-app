@@ -299,6 +299,66 @@ def reset_failed_to_pending() -> int:
         conn.close()
 
 
+def upsert_from_mirror(name: str, pkg: dict) -> None:
+    """mirror 下游用：直接把上游 manifest 带来的富化数据拷进来，status=done，
+    不重新跑 LLM（信任上游，省钱）。pkg 是 manifest 里的包条目。"""
+    sql = """
+        INSERT INTO registry_packages
+          (name, exports, dependencies, widgets_used, builtins_used, tech_stack,
+           summary_zh, summary_en, category, domains, capabilities,
+           use_case_zh, use_case_en, search_text,
+           status, summary_model, summary_prompt_version, indexed_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                'done', %s, %s, NOW(), NOW())
+        ON CONFLICT (name) DO UPDATE SET
+          exports=EXCLUDED.exports, dependencies=EXCLUDED.dependencies,
+          widgets_used=EXCLUDED.widgets_used, builtins_used=EXCLUDED.builtins_used,
+          tech_stack=EXCLUDED.tech_stack,
+          summary_zh=EXCLUDED.summary_zh, summary_en=EXCLUDED.summary_en,
+          category=EXCLUDED.category, domains=EXCLUDED.domains,
+          capabilities=EXCLUDED.capabilities,
+          use_case_zh=EXCLUDED.use_case_zh, use_case_en=EXCLUDED.use_case_en,
+          search_text=EXCLUDED.search_text, status='done',
+          summary_model=EXCLUDED.summary_model,
+          summary_prompt_version=EXCLUDED.summary_prompt_version,
+          indexed_at=NOW(), updated_at=NOW()
+    """
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, [
+                name,
+                Json(pkg.get("exports") or []), Json(pkg.get("dependencies") or []),
+                Json(pkg.get("widgets_used") or []), Json(pkg.get("builtins_used") or []),
+                Json(pkg.get("tech_stack") or []),
+                pkg.get("summary_zh"), pkg.get("summary_en"),
+                pkg.get("category"), Json(pkg.get("domains") or []),
+                Json(pkg.get("capabilities") or []),
+                pkg.get("use_case_zh"), pkg.get("use_case_en"),
+                pkg.get("search_text"),
+                pkg.get("summary_model"), pkg.get("summary_prompt_version") or 0,
+            ])
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def catalog_map() -> dict:
+    """返回 name -> 富化字段 dict，给 build_manifest 拼进 manifest 用。只取有 summary 的。"""
+    conn = _conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT name, exports, dependencies, widgets_used, builtins_used, tech_stack,
+                       summary_zh, summary_en, category, domains, capabilities,
+                       use_case_zh, use_case_en, search_text, summary_model, summary_prompt_version
+                FROM registry_packages WHERE status = 'done'
+            """)
+            return {r["name"]: dict(r) for r in cur.fetchall()}
+    finally:
+        conn.close()
+
+
 def get_catalog(names: Optional[list] = None) -> list:
     """读富化目录（给 /packages 或 /catalog join 用）。names=None 取全部 done 的。"""
     base = """

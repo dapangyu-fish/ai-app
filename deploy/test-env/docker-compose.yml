@@ -161,6 +161,11 @@ services:
       # ── Mirror 配置 ── 空字符串 = 不开 mirror；非空 = 周期性同步上游 manifest
       REGISTRY_UPSTREAM: "${REGISTRY_UPSTREAM}"
       REGISTRY_MIRROR_SYNC_INTERVAL_SEC: "${REGISTRY_MIRROR_SYNC_INTERVAL_SEC}"
+      # ── AI summary 富化 ── enrich worker 调 backend 的 /api/ai/summarize 拿 summary
+      # 走 docker 内部网络 service 名（backend 容器），不暴露公网
+      BACKEND_INTERNAL_URL: "http://backend:5566"
+      ENRICH_POLL_INTERVAL: "30"
+      ENRICH_BATCH: "5"
       SUPABASE_URL: "http://${HOST_IP}:${KONG_HTTP_PORT}"
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
       SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"

@@ -64,6 +64,7 @@ def build_manifest(
     my_base_url: str,
     minio_client: Optional[Minio] = None,
     bucket: Optional[str] = None,
+    catalog: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """把本地 _index.json 转成对外的 mirror manifest。
 
@@ -106,7 +107,7 @@ def build_manifest(
             except Exception:
                 meta_type = "library"  # 默认值
 
-        packages.append({
+        entry = {
             "name": name,
             "type": info.get("type", "user"),
             "meta_type": meta_type or "library",
@@ -116,7 +117,17 @@ def build_manifest(
             "latest": latest,
             "created_at": info.get("created_at"),
             "versions": versions_out,
-        })
+        }
+        # 富化字段（summary/tags/tech_stack）随 manifest 传给下游，下游直接拷不用重跑 LLM
+        cat = (catalog or {}).get(name)
+        if cat:
+            for k in ("exports", "dependencies", "widgets_used", "builtins_used",
+                      "tech_stack", "summary_zh", "summary_en", "category", "domains",
+                      "capabilities", "use_case_zh", "use_case_en", "search_text",
+                      "summary_model", "summary_prompt_version"):
+                if cat.get(k) is not None:
+                    entry[k] = cat[k]
+        packages.append(entry)
     return {
         "registry_version": "1.0",
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -206,6 +217,15 @@ def merge_manifest_into_index(
         )
         if local_pkg["versions"]:
             local_pkg["latest"] = local_pkg["versions"][0]
+
+        # 上游 manifest 带了富化数据（summary 等）→ 直接拷进本地 registry_packages，
+        # status=done，不在下游重跑 LLM（信任上游，省钱）。失败吞掉不影响 index 合并
+        if up_pkg.get("summary_zh") or up_pkg.get("summary_en"):
+            try:
+                import registry_catalog
+                registry_catalog.upsert_from_mirror(name, up_pkg)
+            except Exception as e:
+                print(f"[Mirror] 拷富化数据失败（忽略）{name}: {e}")
 
     return added, replaced
 
