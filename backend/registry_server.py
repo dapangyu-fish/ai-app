@@ -1052,9 +1052,47 @@ def _maybe_start_mirror_sync():
     )
 
 
+def _load_package_json(name: str):
+    """给 enrich worker 用：按包名从 MinIO 读 latest 版本的完整 JSON。
+    路径靠 _index.json 解析（_index.json 仍是解析索引的权威）。读不到返 None。"""
+    with index_lock:
+        index = _load_index()
+        pkg = index.get("packages", {}).get(name)
+    if not pkg:
+        return None
+    latest = pkg.get("latest") or (pkg.get("versions") or [None])[0]
+    if not latest:
+        return None
+    path = pkg.get("path", name)
+    filename = f"{name.split('/')[-1]}-{latest}.json"
+    oss_key = f"{path}/{filename}"
+    try:
+        resp = minio_client.get_object(BUCKET_COMPONENT, oss_key)
+        return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"[Registry] _load_package_json 读 {oss_key} 失败: {e}")
+        return None
+
+
+def _maybe_start_enrich_worker():
+    """起 AI summary 富化后台 worker（advisory lock 选主，只有一个 gunicorn worker 真跑）"""
+    import os
+    if not os.environ.get("BACKEND_INTERNAL_URL"):
+        print("[Registry] BACKEND_INTERNAL_URL 未配置，跳过 enrich worker（summary 不生成）")
+        return
+    import registry_enrich
+    poll = int(os.environ.get("ENRICH_POLL_INTERVAL", "30"))
+    batch = int(os.environ.get("ENRICH_BATCH", "5"))
+    registry_enrich.start_worker(_load_package_json, poll_interval=poll, batch=batch)
+
+
+# gunicorn 不走 __main__，import 时就把后台线程起起来（advisory lock 保证多 worker 只一个干活）
+_maybe_start_mirror_sync()
+_maybe_start_enrich_worker()
+
+
 if __name__ == '__main__':
     print(f"[Registry] 启动 JSON-DSL Registry 服务，端口 {PORT}")
     print(f"[Registry] MinIO: {MINIO_ENDPOINT}")
     print(f"[Registry] Bucket: {BUCKET_COMPONENT}")
-    _maybe_start_mirror_sync()
     app.run(host='0.0.0.0', port=PORT, debug=False)

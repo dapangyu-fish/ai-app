@@ -226,14 +226,22 @@ def claim_pending(limit: int = 5) -> list:
         conn.close()
 
 
-def save_enrich(name: str, enrich: dict, search_text: str, model: str) -> None:
-    """enrich 成功：写 summary 字段 + status=done + 版本号 + 时间。"""
+def save_enrich(name: str, enrich: dict, model: str) -> None:
+    """enrich 成功：写 summary 字段 + status=done + 版本号 + 时间。
+    search_text 在 SQL 里用 LLM 产出 + 已存的 capture 列（tech_stack/exports/deps）拼，
+    worker 不用再查一遍 capture。给未来全文/向量检索用。
+    """
+    name_label = name  # full_name 也塞进检索文本
+    caps_text = " ".join(str(c) for c in (enrich.get("capabilities") or []))
+    domains_text = " ".join(enrich.get("domains") or [])
     sql = """
         UPDATE registry_packages SET
           summary_zh = %s, summary_en = %s,
           category = %s, domains = %s, capabilities = %s,
           use_case_zh = %s, use_case_en = %s,
-          search_text = %s,
+          search_text = concat_ws(' ',
+              %s, %s, %s, %s, %s, %s,
+              tech_stack::text, exports::text, dependencies::text),
           status = 'done', summary_model = %s,
           summary_prompt_version = %s, reindex_attempts = 0,
           indexed_at = NOW(), updated_at = NOW()
@@ -247,7 +255,11 @@ def save_enrich(name: str, enrich: dict, search_text: str, model: str) -> None:
                 enrich.get("category"), Json(enrich.get("domains") or []),
                 Json(enrich.get("capabilities") or []),
                 enrich.get("use_case_zh"), enrich.get("use_case_en"),
-                search_text, model, SUMMARY_PROMPT_VERSION, name,
+                # search_text 拼接片段
+                name_label,
+                enrich.get("summary_zh") or "", enrich.get("summary_en") or "",
+                caps_text, domains_text, enrich.get("category") or "",
+                model, SUMMARY_PROMPT_VERSION, name,
             ])
         conn.commit()
     finally:
