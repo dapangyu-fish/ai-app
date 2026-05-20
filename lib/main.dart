@@ -29,6 +29,7 @@ import 'json_ui/widgets/app_bar_widget.dart' as appbar_helper;
 import 'json_ui/widgets/drawer_helper.dart' as drawer_helper;
 import 'designer/designer_ball.dart';
 import 'designer/market_detail_page.dart';
+import 'designer/market_favorites.dart';
 import 'designer/settings_page.dart';
 import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
@@ -1338,6 +1339,20 @@ class _MarketPageState extends State<_MarketPage> {
     }
 
     try {
+      // 收藏 tab：从本地 SharedPreferences 读，不打 registry
+      if (_selectedTabIndex == 2) {
+        final favs = await MarketFavorites.list();
+        if (!mounted) return;
+        setState(() {
+          _apps = favs.map((e) => <String, dynamic>{
+                'name': e['name'],
+                'display_name': e['display_name'],
+              }).toList();
+          _loading = false;
+        });
+        return;
+      }
+
       final type = _selectedTabIndex == 0 ? 'app' : 'library';
       final resp = await http
           .get(Uri.parse('${AppConfig.registryUrl}/packages?type=$type'))
@@ -1443,6 +1458,32 @@ class _MarketPageState extends State<_MarketPage> {
                           fontSize: 15,
                           fontWeight: _selectedTabIndex == 1 ? FontWeight.w600 : FontWeight.normal,
                           color: _selectedTabIndex == 1 ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _onTabChanged(2),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _selectedTabIndex == 2 ? cs.primary : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        Localizations.localeOf(context).languageCode.startsWith('zh')
+                            ? '收藏' : 'Favorites',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: _selectedTabIndex == 2 ? FontWeight.w600 : FontWeight.normal,
+                          color: _selectedTabIndex == 2 ? cs.primary : cs.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -1595,6 +1636,9 @@ class _MarketPageState extends State<_MarketPage> {
           if (result == 'run' && context.mounted) {
             Navigator.of(context).pop();
             widget.onSelect(app);
+          } else if (_selectedTabIndex == 2 && mounted) {
+            // 收藏 tab：返回时刷新（详情页里可能取消了收藏）
+            _fetchApps();
           }
         },
         child: Padding(

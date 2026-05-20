@@ -16,6 +16,7 @@ import 'package:http/http.dart' as http;
 
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
+import 'market_favorites.dart';
 
 bool _isZh(BuildContext ctx) =>
     Localizations.localeOf(ctx).languageCode.toLowerCase().startsWith('zh');
@@ -45,6 +46,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
   Map<String, dynamic>? _detail;
   bool _loading = true;
   bool _likeBusy = false;
+  bool _favorited = false;
 
   String get _name => widget.app['name']?.toString() ?? '';
 
@@ -52,6 +54,18 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
   void initState() {
     super.initState();
     _fetchDetail();
+    _loadFavorite();
+  }
+
+  Future<void> _loadFavorite() async {
+    final f = await MarketFavorites.isFavorite(_name);
+    if (mounted) setState(() => _favorited = f);
+  }
+
+  Future<void> _toggleFavorite() async {
+    final displayName = widget.app['name']?.toString() ?? _name;
+    final now = await MarketFavorites.toggle(_name, displayName);
+    if (mounted) setState(() => _favorited = now);
   }
 
   Future<void> _fetchDetail() async {
@@ -130,7 +144,17 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
     final version = widget.app['version']?.toString() ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isZh(context) ? '详情' : 'Details')),
+      appBar: AppBar(
+        title: Text(_isZh(context) ? '详情' : 'Details'),
+        actions: [
+          IconButton(
+            tooltip: _isZh(context) ? '收藏' : 'Favorite',
+            icon: Icon(_favorited ? Icons.bookmark : Icons.bookmark_border,
+                color: _favorited ? cs.primary : null),
+            onPressed: _toggleFavorite,
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
