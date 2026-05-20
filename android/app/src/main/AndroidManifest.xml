@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.CAMERA"/>
@@ -8,6 +9,15 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <!-- FCM 推送：Android 13+ 显示通知必须运行时申请这个权限，低版本自动授予 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- 移除依赖插件（image_picker_android / gal 等）保守声明的全量相册读取权限。
+         选图走系统 Photo Picker（Android 13+ ACTION_PICK_IMAGES / 旧版 ACTION_GET_CONTENT），
+         存图走 MediaStore（scoped storage，无需读权限），都不需要这俩权限。
+         Google Play 会因为"声明了 READ_MEDIA_* 但应该用 Photo Picker"警告/拒审，
+         显式 remove 掉合并进来的声明。
+         注意：将来如果真要做"在 app 内自绘相册网格"才需要重新加回来。 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove"/>
     <application
         android:label="MyApp"
         android:name="${applicationName}"
