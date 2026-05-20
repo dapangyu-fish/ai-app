@@ -28,6 +28,7 @@ import 'json_ui/widgets/icon_registry.dart';
 import 'json_ui/widgets/app_bar_widget.dart' as appbar_helper;
 import 'json_ui/widgets/drawer_helper.dart' as drawer_helper;
 import 'designer/designer_ball.dart';
+import 'designer/market_detail_page.dart';
 import 'designer/settings_page.dart';
 import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
@@ -1586,9 +1587,15 @@ class _MarketPageState extends State<_MarketPage> {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.of(context).pop();
-          widget.onSelect(app);
+        onTap: () async {
+          // 先进详情页；详情页"运行"会 pop 返回 'run'，这里再 pop 市场 + 加载
+          final result = await Navigator.of(context).push<String>(
+            MaterialPageRoute(builder: (_) => MarketAppDetailPage(app: app)),
+          );
+          if (result == 'run' && context.mounted) {
+            Navigator.of(context).pop();
+            widget.onSelect(app);
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
