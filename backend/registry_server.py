@@ -40,6 +40,7 @@ from registry_mirror import (
     get_version_source, is_local_version,
     start_background_sync,
 )
+import registry_catalog
 from flask import redirect, Response
 
 BUCKET_APP = "json-app"
@@ -786,6 +787,15 @@ def publish():
                 pkg["description"] = description
 
         _save_index(index)
+
+    # ── 附加：捕获结构化元数据进 registry_packages（不影响上面的 _index.json 发布流程）──
+    # 解析失败/DB 不可用都吞掉，绝不让富化拖累发布主流程。enrich（LLM summary）由后台
+    # worker 异步补，这里只 capture + 标 pending
+    try:
+        capture = registry_catalog.parse_capture(json_content)
+        registry_catalog.upsert_capture(full_name, capture)
+    except Exception as e:
+        print(f"[Registry] capture 失败（忽略，不影响发布）: {full_name}: {e}")
 
     download_url = f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{oss_key}"
 
