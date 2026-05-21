@@ -22,7 +22,7 @@ import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 
 import '../i18n/framework_strings.dart';
 import 'im_cache_manager.dart';
-import 'im_service.dart';
+import 'im_service_io.dart';
 
 class IMCacheManagePage extends StatefulWidget {
   const IMCacheManagePage({super.key});
@@ -68,13 +68,15 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
         }
       }
       if (totalBytes > 0) {
-        result.add(_ConvoCache(
-          conversationID: c.conversationID,
-          name: c.showName ?? c.userID ?? c.groupID ?? c.conversationID,
-          faceUrl: c.faceURL ?? '',
-          bytes: totalBytes,
-          urls: hits,
-        ));
+        result.add(
+          _ConvoCache(
+            conversationID: c.conversationID,
+            name: c.showName ?? c.userID ?? c.groupID ?? c.conversationID,
+            faceUrl: c.faceURL ?? '',
+            bytes: totalBytes,
+            urls: hits,
+          ),
+        );
       }
     }
 
@@ -99,7 +101,8 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
       );
       for (final m in msgs) {
         if (m.contentType == MessageType.picture) {
-          final u = m.pictureElem?.bigPicture?.url ??
+          final u =
+              m.pictureElem?.bigPicture?.url ??
               m.pictureElem?.sourcePicture?.url;
           if (u != null && u.isNotEmpty) urls.add(u);
         } else if (m.contentType == MessageType.video) {
@@ -116,9 +119,9 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
   Future<void> _clearSelected() async {
     final s = T.of(context);
     if (_selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.imCacheNoSelection)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.imCacheNoSelection)));
       return;
     }
     int clearedBytes = 0;
@@ -126,7 +129,11 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
       final item = _items.firstWhere(
         (i) => i.conversationID == cid,
         orElse: () => const _ConvoCache(
-          conversationID: '', name: '', faceUrl: '', bytes: 0, urls: [],
+          conversationID: '',
+          name: '',
+          faceUrl: '',
+          bytes: 0,
+          urls: [],
         ),
       );
       for (final url in item.urls) {
@@ -141,7 +148,9 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
     if (!mounted) return;
     final cleared = _formatBytes(clearedBytes);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.imCacheClearedToast.replaceAll('{size}', cleared))),
+      SnackBar(
+        content: Text(s.imCacheClearedToast.replaceAll('{size}', cleared)),
+      ),
     );
     await _scan();
   }
@@ -161,7 +170,8 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
   static String _formatBytes(int bytes) {
     if (bytes < 1024) return '${bytes}B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)}GB';
   }
 
@@ -173,10 +183,7 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
     final allSelected = _items.isNotEmpty && _selected.length == _items.length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(s.imCacheManageTitle),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text(s.imCacheManageTitle), centerTitle: true),
       body: _loading
           ? Center(
               child: Column(
@@ -184,26 +191,39 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
-                  Text(s.imCacheLoading, style: TextStyle(color: cs.onSurfaceVariant)),
+                  Text(
+                    s.imCacheLoading,
+                    style: TextStyle(color: cs.onSurfaceVariant),
+                  ),
                 ],
               ),
             )
           : Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   color: cs.surfaceContainerHighest,
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
-                          s.imCacheTotal.replaceAll('{size}', _formatBytes(total)),
+                          s.imCacheTotal.replaceAll(
+                            '{size}',
+                            _formatBytes(total),
+                          ),
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                       TextButton(
                         onPressed: _items.isEmpty ? null : _toggleAll,
-                        child: Text(allSelected ? s.imCacheDeselectAll : s.imCacheSelectAll),
+                        child: Text(
+                          allSelected
+                              ? s.imCacheDeselectAll
+                              : s.imCacheSelectAll,
+                        ),
                       ),
                     ],
                   ),
@@ -220,7 +240,9 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
                           itemCount: _items.length,
                           itemBuilder: (_, i) {
                             final item = _items[i];
-                            final checked = _selected.contains(item.conversationID);
+                            final checked = _selected.contains(
+                              item.conversationID,
+                            );
                             return CheckboxListTile(
                               value: checked,
                               onChanged: (v) {
@@ -232,7 +254,11 @@ class _IMCacheManagePageState extends State<IMCacheManagePage> {
                                   }
                                 });
                               },
-                              title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              title: Text(
+                                item.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               subtitle: Text(_formatBytes(item.bytes)),
                               controlAffinity: ListTileControlAffinity.leading,
                             );

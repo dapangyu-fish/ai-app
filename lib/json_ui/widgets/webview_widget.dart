@@ -3,6 +3,7 @@
 //
 // 注意：Android 需要 INTERNET 权限（默认有），iOS 需要 NSAppTransportSecurity
 // 配置（如要加载 http URL）
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'base_widget.dart';
@@ -29,10 +30,7 @@ class JsonWebViewWidget extends JsonBaseWidget {
 
     return SizedBox(
       height: height,
-      child: _WebViewInline(
-        url: url,
-        javascriptEnabled: javascriptEnabled,
-      ),
+      child: _WebViewInline(url: url, javascriptEnabled: javascriptEnabled),
     );
   }
 }
@@ -41,10 +39,7 @@ class _WebViewInline extends StatefulWidget {
   final String url;
   final bool javascriptEnabled;
 
-  const _WebViewInline({
-    required this.url,
-    required this.javascriptEnabled,
-  });
+  const _WebViewInline({required this.url, required this.javascriptEnabled});
 
   @override
   State<_WebViewInline> createState() => _WebViewInlineState();
@@ -60,9 +55,11 @@ class _WebViewInlineState extends State<_WebViewInline> {
     super.initState();
     if (!kIsWeb) {
       _controller = WebViewController()
-        ..setJavaScriptMode(widget.javascriptEnabled
-            ? JavaScriptMode.unrestricted
-            : JavaScriptMode.disabled)
+        ..setJavaScriptMode(
+          widget.javascriptEnabled
+              ? JavaScriptMode.unrestricted
+              : JavaScriptMode.disabled,
+        )
         ..loadRequest(Uri.parse(widget.url));
     }
   }

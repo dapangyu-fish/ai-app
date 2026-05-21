@@ -70,6 +70,7 @@ def create_app():
     # 新路径（feat/ai-background-push）：worker 与 HTTP 解耦，支持后台续跑 + SSE 重连
     # 详见 backend/ARCHITECTURE.md §3
     app.add_url_rule("/api/ai/chat/start", methods=["POST"], view_func=claude_chat.chat_start)
+    app.add_url_rule("/api/ai/chat/<session_id>/stream_token", methods=["POST"], view_func=claude_chat.chat_stream_token)
     app.add_url_rule("/api/ai/chat/<session_id>/stream", methods=["GET"], view_func=claude_chat.chat_stream)
     app.add_url_rule("/api/ai/chat/<session_id>/result", methods=["GET"], view_func=claude_chat.chat_result)
     app.add_url_rule("/api/ai/chat/<session_id>/status", methods=["GET"], view_func=claude_chat.chat_status_v2)

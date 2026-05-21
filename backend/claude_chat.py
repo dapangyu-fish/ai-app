@@ -3,15 +3,18 @@ import os
 import subprocess
 import logging
 import threading
-from flask import request, jsonify, Response, stream_with_context
+from flask import current_app, request, jsonify, Response, stream_with_context
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from config import AI_PROVIDERS, DEFAULT_PROVIDER, PROJECT_ROOT, GENERATE_PROMPT_PATH, CLAUDE_BIN, load_generate_prompt
-from auth import require_auth
+from auth import require_auth, verify_access_token
 from database import get_quota_info, increment_quota
 from config import ROLE_QUOTAS
 
 logger = logging.getLogger(__name__)
 _session_procs = {}
 _session_procs_lock = threading.Lock()
+_STREAM_TOKEN_SALT = "ai-chat-stream-token-v1"
+_STREAM_TOKEN_MAX_AGE = 120
 
 _CLI_LOG_DIR = os.environ.get("CLAUDE_CLI_LOG_DIR", "/mnt/storage00/log")
 _cli_log_lock = threading.Lock()
@@ -71,6 +74,48 @@ def _is_session_proc_alive(session_id):
     if proc is None:
         return False
     return proc.poll() is None
+
+
+def _stream_token_serializer():
+    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+
+
+def _make_stream_token(session_id: str, user_id: str) -> str:
+    return _stream_token_serializer().dumps(
+        {"sid": session_id, "uid": user_id},
+        salt=_STREAM_TOKEN_SALT,
+    )
+
+
+def _verify_stream_token(token: str, session_id: str):
+    try:
+        data = _stream_token_serializer().loads(
+            token,
+            salt=_STREAM_TOKEN_SALT,
+            max_age=_STREAM_TOKEN_MAX_AGE,
+        )
+    except (BadSignature, SignatureExpired):
+        return None
+    if data.get("sid") != session_id:
+        return None
+    uid = data.get("uid")
+    return str(uid) if uid else None
+
+
+def _authenticate_stream_reader(session_id: str):
+    """SSE 鉴权：移动端走 Authorization，Web EventSource 走短期 stream_token。"""
+    token = request.args.get("stream_token", "").strip()
+    if token:
+        return _verify_stream_token(token, session_id)
+
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    user = verify_access_token(auth[7:])
+    if user is None:
+        return None
+    return str(user.get("id", ""))
+
 
 def _get_provider(provider_id=None):
     pid = provider_id or DEFAULT_PROVIDER
@@ -727,6 +772,27 @@ def _build_sse_stream(session_id: str, last_id: str):
 
 
 @require_auth
+def chat_stream_token(session_id):
+    """给 Web EventSource 签发短期读流 token。
+
+    EventSource 不能带 Authorization header，所以 Web 端先用正常登录态 POST
+    换一个只绑定当前 session/user 的短期 token，再把它放到 stream query 里。
+    """
+    store = ai_session.SessionStore()
+    meta = store.get_meta(session_id)
+    if not meta:
+        return jsonify({"error": "session 不存在或已过期"}), 404
+
+    user_id = str(request.supabase_user.get("id", ""))
+    if meta.get("user_id") != user_id:
+        return jsonify({"error": "无权访问此 session"}), 403
+
+    return jsonify({
+        "stream_token": _make_stream_token(session_id, user_id),
+        "expires_in": _STREAM_TOKEN_MAX_AGE,
+    })
+
+
 def chat_stream(session_id):
     """SSE 端点：从 Redis 读 worker 写入的事件序列。
 
@@ -737,8 +803,11 @@ def chat_stream(session_id):
     if not meta:
         return jsonify({"error": "session 不存在或已过期"}), 404
 
-    # 鉴权：只允许该 session 的发起者读
-    if meta.get("user_id") != request.supabase_user.get("id"):
+    # 鉴权：移动端可继续走 Authorization header；Web EventSource 走 stream_token。
+    user_id = _authenticate_stream_reader(session_id)
+    if user_id is None:
+        return jsonify({"error": "未提供认证 token"}), 401
+    if meta.get("user_id") != user_id:
         return jsonify({"error": "无权访问此 session"}), 403
 
     last_id = request.args.get("last_id", "0").strip() or "0"
