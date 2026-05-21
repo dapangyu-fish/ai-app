@@ -8,14 +8,15 @@ import '../auth/auth_service.dart';
 import '../config/app_config.dart';
 import '../config/remote_config_service.dart';
 import '../i18n/framework_strings.dart';
+import '../platform/web_event_source.dart';
 import 'session_meta.dart';
 
 /// AI 对话事件
 class ChatEvent {
-  final String? content;      // 增量文本
-  final String? thinking;     // 思考过程
-  final Map<String, dynamic>? jsonApp;  // 检测到的 JSON-APP
-  final Map<String, dynamic>? quota;    // 配额信息
+  final String? content; // 增量文本
+  final String? thinking; // 思考过程
+  final Map<String, dynamic>? jsonApp; // 检测到的 JSON-APP
+  final Map<String, dynamic>? quota; // 配额信息
   final String? error;
   final bool isGeneratingJson; // 正在生成 JSON
   final String? requestAction; // 比如 "upload_current_app"
@@ -27,7 +28,20 @@ class ChatEvent {
   final bool needsRetry;
   final String? retryUserMessage;
 
-  ChatEvent({this.content, this.thinking, this.jsonApp, this.quota, this.error, this.isGeneratingJson = false, this.requestAction, this.failedJsonUrl, this.statusMessage, this.pendingJsonUrl, this.needsRetry = false, this.retryUserMessage});
+  ChatEvent({
+    this.content,
+    this.thinking,
+    this.jsonApp,
+    this.quota,
+    this.error,
+    this.isGeneratingJson = false,
+    this.requestAction,
+    this.failedJsonUrl,
+    this.statusMessage,
+    this.pendingJsonUrl,
+    this.needsRetry = false,
+    this.retryUserMessage,
+  });
 }
 
 /// tryResumeUnfinished 的返回值。app 启动恢复上次会话用。
@@ -45,7 +59,7 @@ class ResumeCompleted extends ResumeResult {
   final String userMessage;
   final String assistantText;
   final String? thinking;
-  final String? jsonUrl;  // 解析 [json_app_url] 标签得到
+  final String? jsonUrl; // 解析 [json_app_url] 标签得到
   final String? requestAction; // 解析 [request_action] 标签得到（如 upload_current_app）
   const ResumeCompleted({
     required this.userMessage,
@@ -193,12 +207,14 @@ class AiChatService {
         final used = prefs.getBool(_legacySessionUsedKey) ?? false;
         final lastMsg = prefs.getString(_legacyLastUserMessageKey) ?? '';
         if (used) {
-          _sessions.add(SessionMeta(
-            id: legacyId,
-            firstMessage: lastMsg,  // 老数据不知道首条是啥，拿 lastUserMessage 凑数
-            lastUserMessage: lastMsg,
-            committed: true,
-          ));
+          _sessions.add(
+            SessionMeta(
+              id: legacyId,
+              firstMessage: lastMsg, // 老数据不知道首条是啥，拿 lastUserMessage 凑数
+              lastUserMessage: lastMsg,
+              committed: true,
+            ),
+          );
         }
         // 清理老 keys，迁移只跑一次
         await prefs.remove(_legacySessionKey);
@@ -227,15 +243,19 @@ class AiChatService {
     }
 
     await _persistSessions();
-    debugPrint('[AI_CHAT] loadSession: ${_sessions.length} 条，active=$_activeSessionId');
+    debugPrint(
+      '[AI_CHAT] loadSession: ${_sessions.length} 条，active=$_activeSessionId',
+    );
   }
 
   /// 把 committed=true 的 session 写回 prefs（占位的不持久化）
   Future<void> _persistSessions() async {
     final prefs = await SharedPreferences.getInstance();
     final committed = _sessions.where((s) => s.committed).toList();
-    await prefs.setString(_sessionsListKey,
-        json.encode(committed.map((s) => s.toJson()).toList()));
+    await prefs.setString(
+      _sessionsListKey,
+      json.encode(committed.map((s) => s.toJson()).toList()),
+    );
     await prefs.setString(_activeSessionKey, _activeSessionId);
   }
 
@@ -304,7 +324,10 @@ class AiChatService {
 
   /// 重命名 session（用户手动覆盖 auto title）。
   Future<void> renameSession(String sid, String title) async {
-    final s = _sessions.firstWhere((x) => x.id == sid, orElse: () => SessionMeta(id: ''));
+    final s = _sessions.firstWhere(
+      (x) => x.id == sid,
+      orElse: () => SessionMeta(id: ''),
+    );
     if (s.id.isEmpty) return;
     s.customTitle = title.trim().isEmpty ? null : title.trim();
     await _persistSessions();
@@ -323,11 +346,14 @@ class AiChatService {
   String _generateSessionId() {
     final random = Random();
     final hexDigits = '0123456789abcdef';
-    
+
     String generateHex(int length) {
-      return List.generate(length, (_) => hexDigits[random.nextInt(16)]).join('');
+      return List.generate(
+        length,
+        (_) => hexDigits[random.nextInt(16)],
+      ).join('');
     }
-    
+
     // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8, 9, a, b)
     final y = hexDigits[random.nextInt(4) + 8];
     return '${generateHex(8)}-${generateHex(4)}-4${generateHex(3)}-$y${generateHex(3)}-${generateHex(12)}';
@@ -359,13 +385,16 @@ class AiChatService {
     final token = AuthService.token;
     if (token == null) return;
     // 不 await：abort 不能让 UI 卡住
-    http.post(
-      Uri.parse('$_baseUrl/api/ai/chat/$sid/abort'),
-      headers: {'Authorization': 'Bearer $token'},
-    ).timeout(const Duration(seconds: 3)).catchError((e) {
-      debugPrint('[AI_CHAT] abort backend error (ignored): $e');
-      return http.Response('', 0);
-    });
+    http
+        .post(
+          Uri.parse('$_baseUrl/api/ai/chat/$sid/abort'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 3))
+        .catchError((e) {
+          debugPrint('[AI_CHAT] abort backend error (ignored): $e');
+          return http.Response('', 0);
+        });
   }
 
   /// 检查后端对应 session 是否仍在跑（新架构：worker 是否还活）
@@ -386,10 +415,7 @@ class AiChatService {
       final headers = <String, String>{};
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
-          .get(
-            Uri.parse('$_baseUrl/api/ai/chat/$sid/status'),
-            headers: headers,
-          )
+          .get(Uri.parse('$_baseUrl/api/ai/chat/$sid/status'), headers: headers)
           .timeout(const Duration(seconds: 5));
       if (resp.statusCode != 200) return null;
       return json.decode(resp.body) as Map<String, dynamic>;
@@ -407,13 +433,15 @@ class AiChatService {
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     final targets = committed.take(limit).toList();
     final updated = <String>{};
-    await Future.wait(targets.map((s) async {
-      final data = await _probeSessionStatus(s.id);
-      if (data == null) return;
-      s.lastKnownStatus = data['status'] as String?;
-      s.processAlive = data['process_alive'] == true;
-      updated.add(s.id);
-    }));
+    await Future.wait(
+      targets.map((s) async {
+        final data = await _probeSessionStatus(s.id);
+        if (data == null) return;
+        s.lastKnownStatus = data['status'] as String?;
+        s.processAlive = data['process_alive'] == true;
+        updated.add(s.id);
+      }),
+    );
     if (updated.isNotEmpty) await _persistSessions();
     return updated;
   }
@@ -457,18 +485,27 @@ class AiChatService {
       yield ChatEvent(error: startResult.error, quota: startResult.quota);
       return;
     }
+    final streamSessionId = startResult.sessionId ?? active.id;
     // ⚠️ 关键时机：先把 SessionMeta 标记 committed + 持久化，再开 SSE
     // 不变量：prefs 永远 ≤ backend，所以"持久化"必须发生在 backend 已经接受这条消息之后
     active.lastUserMessage = userMessage;
     active.updatedAt = DateTime.now().millisecondsSinceEpoch;
     if (!active.committed) {
       active.committed = true;
-      active.firstMessage = userMessage;  // 首条消息冻结为标题来源
+      active.firstMessage = userMessage; // 首条消息冻结为标题来源
     }
     await _persistSessions();
 
-    // ── 2. SSE 流式读 + 自动重连 ──
-    yield* _streamWithReconnect();
+    // ── 2. 读取结果 ──
+    //
+    // Web 用浏览器原生 EventSource；移动端继续用 package:http + Authorization SSE。
+    if (kIsWeb) {
+      yield* _streamWithWebEventSource(streamSessionId);
+      return;
+    }
+
+    // 非 Web：SSE 流式读 + 自动重连
+    yield* _streamWithReconnect(streamSessionId);
   }
 
   /// 重试上一轮（worker 死了 / 用户主动重试）。复用 active session 的 sid，
@@ -484,7 +521,7 @@ class AiChatService {
 
   /// SSE 主循环：连 → 读 → 断了 → 探活 → 重连 / 报错。
   /// 调用方负责确保 worker 已经在跑（要么刚 _postStart 起来，要么是恢复已有 session）。
-  Stream<ChatEvent> _streamWithReconnect() async* {
+  Stream<ChatEvent> _streamWithReconnect(String sessionId) async* {
     final state = _StreamState();
     int reconnectCount = 0;
     while (true) {
@@ -493,8 +530,8 @@ class AiChatService {
         return;
       }
 
-      state.outcome = _StreamOutcome.retry;  // 默认假设需要重连，_readStreamOnce 内部会改
-      await for (final ev in _readStreamOnce(state)) {
+      state.outcome = _StreamOutcome.retry; // 默认假设需要重连，_readStreamOnce 内部会改
+      await for (final ev in _readStreamOnce(state, sessionId)) {
         yield ev;
       }
 
@@ -506,7 +543,7 @@ class AiChatService {
       // 流断了 → 在重连之前先探活
       // 关键反模式防御：/status 调用本身失败时绝不当成"worker 死了"，
       // 否则坏网络会被误判 → 弹重试按钮 → 用户点重试 → 又失败 → UX 崩
-      final alive = await _checkAliveCarefully();
+      final alive = await _checkAliveCarefully(sessionId);
       if (alive == _AliveCheck.confirmedDead) {
         debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
@@ -518,27 +555,34 @@ class AiChatService {
       if (reconnectCount > 30) {
         // 重试 30 次还连不上，stream 端确实出问题了。同时给 error 和 needsRetry：
         // UI 层负责把这俩组合成 "出错了 + 重试按钮" 的系统消息
-        yield ChatEvent(error: T.fmt(T.current.chatErrConnectionUnstableWith, {'n': 30}));
+        yield ChatEvent(
+          error: T.fmt(T.current.chatErrConnectionUnstableWith, {'n': 30}),
+        );
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
         return;
       }
-      final delayMs = (500 * (1 << (reconnectCount.clamp(1, 4) - 1))).clamp(500, 5000);
-      debugPrint('[AI_CHAT] 第 $reconnectCount 次重连 (alive=$alive)，${delayMs}ms 后...');
+      final delayMs = (500 * (1 << (reconnectCount.clamp(1, 4) - 1))).clamp(
+        500,
+        5000,
+      );
+      debugPrint(
+        '[AI_CHAT] 第 $reconnectCount 次重连 (alive=$alive)，${delayMs}ms 后...',
+      );
       await Future.delayed(Duration(milliseconds: delayMs));
     }
   }
 
   /// 探活三态：confirmed dead / alive or finished / unknown。
   /// 只有 confirmedDead 才是"worker 真死了"的可信信号。
-  Future<_AliveCheck> _checkAliveCarefully() async {
-    if (_activeSessionId.isEmpty) return _AliveCheck.unknown;
+  Future<_AliveCheck> _checkAliveCarefully(String sessionId) async {
+    if (sessionId.isEmpty) return _AliveCheck.unknown;
     try {
       final token = AuthService.token;
       final headers = <String, String>{};
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/$_activeSessionId/status'),
+            Uri.parse('$_baseUrl/api/ai/chat/$sessionId/status'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 8));
@@ -604,12 +648,18 @@ class AiChatService {
         if (!procAlive) {
           return ResumeNeedsRetry(active.lastUserMessage);
         }
+        if (kIsWeb) {
+          return ResumeStreaming(
+            userMessage: active.lastUserMessage,
+            stream: _streamWithWebEventSource(active.id),
+          );
+        }
         // worker 还在跑：续 SSE，不调 /start
         _aborting = false;
-        _lastEntryId = '0';  // backend stream 是这一轮的，从头读没问题
+        _lastEntryId = '0'; // backend stream 是这一轮的，从头读没问题
         return ResumeStreaming(
           userMessage: active.lastUserMessage,
-          stream: _streamWithReconnect(),
+          stream: _streamWithReconnect(active.id),
         );
       }
       return const ResumeNothing();
@@ -619,16 +669,339 @@ class AiChatService {
     }
   }
 
+  /// Flutter Web 兜底：不用 SSE，轮询 /status，完成后拉 /result。
+  ///
+  /// 后端 worker 仍然照常在后台跑；只是 Web 客户端不读 streaming body，避免
+  /// dart2js/browser fetch streaming 差异导致 "SSE 连接超时 / Failed to fetch"。
+  Stream<ChatEvent> _pollResultForWeb(String sessionId) async* {
+    var pollCount = 0;
+    while (true) {
+      if (_aborting) return;
+
+      try {
+        final token = AuthService.token;
+        if (token == null) {
+          yield ChatEvent(error: T.current.chatErrPleaseLogin);
+          return;
+        }
+
+        final resp = await http
+            .get(
+              Uri.parse('$_baseUrl/api/ai/chat/$sessionId/status'),
+              headers: {'Authorization': 'Bearer $token'},
+            )
+            .timeout(const Duration(seconds: 10));
+
+        if (resp.statusCode == 401) {
+          try {
+            await AuthService.refreshSession();
+          } catch (_) {
+            yield ChatEvent(error: T.current.chatErrPleaseLogin);
+            return;
+          }
+          continue;
+        }
+        if (resp.statusCode == 404) {
+          yield ChatEvent(error: 'Session 已过期，请重新发起对话');
+          return;
+        }
+        if (resp.statusCode != 200) {
+          yield ChatEvent(
+            error: T.fmt(T.current.chatErrServerWithBody, {
+              'code': resp.statusCode,
+              'body': resp.body,
+            }),
+          );
+          return;
+        }
+
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        final status = data['status'] as String? ?? '';
+        final procAlive = data['process_alive'] == true;
+
+        if (status == 'done') {
+          final completed = await _fetchCompletedResult(sessionId);
+          if (completed is ResumeCompleted) {
+            await for (final ev in _eventsFromCompleted(completed)) {
+              yield ev;
+            }
+          } else {
+            yield ChatEvent(error: T.current.chatErrConnectionTimeout);
+          }
+          return;
+        }
+
+        if (status == 'failed' || status == 'aborted') {
+          yield ChatEvent(
+            error: data['error'] as String? ?? 'AI 任务已中断',
+            needsRetry: true,
+            retryUserMessage: lastUserMessage,
+          );
+          return;
+        }
+
+        if (status == 'running' && !procAlive) {
+          yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
+          return;
+        }
+
+        pollCount++;
+        if (pollCount == 1 || pollCount % 5 == 0) {
+          yield ChatEvent(statusMessage: T.current.chatStatusGenerating);
+        }
+        await Future.delayed(const Duration(seconds: 2));
+      } on TimeoutException {
+        await Future.delayed(const Duration(seconds: 2));
+      } on http.ClientException catch (e) {
+        debugPrint('[AI_CHAT] web poll ClientException: $e');
+        await Future.delayed(const Duration(seconds: 2));
+      } catch (e) {
+        debugPrint('[AI_CHAT] web poll error: $e');
+        yield ChatEvent(error: T.fmt(T.current.chatErrNetworkWith, {'err': e}));
+        return;
+      }
+    }
+  }
+
+  Stream<ChatEvent> _eventsFromCompleted(ResumeCompleted completed) async* {
+    if (completed.thinking != null && completed.thinking!.isNotEmpty) {
+      yield ChatEvent(thinking: completed.thinking);
+    }
+    if (completed.assistantText.isNotEmpty) {
+      yield ChatEvent(content: completed.assistantText);
+    }
+    final state = _StreamState()
+      ..accumulated = completed.assistantText
+      ..accumulatedThinking = completed.thinking ?? '';
+    await for (final ev in _emitTrailingTags(state)) {
+      yield ev;
+    }
+  }
+
+  Stream<ChatEvent> _streamWithWebEventSource(String sessionId) async* {
+    final state = _StreamState();
+    int reconnectCount = 0;
+    while (true) {
+      if (_aborting) {
+        debugPrint('[AI_CHAT] Web EventSource 用户主动中止，不重连');
+        return;
+      }
+
+      state.outcome = _StreamOutcome.retry;
+      try {
+        await for (final ev in _readWebEventSourceOnce(state, sessionId)) {
+          yield ev;
+        }
+      } on UnsupportedError catch (e) {
+        debugPrint('[AI_CHAT] Web EventSource 不可用，降级轮询: $e');
+        yield* _pollResultForWeb(sessionId);
+        return;
+      }
+
+      if (state.outcome == _StreamOutcome.done) {
+        debugPrint('[AI_CHAT] Web EventSource 流正常结束 (last_id=$_lastEntryId)');
+        return;
+      }
+
+      final alive = await _checkAliveCarefully(sessionId);
+      if (alive == _AliveCheck.confirmedDead) {
+        debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
+        yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
+        return;
+      }
+
+      reconnectCount++;
+      if (reconnectCount > 30) {
+        yield ChatEvent(
+          error: T.fmt(T.current.chatErrConnectionUnstableWith, {'n': 30}),
+        );
+        yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
+        return;
+      }
+      final delayMs = (500 * (1 << (reconnectCount.clamp(1, 4) - 1))).clamp(
+        500,
+        5000,
+      );
+      debugPrint(
+        '[AI_CHAT] Web EventSource 第 $reconnectCount 次重连 (alive=$alive)，${delayMs}ms 后...',
+      );
+      await Future.delayed(Duration(milliseconds: delayMs));
+    }
+  }
+
+  Future<_StreamTokenResult> _fetchStreamToken(String sessionId) async {
+    final token = AuthService.token;
+    if (token == null) {
+      return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+    }
+
+    Future<http.Response> postToken(String bearer) {
+      return http
+          .post(
+            Uri.parse('$_baseUrl/api/ai/chat/$sessionId/stream_token'),
+            headers: {'Authorization': 'Bearer $bearer'},
+          )
+          .timeout(const Duration(seconds: 10));
+    }
+
+    var bearer = token;
+    Object? lastError;
+    for (var attempt = 1; attempt <= 4; attempt++) {
+      if (attempt > 1) {
+        await Future.delayed(Duration(milliseconds: 250 * attempt));
+      }
+
+      try {
+        var resp = await postToken(bearer);
+        if (resp.statusCode == 401 && attempt == 1) {
+          try {
+            await AuthService.refreshSession();
+          } catch (_) {
+            return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+          }
+          final refreshed = AuthService.token;
+          if (refreshed == null) {
+            return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+          }
+          bearer = refreshed;
+          resp = await postToken(bearer);
+        }
+
+        if (resp.statusCode == 200) {
+          final data = json.decode(resp.body) as Map<String, dynamic>;
+          final streamToken = data['stream_token'] as String?;
+          if (streamToken == null || streamToken.isEmpty) {
+            return _StreamTokenResult.error('stream_token 响应为空');
+          }
+          return _StreamTokenResult.ok(streamToken);
+        }
+
+        debugPrint(
+          '[AI_CHAT] stream_token HTTP ${resp.statusCode}: ${resp.body}',
+        );
+        if (resp.statusCode == 404 && attempt < 4) {
+          // Web 弹窗/会话切换时可能短暂拿到旧 session。稍等后再确认，避免误报。
+          lastError = 'HTTP 404';
+          continue;
+        }
+        if (resp.statusCode == 401) {
+          return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+        }
+        if (resp.statusCode == 403) {
+          return _StreamTokenResult.error('无权访问当前会话，请重新打开对话');
+        }
+        if (resp.statusCode == 404) {
+          return _StreamTokenResult.error('当前会话已过期，请重新打开对话');
+        }
+        if (resp.statusCode >= 500 && attempt < 4) {
+          lastError = 'HTTP ${resp.statusCode}';
+          continue;
+        }
+        return _StreamTokenResult.error(
+          T.fmt(T.current.chatErrServerWithBody, {
+            'code': resp.statusCode,
+            'body': resp.body,
+          }),
+        );
+      } on TimeoutException catch (e) {
+        lastError = e;
+        if (attempt < 4) continue;
+      } on http.ClientException catch (e) {
+        lastError = e;
+        if (attempt < 4) continue;
+      } catch (e) {
+        lastError = e;
+        break;
+      }
+    }
+
+    return _StreamTokenResult.error(
+      T.fmt(T.current.chatErrNetworkWith, {'err': lastError ?? ''}),
+    );
+  }
+
+  Stream<ChatEvent> _readWebEventSourceOnce(
+    _StreamState state,
+    String sessionId,
+  ) async* {
+    final tokenResult = await _fetchStreamToken(sessionId);
+    if (tokenResult.error != null) {
+      yield ChatEvent(error: tokenResult.error);
+      state.outcome = _StreamOutcome.done;
+      return;
+    }
+    final streamToken = tokenResult.token!;
+
+    final uri = Uri.parse('$_baseUrl/api/ai/chat/$sessionId/stream').replace(
+      queryParameters: {'last_id': _lastEntryId, 'stream_token': streamToken},
+    );
+    debugPrint('[AI_CHAT] >>> Web EventSource GET $uri');
+
+    try {
+      await for (final message in openWebEventSource(uri.toString()).timeout(
+        const Duration(seconds: 45),
+        onTimeout: (sink) {
+          debugPrint('[AI_CHAT] Web EventSource 45s 无消息，重连');
+          sink.close();
+        },
+      )) {
+        if (_aborting) {
+          state.outcome = _StreamOutcome.done;
+          return;
+        }
+
+        final dataStr = message.data.trimLeft();
+        if (dataStr == '[DONE]') {
+          debugPrint('[AI_CHAT] <<< Web EventSource [DONE]');
+          await for (final ev in _emitTrailingTags(state)) {
+            yield ev;
+          }
+          state.outcome = _StreamOutcome.done;
+          return;
+        }
+
+        if (!dataStr.contains('"content"') && !dataStr.contains('"thinking"')) {
+          debugPrint(
+            '[AI_CHAT] <<< Web EventSource: ${dataStr.length > 200 ? "${dataStr.substring(0, 200)}..." : dataStr}',
+          );
+        }
+
+        try {
+          final data = json.decode(dataStr) as Map<String, dynamic>;
+          await for (final ev in _handleEvent(data, state)) {
+            yield ev;
+          }
+          final id = message.id;
+          if (id != null && id.isNotEmpty) {
+            _lastEntryId = id;
+          }
+        } catch (e) {
+          debugPrint('[AI_CHAT] Web EventSource 事件 JSON 解析失败: $e');
+        }
+      }
+
+      debugPrint('[AI_CHAT] Web EventSource 流自然结束，无 [DONE]，重连');
+      state.outcome = _StreamOutcome.retry;
+    } on TimeoutException catch (_) {
+      debugPrint('[AI_CHAT] Web EventSource 连接超时');
+      state.outcome = _aborting ? _StreamOutcome.done : _StreamOutcome.retry;
+    } catch (e) {
+      debugPrint('[AI_CHAT] Web EventSource 错误: $e');
+      state.outcome = _aborting ? _StreamOutcome.done : _StreamOutcome.retry;
+    }
+  }
+
   /// 从 /result 拿到上一轮完成的最终文本，并解析其中的 [json_app_url] 标签
-  Future<ResumeResult> _fetchCompletedResult() async {
+  Future<ResumeResult> _fetchCompletedResult([String? sessionId]) async {
     final active = _active;
     if (active == null) return const ResumeNothing();
+    final sid = sessionId ?? active.id;
     try {
       final token = AuthService.token;
       if (token == null) return const ResumeNothing();
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/${active.id}/result'),
+            Uri.parse('$_baseUrl/api/ai/chat/$sid/result'),
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(const Duration(seconds: 8));
@@ -640,8 +1013,9 @@ class AiChatService {
 
       // 解析 [json_app_url]…[/json_app_url]（与 _emitTrailingTags 同一份正则）
       String? jsonUrl;
-      final urlMatch = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]')
-          .firstMatch(finalText);
+      final urlMatch = RegExp(
+        r'\[json_app_url\]([^\[]+?)\[/json_app_url\]',
+      ).firstMatch(finalText);
       if (urlMatch != null) {
         final raw = urlMatch.group(1)!.trim();
         final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
@@ -649,8 +1023,9 @@ class AiChatService {
       }
       // 解析 [request_action]xxx[/request_action]（之前漏了 → 杀进程后回来 UPLOAD 不出来 P0 bug）
       String? requestAction;
-      final actionMatch = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]')
-          .firstMatch(finalText);
+      final actionMatch = RegExp(
+        r'\[request_action\]([^\]]+)\[/request_action\]',
+      ).firstMatch(finalText);
       if (actionMatch != null) {
         final action = actionMatch.group(1)!.trim();
         if (action.isNotEmpty) requestAction = action;
@@ -670,12 +1045,16 @@ class AiChatService {
 
   /// 内部：读一次 SSE 直到流结束或断线，把事件 yield 出去；
   /// 流结束后通过 [state.outcome] 告诉调用方下一步该重连还是退出。
-  Stream<ChatEvent> _readStreamOnce(_StreamState state) async* {
+  Stream<ChatEvent> _readStreamOnce(
+    _StreamState state,
+    String sessionId,
+  ) async* {
     final client = http.Client();
     _activeClient = client;
 
     final token = AuthService.token;
-    final url = '$_baseUrl/api/ai/chat/$_activeSessionId/stream?last_id=${Uri.encodeQueryComponent(_lastEntryId)}';
+    final url =
+        '$_baseUrl/api/ai/chat/$sessionId/stream?last_id=${Uri.encodeQueryComponent(_lastEntryId)}';
     debugPrint('[AI_CHAT] >>> SSE GET $url');
 
     try {
@@ -683,7 +1062,9 @@ class AiChatService {
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'text/event-stream';
 
-      final response = await client.send(request).timeout(const Duration(seconds: 30));
+      final response = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 401 && token != null) {
         try {
@@ -709,7 +1090,12 @@ class AiChatService {
           state.outcome = _StreamOutcome.retry;
           return;
         }
-        yield ChatEvent(error: T.fmt(T.current.chatErrServerWithBody, {'code': response.statusCode, 'body': body}));
+        yield ChatEvent(
+          error: T.fmt(T.current.chatErrServerWithBody, {
+            'code': response.statusCode,
+            'body': body,
+          }),
+        );
         state.outcome = _StreamOutcome.done;
         return;
       }
@@ -719,13 +1105,17 @@ class AiChatService {
       // 所以 20s 没收到任何字节 = socket 已死（iOS 切后台再回前台时 TCP 经常这样
       // 静默断掉，await for 不会自然 throw）→ 关闭流让外层重连。
       String? pendingId;
-      await for (final line in response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .timeout(const Duration(seconds: 20), onTimeout: (sink) {
-            debugPrint('[AI_CHAT] SSE 20s 无数据，强制关流走重连');
-            sink.close();
-          })) {
+      await for (final line
+          in response.stream
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())
+              .timeout(
+                const Duration(seconds: 20),
+                onTimeout: (sink) {
+                  debugPrint('[AI_CHAT] SSE 20s 无数据，强制关流走重连');
+                  sink.close();
+                },
+              )) {
         if (_aborting) {
           state.outcome = _StreamOutcome.done;
           return;
@@ -733,10 +1123,10 @@ class AiChatService {
         final trimmed = line.trimRight();
 
         if (trimmed.isEmpty) {
-          continue;  // SSE event separator
+          continue; // SSE event separator
         }
         if (trimmed.startsWith(':')) {
-          continue;  // comment / heartbeat
+          continue; // comment / heartbeat
         }
         if (trimmed.startsWith('id:')) {
           pendingId = trimmed.substring(3).trim();
@@ -758,7 +1148,9 @@ class AiChatService {
 
         // 真正业务事件
         if (!dataStr.contains('"content"') && !dataStr.contains('"thinking"')) {
-          debugPrint('[AI_CHAT] <<< SSE: ${dataStr.length > 200 ? "${dataStr.substring(0, 200)}..." : dataStr}');
+          debugPrint(
+            '[AI_CHAT] <<< SSE: ${dataStr.length > 200 ? "${dataStr.substring(0, 200)}..." : dataStr}',
+          );
         }
 
         try {
@@ -804,12 +1196,17 @@ class AiChatService {
   }
 
   /// 处理单条业务事件（JSON shape 与老版本完全一致）
-  Stream<ChatEvent> _handleEvent(Map<String, dynamic> data, _StreamState state) async* {
-    if (data.containsKey('generating_json') && data['generating_json'] == true) {
+  Stream<ChatEvent> _handleEvent(
+    Map<String, dynamic> data,
+    _StreamState state,
+  ) async* {
+    if (data.containsKey('generating_json') &&
+        data['generating_json'] == true) {
       yield ChatEvent(isGeneratingJson: true);
       return;
     }
-    if (data.containsKey('generating_json') && data['generating_json'] == false) {
+    if (data.containsKey('generating_json') &&
+        data['generating_json'] == false) {
       return;
     }
     if (data.containsKey('request_action')) {
@@ -852,7 +1249,9 @@ class AiChatService {
     if (data.containsKey('assistant_thinking')) {
       final chunk = data['assistant_thinking'] as String? ?? '';
       if (chunk.isNotEmpty) {
-        if (!state.accumulatedThinking.contains(chunk)) state.accumulatedThinking += chunk;
+        if (!state.accumulatedThinking.contains(chunk)) {
+          state.accumulatedThinking += chunk;
+        }
         yield ChatEvent(thinking: state.accumulatedThinking);
       }
       return;
@@ -862,14 +1261,28 @@ class AiChatService {
       if (data['json_url'] != null) {
         final url = data['json_url'] as String;
         try {
-          final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+          final getResp = await http
+              .get(Uri.parse(url))
+              .timeout(const Duration(seconds: 15));
           if (getResp.statusCode == 200) {
-            parsedApp = json.decode(utf8.decode(getResp.bodyBytes)) as Map<String, dynamic>;
+            parsedApp =
+                json.decode(utf8.decode(getResp.bodyBytes))
+                    as Map<String, dynamic>;
           } else {
-            yield ChatEvent(failedJsonUrl: url, error: T.fmt(T.current.chatErrDownloadGenJsonWith, {'code': getResp.statusCode}));
+            yield ChatEvent(
+              failedJsonUrl: url,
+              error: T.fmt(T.current.chatErrDownloadGenJsonWith, {
+                'code': getResp.statusCode,
+              }),
+            );
           }
         } catch (e) {
-          yield ChatEvent(failedJsonUrl: url, error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {'err': e}));
+          yield ChatEvent(
+            failedJsonUrl: url,
+            error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {
+              'err': e,
+            }),
+          );
         }
       } else {
         parsedApp = data['json_app'] as Map<String, dynamic>?;
@@ -915,8 +1328,10 @@ class AiChatService {
     final tail = accumulated.length > 300
         ? accumulated.substring(accumulated.length - 300)
         : accumulated;
-    debugPrint('[AI_CHAT] _emitTrailingTags 入口, accumulated.len=${accumulated.length}, '
-        '末 300 字符: $tail');
+    debugPrint(
+      '[AI_CHAT] _emitTrailingTags 入口, accumulated.len=${accumulated.length}, '
+      '末 300 字符: $tail',
+    );
 
     // 1. [json_app_url]…[/json_app_url] - 等用户确认下载
     final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
@@ -928,17 +1343,23 @@ class AiChatService {
       debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
       yield ChatEvent(pendingJsonUrl: url);
     } else if (accumulated.contains('json_app_url')) {
-      debugPrint('[AI_CHAT] ⚠️ accumulated 里有 json_app_url 字样但 regex 未匹中，可能格式有变');
+      debugPrint(
+        '[AI_CHAT] ⚠️ accumulated 里有 json_app_url 字样但 regex 未匹中，可能格式有变',
+      );
     }
 
     // 2. [request_action]xxx[/request_action]
     // .trim() 防 AI 偶尔在 tag 内夹换行/空格，designer_ball 那边走 == 严格比较
-    final actionRegex = RegExp(r'\[request_action\]([^\]]+)\[/request_action\]');
+    final actionRegex = RegExp(
+      r'\[request_action\]([^\]]+)\[/request_action\]',
+    );
     final actionMatch = actionRegex.firstMatch(accumulated);
     if (actionMatch != null) {
       final action = actionMatch.group(1)!.trim();
       if (action.isNotEmpty) {
-        debugPrint('[AI_CHAT] 流结束，检测到 request_action: "$action" (len=${action.length})');
+        debugPrint(
+          '[AI_CHAT] 流结束，检测到 request_action: "$action" (len=${action.length})',
+        );
         yield ChatEvent(requestAction: action);
       } else {
         debugPrint('[AI_CHAT] ⚠️ request_action regex 匹中但 trim 后为空');
@@ -948,8 +1369,10 @@ class AiChatService {
       final idx = accumulated.lastIndexOf('request_action');
       final from = (idx - 50).clamp(0, accumulated.length);
       final to = (idx + 100).clamp(0, accumulated.length);
-      debugPrint('[AI_CHAT] ⚠️ accumulated 含 request_action 字样但正则没匹中，'
-          '上下文: "${accumulated.substring(from, to)}"');
+      debugPrint(
+        '[AI_CHAT] ⚠️ accumulated 含 request_action 字样但正则没匹中，'
+        '上下文: "${accumulated.substring(from, to)}"',
+      );
     }
 
     // 3. 内联 ```json``` 块（仅当没有 url 时）
@@ -966,7 +1389,10 @@ class AiChatService {
   }
 
   /// POST /api/ai/chat/start，处理 401 刷新、429 配额、5xx 重试
-  Future<_StartResult> _postStart(String userMessage, {required bool forceRestart}) async {
+  Future<_StartResult> _postStart(
+    String userMessage, {
+    required bool forceRestart,
+  }) async {
     const maxAttempts = 3;
     Object? lastError;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -979,13 +1405,19 @@ class AiChatService {
         final headers = <String, String>{'Content-Type': 'application/json'};
         if (token != null) headers['Authorization'] = 'Bearer $token';
         final body = json.encode({
-          'messages': [{'role': 'user', 'content': userMessage}],
+          'messages': [
+            {'role': 'user', 'content': userMessage},
+          ],
           'session_id': _activeSessionId,
           'provider': _selectedProvider,
           'force_restart': forceRestart,
         });
         var resp = await http
-            .post(Uri.parse('$_baseUrl/api/ai/chat/start'), headers: headers, body: body)
+            .post(
+              Uri.parse('$_baseUrl/api/ai/chat/start'),
+              headers: headers,
+              body: body,
+            )
             .timeout(const Duration(seconds: 30));
 
         if (resp.statusCode == 401 && token != null) {
@@ -994,7 +1426,11 @@ class AiChatService {
             final newToken = AuthService.token;
             if (newToken != null) headers['Authorization'] = 'Bearer $newToken';
             resp = await http
-                .post(Uri.parse('$_baseUrl/api/ai/chat/start'), headers: headers, body: body)
+                .post(
+                  Uri.parse('$_baseUrl/api/ai/chat/start'),
+                  headers: headers,
+                  body: body,
+                )
                 .timeout(const Duration(seconds: 30));
           } catch (_) {
             return _StartResult.error(T.current.chatErrPleaseLogin);
@@ -1003,21 +1439,32 @@ class AiChatService {
 
         if (resp.statusCode == 429) {
           final data = json.decode(resp.body) as Map<String, dynamic>;
-          return _StartResult.error(data['error'] as String? ?? T.current.chatErrQuotaExceeded,
-              quota: data['quota'] as Map<String, dynamic>?);
+          return _StartResult.error(
+            data['error'] as String? ?? T.current.chatErrQuotaExceeded,
+            quota: data['quota'] as Map<String, dynamic>?,
+          );
         }
-        if (resp.statusCode == 401) return _StartResult.error(T.current.chatErrPleaseLogin);
+        if (resp.statusCode == 401) {
+          return _StartResult.error(T.current.chatErrPleaseLogin);
+        }
         if (resp.statusCode >= 500) {
           lastError = 'HTTP ${resp.statusCode}';
-          continue;  // retry
+          continue; // retry
         }
         if (resp.statusCode != 200) {
-          return _StartResult.error(T.fmt(T.current.chatErrServerWithBody, {'code': resp.statusCode, 'body': resp.body}));
+          return _StartResult.error(
+            T.fmt(T.current.chatErrServerWithBody, {
+              'code': resp.statusCode,
+              'body': resp.body,
+            }),
+          );
         }
 
         final data = json.decode(resp.body) as Map<String, dynamic>;
         debugPrint('[AI_CHAT] start ok: $data');
-        return _StartResult.ok(data['session_id'] as String? ?? _activeSessionId);
+        return _StartResult.ok(
+          data['session_id'] as String? ?? _activeSessionId,
+        );
       } on TimeoutException {
         lastError = T.current.chatErrConnectionTimeout;
       } on http.ClientException catch (e) {
@@ -1027,7 +1474,9 @@ class AiChatService {
         lastError = e;
       }
     }
-    return _StartResult.error(T.fmt(T.current.chatErrNetworkWith, {'err': lastError ?? ''}));
+    return _StartResult.error(
+      T.fmt(T.current.chatErrNetworkWith, {'err': lastError ?? ''}),
+    );
   }
 
   void commitPartial(String partialContent) {
@@ -1050,13 +1499,13 @@ class AiChatService {
         // 指数退避：1s, 2s（attempt=2 → 1s, attempt=3 → 2s）
         final delay = Duration(seconds: 1 << (attempt - 2));
         debugPrint(
-            '[AI_CHAT] 第 $attempt/$maxAttempts 次重试，等待 ${delay.inSeconds}s...');
+          '[AI_CHAT] 第 $attempt/$maxAttempts 次重试，等待 ${delay.inSeconds}s...',
+        );
         await Future.delayed(delay);
       }
       try {
         final result = await _uploadCurrentAppOnce(jsonStr);
-        debugPrint(
-            '[AI_CHAT] ✅ 上传成功（第 $attempt 次尝试）');
+        debugPrint('[AI_CHAT] ✅ 上传成功（第 $attempt 次尝试）');
         debugPrint('[AI_CHAT] ==========================================');
         return result;
       } catch (e) {
@@ -1065,10 +1514,14 @@ class AiChatService {
       }
     }
 
-    debugPrint(
-        '[AI_CHAT] ❌ 已重试 $maxAttempts 次仍失败，向上抛出（不再 fallback 到内联 JSON）');
+    debugPrint('[AI_CHAT] ❌ 已重试 $maxAttempts 次仍失败，向上抛出（不再 fallback 到内联 JSON）');
     debugPrint('[AI_CHAT] ==========================================');
-    throw Exception(T.fmt(T.current.chatErrUploadFailedRetriesWith, {'n': maxAttempts, 'err': lastError ?? ''}));
+    throw Exception(
+      T.fmt(T.current.chatErrUploadFailedRetriesWith, {
+        'n': maxAttempts,
+        'err': lastError ?? '',
+      }),
+    );
   }
 
   /// 单次上传尝试（不带重试）。任何失败抛出 Exception 由 uploadCurrentApp 处理重试。
@@ -1087,7 +1540,8 @@ class AiChatService {
     debugPrint('[AI_CHAT] 预签名 URL 响应: ${urlResp.statusCode}');
     if (urlResp.statusCode != 200) {
       throw Exception(
-          'upload_url API failed: HTTP ${urlResp.statusCode} body=${urlResp.body}');
+        'upload_url API failed: HTTP ${urlResp.statusCode} body=${urlResp.body}',
+      );
     }
 
     final urlData = json.decode(urlResp.body) as Map<String, dynamic>;
@@ -1110,7 +1564,8 @@ class AiChatService {
     debugPrint('[AI_CHAT] MinIO 上传响应: ${uploadResp.statusCode}');
     if (uploadResp.statusCode != 200) {
       throw Exception(
-          'MinIO PUT failed: HTTP ${uploadResp.statusCode} body=${uploadResp.body}');
+        'MinIO PUT failed: HTTP ${uploadResp.statusCode} body=${uploadResp.body}',
+      );
     }
 
     return '${T.current.chatUploadSuccessIntro}[json_app_url]$getUrl[/json_app_url]';
@@ -1120,7 +1575,8 @@ class AiChatService {
   /// [userPrompt] 用户的需求描述
   /// [currentApp] 当前运行的 APP JSON（修改/修复场景）
   /// [crashLog] 崩溃日志（修复场景）
-  Stream<ChatEvent> generateApp(String userPrompt, {
+  Stream<ChatEvent> generateApp(
+    String userPrompt, {
     Map<String, dynamic>? currentApp,
     String? crashLog,
   }) async* {
@@ -1134,7 +1590,10 @@ class AiChatService {
     _activeClient = client;
 
     try {
-      final request = http.Request('POST', Uri.parse('$_baseUrl/api/ai/generate'));
+      final request = http.Request(
+        'POST',
+        Uri.parse('$_baseUrl/api/ai/generate'),
+      );
       request.headers['Content-Type'] = 'application/json';
       final token = AuthService.token;
       if (token != null) {
@@ -1147,14 +1606,19 @@ class AiChatService {
         'provider': _selectedProvider,
       });
 
-      final response = await client.send(request).timeout(
-        const Duration(seconds: 300), // Claude CLI 可能运行较久
-      );
+      final response = await client
+          .send(request)
+          .timeout(
+            const Duration(seconds: 300), // Claude CLI 可能运行较久
+          );
 
       if (response.statusCode == 429) {
         final body = await response.stream.bytesToString();
         final data = json.decode(body);
-        yield ChatEvent(error: data['error'] ?? T.current.chatErrQuotaExceeded, quota: data['quota']);
+        yield ChatEvent(
+          error: data['error'] ?? T.current.chatErrQuotaExceeded,
+          quota: data['quota'],
+        );
         return;
       }
 
@@ -1165,15 +1629,21 @@ class AiChatService {
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        yield ChatEvent(error: T.fmt(T.current.chatErrServerWithBody, {'code': response.statusCode, 'body': body}));
+        yield ChatEvent(
+          error: T.fmt(T.current.chatErrServerWithBody, {
+            'code': response.statusCode,
+            'body': body,
+          }),
+        );
         return;
       }
 
       String accumulated = '';
 
-      await for (final line in response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())) {
+      await for (final line
+          in response.stream
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())) {
         final trimmed = line.trim();
         if (trimmed.isEmpty) continue;
         if (trimmed == 'data: [DONE]') continue;
@@ -1189,13 +1659,19 @@ class AiChatService {
             if (data.containsKey('json_url') && data['json_url'] != null) {
               try {
                 final url = data['json_url'] as String;
-                final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+                final getResp = await http
+                    .get(Uri.parse(url))
+                    .timeout(const Duration(seconds: 15));
                 if (getResp.statusCode == 200) {
                   final jsonBody = utf8.decode(getResp.bodyBytes);
                   parsedApp = json.decode(jsonBody) as Map<String, dynamic>;
                 }
               } catch (e) {
-                yield ChatEvent(error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {'err': e}));
+                yield ChatEvent(
+                  error: T.fmt(T.current.chatErrDownloadJsonExceptionWith, {
+                    'err': e,
+                  }),
+                );
               }
             } else {
               parsedApp = data['json_app'] as Map<String, dynamic>?;
@@ -1214,7 +1690,10 @@ class AiChatService {
 
           // 错误
           if (data.containsKey('error')) {
-            yield ChatEvent(content: accumulated, error: data['error'] as String);
+            yield ChatEvent(
+              content: accumulated,
+              error: data['error'] as String,
+            );
             continue;
           }
 
@@ -1238,7 +1717,9 @@ class AiChatService {
 
   /// 重试下载 JSON
   Future<Map<String, dynamic>> retryDownloadJson(String url) async {
-    final getResp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+    final getResp = await http
+        .get(Uri.parse(url))
+        .timeout(const Duration(seconds: 15));
     if (getResp.statusCode == 200) {
       final jsonBody = utf8.decode(getResp.bodyBytes);
       return json.decode(jsonBody) as Map<String, dynamic>;
@@ -1276,4 +1757,16 @@ class _StartResult {
   factory _StartResult.ok(String sid) => _StartResult._(sid, null, null);
   factory _StartResult.error(String msg, {Map<String, dynamic>? quota}) =>
       _StartResult._(null, msg, quota);
+}
+
+class _StreamTokenResult {
+  final String? token;
+  final String? error;
+
+  const _StreamTokenResult._(this.token, this.error);
+
+  factory _StreamTokenResult.ok(String token) =>
+      _StreamTokenResult._(token, null);
+  factory _StreamTokenResult.error(String msg) =>
+      _StreamTokenResult._(null, msg);
 }

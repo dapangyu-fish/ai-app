@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../platform/native_fs.dart';
 import 'http_client.dart';
 import 'semver.dart';
 import 'dependency_loader.dart' show RegistryConfig;
@@ -21,16 +20,22 @@ class CacheManager {
   Future<void> init() async {
     if (_initialized) return;
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      _cacheDir = '${dir.path}/dsl_cache';
-      final cacheDir = Directory(_cacheDir!);
-      if (!cacheDir.existsSync()) {
-        cacheDir.createSync(recursive: true);
+      final docPath = await NativeFs.appDocDir();
+      if (docPath == null) {
+        // web / 无文件系统：只用内存索引（永远 cache-miss，不落盘）
+        _indexCache = {
+          'version': '1.1',
+          'updated_at': DateTime.now().toIso8601String(),
+          'resources': <String, dynamic>{}
+        };
+        _initialized = true;
+        return;
       }
-      
-      final indexFile = File('$_cacheDir/index.json');
-      if (indexFile.existsSync()) {
-        final content = await indexFile.readAsString();
+      _cacheDir = '$docPath/dsl_cache';
+      await NativeFs.ensureDir(_cacheDir!);
+
+      final content = await NativeFs.readStringAbs('$_cacheDir/index.json');
+      if (content != null) {
         _indexCache = json.decode(content) as Map<String, dynamic>;
       } else {
         _indexCache = {
@@ -57,8 +62,7 @@ class CacheManager {
     if (_cacheDir == null || _indexCache == null) return;
     try {
       _indexCache!['updated_at'] = DateTime.now().toIso8601String();
-      final indexFile = File('$_cacheDir/index.json');
-      await indexFile.writeAsString(json.encode(_indexCache));
+      await NativeFs.writeStringAbs('$_cacheDir/index.json', json.encode(_indexCache));
     } catch (e) {
       debugPrint('[CacheManager] Failed to save index: $e');
     }
@@ -83,16 +87,15 @@ class CacheManager {
       final filePath = localMatch['file_path'] as String;
       
       try {
-        final file = File('$_cacheDir/$filePath');
-        if (file.existsSync()) {
-          final content = await file.readAsString();
+        final content = await NativeFs.readStringAbs('$_cacheDir/$filePath');
+        if (content != null) {
           final config = json.decode(content) as Map<String, dynamic>;
-          
+
           debugPrint('[CacheManager] 命中本地缓存: $name@$version (约束: $constraint)');
-          
+
           // 后台静默更新
           _revalidateResourceAsync(name, constraint, type);
-          
+
           return config;
         }
       } catch (e) {
@@ -162,12 +165,7 @@ class CacheManager {
       
       // 保存到本地
       final relPath = '${type == "app" ? "apps" : "packages"}/$name/$resolvedVersionStr.json';
-      final absPath = '$_cacheDir/$relPath';
-      final file = File(absPath);
-      if (!file.parent.existsSync()) {
-        file.parent.createSync(recursive: true);
-      }
-      await file.writeAsString(json.encode(config));
+      await NativeFs.writeStringAbs('$_cacheDir/$relPath', json.encode(config));
       
       // 更新索引
       final resources = _indexCache!['resources'] as Map<String, dynamic>;

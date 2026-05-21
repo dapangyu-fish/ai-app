@@ -3,7 +3,6 @@
 // 支持：source (gallery/camera)、bind (绑定选中图片路径到变量)、
 //       placeholder、width、height、borderRadius
 // 选中图片后自动预览，再次点击可重新选择
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
 import '../../i18n/framework_strings.dart';
+import '../../platform/local_media.dart';
 
 class JsonImagePickerWidget extends JsonBaseWidget {
   @override
@@ -102,8 +102,8 @@ class JsonImagePickerWidget extends JsonBaseWidget {
         errorWidget: (_, __, ___) => _errorWidget(context),
       );
     }
-    return Image.file(
-      File(path),
+    return Image(
+      image: localFileImage(path),
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => _errorWidget(context),
     );

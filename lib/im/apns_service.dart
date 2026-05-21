@@ -13,9 +13,9 @@
 //   - 不持久化 token 到本地（每次启动重新拿一次最稳；APNs token 本来就会变）
 
 import 'dart:convert';
-import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
@@ -35,7 +35,7 @@ class ApnsService {
   /// （模拟器不会真给 deviceToken，但调用本身不会崩）
   static bool get isPlatformSupported {
     if (kIsWeb) return false;
-    return Platform.isIOS;
+    return defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   /// 启动 APNs 流程：弹权限 → 拿 token → 上传后端

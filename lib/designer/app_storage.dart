@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
+
+import '../platform/native_fs.dart';
 
 /// 当前页面作用域
 /// - framework: Flutter 框架页面（登录、设置、市场、我的APP、崩溃页等）
@@ -89,16 +89,17 @@ class AppStorage {
   static AppStorage get instance => _instance ??= AppStorage._();
   AppStorage._();
 
-  Future<String> get _dirPath async {
-    final dir = await getApplicationDocumentsDirectory();
-    final appDir = Directory('${dir.path}/my_apps');
-    if (!appDir.existsSync()) appDir.createSync(recursive: true);
-    return appDir.path;
+  /// my_apps 目录绝对路径；web 上无文件系统返回 null。
+  Future<String?> get _dirPath async {
+    final docPath = await NativeFs.appDocDir();
+    if (docPath == null) return null;
+    final appDir = '$docPath/my_apps';
+    await NativeFs.ensureDir(appDir);
+    return appDir;
   }
 
   /// 保存 JSON-APP，返回文件名
   Future<String> save(Map<String, dynamic> jsonConfig) async {
-    final dir = await _dirPath;
     final meta = jsonConfig['meta'] as Map<String, dynamic>? ?? {};
     final name = (meta['name'] as String?) ?? 'Untitled';
     final ts = DateTime.now().millisecondsSinceEpoch;
@@ -107,28 +108,30 @@ class AppStorage {
     // 在 JSON 中嵌入保存时间
     jsonConfig['_saved_at'] = DateTime.now().toIso8601String();
 
-    final file = File('$dir/$fileName');
-    await file.writeAsString(json.encode(jsonConfig));
+    final dir = await _dirPath;
+    if (dir == null) return fileName; // web：不落盘，仅返回名字
+    await NativeFs.writeStringAbs('$dir/$fileName', json.encode(jsonConfig));
     return fileName;
   }
 
   /// 列出所有已保存的 APP（按时间倒序）
   Future<List<SavedApp>> list() async {
     final dir = await _dirPath;
-    final d = Directory(dir);
-    if (!d.existsSync()) return [];
+    if (dir == null) return [];
 
-    final files = d.listSync().whereType<File>().where((f) => f.path.endsWith('.json')).toList();
-    files.sort((a, b) => b.path.compareTo(a.path)); // 按文件名倒序（时间戳前缀）
+    final paths = await NativeFs.listFilesAbs(dir);
+    final jsonPaths = paths.where((p) => p.endsWith('.json')).toList()
+      ..sort((a, b) => b.compareTo(a)); // 按文件名倒序（时间戳前缀）
 
     final result = <SavedApp>[];
-    for (final file in files) {
+    for (final p in jsonPaths) {
       try {
-        final content = await file.readAsString();
+        final content = await NativeFs.readStringAbs(p);
+        if (content == null) continue;
         final data = json.decode(content) as Map<String, dynamic>;
         final meta = data['meta'] as Map<String, dynamic>? ?? {};
         result.add(SavedApp(
-          fileName: file.uri.pathSegments.last,
+          fileName: p.split('/').last,
           name: (meta['name'] as String?) ?? 'Untitled',
           description: (meta['description'] as String?) ?? '',
           savedAt: data['_saved_at'] as String? ?? '',
@@ -142,17 +145,17 @@ class AppStorage {
   /// 读取单个 APP
   Future<Map<String, dynamic>?> load(String fileName) async {
     final dir = await _dirPath;
-    final file = File('$dir/$fileName');
-    if (!file.existsSync()) return null;
-    final content = await file.readAsString();
+    if (dir == null) return null;
+    final content = await NativeFs.readStringAbs('$dir/$fileName');
+    if (content == null) return null;
     return json.decode(content) as Map<String, dynamic>;
   }
 
   /// 删除 APP
   Future<void> delete(String fileName) async {
     final dir = await _dirPath;
-    final file = File('$dir/$fileName');
-    if (file.existsSync()) await file.delete();
+    if (dir == null) return;
+    await NativeFs.deleteAbs('$dir/$fileName');
   }
 }
 

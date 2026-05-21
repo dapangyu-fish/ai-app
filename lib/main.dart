@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -19,8 +19,8 @@ import 'i18n/framework_strings.dart';
 import 'i18n/locale_controller.dart';
 import 'i18n/language_switcher.dart';
 import 'i18n/meta_helper.dart';
+import 'platform/native_fs.dart';
 import 'json_ui/interpreter.dart';
-import 'json_ui/widget_builder.dart';
 import 'json_ui/cache_manager.dart';
 import 'json_ui/semver.dart';
 import 'json_ui/widgets/screen_layout.dart';
@@ -36,8 +36,8 @@ import 'designer/app_storage.dart';
 import 'designer/default_startup_prefs.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
+import 'im/im_conversation_entry.dart';
 import 'im/im_service.dart';
-import 'im/conversation_list.dart';
 import 'onboarding/onboarding_keys.dart';
 import 'onboarding/onboarding_service.dart';
 
@@ -52,8 +52,9 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
 
 /// 全局主题模式（light/dark/system）。被 MaterialApp 监听用于运行时切主题。
 /// JSON-APP 通过 @set_theme 写它，框架自动重建。
-final ValueNotifier<ThemeMode> appThemeMode =
-    ValueNotifier<ThemeMode>(ThemeMode.system);
+final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier<ThemeMode>(
+  ThemeMode.system,
+);
 
 /// 全局 App 生命周期事件总线（resume / pause / inactive / detached / hidden）。
 /// JSON-APP 在 global.lifecycle.onResume 等字段声明步骤，
@@ -101,7 +102,7 @@ void main() async {
   // Firebase Core 初始化 —— FirebaseMessaging 等所有 firebase_xxx 插件都依赖它。
   // Android 自动从 android/app/google-services.json 读配置；其他平台暂时不开 FCM 跳过。
   // 失败吞掉：FCM 不可用不应阻塞 app 启动（iOS 走 APNs 也用不上 Firebase）
-  if (!kIsWeb && Platform.isAndroid) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     try {
       await Firebase.initializeApp();
     } catch (e) {
@@ -153,7 +154,11 @@ void main() async {
                   const SizedBox(width: 8),
                   Text(
                     t.uiRenderCrash,
-                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -185,13 +190,15 @@ void main() async {
     debugPrint('========================================');
     debugPrint(stack.toString());
     debugPrint('========================================');
-    navState.push(MaterialPageRoute(
-      builder: (_) => _CrashPage(
-        error: error.toString(),
-        stackTrace: stack.toString(),
-        fileName: fileName,
+    navState.push(
+      MaterialPageRoute(
+        builder: (_) => _CrashPage(
+          error: error.toString(),
+          stackTrace: stack.toString(),
+          fileName: fileName,
+        ),
       ),
-    ));
+    );
   };
 
   // 并行：恢复鉴权 + 拉取远程配置（1s 超时，超时 fall back 到缓存/默认值）。
@@ -205,11 +212,7 @@ void main() async {
   if (AuthService.isLoggedIn) {
     IMService.instance.restoreSession();
   }
-  runApp(
-    const ProviderScope(
-      child: JsonDslApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: JsonDslApp()));
 }
 
 /// 应用根组件
@@ -237,7 +240,11 @@ class JsonDslApp extends ConsumerWidget {
   }
 
   Widget _buildApp(
-      BuildContext context, WidgetRef ref, ThemeMode mode, Locale? locale) {
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode mode,
+    Locale? locale,
+  ) {
     return MaterialApp(
       title: 'MyApp',
       navigatorKey: navigatorKey,
@@ -316,9 +323,7 @@ class JsonDslApp extends ConsumerWidget {
           ),
         ),
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.black,
-          ),
+          style: TextButton.styleFrom(foregroundColor: Colors.black),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -335,15 +340,16 @@ class JsonDslApp extends ConsumerWidget {
             borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: Colors.black, width: 1.5),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 18,
+          ),
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.white,
           indicatorColor: Colors.black.withValues(alpha: 0.08),
         ),
-        dividerTheme: const DividerThemeData(
-          color: Color(0xFFE0E0E0),
-        ),
+        dividerTheme: const DividerThemeData(color: Color(0xFFE0E0E0)),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -402,9 +408,7 @@ class JsonDslApp extends ConsumerWidget {
           ),
         ),
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.white,
-          ),
+          style: TextButton.styleFrom(foregroundColor: Colors.white),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -421,27 +425,34 @@ class JsonDslApp extends ConsumerWidget {
             borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: Colors.white, width: 1.5),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 18,
+          ),
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.black,
           indicatorColor: Colors.white.withValues(alpha: 0.08),
         ),
-        dividerTheme: const DividerThemeData(
-          color: Color(0xFF333333),
-        ),
+        dividerTheme: const DividerThemeData(color: Color(0xFF333333)),
       ),
       themeMode: mode,
       // 使用 builder 注入悬浮球，凌驾于所有路由之上
       builder: (context, child) {
         return DesignerBall(
           child: child ?? const SizedBox.shrink(),
-          getCurrentConfig: () => ProviderScope.containerOf(context).read(interpreterProvider).rawConfig,
+          getCurrentConfig: () => ProviderScope.containerOf(
+            context,
+          ).read(interpreterProvider).rawConfig,
           onRunJsonApp: (jsonConfig) async {
-            final interpreter = ProviderScope.containerOf(context).read(interpreterProvider);
+            final interpreter = ProviderScope.containerOf(
+              context,
+            ).read(interpreterProvider);
             try {
               // 保存到本地
-              await AppStorage.instance.save(Map<String, dynamic>.from(jsonConfig));
+              await AppStorage.instance.save(
+                Map<String, dynamic>.from(jsonConfig),
+              );
               interpreter.loadConfig(jsonConfig);
               await interpreter.executeSteps();
               final meta = jsonConfig['meta'] as Map<String, dynamic>? ?? {};
@@ -540,10 +551,7 @@ class _SplashGateState extends State<_SplashGate> {
                   return Text(
                     txt,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 18, color: cs.onSurfaceVariant),
                   );
                 },
               ),
@@ -578,9 +586,7 @@ class _AuthGate extends StatelessWidget {
           IMService.instance.login();
           return const FilePickerPage();
         }
-        return AuthPage(
-          onAuthSuccess: () {},
-        );
+        return AuthPage(onAuthSuccess: () {});
       },
     );
   }
@@ -659,7 +665,11 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
           final app = apps.firstWhere(
             (a) => a.fileName == cfg.localFileName,
             orElse: () => SavedApp(
-              fileName: '', name: '', description: '', savedAt: '', config: const {},
+              fileName: '',
+              name: '',
+              description: '',
+              savedAt: '',
+              config: const {},
             ),
           );
           if (app.fileName.isNotEmpty) {
@@ -677,11 +687,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
   }
 
   void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const SettingsPage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
   }
 
   Future<void> _pickAndLoadJson() async {
@@ -694,6 +702,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
+        withData: true, // web 没有文件路径，必须靠 bytes 拿内容
       );
 
       if (result == null || result.files.isEmpty) {
@@ -701,8 +710,15 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         return;
       }
 
-      final filePath = result.files.single.path;
-      if (filePath == null) {
+      // web：用 bytes；移动/桌面：bytes 通常也有（withData），否则回退读路径
+      final picked = result.files.single;
+      String? jsonStr;
+      if (picked.bytes != null) {
+        jsonStr = utf8.decode(picked.bytes!);
+      } else if (picked.path != null) {
+        jsonStr = await NativeFs.readStringAbs(picked.path!);
+      }
+      if (jsonStr == null) {
         setState(() {
           _loading = false;
           _error = T.of(context).errorPathUnavailable;
@@ -710,8 +726,6 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         return;
       }
 
-      final file = File(filePath);
-      final jsonStr = await file.readAsString();
       final config = json.decode(jsonStr) as Map<String, dynamic>;
 
       final interpreter = ref.read(interpreterProvider);
@@ -752,9 +766,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         try {
           await AppStorage.instance.save(config);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(t.addToMyAppsAdded)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(t.addToMyAppsAdded)));
           }
         } catch (e) {
           if (mounted) {
@@ -781,7 +795,10 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     }
   }
 
-  Future<void> _loadFromMarket(Map<String, dynamic> app, {bool isStartupRoot = false}) async {
+  Future<void> _loadFromMarket(
+    Map<String, dynamic> app, {
+    bool isStartupRoot = false,
+  }) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -795,7 +812,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final config = await CacheManager.instance.getResource(
         name,
         VersionConstraint.parse('^$version'),
-        type: 'app'
+        type: 'app',
       );
 
       if (config == null) {
@@ -816,20 +833,22 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
       if (!mounted) return;
 
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => JsonScreenView(
-            fileName: _loadedFileName!,
-            isStartupRoot: isStartupRoot,
-          ),
-        ),
-      ).whenComplete(() {
-        // startup root：等用户从 JSON-APP pop 回来才退出占位，让 home 显示。
-        // 之前在 push 之前就翻 false，转场动画期间 home 会从底下被瞄到 → 闪一下。
-        if (isStartupRoot && mounted) {
-          setState(() => _bootstrapping = false);
-        }
-      });
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute(
+              builder: (_) => JsonScreenView(
+                fileName: _loadedFileName!,
+                isStartupRoot: isStartupRoot,
+              ),
+            ),
+          )
+          .whenComplete(() {
+            // startup root：等用户从 JSON-APP pop 回来才退出占位，让 home 显示。
+            // 之前在 push 之前就翻 false，转场动画期间 home 会从底下被瞄到 → 闪一下。
+            if (isStartupRoot && mounted) {
+              setState(() => _bootstrapping = false);
+            }
+          });
     } catch (e) {
       setState(() {
         _loading = false;
@@ -842,17 +861,13 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
   void _openMarket() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _MarketPage(onSelect: _loadFromMarket),
-      ),
+      MaterialPageRoute(builder: (_) => _MarketPage(onSelect: _loadFromMarket)),
     );
   }
 
   void _openMyApps() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _MyAppsPage(onSelect: _loadSavedApp),
-      ),
+      MaterialPageRoute(builder: (_) => _MyAppsPage(onSelect: _loadSavedApp)),
     );
   }
 
@@ -870,19 +885,21 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       _loadedFileName = displayName;
       setState(() => _loading = false);
       if (!mounted) return;
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => JsonScreenView(
-            fileName: displayName,
-            isStartupRoot: isStartupRoot,
-          ),
-        ),
-      ).whenComplete(() {
-        // 同 _loadFromMarket：等 pop 回来才退占位，避免转场闪 home
-        if (isStartupRoot && mounted) {
-          setState(() => _bootstrapping = false);
-        }
-      });
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute(
+              builder: (_) => JsonScreenView(
+                fileName: displayName,
+                isStartupRoot: isStartupRoot,
+              ),
+            ),
+          )
+          .whenComplete(() {
+            // 同 _loadFromMarket：等 pop 回来才退占位，避免转场闪 home
+            if (isStartupRoot && mounted) {
+              setState(() => _bootstrapping = false);
+            }
+          });
     } catch (e) {
       setState(() {
         _loading = false;
@@ -921,10 +938,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurfaceVariant,
-                ),
+                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
               ),
             ],
           ),
@@ -939,15 +953,14 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     // （等 _maybeAutoLoadDefaultStartup 决定是 push 进 JSON-APP 还是
     //  setState(_bootstrapping=false) 切回正常 home）
     if (_bootstrapping) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     CurrentPageState.instance.setFrameworkPage('home');
     final cs = Theme.of(context).colorScheme;
     final t = T.of(context);
-    final username = AuthService.currentUser?['username'] ??
+    final username =
+        AuthService.currentUser?['username'] ??
         AuthService.currentUser?['email']?.toString().split('@').first ??
         '';
 
@@ -977,7 +990,10 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                   if (AuthService.isLoggedIn)
                     PopupMenuButton<String>(
                       key: OnboardingKeys.userMenu,
-                      icon: Icon(Icons.account_circle_outlined, color: cs.onSurface),
+                      icon: Icon(
+                        Icons.account_circle_outlined,
+                        color: cs.onSurface,
+                      ),
                       onSelected: (value) async {
                         if (value == 'profile') {
                           Navigator.of(context).push(
@@ -1068,10 +1084,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               const SizedBox(height: 4),
               Text(
                 t.homeSubtitle,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: cs.onSurfaceVariant,
-                ),
+                style: TextStyle(fontSize: 15, color: cs.onSurfaceVariant),
               ),
 
               const SizedBox(height: 32),
@@ -1122,7 +1135,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                         if (!IMService.isPlatformSupported) {
                           messenger.showSnackBar(
                             const SnackBar(
-                              content: Text('IM 仅支持 iOS / Android（OpenIM SDK 限制）。请在 iOS 模拟器或真机上运行。'),
+                              content: Text(
+                                'IM 仅支持 iOS / Android（OpenIM SDK 限制）。请在 iOS 模拟器或真机上运行。',
+                              ),
                               duration: Duration(seconds: 3),
                             ),
                           );
@@ -1133,7 +1148,9 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           if (!mounted) return;
                           if (!ok) {
                             messenger.showSnackBar(
-                              SnackBar(content: Text(T.of(context).homeImLoginFailed)),
+                              SnackBar(
+                                content: Text(T.of(context).homeImLoginFailed),
+                              ),
                             );
                             return;
                           }
@@ -1141,31 +1158,48 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                         if (!mounted) return;
                         navigator.push(
                           MaterialPageRoute(
-                              builder: (_) => const IMConversationPage()),
+                            builder: (_) => const IMConversationPage(),
+                          ),
                         );
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 18,
+                        ),
                         child: Row(
                           children: [
                             Stack(
                               clipBehavior: Clip.none,
                               children: [
-                                Icon(Icons.chat_outlined, size: 24, color: cs.onSurface),
+                                Icon(
+                                  Icons.chat_outlined,
+                                  size: 24,
+                                  color: cs.onSurface,
+                                ),
                                 if (unread > 0)
                                   Positioned(
                                     right: -6,
                                     top: -4,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 1,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: cs.error,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
+                                      ),
                                       child: Text(
                                         unread > 99 ? '99+' : unread.toString(),
-                                        style: TextStyle(color: cs.onError, fontSize: 10),
+                                        style: TextStyle(
+                                          color: cs.onError,
+                                          fontSize: 10,
+                                        ),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
@@ -1188,14 +1222,22 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                                   const SizedBox(height: 2),
                                   Text(
                                     unread > 0
-                                        ? T.fmt(T.of(context).homeUnreadCount, {'n': unread})
+                                        ? T.fmt(T.of(context).homeUnreadCount, {
+                                            'n': unread,
+                                          })
                                         : T.of(context).homeMessagesSubtitle,
-                                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: cs.onSurfaceVariant,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                            Icon(
+                              Icons.chevron_right,
+                              color: cs.onSurfaceVariant,
+                            ),
                           ],
                         ),
                       ),
@@ -1212,10 +1254,17 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                   borderRadius: BorderRadius.circular(16),
                   onTap: _loading ? null : _pickAndLoadJson,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 18,
+                    ),
                     child: Row(
                       children: [
-                        Icon(Icons.folder_open_outlined, size: 24, color: cs.onSurface),
+                        Icon(
+                          Icons.folder_open_outlined,
+                          size: 24,
+                          color: cs.onSurface,
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -1273,7 +1322,10 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                       Expanded(
                         child: Text(
                           _error!,
-                          style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+                          style: TextStyle(
+                            color: cs.onErrorContainer,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -1287,10 +1339,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               Center(
                 child: Text(
                   'v${AppConfig.appVersion}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurfaceVariant,
-                  ),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ),
             ],
@@ -1344,10 +1393,14 @@ class _MarketPageState extends State<_MarketPage> {
         final favs = await MarketFavorites.list();
         if (!mounted) return;
         setState(() {
-          _apps = favs.map((e) => <String, dynamic>{
-                'name': e['name'],
-                'display_name': e['display_name'],
-              }).toList();
+          _apps = favs
+              .map(
+                (e) => <String, dynamic>{
+                  'name': e['name'],
+                  'display_name': e['display_name'],
+                },
+              )
+              .toList();
           _loading = false;
         });
         return;
@@ -1399,13 +1452,13 @@ class _MarketPageState extends State<_MarketPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.marketTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          t.marketTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchApps,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchApps),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -1421,7 +1474,9 @@ class _MarketPageState extends State<_MarketPage> {
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
-                            color: _selectedTabIndex == 0 ? cs.primary : Colors.transparent,
+                            color: _selectedTabIndex == 0
+                                ? cs.primary
+                                : Colors.transparent,
                             width: 2,
                           ),
                         ),
@@ -1431,8 +1486,12 @@ class _MarketPageState extends State<_MarketPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,
-                          fontWeight: _selectedTabIndex == 0 ? FontWeight.w600 : FontWeight.normal,
-                          color: _selectedTabIndex == 0 ? cs.primary : cs.onSurfaceVariant,
+                          fontWeight: _selectedTabIndex == 0
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: _selectedTabIndex == 0
+                              ? cs.primary
+                              : cs.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -1446,7 +1505,9 @@ class _MarketPageState extends State<_MarketPage> {
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
-                            color: _selectedTabIndex == 1 ? cs.primary : Colors.transparent,
+                            color: _selectedTabIndex == 1
+                                ? cs.primary
+                                : Colors.transparent,
                             width: 2,
                           ),
                         ),
@@ -1456,8 +1517,12 @@ class _MarketPageState extends State<_MarketPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,
-                          fontWeight: _selectedTabIndex == 1 ? FontWeight.w600 : FontWeight.normal,
-                          color: _selectedTabIndex == 1 ? cs.primary : cs.onSurfaceVariant,
+                          fontWeight: _selectedTabIndex == 1
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: _selectedTabIndex == 1
+                              ? cs.primary
+                              : cs.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -1471,19 +1536,28 @@ class _MarketPageState extends State<_MarketPage> {
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
-                            color: _selectedTabIndex == 2 ? cs.primary : Colors.transparent,
+                            color: _selectedTabIndex == 2
+                                ? cs.primary
+                                : Colors.transparent,
                             width: 2,
                           ),
                         ),
                       ),
                       child: Text(
-                        Localizations.localeOf(context).languageCode.startsWith('zh')
-                            ? '收藏' : 'Favorites',
+                        Localizations.localeOf(
+                              context,
+                            ).languageCode.startsWith('zh')
+                            ? '收藏'
+                            : 'Favorites',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,
-                          fontWeight: _selectedTabIndex == 2 ? FontWeight.w600 : FontWeight.normal,
-                          color: _selectedTabIndex == 2 ? cs.primary : cs.onSurfaceVariant,
+                          fontWeight: _selectedTabIndex == 2
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: _selectedTabIndex == 2
+                              ? cs.primary
+                              : cs.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -1497,31 +1571,33 @@ class _MarketPageState extends State<_MarketPage> {
       body: _loading
           ? Center(child: CircularProgressIndicator(color: cs.onSurface))
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.cloud_off, size: 48, color: cs.onSurfaceVariant),
-                      const SizedBox(height: 16),
-                      Text(_error!, style: TextStyle(color: cs.onSurfaceVariant)),
-                      const SizedBox(height: 16),
-                      FilledButton(onPressed: _fetchApps, child: Text(t.retry)),
-                    ],
-                  ),
-                )
-              : _apps.isEmpty
-                  ? Center(
-                      child: Text(t.marketEmpty,
-                          style: TextStyle(color: cs.onSurfaceVariant)),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _apps.length,
-                      itemBuilder: (context, index) {
-                        final app = _apps[index];
-                        return _buildAppCard(context, app, cs);
-                      },
-                    ),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_off, size: 48, color: cs.onSurfaceVariant),
+                  const SizedBox(height: 16),
+                  Text(_error!, style: TextStyle(color: cs.onSurfaceVariant)),
+                  const SizedBox(height: 16),
+                  FilledButton(onPressed: _fetchApps, child: Text(t.retry)),
+                ],
+              ),
+            )
+          : _apps.isEmpty
+          ? Center(
+              child: Text(
+                t.marketEmpty,
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _apps.length,
+              itemBuilder: (context, index) {
+                final app = _apps[index];
+                return _buildAppCard(context, app, cs);
+              },
+            ),
     );
   }
 
@@ -1533,7 +1609,9 @@ class _MarketPageState extends State<_MarketPage> {
         final dt = T.of(dialogCtx);
         return AlertDialog(
           title: Text(dt.marketDeleteConfirmTitle),
-          content: Text(T.fmt(dt.marketDeleteConfirmContent, {'package': packageName})),
+          content: Text(
+            T.fmt(dt.marketDeleteConfirmContent, {'package': packageName}),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogCtx, false),
@@ -1556,7 +1634,10 @@ class _MarketPageState extends State<_MarketPage> {
   }
 
   Future<void> _deletePackage(
-      BuildContext context, String packageName, FrameworkStrings t) async {
+    BuildContext context,
+    String packageName,
+    FrameworkStrings t,
+  ) async {
     final cs = Theme.of(context).colorScheme;
 
     // 显示加载提示
@@ -1584,18 +1665,20 @@ class _MarketPageState extends State<_MarketPage> {
       final token = AuthService.token;
       if (token == null) throw Exception(t.errorNotLoggedIn);
 
-      final resp = await http.delete(
-        Uri.parse('${AppConfig.registryUrl}/package/$packageName'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .delete(
+            Uri.parse('${AppConfig.registryUrl}/package/$packageName'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (context.mounted) Navigator.pop(context); // 关闭加载对话框
 
       if (resp.statusCode == 200) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(t.marketDeleteSuccess)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(t.marketDeleteSuccess)));
           // 刷新列表
           _fetchApps();
         }
@@ -1607,14 +1690,19 @@ class _MarketPageState extends State<_MarketPage> {
       if (context.mounted) {
         Navigator.pop(context); // 关闭加载对话框
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(T.fmt(t.marketDeleteFailedWith, {'msg': '$e'}))),
+          SnackBar(
+            content: Text(T.fmt(t.marketDeleteFailedWith, {'msg': '$e'})),
+          ),
         );
       }
     }
   }
 
-  Widget _buildAppCard(BuildContext context, Map<String, dynamic> app,
-      ColorScheme cs) {
+  Widget _buildAppCard(
+    BuildContext context,
+    Map<String, dynamic> app,
+    ColorScheme cs,
+  ) {
     final name = app['name'] as String? ?? '';
     final displayName = resolveDisplayName(app, fallback: name);
     final desc = app['description'] as String? ?? '';
@@ -1674,7 +1762,9 @@ class _MarketPageState extends State<_MarketPage> {
                         if (version.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
@@ -1882,7 +1972,11 @@ class JsonScreenView extends ConsumerWidget {
     final customAppBarConfig = screenConfig['appBar'];
     PreferredSizeWidget appBar;
     if (customAppBarConfig is Map<String, dynamic>) {
-      appBar = appbar_helper.buildAppBar(context, customAppBarConfig, interpreter);
+      appBar = appbar_helper.buildAppBar(
+        context,
+        customAppBarConfig,
+        interpreter,
+      );
     } else {
       // 走 resolveTemplate 让 title 支持 "{{ global.xxx }}" 模板
       // （和自定义 appBar / 普通 text widget 行为一致）
@@ -1969,7 +2063,6 @@ class JsonScreenView extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 // ============================================================
@@ -1994,7 +2087,10 @@ class _CrashPage extends StatelessWidget {
     final t = T.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.crashTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          t.crashTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -2007,8 +2103,10 @@ class _CrashPage extends StatelessWidget {
           children: [
             Icon(Icons.warning_amber_rounded, size: 48, color: cs.error),
             const SizedBox(height: 12),
-            Text(T.fmt(t.crashSubtitle, {'file': fileName}),
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              T.fmt(t.crashSubtitle, {'file': fileName}),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -2017,8 +2115,10 @@ class _CrashPage extends StatelessWidget {
                 color: cs.errorContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(error,
-                  style: TextStyle(color: cs.onErrorContainer, fontSize: 13)),
+              child: Text(
+                error,
+                style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+              ),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -2030,11 +2130,14 @@ class _CrashPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SingleChildScrollView(
-                  child: Text(stackTrace,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                          color: cs.onSurface)),
+                  child: Text(
+                    stackTrace,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      color: cs.onSurface,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -2044,12 +2147,13 @@ class _CrashPage extends StatelessWidget {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () async {
-                      final fullText = '${T.fmt(t.crashSubtitle, {'file': fileName})}\n\n$error\n\n$stackTrace';
+                      final fullText =
+                          '${T.fmt(t.crashSubtitle, {'file': fileName})}\n\n$error\n\n$stackTrace';
                       await Clipboard.setData(ClipboardData(text: fullText));
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(t.crashCopied)),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(t.crashCopied)));
                       }
                     },
                     icon: const Icon(Icons.copy_all),
@@ -2065,7 +2169,8 @@ class _CrashPage extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: () {
                       // 把崩溃信息发给 AI 分析（JSON 配置由 DesignerBall 自动注入上下文）
-                      final crashMsg = 'JSON-APP 运行崩溃，请分析原因并输出修复后的完整 JSON：\n\n'
+                      final crashMsg =
+                          'JSON-APP 运行崩溃，请分析原因并输出修复后的完整 JSON：\n\n'
                           '## 错误\n$error\n\n'
                           '## 堆栈\n$stackTrace';
                       Navigator.of(context).pop();
@@ -2125,8 +2230,8 @@ class _TabScreenViewState extends State<_TabScreenView> {
   Widget build(BuildContext context) {
     final tabs = widget.screenConfig['tabs'] as List<dynamic>;
     // 支持 "{{ }}" 模板（同普通 screen 的 AppBar 行为）
-    final rawTitle = widget.screenConfig['title']?.toString() ??
-        widget.interpreter.appName;
+    final rawTitle =
+        widget.screenConfig['title']?.toString() ?? widget.interpreter.appName;
     final title = widget.interpreter.resolveTemplate(rawTitle);
 
     final bgColorStr = widget.screenConfig['backgroundColor'] as String?;
@@ -2151,8 +2256,7 @@ class _TabScreenViewState extends State<_TabScreenView> {
     final hasListWidget = _containsListInChildren(tabChildren);
     final childWidgets = tabChildren
         .whereType<Map<String, dynamic>>()
-        .map((childJson) =>
-            widget.interpreter.buildWidget(context, childJson))
+        .map((childJson) => widget.interpreter.buildWidget(context, childJson))
         .toList();
 
     final padding =
@@ -2187,16 +2291,16 @@ class _TabScreenViewState extends State<_TabScreenView> {
       if (tab is Map<String, dynamic>) {
         // tab.label 走 resolveTemplate，支持 {{ t('xxx') }} / {{ global.xxx }}
         // ——和 button.label / text.value 一致
-        final label = widget.interpreter
-            .resolveTemplate(tab['label']?.toString() ?? '');
+        final label = widget.interpreter.resolveTemplate(
+          tab['label']?.toString() ?? '',
+        );
         final iconName = tab['icon']?.toString();
         final iconData = iconName != null
             ? IconRegistry.get(iconName) ?? Icons.circle
             : Icons.circle;
-        navItems.add(BottomNavigationBarItem(
-          icon: Icon(iconData),
-          label: label,
-        ));
+        navItems.add(
+          BottomNavigationBarItem(icon: Icon(iconData), label: label),
+        );
       }
     }
 
@@ -2213,8 +2317,11 @@ class _TabScreenViewState extends State<_TabScreenView> {
       child: Scaffold(
         backgroundColor: tabBgColor ?? bgColor,
         appBar: AppBar(
-          title: Text(widget.interpreter.resolveTemplate(
-              currentTab['title']?.toString() ?? title)),
+          title: Text(
+            widget.interpreter.resolveTemplate(
+              currentTab['title']?.toString() ?? title,
+            ),
+          ),
           centerTitle: true,
           // 默认启动 App 的根 screen：没地方可退，藏掉 leading
           automaticallyImplyLeading:
@@ -2249,7 +2356,6 @@ class _TabScreenViewState extends State<_TabScreenView> {
     );
   }
 }
-
 
 // ============================================================
 // 我的 APP — AI 生成的历史列表
@@ -2310,98 +2416,129 @@ class _MyAppsPageState extends State<_MyAppsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.myAppsTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          t.myAppsTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
       ),
       body: _apps == null
           ? Center(child: CircularProgressIndicator(color: cs.onSurface))
           : _apps!.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.inbox_outlined, size: 64, color: cs.onSurfaceVariant),
-                      const SizedBox(height: 16),
-                      Text(t.myAppsEmpty, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text(t.myAppsEmptyHint, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: cs.onSurfaceVariant,
                   ),
-                )
-              : Stack(
-                  children: [
-                    ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _apps!.length,
-                      itemBuilder: (context, index) {
-                        final app = _apps![index];
-                        final time = DateTime.tryParse(app.savedAt);
-                        final timeStr = time != null
-                            ? '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
-                            : '';
-                        final meta = app.config['meta'] as Map<String, dynamic>?;
-                        final displayName = resolveDisplayName(meta, fallback: app.name);
+                  const SizedBox(height: 16),
+                  Text(
+                    t.myAppsEmpty,
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    t.myAppsEmptyHint,
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                  ),
+                ],
+              ),
+            )
+          : Stack(
+              children: [
+                ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _apps!.length,
+                  itemBuilder: (context, index) {
+                    final app = _apps![index];
+                    final time = DateTime.tryParse(app.savedAt);
+                    final timeStr = time != null
+                        ? '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
+                        : '';
+                    final meta = app.config['meta'] as Map<String, dynamic>?;
+                    final displayName = resolveDisplayName(
+                      meta,
+                      fallback: app.name,
+                    );
 
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: cs.surfaceContainerHighest,
-                              child: Icon(Icons.apps, color: cs.onSurface),
-                            ),
-                            title: Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(
-                              app.description.isNotEmpty ? app.description : timeStr,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (_isAdmin)
-                                  IconButton(
-                                    icon: Icon(Icons.cloud_upload_outlined,
-                                        size: 20, color: cs.onSurfaceVariant),
-                                    tooltip: t.myAppsUploadTooltip,
-                                    onPressed: _uploading ? null : () => _uploadToMarket(app),
-                                  ),
-                                IconButton(
-                                  icon: Icon(Icons.delete_outline, size: 20, color: cs.onSurfaceVariant),
-                                  onPressed: () async {
-                                    await AppStorage.instance.delete(app.fileName);
-                                    _load();
-                                  },
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: cs.surfaceContainerHighest,
+                          child: Icon(Icons.apps, color: cs.onSurface),
+                        ),
+                        title: Text(
+                          displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          app.description.isNotEmpty
+                              ? app.description
+                              : timeStr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isAdmin)
+                              IconButton(
+                                icon: Icon(
+                                  Icons.cloud_upload_outlined,
+                                  size: 20,
+                                  color: cs.onSurfaceVariant,
                                 ),
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              widget.onSelect(app);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    if (_uploading)
-                      Container(
-                        color: Colors.black26,
-                        child: Center(
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const CircularProgressIndicator(),
-                                  const SizedBox(height: 16),
-                                  Text(t.myAppsUploading),
-                                ],
+                                tooltip: t.myAppsUploadTooltip,
+                                onPressed: _uploading
+                                    ? null
+                                    : () => _uploadToMarket(app),
                               ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: cs.onSurfaceVariant,
+                              ),
+                              onPressed: () async {
+                                await AppStorage.instance.delete(app.fileName);
+                                _load();
+                              },
                             ),
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          widget.onSelect(app);
+                        },
+                      ),
+                    );
+                  },
+                ),
+                if (_uploading)
+                  Container(
+                    color: Colors.black26,
+                    child: Center(
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(),
+                              const SizedBox(height: 16),
+                              Text(t.myAppsUploading),
+                            ],
                           ),
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 }
@@ -2421,7 +2558,9 @@ String _generateUuidV4() {
 }
 
 bool _isValidUuid(String s) {
-  return RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(s);
+  return RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  ).hasMatch(s);
 }
 
 class _PublishDialog extends StatefulWidget {
@@ -2458,9 +2597,15 @@ class _PublishDialogState extends State<_PublishDialog> {
     final rawAppid = widget.config['appid']?.toString() ?? '';
 
     _nameCtrl = TextEditingController(text: meta['name']?.toString() ?? '');
-    _appidCtrl = TextEditingController(text: _isValidUuid(rawAppid) ? rawAppid : '');
-    _descCtrl = TextEditingController(text: meta['description']?.toString() ?? '');
-    _versionCtrl = TextEditingController(text: meta['version']?.toString() ?? '1.0.0');
+    _appidCtrl = TextEditingController(
+      text: _isValidUuid(rawAppid) ? rawAppid : '',
+    );
+    _descCtrl = TextEditingController(
+      text: meta['description']?.toString() ?? '',
+    );
+    _versionCtrl = TextEditingController(
+      text: meta['version']?.toString() ?? '1.0.0',
+    );
     _type = meta['type']?.toString() ?? 'app';
 
     _fetchNamespaces();
@@ -2478,10 +2623,12 @@ class _PublishDialogState extends State<_PublishDialog> {
   Future<void> _fetchNamespaces() async {
     setState(() => _loadingNs = true);
     try {
-      final resp = await http.get(
-        Uri.parse('$_registryUrl/my-namespaces'),
-        headers: {'Authorization': 'Bearer ${AuthService.token}'},
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(
+            Uri.parse('$_registryUrl/my-namespaces'),
+            headers: {'Authorization': 'Bearer ${AuthService.token}'},
+          )
+          .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = json.decode(resp.body) as Map<String, dynamic>;
         final list = (data['namespaces'] as List<dynamic>)
@@ -2518,11 +2665,16 @@ class _PublishDialogState extends State<_PublishDialog> {
             decoration: InputDecoration(
               labelText: dt.publishNamespaceName,
               hintText: dt.publishNamespaceHint,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(dt.cancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(dt.cancel),
+            ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
               child: Text(dt.create),
@@ -2534,14 +2686,16 @@ class _PublishDialogState extends State<_PublishDialog> {
     if (nsName == null || nsName.isEmpty) return;
 
     try {
-      final resp = await http.post(
-        Uri.parse('$_registryUrl/namespace/create'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${AuthService.token}',
-        },
-        body: json.encode({'namespace': nsName}),
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .post(
+            Uri.parse('$_registryUrl/namespace/create'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${AuthService.token}',
+            },
+            body: json.encode({'namespace': nsName}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       final data = json.decode(resp.body) as Map<String, dynamic>;
       if (resp.statusCode == 200) {
@@ -2549,7 +2703,9 @@ class _PublishDialogState extends State<_PublishDialog> {
         if (mounted) setState(() => _selectedNamespace = nsName);
       } else {
         if (mounted) {
-          setState(() => _error = data['error']?.toString() ?? t.publishCreateFailed);
+          setState(
+            () => _error = data['error']?.toString() ?? t.publishCreateFailed,
+          );
         }
       }
     } catch (e) {
@@ -2573,7 +2729,10 @@ class _PublishDialogState extends State<_PublishDialog> {
               const SizedBox(height: 16),
               Text(
                 dt.featureInDevelopment,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -2613,7 +2772,8 @@ class _PublishDialogState extends State<_PublishDialog> {
       setState(() => _error = t.publishVersionInvalid);
       return;
     }
-    if (!_isAdmin && (_selectedNamespace == null || _selectedNamespace!.isEmpty)) {
+    if (!_isAdmin &&
+        (_selectedNamespace == null || _selectedNamespace!.isEmpty)) {
       setState(() => _error = t.publishNamespaceRequired);
       return;
     }
@@ -2624,24 +2784,29 @@ class _PublishDialogState extends State<_PublishDialog> {
     });
 
     try {
-      final resp = await http.post(
-        Uri.parse('$_registryUrl/publish'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${AuthService.token}',
-        },
-        body: json.encode({
-          'json_content': widget.config,
-          'namespace': _isAdmin && (_selectedNamespace == null || _selectedNamespace == '_official_')
-              ? ''
-              : _selectedNamespace ?? '',
-          'name': name,
-          'appid': appid,
-          'version': version,
-          'description': desc,
-          'type': _type,
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final resp = await http
+          .post(
+            Uri.parse('$_registryUrl/publish'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${AuthService.token}',
+            },
+            body: json.encode({
+              'json_content': widget.config,
+              'namespace':
+                  _isAdmin &&
+                      (_selectedNamespace == null ||
+                          _selectedNamespace == '_official_')
+                  ? ''
+                  : _selectedNamespace ?? '',
+              'name': name,
+              'appid': appid,
+              'version': version,
+              'description': desc,
+              'type': _type,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       final data = json.decode(resp.body) as Map<String, dynamic>;
 
@@ -2660,7 +2825,9 @@ class _PublishDialogState extends State<_PublishDialog> {
               final dt = T.of(ctx);
               return AlertDialog(
                 title: Text(dt.publishUuidConflictTitle),
-                content: Text(T.fmt(dt.publishUuidConflictContent, {'pkg': pkg})),
+                content: Text(
+                  T.fmt(dt.publishUuidConflictContent, {'pkg': pkg}),
+                ),
                 actions: [
                   FilledButton(
                     onPressed: () => Navigator.pop(ctx),
@@ -2678,7 +2845,8 @@ class _PublishDialogState extends State<_PublishDialog> {
       // 其他错误
       if (mounted) {
         setState(() {
-          _error = data['error']?.toString() ??
+          _error =
+              data['error']?.toString() ??
               T.fmt(t.publishFailedWithCode, {'code': resp.statusCode});
           _publishing = false;
         });
@@ -2730,7 +2898,10 @@ class _PublishDialogState extends State<_PublishDialog> {
                     color: cs.errorContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(_error!, style: TextStyle(color: cs.onErrorContainer, fontSize: 13)),
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+                  ),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -2741,13 +2912,24 @@ class _PublishDialogState extends State<_PublishDialog> {
                   // 命名空间选择器
                   Expanded(
                     child: _loadingNs
-                        ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                        ? const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
                         : DropdownButtonFormField<String>(
                             value: _selectedNamespace,
                             decoration: InputDecoration(
                               labelText: t.publishNamespaceField,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
                             ),
                             isExpanded: true,
                             items: [
@@ -2756,15 +2938,21 @@ class _PublishDialogState extends State<_PublishDialog> {
                                   value: '_official_',
                                   child: Text(
                                     t.publishOfficialNamespace,
-                                    style: const TextStyle(fontStyle: FontStyle.italic),
+                                    style: const TextStyle(
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                 ),
                               ...(_namespaces ?? []).map((ns) {
                                 final n = ns['name'] as String;
-                                return DropdownMenuItem(value: n, child: Text(n));
+                                return DropdownMenuItem(
+                                  value: n,
+                                  child: Text(n),
+                                );
                               }),
                             ],
-                            onChanged: (v) => setState(() => _selectedNamespace = v),
+                            onChanged: (v) =>
+                                setState(() => _selectedNamespace = v),
                           ),
                   ),
                   const SizedBox(width: 12),
@@ -2774,8 +2962,13 @@ class _PublishDialogState extends State<_PublishDialog> {
                       controller: _nameCtrl,
                       decoration: InputDecoration(
                         labelText: t.publishPkgNameField,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -2791,10 +2984,18 @@ class _PublishDialogState extends State<_PublishDialog> {
                       controller: _appidCtrl,
                       decoration: InputDecoration(
                         labelText: 'AppID (UUID)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
-                      style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -2805,7 +3006,10 @@ class _PublishDialogState extends State<_PublishDialog> {
                     icon: const Icon(Icons.casino, size: 18),
                     label: Text(t.publishRandomGenerate),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -2818,8 +3022,13 @@ class _PublishDialogState extends State<_PublishDialog> {
                 maxLines: 2,
                 decoration: InputDecoration(
                   labelText: t.publishDescField,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -2833,8 +3042,13 @@ class _PublishDialogState extends State<_PublishDialog> {
                       decoration: InputDecoration(
                         labelText: t.publishVersionField,
                         hintText: '1.0.0',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -2844,12 +3058,20 @@ class _PublishDialogState extends State<_PublishDialog> {
                       value: _type,
                       decoration: InputDecoration(
                         labelText: t.publishTypeField,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
                       items: const [
                         DropdownMenuItem(value: 'app', child: Text('App')),
-                        DropdownMenuItem(value: 'library', child: Text('Library')),
+                        DropdownMenuItem(
+                          value: 'library',
+                          child: Text('Library'),
+                        ),
                       ],
                       onChanged: (v) {
                         if (v != null) setState(() => _type = v);
@@ -2864,13 +3086,22 @@ class _PublishDialogState extends State<_PublishDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _publishing ? null : () => Navigator.of(context).pop(false),
+          onPressed: _publishing
+              ? null
+              : () => Navigator.of(context).pop(false),
           child: Text(t.cancel),
         ),
         FilledButton(
           onPressed: _publishing ? null : _doPublish,
           child: _publishing
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : Text(t.publishButton),
         ),
       ],

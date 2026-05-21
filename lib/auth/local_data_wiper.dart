@@ -1,7 +1,6 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../platform/native_fs.dart';
 import '../config/environment_service.dart';
 import '../im/apns_service.dart';
 import '../im/fcm_service.dart';
@@ -62,42 +61,37 @@ Future<void> wipeAllLocalAccountData() async {
     debugPrint('[Wipe] CacheManager.reset 失败 (忽略): $e');
   }
 
-  // 4. 删除文件系统上的本地数据
+  // 4. 删除文件系统上的本地数据（web 无文件系统则全部 no-op）
   try {
-    final appSupport = await getApplicationSupportDirectory();
-    final openimDir = Directory('${appSupport.path}/openim');
-    if (await openimDir.exists()) {
-      await openimDir.delete(recursive: true);
-      debugPrint('[Wipe] 删除 OpenIM 目录: ${openimDir.path}');
+    final appSupport = await NativeFs.appSupportDir();
+    if (appSupport != null) {
+      final deleted = await NativeFs.deleteDirAbs('$appSupport/openim');
+      if (deleted) debugPrint('[Wipe] 删除 OpenIM 目录: $appSupport/openim');
     }
   } catch (e) {
     debugPrint('[Wipe] 删 OpenIM 目录失败 (忽略): $e');
   }
 
   try {
-    final appDocs = await getApplicationDocumentsDirectory();
+    final appDocs = await NativeFs.appDocDir();
+    if (appDocs != null) {
+      // dsl_cache：JSON-APP / 依赖库的本地缓存
+      final deleted = await NativeFs.deleteDirAbs('$appDocs/dsl_cache');
+      if (deleted) debugPrint('[Wipe] 删除 dsl_cache: $appDocs/dsl_cache');
 
-    // dsl_cache：JSON-APP / 依赖库的本地缓存
-    final dslCache = Directory('${appDocs.path}/dsl_cache');
-    if (await dslCache.exists()) {
-      await dslCache.delete(recursive: true);
-      debugPrint('[Wipe] 删除 dsl_cache: ${dslCache.path}');
-    }
-
-    // drift 数据库文件 (app_*.sqlite, app_*.sqlite-journal/wal/shm)
-    await for (final f in appDocs.list()) {
-      if (f is File) {
-        final name = f.uri.pathSegments.last;
+      // drift 数据库文件 (app_*.sqlite, app_*.sqlite-journal/wal/shm)
+      for (final path in await NativeFs.listFilesAbs(appDocs)) {
+        final name = path.split('/').last;
         if (name.startsWith('app_') &&
             (name.endsWith('.sqlite') ||
                 name.endsWith('.sqlite-journal') ||
                 name.endsWith('.sqlite-wal') ||
                 name.endsWith('.sqlite-shm'))) {
           try {
-            await f.delete();
-            debugPrint('[Wipe] 删除 drift 文件: ${f.path}');
+            await NativeFs.deleteAbs(path);
+            debugPrint('[Wipe] 删除 drift 文件: $path');
           } catch (e) {
-            debugPrint('[Wipe] 删 drift 文件失败 ${f.path}: $e');
+            debugPrint('[Wipe] 删 drift 文件失败 $path: $e');
           }
         }
       }

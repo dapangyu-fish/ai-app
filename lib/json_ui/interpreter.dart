@@ -6,19 +6,17 @@
 // ───────────────────────────────────────────────
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import '../platform/biometric.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
+import 'app_fs.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
@@ -106,7 +104,7 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ IM 反应式订阅 ============
   // @im_subscribe_inbox 第一次被调用时挂上 IMService.newMessageStream 监听，
   // 整个 interpreter 生命周期复用同一个订阅，避免重入创建多个 listener。
-  StreamSubscription<Message>? _imInboxSub;
+  StreamSubscription<Map<String, dynamic>>? _imInboxSub;
 
   // ============ 嵌套 APP 状态栈 ============
   //
@@ -1259,23 +1257,9 @@ class JsonInterpreter extends ChangeNotifier {
         };
       case '@biometric_auth':
         // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
-        // 返回 bool：通过 / 失败
+        // 返回 bool：通过 / 失败（web 无生物识别，恒 false）
         final reason = resolvedArgs['reason']?.toString() ?? T.current.builtinBiometricDefaultReason;
-        try {
-          final auth = LocalAuthentication();
-          final canCheck = await auth.canCheckBiometrics ||
-              await auth.isDeviceSupported();
-          if (!canCheck) return false;
-          return await auth.authenticate(
-            localizedReason: reason,
-            options: const AuthenticationOptions(
-              biometricOnly: false, // 允许 fallback 到 PIN / 密码
-              stickyAuth: true,
-            ),
-          );
-        } catch (_) {
-          return false;
-        }
+        return await biometricAuthenticate(reason);
 
       // ── HTTP ──
       case '@http_get':
@@ -1522,12 +1506,8 @@ class JsonInterpreter extends ChangeNotifier {
           final relPath = resolvedArgs['path']?.toString();
           final data = resolvedArgs['data'];
           if (relPath == null || data == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          await file.parent.create(recursive: true);
           final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_write_json error: $e');
           return false;
@@ -1537,10 +1517,8 @@ class JsonInterpreter extends ChangeNotifier {
         try {
           final relPath = resolvedArgs['path']?.toString();
           if (relPath == null) return null;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (!await file.exists()) return resolvedArgs['default'];
-          final content = await file.readAsString();
+          final content = await AppFs.readString(relPath);
+          if (content == null) return resolvedArgs['default'];
           return json.decode(content);
         } catch (e) {
           debugPrint('[JSON DSL] @file_read_json error: $e');
@@ -1551,9 +1529,7 @@ class JsonInterpreter extends ChangeNotifier {
         try {
           final relPath = resolvedArgs['path']?.toString();
           if (relPath == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          return await file.exists();
+          return await AppFs.exists(relPath);
         } catch (e) {
           return false;
         }
@@ -1562,13 +1538,7 @@ class JsonInterpreter extends ChangeNotifier {
         try {
           final relPath = resolvedArgs['path']?.toString();
           if (relPath == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (await file.exists()) {
-            await file.delete();
-            return true;
-          }
-          return false;
+          return await AppFs.deleteFile(relPath);
         } catch (e) {
           debugPrint('[JSON DSL] @file_delete error: $e');
           return false;
@@ -1577,14 +1547,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@file_list':
         try {
           final relDir = resolvedArgs['path']?.toString() ?? '';
-          final dir = await _getAppDocDir();
-          final targetDir = Directory('${dir.path}/$relDir');
-          if (!await targetDir.exists()) return <String>[];
-          final entities = await targetDir.list().toList();
-          return entities
-              .whereType<File>()
-              .map((f) => f.path.split('/').last)
-              .toList();
+          return await AppFs.listFiles(relDir);
         } catch (e) {
           debugPrint('[JSON DSL] @file_list error: $e');
           return <String>[];
@@ -1596,19 +1559,15 @@ class JsonInterpreter extends ChangeNotifier {
           final relPath = resolvedArgs['path']?.toString();
           final item = resolvedArgs['item'];
           if (relPath == null || item == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
           List<dynamic> list = [];
-          if (await file.exists()) {
-            final content = await file.readAsString();
+          final content = await AppFs.readString(relPath);
+          if (content != null) {
             final decoded = json.decode(content);
             if (decoded is List) list = decoded;
           }
           list.add(item);
-          await file.parent.create(recursive: true);
           final jsonStr = const JsonEncoder.withIndent('  ').convert(list);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_append_json error: $e');
           return false;
@@ -1621,10 +1580,8 @@ class JsonInterpreter extends ChangeNotifier {
           final matchField = resolvedArgs['field']?.toString();
           final matchValue = resolvedArgs['value'];
           if (relPath == null || matchField == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (!await file.exists()) return false;
-          final content = await file.readAsString();
+          final content = await AppFs.readString(relPath);
+          if (content == null) return false;
           final decoded = json.decode(content);
           if (decoded is! List) return false;
           final newList = decoded.where((item) {
@@ -1634,8 +1591,7 @@ class JsonInterpreter extends ChangeNotifier {
             return true;
           }).toList();
           final jsonStr = const JsonEncoder.withIndent('  ').convert(newList);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_remove_json_item error: $e');
           return false;
@@ -1649,10 +1605,8 @@ class JsonInterpreter extends ChangeNotifier {
           final matchValue = resolvedArgs['value'];
           final updates = resolvedArgs['updates'];
           if (relPath == null || matchField == null || updates is! Map) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (!await file.exists()) return false;
-          final content = await file.readAsString();
+          final content = await AppFs.readString(relPath);
+          if (content == null) return false;
           final decoded = json.decode(content);
           if (decoded is! List) return false;
           bool found = false;
@@ -1667,8 +1621,7 @@ class JsonInterpreter extends ChangeNotifier {
           }
           if (!found) return false;
           final jsonStr = const JsonEncoder.withIndent('  ').convert(decoded);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_update_json_item error: $e');
           return false;
@@ -2113,10 +2066,8 @@ class JsonInterpreter extends ChangeNotifier {
         final filePath = resolvedArgs['path'] as String?;
         if (filePath == null || filePath.isEmpty) return null;
         try {
-          final file = File(filePath);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            final b64 = base64Encode(bytes);
+          final b64 = await AppFs.readAbsoluteAsBase64(filePath);
+          if (b64 != null) {
             final b64Bind = resolvedArgs['bind'] as String?;
             if (b64Bind != null) {
               setVariable(b64Bind, b64);
@@ -2258,11 +2209,7 @@ class JsonInterpreter extends ChangeNotifier {
             // 给每条结果加 is_friend / is_self 标记，方便 JSON-APP 做条件渲染。
             // 友列走 OpenIM SDK 本地缓存（O(1) 内存读，无网络），currentUserId
             // 是登录后就有的字段，整体零额外延迟。
-            final friends = await IMService.instance.getFriendList();
-            final friendIds = friends
-                .map((f) => f.userID)
-                .whereType<String>()
-                .toSet();
+            final friendIds = await IMService.instance.getFriendIds();
             final myId = IMService.instance.currentUserId;
 
             final enriched = users.map((u) {
@@ -2302,8 +2249,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@im_friend_applications':
         {
           try {
-            final apps = await IMService.instance.getIncomingFriendApplications();
-            final list = apps.map(_friendApplicationToMap).toList();
+            final list = await IMService.instance.getIncomingFriendApplicationsAsMaps();
             await _backfillFaceUrls(
               list,
               idField: 'from_user_id',
@@ -2346,8 +2292,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@im_friend_list':
         {
           try {
-            final friends = await IMService.instance.getFriendList();
-            final list = friends.map(_friendInfoToMap).toList();
+            final list = await IMService.instance.getFriendListAsMaps();
             await _backfillFaceUrls(
               list,
               idField: 'user_id',
@@ -2366,8 +2311,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@im_conversations':
         {
           try {
-            final convos = await IMService.instance.getConversationList();
-            final list = convos.map(_conversationToMap).toList();
+            final list = await IMService.instance.getConversationListAsMaps();
             // 用 show_name 当昵称兜底字段——OpenIM 的 ConversationInfo.showName 已经是
             // 对方在 OpenIM 的昵称，但同样可能过时；Supabase 拿到新昵称时覆盖
             await _backfillFaceUrls(
@@ -2395,15 +2339,13 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final convId = _singleChatConversationId(userId);
             if (convId == null) return const [];
-            final messages = await IMService.instance.getHistoryMessages(
-              conversationID: convId,
-              count: count,
-            );
             // OpenIM SDK 的 getAdvancedHistoryMessageList 返回**升序**（旧→新），
             // JSON-DSL 的 list 控件从上往下渲染 index 0 → N，所以**直接保留升序**
             // 即可让 UI 上呈现"老消息在顶、新消息在底"的微信式聊天体验。
-            // 之前这里多了一步 .reversed 反而把"新消息"顶到列表最上方。
-            final list = messages.map(_messageToMap).toList();
+            final list = await IMService.instance.getHistoryMessagesAsMaps(
+              conversationID: convId,
+              count: count,
+            );
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, list);
             return list;
@@ -2421,12 +2363,11 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final convId = _singleChatConversationId(userId);
             if (convId == null) return null;
-            final msg = await IMService.instance.sendTextMessage(
+            return await IMService.instance.sendTextMessageAsMap(
               conversationID: convId,
               text: text,
               userID: userId,
             );
-            return msg != null ? _messageToMap(msg) : null;
           } catch (e) {
             debugPrint('[JSON DSL] im_send_text 失败: $e');
             return null;
@@ -2452,11 +2393,7 @@ class JsonInterpreter extends ChangeNotifier {
         {
           // 跨所有会话的未读总数，用于 tab badge / 应用图标角标
           try {
-            final convos = await IMService.instance.getConversationList();
-            int total = 0;
-            for (final c in convos) {
-              total += c.unreadCount;
-            }
+            final total = await IMService.instance.getTotalUnread();
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, total);
             return total;
@@ -2476,13 +2413,14 @@ class JsonInterpreter extends ChangeNotifier {
             'current_user_id': IMService.instance.currentUserId,
           });
           // 监听只挂一次：interpreter 整个生命周期共用同一个 sub
-          _imInboxSub ??= IMService.instance.newMessageStream.listen((msg) {
+          // newMessageMapStream 已在 IMService 侧转成 Map，interpreter 不碰 OpenIM 类型
+          _imInboxSub ??= IMService.instance.newMessageMapStream.listen((msgMap) {
             try {
               final current = getVariable('global._im');
               final tick = (current is Map ? (current['tick'] as int? ?? 0) : 0) + 1;
               setVariable('global._im', {
                 'tick': tick,
-                'last_message': _messageToMap(msg),
+                'last_message': msgMap,
                 'current_user_id': IMService.instance.currentUserId,
               });
             } catch (e) {
@@ -2709,14 +2647,6 @@ class JsonInterpreter extends ChangeNotifier {
       debugPrint('[JSON DSL] json_encode 失败: $e');
       return '';
     }
-  }
-
-  // ============ 文件持久化辅助 ============
-
-  Directory? _appDocDirCache;
-  Future<Directory> _getAppDocDir() async {
-    _appDocDirCache ??= await getApplicationDocumentsDirectory();
-    return _appDocDirCache!;
   }
 
   // ============ UI 反馈 ============
@@ -3385,118 +3315,6 @@ class JsonInterpreter extends ChangeNotifier {
     final ids = [myId, otherUserId]..sort();
     return 'si_${ids[0]}_${ids[1]}';
   }
-
-  Map<String, dynamic> _friendInfoToMap(FriendInfo f) {
-    return {
-      'user_id': f.userID ?? '',
-      'nickname': f.nickname ?? '',
-      'face_url': f.faceURL ?? '',
-      'remark': f.remark ?? '',
-    };
-  }
-
-  Map<String, dynamic> _friendApplicationToMap(FriendApplicationInfo a) {
-    return {
-      'from_user_id': a.fromUserID ?? '',
-      'from_nickname': a.fromNickname ?? '',
-      'from_face_url': a.fromFaceURL ?? '',
-      'req_msg': a.reqMsg ?? '',
-      'handle_result': a.handleResult ?? 0, // 0=待处理 1=已同意 -1=已拒绝
-      'create_time': a.createTime ?? 0,
-    };
-  }
-
-  Map<String, dynamic> _messageToMap(Message m) {
-    String text;
-    switch (m.contentType) {
-      case MessageType.text:
-        text = m.textElem?.content ?? '';
-        break;
-      case MessageType.picture:
-        text = '[图片]';
-        break;
-      case MessageType.video:
-        text = '[视频]';
-        break;
-      case MessageType.voice:
-        text = '[语音]';
-        break;
-      case MessageType.file:
-        text = '[文件]';
-        break;
-      default:
-        text = '[消息]';
-    }
-    final myId = IMService.instance.currentUserId ?? '';
-    final sendId = m.sendID ?? '';
-    final isMe = sendId == myId && sendId.isNotEmpty;
-    final sendTime = m.sendTime ?? 0;
-    final senderNick = m.senderNickname ?? '';
-    // 他人显示名兜底：nick 为空时回退到 sendId（不要让 UI 出现空白发送者）
-    final otherDisplay = senderNick.isNotEmpty ? senderNick : sendId;
-    return {
-      'client_msg_id': m.clientMsgID ?? '',
-      'send_id': sendId,
-      'recv_id': m.recvID ?? '',
-      'send_time': sendTime,
-      'content_type': m.contentType ?? 101,
-      'text': text,
-      'sender_nickname': senderNick,
-      'sender_face_url': m.senderFaceUrl ?? '',
-      'is_me': isMe,
-      // 给 JSON-APP 用的"另一面"flag：is_me 取反，配合 widget visible 字段做
-      // 自他分支渲染时不用写 jsonlogic `{"!": [...]}`
-      'is_other': !isMe,
-      // 预格式化字段：JSON-DSL 不支持条件 / 时间格式表达式，所以在这里算好
-      'display_time': _formatChatTime(sendTime),
-      'display_sender': isMe ? T.current.imSenderMe : otherDisplay,
-      // 微信风格气泡配色：自己绿色（#95EC69），他人白色
-      'bubble_color': isMe ? '#95EC69' : '#FFFFFF',
-      'bubble_text_color': '#000000',
-    };
-  }
-
-  Map<String, dynamic> _conversationToMap(ConversationInfo c) {
-    String latest;
-    final lm = c.latestMsg;
-    if (lm == null) {
-      latest = '';
-    } else {
-      latest = _messageToMap(lm)['text'] as String? ?? '';
-    }
-    final unread = c.unreadCount;
-    final latestTime = c.latestMsgSendTime ?? 0;
-    return {
-      'conversation_id': c.conversationID,
-      'user_id': c.userID ?? '',
-      'show_name': c.showName ?? '',
-      'face_url': c.faceURL ?? '',
-      'latest_text': latest,
-      'latest_time': latestTime,
-      'unread_count': unread,
-      // 预格式化：unread 为 0 时空字符串（绑 text.value 直接隐藏徽标视觉）
-      'display_unread': unread > 0 ? unread.toString() : '',
-      'display_time': _formatChatTime(latestTime),
-    };
-  }
-
-  /// 把 epoch 毫秒时间戳格式化为 IM 列表常见的"今天 HH:mm / 昨天 / MM-dd"。
-  /// 0 / 负数 → 空串（用于"暂无消息"等场景）。
-  String _formatChatTime(int millis) {
-    if (millis <= 0) return '';
-    final dt = DateTime.fromMillisecondsSinceEpoch(millis);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dtDay = DateTime(dt.year, dt.month, dt.day);
-    final diff = today.difference(dtDay).inDays;
-    String two(int n) => n.toString().padLeft(2, '0');
-    // 时钟漂移 / 服务器时间快于本地时（diff < 0）也按"今天 HH:mm"渲染，
-    // 避免出现 "−1 天前" 之类怪字符串。
-    if (diff <= 0) return '${two(dt.hour)}:${two(dt.minute)}';
-    if (diff == 1) return T.current.relativeDateYesterday;
-    if (diff < 7) return '$diff天前';
-    return '${two(dt.month)}-${two(dt.day)}';
-  }
 }
 
 class _TextInputDialog extends StatefulWidget {
@@ -3568,7 +3386,7 @@ class _InterpreterStateSnapshot {
   final List<Map<String, dynamic>> loopContextStack;
   final List<Map<String, dynamic>> paramsStack;
   final List<Map<String, dynamic>> eventContextStack;
-  final StreamSubscription<Message>? imInboxSub;
+  final StreamSubscription<Map<String, dynamic>>? imInboxSub;
 
   _InterpreterStateSnapshot({
     required this.config,

@@ -21,7 +21,7 @@ import '../auth/auth_service.dart';
 import '../i18n/framework_strings.dart';
 import 'im_cache_manager.dart';
 import 'im_media_uploader.dart';
-import 'im_service.dart';
+import 'im_service_io.dart';
 import 'group_management.dart';
 import 'message_preview.dart';
 
@@ -93,22 +93,28 @@ class _IMChatPageState extends State<IMChatPage> {
     final myImId = IMService.instance.currentUserId;
     if (myImId == null) return;
     final myAvatar = AuthService.currentUser?['avatar_url']?.toString();
-    _avatarCache[myImId] = (myAvatar != null && myAvatar.isNotEmpty) ? myAvatar : null;
+    _avatarCache[myImId] = (myAvatar != null && myAvatar.isNotEmpty)
+        ? myAvatar
+        : null;
   }
 
   /// 批量拉头像到 _avatarCache，重复 / in-flight 自动跳过。
   /// 调用方负责传入所有需要确保的 userIDs（一般是消息列表里所有 sendID）
   Future<void> _ensureAvatars(Iterable<String> userIds) async {
     final missing = userIds
-        .where((id) => id.isNotEmpty &&
-            !_avatarCache.containsKey(id) &&
-            !_avatarInFlight.contains(id))
+        .where(
+          (id) =>
+              id.isNotEmpty &&
+              !_avatarCache.containsKey(id) &&
+              !_avatarInFlight.contains(id),
+        )
         .toSet();
     if (missing.isEmpty) return;
     _avatarInFlight.addAll(missing);
     try {
-      final result = await IMService.instance
-          .lookupUsersFromSupabase(missing.toList());
+      final result = await IMService.instance.lookupUsersFromSupabase(
+        missing.toList(),
+      );
       if (!mounted) return;
       setState(() {
         for (final id in missing) {
@@ -274,26 +280,32 @@ class _IMChatPageState extends State<IMChatPage> {
     }
 
     // 后台发，不阻塞 UI
-    unawaited(IMService.instance.sendPreparedMessage(
-      message: pending,
-      previewText: text,
-      userID: widget.userID,
-      groupID: widget.groupID,
-    ).then((sent) {
-      if (!mounted) return;
-      setState(() {
-        final idx = _messages.indexWhere((m) => m.clientMsgID == pending.clientMsgID);
-        if (idx < 0) return;
-        if (sent != null) {
-          // SDK 把状态改成 sendSuccess，且可能补 serverMsgID
-          _messages[idx] = sent;
-        } else {
-          // 发送失败：把本地这条标记为 failed（SDK 会改 pending.status 但保险显式改）
-          pending.status = MessageStatus.failed;
-          _messages[idx] = pending;
-        }
-      });
-    }));
+    unawaited(
+      IMService.instance
+          .sendPreparedMessage(
+            message: pending,
+            previewText: text,
+            userID: widget.userID,
+            groupID: widget.groupID,
+          )
+          .then((sent) {
+            if (!mounted) return;
+            setState(() {
+              final idx = _messages.indexWhere(
+                (m) => m.clientMsgID == pending.clientMsgID,
+              );
+              if (idx < 0) return;
+              if (sent != null) {
+                // SDK 把状态改成 sendSuccess，且可能补 serverMsgID
+                _messages[idx] = sent;
+              } else {
+                // 发送失败：把本地这条标记为 failed（SDK 会改 pending.status 但保险显式改）
+                pending.status = MessageStatus.failed;
+                _messages[idx] = pending;
+              }
+            });
+          }),
+    );
   }
 
   @override
@@ -305,10 +317,7 @@ class _IMChatPageState extends State<IMChatPage> {
       appBar: AppBar(
         title: Column(
           children: [
-            Text(
-              widget.conversationName,
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text(widget.conversationName, style: const TextStyle(fontSize: 16)),
             if (widget.conversationType == 3)
               Text(
                 s.imGroupChat,
@@ -341,7 +350,10 @@ class _IMChatPageState extends State<IMChatPage> {
 
     if (_messages.isEmpty) {
       return Center(
-        child: Text(T.of(context).imEmptyMessages, style: TextStyle(color: cs.outline)),
+        child: Text(
+          T.of(context).imEmptyMessages,
+          style: TextStyle(color: cs.outline),
+        ),
       );
     }
 
@@ -389,14 +401,18 @@ class _IMChatPageState extends State<IMChatPage> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
-          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isMe) _buildAvatar(msg, cs),
             if (!isMe) const SizedBox(width: 8),
             Flexible(
               child: Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
                   if (!isMe && widget.conversationType == 3)
                     Padding(
@@ -410,7 +426,10 @@ class _IMChatPageState extends State<IMChatPage> {
                     constraints: BoxConstraints(
                       maxWidth: MediaQuery.of(context).size.width * 0.7,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: isMe ? cs.primary : cs.surfaceContainerHighest,
                       borderRadius: BorderRadius.only(
@@ -427,7 +446,10 @@ class _IMChatPageState extends State<IMChatPage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(time, style: TextStyle(fontSize: 10, color: cs.outline)),
+                        Text(
+                          time,
+                          style: TextStyle(fontSize: 10, color: cs.outline),
+                        ),
                         if (isMe) ...[
                           const SizedBox(width: 4),
                           _buildReadStatus(msg, cs),
@@ -453,7 +475,9 @@ class _IMChatPageState extends State<IMChatPage> {
     final cached = senderId.isNotEmpty && _avatarCache.containsKey(senderId)
         ? _avatarCache[senderId]
         : null;
-    final faceUrl = (cached != null && cached.isNotEmpty) ? cached : msg.senderFaceUrl;
+    final faceUrl = (cached != null && cached.isNotEmpty)
+        ? cached
+        : msg.senderFaceUrl;
     final name = msg.senderNickname ?? '?';
     return CircleAvatar(
       radius: 18,
@@ -462,8 +486,10 @@ class _IMChatPageState extends State<IMChatPage> {
           ? CachedNetworkImageProvider(faceUrl)
           : null,
       child: faceUrl == null || faceUrl.isEmpty
-          ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: TextStyle(color: cs.onPrimaryContainer, fontSize: 14))
+          ? Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: TextStyle(color: cs.onPrimaryContainer, fontSize: 14),
+            )
           : null,
     );
   }
@@ -478,7 +504,8 @@ class _IMChatPageState extends State<IMChatPage> {
           style: TextStyle(color: textColor, fontSize: 15),
         );
       case MessageType.picture:
-        final url = msg.pictureElem?.bigPicture?.url ??
+        final url =
+            msg.pictureElem?.bigPicture?.url ??
             msg.pictureElem?.sourcePicture?.url;
         if (url != null && url.isNotEmpty) {
           return GestureDetector(
@@ -493,14 +520,20 @@ class _IMChatPageState extends State<IMChatPage> {
                 placeholder: (_, __) => SizedBox(
                   width: 200,
                   height: 150,
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
-                errorWidget: (_, __, ___) => _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
+                errorWidget: (_, __, ___) =>
+                    _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
               ),
             ),
           );
         }
-        return Text(T.of(context).imPreviewImage, style: TextStyle(color: textColor));
+        return Text(
+          T.of(context).imPreviewImage,
+          style: TextStyle(color: textColor),
+        );
       case MessageType.voice:
         final duration = msg.soundElem?.duration ?? 0;
         return Row(
@@ -531,7 +564,8 @@ class _IMChatPageState extends State<IMChatPage> {
                     cacheManager: ImMediaCacheManager.instance,
                     width: 200,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
+                    errorWidget: (_, __, ___) =>
+                        _ExpiredPlaceholder(width: 200, height: 150, cs: cs),
                   )
                 else
                   Container(
@@ -549,14 +583,20 @@ class _IMChatPageState extends State<IMChatPage> {
                     right: 6,
                     bottom: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         _fmtDuration(duration),
-                        style: const TextStyle(color: Colors.white, fontSize: 11),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ),
@@ -565,7 +605,8 @@ class _IMChatPageState extends State<IMChatPage> {
           ),
         );
       case MessageType.file:
-        final fileName = msg.fileElem?.fileName ?? T.of(context).imAttachmentFile;
+        final fileName =
+            msg.fileElem?.fileName ?? T.of(context).imAttachmentFile;
         final fileSize = msg.fileElem?.fileSize ?? 0;
         final url = msg.fileElem?.sourceUrl ?? '';
         return GestureDetector(
@@ -587,14 +628,21 @@ class _IMChatPageState extends State<IMChatPage> {
                     children: [
                       Text(
                         fileName,
-                        style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         _fmtFileSize(fileSize),
-                        style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 11),
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.7),
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
@@ -616,7 +664,8 @@ class _IMChatPageState extends State<IMChatPage> {
     final status = msg.status;
     if (status == MessageStatus.sending) {
       return SizedBox(
-        width: 12, height: 12,
+        width: 12,
+        height: 12,
         child: CircularProgressIndicator(strokeWidth: 1.5, color: cs.outline),
       );
     }
@@ -666,7 +715,10 @@ class _IMChatPageState extends State<IMChatPage> {
                 hintText: T.of(context).imChatInputHint,
                 filled: true,
                 fillColor: cs.surfaceContainerHighest,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -701,10 +753,15 @@ class _IMChatPageState extends State<IMChatPage> {
                 leading: const Icon(Icons.copy),
                 title: Text(s.imActionCopy),
                 onTap: () {
-                  Clipboard.setData(ClipboardData(text: msg.textElem?.content ?? ''));
+                  Clipboard.setData(
+                    ClipboardData(text: msg.textElem?.content ?? ''),
+                  );
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(s.imToastCopied), duration: const Duration(seconds: 1)),
+                    SnackBar(
+                      content: Text(s.imToastCopied),
+                      duration: const Duration(seconds: 1),
+                    ),
                   );
                 },
               ),
@@ -728,7 +785,9 @@ class _IMChatPageState extends State<IMChatPage> {
                   );
                   if (ok && mounted) {
                     setState(() {
-                      _messages.removeWhere((m) => m.clientMsgID == msg.clientMsgID);
+                      _messages.removeWhere(
+                        (m) => m.clientMsgID == msg.clientMsgID,
+                      );
                     });
                   }
                 },
@@ -739,13 +798,16 @@ class _IMChatPageState extends State<IMChatPage> {
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
-                  await OpenIM.iMManager.messageManager.deleteMessageFromLocalAndSvr(
-                    conversationID: widget.conversationID,
-                    clientMsgID: msg.clientMsgID!,
-                  );
+                  await OpenIM.iMManager.messageManager
+                      .deleteMessageFromLocalAndSvr(
+                        conversationID: widget.conversationID,
+                        clientMsgID: msg.clientMsgID!,
+                      );
                   if (mounted) {
                     setState(() {
-                      _messages.removeWhere((m) => m.clientMsgID == msg.clientMsgID);
+                      _messages.removeWhere(
+                        (m) => m.clientMsgID == msg.clientMsgID,
+                      );
                     });
                   }
                 } catch (e) {
@@ -800,7 +862,9 @@ class _IMChatPageState extends State<IMChatPage> {
 
     // 占位消息（先不真实 createMessage，临时用一个本地 textMessage 假装；
     // 等上传完拿到 URL 再替换成真正的 picture 消息）
-    final placeholder = await IMService.instance.createTextMessage('[图片上传中...]');
+    final placeholder = await IMService.instance.createTextMessage(
+      '[图片上传中...]',
+    );
     if (!mounted) return;
     setState(() => _messages.insert(0, placeholder));
 
@@ -838,7 +902,9 @@ class _IMChatPageState extends State<IMChatPage> {
 
     if (!mounted) return;
     setState(() {
-      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      final idx = _messages.indexWhere(
+        (m) => m.clientMsgID == placeholder.clientMsgID,
+      );
       if (idx < 0) return;
       if (sent != null) {
         _messages[idx] = sent;
@@ -881,10 +947,13 @@ class _IMChatPageState extends State<IMChatPage> {
   Future<File?> _compressImage(File src) async {
     try {
       final tmpDir = await getTemporaryDirectory();
-      final out = '${tmpDir.path}/im_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final out =
+          '${tmpDir.path}/im_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final result = await FlutterImageCompress.compressAndGetFile(
-        src.absolute.path, out,
-        minWidth: 1920, minHeight: 1920, // 长边 1920，短边按比例
+        src.absolute.path,
+        out,
+        minWidth: 1920,
+        minHeight: 1920, // 长边 1920，短边按比例
         quality: 80,
         format: CompressFormat.jpeg,
       );
@@ -901,12 +970,15 @@ class _IMChatPageState extends State<IMChatPage> {
     try {
       final completer = Completer<(int, int)?>();
       final image = Image.file(file);
-      image.image.resolve(const ImageConfiguration()).addListener(
-        ImageStreamListener(
-          (info, _) => completer.complete((info.image.width, info.image.height)),
-          onError: (e, _) => completer.complete(null),
-        ),
-      );
+      image.image
+          .resolve(const ImageConfiguration())
+          .addListener(
+            ImageStreamListener(
+              (info, _) =>
+                  completer.complete((info.image.width, info.image.height)),
+              onError: (e, _) => completer.complete(null),
+            ),
+          );
       return await completer.future.timeout(const Duration(seconds: 5));
     } catch (e) {
       return null;
@@ -923,14 +995,17 @@ class _IMChatPageState extends State<IMChatPage> {
   static String _fmtFileSize(int bytes) {
     if (bytes < 1024) return '${bytes}B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)}GB';
   }
 
   void _markPlaceholderFailed(Message placeholder, String text) {
     if (!mounted) return;
     setState(() {
-      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      final idx = _messages.indexWhere(
+        (m) => m.clientMsgID == placeholder.clientMsgID,
+      );
       if (idx < 0) return;
       placeholder.status = MessageStatus.failed;
       placeholder.textElem?.content = text;
@@ -940,10 +1015,12 @@ class _IMChatPageState extends State<IMChatPage> {
 
   /// 全屏图片查看器（捏合缩放 / 双击放大）。
   void _openImageViewer(String url) {
-    Navigator.of(context).push(MaterialPageRoute(
-      fullscreenDialog: true,
-      builder: (_) => _ImageViewerPage(url: url),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _ImageViewerPage(url: url),
+      ),
+    );
   }
 
   // ---------- 视频：picker → 抽首帧 → 上传 video + snapshot → sendVideoByUrl ----------
@@ -959,7 +1036,9 @@ class _IMChatPageState extends State<IMChatPage> {
     final videoFile = File(xfile.path);
     if (!await videoFile.exists()) return;
 
-    final placeholder = await IMService.instance.createTextMessage('[视频处理中...]');
+    final placeholder = await IMService.instance.createTextMessage(
+      '[视频处理中...]',
+    );
     if (!mounted) return;
     setState(() => _messages.insert(0, placeholder));
 
@@ -1048,7 +1127,9 @@ class _IMChatPageState extends State<IMChatPage> {
 
     if (!mounted) return;
     setState(() {
-      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      final idx = _messages.indexWhere(
+        (m) => m.clientMsgID == placeholder.clientMsgID,
+      );
       if (idx < 0) return;
       if (sent != null) {
         _messages[idx] = sent;
@@ -1062,10 +1143,12 @@ class _IMChatPageState extends State<IMChatPage> {
 
   /// 全屏视频播放器（chewie + video_player）
   void _openVideoPlayer(String url) {
-    Navigator.of(context).push(MaterialPageRoute(
-      fullscreenDialog: true,
-      builder: (_) => _VideoPlayerPage(url: url),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _VideoPlayerPage(url: url),
+      ),
+    );
   }
 
   // ---------- 文件：file_picker → 上传 → sendFileByUrl ----------
@@ -1085,7 +1168,9 @@ class _IMChatPageState extends State<IMChatPage> {
     if (!await file.exists() || !mounted) return;
 
     final fileName = picked.name;
-    final placeholder = await IMService.instance.createTextMessage('[文件 $fileName 上传中...]');
+    final placeholder = await IMService.instance.createTextMessage(
+      '[文件 $fileName 上传中...]',
+    );
     if (!mounted) return;
     setState(() => _messages.insert(0, placeholder));
 
@@ -1118,7 +1203,9 @@ class _IMChatPageState extends State<IMChatPage> {
 
     if (!mounted) return;
     setState(() {
-      final idx = _messages.indexWhere((m) => m.clientMsgID == placeholder.clientMsgID);
+      final idx = _messages.indexWhere(
+        (m) => m.clientMsgID == placeholder.clientMsgID,
+      );
       if (idx < 0) return;
       if (sent != null) {
         _messages[idx] = sent;
@@ -1133,7 +1220,10 @@ class _IMChatPageState extends State<IMChatPage> {
   /// 点击文件气泡：下载到 app 缓存目录后调系统默认 app 打开。
   /// 同名文件已存在就直接打开（避免每次重新下载）；只用 url 做 cache key 也够了，
   /// 因为我们的 URL 是 MinIO key 直链，永久不变。
-  Future<void> _openFileMessage({required String url, required String fileName}) async {
+  Future<void> _openFileMessage({
+    required String url,
+    required String fileName,
+  }) async {
     try {
       final cacheDir = await getTemporaryDirectory();
       // 用 url 末段做 cache key + 保留原文件名，让系统能按后缀挑 app
@@ -1150,14 +1240,23 @@ class _IMChatPageState extends State<IMChatPage> {
         // 简单进度：snackbar
         final messenger = ScaffoldMessenger.of(context);
         messenger.showSnackBar(
-          SnackBar(content: Text(T.of(context).imDownloadingMsg), duration: const Duration(seconds: 30)),
+          SnackBar(
+            content: Text(T.of(context).imDownloadingMsg),
+            duration: const Duration(seconds: 30),
+          ),
         );
         final resp = await http.get(Uri.parse(url));
         messenger.hideCurrentSnackBar();
         if (resp.statusCode != 200) {
           if (!mounted) return;
           messenger.showSnackBar(
-            SnackBar(content: Text(T.fmt(T.of(context).imDownloadFailedWith, {'code': resp.statusCode}))),
+            SnackBar(
+              content: Text(
+                T.fmt(T.of(context).imDownloadFailedWith, {
+                  'code': resp.statusCode,
+                }),
+              ),
+            ),
           );
           return;
         }
@@ -1167,13 +1266,19 @@ class _IMChatPageState extends State<IMChatPage> {
       final r = await OpenFilex.open(localPath);
       if (r.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(T.fmt(T.of(context).imOpenFailedWith, {'msg': r.message ?? ''}))),
+          SnackBar(
+            content: Text(
+              T.fmt(T.of(context).imOpenFailedWith, {'msg': r.message ?? ''}),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(T.fmt(T.of(context).imOpenExceptionWith, {'err': e}))),
+          SnackBar(
+            content: Text(T.fmt(T.of(context).imOpenExceptionWith, {'err': e})),
+          ),
         );
       }
     }
@@ -1273,7 +1378,11 @@ class _ExpiredPlaceholder extends StatelessWidget {
   final double width;
   final double height;
   final ColorScheme cs;
-  const _ExpiredPlaceholder({required this.width, required this.height, required this.cs});
+  const _ExpiredPlaceholder({
+    required this.width,
+    required this.height,
+    required this.cs,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1346,11 +1455,15 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
     Widget body;
     if (_err != null) {
       body = Center(
-        child: Text(T.fmt(T.of(context).imVideoLoadFailedWith, {'err': _err}),
-            style: const TextStyle(color: Colors.white)),
+        child: Text(
+          T.fmt(T.of(context).imVideoLoadFailedWith, {'err': _err}),
+          style: const TextStyle(color: Colors.white),
+        ),
       );
     } else if (_cc == null) {
-      body = const Center(child: CircularProgressIndicator(color: Colors.white));
+      body = const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
     } else {
       body = Center(child: Chewie(controller: _cc!));
     }
@@ -1393,18 +1506,24 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
     final s = T.of(context);
     try {
       // gal 在 iOS 第一次会弹相册写入权限；在 Android 13+ 不要权限
-      final granted = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      final granted =
+          await Gal.hasAccess(toAlbum: true) ||
+          await Gal.requestAccess(toAlbum: true);
       if (!granted) {
         messenger.showSnackBar(SnackBar(content: Text(s.imSaveFailed)));
         return;
       }
       // 从 cache_manager 拿本地文件（如果已经缓存过）；没缓存就 http 下一次
-      final fileInfo = await ImMediaCacheManager.instance.getFileFromCache(widget.url);
+      final fileInfo = await ImMediaCacheManager.instance.getFileFromCache(
+        widget.url,
+      );
       String localPath;
       if (fileInfo != null) {
         localPath = fileInfo.file.path;
       } else {
-        final downloaded = await ImMediaCacheManager.instance.downloadFile(widget.url);
+        final downloaded = await ImMediaCacheManager.instance.downloadFile(
+          widget.url,
+        );
         localPath = downloaded.file.path;
       }
       await Gal.putImage(localPath);
@@ -1439,7 +1558,11 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.history_toggle_off, color: Colors.white54, size: 48),
+                    const Icon(
+                      Icons.history_toggle_off,
+                      color: Colors.white54,
+                      size: 48,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       T.of(context).imImageExpired,
@@ -1464,8 +1587,12 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
             child: IconButton(
               icon: _saving
                   ? const SizedBox(
-                      width: 22, height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Icon(Icons.download_rounded, color: Colors.white),
               tooltip: T.of(context).imSaveToAlbum,

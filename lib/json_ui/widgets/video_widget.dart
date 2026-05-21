@@ -2,12 +2,12 @@
 // 基于 video_player + chewie 的跨平台视频播放器
 // 支持：网络视频 (http/https/HLS) 和本地文件
 // 支持属性：url/src, autoplay, looping, aspectRatio, width, height
-import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'base_widget.dart';
+import '../../platform/local_media.dart';
 import '../interpreter.dart';
 import '../../i18n/framework_strings.dart';
 
@@ -124,7 +124,7 @@ class _VideoPlayerStatefulState extends State<_VideoPlayerStateful> {
           },
         );
       } else if (!kIsWeb) {
-        controller = VideoPlayerController.file(File(src));
+        controller = localFileVideoController(src);
       } else {
         if (mounted) setState(() => _error = T.current.widgetVideoUnsupportedSource);
         return;
