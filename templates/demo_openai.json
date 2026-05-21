@@ -1,0 +1,598 @@
+{
+  "dsl": "3.3",
+  "appid": "9b45c5fc-c76e-43c1-a4cf-5d6549094562",
+  "meta": {
+    "name": "demo-openai",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "OpenAI-compatible streaming chat demo. The API key stays on the user's device and requests are sent directly from the client.",
+    "author": "demo"
+  },
+  "dependencies": {
+    "lib_openai": "^1.0.0",
+    "data-utils": "^1.0.5"
+  },
+  "global": {
+    "variables": {
+      "baseUrl": "https://api.deepseek.com",
+      "apiKey": "",
+      "model": "deepseek-v4-pro",
+      "systemPrompt": "You are a helpful assistant.",
+      "temperature": 0.7,
+      "maxTokens": 1024,
+      "rememberKey": false,
+      "input": "",
+      "messages": [],
+      "requestMessages": [],
+      "assistantIndex": 0,
+      "isStreaming": false,
+      "status": "Ready",
+      "savedConfig": null
+    },
+    "functions": {
+      "loadConfig": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@file_read_json",
+            "args": {
+              "path": "demo-openai/config.json",
+              "default": {}
+            },
+            "assign": "global.savedConfig"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!!": [
+                  {
+                    "var": "global.savedConfig.baseUrl"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.baseUrl",
+                    "value": "{{ global.savedConfig.baseUrl }}"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.model",
+                    "value": "{{ global.savedConfig.model }}"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.systemPrompt",
+                    "value": "{{ global.savedConfig.systemPrompt }}"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.temperature",
+                    "value": "{{ global.savedConfig.temperature }}"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.maxTokens",
+                    "value": "{{ global.savedConfig.maxTokens }}"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.apiKey",
+                    "value": "{{ global.savedConfig.apiKey }}"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.rememberKey",
+                    "value": "{{ global.savedConfig.rememberKey }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "saveConfig": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.rememberKey"
+              },
+              "then": [
+                {
+                  "call": "@file_write_json",
+                  "args": {
+                    "path": "demo-openai/config.json",
+                    "data": {
+                      "baseUrl": "{{ global.baseUrl }}",
+                      "apiKey": "{{ global.apiKey }}",
+                      "model": "{{ global.model }}",
+                      "systemPrompt": "{{ global.systemPrompt }}",
+                      "temperature": "{{ global.temperature }}",
+                      "maxTokens": "{{ global.maxTokens }}",
+                      "rememberKey": true
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@file_write_json",
+                  "args": {
+                    "path": "demo-openai/config.json",
+                    "data": {
+                      "baseUrl": "{{ global.baseUrl }}",
+                      "apiKey": "",
+                      "model": "{{ global.model }}",
+                      "systemPrompt": "{{ global.systemPrompt }}",
+                      "temperature": "{{ global.temperature }}",
+                      "maxTokens": "{{ global.maxTokens }}",
+                      "rememberKey": false
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "Settings saved"
+            }
+          }
+        ]
+      },
+      "send": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "!": [
+                      {
+                        "var": "global.apiKey"
+                      }
+                    ]
+                  },
+                  {
+                    "!": [
+                      {
+                        "var": "global.input"
+                      }
+                    ]
+                  },
+                  {
+                    "var": "global.isStreaming"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "Please enter API key and message"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@timestamp",
+                  "args": {},
+                  "assign": "global._ts"
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.status",
+                    "value": "Streaming..."
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.isStreaming",
+                    "value": true
+                  }
+                },
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.messages",
+                    "item": {
+                      "id": "u_{{ global._ts }}",
+                      "role": "user",
+                      "label": "You",
+                      "content": "{{ global.input }}",
+                      "bubbleColor": "#DCFCE7"
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.requestMessages",
+                    "value": {
+                      "merge": [
+                        [
+                          {
+                            "role": "system",
+                            "content": "{{ global.systemPrompt }}"
+                          }
+                        ],
+                        {
+                          "var": "global.messages"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@list_length",
+                  "args": {
+                    "value": "{{ global.messages }}"
+                  },
+                  "assign": "global.assistantIndex"
+                },
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.messages",
+                    "item": {
+                      "id": "a_{{ global._ts }}",
+                      "role": "assistant",
+                      "label": "{{ global.model }}",
+                      "content": "",
+                      "bubbleColor": "#F1F5F9"
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.input",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@lib_openai.chatStream",
+                  "args": {
+                    "baseUrl": "{{ global.baseUrl }}",
+                    "apiKey": "{{ global.apiKey }}",
+                    "model": "{{ global.model }}",
+                    "messages": "{{ global.requestMessages }}",
+                    "temperature": "{{ global.temperature }}",
+                    "maxTokens": "{{ global.maxTokens }}",
+                    "bind": "global.stream",
+                    "onDelta": [
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "!!": [
+                              {
+                                "var": "event.delta"
+                              }
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@data-utils.appendText",
+                              "args": {
+                                "var": "global.messages.{{ global.assistantIndex }}.content",
+                                "text": "{{ event.delta }}"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "onDone": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.isStreaming",
+                          "value": false
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.status",
+                          "value": "Ready"
+                        }
+                      }
+                    ],
+                    "onError": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.isStreaming",
+                          "value": false
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.status",
+                          "value": "Error: {{ event.error }}"
+                        }
+                      },
+                      {
+                        "call": "@data-utils.appendText",
+                        "args": {
+                          "var": "global.messages.{{ global.assistantIndex }}.content",
+                          "text": "Request failed: {{ event.error }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "clearChat": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.messages",
+              "value": []
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "Ready"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@global.loadConfig",
+      "args": {}
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "chat",
+        "title": "OpenAI Chat",
+        "layout": "column",
+        "padding": 12,
+        "backgroundColor": "#F8FAFC",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "mainAxisAlignment": "spaceBetween",
+            "children": [
+              {
+                "type": "text",
+                "value": "OpenAI Chat",
+                "style": {
+                  "fontSize": 22,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "button",
+                "label": "Settings",
+                "variant": "outlined",
+                "icon": "settings",
+                "action": {
+                  "type": "navigate",
+                  "screen": "settings"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "{{ global.model }} · {{ global.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#64748B"
+            }
+          },
+          {
+            "type": "list",
+            "source": "{{ global.messages }}",
+            "emptyText": "Enter your API key in Settings, then start chatting.",
+            "separator": "none",
+            "scrollToEnd": true,
+            "item_template": {
+              "type": "container",
+              "layout": "column",
+              "padding": 12,
+              "margin": 6,
+              "borderRadius": 10,
+              "color": "{{ loop.item.bubbleColor }}",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.label }}",
+                  "style": {
+                    "fontSize": 12,
+                    "fontWeight": "bold",
+                    "color": "#334155"
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.content }}",
+                  "style": {
+                    "fontSize": 15,
+                    "lineHeight": 1.35,
+                    "color": "#0F172A"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "crossAxisAlignment": "end",
+            "children": [
+              {
+                "type": "input",
+                "bind": "global.input",
+                "placeholder": "Message",
+                "maxLines": 3,
+                "keyboardType": "multiline",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "button",
+                "label": "Send",
+                "icon": "send",
+                "action": {
+                  "type": "call",
+                  "call": "@global.send",
+                  "args": {}
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "settings",
+        "title": "Settings",
+        "layout": "column",
+        "padding": 16,
+        "backgroundColor": "#F8FAFC",
+        "children": [
+          {
+            "type": "text",
+            "value": "Provider",
+            "style": {
+              "fontSize": 22,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "input",
+            "bind": "global.baseUrl",
+            "label": "Base URL",
+            "placeholder": "https://api.deepseek.com",
+            "keyboardType": "url"
+          },
+          {
+            "type": "input",
+            "bind": "global.apiKey",
+            "label": "API Key",
+            "placeholder": "sk-...",
+            "obscureText": true
+          },
+          {
+            "type": "input",
+            "bind": "global.model",
+            "label": "Model",
+            "placeholder": "deepseek-v4-pro"
+          },
+          {
+            "type": "input",
+            "bind": "global.systemPrompt",
+            "label": "System Prompt",
+            "placeholder": "You are a helpful assistant.",
+            "maxLines": 3,
+            "keyboardType": "multiline"
+          },
+          {
+            "type": "input",
+            "bind": "global.temperature",
+            "label": "Temperature",
+            "placeholder": "0.7",
+            "keyboardType": "number"
+          },
+          {
+            "type": "input",
+            "bind": "global.maxTokens",
+            "label": "Max Tokens",
+            "placeholder": "1024",
+            "keyboardType": "number"
+          },
+          {
+            "type": "checkbox",
+            "bind": "global.rememberKey",
+            "label": "Remember API key on this device"
+          },
+          {
+            "type": "text",
+            "value": "Requests are sent directly from this device. Web may fail if the provider blocks browser CORS.",
+            "style": {
+              "fontSize": 12,
+              "color": "#64748B"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "button",
+                "label": "Save",
+                "icon": "save",
+                "action": {
+                  "type": "call",
+                  "call": "@global.saveConfig",
+                  "args": {}
+                }
+              },
+              {
+                "type": "button",
+                "label": "Clear Chat",
+                "variant": "outlined",
+                "icon": "delete",
+                "action": {
+                  "type": "call",
+                  "call": "@global.clearChat",
+                  "args": {}
+                }
+              },
+              {
+                "type": "button",
+                "label": "Back",
+                "variant": "text",
+                "action": {
+                  "type": "back"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

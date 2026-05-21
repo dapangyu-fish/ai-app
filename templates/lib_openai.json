@@ -1,0 +1,130 @@
+{
+  "dsl": "3.3",
+  "appid": "8fb2db2c-bac0-42ec-9fe3-6f11f5f0a78b",
+  "meta": {
+    "name": "lib_openai",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "OpenAI-compatible chat helpers for JSON APPs. Requests are sent directly from the client.",
+    "author": "AI Designer",
+    "exports": [
+      "chatStream",
+      "chatOnce"
+    ]
+  },
+  "global": {
+    "variables": {
+      "_result": null
+    },
+    "functions": {
+      "chatStream": {
+        "params": [
+          "baseUrl",
+          "apiKey",
+          "model",
+          "messages",
+          "temperature",
+          "maxTokens",
+          "onDelta",
+          "onDone",
+          "onError",
+          "bind"
+        ],
+        "description": "Stream an OpenAI-compatible /chat/completions response. event.delta contains incremental text.",
+        "logic": [
+          {
+            "call": "@http_sse",
+            "args": {
+              "method": "POST",
+              "url": "{{ params.baseUrl }}/chat/completions",
+              "headers": {
+                "Authorization": "Bearer {{ params.apiKey }}"
+              },
+              "content_type": "application/json",
+              "body": {
+                "model": "{{ params.model }}",
+                "messages": "{{ params.messages }}",
+                "temperature": {
+                  "to_double": [
+                    {
+                      "var": "params.temperature"
+                    }
+                  ]
+                },
+                "max_tokens": {
+                  "to_int": [
+                    {
+                      "var": "params.maxTokens"
+                    }
+                  ]
+                },
+                "stream": true
+              },
+              "onEvent": "{{ params.onDelta }}",
+              "onDone": "{{ params.onDone }}",
+              "onError": "{{ params.onError }}",
+              "bind": "{{ params.bind }}"
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "chatOnce": {
+        "params": [
+          "baseUrl",
+          "apiKey",
+          "model",
+          "messages",
+          "temperature",
+          "maxTokens"
+        ],
+        "description": "Send a non-stream OpenAI-compatible /chat/completions request.",
+        "logic": [
+          {
+            "call": "@http_post",
+            "args": {
+              "url": "{{ params.baseUrl }}/chat/completions",
+              "headers": {
+                "Authorization": "Bearer {{ params.apiKey }}"
+              },
+              "body": {
+                "model": "{{ params.model }}",
+                "messages": "{{ params.messages }}",
+                "temperature": {
+                  "to_double": [
+                    {
+                      "var": "params.temperature"
+                    }
+                  ]
+                },
+                "max_tokens": {
+                  "to_int": [
+                    {
+                      "var": "params.maxTokens"
+                    }
+                  ]
+                },
+                "stream": false
+              }
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  }
+}
