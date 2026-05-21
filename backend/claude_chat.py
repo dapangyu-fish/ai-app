@@ -573,7 +573,7 @@ def chat():
     return Response(
         stream_with_context(generate()),
         mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "Access-Control-Allow-Origin": "*"}
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
     )
 
 
@@ -818,7 +818,6 @@ def chat_stream(session_id):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
             "X-Accel-Buffering": "no",  # nginx 不要 buffer SSE
         },
     )
