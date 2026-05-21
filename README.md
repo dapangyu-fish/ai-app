@@ -54,6 +54,17 @@ flutter run -d <ios|android|chrome>
 
 The default config points at the public hosted backend, so you can sign up and use it immediately.
 
+For Flutter Web IM support, the checked-in `web/openIM.wasm`, `web/sql-wasm.wasm`,
+workers, and bridge bundle are runtime assets copied from the pinned
+`@openim/wasm-client-sdk` dependency in `web_openim_bridge/package-lock.json`.
+On a fresh machine or in CI, regenerate them before `flutter build web` if they
+are missing or after changing the SDK version:
+
+```bash
+./scripts/build_web_openim.sh
+flutter build web
+```
+
 ### Self-host the full backend stack (20 minutes)
 
 ```bash
