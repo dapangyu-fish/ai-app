@@ -151,6 +151,7 @@ class _DesignerBallState extends State<DesignerBall>
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
+  bool _resumeInFlight = false;
   // 老的 5s 独立 heartbeat 已被删掉。新逻辑：
   // - SSE 内部 20s idle timeout → _checkAliveCarefully 三态探活
   // - 后端 worker 自身在 CLI 异常退出 / 外部 kill 时主动写 needs_retry 事件
@@ -632,10 +633,11 @@ class _DesignerBallState extends State<DesignerBall>
 
   /// 真正恢复会话的逻辑（之前 _onDoubleTap 直接干的事）。
   /// 从快捷菜单的"恢复会话"按钮调过来。
-  void _restoreSession() {
+  Future<void> _restoreSession() async {
     if (_chatMode || _messages.isEmpty) return;
     setState(() => _chatMode = true);
     _scrollToBottom();
+    await _resumeActiveSessionIfNeeded();
   }
 
   /// 一路 pop 回根路由（FilePickerPage / MyApp 主页）。
@@ -707,7 +709,7 @@ class _DesignerBallState extends State<DesignerBall>
                         tooltipDisabled: s.ballMenuRestoreSessionEmpty,
                         onTap: () {
                           Navigator.of(ctx).pop();
-                          _restoreSession();
+                          unawaited(_restoreSession());
                         },
                       ),
                       _QuickMenuButton(
@@ -1175,9 +1177,14 @@ class _DesignerBallState extends State<DesignerBall>
     _attachAiStream(_chatService.retryLastTurn());
   }
 
-  /// app 启动时调一次：检查后端有没有上一轮未完成 / 已完成的任务，按情况注入消息
-  Future<void> _maybeResumeUnfinishedSession() async {
+  /// app 启动/重新打开字幕时：检查后端有没有上一轮未完成 / 已完成的任务，
+  /// 并合并到当前消息桶，避免关闭字幕后恢复时重复插入 user/assistant 气泡。
+  Future<void> _maybeResumeUnfinishedSession() => _resumeActiveSessionIfNeeded();
+
+  Future<void> _resumeActiveSessionIfNeeded() async {
     if (!mounted) return;
+    if (_resumeInFlight || _streamSub != null) return;
+    _resumeInFlight = true;
     try {
       final result = await _chatService.tryResumeUnfinished();
       if (!mounted) return;
@@ -1191,17 +1198,18 @@ class _DesignerBallState extends State<DesignerBall>
             :final requestAction,
           ):
           setState(() {
-            _messages.add(ChatMessage(role: 'user', content: userMessage));
-            _messages.add(ChatMessage(role: 'assistant', content: assistantText));
+            _ensureUserMessage(userMessage);
+            _upsertAssistantMessage(assistantText);
             // 各按钮独立共存（同一回复可能既要 upload 又给 url，参考 6645d35）
-            if (requestAction == 'upload_current_app') {
+            if (requestAction == 'upload_current_app' &&
+                !_hasSystemMessage(action: 'UPLOAD_CURRENT_APP')) {
               _messages.add(ChatMessage(
                 role: 'system',
                 content: 'AI 需要获取当前应用的代码配置以进行修改：',
                 action: 'UPLOAD_CURRENT_APP',
               ));
             }
-            if (jsonUrl != null) {
+            if (jsonUrl != null && !_hasSystemMessage(jsonUrl: jsonUrl)) {
               _messages.add(ChatMessage(
                 role: 'system',
                 content: 'JSON-APP 已生成，点击下载并运行：',
@@ -1212,8 +1220,8 @@ class _DesignerBallState extends State<DesignerBall>
           _scrollToBottom();
         case ResumeStreaming(:final userMessage, :final stream):
           setState(() {
-            _messages.add(ChatMessage(role: 'user', content: userMessage));
-            _messages.add(ChatMessage(role: 'assistant', content: ''));
+            _ensureUserMessage(userMessage);
+            _ensureAssistantPlaceholder();
             _isThinking = true;
             _isGeneratingJson = true;
             _generatingStatusMessage = T.current.chatStatusResumingLast;
@@ -1222,18 +1230,57 @@ class _DesignerBallState extends State<DesignerBall>
           _attachAiStream(stream);
         case ResumeNeedsRetry(:final userMessage):
           setState(() {
-            _messages.add(ChatMessage(role: 'user', content: userMessage));
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: 'AI 任务被中断（可能服务器进程异常），点击重试',
-              action: 'RETRY_LAST_TURN',
-            ));
+            _ensureUserMessage(userMessage);
+            if (!_hasSystemMessage(action: 'RETRY_LAST_TURN')) {
+              _messages.add(ChatMessage(
+                role: 'system',
+                content: 'AI 任务被中断（可能服务器进程异常），点击重试',
+                action: 'RETRY_LAST_TURN',
+              ));
+            }
           });
           _scrollToBottom();
       }
     } catch (e) {
       debugPrint('[DesignerBall] resume 失败 (静默): $e');
+    } finally {
+      _resumeInFlight = false;
     }
+  }
+
+  void _ensureUserMessage(String content) {
+    if (content.isEmpty) return;
+    if (_messages.any((m) => m.role == 'user' && m.content == content)) return;
+    _messages.add(ChatMessage(role: 'user', content: content));
+  }
+
+  void _ensureAssistantPlaceholder() {
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') return;
+    _messages.add(ChatMessage(role: 'assistant', content: ''));
+  }
+
+  void _upsertAssistantMessage(String content) {
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      _messages.last = ChatMessage(role: 'assistant', content: content);
+      return;
+    }
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i].role == 'user') break;
+      if (_messages[i].role == 'assistant') {
+        _messages[i] = ChatMessage(role: 'assistant', content: content);
+        return;
+      }
+    }
+    _messages.add(ChatMessage(role: 'assistant', content: content));
+  }
+
+  bool _hasSystemMessage({String? action, String? jsonUrl}) {
+    return _messages.any((m) {
+      if (m.role != 'system') return false;
+      if (action != null && m.action == action) return true;
+      if (jsonUrl != null && m.jsonUrl == jsonUrl) return true;
+      return false;
+    });
   }
 
   Future<void> _handleUploadCurrentApp() async {
@@ -1492,6 +1539,24 @@ class _DesignerBallState extends State<DesignerBall>
     });
   }
 
+  /// 只隐藏字幕时使用：断开本地 SSE 节省资源，但保留当前 session 和消息占位。
+  /// 后端 worker 继续跑；用户从快捷菜单恢复会话时会通过 /status + /stream 接回。
+  void _detachCurrentStreamForHide() {
+    if (_streamSub != null) {
+      if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+        _chatService.commitPartial(_messages.last.content);
+      }
+      _streamSub?.cancel();
+      _streamSub = null;
+      _chatService.abortLocal();
+    }
+    setState(() {
+      _isThinking = false;
+      _isGeneratingJson = false;
+      _generatingStatusMessage = T.current.chatStatusGenerating;
+    });
+  }
+
   /// 处理崩溃报告 — 自动进入对话模式并发送崩溃信息给 AI
   void _handleCrashReport(String crashReport) {
     // 进入对话模式
@@ -1547,7 +1612,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _closeChatMode() {
     _intentionalNativeStop = true;
     try { _speech?.stop(); } catch (_) {}
-    _cancelCurrentStream();
+    _detachCurrentStreamForHide();
     _pulseController.stop();
     _pulseController.reset();
     setState(() {

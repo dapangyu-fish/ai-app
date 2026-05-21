@@ -648,6 +648,8 @@ class AiChatService {
         if (!procAlive) {
           return ResumeNeedsRetry(active.lastUserMessage);
         }
+        _aborting = false;
+        _lastEntryId = '0'; // backend stream 是这一轮的，从头读没问题
         if (kIsWeb) {
           return ResumeStreaming(
             userMessage: active.lastUserMessage,
@@ -655,8 +657,6 @@ class AiChatService {
           );
         }
         // worker 还在跑：续 SSE，不调 /start
-        _aborting = false;
-        _lastEntryId = '0'; // backend stream 是这一轮的，从头读没问题
         return ResumeStreaming(
           userMessage: active.lastUserMessage,
           stream: _streamWithReconnect(active.id),
