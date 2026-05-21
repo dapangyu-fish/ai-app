@@ -65,6 +65,14 @@ are missing or after changing the SDK version:
 flutter build web
 ```
 
+For Web builds/runs, you can also use the wrapper script so the OpenIM Web
+assets are checked first and regenerated when needed:
+
+```bash
+./scripts/flutter_web.sh run -d chrome
+./scripts/flutter_web.sh build web
+```
+
 ### Self-host the full backend stack (20 minutes)
 
 ```bash
