@@ -9,7 +9,7 @@ import 'default_startup_prefs.dart';
 import 'hidden_env_entry.dart';
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
-import '../im/im_cache_manage_page.dart';
+import '../im/im_cache_manage_entry.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -671,7 +670,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _message = null;
       });
 
-      final bytes = await File(file.path).readAsBytes();
+      final bytes = await file.readAsBytes();
       final b64 = base64Encode(bytes);
       await AuthService.uploadAvatar(b64);
 

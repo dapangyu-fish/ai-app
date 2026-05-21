@@ -14,9 +14,9 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 
@@ -39,7 +39,7 @@ class FcmService {
   static bool get isPlatformSupported {
     if (kIsWeb) return false;
     try {
-      return Platform.isAndroid;
+      return defaultTargetPlatform == TargetPlatform.android;
     } catch (_) {
       return false;
     }

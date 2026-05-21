@@ -51,28 +51,41 @@ class _WebViewInline extends StatefulWidget {
 }
 
 class _WebViewInlineState extends State<_WebViewInline> {
-  late final WebViewController _controller;
+  // web 上 webview_flutter 没有平台实现，构造 WebViewController 会抛异常，
+  // 所以 web 上不创建 controller，build 时直接给占位。
+  WebViewController? _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(widget.javascriptEnabled
-          ? JavaScriptMode.unrestricted
-          : JavaScriptMode.disabled)
-      ..loadRequest(Uri.parse(widget.url));
+    if (!kIsWeb) {
+      _controller = WebViewController()
+        ..setJavaScriptMode(widget.javascriptEnabled
+            ? JavaScriptMode.unrestricted
+            : JavaScriptMode.disabled)
+        ..loadRequest(Uri.parse(widget.url));
+    }
   }
 
   @override
   void didUpdateWidget(_WebViewInline old) {
     super.didUpdateWidget(old);
     if (old.url != widget.url) {
-      _controller.loadRequest(Uri.parse(widget.url));
+      _controller?.loadRequest(Uri.parse(widget.url));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return WebViewWidget(controller: _controller);
+    final controller = _controller;
+    if (controller == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('WebView 在 Web 端不可用'),
+        ),
+      );
+    }
+    return WebViewWidget(controller: controller);
   }
 }

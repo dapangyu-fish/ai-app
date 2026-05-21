@@ -6,12 +6,12 @@
 // 支持格式：PNG、JPG、GIF（GIF 自动播放）
 // 支持属性：url/src, fit, width, height, borderRadius
 import 'dart:convert';
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../platform/local_media.dart';
 
 class JsonImageWidget extends JsonBaseWidget {
   @override
@@ -116,11 +116,10 @@ class JsonImageWidget extends JsonBaseWidget {
       );
     }
 
-    // 3. 本地文件
+    // 3. 本地文件（web 上无本地文件系统，跳过）
     if (!kIsWeb) {
-      final file = File(src);
-      return Image.file(
-        file,
+      return Image(
+        image: localFileImage(src),
         width: width,
         height: height,
         fit: fit,

@@ -12,11 +12,10 @@
 // interpreter 走原来的"未知内置函数"警告。
 
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
+import '../../platform/native_fs.dart';
 import '../cache_manager.dart';
 import '../interpreter.dart';
 import '../semver.dart';
@@ -124,13 +123,17 @@ class LauncherBridges {
         return false;
       }
       // 写到临时目录再分享（share_plus 需要文件路径）
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/$fileName');
-      await tempFile.writeAsString(json.encode(config));
+      final tmp = await NativeFs.tempDir();
+      if (tmp == null) {
+        debugPrint('[@my_apps_share] 当前平台不支持文件分享');
+        return false;
+      }
+      final tempPath = '$tmp/$fileName';
+      await NativeFs.writeStringAbs(tempPath, json.encode(config));
       final meta = config['meta'] as Map<String, dynamic>? ?? {};
       final displayName = resolveDisplayName(meta, fallback: fileName);
       final result = await Share.shareXFiles(
-        [XFile(tempFile.path, mimeType: 'application/json')],
+        [XFile(tempPath, mimeType: 'application/json')],
         subject: displayName,
       );
       return result.status == ShareResultStatus.success;
@@ -369,11 +372,10 @@ class LauncherBridges {
   static Future<bool> _cacheClear() async {
     try {
       await CacheManager.instance.reset();
-      // CacheManager.reset 只清内存态，磁盘目录得自己删
-      final docs = await getApplicationDocumentsDirectory();
-      final dir = Directory('${docs.path}/dsl_cache');
-      if (dir.existsSync()) {
-        dir.deleteSync(recursive: true);
+      // CacheManager.reset 只清内存态，磁盘目录得自己删（web 无文件系统则 no-op）
+      final docs = await NativeFs.appDocDir();
+      if (docs != null) {
+        await NativeFs.deleteDirAbs('$docs/dsl_cache');
       }
       return true;
     } catch (e) {

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -19,6 +19,7 @@ import 'i18n/framework_strings.dart';
 import 'i18n/locale_controller.dart';
 import 'i18n/language_switcher.dart';
 import 'i18n/meta_helper.dart';
+import 'platform/native_fs.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/widget_builder.dart';
 import 'json_ui/cache_manager.dart';
@@ -37,7 +38,6 @@ import 'designer/default_startup_prefs.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 import 'im/im_service.dart';
-import 'im/conversation_list.dart';
 import 'onboarding/onboarding_keys.dart';
 import 'onboarding/onboarding_service.dart';
 
@@ -101,7 +101,7 @@ void main() async {
   // Firebase Core 初始化 —— FirebaseMessaging 等所有 firebase_xxx 插件都依赖它。
   // Android 自动从 android/app/google-services.json 读配置；其他平台暂时不开 FCM 跳过。
   // 失败吞掉：FCM 不可用不应阻塞 app 启动（iOS 走 APNs 也用不上 Firebase）
-  if (!kIsWeb && Platform.isAndroid) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     try {
       await Firebase.initializeApp();
     } catch (e) {
@@ -694,6 +694,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
+        withData: true, // web 没有文件路径，必须靠 bytes 拿内容
       );
 
       if (result == null || result.files.isEmpty) {
@@ -701,8 +702,15 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         return;
       }
 
-      final filePath = result.files.single.path;
-      if (filePath == null) {
+      // web：用 bytes；移动/桌面：bytes 通常也有（withData），否则回退读路径
+      final picked = result.files.single;
+      String? jsonStr;
+      if (picked.bytes != null) {
+        jsonStr = utf8.decode(picked.bytes!);
+      } else if (picked.path != null) {
+        jsonStr = await NativeFs.readStringAbs(picked.path!);
+      }
+      if (jsonStr == null) {
         setState(() {
           _loading = false;
           _error = T.of(context).errorPathUnavailable;
@@ -710,8 +718,6 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         return;
       }
 
-      final file = File(filePath);
-      final jsonStr = await file.readAsString();
       final config = json.decode(jsonStr) as Map<String, dynamic>;
 
       final interpreter = ref.read(interpreterProvider);
