@@ -143,6 +143,10 @@ T_en[deploy_done]="Deploy complete!"
 T_zh[deploy_done]="部署完成！"
 T_en[info_saved]="All info also saved to ./test-env-info.txt (mode 600)"
 T_zh[info_saved]="全部信息也保存到 ./test-env-info.txt（mode 600）"
+T_en[env_qr_saved]="Client environment QR saved to ./test-env-environment.png and ./test-env-environment.json"
+T_zh[env_qr_saved]="客户端环境二维码已保存到 ./test-env-environment.png 和 ./test-env-environment.json"
+T_en[env_qr_title]="Scan this QR in the client Service Environment page"
+T_zh[env_qr_title]="在客户端“服务环境”页扫码导入"
 
 say()  { printf "${C}» %s${N}\n" "$*"; }
 ok()   { printf "${G}✔ %s${N}\n" "$*"; }
@@ -223,7 +227,7 @@ printf "${B}║  %-56s║${N}\n" "$(t banner_sub)"
 printf "${B}╚══════════════════════════════════════════════════════════╝${N}\n\n"
 
 say "$(t deps_check)"
-for cmd in docker openssl python3 envsubst curl; do
+for cmd in docker openssl python3 envsubst curl qrencode; do
   command -v "$cmd" >/dev/null 2>&1 || die "$(t dep_missing "$cmd")"
 done
 docker compose version >/dev/null 2>&1 || die "$(t compose_missing)"
@@ -450,6 +454,43 @@ TEST_USER_PASSWORD="$TEST_USER_PASSWORD" \
 TEST_USER_USERNAME="$TEST_USER_USERNAME" \
 python3 "$SCRIPT_DIR/lib/seed-test-user.py"
 
+# ───────── client environment import QR ─────────
+ENV_IMPORT_JSON="test-env-environment.json"
+ENV_IMPORT_QR="test-env-environment.png"
+ENV_NAME="Test Env ${HOST_IP}"
+if [[ "$PORT_OFFSET" != "0" ]]; then
+  ENV_NAME="Test Env ${HOST_IP} +${PORT_OFFSET}"
+fi
+
+ENV_NAME="$ENV_NAME" \
+BACKEND_URL="http://${HOST_IP}:${BACKEND_PORT}" \
+SUPABASE_URL="http://${HOST_IP}:${KONG_HTTP_PORT}" \
+MINIO_URL="http://${HOST_IP}:${APP_MINIO_PORT}" \
+REGISTRY_URL="http://${HOST_IP}:${REGISTRY_PORT}" \
+IM_API_URL="http://${HOST_IP}:${OPENIM_API_PORT}" \
+IM_WS_URL="ws://${HOST_IP}:${OPENIM_WS_PORT}" \
+CONFIG_CENTER_URL="http://${HOST_IP}:${CONFIG_CENTER_PORT}" \
+python3 - <<'PY' > "$ENV_IMPORT_JSON"
+import json
+import os
+
+payload = {
+    "type": "myapp.environment",
+    "version": 1,
+    "name": os.environ["ENV_NAME"],
+    "backendUrl": os.environ["BACKEND_URL"],
+    "supabaseUrl": os.environ["SUPABASE_URL"],
+    "minioUrl": os.environ["MINIO_URL"],
+    "registryUrl": os.environ["REGISTRY_URL"],
+    "imApiUrl": os.environ["IM_API_URL"],
+    "imWsUrl": os.environ["IM_WS_URL"],
+    "configCenterUrl": os.environ["CONFIG_CENTER_URL"],
+}
+print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+PY
+chmod 644 "$ENV_IMPORT_JSON"
+qrencode -o "$ENV_IMPORT_QR" < "$ENV_IMPORT_JSON"
+
 # ───────── write info file + summary ─────────
 if [[ "$UI_LANG" == "zh" ]]; then
 cat > test-env-info.txt <<EOF
@@ -468,6 +509,10 @@ cat > test-env-info.txt <<EOF
   OpenIM HTTP   http://${HOST_IP}:${OPENIM_API_PORT}
   OpenIM WS     ws://${HOST_IP}:${OPENIM_WS_PORT}
   Config Center http://${HOST_IP}:${CONFIG_CENTER_PORT}
+
+【客户端扫码导入】
+  二维码 PNG:  ./test-env-environment.png
+  二维码 JSON: ./test-env-environment.json
 
 【测试账号】
   邮箱:    ${TEST_USER_EMAIL}
@@ -509,6 +554,10 @@ Client access IP: ${HOST_IP}
   OpenIM WS     ws://${HOST_IP}:${OPENIM_WS_PORT}
   Config Center http://${HOST_IP}:${CONFIG_CENTER_PORT}
 
+[Client QR import]
+  QR PNG:  ./test-env-environment.png
+  QR JSON: ./test-env-environment.json
+
 [Test account]
   Email:    ${TEST_USER_EMAIL}
   Username: ${TEST_USER_USERNAME}
@@ -541,3 +590,7 @@ printf "${G}╚═════════════════════�
 cat test-env-info.txt
 echo
 ok "$(t info_saved)"
+ok "$(t env_qr_saved)"
+echo
+printf "${B}%s:${N}\n" "$(t env_qr_title)"
+qrencode -t ANSIUTF8 < "$ENV_IMPORT_JSON"

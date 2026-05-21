@@ -4,6 +4,9 @@
 
 ## 使用
 
+依赖：`docker`、Docker Compose v2、`openssl`、`python3`、`envsubst`、`curl`、`qrencode`。
+其中 `qrencode` 用于部署完成后生成客户端环境导入二维码。
+
 ```bash
 cd deploy/test-env
 ./bootstrap.sh
@@ -18,7 +21,18 @@ cd deploy/test-env
 
 ## 部署完后客户端怎么用
 
-启动手机/模拟器上的 app，进设置 → 标题连点 7 下 → 服务环境 → 右上 + 新建：
+启动手机/模拟器上的 app，进设置 → 标题连点 7 下 → 服务环境 → 右上扫码按钮，扫描
+`test-env-environment.png` 或终端里渲染出的二维码即可导入整套环境。
+
+bootstrap 同时会保存：
+
+| 文件 | 用途 |
+|------|------|
+| `test-env-environment.png` | 客户端扫码导入环境 |
+| `test-env-environment.json` | 二维码内的 JSON 内容，便于检查/复制 |
+| `test-env-info.txt` | 完整部署信息，包含测试账号和运维入口 |
+
+也可以手动进服务环境 → 右上 + 新建：
 
 | 字段 | 填什么 |
 |------|--------|
