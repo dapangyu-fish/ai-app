@@ -20,9 +20,9 @@ Registry Mirror —— 跨实例的索引同步 + 按需文件代理缓存。
 
 import io
 import json
-import logging
 import threading
 import time
+import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 
@@ -31,7 +31,9 @@ from minio import Minio
 from minio.error import S3Error
 
 
-logger = logging.getLogger(__name__)
+# 这个模块所有日志走 print() —— 跟 registry_server.py / store.py 等其他后端模块风格一致。
+# 历史教训：本来用 logging.getLogger(__name__).info(...)，但项目没全局 basicConfig，
+# 默认 WARNING+，sync 进度全被吞，ops 时啥也看不见
 
 # 进程级 RLock：所有 _load_index → 改 → _save_index 的临界区都要持有它。
 # RLock 是因为有些场景嵌套（比如 publish 内部又走 helper 加锁），保持简单
@@ -57,11 +59,22 @@ def is_local_version(pkg_info: Dict[str, Any], version: str) -> bool:
 # Manifest 构造（自己作为 upstream 给别人看）
 # ═════════════════════════════════════════════════════════════
 
-def build_manifest(index_data: Dict[str, Any], my_base_url: str) -> Dict[str, Any]:
+def build_manifest(
+    index_data: Dict[str, Any],
+    my_base_url: str,
+    minio_client: Optional[Minio] = None,
+    bucket: Optional[str] = None,
+    catalog: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """把本地 _index.json 转成对外的 mirror manifest。
 
     URL 全部指回 my_base_url —— 这样别人 mirror 我，看到的 source 就是我，
     递归代理的链路自动成立（不暴露我的更上游）。
+
+    如果传了 minio_client/bucket，会读每个包 latest 版本的 JSON 抽取 meta.type /
+    description / author 一并塞进 manifest。否则字段缺失，下游 fallback 到本地兜底。
+    必须传，否则下游过滤 `?type=app` 会失效（manifest 没 meta_type，sync 完
+    本地索引也没，filter 用了不存在的字段 → 永远不匹配）
     """
     my_base_url = my_base_url.rstrip("/")
     packages = []
@@ -73,14 +86,49 @@ def build_manifest(index_data: Dict[str, Any], my_base_url: str) -> Dict[str, An
                 "filename": f"{name.split('/')[-1]}-{v}.json",
                 "download_url": f"{my_base_url}/mirror/file/{name}/{v}",
             })
-        packages.append({
+
+        # 读 latest 文件抽 meta（如果本地有这个文件 & 客户端传了 minio）
+        meta_type = info.get("meta_type")     # 优先用 index 缓存
+        description = info.get("description", "")
+        author = info.get("author", "")
+        latest = info.get("latest")
+
+        if meta_type is None and minio_client and bucket and latest:
+            # index 没存 meta —— 现读现填（建 manifest 时一次性，缓存住）
+            path = info.get("path", name)
+            filename = f"{name.split('/')[-1]}-{latest}.json"
+            try:
+                resp = minio_client.get_object(bucket, f"{path}/{filename}")
+                content = json.loads(resp.read().decode("utf-8"))
+                m = content.get("meta", {})
+                meta_type = m.get("type", "library")
+                description = description or m.get("description", "")
+                author = author or m.get("author", "")
+            except Exception:
+                meta_type = "library"  # 默认值
+
+        entry = {
             "name": name,
             "type": info.get("type", "user"),
+            "meta_type": meta_type or "library",
+            "description": description,
+            "author": author,
             "appid": info.get("appid"),
-            "latest": info.get("latest"),
+            "latest": latest,
             "created_at": info.get("created_at"),
             "versions": versions_out,
-        })
+        }
+        # 富化字段（summary/tags/tech_stack）随 manifest 传给下游，下游直接拷不用重跑 LLM
+        cat = (catalog or {}).get(name)
+        if cat:
+            for k in ("author_id", "author_name",
+                      "exports", "dependencies", "widgets_used", "builtins_used",
+                      "tech_stack", "summary_zh", "summary_en", "category", "domains",
+                      "capabilities", "use_case_zh", "use_case_en", "search_text",
+                      "summary_model", "summary_prompt_version"):
+                if cat.get(k) is not None:
+                    entry[k] = cat[k]
+        packages.append(entry)
     return {
         "registry_version": "1.0",
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -138,6 +186,12 @@ def merge_manifest_into_index(
         if "versions" not in local_pkg:
             local_pkg["versions"] = []
 
+        # 拷贝 upstream 的 meta 字段进本地 index，让 /packages?type 过滤不需要去读文件
+        # 这些字段是"latest 版本视角"的（manifest 也是按 latest 取的），随每次 sync 刷新
+        for meta_field in ("meta_type", "description", "author"):
+            if up_pkg.get(meta_field):
+                local_pkg[meta_field] = up_pkg[meta_field]
+
         for v in up_versions:
             existing_source = local_pkg["version_sources"].get(v)
             if existing_source is None:
@@ -149,10 +203,7 @@ def merge_manifest_into_index(
                 # 同号冲突：upstream 赢。文件在本地 MinIO 留着但被影响（孤儿，不删）
                 local_pkg["version_sources"][v] = upstream_url
                 replaced += 1
-                logger.warning(
-                    "[Mirror] %s@%s: local 版本被 upstream(%s) 覆盖",
-                    name, v, upstream_url,
-                )
+                print(f"[Mirror] WARN: {name}@{v} 本地版本被 upstream({upstream_url}) 覆盖")
             else:
                 # 已经是某个 upstream 来的（可能是同一个 upstream 刷新，也可能换了 upstream）
                 if existing_source != upstream_url:
@@ -167,6 +218,15 @@ def merge_manifest_into_index(
         )
         if local_pkg["versions"]:
             local_pkg["latest"] = local_pkg["versions"][0]
+
+        # 上游 manifest 带了富化数据（summary 等）→ 直接拷进本地 registry_packages，
+        # status=done，不在下游重跑 LLM（信任上游，省钱）。失败吞掉不影响 index 合并
+        if up_pkg.get("summary_zh") or up_pkg.get("summary_en"):
+            try:
+                import registry_catalog
+                registry_catalog.upsert_from_mirror(name, up_pkg)
+            except Exception as e:
+                print(f"[Mirror] 拷富化数据失败（忽略）{name}: {e}")
 
     return added, replaced
 
@@ -195,7 +255,7 @@ def sync_once(
         resp.raise_for_status()
         manifest = resp.json()
     except Exception as e:
-        logger.error("[Mirror] 拉 upstream manifest 失败: %s", e)
+        print(f"[Mirror] ERROR 拉 upstream manifest 失败: {e}")
         return None
 
     with index_lock:
@@ -203,10 +263,7 @@ def sync_once(
         added, replaced = merge_manifest_into_index(local_index, manifest, upstream_url)
         save_index_fn(local_index)
 
-    logger.info(
-        "[Mirror] sync 完成: upstream=%s, +%d 新版本, %d 替换",
-        upstream_url, added, replaced,
-    )
+    print(f"[Mirror] sync 完成: upstream={upstream_url}, +{added} 新版本, {replaced} 替换")
     return added, replaced
 
 
@@ -241,11 +298,11 @@ def proxy_fetch_and_cache(
     try:
         resp = requests.get(fetch_url, timeout=timeout_sec, allow_redirects=True)
         if resp.status_code != 200:
-            logger.error("[Mirror] 拉 %s 失败: HTTP %d", fetch_url, resp.status_code)
+            print(f"[Mirror] ERROR 拉 {fetch_url} 失败: HTTP {resp.status_code}")
             return False
         content = resp.content
     except Exception as e:
-        logger.error("[Mirror] 拉 %s 失败: %s", fetch_url, e)
+        print(f"[Mirror] ERROR 拉 {fetch_url} 失败: {e}")
         return False
 
     try:
@@ -254,10 +311,10 @@ def proxy_fetch_and_cache(
             io.BytesIO(content), len(content),
             content_type="application/json",
         )
-        logger.info("[Mirror] 缓存 %s → %s/%s (%d bytes)", fetch_url, bucket, oss_key, len(content))
+        print(f"[Mirror] 缓存 {fetch_url} → {bucket}/{oss_key} ({len(content)} bytes)")
         return True
     except Exception as e:
-        logger.error("[Mirror] 写本地 MinIO 失败 %s/%s: %s", bucket, oss_key, e)
+        print(f"[Mirror] ERROR 写本地 MinIO 失败 {bucket}/{oss_key}: {e}")
         return False
 
 
@@ -285,15 +342,15 @@ def start_background_sync(
                 sync_once(upstream_url, minio_client, bucket,
                           load_index_fn, save_index_fn)
             except Exception as e:
-                logger.exception("[Mirror] sync 循环异常: %s", e)
+                print(f"[Mirror] ERROR sync 循环异常: {e}")
+                traceback.print_exc()
             if interval_sec <= 0 and first:
-                logger.info("[Mirror] interval<=0，仅同步一次")
+                print("[Mirror] interval<=0，仅同步一次")
                 return
             first = False
             time.sleep(max(interval_sec, 30))   # 30s 下限防误配
 
     t = threading.Thread(target=loop, name="registry-mirror-sync", daemon=True)
     t.start()
-    logger.info("[Mirror] 后台同步线程已起，upstream=%s, interval=%ds",
-                upstream_url, interval_sec)
+    print(f"[Mirror] 后台同步线程已起，upstream={upstream_url}, interval={interval_sec}s")
     return t

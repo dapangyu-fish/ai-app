@@ -1,37 +1,185 @@
 #!/usr/bin/env bash
-# 测试环境一键部署 —— 交互式，按 Enter 接受默认；只有 3 个必填：
-#   - DeepSeek API Key
-#   - 测试账号邮箱
-#   - 测试账号密码
+# Test-env one-click deploy / 测试环境一键部署 —— interactive.
+# First prompt picks UI language (1=English default, 2=中文). All messages are i18n'd.
 #
-# 用法:
-#   ./bootstrap.sh                       # 全交互
-#   ./bootstrap.sh --yes                 # 全用默认（DeepSeek key 仍必填，从 $DEEPSEEK_API_KEY 读）
+# Usage:
+#   ./bootstrap.sh                       # interactive
+#   ./bootstrap.sh --yes                 # all defaults (DeepSeek key still required, from $DEEPSEEK_API_KEY)
+#   ./bootstrap.sh --lang en|zh          # preset language, skip the picker
 #
-# 重跑安全：再次执行会基于现有 .env 起服务；要从头来跑 ./teardown.sh 后再 bootstrap
+# Re-run safe: running again brings services up from existing .env. To start fresh run ./teardown.sh first.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ───────── 颜色 / 排版 ─────────
+# ───────── colors ─────────
 B="\033[1m"; G="\033[32m"; Y="\033[33m"; R="\033[31m"; C="\033[36m"; N="\033[0m"
+
+# ───────── i18n catalog ─────────
+declare -A T_en T_zh
+UI_LANG="en"
+
+# t <key> [printf args...] —— emit localized string (falls back en → key)
+t() {
+  local key="$1"; shift || true
+  local fmt
+  if [[ "$UI_LANG" == "zh" ]]; then
+    fmt="${T_zh[$key]:-${T_en[$key]:-$key}}"
+  else
+    fmt="${T_en[$key]:-$key}"
+  fi
+  # shellcheck disable=SC2059
+  printf "$fmt" "$@"
+}
+
+T_en[deps_check]="Checking dependencies..."
+T_zh[deps_check]="检查依赖..."
+T_en[dep_missing]="Missing %s — please install it first"
+T_zh[dep_missing]="缺少 %s，请先安装"
+T_en[compose_missing]="docker compose plugin missing (need v2, not the old docker-compose)"
+T_zh[compose_missing]="docker compose 插件缺失（要 v2，不是老的 docker-compose）"
+T_en[deps_ok]="Dependencies OK"
+T_zh[deps_ok]="依赖齐"
+T_en[unknown_arg]="Unknown argument: %s"
+T_zh[unknown_arg]="未知参数: %s"
+T_en[required_yes]="%s is required (must be provided via env in --yes mode)"
+T_zh[required_yes]="%s 必填（--yes 模式下需在环境变量里给出）"
+T_en[required]="required"
+T_zh[required]="必填"
+T_en[banner_title]="AI App test-env one-click deploy (test-env v1)"
+T_zh[banner_title]="AI App 测试环境一键部署 (test-env v1)"
+T_en[banner_sub]="Press Enter for defaults; only DeepSeek key + test account are required"
+T_zh[banner_sub]="按 Enter 接受默认；必填只有 DeepSeek key + 测试账号"
+T_en[sec_ip]="[1/5] Client access IP"
+T_zh[sec_ip]="[1/5] 客户端访问 IP"
+T_en[ask_ip]="  IP the client uses (LAN testing: your machine's intranet IP)"
+T_zh[ask_ip]="  客户端访问的 IP（局域网测试就填本机内网 IP）"
+T_en[sec_ai]="[2/5] AI providers (backend/config.py recognizes these)"
+T_zh[sec_ai]="[2/5] AI 供应商（backend/config.py 实际识别这几个）"
+T_en[ask_deepseek]="  DeepSeek API Key (required)"
+T_zh[ask_deepseek]="  DeepSeek API Key（必填）"
+T_en[ask_glm_token]="  GLM (Anthropic-compatible) Auth Token (optional)"
+T_zh[ask_glm_token]="  GLM (Anthropic-compatible) Auth Token（可选）"
+T_en[ask_glm_url]="  GLM Base URL (optional)"
+T_zh[ask_glm_url]="  GLM Base URL（可选）"
+T_en[ask_cc_token]="  Claude Code Anthropic Token (optional)"
+T_zh[ask_cc_token]="  Claude Code Anthropic Token（可选）"
+T_en[ask_cc_url]="  Claude Code Base URL (optional)"
+T_zh[ask_cc_url]="  Claude Code Base URL（可选）"
+T_en[sec_account]="[3/5] Test account (used to log into the client after deploy)"
+T_zh[sec_account]="[3/5] 测试账号（部署完后用来登录客户端）"
+T_en[ask_email]="  Email"
+T_zh[ask_email]="  邮箱"
+T_en[ask_username]="  Username"
+T_zh[ask_username]="  用户名"
+T_en[ask_password]="  Password"
+T_zh[ask_password]="  密码"
+T_en[sec_mirror]="[4/5] Registry mirror (optional)"
+T_zh[sec_mirror]="[4/5] Registry mirror（可选）"
+T_en[mirror_desc1]="  This instance can mirror another Registry's public package index, syncing every N seconds."
+T_zh[mirror_desc1]="  本实例可以镜像另一个 Registry 的公开包索引，每 N 秒同步一次。"
+T_en[mirror_desc2]="  Leave upstream URL empty = no mirror, run standalone."
+T_zh[mirror_desc2]="  上游 URL 留空 = 不开 mirror，本实例独立运行。"
+T_en[ask_upstream]="  Upstream Registry URL (e.g. https://myapp-registry.dapangyu.work)"
+T_zh[ask_upstream]="  上游 Registry URL（如 https://myapp-registry.dapangyu.work）"
+T_en[ask_interval]="  Sync interval (seconds, <=0 = sync once at startup only)"
+T_zh[ask_interval]="  同步间隔（秒，<=0 = 只首启一次）"
+T_en[sec_port]="[5/5] Port offset (for running multiple envs on one host, default 0)"
+T_zh[sec_port]="[5/5] 端口偏移（同机并行多 env 时用，默认 0）"
+T_en[ask_offset]="  Port offset"
+T_zh[ask_offset]="  端口偏移"
+T_en[offset_num]="Port offset must be a number"
+T_zh[offset_num]="端口偏移必须是数字"
+T_en[gen_secrets]="Generating secrets..."
+T_zh[gen_secrets]="生成密钥..."
+T_en[secrets_done]="Secrets generated"
+T_zh[secrets_done]="密钥生成完毕"
+T_en[mint_keys]="Minting Supabase ANON_KEY / SERVICE_ROLE_KEY..."
+T_zh[mint_keys]="签发 Supabase ANON_KEY / SERVICE_ROLE_KEY..."
+T_en[keys_done]="Supabase keys minted"
+T_zh[keys_done]="Supabase keys 已签发"
+T_en[render_env]="Rendering .env files..."
+T_zh[render_env]="渲染 .env 文件..."
+T_en[env_done]=".env rendered (3 files)"
+T_zh[env_done]=".env 已渲染（3 份）"
+T_en[pull_images]="Pulling images (slow the first time)..."
+T_zh[pull_images]="拉镜像（首次比较慢）..."
+T_en[images_ready]="Images ready"
+T_zh[images_ready]="镜像 ready"
+T_en[start_supabase]="Starting Supabase (13 services, ~1-2 min first time)..."
+T_zh[start_supabase]="启动 Supabase（13 服务，首次起约 1-2 分钟）..."
+T_en[wait_supabase]="Waiting for Supabase auth..."
+T_zh[wait_supabase]="等 Supabase auth 服务就绪..."
+T_en[supabase_ready]="Supabase auth ready (%ss)"
+T_zh[supabase_ready]="Supabase auth ready (%ss)"
+T_en[supabase_timeout]="Supabase auth not up after 120s (last HTTP %s), docker logs supabase-auth"
+T_zh[supabase_timeout]="Supabase auth 等 120s 还没起来 (last HTTP %s)，docker logs supabase-auth"
+T_en[openim_cfg]="Extracting + patching default config from OpenIM image..."
+T_zh[openim_cfg]="从 OpenIM 镜像提取默认 config 并打补丁..."
+T_en[openim_cfg_done]="OpenIM config rendered (mongodb/redis/kafka/etcd/minio/share)"
+T_zh[openim_cfg_done]="OpenIM config 渲染完毕（mongodb/redis/kafka/etcd/minio/share）"
+T_en[start_openim]="Starting OpenIM (8 services, ~1-2 min first time)..."
+T_zh[start_openim]="启动 OpenIM（8 服务，首次起约 1-2 分钟）..."
+T_en[wait_openim]="Waiting for OpenIM server..."
+T_zh[wait_openim]="等 OpenIM server 就绪..."
+T_en[openim_ready]="OpenIM API ready (%ss, HTTP %s)"
+T_zh[openim_ready]="OpenIM API ready (%ss, HTTP %s)"
+T_en[openim_timeout]="OpenIM not ready after 120s, continuing; logs: docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
+T_zh[openim_timeout]="OpenIM 等 120s 没就绪，继续；docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
+T_en[start_app]="Building + starting app services (backend / registry / config-center / user-center / jsonapp-postgres / app-minio)..."
+T_zh[start_app]="构建 + 启动 app 自有服务（backend / registry / config-center / user-center / jsonapp-postgres / app-minio）..."
+T_en[wait_backend]="Waiting for backend health check..."
+T_zh[wait_backend]="等 backend 健康检查..."
+T_en[backend_ready]="backend ready (%ss)"
+T_zh[backend_ready]="backend ready (%ss)"
+T_en[backend_timeout]="backend health check failed after 80s, continuing; docker compose logs -f backend"
+T_zh[backend_timeout]="backend 健康检查 80s 没过，继续；docker compose logs -f backend 看看"
+T_en[init_minio]="Initializing app-minio buckets..."
+T_zh[init_minio]="初始化 app-minio buckets..."
+T_en[seed_user]="Creating test account on Supabase..."
+T_zh[seed_user]="在 Supabase 上创建测试账号..."
+T_en[deploy_done]="Deploy complete!"
+T_zh[deploy_done]="部署完成！"
+T_en[info_saved]="All info also saved to ./test-env-info.txt (mode 600)"
+T_zh[info_saved]="全部信息也保存到 ./test-env-info.txt（mode 600）"
+
 say()  { printf "${C}» %s${N}\n" "$*"; }
 ok()   { printf "${G}✔ %s${N}\n" "$*"; }
 warn() { printf "${Y}! %s${N}\n" "$*"; }
 die()  { printf "${R}✗ %s${N}\n" "$*" >&2; exit 1; }
 
 NON_INTERACTIVE=0
+LANG_PRESET=""
+_args=()
 for arg in "$@"; do
   case "$arg" in
     -y|--yes) NON_INTERACTIVE=1 ;;
+    --lang) LANG_PRESET="__next__" ;;
+    --lang=*) LANG_PRESET="${arg#*=}" ;;
+    en|zh) [[ "$LANG_PRESET" == "__next__" ]] && LANG_PRESET="$arg" || _args+=("$arg") ;;
     -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
-    *) die "未知参数: $arg" ;;
+    *) die "$(t unknown_arg "$arg")" ;;
   esac
 done
 
+# ───────── language selection (number-based, default English) ─────────
+if [[ -n "$LANG_PRESET" && "$LANG_PRESET" != "__next__" ]]; then
+  UI_LANG="$LANG_PRESET"
+elif [[ $NON_INTERACTIVE -eq 1 ]]; then
+  UI_LANG="en"
+else
+  printf "${B}Select language / 选择语言:${N}\n"
+  printf "  1) English (default)\n"
+  printf "  2) 中文\n"
+  read -r -p "$(printf "${B}> ${N}")" _lang </dev/tty
+  case "${_lang:-1}" in
+    2) UI_LANG="zh" ;;
+    *) UI_LANG="en" ;;
+  esac
+fi
+
 ask() {
-  # ask "提示语" "默认值"  → 把答案 echo 出来
   local prompt="$1"; local default="${2:-}"
   if [[ $NON_INTERACTIVE -eq 1 ]]; then
     echo "$default"; return
@@ -48,13 +196,13 @@ ask_required() {
   local ans
   if [[ $NON_INTERACTIVE -eq 1 ]]; then
     [[ -n "$default_from_env" ]] && { echo "$default_from_env"; return; }
-    die "$prompt 必填（--yes 模式下需在环境变量里给出）"
+    die "$(t required_yes "$prompt")"
   fi
   while :; do
     read -r -p "$(printf "${B}%s${N}: " "$prompt")" ans </dev/tty
     ans="${ans:-$default_from_env}"
     if [[ -n "$ans" ]]; then echo "$ans"; return; fi
-    warn "必填"
+    warn "$(t required)"
   done
 }
 
@@ -62,35 +210,27 @@ ask_secret() {
   local prompt="$1"; local default="${2:-}"
   if [[ $NON_INTERACTIVE -eq 1 ]]; then echo "$default"; return; fi
   local hint=""
-  [[ -n "$default" ]] && hint=" [自动生成: ${default:0:8}…]"
+  [[ -n "$default" ]] && hint=" [auto: ${default:0:8}…]"
   local ans
   read -r -p "$(printf "${B}%s${N}${hint}: " "$prompt")" ans </dev/tty
   echo "${ans:-$default}"
 }
 
-# ───────── 前置检查 ─────────
-banner() {
-cat <<'EOF'
+# ───────── banner ─────────
+printf "\n${B}╔══════════════════════════════════════════════════════════╗${N}\n"
+printf "${B}║  %-56s║${N}\n" "$(t banner_title)"
+printf "${B}║  %-56s║${N}\n" "$(t banner_sub)"
+printf "${B}╚══════════════════════════════════════════════════════════╝${N}\n\n"
 
-╔══════════════════════════════════════════════════════════╗
-║         AI App 测试环境一键部署 (test-env v1)            ║
-║   按 Enter 接受默认；必填只有 DeepSeek key + 测试账号    ║
-╚══════════════════════════════════════════════════════════╝
-
-EOF
-}
-banner
-
-say "检查依赖..."
+say "$(t deps_check)"
 for cmd in docker openssl python3 envsubst curl; do
-  command -v "$cmd" >/dev/null 2>&1 || die "缺少 $cmd，请先安装"
+  command -v "$cmd" >/dev/null 2>&1 || die "$(t dep_missing "$cmd")"
 done
-docker compose version >/dev/null 2>&1 || die "docker compose 插件缺失（要 v2，不是老的 docker-compose）"
-ok "依赖齐"
+docker compose version >/dev/null 2>&1 || die "$(t compose_missing)"
+ok "$(t deps_ok)"
 
-# ───────── 探测 IP ─────────
+# ───────── detect IP ─────────
 detect_ip() {
-  # 优先取私网网卡 IP；不行用 hostname -I 第一个
   local ip=""
   if command -v ip >/dev/null 2>&1; then
     ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}')
@@ -101,47 +241,48 @@ detect_ip() {
 }
 DETECTED_IP=$(detect_ip)
 
-# ───────── 收集输入 ─────────
-say "[1/4] 客户端访问 IP"
-HOST_IP=$(ask "  客户端访问的 IP（局域网测试就填本机内网 IP）" "$DETECTED_IP")
+# ───────── collect input ─────────
+say "$(t sec_ip)"
+HOST_IP=$(ask "$(t ask_ip)" "$DETECTED_IP")
 
 echo
-say "[2/4] AI 供应商（backend/config.py 实际识别这几个）"
-DEEPSEEK_KEY=$(ask_required "  DeepSeek API Key（必填）" "${DEEPSEEK_KEY:-${DEEPSEEK_API_KEY:-}}")
-GLM_ANTHROPIC_AUTH_TOKEN=$(ask    "  GLM (Anthropic-compatible) Auth Token（可选）" "")
-GLM_ANTHROPIC_BASE_URL=$(ask      "  GLM Base URL（可选）" "")
-CC_ANTHROPIC_AUTH_TOKEN=$(ask     "  Claude Code Anthropic Token（可选）" "")
-CC_ANTHROPIC_BASE_URL=$(ask       "  Claude Code Base URL（可选）" "")
+say "$(t sec_ai)"
+DEEPSEEK_KEY=$(ask_required "$(t ask_deepseek)" "${DEEPSEEK_KEY:-${DEEPSEEK_API_KEY:-}}")
+GLM_ANTHROPIC_AUTH_TOKEN=$(ask    "$(t ask_glm_token)" "")
+GLM_ANTHROPIC_BASE_URL=$(ask      "$(t ask_glm_url)" "")
+CC_ANTHROPIC_AUTH_TOKEN=$(ask     "$(t ask_cc_token)" "")
+CC_ANTHROPIC_BASE_URL=$(ask       "$(t ask_cc_url)" "")
 
 echo
-say "[3/4] 测试账号（部署完后用来登录客户端）"
-TEST_USER_EMAIL=$(ask_required    "  邮箱" "test@example.local")
-TEST_USER_USERNAME=$(ask          "  用户名" "${TEST_USER_EMAIL%%@*}")
+say "$(t sec_account)"
+TEST_USER_EMAIL=$(ask_required    "$(t ask_email)" "test@example.local")
+TEST_USER_USERNAME=$(ask          "$(t ask_username)" "${TEST_USER_EMAIL%%@*}")
 DEFAULT_PASSWORD="Test$(openssl rand -hex 4)"
-TEST_USER_PASSWORD=$(ask_secret   "  密码" "$DEFAULT_PASSWORD")
+TEST_USER_PASSWORD=$(ask_secret   "$(t ask_password)" "$DEFAULT_PASSWORD")
 
 echo
-say "[4/5] Registry mirror（可选）"
-echo "  本实例可以镜像另一个 Registry 的公开包索引，每 N 秒同步一次。"
-echo "  上游 URL 留空 = 不开 mirror，本实例独立运行。"
-REGISTRY_UPSTREAM=$(ask "  上游 Registry URL（如 https://myapp-registry.dapangyu.work）" "")
+say "$(t sec_mirror)"
+echo "$(t mirror_desc1)"
+echo "$(t mirror_desc2)"
+REGISTRY_UPSTREAM=$(ask "$(t ask_upstream)" "")
 if [[ -n "$REGISTRY_UPSTREAM" ]]; then
-  REGISTRY_MIRROR_SYNC_INTERVAL_SEC=$(ask "  同步间隔（秒，<=0 = 只首启一次）" "600")
+  REGISTRY_MIRROR_SYNC_INTERVAL_SEC=$(ask "$(t ask_interval)" "600")
 else
   REGISTRY_MIRROR_SYNC_INTERVAL_SEC="0"
 fi
 
 echo
-say "[5/5] 端口偏移（同机并行多 env 时用，默认 0）"
-PORT_OFFSET=$(ask "  端口偏移" "0")
-[[ "$PORT_OFFSET" =~ ^[0-9]+$ ]] || die "端口偏移必须是数字"
+say "$(t sec_port)"
+PORT_OFFSET=$(ask "$(t ask_offset)" "0")
+[[ "$PORT_OFFSET" =~ ^[0-9]+$ ]] || die "$(t offset_num)"
 
-# ───────── 计算端口 ─────────
+# ───────── compute ports ─────────
 add() { echo $(( $1 + PORT_OFFSET )); }
 
 BACKEND_PORT=$(add 5566)
 REGISTRY_PORT=$(add 3254)
 CONFIG_CENTER_PORT=$(add 5567)
+USER_CENTER_PORT=$(add 5568)
 KONG_HTTP_PORT=$(add 18000)
 KONG_HTTPS_PORT=$(add 18443)
 SUPABASE_DB_PORT=$(add 15432)
@@ -158,8 +299,8 @@ OPENIM_REDIS_PORT=$(add 16379)
 OPENIM_MINIO_PORT=$(add 10005)
 OPENIM_MINIO_CONSOLE_PORT=$(add 10006)
 
-# ───────── 生成 secrets ─────────
-say "生成密钥..."
+# ───────── generate secrets ─────────
+say "$(t gen_secrets)"
 rand_hex()  { openssl rand -hex "$1"; }
 rand_b64()  { openssl rand -base64 "$1" | tr -d '=+/' | cut -c1-"$2"; }
 
@@ -168,7 +309,7 @@ JSONAPP_DB_PASSWORD=$(rand_b64 30 24)
 SUPABASE_DB_PASSWORD=$(rand_b64 30 24)
 SUPABASE_DASHBOARD_PASSWORD=$(rand_b64 30 16)
 SUPABASE_SECRET_KEY_BASE=$(rand_hex 32)
-SUPABASE_VAULT_ENC_KEY=$(rand_hex 16)             # 32 字符 hex = 16 字节
+SUPABASE_VAULT_ENC_KEY=$(rand_hex 16)
 SUPABASE_PG_META_CRYPTO_KEY=$(rand_hex 32)
 SUPABASE_LOGFLARE_PUBLIC=$(rand_hex 24)
 SUPABASE_LOGFLARE_PRIVATE=$(rand_hex 24)
@@ -193,20 +334,22 @@ REGISTRY_ADMIN_TOKEN=$(rand_hex 32)
 BACKEND_REDIS_PASSWORD=$(rand_b64 30 24)
 CONFIG_CENTER_ADMIN_PASSWORD=$(rand_b64 30 16)
 CONFIG_CENTER_SESSION_SECRET=$(rand_hex 32)
+USER_CENTER_ADMIN_PASSWORD=$(rand_b64 30 16)
+USER_CENTER_SESSION_SECRET=$(rand_hex 32)
 
 BYTEDANCE_ASR_APP_KEY=""
 BYTEDANCE_ASR_ACCESS_KEY=""
 BYTEDANCE_ASR_RESOURCE_ID="volc.bigasr.sauc.duration"
-ok "密钥生成完毕"
+ok "$(t secrets_done)"
 
-# ───────── 算 Supabase JWT keys ─────────
-say "签发 Supabase ANON_KEY / SERVICE_ROLE_KEY..."
+# ───────── mint Supabase JWT keys ─────────
+say "$(t mint_keys)"
 SUPABASE_ANON_KEY=$(python3 "$SCRIPT_DIR/lib/mint-jwt.py" "$JWT_SECRET" anon)
 SUPABASE_SERVICE_ROLE_KEY=$(python3 "$SCRIPT_DIR/lib/mint-jwt.py" "$JWT_SECRET" service_role)
-ok "Supabase keys 已签发"
+ok "$(t keys_done)"
 
-# ───────── 写 .env 们 ─────────
-say "渲染 .env 文件..."
+# ───────── render .env files ─────────
+say "$(t render_env)"
 export HOST_IP PORT_OFFSET
 export TEST_USER_EMAIL TEST_USER_PASSWORD TEST_USER_USERNAME
 export DEEPSEEK_KEY GLM_ANTHROPIC_AUTH_TOKEN GLM_ANTHROPIC_BASE_URL CC_ANTHROPIC_AUTH_TOKEN CC_ANTHROPIC_BASE_URL
@@ -221,46 +364,44 @@ export OPENIM_MYSQL_ROOT_PASSWORD OPENIM_MYSQL_PASSWORD OPENIM_MONGO_PASSWORD OP
 export OPENIM_MYSQL_PORT OPENIM_MONGO_PORT OPENIM_REDIS_PORT OPENIM_MINIO_PORT OPENIM_MINIO_CONSOLE_PORT
 export FLASK_SECRET_KEY REGISTRY_ADMIN_TOKEN BACKEND_PORT REGISTRY_PORT CONFIG_CENTER_PORT
 export CONFIG_CENTER_ADMIN_PASSWORD CONFIG_CENTER_SESSION_SECRET
+export USER_CENTER_PORT USER_CENTER_ADMIN_PASSWORD USER_CENTER_SESSION_SECRET
 export REGISTRY_UPSTREAM REGISTRY_MIRROR_SYNC_INTERVAL_SEC
 
 envsubst < .env.template          > .env
 envsubst < supabase/.env.template > supabase/.env
 envsubst < openim/.env.template   > openim/.env
-ok ".env 已渲染（3 份）"
+ok "$(t env_done)"
 
-# ───────── 拉镜像 ─────────
-say "拉镜像（首次比较慢）..."
+# ───────── pull images ─────────
+say "$(t pull_images)"
 docker compose --env-file supabase/.env -f supabase/docker-compose.yml -f supabase/docker-compose.override.yml pull --quiet
 docker compose --env-file openim/.env   -f openim/docker-compose.yml   pull --quiet
 docker compose --env-file .env          -f docker-compose.yml          pull --quiet
-ok "镜像 ready"
+ok "$(t images_ready)"
 
-# ───────── 启动 Supabase ─────────
-say "启动 Supabase（13 服务，首次起约 1-2 分钟）..."
+# ───────── start Supabase ─────────
+say "$(t start_supabase)"
 docker compose --env-file supabase/.env -f supabase/docker-compose.yml -f supabase/docker-compose.override.yml up -d
-say "等 Supabase auth 服务就绪..."
+say "$(t wait_supabase)"
 for i in {1..60}; do
-  # Kong 的 /auth/v1/* 路由有 keyauth 插件保护，必须带 apikey；
-  # 带 apikey 后：auth 健康返回 200；auth 挂了 Kong 返 502/503
   code=$(curl -sS -o /dev/null -m 2 -w '%{http_code}' \
     -H "apikey: ${SUPABASE_ANON_KEY}" \
     "http://${HOST_IP}:${KONG_HTTP_PORT}/auth/v1/health" 2>/dev/null || echo "000")
   if [[ "$code" == "200" ]]; then
-    ok "Supabase auth ready (${i}s)"; break
+    ok "$(t supabase_ready "$i")"; break
   fi
   sleep 2
-  [[ $i -eq 60 ]] && die "Supabase auth 等 120s 还没起来 (last HTTP $code)，docker logs supabase-auth"
+  [[ $i -eq 60 ]] && die "$(t supabase_timeout "$code")"
 done
 
-# ───────── 渲染 OpenIM config（v3.8 镜像不读 env，只读 /openim-server/config/*.yml）─────────
-say "从 OpenIM 镜像提取默认 config 并打补丁..."
+# ───────── render OpenIM config (v3.8 image ignores env, only reads /openim-server/config/*.yml) ─────────
+say "$(t openim_cfg)"
 OPENIM_CFG_DIR="$SCRIPT_DIR/openim/config-rendered"
 rm -rf "$OPENIM_CFG_DIR" && mkdir -p "$OPENIM_CFG_DIR"
 docker run --rm --entrypoint sh -v "$OPENIM_CFG_DIR":/host \
   openim/openim-server:v3.8.3-patch.12 \
   -c "cp -a /openim-server/config/. /host/ && chmod -R a+r /host/"
 
-# sed 替换关键字段（用 | 当分隔符避开 password 里的 / + =）
 cd "$OPENIM_CFG_DIR"
 sed -i "s|localhost:37017|mongodb:27017|g; s|^username: openIM$|username: openim|; s|^password: openIM123$|password: ${OPENIM_MONGO_PASSWORD}|; s|^authSource: openim_v3$|authSource: admin|" mongodb.yml
 sed -i "s|localhost:16379|redis:6379|g; s|^password: openIM123$|password: ${OPENIM_REDIS_PASSWORD}|" redis.yml
@@ -269,41 +410,39 @@ sed -i "s|localhost:12379|etcd:2379|g" discovery.yml
 sed -i "s|^accessKeyID: root$|accessKeyID: ${OPENIM_MINIO_ACCESS_KEY}|; s|^secretAccessKey: openIM123$|secretAccessKey: ${OPENIM_MINIO_SECRET_KEY}|; s|localhost:10005|minio:9000|g; s|http://external_ip:10005|http://${HOST_IP}:${OPENIM_MINIO_PORT}|g" minio.yml
 sed -i "s|^secret: openIM123$|secret: ${OPENIM_SECRET}|" share.yml
 cd "$SCRIPT_DIR"
-ok "OpenIM config 渲染完毕（mongodb/redis/kafka/etcd/minio/share）"
+ok "$(t openim_cfg_done)"
 
-# ───────── 启动 OpenIM ─────────
-say "启动 OpenIM（8 服务，首次起约 1-2 分钟）..."
+# ───────── start OpenIM ─────────
+say "$(t start_openim)"
 docker compose --env-file openim/.env -f openim/docker-compose.yml up -d
-say "等 OpenIM server 就绪..."
+say "$(t wait_openim)"
 for i in {1..60}; do
-  # OpenIM 根路径会返 404（没注册）；用 -o /dev/null 拿 status code，**不**用 -f
-  # 否则 curl 4xx 即 exit 22，永远拿不到 status，循环等死
   code=$(curl -sS -o /dev/null -m 2 -w '%{http_code}' "http://${HOST_IP}:${OPENIM_API_PORT}/" 2>/dev/null || echo "000")
   if [[ "$code" =~ ^(200|400|401|403|404)$ ]]; then
-    ok "OpenIM API ready (${i}s, HTTP $code)"; break
+    ok "$(t openim_ready "$i" "$code")"; break
   fi
   sleep 2
-  [[ $i -eq 60 ]] && warn "OpenIM 等 120s 没就绪，继续；docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
+  [[ $i -eq 60 ]] && warn "$(t openim_timeout)"
 done
 
-# ───────── 启动 app 自有服务 ─────────
-say "构建 + 启动 app 自有服务（backend / registry / config-center / jsonapp-postgres / app-minio）..."
+# ───────── start app services ─────────
+say "$(t start_app)"
 docker compose --env-file .env -f docker-compose.yml up -d --build
-say "等 backend 健康检查..."
+say "$(t wait_backend)"
 for i in {1..40}; do
   if curl -fsS "http://${HOST_IP}:${BACKEND_PORT}/api/ai/providers" >/dev/null 2>&1; then
-    ok "backend ready (${i}s)"; break
+    ok "$(t backend_ready "$i")"; break
   fi
   sleep 2
-  [[ $i -eq 40 ]] && warn "backend 健康检查 80s 没过，继续；docker compose logs -f backend 看看"
+  [[ $i -eq 40 ]] && warn "$(t backend_timeout)"
 done
 
-# ───────── 初始化 MinIO buckets ─────────
-say "初始化 app-minio buckets..."
+# ───────── init MinIO buckets ─────────
+say "$(t init_minio)"
 bash "$SCRIPT_DIR/lib/init-buckets.sh"
 
-# ───────── Seed 测试账号 ─────────
-say "在 Supabase 上创建测试账号..."
+# ───────── seed test account ─────────
+say "$(t seed_user)"
 SUPABASE_URL="http://${HOST_IP}:${KONG_HTTP_PORT}" \
 SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
 TEST_USER_EMAIL="$TEST_USER_EMAIL" \
@@ -311,7 +450,8 @@ TEST_USER_PASSWORD="$TEST_USER_PASSWORD" \
 TEST_USER_USERNAME="$TEST_USER_USERNAME" \
 python3 "$SCRIPT_DIR/lib/seed-test-user.py"
 
-# ───────── 写信息文件 + 摘要 ─────────
+# ───────── write info file + summary ─────────
+if [[ "$UI_LANG" == "zh" ]]; then
 cat > test-env-info.txt <<EOF
 ========================================
   AI App 测试环境部署信息
@@ -335,43 +475,69 @@ cat > test-env-info.txt <<EOF
   密码:    ${TEST_USER_PASSWORD}
 
 【运维 UI / 调试入口】
-  Supabase Studio (DB / Auth GUI):
-     http://${HOST_IP}:${KONG_HTTP_PORT}
-     账号: admin / ${SUPABASE_DASHBOARD_PASSWORD}
-  MinIO Console:
-     http://${HOST_IP}:${APP_MINIO_CONSOLE_PORT}
-     账号: ${APP_MINIO_ROOT_USER} / ${APP_MINIO_ROOT_PASSWORD}
-  jsonapp Postgres:
-     psql postgresql://jsonapp:${JSONAPP_DB_PASSWORD}@${HOST_IP}:${JSONAPP_DB_PORT}/jsonapp
-  Config Center 后台:
-     http://${HOST_IP}:${CONFIG_CENTER_PORT}/login
-     账号: admin / ${CONFIG_CENTER_ADMIN_PASSWORD}
+  Supabase Studio: http://${HOST_IP}:${KONG_HTTP_PORT}   账号: admin / ${SUPABASE_DASHBOARD_PASSWORD}
+  MinIO Console:   http://${HOST_IP}:${APP_MINIO_CONSOLE_PORT}   账号: ${APP_MINIO_ROOT_USER} / ${APP_MINIO_ROOT_PASSWORD}
+  jsonapp Postgres: psql postgresql://jsonapp:${JSONAPP_DB_PASSWORD}@${HOST_IP}:${JSONAPP_DB_PORT}/jsonapp
+  Config Center:   http://${HOST_IP}:${CONFIG_CENTER_PORT}/login   账号: admin / ${CONFIG_CENTER_ADMIN_PASSWORD}
+  User Center:     http://${HOST_IP}:${USER_CENTER_PORT}/login   账号: admin / ${USER_CENTER_ADMIN_PASSWORD}
   Registry admin token: ${REGISTRY_ADMIN_TOKEN}
 
 【Registry Mirror】
   Upstream: ${REGISTRY_UPSTREAM:-（未配置，本实例独立运行）}
   同步间隔: ${REGISTRY_MIRROR_SYNC_INTERVAL_SEC}s（0 = 仅首启同步一次）
-  手动触发: curl -X POST -H "Authorization: Bearer <REGISTRY_ADMIN_TOKEN>" http://${HOST_IP}:${REGISTRY_PORT}/mirror/sync
 
 【常用命令】
-  ./redeploy.sh      只更新后端代码（git pull + rebuild 3 个 backend 镜像，不动数据）
+  ./redeploy.sh      只更新后端代码（git pull + rebuild，不动数据）
   ./reset-data.sh    清空所有数据卷但保留容器配置
   ./teardown.sh      彻底销毁本环境（删容器 + 数据卷 + .env）
-  docker compose --env-file .env logs -f backend          实时看 backend 日志
-  docker compose --env-file supabase/.env -f supabase/docker-compose.yml logs -f auth
-
-【已禁用】
-  - APNs / FCM / 极光 / 任何 push 通道（测试环境用不到）
-  - OpenIM beforeOfflinePush / afterSendSingleMsg webhook
-  → 用户杀后台收不到消息，重新打开 app 会拿到积压消息（OpenIM 离线消息保留）
-
 EOF
+else
+cat > test-env-info.txt <<EOF
+========================================
+  AI App Test Environment Info
+  Generated: $(date)
+========================================
+
+Client access IP: ${HOST_IP}
+
+[Fill these URLs in the client "Service Environment" page]
+  Backend       http://${HOST_IP}:${BACKEND_PORT}
+  Supabase      http://${HOST_IP}:${KONG_HTTP_PORT}
+  MinIO         http://${HOST_IP}:${APP_MINIO_PORT}
+  Registry      http://${HOST_IP}:${REGISTRY_PORT}
+  OpenIM HTTP   http://${HOST_IP}:${OPENIM_API_PORT}
+  OpenIM WS     ws://${HOST_IP}:${OPENIM_WS_PORT}
+  Config Center http://${HOST_IP}:${CONFIG_CENTER_PORT}
+
+[Test account]
+  Email:    ${TEST_USER_EMAIL}
+  Username: ${TEST_USER_USERNAME}
+  Password: ${TEST_USER_PASSWORD}
+
+[Ops UI / debug entries]
+  Supabase Studio: http://${HOST_IP}:${KONG_HTTP_PORT}   login: admin / ${SUPABASE_DASHBOARD_PASSWORD}
+  MinIO Console:   http://${HOST_IP}:${APP_MINIO_CONSOLE_PORT}   login: ${APP_MINIO_ROOT_USER} / ${APP_MINIO_ROOT_PASSWORD}
+  jsonapp Postgres: psql postgresql://jsonapp:${JSONAPP_DB_PASSWORD}@${HOST_IP}:${JSONAPP_DB_PORT}/jsonapp
+  Config Center:   http://${HOST_IP}:${CONFIG_CENTER_PORT}/login   login: admin / ${CONFIG_CENTER_ADMIN_PASSWORD}
+  User Center:     http://${HOST_IP}:${USER_CENTER_PORT}/login   login: admin / ${USER_CENTER_ADMIN_PASSWORD}
+  Registry admin token: ${REGISTRY_ADMIN_TOKEN}
+
+[Registry Mirror]
+  Upstream: ${REGISTRY_UPSTREAM:-(not set, standalone)}
+  Sync interval: ${REGISTRY_MIRROR_SYNC_INTERVAL_SEC}s (0 = sync once at startup)
+
+[Common commands]
+  ./redeploy.sh      update backend code only (git pull + rebuild, data preserved)
+  ./reset-data.sh    wipe all data volumes, keep container config
+  ./teardown.sh      destroy this env (containers + volumes + .env)
+EOF
+fi
 chmod 600 test-env-info.txt
 
 echo
 printf "${G}╔════════════════════════════════════════════════════════════╗${N}\n"
-printf "${G}║                  ✔ 部署完成！                              ║${N}\n"
+printf "${G}║  ✔ %-56s║${N}\n" "$(t deploy_done)"
 printf "${G}╚════════════════════════════════════════════════════════════╝${N}\n"
 cat test-env-info.txt
 echo
-ok "全部信息也保存到 ./test-env-info.txt（mode 600）"
+ok "$(t info_saved)"

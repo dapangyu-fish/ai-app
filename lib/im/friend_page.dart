@@ -18,7 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import '../i18n/framework_strings.dart';
-import 'im_service.dart';
+import 'im_service_io.dart';
 import 'chat_page.dart';
 import 'create_group_page.dart';
 import 'add_friend_search_page.dart';
@@ -83,13 +83,21 @@ class _IMFriendPageState extends State<IMFriendPage> {
             tooltip: s.imAdd,
             onSelected: (v) {
               if (v == 'add_friend') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddFriendSearchPage()),
-                ).then((_) => _load());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => const AddFriendSearchPage(),
+                      ),
+                    )
+                    .then((_) => _load());
               } else if (v == 'create_group') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CreateGroupPage()),
-                ).then((_) => _load());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => const CreateGroupPage(),
+                      ),
+                    )
+                    .then((_) => _load());
               }
             },
             itemBuilder: (_) => [
@@ -137,12 +145,19 @@ class _IMFriendPageState extends State<IMFriendPage> {
               children: [
                 Icon(Icons.fingerprint, color: cs.primary),
                 const SizedBox(width: 8),
-                Text(s.imMyId, style: const TextStyle(fontWeight: FontWeight.w500)),
+                Text(
+                  s.imMyId,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SelectableText(
                     _myUserId(),
-                    style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: cs.onSurface),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: cs.onSurface,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -152,7 +167,10 @@ class _IMFriendPageState extends State<IMFriendPage> {
                     await Clipboard.setData(ClipboardData(text: _myUserId()));
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(s.imCopiedId), duration: const Duration(seconds: 1)),
+                      SnackBar(
+                        content: Text(s.imCopiedId),
+                        duration: const Duration(seconds: 1),
+                      ),
                     );
                   },
                 ),
@@ -169,7 +187,10 @@ class _IMFriendPageState extends State<IMFriendPage> {
             title: Text(s.imNewFriends),
             trailing: _pendingApplications > 0
                 ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: cs.error,
                       borderRadius: BorderRadius.circular(10),
@@ -182,7 +203,9 @@ class _IMFriendPageState extends State<IMFriendPage> {
                 : const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () async {
               await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const _FriendApplicationPage()),
+                MaterialPageRoute(
+                  builder: (_) => const _FriendApplicationPage(),
+                ),
               );
               _load();
             },
@@ -198,9 +221,15 @@ class _IMFriendPageState extends State<IMFriendPage> {
                 children: [
                   Icon(Icons.people_outline, size: 56, color: cs.outline),
                   const SizedBox(height: 12),
-                  Text(s.imEmptyFriends, style: TextStyle(color: cs.outline, fontSize: 16)),
+                  Text(
+                    s.imEmptyFriends,
+                    style: TextStyle(color: cs.outline, fontSize: 16),
+                  ),
                   const SizedBox(height: 4),
-                  Text(s.imEmptyFriendsHint, style: TextStyle(color: cs.outline, fontSize: 13)),
+                  Text(
+                    s.imEmptyFriendsHint,
+                    style: TextStyle(color: cs.outline, fontSize: 13),
+                  ),
                 ],
               ),
             )
@@ -213,7 +242,8 @@ class _IMFriendPageState extends State<IMFriendPage> {
 
   Widget _buildFriendTile(FriendInfo f, ColorScheme cs) {
     final s = T.of(context);
-    final name = (f.remark?.isNotEmpty == true ? f.remark : null) ??
+    final name =
+        (f.remark?.isNotEmpty == true ? f.remark : null) ??
         (f.nickname?.isNotEmpty == true ? f.nickname : null) ??
         f.userID ??
         '?';
@@ -229,7 +259,10 @@ class _IMFriendPageState extends State<IMFriendPage> {
             title: Text(s.imDeleteFriendTitle),
             content: Text(T.fmt(s.imDeleteFriendContent, {'name': name})),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel)),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(s.cancel),
+              ),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 style: FilledButton.styleFrom(backgroundColor: cs.error),
@@ -253,16 +286,24 @@ class _IMFriendPageState extends State<IMFriendPage> {
         leading: CircleAvatar(
           radius: 22,
           backgroundColor: cs.primaryContainer,
-          backgroundImage: faceUrl != null && faceUrl.isNotEmpty ? CachedNetworkImageProvider(faceUrl) : null,
+          backgroundImage: faceUrl != null && faceUrl.isNotEmpty
+              ? CachedNetworkImageProvider(faceUrl)
+              : null,
           child: faceUrl == null || faceUrl.isEmpty
-              ? Text(name[0].toUpperCase(),
-                  style: TextStyle(color: cs.onPrimaryContainer))
+              ? Text(
+                  name[0].toUpperCase(),
+                  style: TextStyle(color: cs.onPrimaryContainer),
+                )
               : null,
         ),
         title: Text(name),
         subtitle: Text(
           f.userID ?? '',
-          style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cs.outline),
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 11,
+            color: cs.outline,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -287,7 +328,6 @@ class _IMFriendPageState extends State<IMFriendPage> {
       ),
     );
   }
-
 }
 
 // ============================================================
@@ -340,76 +380,85 @@ class _FriendApplicationPageState extends State<_FriendApplicationPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _apps.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.inbox_outlined, size: 56, color: cs.outline),
-                      const SizedBox(height: 12),
-                      Text(s.imEmptyApplications, style: TextStyle(color: cs.outline)),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 56, color: cs.outline),
+                  const SizedBox(height: 12),
+                  Text(
+                    s.imEmptyApplications,
+                    style: TextStyle(color: cs.outline),
                   ),
-                )
-              : ListView.separated(
-                  itemCount: _apps.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final a = _apps[i];
-                    final pending = (a.handleResult ?? 0) == 0;
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: cs.primaryContainer,
-                        backgroundImage: (a.fromFaceURL?.isNotEmpty ?? false)
-                            ? CachedNetworkImageProvider(a.fromFaceURL!)
-                            : null,
-                        child: (a.fromFaceURL?.isEmpty ?? true)
-                            ? Text(((a.fromNickname ?? a.fromUserID ?? '?')[0])
-                                .toUpperCase())
-                            : null,
-                      ),
-                      title: Text(a.fromNickname?.isNotEmpty == true
-                          ? a.fromNickname!
-                          : (a.fromUserID ?? '?')),
-                      subtitle: Text(
-                        (a.reqMsg?.isNotEmpty == true)
-                            ? a.reqMsg!
-                            : s.imApplyDefaultMessage,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: pending
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.close, color: cs.error),
-                                  tooltip: s.imReject,
-                                  onPressed: () async {
-                                    await IMService.instance.rejectFriendApplication(
+                ],
+              ),
+            )
+          : ListView.separated(
+              itemCount: _apps.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final a = _apps[i];
+                final pending = (a.handleResult ?? 0) == 0;
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: cs.primaryContainer,
+                    backgroundImage: (a.fromFaceURL?.isNotEmpty ?? false)
+                        ? CachedNetworkImageProvider(a.fromFaceURL!)
+                        : null,
+                    child: (a.fromFaceURL?.isEmpty ?? true)
+                        ? Text(
+                            ((a.fromNickname ?? a.fromUserID ?? '?')[0])
+                                .toUpperCase(),
+                          )
+                        : null,
+                  ),
+                  title: Text(
+                    a.fromNickname?.isNotEmpty == true
+                        ? a.fromNickname!
+                        : (a.fromUserID ?? '?'),
+                  ),
+                  subtitle: Text(
+                    (a.reqMsg?.isNotEmpty == true)
+                        ? a.reqMsg!
+                        : s.imApplyDefaultMessage,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: pending
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.close, color: cs.error),
+                              tooltip: s.imReject,
+                              onPressed: () async {
+                                await IMService.instance
+                                    .rejectFriendApplication(
                                       fromUserID: a.fromUserID!,
                                     );
-                                    _load();
-                                  },
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.check, color: Colors.green),
-                                  tooltip: s.imAccept,
-                                  onPressed: () async {
-                                    await IMService.instance.acceptFriendApplication(
-                                      fromUserID: a.fromUserID!,
-                                    );
-                                    _load();
-                                  },
-                                ),
-                              ],
-                            )
-                          : Text(
-                              _statusText(a.handleResult, s),
-                              style: TextStyle(color: cs.outline, fontSize: 13),
+                                _load();
+                              },
                             ),
-                    );
-                  },
-                ),
+                            IconButton(
+                              icon: Icon(Icons.check, color: Colors.green),
+                              tooltip: s.imAccept,
+                              onPressed: () async {
+                                await IMService.instance
+                                    .acceptFriendApplication(
+                                      fromUserID: a.fromUserID!,
+                                    );
+                                _load();
+                              },
+                            ),
+                          ],
+                        )
+                      : Text(
+                          _statusText(a.handleResult, s),
+                          style: TextStyle(color: cs.outline, fontSize: 13),
+                        ),
+                );
+              },
+            ),
     );
   }
 }

@@ -10,7 +10,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../i18n/framework_strings.dart';
-import 'im_service.dart';
+import 'im_service_io.dart';
 
 class AddFriendSearchPage extends StatefulWidget {
   const AddFriendSearchPage({super.key});
@@ -70,7 +70,9 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
     if (imUserId.isEmpty || imUserId == _myUserId) return;
 
     final s = T.of(context);
-    final reasonCtrl = TextEditingController(text: s.imAddFriendDefaultGreeting);
+    final reasonCtrl = TextEditingController(
+      text: s.imAddFriendDefaultGreeting,
+    );
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -94,12 +96,14 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
                     CircleAvatar(
                       radius: 18,
                       backgroundColor: cs.primary,
-                      backgroundImage: (user['face_url'] as String?)?.isNotEmpty == true
+                      backgroundImage:
+                          (user['face_url'] as String?)?.isNotEmpty == true
                           ? CachedNetworkImageProvider(user['face_url'])
                           : null,
                       child: (user['face_url'] as String? ?? '').isEmpty
                           ? Text(
-                              ((user['nickname'] as String? ?? '?')[0]).toUpperCase(),
+                              ((user['nickname'] as String? ?? '?')[0])
+                                  .toUpperCase(),
                               style: TextStyle(color: cs.onPrimary),
                             )
                           : null,
@@ -109,10 +113,14 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(user['nickname'] as String? ?? '',
-                              style: const TextStyle(fontWeight: FontWeight.w500)),
-                          Text(user['email'] as String? ?? '',
-                              style: TextStyle(color: cs.outline, fontSize: 12)),
+                          Text(
+                            user['nickname'] as String? ?? '',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            user['email'] as String? ?? '',
+                            style: TextStyle(color: cs.outline, fontSize: 12),
+                          ),
                         ],
                       ),
                     ),
@@ -124,14 +132,19 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
                 controller: reasonCtrl,
                 decoration: InputDecoration(
                   labelText: ds.imAddFriendNote,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 maxLines: 2,
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ds.cancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(ds.cancel),
+            ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(ds.imSendApplication),
@@ -163,9 +176,7 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
     final s = T.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(s.imSearchTitle),
-      ),
+      appBar: AppBar(title: Text(s.imSearchTitle)),
       body: Column(
         children: [
           // 搜索框
@@ -186,7 +197,9 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
                           _onChanged('');
                         },
                       ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 isDense: true,
               ),
               onChanged: _onChanged,
@@ -217,11 +230,12 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
             children: [
               Icon(Icons.search_off, size: 56, color: cs.outline),
               const SizedBox(height: 12),
-              Text(s.imSearchHelp,
-                  style: TextStyle(color: cs.outline)),
+              Text(s.imSearchHelp, style: TextStyle(color: cs.outline)),
               const SizedBox(height: 4),
-              Text(s.imSearchHelpMin,
-                  style: TextStyle(color: cs.outline, fontSize: 12)),
+              Text(
+                s.imSearchHelpMin,
+                style: TextStyle(color: cs.outline, fontSize: 12),
+              ),
             ],
           ),
         ),
@@ -235,11 +249,15 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
           children: [
             Icon(Icons.person_search, size: 56, color: cs.outline),
             const SizedBox(height: 12),
-            Text(T.fmt(s.imSearchNoMatch, {'q': _lastQuery}),
-                style: TextStyle(color: cs.outline)),
+            Text(
+              T.fmt(s.imSearchNoMatch, {'q': _lastQuery}),
+              style: TextStyle(color: cs.outline),
+            ),
             const SizedBox(height: 4),
-            Text(s.imSearchNoMatchHint,
-                style: TextStyle(color: cs.outline, fontSize: 12)),
+            Text(
+              s.imSearchNoMatchHint,
+              style: TextStyle(color: cs.outline, fontSize: 12),
+            ),
           ],
         ),
       );
@@ -247,7 +265,8 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
 
     return ListView.separated(
       itemCount: _results.length,
-      separatorBuilder: (_, __) => Divider(height: 1, indent: 72, color: cs.outlineVariant),
+      separatorBuilder: (_, __) =>
+          Divider(height: 1, indent: 72, color: cs.outlineVariant),
       itemBuilder: (_, i) {
         final u = _results[i];
         final faceUrl = u['face_url'] as String? ?? '';
@@ -259,19 +278,28 @@ class _AddFriendSearchPageState extends State<AddFriendSearchPage> {
           leading: CircleAvatar(
             radius: 22,
             backgroundColor: cs.primaryContainer,
-            backgroundImage: faceUrl.isNotEmpty ? CachedNetworkImageProvider(faceUrl) : null,
+            backgroundImage: faceUrl.isNotEmpty
+                ? CachedNetworkImageProvider(faceUrl)
+                : null,
             child: faceUrl.isEmpty
-                ? Text(nickname.isNotEmpty ? nickname[0].toUpperCase() : '?',
-                    style: TextStyle(color: cs.onPrimaryContainer))
+                ? Text(
+                    nickname.isNotEmpty ? nickname[0].toUpperCase() : '?',
+                    style: TextStyle(color: cs.onPrimaryContainer),
+                  )
                 : null,
           ),
           title: Text(nickname),
-          subtitle: Text(email,
-              style: TextStyle(color: cs.outline, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+          subtitle: Text(
+            email,
+            style: TextStyle(color: cs.outline, fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           trailing: isMe
-              ? Text(s.imYouSelfBadge, style: TextStyle(color: cs.outline, fontSize: 12))
+              ? Text(
+                  s.imYouSelfBadge,
+                  style: TextStyle(color: cs.outline, fontSize: 12),
+                )
               : const Icon(Icons.person_add_alt_1, size: 20),
           onTap: isMe ? null : () => _onTapUser(u),
         );

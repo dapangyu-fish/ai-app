@@ -119,6 +119,27 @@
       <input type="hidden" name="page" value="{{ page }}">
       <button type="submit" style="padding:9px 14px;background:#38bdf8;color:#0f172a;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">搜索</button>
       {% if q %}<a href="/?page={{ page }}">清除</a>{% endif %}
+      <button type="button" onclick="document.getElementById('create-user-form').style.display = document.getElementById('create-user-form').style.display==='none' ? 'flex' : 'none'"
+              style="margin-left:auto;padding:9px 14px;background:#22c55e;color:#0f172a;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">+ 新增用户</button>
+    </form>
+
+    <form id="create-user-form" method="POST" action="/users/create" class="toolbar"
+          style="display:none;flex-wrap:wrap;gap:8px;background:#1e293b;padding:12px;border-radius:6px;border:1px solid #334155;margin-bottom:12px;">
+      <input type="email" name="email" placeholder="邮箱（必填）" required
+             style="flex:1 1 240px;padding:8px 10px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;">
+      <input type="password" name="password" placeholder="密码（≥6 位）" minlength="6" required
+             style="flex:1 1 180px;padding:8px 10px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;">
+      <input type="text" name="username" placeholder="用户名（可选）"
+             style="flex:1 1 160px;padding:8px 10px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;">
+      <select name="role" style="padding:8px 10px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:4px;">
+        <option value="user">user</option>
+        <option value="pro">pro</option>
+        <option value="admin">admin</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;color:#cbd5e1;font-size:13px;padding:0 8px;">
+        <input type="checkbox" name="email_confirm" checked> 自动确认邮箱
+      </label>
+      <button type="submit" style="padding:9px 14px;background:#22c55e;color:#0f172a;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">创建</button>
     </form>
 
     <table>

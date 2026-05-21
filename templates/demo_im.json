@@ -3,7 +3,7 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.4.8",
+    "version": "1.5.1",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
     "author": "demo"
@@ -600,7 +600,7 @@
                     {
                       "type": "avatar",
                       "visible": "{{ loop.item.is_other }}",
-                      "url": "{{ global.otherAvatar }}",
+                      "url": "{{ loop.item.sender_face_url }}",
                       "text": "{{ global.currentChatName }}",
                       "size": 40,
                       "color": "#5C6BC0",
@@ -625,7 +625,29 @@
                             "padding": 10,
                             "children": [
                               {
+                                "type": "image",
+                                "visible": {"==": [{"var": "loop.item.content_type"}, 102]},
+                                "url": "{{ loop.item.image_url }}",
+                                "width": 200,
+                                "height": 150,
+                                "fit": "contain",
+                                "borderRadius": 8
+                              },
+                              {
+                                "type": "video",
+                                "visible": {"==": [{"var": "loop.item.content_type"}, 104]},
+                                "url": "{{ loop.item.video_url }}",
+                                "width": 220,
+                                "height": 165,
+                                "aspectRatio": 1.3333333333,
+                                "borderRadius": 8
+                              },
+                              {
                                 "type": "text",
+                                "visible": {"and": [
+                                  {"!=": [{"var": "loop.item.content_type"}, 102]},
+                                  {"!=": [{"var": "loop.item.content_type"}, 104]}
+                                ]},
                                 "value": "{{ loop.item.text }}",
                                 "style": {"fontSize": 15, "color": "#1A1A1A"}
                               }
@@ -645,7 +667,29 @@
                             "padding": 10,
                             "children": [
                               {
+                                "type": "image",
+                                "visible": {"==": [{"var": "loop.item.content_type"}, 102]},
+                                "url": "{{ loop.item.image_url }}",
+                                "width": 200,
+                                "height": 150,
+                                "fit": "contain",
+                                "borderRadius": 8
+                              },
+                              {
+                                "type": "video",
+                                "visible": {"==": [{"var": "loop.item.content_type"}, 104]},
+                                "url": "{{ loop.item.video_url }}",
+                                "width": 220,
+                                "height": 165,
+                                "aspectRatio": 1.3333333333,
+                                "borderRadius": 8
+                              },
+                              {
                                 "type": "text",
+                                "visible": {"and": [
+                                  {"!=": [{"var": "loop.item.content_type"}, 102]},
+                                  {"!=": [{"var": "loop.item.content_type"}, 104]}
+                                ]},
                                 "value": "{{ loop.item.text }}",
                                 "style": {"fontSize": 15, "color": "#1A1A1A"}
                               }
@@ -658,7 +702,7 @@
                     {
                       "type": "avatar",
                       "visible": "{{ loop.item.is_me }}",
-                      "url": "{{ global.myAvatar }}",
+                      "url": "{{ loop.item.sender_face_url }}",
                       "text": "{{ global.myName }}",
                       "size": 40,
                       "color": "#5C6BC0",

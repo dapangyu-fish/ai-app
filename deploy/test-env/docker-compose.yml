@@ -161,6 +161,11 @@ services:
       # ── Mirror 配置 ── 空字符串 = 不开 mirror；非空 = 周期性同步上游 manifest
       REGISTRY_UPSTREAM: "${REGISTRY_UPSTREAM}"
       REGISTRY_MIRROR_SYNC_INTERVAL_SEC: "${REGISTRY_MIRROR_SYNC_INTERVAL_SEC}"
+      # ── AI summary 富化 ── enrich worker 调 backend 的 /api/ai/summarize 拿 summary
+      # 走 docker 内部网络 service 名（backend 容器），不暴露公网
+      BACKEND_INTERNAL_URL: "http://backend:5566"
+      ENRICH_POLL_INTERVAL: "30"
+      ENRICH_BATCH: "5"
       SUPABASE_URL: "http://${HOST_IP}:${KONG_HTTP_PORT}"
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
       SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
@@ -201,11 +206,47 @@ services:
       retries: 10
       start_period: 10s
 
+  user-center:
+    # Supabase 用户管理后台 —— 改 role / ban / 重置密码邮件。生产用 gunicorn + supervisor，
+    # 测试环境跟 config-center 同样跑 python app.py 即可（admin 工具，低流量）
+    build:
+      context: ../../
+      dockerfile: deploy/test-env/Dockerfile.backend
+    container_name: testenv-user-center
+    restart: unless-stopped
+    working_dir: /app/user_center
+    command: ["python", "app.py"]
+    environment:
+      # app.py 强制要求 ADMIN_PASSWORD + SESSION_SECRET，缺就 exit
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "${USER_CENTER_ADMIN_PASSWORD}"
+      SESSION_SECRET: "${USER_CENTER_SESSION_SECRET}"
+      LISTEN_HOST: "0.0.0.0"
+      LISTEN_PORT: "8089"
+      DB_PATH: "/data/audit.db"
+      # 测试环境裸 HTTP；secure cookie 会被浏览器丢弃 → 登录看似无错但跳回登录页
+      COOKIE_SECURE: "false"
+      # 通过 Kong 调 Supabase Admin API（GoTrue 在 Kong 后面）
+      SUPABASE_URL: "http://${HOST_IP}:${KONG_HTTP_PORT}"
+      SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
+    volumes:
+      - user_center_data:/data
+    ports:
+      - "${USER_CENTER_PORT}:8089"
+    healthcheck:
+      # / 未登录时 302 → /login，curl -f 不接 3xx，用 -L 跟跳
+      test: ["CMD", "curl", "-fsSL", "http://localhost:8089/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   jsonapp_pg_data:
   backend_redis_data:
   app_minio_data:
   config_center_data:
+  user_center_data:
 
 networks:
   default:

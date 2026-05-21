@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import '../i18n/framework_strings.dart';
-import 'im_service.dart';
+import 'im_service_io.dart';
 import 'chat_page.dart';
 import 'friend_page.dart';
 import 'message_preview.dart';
@@ -75,7 +75,8 @@ class _IMConversationPageState extends State<IMConversationPage> {
     final s = T.current;
 
     if (diff.inMinutes < 1) return s.imTimeJustNow;
-    if (diff.inHours < 1) return T.fmt(s.imTimeMinutesAgo, {'n': diff.inMinutes});
+    if (diff.inHours < 1)
+      return T.fmt(s.imTimeMinutesAgo, {'n': diff.inMinutes});
     if (diff.inDays < 1) {
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
@@ -102,9 +103,9 @@ class _IMConversationPageState extends State<IMConversationPage> {
             icon: const Icon(Icons.people_outline),
             tooltip: s.imContacts,
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const IMFriendPage()),
-              ).then((_) => _loadConversations());
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const IMFriendPage()))
+                  .then((_) => _loadConversations());
             },
           ),
         ],
@@ -143,9 +144,15 @@ class _IMConversationPageState extends State<IMConversationPage> {
           children: [
             Icon(Icons.chat_bubble_outline, size: 64, color: cs.outline),
             const SizedBox(height: 16),
-            Text(T.of(context).imEmptyMessages, style: TextStyle(color: cs.outline, fontSize: 16)),
+            Text(
+              T.of(context).imEmptyMessages,
+              style: TextStyle(color: cs.outline, fontSize: 16),
+            ),
             const SizedBox(height: 8),
-            Text(T.of(context).imEmptyMessagesHint, style: TextStyle(color: cs.outline, fontSize: 13)),
+            Text(
+              T.of(context).imEmptyMessagesHint,
+              style: TextStyle(color: cs.outline, fontSize: 13),
+            ),
           ],
         ),
       );
@@ -155,7 +162,11 @@ class _IMConversationPageState extends State<IMConversationPage> {
       onRefresh: _loadConversations,
       child: ListView.separated(
         itemCount: _conversations.length,
-        separatorBuilder: (_, __) => Divider(height: 1, indent: 72, color: cs.outlineVariant.withAlpha(80)),
+        separatorBuilder: (_, __) => Divider(
+          height: 1,
+          indent: 72,
+          color: cs.outlineVariant.withAlpha(80),
+        ),
         itemBuilder: (context, index) {
           final conv = _conversations[index];
           return _buildConversationTile(conv, cs);
@@ -183,8 +194,14 @@ class _IMConversationPageState extends State<IMConversationPage> {
             title: Text(s.imConfirmDeleteTitle),
             content: Text(T.fmt(s.imDeleteConversationContent, {'name': name})),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel)),
-              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(s.delete)),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(s.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(s.delete),
+              ),
             ],
           ),
         );
@@ -192,7 +209,9 @@ class _IMConversationPageState extends State<IMConversationPage> {
       onDismissed: (_) async {
         try {
           await OpenIM.iMManager.conversationManager
-              .deleteConversationAndDeleteAllMsg(conversationID: conv.conversationID);
+              .deleteConversationAndDeleteAllMsg(
+                conversationID: conv.conversationID,
+              );
           _loadConversations();
         } catch (e) {
           debugPrint('[IM] 删除会话失败: $e');
@@ -229,10 +248,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            Text(
-              time,
-              style: TextStyle(fontSize: 12, color: cs.outline),
-            ),
+            Text(time, style: TextStyle(fontSize: 12, color: cs.outline)),
           ],
         ),
         subtitle: Row(
@@ -260,18 +276,20 @@ class _IMConversationPageState extends State<IMConversationPage> {
           ],
         ),
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => IMChatPage(
-                conversationID: conv.conversationID,
-                conversationName: name,
-                faceURL: faceUrl,
-                conversationType: conv.conversationType ?? 1,
-                userID: conv.userID,
-                groupID: conv.groupID,
-              ),
-            ),
-          ).then((_) => _loadConversations());
+          Navigator.of(context)
+              .push(
+                MaterialPageRoute(
+                  builder: (_) => IMChatPage(
+                    conversationID: conv.conversationID,
+                    conversationName: name,
+                    faceURL: faceUrl,
+                    conversationType: conv.conversationType ?? 1,
+                    userID: conv.userID,
+                    groupID: conv.groupID,
+                  ),
+                ),
+              )
+              .then((_) => _loadConversations());
         },
         onLongPress: () => _showConversationActions(conv),
       ),
@@ -288,7 +306,9 @@ class _IMConversationPageState extends State<IMConversationPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
+              leading: Icon(
+                isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+              ),
               title: Text(isPinned ? s.imUnpin : s.imPin),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -304,7 +324,10 @@ class _IMConversationPageState extends State<IMConversationPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.mark_chat_read, color: Theme.of(context).colorScheme.primary),
+              leading: Icon(
+                Icons.mark_chat_read,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               title: Text(s.imMarkRead),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -315,13 +338,18 @@ class _IMConversationPageState extends State<IMConversationPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+              leading: Icon(
+                Icons.delete,
+                color: Theme.of(context).colorScheme.error,
+              ),
               title: Text(s.imDeleteConversation),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
                   await OpenIM.iMManager.conversationManager
-                      .deleteConversationAndDeleteAllMsg(conversationID: conv.conversationID);
+                      .deleteConversationAndDeleteAllMsg(
+                        conversationID: conv.conversationID,
+                      );
                   _loadConversations();
                 } catch (e) {
                   debugPrint('[IM] 删除会话失败: $e');
@@ -333,5 +361,4 @@ class _IMConversationPageState extends State<IMConversationPage> {
       ),
     );
   }
-
 }

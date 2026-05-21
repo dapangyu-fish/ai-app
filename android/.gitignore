@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Firebase 应用级配置 —— 开源仓库别 commit。每个 contributor 自建 Firebase
+# 项目后把自己的 google-services.json 放到 android/app/
+app/google-services.json

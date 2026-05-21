@@ -176,6 +176,164 @@ supervisorctl restart ai-app
 - 标准输出日志: `/var/log/ai-app/ai-app.log`
 - 错误日志: `/var/log/ai-app/ai-app-error.log`
 
+## nginx 反向代理与 Web CORS/SSE
+
+生产环境的浏览器 Web 端会跨域访问 API、Registry、OSS，并通过浏览器原生 `EventSource` 读取 AI 对话 SSE。nginx 配置需要满足两点：
+
+1. CORS 统一由 nginx 处理，后端业务代码不要再给同一个响应追加 `Access-Control-Allow-Origin`，否则浏览器会因为重复 ACAO 头判定 CORS 失败。
+2. SSE 路径必须关闭 nginx buffering，并保持长连接超时足够长，否则 Web EventSource 会表现为连接超时或断流。
+
+### 主后端 API
+
+脱敏模板：
+
+```nginx
+server {
+    listen 80;
+    server_name <api.example.com>;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name <api.example.com>;
+    include snippets/<ssl-snippet>.conf;
+    client_max_body_size 20M;
+
+    location /models/ {
+        alias /path/to/app/static/models/;
+        autoindex off;
+    }
+
+    location / {
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin $http_origin always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
+            add_header Access-Control-Max-Age 86400 always;
+            add_header Vary Origin always;
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+            return 204;
+        }
+
+        add_header Access-Control-Allow-Origin $http_origin always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, X-OpenIM-Webhook-Secret" always;
+        add_header Vary Origin always;
+
+        proxy_pass http://127.0.0.1:<backend-port>;
+        include snippets/proxy-common.conf;
+
+        # AI 对话 SSE/EventSource 必须关闭 buffering。
+        proxy_buffering off;
+    }
+}
+```
+
+`proxy-common.conf` 至少应包含：
+
+```nginx
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_read_timeout 3600s;
+proxy_send_timeout 3600s;
+```
+
+### AI 对话 Web SSE 注意事项
+
+Web 端流程：
+
+```text
+POST /api/ai/chat/start
+POST /api/ai/chat/<session_id>/stream_token
+GET  /api/ai/chat/<session_id>/stream?last_id=0&stream_token=<short-lived-token>
+```
+
+`EventSource` 不能设置 `Authorization` header，所以 Web 端先用正常登录态换短期 `stream_token`，再把 token 放进 stream query。Android/iOS 仍可继续用 `Authorization: Bearer ...` 读取 SSE。
+
+排障要点：
+
+- `stream_token` 404：线上 Flask 路由未部署或服务未重启；确认 `app.url_map` 里有 `/api/ai/chat/<session_id>/stream_token`。
+- `stream_token` 200 但 EventSource CORS error：检查 `/stream` 成功响应是否出现重复 `Access-Control-Allow-Origin`。nginx 加一份即可，Flask SSE Response 不要再加。
+- EventSource 超时/断流：确认 `proxy_buffering off`，并确认 `X-Accel-Buffering: no` 由后端 SSE Response 返回。
+
+验证命令：
+
+```bash
+# 预检请求应返回 204，并带 Access-Control-Allow-*。
+curl -i -X OPTIONS "https://<api.example.com>/api/ai/chat/<sid>/stream_token" \
+  -H "Origin: https://<web.example.com>" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: authorization"
+
+# 无效 token/session 可以返回 401/404，但仍必须带单份 Access-Control-Allow-Origin。
+curl -i "https://<api.example.com>/api/ai/chat/<sid>/stream?last_id=0&stream_token=bad" \
+  -H "Origin: https://<web.example.com>"
+```
+
+### Registry API
+
+Registry 也被 Web 跨域访问，使用同样的 nginx CORS 处理方式：
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name <registry.example.com>;
+    include snippets/<ssl-snippet>.conf;
+
+    location / {
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin $http_origin always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
+            add_header Access-Control-Max-Age 86400 always;
+            add_header Vary Origin always;
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+            return 204;
+        }
+
+        add_header Access-Control-Allow-Origin $http_origin always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With" always;
+        add_header Vary Origin always;
+
+        proxy_pass http://127.0.0.1:<registry-port>;
+        include snippets/proxy-common.conf;
+    }
+}
+```
+
+### OSS / MinIO
+
+OSS endpoint 主要用于上传、下载头像和 JSON App 资源。nginx 侧重点是大文件、原始 header 和禁用 request buffering：
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name <oss-endpoint.example.com>;
+    include snippets/<ssl-snippet>.conf;
+    client_max_body_size 1G;
+    ignore_invalid_headers off;
+    proxy_buffering off;
+    proxy_request_buffering off;
+
+    location / {
+        proxy_pass http://127.0.0.1:<minio-api-port>;
+        include snippets/proxy-common.conf;
+    }
+}
+```
+
+MinIO bucket CORS 也要单独配置，nginx 只负责反代。头像或 OSS 图片在 Web 端加载失败时，同时检查：
+
+- 浏览器 Network 响应是否带正确的 `Access-Control-Allow-Origin`
+- bucket/object 权限或 presigned URL 是否有效
+- nginx 是否代理到正确的 MinIO API 端口，而不是 Console 端口
+
 ## 发布 JSON-APP 到市场
 
 ### 通过 API 发布（需要用户认证）

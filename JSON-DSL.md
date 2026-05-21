@@ -429,11 +429,25 @@
 | `@haptic` | `{ "style": "light" }` | 触觉反馈：`light` / `medium` / `heavy` / `selection` / `vibrate`（默认 `light`） |
 | `@launch_url` | `{ "url": "https://..." 或 "tel:..." 或 "mailto:..." 或 "sms:...", "mode": "external" }` | 打开外链；`mode`：`external`（默认外部浏览器）/ `inAppBrowserView`（iOS Safari / Android Custom Tabs）/ `inAppWebView`（旧式嵌入）。返回 bool |
 | `@share` | `{ "text": "...", "subject": "...", "files": ["/path/to/file.png"] }` | 调起系统分享面板。`text` 必填或 `files` 非空 |
-| `@request_permission` | `{ "type": "camera" }` | 请求权限。`type`：`camera` / `microphone` / `photos` / `location` / `locationWhenInUse` / `locationAlways` / `contacts` / `calendar` / `notification` / `storage` / `bluetooth` / `speech`。返回 status: `granted` / `denied` / `restricted` / `permanentlyDenied` / `limited` |
+| `@request_permission` | `{ "type": "camera" }` | 请求权限。`type`：`camera` / `microphone` / `photos` / `location` / `locationWhenInUse` / `locationAlways` / `contacts` / `calendar` / `notification` / `storage` / `bluetooth` / `speech`。返回 status: `granted` / `denied` / `restricted` / `permanentlyDenied` / `limited`。<br>⚠️ **选图/选视频不需要申请 `photos`**：`image_picker` 控件 / `@pick_image` 走系统 Photo Picker（Android 13+）/ PHPicker（iOS），系统级代选，零权限。`photos` 仅用于"app 内自绘相册网格读取全部媒体"这种场景，Android 上当前已移除该权限声明（请求会返回 `denied`），iOS 仍有效。 |
 | `@permission_status` | `{ "type": "..." }` | 同 `@request_permission`，但只查不请求 |
 | `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
 | `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
 | `@flame_game_reset` | `{}` | 重置当前屏幕挂着的所有 flame_game。给 JSON-APP 层（结算 dialog 的"再来一局"按钮）从外面重置游戏用，避免依赖 canvas 的 tap-to-reset |
+
+### 4.9.1 媒体 / 相机（底层 API，**建议走 lib**）
+
+> ⚠️ 这几个是底层媒体 API，**JSON-APP 不要直接调**。请通过组件库间接使用：
+> - 选图 / 拍照 → `@common-ui.pickImage` / `@common-ui.takePhoto`（参数 `bind`，自动 quality=85）
+> - 上传/更换头像 → `@lib_user.updateAvatar`（参数 `imagePath`，内部做 base64 + 上传）
+>
+> 走系统 Photo Picker（Android 13+）/ PHPicker（iOS）/ 相机，**零相册权限**（拍照用 camera 权限）。本节仅作 lib 的实现底层参考。
+
+| 函数 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `@pick_image` | `{ "bind": "...", "max_width": 1920, "max_height": 1920, "quality": 85 }` | string 路径 \| null | 从相册选 1 张图（系统 Photo Picker），返回本地文件路径 |
+| `@take_photo` | `{ "bind": "...", "max_width": 1920, "max_height": 1920, "quality": 85 }` | string 路径 \| null | 调相机拍 1 张（失败自动 fallback 到相册），返回本地文件路径 |
+| `@file_to_base64` | `{ "path": "...", "bind": "..." }` | string base64 \| null | 把本地文件读成 base64（给上传 / 内嵌 image 用） |
 
 ### 4.10 私信 / 好友（IM）
 

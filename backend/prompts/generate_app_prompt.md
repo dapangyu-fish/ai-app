@@ -177,7 +177,8 @@ g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2
 1. **依赖声明必须是字典 (Map)**：在顶层声明 `dependencies` 时必须是一个 Map，绝对不能写成 List 数组。正确写法：`"dependencies": { "lib_database": "^1.0.0" }`。
 2. **优先使用组件库**：尽量复用通用组件库（如 `lib_database`, `common-ui`）中的功能，避免重复造轮子。
 3. **数据存储推荐**：当 App 需要持久化存储结构化数据时，优先依赖 `lib_database` 并调用 `@lib_database.xxx` 函数，不要直接手写底层的 `@db_xxx` API。
-4. **控制流参数**：`@if` 判断时，条件参数必须写 `"condition"`，千万不要写成 `"cond"`。
+4. **媒体/相机推荐**：选图 / 拍照 / 头像，优先依赖 `common-ui` + `lib_user`，调 `@common-ui.pickImage` / `@common-ui.takePhoto` / `@lib_user.updateAvatar`，**不要直接写底层 `@pick_image` / `@take_photo` / `@file_to_base64`**。
+5. **控制流参数**：`@if` 判断时，条件参数必须写 `"condition"`，千万不要写成 `"cond"`。
 
 ## 布局与样式规则（极其重要！）
 

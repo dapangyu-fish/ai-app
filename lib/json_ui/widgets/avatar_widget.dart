@@ -1,6 +1,7 @@
 // Avatar 控件 — 圆形头像
 // 支持: url (图片), text (无图时显示首字母), size (默认 40), color (背景), textColor
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
@@ -19,11 +20,12 @@ class JsonAvatarWidget extends JsonBaseWidget {
     final size = (json['size'] as num?)?.toDouble() ?? 40;
     final rawColor = json['color']?.toString();
     final bgColor = _parseColor(
-        rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
+      rawColor != null ? interpreter.resolveTemplate(rawColor) : null,
+    );
     final rawTextColor = json['textColor']?.toString();
-    final textColor = _parseColor(rawTextColor != null
-        ? interpreter.resolveTemplate(rawTextColor)
-        : null);
+    final textColor = _parseColor(
+      rawTextColor != null ? interpreter.resolveTemplate(rawTextColor) : null,
+    );
 
     final initials = _initials(text);
     final fallback = _buildText(
@@ -35,6 +37,22 @@ class JsonAvatarWidget extends JsonBaseWidget {
     );
 
     if (url != null && url.isNotEmpty) {
+      if (kIsWeb) {
+        return ClipOval(
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+              errorBuilder: (_, __, ___) => fallback,
+              loadingBuilder: (_, child, progress) =>
+                  progress == null ? child : fallback,
+            ),
+          ),
+        );
+      }
       // CachedNetworkImage 带 disk 缓存（200MB/30d LRU），冷启动后命中
       return ClipOval(
         child: SizedBox(

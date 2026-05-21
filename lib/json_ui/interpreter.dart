@@ -6,19 +6,17 @@
 // ───────────────────────────────────────────────
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:jsonlogic/jsonlogic.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import '../platform/biometric.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
+import 'app_fs.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'widget_builder.dart';
@@ -106,7 +104,7 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ IM 反应式订阅 ============
   // @im_subscribe_inbox 第一次被调用时挂上 IMService.newMessageStream 监听，
   // 整个 interpreter 生命周期复用同一个订阅，避免重入创建多个 listener。
-  StreamSubscription<Message>? _imInboxSub;
+  StreamSubscription<Map<String, dynamic>>? _imInboxSub;
 
   // ============ 嵌套 APP 状态栈 ============
   //
@@ -155,7 +153,7 @@ class JsonInterpreter extends ChangeNotifier {
   /// try/catch，老代码下要么静默 debugPrint，要么只在启动页显示一行红字，
   /// AI 修复按钮根本看不到。
   static void Function(Object error, StackTrace stack, String fileName)?
-      onActionCrash;
+  onActionCrash;
 
   // ============ 初始化 ============
 
@@ -200,7 +198,8 @@ class JsonInterpreter extends ChangeNotifier {
       return str.replaceAll(from, to);
     });
     jl.add('str_split', (applier, data, params) {
-      if (params.length < 2) return [applier(params[0], data)?.toString() ?? ''];
+      if (params.length < 2)
+        return [applier(params[0], data)?.toString() ?? ''];
       final str = applier(params[0], data)?.toString() ?? '';
       final sep = applier(params[1], data)?.toString() ?? '';
       return str.split(sep);
@@ -208,7 +207,9 @@ class JsonInterpreter extends ChangeNotifier {
     jl.add('str_join', (applier, data, params) {
       if (params.isEmpty) return '';
       final list = applier(params[0], data);
-      final sep = params.length > 1 ? applier(params[1], data)?.toString() ?? '' : '';
+      final sep = params.length > 1
+          ? applier(params[1], data)?.toString() ?? ''
+          : '';
       if (list is List) return list.map((e) => e?.toString() ?? '').join(sep);
       return list?.toString() ?? '';
     });
@@ -237,10 +238,9 @@ class JsonInterpreter extends ChangeNotifier {
       if (source is! List) return [];
       final start = (params.length > 1 ? _toInt(applier(params[1], data)) : 0)
           .clamp(0, source.length);
-      final end = (params.length > 2
-              ? _toInt(applier(params[2], data))
-              : source.length)
-          .clamp(start, source.length);
+      final end =
+          (params.length > 2 ? _toInt(applier(params[2], data)) : source.length)
+              .clamp(start, source.length);
       return source.sublist(start, end);
     });
     jl.add('sort', (applier, data, params) {
@@ -295,8 +295,7 @@ class JsonInterpreter extends ChangeNotifier {
   /// global.computed.* 会被即时求值，作为 global 名空间下的"派生字段"暴露
   Map<String, dynamic> _buildDataContext() {
     Map<String, dynamic> globalView = _variables;
-    final computed =
-        (_config['global'] as Map<String, dynamic>?)?['computed'];
+    final computed = (_config['global'] as Map<String, dynamic>?)?['computed'];
     if (computed is Map && computed.isNotEmpty) {
       // 只有真存在 computed 时才浅拷贝并注入，避免每次求值都付拷贝成本
       globalView = Map<String, dynamic>.from(_variables);
@@ -430,11 +429,13 @@ class JsonInterpreter extends ChangeNotifier {
     _config = config;
 
     // 提取 appid，用于 Drift 数据库隔离
-    _appId = config['appid']?.toString() ?? config['meta']?['name']?.toString() ?? 'default';
+    _appId =
+        config['appid']?.toString() ??
+        config['meta']?['name']?.toString() ??
+        'default';
 
     final global = config['global'] as Map<String, dynamic>? ?? {};
-    _variables =
-        _deepCopy(global['variables'] as Map<String, dynamic>? ?? {});
+    _variables = _deepCopy(global['variables'] as Map<String, dynamic>? ?? {});
     _functions = global['functions'] as Map<String, dynamic>? ?? {};
 
     _loopContextStack.clear();
@@ -461,7 +462,8 @@ class JsonInterpreter extends ChangeNotifier {
     // 只在 JSON-APP 没显式预设 locale 时才注入，保留 JSON 自己的优先级。
     if (!_variables.containsKey('locale')) {
       _variables['locale'] = _normalizeLocaleTag(
-          LocaleController.currentLocaleTag());
+        LocaleController.currentLocaleTag(),
+      );
     }
 
     // 注册生命周期 hook（resume/pause/...）
@@ -483,23 +485,24 @@ class JsonInterpreter extends ChangeNotifier {
     final savedIm = _imInboxSub;
     _imInboxSub = null;
 
-    _stateStack.add(_InterpreterStateSnapshot(
-      config: _config,
-      variables: _variables,
-      functions: _functions,
-      currentScreenId: _currentScreenId,
-      appId: _appId,
-      navigationHistory: List<String>.of(_navigationHistory),
-      depModules: _depLoader.snapshot(),
-      textControllers:
-          Map<String, TextEditingController>.of(_textControllers),
-      loopContextStack:
-          List<Map<String, dynamic>>.of(_loopContextStack),
-      paramsStack: List<Map<String, dynamic>>.of(_paramsStack),
-      eventContextStack:
-          List<Map<String, dynamic>>.of(_eventContextStack),
-      imInboxSub: savedIm,
-    ));
+    _stateStack.add(
+      _InterpreterStateSnapshot(
+        config: _config,
+        variables: _variables,
+        functions: _functions,
+        currentScreenId: _currentScreenId,
+        appId: _appId,
+        navigationHistory: List<String>.of(_navigationHistory),
+        depModules: _depLoader.snapshot(),
+        textControllers: Map<String, TextEditingController>.of(
+          _textControllers,
+        ),
+        loopContextStack: List<Map<String, dynamic>>.of(_loopContextStack),
+        paramsStack: List<Map<String, dynamic>>.of(_paramsStack),
+        eventContextStack: List<Map<String, dynamic>>.of(_eventContextStack),
+        imInboxSub: savedIm,
+      ),
+    );
 
     // 把"实例 final 的容器"清空（保留同一份 Map/List 实例），由后续 loadConfig
     // 填充。注意 _textControllers 这里**不能 dispose**——所有控件还活在父 app
@@ -650,13 +653,11 @@ class JsonInterpreter extends ChangeNotifier {
   /// 在 global.computed 字典里查表达式（按 dot 路径匹配）
   /// 例: global.computed = { fullName: <expr> }, subPath="fullName" → 命中
   dynamic _findComputedExpr(String subPath) {
-    final computed =
-        (_config['global'] as Map<String, dynamic>?)?['computed'];
+    final computed = (_config['global'] as Map<String, dynamic>?)?['computed'];
     if (computed is! Map) return null;
     if (computed[subPath] != null) return computed[subPath];
     // 也支持嵌套 dot 路径（极少需要，但成本几乎为零）
-    return _getNestedValue(
-        Map<String, dynamic>.from(computed), subPath);
+    return _getNestedValue(Map<String, dynamic>.from(computed), subPath);
   }
 
   /// 读取依赖模块的变量（只读）: "depName.varPath"
@@ -723,7 +724,10 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   void _setNestedValue(
-      Map<String, dynamic> map, String dotPath, dynamic value) {
+    Map<String, dynamic> map,
+    String dotPath,
+    dynamic value,
+  ) {
     final keys = dotPath.split('.');
     if (keys.length == 1) {
       map[keys[0]] = value;
@@ -787,7 +791,9 @@ class JsonInterpreter extends ChangeNotifier {
   /// 把 1.0 显示成 "1" 同时也让 UI 友好（"Score: 100" 而不是 "Score: 100.0"）。
   static String _stringifyForTemplate(dynamic value) {
     if (value == null) return '';
-    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+    if (value is double &&
+        value.isFinite &&
+        value == value.truncateToDouble()) {
       return value.toInt().toString();
     }
     return value.toString();
@@ -799,8 +805,9 @@ class JsonInterpreter extends ChangeNotifier {
   dynamic _resolveTemplateExpression(String expr) {
     final trimmed = expr.trim();
     // 形如 t('home.title') 或 t("home.title")
-    final tMatch =
-        RegExp(r'''^t\(\s*['"](.+?)['"]\s*\)$''').firstMatch(trimmed);
+    final tMatch = RegExp(
+      r'''^t\(\s*['"](.+?)['"]\s*\)$''',
+    ).firstMatch(trimmed);
     if (tMatch != null) {
       return _i18nLookup(tMatch.group(1)!);
     }
@@ -820,17 +827,16 @@ class JsonInterpreter extends ChangeNotifier {
   /// "You have {{ global.count }} messages" / 中文 "你有 {{ global.count }} 条消息"，
   /// 翻译者控制变量在句子里的位置，不能强制把字符串切碎让调用方拼。
   String _i18nLookup(String keyPath) {
-    final locale = (_variables['locale'] ??
-            (_config['global'] as Map<String, dynamic>?)?['locale'] ??
-            'zh')
-        .toString();
-    final dict =
-        (_config['global'] as Map<String, dynamic>?)?['i18n'] as Map?;
+    final locale =
+        (_variables['locale'] ??
+                (_config['global'] as Map<String, dynamic>?)?['locale'] ??
+                'zh')
+            .toString();
+    final dict = (_config['global'] as Map<String, dynamic>?)?['i18n'] as Map?;
     if (dict == null) return keyPath;
     final localeDict = dict[locale];
     if (localeDict is! Map) return keyPath;
-    final raw = _getNestedValue(
-        Map<String, dynamic>.from(localeDict), keyPath);
+    final raw = _getNestedValue(Map<String, dynamic>.from(localeDict), keyPath);
     final value = raw?.toString() ?? keyPath;
     // 翻译值里没模板：原样返回（绝大多数情况）
     if (!value.contains('{{') || !value.contains('}}')) return value;
@@ -870,7 +876,9 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ TextField 控制器 ============
 
   TextEditingController getTextController(
-      String bindPath, String currentValue) {
+    String bindPath,
+    String currentValue,
+  ) {
     if (_textControllers.containsKey(bindPath)) {
       final controller = _textControllers[bindPath]!;
       if (controller.text != currentValue) {
@@ -893,7 +901,9 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Action 执行 ============
 
   Future<void> executeAction(
-      Map<String, dynamic> action, BuildContext context) async {
+    Map<String, dynamic> action,
+    BuildContext context,
+  ) async {
     try {
       final type = action['type'] ?? 'call';
 
@@ -953,7 +963,9 @@ class JsonInterpreter extends ChangeNotifier {
   /// 与 executeAction 相同，但返回函数调用的返回值
   /// 主要供需要决策结果的回调使用（如 dismissible.confirmAction）
   Future<dynamic> executeActionWithResult(
-      dynamic action, BuildContext context) async {
+    dynamic action,
+    BuildContext context,
+  ) async {
     if (action is! Map<String, dynamic>) return null;
     try {
       final type = action['type'] ?? 'call';
@@ -989,14 +1001,16 @@ class JsonInterpreter extends ChangeNotifier {
       if (depScreen != null) {
         // 将依赖的 screen 注入到当前 screens 列表中（如果不存在）
         final localScreens = screens;
-        final exists = localScreens.any((s) =>
-            s is Map<String, dynamic> && s['id'] == screenId);
+        final exists = localScreens.any(
+          (s) => s is Map<String, dynamic> && s['id'] == screenId,
+        );
         if (!exists) {
           // 用 depName:screenId 作为唯一 ID 避免冲突
           final injectedScreen = Map<String, dynamic>.from(depScreen);
           injectedScreen['id'] = screenId;
-          ((_config['ui'] as Map<String, dynamic>)['screens'] as List)
-              .add(injectedScreen);
+          ((_config['ui'] as Map<String, dynamic>)['screens'] as List).add(
+            injectedScreen,
+          );
         }
       }
     }
@@ -1057,7 +1071,9 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<dynamic> _executeCall(
-      String callTarget, Map<String, dynamic> args) async {
+    String callTarget,
+    Map<String, dynamic> args,
+  ) async {
     final resolvedArgs = _resolveArgs(args);
 
     // 自定义全局函数: @global.funcName
@@ -1127,14 +1143,16 @@ class JsonInterpreter extends ChangeNotifier {
       case '@parallel':
         return await _builtinParallel(args);
       case '@delay':
-        final ms =
-            _toInt(resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0);
+        final ms = _toInt(
+          resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0,
+        );
         await Future.delayed(Duration(milliseconds: ms));
         return null;
       case '@throw':
         // 主动抛错——用于测试 @try_catch / 业务侧主动失败
         throw Exception(
-            resolvedArgs['message']?.toString() ?? 'thrown by @throw');
+          resolvedArgs['message']?.toString() ?? 'thrown by @throw',
+        );
 
       // ── 系统 / 平台原生 ──
       case '@clipboard_copy':
@@ -1231,7 +1249,8 @@ class JsonInterpreter extends ChangeNotifier {
         return null;
       case '@set_locale':
         // value: locale 字符串（如 'zh' / 'en'）；写入 global.locale，触发 UI 重建
-        final localeStr = resolvedArgs['value']?.toString() ??
+        final localeStr =
+            resolvedArgs['value']?.toString() ??
             resolvedArgs['locale']?.toString() ??
             'zh';
         setVariable('global.locale', localeStr);
@@ -1259,23 +1278,11 @@ class JsonInterpreter extends ChangeNotifier {
         };
       case '@biometric_auth':
         // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
-        // 返回 bool：通过 / 失败
-        final reason = resolvedArgs['reason']?.toString() ?? T.current.builtinBiometricDefaultReason;
-        try {
-          final auth = LocalAuthentication();
-          final canCheck = await auth.canCheckBiometrics ||
-              await auth.isDeviceSupported();
-          if (!canCheck) return false;
-          return await auth.authenticate(
-            localizedReason: reason,
-            options: const AuthenticationOptions(
-              biometricOnly: false, // 允许 fallback 到 PIN / 密码
-              stickyAuth: true,
-            ),
-          );
-        } catch (_) {
-          return false;
-        }
+        // 返回 bool：通过 / 失败（web 无生物识别，恒 false）
+        final reason =
+            resolvedArgs['reason']?.toString() ??
+            T.current.builtinBiometricDefaultReason;
+        return await biometricAuthenticate(reason);
 
       // ── HTTP ──
       case '@http_get':
@@ -1415,7 +1422,9 @@ class JsonInterpreter extends ChangeNotifier {
         );
 
       case '@show_input_dialog':
-        final title = resolvedArgs['title']?.toString() ?? T.current.builtinInputDialogDefaultTitle;
+        final title =
+            resolvedArgs['title']?.toString() ??
+            T.current.builtinInputDialogDefaultTitle;
         final hint = resolvedArgs['hint']?.toString() ?? '';
         final defaultValue = resolvedArgs['defaultValue']?.toString() ?? '';
         final bindPath = resolvedArgs['bind'] as String?;
@@ -1446,7 +1455,8 @@ class JsonInterpreter extends ChangeNotifier {
         final snackMsg = resolvedArgs['message']?.toString() ?? '';
         final actionLabel = resolvedArgs['actionLabel']?.toString();
         final actionDef = resolvedArgs['action'];
-        final durationMs = (resolvedArgs['durationMs'] as num?)?.toInt() ?? 3000;
+        final durationMs =
+            (resolvedArgs['durationMs'] as num?)?.toInt() ?? 3000;
         final bgColorStr = resolvedArgs['backgroundColor']?.toString();
         _showSnackBar(
           snackMsg,
@@ -1489,7 +1499,9 @@ class JsonInterpreter extends ChangeNotifier {
             await prefs.setDouble(key, value);
           } else if (value is List) {
             await prefs.setStringList(
-                key, value.map((e) => e.toString()).toList());
+              key,
+              value.map((e) => e.toString()).toList(),
+            );
           } else {
             await prefs.setString(key, value?.toString() ?? '');
           }
@@ -1522,12 +1534,8 @@ class JsonInterpreter extends ChangeNotifier {
           final relPath = resolvedArgs['path']?.toString();
           final data = resolvedArgs['data'];
           if (relPath == null || data == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          await file.parent.create(recursive: true);
           final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_write_json error: $e');
           return false;
@@ -1537,10 +1545,8 @@ class JsonInterpreter extends ChangeNotifier {
         try {
           final relPath = resolvedArgs['path']?.toString();
           if (relPath == null) return null;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (!await file.exists()) return resolvedArgs['default'];
-          final content = await file.readAsString();
+          final content = await AppFs.readString(relPath);
+          if (content == null) return resolvedArgs['default'];
           return json.decode(content);
         } catch (e) {
           debugPrint('[JSON DSL] @file_read_json error: $e');
@@ -1551,9 +1557,7 @@ class JsonInterpreter extends ChangeNotifier {
         try {
           final relPath = resolvedArgs['path']?.toString();
           if (relPath == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          return await file.exists();
+          return await AppFs.exists(relPath);
         } catch (e) {
           return false;
         }
@@ -1562,13 +1566,7 @@ class JsonInterpreter extends ChangeNotifier {
         try {
           final relPath = resolvedArgs['path']?.toString();
           if (relPath == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (await file.exists()) {
-            await file.delete();
-            return true;
-          }
-          return false;
+          return await AppFs.deleteFile(relPath);
         } catch (e) {
           debugPrint('[JSON DSL] @file_delete error: $e');
           return false;
@@ -1577,14 +1575,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@file_list':
         try {
           final relDir = resolvedArgs['path']?.toString() ?? '';
-          final dir = await _getAppDocDir();
-          final targetDir = Directory('${dir.path}/$relDir');
-          if (!await targetDir.exists()) return <String>[];
-          final entities = await targetDir.list().toList();
-          return entities
-              .whereType<File>()
-              .map((f) => f.path.split('/').last)
-              .toList();
+          return await AppFs.listFiles(relDir);
         } catch (e) {
           debugPrint('[JSON DSL] @file_list error: $e');
           return <String>[];
@@ -1596,19 +1587,15 @@ class JsonInterpreter extends ChangeNotifier {
           final relPath = resolvedArgs['path']?.toString();
           final item = resolvedArgs['item'];
           if (relPath == null || item == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
           List<dynamic> list = [];
-          if (await file.exists()) {
-            final content = await file.readAsString();
+          final content = await AppFs.readString(relPath);
+          if (content != null) {
             final decoded = json.decode(content);
             if (decoded is List) list = decoded;
           }
           list.add(item);
-          await file.parent.create(recursive: true);
           final jsonStr = const JsonEncoder.withIndent('  ').convert(list);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_append_json error: $e');
           return false;
@@ -1621,10 +1608,8 @@ class JsonInterpreter extends ChangeNotifier {
           final matchField = resolvedArgs['field']?.toString();
           final matchValue = resolvedArgs['value'];
           if (relPath == null || matchField == null) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (!await file.exists()) return false;
-          final content = await file.readAsString();
+          final content = await AppFs.readString(relPath);
+          if (content == null) return false;
           final decoded = json.decode(content);
           if (decoded is! List) return false;
           final newList = decoded.where((item) {
@@ -1634,8 +1619,7 @@ class JsonInterpreter extends ChangeNotifier {
             return true;
           }).toList();
           final jsonStr = const JsonEncoder.withIndent('  ').convert(newList);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_remove_json_item error: $e');
           return false;
@@ -1648,16 +1632,16 @@ class JsonInterpreter extends ChangeNotifier {
           final matchField = resolvedArgs['field']?.toString();
           final matchValue = resolvedArgs['value'];
           final updates = resolvedArgs['updates'];
-          if (relPath == null || matchField == null || updates is! Map) return false;
-          final dir = await _getAppDocDir();
-          final file = File('${dir.path}/$relPath');
-          if (!await file.exists()) return false;
-          final content = await file.readAsString();
+          if (relPath == null || matchField == null || updates is! Map)
+            return false;
+          final content = await AppFs.readString(relPath);
+          if (content == null) return false;
           final decoded = json.decode(content);
           if (decoded is! List) return false;
           bool found = false;
           for (int i = 0; i < decoded.length; i++) {
-            if (decoded[i] is Map && decoded[i][matchField]?.toString() == matchValue?.toString()) {
+            if (decoded[i] is Map &&
+                decoded[i][matchField]?.toString() == matchValue?.toString()) {
               for (final entry in updates.entries) {
                 decoded[i][entry.key] = entry.value;
               }
@@ -1667,8 +1651,7 @@ class JsonInterpreter extends ChangeNotifier {
           }
           if (!found) return false;
           final jsonStr = const JsonEncoder.withIndent('  ').convert(decoded);
-          await file.writeAsString(jsonStr, flush: true);
-          return true;
+          return await AppFs.writeString(relPath, jsonStr);
         } catch (e) {
           debugPrint('[JSON DSL] @file_update_json_item error: $e');
           return false;
@@ -1681,9 +1664,15 @@ class JsonInterpreter extends ChangeNotifier {
           final columns = resolvedArgs['columns'];
           if (table == null || columns is! List) return false;
           final db = DriftDatabaseManager.instance.getDatabase(_appId);
-          final colList = columns.map((c) => Map<String, String>.from(
-            (c as Map).map((k, v) => MapEntry(k.toString(), v.toString()))
-          )).toList();
+          final colList = columns
+              .map(
+                (c) => Map<String, String>.from(
+                  (c as Map).map(
+                    (k, v) => MapEntry(k.toString(), v.toString()),
+                  ),
+                ),
+              )
+              .toList();
           await db.ensureTable(table, colList);
           return true;
         } catch (e) {
@@ -1713,9 +1702,14 @@ class JsonInterpreter extends ChangeNotifier {
               ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
               : null;
           final orderBy = resolvedArgs['orderBy']?.toString();
-          final limit = resolvedArgs['limit'] != null ? _toInt(resolvedArgs['limit']!) : null;
-          final offset = resolvedArgs['offset'] != null ? _toInt(resolvedArgs['offset']!) : null;
-          return await db.queryRows(table,
+          final limit = resolvedArgs['limit'] != null
+              ? _toInt(resolvedArgs['limit']!)
+              : null;
+          final offset = resolvedArgs['offset'] != null
+              ? _toInt(resolvedArgs['offset']!)
+              : null;
+          return await db.queryRows(
+            table,
             where: where,
             whereArgs: whereArgs,
             orderBy: orderBy,
@@ -1737,7 +1731,9 @@ class JsonInterpreter extends ChangeNotifier {
           final whereArgs = resolvedArgs['whereArgs'] is List
               ? (resolvedArgs['whereArgs'] as List).cast<dynamic>()
               : null;
-          return await db.updateRows(table, Map<String, dynamic>.from(data),
+          return await db.updateRows(
+            table,
+            Map<String, dynamic>.from(data),
             where: where,
             whereArgs: whereArgs,
           );
@@ -1821,8 +1817,9 @@ class JsonInterpreter extends ChangeNotifier {
         // 时才用本函数
         final rawV = resolvedArgs['value'];
         final precision = _toInt(resolvedArgs['precision'] ?? 0).clamp(0, 20);
-        final num? n =
-            rawV is num ? rawV : double.tryParse(rawV?.toString() ?? '');
+        final num? n = rawV is num
+            ? rawV
+            : double.tryParse(rawV?.toString() ?? '');
         if (n == null) return rawV?.toString() ?? '';
         return n.toStringAsFixed(precision);
 
@@ -1864,7 +1861,8 @@ class JsonInterpreter extends ChangeNotifier {
             break;
           case 'alphanumeric':
           default:
-            chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            chars =
+                '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
             break;
         }
         for (var i = 0; i < length; i++) {
@@ -1877,7 +1875,9 @@ class JsonInterpreter extends ChangeNotifier {
         final bytes = List<int>.generate(16, (_) => random.nextInt(256));
         bytes[6] = (bytes[6] & 0x0F) | 0x40;
         bytes[8] = (bytes[8] & 0x3F) | 0x80;
-        final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
+        final hex = bytes
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join('');
         return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
 
       case '@random_pick':
@@ -1893,7 +1893,8 @@ class JsonInterpreter extends ChangeNotifier {
 
       case '@date_format':
         final ts = resolvedArgs['timestamp'];
-        final format = resolvedArgs['format']?.toString() ?? 'YYYY-MM-DD HH:mm:ss';
+        final format =
+            resolvedArgs['format']?.toString() ?? 'YYYY-MM-DD HH:mm:ss';
         DateTime dt;
         if (ts is int) {
           dt = DateTime.fromMillisecondsSinceEpoch(ts);
@@ -1918,7 +1919,10 @@ class JsonInterpreter extends ChangeNotifier {
         return str * count;
 
       case '@str_reverse':
-        return (resolvedArgs['value']?.toString() ?? '').split('').reversed.join();
+        return (resolvedArgs['value']?.toString() ?? '')
+            .split('')
+            .reversed
+            .join();
 
       case '@str_pad':
         final str = resolvedArgs['value']?.toString() ?? '';
@@ -1927,7 +1931,8 @@ class JsonInterpreter extends ChangeNotifier {
         final direction = resolvedArgs['direction']?.toString() ?? 'right';
         if (str.length >= targetLength) return str;
         final padCount = targetLength - str.length;
-        final padding = (padStr * ((padCount / padStr.length).ceil())).substring(0, padCount);
+        final padding = (padStr * ((padCount / padStr.length).ceil()))
+            .substring(0, padCount);
         return direction == 'left' ? '$padding$str' : '$str$padding';
 
       case '@str_join':
@@ -2040,7 +2045,8 @@ class JsonInterpreter extends ChangeNotifier {
       case '@list_sort':
         final sortListPath = resolvedArgs['var'] as String?;
         final sortKey = resolvedArgs['key'] as String?;
-        final sortDesc = resolvedArgs['desc'] == true || resolvedArgs['desc'] == 'true';
+        final sortDesc =
+            resolvedArgs['desc'] == true || resolvedArgs['desc'] == 'true';
         if (sortListPath != null) {
           final current = getVariable(sortListPath);
           if (current is List) {
@@ -2113,10 +2119,8 @@ class JsonInterpreter extends ChangeNotifier {
         final filePath = resolvedArgs['path'] as String?;
         if (filePath == null || filePath.isEmpty) return null;
         try {
-          final file = File(filePath);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            final b64 = base64Encode(bytes);
+          final b64 = await AppFs.readAbsoluteAsBase64(filePath);
+          if (b64 != null) {
             final b64Bind = resolvedArgs['bind'] as String?;
             if (b64Bind != null) {
               setVariable(b64Bind, b64);
@@ -2131,7 +2135,9 @@ class JsonInterpreter extends ChangeNotifier {
       // ── 用户信息 ──
       case '@get_user_info':
         final userInfo = AuthService.currentUser != null
-            ? Map<String, dynamic>.from(AuthService.currentUser!)
+            ? _normalizeUserInfo(
+                Map<String, dynamic>.from(AuthService.currentUser!),
+              )
             : null;
         final bindPath = resolvedArgs['bind'] as String?;
         if (bindPath != null && userInfo != null) {
@@ -2238,6 +2244,7 @@ class JsonInterpreter extends ChangeNotifier {
               'user_id': match['im_user_id']?.toString() ?? '',
               'nickname': match['nickname']?.toString() ?? '',
               'face_url': match['face_url']?.toString() ?? '',
+              'avatar_url': match['face_url']?.toString() ?? '',
               'email': match['email']?.toString() ?? '',
             };
             if (bindPath != null) setVariable(bindPath, result);
@@ -2258,11 +2265,7 @@ class JsonInterpreter extends ChangeNotifier {
             // 给每条结果加 is_friend / is_self 标记，方便 JSON-APP 做条件渲染。
             // 友列走 OpenIM SDK 本地缓存（O(1) 内存读，无网络），currentUserId
             // 是登录后就有的字段，整体零额外延迟。
-            final friends = await IMService.instance.getFriendList();
-            final friendIds = friends
-                .map((f) => f.userID)
-                .whereType<String>()
-                .toSet();
+            final friendIds = await IMService.instance.getFriendIds();
             final myId = IMService.instance.currentUserId;
 
             final enriched = users.map((u) {
@@ -2302,8 +2305,8 @@ class JsonInterpreter extends ChangeNotifier {
       case '@im_friend_applications':
         {
           try {
-            final apps = await IMService.instance.getIncomingFriendApplications();
-            final list = apps.map(_friendApplicationToMap).toList();
+            final list = await IMService.instance
+                .getIncomingFriendApplicationsAsMaps();
             await _backfillFaceUrls(
               list,
               idField: 'from_user_id',
@@ -2324,7 +2327,9 @@ class JsonInterpreter extends ChangeNotifier {
           final userId = (resolvedArgs['user_id'] as String?) ?? '';
           if (userId.isEmpty) return false;
           try {
-            return await IMService.instance.acceptFriendApplication(fromUserID: userId);
+            return await IMService.instance.acceptFriendApplication(
+              fromUserID: userId,
+            );
           } catch (e) {
             debugPrint('[JSON DSL] im_accept_friend 失败: $e');
             return false;
@@ -2336,7 +2341,9 @@ class JsonInterpreter extends ChangeNotifier {
           final userId = (resolvedArgs['user_id'] as String?) ?? '';
           if (userId.isEmpty) return false;
           try {
-            return await IMService.instance.rejectFriendApplication(fromUserID: userId);
+            return await IMService.instance.rejectFriendApplication(
+              fromUserID: userId,
+            );
           } catch (e) {
             debugPrint('[JSON DSL] im_reject_friend 失败: $e');
             return false;
@@ -2346,8 +2353,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@im_friend_list':
         {
           try {
-            final friends = await IMService.instance.getFriendList();
-            final list = friends.map(_friendInfoToMap).toList();
+            final list = await IMService.instance.getFriendListAsMaps();
             await _backfillFaceUrls(
               list,
               idField: 'user_id',
@@ -2366,8 +2372,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@im_conversations':
         {
           try {
-            final convos = await IMService.instance.getConversationList();
-            final list = convos.map(_conversationToMap).toList();
+            final list = await IMService.instance.getConversationListAsMaps();
             // 用 show_name 当昵称兜底字段——OpenIM 的 ConversationInfo.showName 已经是
             // 对方在 OpenIM 的昵称，但同样可能过时；Supabase 拿到新昵称时覆盖
             await _backfillFaceUrls(
@@ -2395,15 +2400,19 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final convId = _singleChatConversationId(userId);
             if (convId == null) return const [];
-            final messages = await IMService.instance.getHistoryMessages(
-              conversationID: convId,
-              count: count,
-            );
             // OpenIM SDK 的 getAdvancedHistoryMessageList 返回**升序**（旧→新），
             // JSON-DSL 的 list 控件从上往下渲染 index 0 → N，所以**直接保留升序**
             // 即可让 UI 上呈现"老消息在顶、新消息在底"的微信式聊天体验。
-            // 之前这里多了一步 .reversed 反而把"新消息"顶到列表最上方。
-            final list = messages.map(_messageToMap).toList();
+            final list = await IMService.instance.getHistoryMessagesAsMaps(
+              conversationID: convId,
+              count: count,
+            );
+            await _backfillFaceUrls(
+              list,
+              idField: 'send_id',
+              faceField: 'sender_face_url',
+              nicknameField: 'sender_nickname',
+            );
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, list);
             return list;
@@ -2421,12 +2430,11 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final convId = _singleChatConversationId(userId);
             if (convId == null) return null;
-            final msg = await IMService.instance.sendTextMessage(
+            return await IMService.instance.sendTextMessageAsMap(
               conversationID: convId,
               text: text,
               userID: userId,
             );
-            return msg != null ? _messageToMap(msg) : null;
           } catch (e) {
             debugPrint('[JSON DSL] im_send_text 失败: $e');
             return null;
@@ -2440,7 +2448,9 @@ class JsonInterpreter extends ChangeNotifier {
           try {
             final convId = _singleChatConversationId(userId);
             if (convId == null) return false;
-            await IMService.instance.markConversationRead(conversationID: convId);
+            await IMService.instance.markConversationRead(
+              conversationID: convId,
+            );
             return true;
           } catch (e) {
             debugPrint('[JSON DSL] im_mark_read 失败: $e');
@@ -2452,11 +2462,7 @@ class JsonInterpreter extends ChangeNotifier {
         {
           // 跨所有会话的未读总数，用于 tab badge / 应用图标角标
           try {
-            final convos = await IMService.instance.getConversationList();
-            int total = 0;
-            for (final c in convos) {
-              total += c.unreadCount;
-            }
+            final total = await IMService.instance.getTotalUnread();
             final bindPath = resolvedArgs['bind'] as String?;
             if (bindPath != null) setVariable(bindPath, total);
             return total;
@@ -2476,13 +2482,17 @@ class JsonInterpreter extends ChangeNotifier {
             'current_user_id': IMService.instance.currentUserId,
           });
           // 监听只挂一次：interpreter 整个生命周期共用同一个 sub
-          _imInboxSub ??= IMService.instance.newMessageStream.listen((msg) {
+          // newMessageMapStream 已在 IMService 侧转成 Map，interpreter 不碰 OpenIM 类型
+          _imInboxSub ??= IMService.instance.newMessageMapStream.listen((
+            msgMap,
+          ) {
             try {
               final current = getVariable('global._im');
-              final tick = (current is Map ? (current['tick'] as int? ?? 0) : 0) + 1;
+              final tick =
+                  (current is Map ? (current['tick'] as int? ?? 0) : 0) + 1;
               setVariable('global._im', {
                 'tick': tick,
-                'last_message': _messageToMap(msg),
+                'last_message': msgMap,
                 'current_user_id': IMService.instance.currentUserId,
               });
             } catch (e) {
@@ -2515,7 +2525,8 @@ class JsonInterpreter extends ChangeNotifier {
         }
 
       case '@save_app_config':
-        final configToSave = resolvedArgs['config'] as Map<String, dynamic>? ?? rawConfig;
+        final configToSave =
+            resolvedArgs['config'] as Map<String, dynamic>? ?? rawConfig;
         if (configToSave == null) return false;
         try {
           final appStorageClass = AppStorage.instance;
@@ -2562,7 +2573,9 @@ class JsonInterpreter extends ChangeNotifier {
   Future<dynamic> _builtinWhile(Map<String, dynamic> args) async {
     final condition = args['condition'];
     final body = args['body'] as List<dynamic>? ?? [];
-    final maxIterations = _toInt(_resolveTemplatesInRule(args['max_iterations']) ?? 10000);
+    final maxIterations = _toInt(
+      _resolveTemplatesInRule(args['max_iterations']) ?? 10000,
+    );
 
     int count = 0;
     while (_evaluateBool(condition) && count < maxIterations) {
@@ -2657,7 +2670,8 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ HTTP ============
 
   Future<Map<String, dynamic>> _builtinHttpGet(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final url = args['url']?.toString() ?? '';
     final query = args['query'] as Map<String, dynamic>?;
     final headers = _toStringMap(args['headers']);
@@ -2665,17 +2679,23 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> _builtinHttpPost(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final url = args['url']?.toString() ?? '';
     final body = _evaluateExpression(args['body']);
     final headers = _toStringMap(args['headers']);
     final contentType = args['content_type']?.toString() ?? 'application/json';
-    return await _httpClient.post(url,
-        body: body, headers: headers, contentType: contentType);
+    return await _httpClient.post(
+      url,
+      body: body,
+      headers: headers,
+      contentType: contentType,
+    );
   }
 
   Future<Map<String, dynamic>> _builtinHttpPut(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final url = args['url']?.toString() ?? '';
     final body = _evaluateExpression(args['body']);
     final headers = _toStringMap(args['headers']);
@@ -2683,7 +2703,8 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> _builtinHttpDelete(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final url = args['url']?.toString() ?? '';
     final headers = _toStringMap(args['headers']);
     return await _httpClient.delete(url, headers: headers);
@@ -2709,14 +2730,6 @@ class JsonInterpreter extends ChangeNotifier {
       debugPrint('[JSON DSL] json_encode 失败: $e');
       return '';
     }
-  }
-
-  // ============ 文件持久化辅助 ============
-
-  Directory? _appDocDirCache;
-  Future<Directory> _getAppDocDir() async {
-    _appDocDirCache ??= await getApplicationDocumentsDirectory();
-    return _appDocDirCache!;
   }
 
   // ============ UI 反馈 ============
@@ -2748,8 +2761,7 @@ class JsonInterpreter extends ChangeNotifier {
             color: Colors.transparent,
             child: Container(
               constraints: const BoxConstraints(maxWidth: 320),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.75),
                 borderRadius: BorderRadius.circular(8),
@@ -2789,9 +2801,7 @@ class JsonInterpreter extends ChangeNotifier {
           final t = T.of(dialogCtx);
           return AlertDialog(
             title: Text(title),
-            content: SingleChildScrollView(
-              child: SelectableText(message),
-            ),
+            content: SingleChildScrollView(child: SelectableText(message)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogCtx).pop(false),
@@ -2828,55 +2838,59 @@ class JsonInterpreter extends ChangeNotifier {
         context: ctx,
         barrierDismissible: dismissible,
         builder: (dialogCtx) {
-        final actions = <Widget>[];
-        for (final btn in buttons) {
-          if (btn is! Map) continue;
-          final label = btn['label']?.toString() ?? '';
-          final value = btn['value'];
-          final style = btn['style']?.toString() ?? 'text';
+          final actions = <Widget>[];
+          for (final btn in buttons) {
+            if (btn is! Map) continue;
+            final label = btn['label']?.toString() ?? '';
+            final value = btn['value'];
+            final style = btn['style']?.toString() ?? 'text';
 
-          Widget button;
-          switch (style) {
-            case 'primary':
-              button = FilledButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(value),
-                child: Text(label),
-              );
-              break;
-            case 'danger':
-              button = FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(dialogCtx).colorScheme.error,
-                  foregroundColor: Theme.of(dialogCtx).colorScheme.onError,
-                ),
-                onPressed: () => Navigator.of(dialogCtx).pop(value),
-                child: Text(label),
-              );
-              break;
-            case 'text':
-            default:
-              button = TextButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(value),
-                child: Text(label),
-              );
+            Widget button;
+            switch (style) {
+              case 'primary':
+                button = FilledButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(value),
+                  child: Text(label),
+                );
+                break;
+              case 'danger':
+                button = FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(dialogCtx).colorScheme.error,
+                    foregroundColor: Theme.of(dialogCtx).colorScheme.onError,
+                  ),
+                  onPressed: () => Navigator.of(dialogCtx).pop(value),
+                  child: Text(label),
+                );
+                break;
+              case 'text':
+              default:
+                button = TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(value),
+                  child: Text(label),
+                );
+            }
+            actions.add(button);
           }
-          actions.add(button);
-        }
-        return AlertDialog(
-          title: title.isEmpty ? null : Text(title),
-          content: message.isEmpty
-              ? null
-              : SingleChildScrollView(child: SelectableText(message)),
-          actions: actions,
-        );
-      },
-    );
+          return AlertDialog(
+            title: title.isEmpty ? null : Text(title),
+            content: message.isEmpty
+                ? null
+                : SingleChildScrollView(child: SelectableText(message)),
+            actions: actions,
+          );
+        },
+      );
     } finally {
       _activeModalCount--;
     }
   }
 
-  Future<String?> _showTextInputDialog(String title, String hint, String defaultValue) async {
+  Future<String?> _showTextInputDialog(
+    String title,
+    String hint,
+    String defaultValue,
+  ) async {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
 
@@ -2927,8 +2941,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   /// 命令式日期选择器
-  Future<String?> _showDatePickerImperative(
-      Map<String, dynamic> args) async {
+  Future<String?> _showDatePickerImperative(Map<String, dynamic> args) async {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
     DateTime parseOr(String? s, DateTime fallback) {
@@ -2942,10 +2955,14 @@ class JsonInterpreter extends ChangeNotifier {
 
     final now = DateTime.now();
     final initial = parseOr(args['initial']?.toString(), now);
-    final firstDate = parseOr(args['firstDate']?.toString(),
-        DateTime(now.year - 50));
-    final lastDate = parseOr(args['lastDate']?.toString(),
-        DateTime(now.year + 50));
+    final firstDate = parseOr(
+      args['firstDate']?.toString(),
+      DateTime(now.year - 50),
+    );
+    final lastDate = parseOr(
+      args['lastDate']?.toString(),
+      DateTime(now.year + 50),
+    );
     final bindPath = args['bind'] as String?;
 
     final picked = await showDatePicker(
@@ -2965,8 +2982,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   /// 命令式时间选择器
-  Future<String?> _showTimePickerImperative(
-      Map<String, dynamic> args) async {
+  Future<String?> _showTimePickerImperative(Map<String, dynamic> args) async {
     final ctx = globalContext;
     if (ctx == null || !ctx.mounted) return null;
     TimeOfDay initial = TimeOfDay.now();
@@ -2981,10 +2997,7 @@ class JsonInterpreter extends ChangeNotifier {
     }
     final bindPath = args['bind'] as String?;
 
-    final picked = await showTimePicker(
-      context: ctx,
-      initialTime: initial,
-    );
+    final picked = await showTimePicker(context: ctx, initialTime: initial);
     if (picked == null) return null;
     final h = picked.hour.toString().padLeft(2, '0');
     final m = picked.minute.toString().padLeft(2, '0');
@@ -3087,7 +3100,9 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ 自定义函数 ============
 
   Future<dynamic> _executeGlobalFunction(
-      String funcName, Map<String, dynamic> args) async {
+    String funcName,
+    Map<String, dynamic> args,
+  ) async {
     final funcDef = _functions[funcName] as Map<String, dynamic>?;
     if (funcDef == null) {
       debugPrint('[JSON DSL] 未找到函数: $funcName');
@@ -3098,14 +3113,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   /// 执行依赖模块中的函数
   Future<dynamic> _executeDependencyFunction(
-      String depName, Map<String, dynamic> funcDef, Map<String, dynamic> args) async {
+    String depName,
+    Map<String, dynamic> funcDef,
+    Map<String, dynamic> args,
+  ) async {
     return await _executeFunctionDef(funcDef, args);
   }
 
   /// 通用函数执行器
   Future<dynamic> _executeFunctionDef(
-      Map<String, dynamic> funcDef, Map<String, dynamic> args) async {
-
+    Map<String, dynamic> funcDef,
+    Map<String, dynamic> args,
+  ) async {
     final params = funcDef['params'] as List<dynamic>? ?? [];
     final paramMap = <String, dynamic>{};
     for (final p in params) {
@@ -3343,6 +3362,17 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   // ── IM helpers ──────────────────────────────────────────────────────
+  Map<String, dynamic> _normalizeUserInfo(Map<String, dynamic> user) {
+    final avatar = user['avatar_url']?.toString() ?? '';
+    final face = user['face_url']?.toString() ?? '';
+    if (avatar.isEmpty && face.isNotEmpty) {
+      user['avatar_url'] = face;
+    } else if (face.isEmpty && avatar.isNotEmpty) {
+      user['face_url'] = avatar;
+    }
+    return user;
+  }
+
   /// 把 OpenIM 列表（friends / conversations / friend_applications）里的
   /// face_url 字段从 Supabase 回填一次。
   ///
@@ -3384,118 +3414,6 @@ class JsonInterpreter extends ChangeNotifier {
     if (myId == null || myId.isEmpty || otherUserId.isEmpty) return null;
     final ids = [myId, otherUserId]..sort();
     return 'si_${ids[0]}_${ids[1]}';
-  }
-
-  Map<String, dynamic> _friendInfoToMap(FriendInfo f) {
-    return {
-      'user_id': f.userID ?? '',
-      'nickname': f.nickname ?? '',
-      'face_url': f.faceURL ?? '',
-      'remark': f.remark ?? '',
-    };
-  }
-
-  Map<String, dynamic> _friendApplicationToMap(FriendApplicationInfo a) {
-    return {
-      'from_user_id': a.fromUserID ?? '',
-      'from_nickname': a.fromNickname ?? '',
-      'from_face_url': a.fromFaceURL ?? '',
-      'req_msg': a.reqMsg ?? '',
-      'handle_result': a.handleResult ?? 0, // 0=待处理 1=已同意 -1=已拒绝
-      'create_time': a.createTime ?? 0,
-    };
-  }
-
-  Map<String, dynamic> _messageToMap(Message m) {
-    String text;
-    switch (m.contentType) {
-      case MessageType.text:
-        text = m.textElem?.content ?? '';
-        break;
-      case MessageType.picture:
-        text = '[图片]';
-        break;
-      case MessageType.video:
-        text = '[视频]';
-        break;
-      case MessageType.voice:
-        text = '[语音]';
-        break;
-      case MessageType.file:
-        text = '[文件]';
-        break;
-      default:
-        text = '[消息]';
-    }
-    final myId = IMService.instance.currentUserId ?? '';
-    final sendId = m.sendID ?? '';
-    final isMe = sendId == myId && sendId.isNotEmpty;
-    final sendTime = m.sendTime ?? 0;
-    final senderNick = m.senderNickname ?? '';
-    // 他人显示名兜底：nick 为空时回退到 sendId（不要让 UI 出现空白发送者）
-    final otherDisplay = senderNick.isNotEmpty ? senderNick : sendId;
-    return {
-      'client_msg_id': m.clientMsgID ?? '',
-      'send_id': sendId,
-      'recv_id': m.recvID ?? '',
-      'send_time': sendTime,
-      'content_type': m.contentType ?? 101,
-      'text': text,
-      'sender_nickname': senderNick,
-      'sender_face_url': m.senderFaceUrl ?? '',
-      'is_me': isMe,
-      // 给 JSON-APP 用的"另一面"flag：is_me 取反，配合 widget visible 字段做
-      // 自他分支渲染时不用写 jsonlogic `{"!": [...]}`
-      'is_other': !isMe,
-      // 预格式化字段：JSON-DSL 不支持条件 / 时间格式表达式，所以在这里算好
-      'display_time': _formatChatTime(sendTime),
-      'display_sender': isMe ? T.current.imSenderMe : otherDisplay,
-      // 微信风格气泡配色：自己绿色（#95EC69），他人白色
-      'bubble_color': isMe ? '#95EC69' : '#FFFFFF',
-      'bubble_text_color': '#000000',
-    };
-  }
-
-  Map<String, dynamic> _conversationToMap(ConversationInfo c) {
-    String latest;
-    final lm = c.latestMsg;
-    if (lm == null) {
-      latest = '';
-    } else {
-      latest = _messageToMap(lm)['text'] as String? ?? '';
-    }
-    final unread = c.unreadCount;
-    final latestTime = c.latestMsgSendTime ?? 0;
-    return {
-      'conversation_id': c.conversationID,
-      'user_id': c.userID ?? '',
-      'show_name': c.showName ?? '',
-      'face_url': c.faceURL ?? '',
-      'latest_text': latest,
-      'latest_time': latestTime,
-      'unread_count': unread,
-      // 预格式化：unread 为 0 时空字符串（绑 text.value 直接隐藏徽标视觉）
-      'display_unread': unread > 0 ? unread.toString() : '',
-      'display_time': _formatChatTime(latestTime),
-    };
-  }
-
-  /// 把 epoch 毫秒时间戳格式化为 IM 列表常见的"今天 HH:mm / 昨天 / MM-dd"。
-  /// 0 / 负数 → 空串（用于"暂无消息"等场景）。
-  String _formatChatTime(int millis) {
-    if (millis <= 0) return '';
-    final dt = DateTime.fromMillisecondsSinceEpoch(millis);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dtDay = DateTime(dt.year, dt.month, dt.day);
-    final diff = today.difference(dtDay).inDays;
-    String two(int n) => n.toString().padLeft(2, '0');
-    // 时钟漂移 / 服务器时间快于本地时（diff < 0）也按"今天 HH:mm"渲染，
-    // 避免出现 "−1 天前" 之类怪字符串。
-    if (diff <= 0) return '${two(dt.hour)}:${two(dt.minute)}';
-    if (diff == 1) return T.current.relativeDateYesterday;
-    if (diff < 7) return '$diff天前';
-    return '${two(dt.month)}-${two(dt.day)}';
   }
 }
 
@@ -3568,7 +3486,7 @@ class _InterpreterStateSnapshot {
   final List<Map<String, dynamic>> loopContextStack;
   final List<Map<String, dynamic>> paramsStack;
   final List<Map<String, dynamic>> eventContextStack;
-  final StreamSubscription<Message>? imInboxSub;
+  final StreamSubscription<Map<String, dynamic>>? imInboxSub;
 
   _InterpreterStateSnapshot({
     required this.config,

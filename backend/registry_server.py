@@ -40,6 +40,7 @@ from registry_mirror import (
     get_version_source, is_local_version,
     start_background_sync,
 )
+import registry_catalog
 from flask import redirect, Response
 
 BUCKET_APP = "json-app"
@@ -363,24 +364,28 @@ def list_packages():
         filename = f"{name.split('/')[-1]}-{latest_version}.json"
         download_url = _download_url_for_version(name, latest_version, info, path)
 
-        # 尝试从 MinIO 读取完整的包信息（包含 description 等）
-        # 镜像版本可能还没缓存到本地 → stat 不到就跳过，避免阻塞列表接口
-        description = ''
-        author = ''
-        package_type = info.get('type', 'library')
+        # 拿 meta（type/description/author）顺序：
+        # 1. index 里有 meta_type 直接用（publish 时存的 / mirror sync 拷来的）
+        # 2. 否则去 MinIO 读文件（local 版本必有；mirror 版本只在缓存命中时才能读到）
+        # 3. 读不到就默认 library
+        meta_type = info.get('meta_type')
+        description = info.get('description', '')
+        author = info.get('author', '')
 
-        if is_local_version(info, latest_version) or file_exists_in_minio(
+        if meta_type is None and (is_local_version(info, latest_version) or file_exists_in_minio(
             minio_client, BUCKET_COMPONENT, f"{path}/{filename}"
-        ):
+        )):
             try:
                 response = minio_client.get_object(BUCKET_COMPONENT, f"{path}/{filename}")
                 content = json.loads(response.read().decode('utf-8'))
                 meta = content.get('meta', {})
-                description = meta.get('description', '')
-                author = meta.get('author', '')
-                package_type = meta.get('type', 'library')
+                meta_type = meta.get('type', 'library')
+                description = description or meta.get('description', '')
+                author = author or meta.get('author', '')
             except Exception:
                 pass
+
+        package_type = meta_type or 'library'
 
         # 类型过滤
         if filter_type and package_type != filter_type:
@@ -652,6 +657,9 @@ def publish():
     user = request.supabase_user
     user_id = user.get('id')
     user_role = request.user_role
+    # 作者展示名：优先 username，退到 email 前缀
+    author_name = (user.get('user_metadata', {}) or {}).get('username') \
+        or (user.get('email') or '').split('@')[0] or None
 
     if namespace:
         # 用户包：full_name = namespace/pkg_name
@@ -763,6 +771,9 @@ def publish():
                 "appid": appid,
                 "created_at": datetime.utcnow().isoformat() + "Z",
                 "version_sources": {version: "local"},
+                # 存 latest 视角的 meta，避免 /packages?type 还要去读文件
+                "meta_type": package_type,
+                "description": description,
             }
         else:
             pkg = index['packages'][full_name]
@@ -773,8 +784,25 @@ def publish():
             pkg['appid'] = appid  # 更新 appid（允许用户改 name 但保持 appid）
             # 新版本一定是本地发的（已经通过上面的同号检查）
             pkg.setdefault("version_sources", {})[version] = "local"
+            # 如果这次 publish 的就是 latest，刷新 meta
+            if version == pkg['latest']:
+                pkg["meta_type"] = package_type
+                pkg["description"] = description
 
         _save_index(index)
+
+    # ── 附加：捕获结构化元数据进 registry_packages（不影响上面的 _index.json 发布流程）──
+    # 解析失败/DB 不可用都吞掉，绝不让富化拖累发布主流程。enrich（LLM summary）由后台
+    # worker 异步补，这里只 capture + 标 pending
+    try:
+        capture = registry_catalog.parse_capture(json_content)
+        registry_catalog.upsert_capture(
+            full_name, capture,
+            author_id=user_id,
+            author_name=author_name,
+        )
+    except Exception as e:
+        print(f"[Registry] capture 失败（忽略，不影响发布）: {full_name}: {e}")
 
     download_url = f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{oss_key}"
 
@@ -944,10 +972,129 @@ def update_member_role(namespace_id, user_id):
 def mirror_manifest():
     """对外的 mirror 清单。公开访问，无 token。
     URL 全指向 REGISTRY_BASE_URL（自己），下游 mirror 我时 source 永远是我，
-    chain mirror 自然成立"""
+    chain mirror 自然成立。带富化数据（summary/tags/tech_stack），下游直接拷不重跑 LLM。"""
     with index_lock:
         index = _load_index()
-    return jsonify(build_manifest(index, REGISTRY_BASE_URL))
+    # catalog 富化数据从 registry_packages 取，拼进 manifest 让下游免 LLM 拷过去
+    try:
+        catalog = registry_catalog.catalog_map()
+    except Exception as e:
+        print(f"[Registry] catalog_map 失败（manifest 不带富化）: {e}")
+        catalog = {}
+    return jsonify(build_manifest(index, REGISTRY_BASE_URL, minio_client, BUCKET_COMPONENT, catalog))
+
+
+@app.route('/catalog', methods=['GET'])
+def catalog():
+    """富化目录 —— 给 AI 生成挑参考包用。每个包带 summary/tags/tech_stack/exports/deps。
+    公开只读。可选 ?status=done 只看已富化的。"""
+    only_done = request.args.get('status') == 'done'
+    try:
+        rows = registry_catalog.get_catalog()
+    except Exception as e:
+        return jsonify({"error": f"catalog 读取失败: {e}", "packages": []}), 500
+    if only_done:
+        rows = [r for r in rows if r.get('status') == 'done']
+    return jsonify({"packages": rows, "total": len(rows)})
+
+
+@app.route('/catalog/backfill', methods=['POST'])
+@require_auth
+def catalog_backfill():
+    """给现有包补 capture（exports/deps/widgets/tech_stack）+ 标 pending，
+    让 enrich worker 后续生成 summary。仅 admin。首次上线 / migration 后跑一次。"""
+    if request.user_role != 'admin':
+        return jsonify({"error": "只有管理员可以 backfill"}), 403
+
+    with index_lock:
+        index = _load_index()
+    names = list((index.get("packages") or {}).keys())
+
+    pkgs = index.get("packages") or {}
+    captured, failed = 0, 0
+    for name in names:
+        try:
+            content = _load_package_json(name)
+            if not content:
+                failed += 1
+                continue
+            cap = registry_catalog.parse_capture(content)
+            # author_id 从 _index.json 取（历史归属）；author_name 后面刷作者时统一改
+            author_id = (pkgs.get(name) or {}).get("author_id")
+            registry_catalog.upsert_capture(name, cap, author_id=author_id)
+            captured += 1
+        except Exception as e:
+            print(f"[Registry] backfill {name} 失败: {e}")
+            failed += 1
+
+    return jsonify({
+        "message": "backfill 完成，enrich worker 会异步生成 summary",
+        "total": len(names),
+        "captured": captured,
+        "failed": failed,
+    })
+
+
+@app.route('/admin/set_all_authors', methods=['POST'])
+@require_auth
+def admin_set_all_authors():
+    """一次性把所有包作者刷成指定用户（修历史乱作者）。仅 admin。
+    Body: {"author_id": "...", "author_name": "..."}"""
+    if request.user_role != 'admin':
+        return jsonify({"error": "只有管理员可以刷作者"}), 403
+    body = request.get_json(silent=True) or {}
+    author_id = (body.get("author_id") or "").strip()
+    author_name = (body.get("author_name") or "").strip()
+    if not author_id or not author_name:
+        return jsonify({"error": "author_id 和 author_name 必填"}), 400
+    n = registry_catalog.set_all_authors(author_id, author_name)
+    return jsonify({"message": "已刷新所有包作者", "updated": n,
+                    "author_id": author_id, "author_name": author_name})
+
+
+@app.route('/packages/<path:name>/detail', methods=['GET'])
+def package_detail(name):
+    """app 详情：富化 + 作者(头像) + 点赞/下载量 + (登录则)我点没点。
+    可选 ?viewer=<user_id> 传当前用户拿点赞态（或走 Authorization）。"""
+    viewer = request.args.get('viewer')
+    if not viewer:
+        # 也支持从 Bearer token 解析（登录用户）
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            try:
+                r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
+                                 headers=_supabase_headers(auth[7:]), timeout=8)
+                if r.status_code == 200:
+                    viewer = r.json().get("id")
+            except Exception:
+                pass
+    detail = registry_catalog.get_app_detail(name, viewer)
+    if not detail:
+        return jsonify({"error": f"包 '{name}' 不存在"}), 404
+    return jsonify(detail)
+
+
+@app.route('/users/<author_id>/profile', methods=['GET'])
+def user_profile(author_id):
+    """用户主页：头像/名字 + 总下载/总点赞 + 他发布的 app 列表。公开只读。"""
+    return jsonify(registry_catalog.get_user_profile(author_id))
+
+
+@app.route('/packages/<path:name>/install', methods=['POST'])
+@require_auth
+def package_install(name):
+    """下载埋点（per-user 去重）。客户端运行/下载时调。"""
+    registry_catalog.record_install(name, request.supabase_user.get("id"))
+    return jsonify({"ok": True})
+
+
+@app.route('/packages/<path:name>/like', methods=['POST', 'DELETE'])
+@require_auth
+def package_like(name):
+    """点赞 / 取消。"""
+    registry_catalog.set_like(name, request.supabase_user.get("id"),
+                              liked=(request.method == 'POST'))
+    return jsonify({"ok": True, "liked": request.method == 'POST'})
 
 
 @app.route('/mirror/file/<path:name>/<version>', methods=['GET'])
@@ -1029,9 +1176,47 @@ def _maybe_start_mirror_sync():
     )
 
 
+def _load_package_json(name: str):
+    """给 enrich worker 用：按包名从 MinIO 读 latest 版本的完整 JSON。
+    路径靠 _index.json 解析（_index.json 仍是解析索引的权威）。读不到返 None。"""
+    with index_lock:
+        index = _load_index()
+        pkg = index.get("packages", {}).get(name)
+    if not pkg:
+        return None
+    latest = pkg.get("latest") or (pkg.get("versions") or [None])[0]
+    if not latest:
+        return None
+    path = pkg.get("path", name)
+    filename = f"{name.split('/')[-1]}-{latest}.json"
+    oss_key = f"{path}/{filename}"
+    try:
+        resp = minio_client.get_object(BUCKET_COMPONENT, oss_key)
+        return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"[Registry] _load_package_json 读 {oss_key} 失败: {e}")
+        return None
+
+
+def _maybe_start_enrich_worker():
+    """起 AI summary 富化后台 worker（advisory lock 选主，只有一个 gunicorn worker 真跑）"""
+    import os
+    if not os.environ.get("BACKEND_INTERNAL_URL"):
+        print("[Registry] BACKEND_INTERNAL_URL 未配置，跳过 enrich worker（summary 不生成）")
+        return
+    import registry_enrich
+    poll = int(os.environ.get("ENRICH_POLL_INTERVAL", "30"))
+    batch = int(os.environ.get("ENRICH_BATCH", "5"))
+    registry_enrich.start_worker(_load_package_json, poll_interval=poll, batch=batch)
+
+
+# gunicorn 不走 __main__，import 时就把后台线程起起来（advisory lock 保证多 worker 只一个干活）
+_maybe_start_mirror_sync()
+_maybe_start_enrich_worker()
+
+
 if __name__ == '__main__':
     print(f"[Registry] 启动 JSON-DSL Registry 服务，端口 {PORT}")
     print(f"[Registry] MinIO: {MINIO_ENDPOINT}")
     print(f"[Registry] Bucket: {BUCKET_COMPONENT}")
-    _maybe_start_mirror_sync()
     app.run(host='0.0.0.0', port=PORT, debug=False)

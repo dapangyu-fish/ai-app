@@ -54,6 +54,9 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
 
 COOKIE_NAME = "uc_session"
 COOKIE_MAX_AGE = 7 * 24 * 3600  # 7 天
+# 默认 True（prod 走 HTTPS）。测试环境裸 http://IP:PORT 必须 false，否则
+# 浏览器直接丢掉 session cookie → 登录看似无错但跳回登录页
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() not in ("false", "0", "no")
 LOGIN_RATELIMIT_WINDOW = 15 * 60
 LOGIN_RATELIMIT_MAX = 5
 
@@ -203,6 +206,32 @@ def sb_force_email_confirm(user_id: str) -> dict:
     return r.json()
 
 
+def sb_create_user(email: str, password: str, role: str,
+                   username: str | None = None,
+                   email_confirm: bool = True) -> dict:
+    """通过 Supabase Admin API 直接创建用户，不走注册流程。
+    - email_confirm=True 一并把邮箱标为已确认，免去 OTP 邮件
+    - app_metadata.role 设角色（user/pro/admin），后端 require_role 用这个字段
+    - user_metadata.username 可选，跟前端注册时的字段保持一致
+    """
+    body: dict = {
+        "email": email,
+        "password": password,
+        "email_confirm": email_confirm,
+        "app_metadata": {"role": role},
+    }
+    if username:
+        body["user_metadata"] = {"username": username}
+    r = requests.post(
+        f"{SUPABASE_URL}/auth/v1/admin/users",
+        headers=_sb_headers(),
+        json=body,
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 # ────────────────────────────── Auth ──────────────────────────────
 
 serializer = URLSafeTimedSerializer(SESSION_SECRET, salt="user-center-session")
@@ -321,7 +350,7 @@ def do_login():
         nxt = "/"
     resp = redirect(nxt)
     resp.set_cookie(COOKIE_NAME, cookie_val,
-                    max_age=COOKIE_MAX_AGE, httponly=True, secure=True, samesite="Lax")
+                    max_age=COOKIE_MAX_AGE, httponly=True, secure=COOKIE_SECURE, samesite="Lax")
     return resp
 
 
@@ -368,6 +397,50 @@ def dashboard():
         has_more=len(listing["users"]) == per_page,
         audit=audit,
     )
+
+
+# ── 创建用户 ──
+@app.route("/users/create", methods=["POST"])
+def create_user():
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    role = (request.form.get("role") or "user").strip()
+    username = (request.form.get("username") or "").strip() or None
+    # 创建时是否一并把邮箱标为已确认（测试 / 内部账号常用）
+    email_confirm = request.form.get("email_confirm") == "on"
+
+    # 校验
+    if not email or "@" not in email:
+        return "email 格式不正确", 400
+    if len(password) < 6:
+        return "密码至少 6 位", 400
+    if role not in VALID_ROLES:
+        return f"role 必须是 {VALID_ROLES} 之一", 400
+
+    try:
+        created = sb_create_user(
+            email=email, password=password, role=role,
+            username=username, email_confirm=email_confirm,
+        )
+        log_audit(g.admin_user, created.get("id", ""), email,
+                  "create_user",
+                  json.dumps({
+                      "role": role,
+                      "username": username,
+                      "email_confirm": email_confirm,
+                  }, ensure_ascii=False),
+                  _client_ip())
+        flash(f"已创建用户 {email}（role={role}，"
+              f"{'邮箱已自动确认' if email_confirm else '需走邮件验证'}）")
+    except requests.HTTPError as e:
+        # Supabase 的 422 一般是 email 已存在；422/400 都把 body 抛回让 admin 看
+        body = ""
+        try:
+            body = e.response.text[:300] if e.response is not None else ""
+        except Exception:
+            pass
+        return f"Supabase API 错误 ({e.response.status_code if e.response is not None else '?'}): {body}", 502
+    return redirect(url_for("dashboard"))
 
 
 # ── 改 role ──

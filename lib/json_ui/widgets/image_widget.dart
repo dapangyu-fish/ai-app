@@ -6,12 +6,12 @@
 // 支持格式：PNG、JPG、GIF（GIF 自动播放）
 // 支持属性：url/src, fit, width, height, borderRadius
 import 'dart:convert';
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
+import '../../platform/local_media.dart';
 
 class JsonImageWidget extends JsonBaseWidget {
   @override
@@ -55,8 +55,10 @@ class JsonImageWidget extends JsonBaseWidget {
         width: width,
         height: height ?? 100,
         child: Center(
-          child: Icon(Icons.image_not_supported,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
+          child: Icon(
+            Icons.image_not_supported,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -73,11 +75,7 @@ class JsonImageWidget extends JsonBaseWidget {
     // 当同时指定了 width 和 height 时，用 SizedBox 约束尺寸
     // 防止父级 Column/Row 的 CrossAxisAlignment.stretch 拉伸图片
     if (width != null && height != null) {
-      image = SizedBox(
-        width: width,
-        height: height,
-        child: image,
-      );
+      image = SizedBox(width: width, height: height, child: image);
     }
 
     return Padding(
@@ -106,6 +104,20 @@ class JsonImageWidget extends JsonBaseWidget {
 
     // 2. 网络图片（CachedNetworkImage 带 disk 缓存，冷启动命中）
     if (src.startsWith('http://') || src.startsWith('https://')) {
+      if (kIsWeb) {
+        return Image.network(
+          src,
+          width: width,
+          height: height,
+          fit: fit,
+          webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+          errorBuilder: (_, __, ___) => _errorWidget(width, height, context),
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return _loadingWidget(width, height, progress, ctx);
+          },
+        );
+      }
       return CachedNetworkImage(
         imageUrl: src,
         width: width,
@@ -116,11 +128,10 @@ class JsonImageWidget extends JsonBaseWidget {
       );
     }
 
-    // 3. 本地文件
+    // 3. 本地文件（web 上无本地文件系统，跳过）
     if (!kIsWeb) {
-      final file = File(src);
-      return Image.file(
-        file,
+      return Image(
+        image: localFileImage(src),
         width: width,
         height: height,
         fit: fit,
@@ -164,8 +175,10 @@ class JsonImageWidget extends JsonBaseWidget {
       height: height ?? 100,
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Center(
-        child: Icon(Icons.broken_image,
-            color: Theme.of(context).colorScheme.onSurfaceVariant),
+        child: Icon(
+          Icons.broken_image,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }

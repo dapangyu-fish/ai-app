@@ -1,0 +1,17 @@
+{
+  "name": "web_openim_bridge",
+  "version": "1.0.0",
+  "description": "Builds the browser OpenIM WASM bridge for Flutter Web",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild src/openim_bridge.js --bundle --format=esm --target=es2020 --outfile=../web/openim_bridge.js && cp node_modules/@openim/wasm-client-sdk/assets/openIM.wasm ../web/openIM.wasm && cp node_modules/@openim/wasm-client-sdk/assets/sql-wasm.wasm ../web/sql-wasm.wasm && cp node_modules/@openim/wasm-client-sdk/assets/wasm_exec.js ../web/wasm_exec.js && cp node_modules/@openim/wasm-client-sdk/lib/worker.js ../web/worker.js && cp node_modules/@openim/wasm-client-sdk/lib/worker-legacy.js ../web/worker-legacy.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openim/wasm-client-sdk": "^3.8.3-patch.10",
+    "esbuild": "^0.25.12"
+  },
+  "private": true
+}

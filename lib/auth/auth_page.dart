@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -95,10 +93,8 @@ class _AuthPageState extends State<AuthPage> {
           if (!context.mounted) return;
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => OtpVerifyPage(
-                email: email,
-                onVerified: widget.onAuthSuccess,
-              ),
+              builder: (_) =>
+                  OtpVerifyPage(email: email, onVerified: widget.onAuthSuccess),
             ),
           );
         } else {
@@ -157,7 +153,9 @@ class _AuthPageState extends State<AuthPage> {
     } catch (e) {
       debugPrint('[AuthPage] confirmAccountSwitchAndWipe 失败: $e');
       if (mounted) {
-        setState(() => _error = T.fmt(T.current.authClearLocalFailedWith, {'err': e}));
+        setState(
+          () => _error = T.fmt(T.current.authClearLocalFailedWith, {'err': e}),
+        );
       }
       return false;
     }
@@ -175,10 +173,7 @@ class _AuthPageState extends State<AuthPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        actions: const [
-          LanguageSwitcher(),
-          SizedBox(width: 8),
-        ],
+        actions: const [LanguageSwitcher(), SizedBox(width: 8)],
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -208,10 +203,7 @@ class _AuthPageState extends State<AuthPage> {
                 const SizedBox(height: 8),
                 Text(
                   _isLogin ? t.authLoginSubtitle : t.authRegisterSubtitle,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: cs.onSurfaceVariant,
-                  ),
+                  style: TextStyle(fontSize: 15, color: cs.onSurfaceVariant),
                 ),
 
                 const SizedBox(height: 48),
@@ -224,7 +216,10 @@ class _AuthPageState extends State<AuthPage> {
                     decoration: InputDecoration(
                       hintText: t.authUsernameOptionalHint,
                       hintStyle: TextStyle(color: cs.onSurfaceVariant),
-                      prefixIcon: Icon(Icons.person_outline, color: cs.onSurfaceVariant),
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -238,7 +233,10 @@ class _AuthPageState extends State<AuthPage> {
                   decoration: InputDecoration(
                     hintText: t.authEmailHint,
                     hintStyle: TextStyle(color: cs.onSurfaceVariant),
-                    prefixIcon: Icon(Icons.email_outlined, color: cs.onSurfaceVariant),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                   onSubmitted: (_) => _submit(),
                 ),
@@ -252,11 +250,17 @@ class _AuthPageState extends State<AuthPage> {
                   decoration: InputDecoration(
                     hintText: t.authPasswordHint,
                     hintStyle: TextStyle(color: cs.onSurfaceVariant),
-                    prefixIcon: Icon(Icons.lock_outlined, color: cs.onSurfaceVariant),
+                    prefixIcon: Icon(
+                      Icons.lock_outlined,
+                      color: cs.onSurfaceVariant,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                          _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: cs.onSurfaceVariant),
+                        _obscure
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: cs.onSurfaceVariant,
+                      ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
@@ -276,9 +280,13 @@ class _AuthPageState extends State<AuthPage> {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: cs.onPrimary),
+                              strokeWidth: 2,
+                              color: cs.onPrimary,
+                            ),
                           )
-                        : Text(_isLogin ? t.authLoginButton : t.authRegisterButton),
+                        : Text(
+                            _isLogin ? t.authLoginButton : t.authRegisterButton,
+                          ),
                   ),
                 ),
 
@@ -293,12 +301,18 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.check_circle_outline,
-                            color: cs.onSurface, size: 18),
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: cs.onSurface,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
-                            child: Text(_info!,
-                                style: TextStyle(color: cs.onSurface, fontSize: 13))),
+                          child: Text(
+                            _info!,
+                            style: TextStyle(color: cs.onSurface, fontSize: 13),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -318,8 +332,14 @@ class _AuthPageState extends State<AuthPage> {
                         Icon(Icons.error_outline, color: cs.error, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
-                            child: Text(_error!,
-                                style: TextStyle(color: cs.onErrorContainer, fontSize: 13))),
+                          child: Text(
+                            _error!,
+                            style: TextStyle(
+                              color: cs.onErrorContainer,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -331,8 +351,13 @@ class _AuthPageState extends State<AuthPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_isLogin ? t.authNoAccountPrompt : t.authHasAccountPrompt,
-                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+                    Text(
+                      _isLogin ? t.authNoAccountPrompt : t.authHasAccountPrompt,
+                      style: TextStyle(
+                        color: cs.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
+                    ),
                     TextButton(
                       onPressed: () => setState(() {
                         _isLogin = !_isLogin;
@@ -363,7 +388,9 @@ class _AuthPageState extends State<AuthPage> {
 
 /// 切换账号确认弹窗。返回 true=确认清除并继续，false/null=取消。
 Future<bool?> showAccountSwitchDialog(
-    BuildContext context, AccountSwitchInfo info) {
+  BuildContext context,
+  AccountSwitchInfo info,
+) {
   final cs = Theme.of(context).colorScheme;
   return showDialog<bool>(
     context: context,
@@ -372,10 +399,12 @@ Future<bool?> showAccountSwitchDialog(
       final t = T.of(ctx);
       return AlertDialog(
         title: Text(t.authSwitchAccountTitle),
-        content: Text(T.fmt(t.authSwitchAccountContent, {
-          'newEmail': info.newEmail,
-          'prevEmail': info.prevEmail,
-        })),
+        content: Text(
+          T.fmt(t.authSwitchAccountContent, {
+            'newEmail': info.newEmail,
+            'prevEmail': info.prevEmail,
+          }),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -453,7 +482,11 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
         } catch (e) {
           debugPrint('[OtpVerifyPage] wipe 失败: $e');
           if (mounted) {
-            setState(() => _error = T.fmt(T.current.authClearLocalFailedWith, {'err': e}));
+            setState(
+              () => _error = T.fmt(T.current.authClearLocalFailedWith, {
+                'err': e,
+              }),
+            );
           }
           return;
         }
@@ -463,8 +496,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
       }
       widget.onVerified();
     } catch (e) {
-      setState(
-          () => _error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -481,8 +513,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
       await AuthService.resendVerification(widget.email);
       setState(() => _info = T.of(context).authVerifyCodeSent);
     } catch (e) {
-      setState(
-          () => _error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       setState(() => _loading = false);
     }
@@ -496,7 +527,10 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.authVerifyTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          t.authVerifyTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -505,7 +539,11 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               children: [
-                Icon(Icons.mark_email_read_outlined, size: 56, color: cs.onSurface),
+                Icon(
+                  Icons.mark_email_read_outlined,
+                  size: 56,
+                  color: cs.onSurface,
+                ),
                 const SizedBox(height: 20),
                 Text(
                   t.authVerifyPageHeading,
@@ -557,7 +595,9 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: cs.onPrimary),
+                              strokeWidth: 2,
+                              color: cs.onPrimary,
+                            ),
                           )
                         : Text(t.authVerifyButton),
                   ),
@@ -576,7 +616,10 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
 
                 if (_info != null) ...[
                   const SizedBox(height: 12),
-                  Text(_info!, style: TextStyle(color: cs.onSurface, fontSize: 13)),
+                  Text(
+                    _info!,
+                    style: TextStyle(color: cs.onSurface, fontSize: 13),
+                  ),
                 ],
 
                 if (_error != null) ...[
@@ -592,8 +635,14 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                         Icon(Icons.error_outline, color: cs.error, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
-                            child: Text(_error!,
-                                style: TextStyle(color: cs.onErrorContainer, fontSize: 13))),
+                          child: Text(
+                            _error!,
+                            style: TextStyle(
+                              color: cs.onErrorContainer,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -646,10 +695,11 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _message = T.of(context).profileSavedSuccess);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _message = T.fmt(
-            T.of(context).profileSaveFailedWith,
-            {'msg': e.toString().replaceFirst('Exception: ', '')},
-          ));
+      setState(
+        () => _message = T.fmt(T.of(context).profileSaveFailedWith, {
+          'msg': e.toString().replaceFirst('Exception: ', ''),
+        }),
+      );
     } finally {
       setState(() => _loading = false);
     }
@@ -671,7 +721,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _message = null;
       });
 
-      final bytes = await File(file.path).readAsBytes();
+      final bytes = await file.readAsBytes();
       final b64 = base64Encode(bytes);
       await AuthService.uploadAvatar(b64);
 
@@ -683,10 +733,11 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _message = T.of(context).profileSavedSuccess);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _message = T.fmt(
-            T.of(context).profileSaveFailedWith,
-            {'msg': e.toString().replaceFirst('Exception: ', '')},
-          ));
+      setState(
+        () => _message = T.fmt(T.of(context).profileSaveFailedWith, {
+          'msg': e.toString().replaceFirst('Exception: ', ''),
+        }),
+      );
     } finally {
       setState(() => _loading = false);
     }
@@ -698,7 +749,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = AuthService.currentUser;
     String avatarUrl = user?['avatar_url'] as String? ?? '';
     if (avatarUrl.isNotEmpty && avatarUrl.startsWith('http')) {
-      avatarUrl = avatarUrl.contains('?') 
+      avatarUrl = avatarUrl.contains('?')
           ? '$avatarUrl&_cb=${AuthService.avatarCacheBuster}'
           : '$avatarUrl?_cb=${AuthService.avatarCacheBuster}';
     }
@@ -706,35 +757,61 @@ class _ProfilePageState extends State<ProfilePage> {
     final cs = Theme.of(context).colorScheme;
     final t = T.of(context);
 
+    Widget fallbackAvatar() => CircleAvatar(
+      radius: 48,
+      backgroundColor: cs.surfaceContainerHighest,
+      child: Icon(Icons.person_outline, size: 48, color: cs.onSurface),
+    );
+
     Widget avatar;
     if (avatarUrl.startsWith('http')) {
-      avatar = CircleAvatar(
-        radius: 48,
-        backgroundImage: CachedNetworkImageProvider(avatarUrl),
-        onBackgroundImageError: (e, stack) {
-          debugPrint('[ProfilePage] CachedNetworkImage ERROR: $e');
-        },
-        child: const Icon(Icons.person, color: Colors.transparent),
+      avatar = ClipOval(
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: Image.network(
+            avatarUrl,
+            fit: BoxFit.cover,
+            webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return fallbackAvatar();
+            },
+            errorBuilder: (_, error, __) {
+              debugPrint('[ProfilePage] Image.network ERROR: $error');
+              return fallbackAvatar();
+            },
+          ),
+        ),
       );
     } else if (avatarUrl.startsWith('data:')) {
       final parts = avatarUrl.split(',');
       if (parts.length == 2) {
-        avatar = CircleAvatar(
-          radius: 48,
-          backgroundImage: MemoryImage(base64Decode(parts[1])),
+        avatar = ClipOval(
+          child: Image.memory(
+            base64Decode(parts[1]),
+            width: 96,
+            height: 96,
+            fit: BoxFit.cover,
+            errorBuilder: (_, error, __) {
+              debugPrint('[ProfilePage] MemoryImage ERROR: $error');
+              return fallbackAvatar();
+            },
+          ),
         );
       } else {
-        avatar = CircleAvatar(
-            radius: 48, child: Icon(Icons.person_outline, size: 48, color: cs.onSurface));
+        avatar = fallbackAvatar();
       }
     } else {
-      avatar = CircleAvatar(
-          radius: 48, child: Icon(Icons.person_outline, size: 48, color: cs.onSurface));
+      avatar = fallbackAvatar();
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.profileTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          t.profileTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -758,50 +835,60 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: cs.onSurface,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.camera_alt,
-                          size: 16, color: cs.surface),
+                      child: Icon(
+                        Icons.camera_alt,
+                        size: 16,
+                        color: cs.surface,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            Text(user?['email'] ?? '',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+            Text(
+              user?['email'] ?? '',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+            ),
             const SizedBox(height: 8),
             // User Role Badge
-            Builder(builder: (context) {
-              final role = user?['role']?.toString() ?? 'user';
-              String roleText = t.roleUser;
-              Color roleColor = cs.surfaceContainerHighest;
-              Color roleTextColor = cs.onSurfaceVariant;
+            Builder(
+              builder: (context) {
+                final role = user?['role']?.toString() ?? 'user';
+                String roleText = t.roleUser;
+                Color roleColor = cs.surfaceContainerHighest;
+                Color roleTextColor = cs.onSurfaceVariant;
 
-              if (role == 'admin') {
-                roleText = t.roleAdmin;
-                roleColor = cs.primaryContainer;
-                roleTextColor = cs.onPrimaryContainer;
-              } else if (role == 'pro') {
-                roleText = t.roleProUser;
-                roleColor = cs.tertiaryContainer;
-                roleTextColor = cs.onTertiaryContainer;
-              }
+                if (role == 'admin') {
+                  roleText = t.roleAdmin;
+                  roleColor = cs.primaryContainer;
+                  roleTextColor = cs.onPrimaryContainer;
+                } else if (role == 'pro') {
+                  roleText = t.roleProUser;
+                  roleColor = cs.tertiaryContainer;
+                  roleTextColor = cs.onTertiaryContainer;
+                }
 
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: roleColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  roleText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: roleTextColor,
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
                   ),
-                ),
-              );
-            }),
+                  decoration: BoxDecoration(
+                    color: roleColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    roleText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: roleTextColor,
+                    ),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 36),
 
             // Username
@@ -811,7 +898,10 @@ class _ProfilePageState extends State<ProfilePage> {
               decoration: InputDecoration(
                 hintText: t.authUsernameHint,
                 hintStyle: TextStyle(color: cs.onSurfaceVariant),
-                prefixIcon: Icon(Icons.person_outline, color: cs.onSurfaceVariant),
+                prefixIcon: Icon(
+                  Icons.person_outline,
+                  color: cs.onSurfaceVariant,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -826,7 +916,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: cs.onPrimary),
+                          strokeWidth: 2,
+                          color: cs.onPrimary,
+                        ),
                       )
                     : Text(t.save),
               ),
@@ -834,7 +926,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
             if (_message != null) ...[
               const SizedBox(height: 16),
-              Text(_message!, style: TextStyle(color: cs.onSurface, fontSize: 13)),
+              Text(
+                _message!,
+                style: TextStyle(color: cs.onSurface, fontSize: 13),
+              ),
             ],
 
             const SizedBox(height: 36),

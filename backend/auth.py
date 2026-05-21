@@ -127,18 +127,28 @@ def require_auth(f):
         if not auth.startswith("Bearer "):
             return jsonify({"error": "未提供认证 token"}), 401
         token = auth[7:]
-        resp = requests.get(
-            f"{SUPABASE_URL}/auth/v1/user",
-            headers=_supabase_headers(token),
-            timeout=10,
-        )
-        if resp.status_code != 200:
+        user = verify_access_token(token)
+        if user is None:
             return jsonify({"error": "token 无效或已过期"}), 401
-        request.supabase_user = resp.json()
+        request.supabase_user = user
         request.supabase_token = token
         request.user_role = _get_user_role(request.supabase_user)
         return f(*args, **kwargs)
     return decorated
+
+
+def verify_access_token(token):
+    """校验 Supabase access token，成功返回 user dict，失败返回 None。"""
+    if not token:
+        return None
+    resp = requests.get(
+        f"{SUPABASE_URL}/auth/v1/user",
+        headers=_supabase_headers(token),
+        timeout=10,
+    )
+    if resp.status_code != 200:
+        return None
+    return resp.json()
 
 
 def require_auth_socketio(f):
