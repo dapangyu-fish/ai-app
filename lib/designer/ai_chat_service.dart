@@ -828,9 +828,11 @@ class AiChatService {
     }
   }
 
-  Future<String?> _fetchStreamToken() async {
+  Future<_StreamTokenResult> _fetchStreamToken() async {
     final token = AuthService.token;
-    if (token == null) return null;
+    if (token == null) {
+      return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+    }
 
     Future<http.Response> postToken(String bearer) {
       return http
@@ -841,37 +843,90 @@ class AiChatService {
           .timeout(const Duration(seconds: 10));
     }
 
-    var resp = await postToken(token);
-    if (resp.statusCode == 401) {
-      try {
-        await AuthService.refreshSession();
-      } catch (_) {
-        return null;
+    var bearer = token;
+    Object? lastError;
+    for (var attempt = 1; attempt <= 4; attempt++) {
+      if (attempt > 1) {
+        await Future.delayed(Duration(milliseconds: 250 * attempt));
       }
-      final refreshed = AuthService.token;
-      if (refreshed == null) return null;
-      resp = await postToken(refreshed);
-    }
-    if (resp.statusCode != 200) {
-      debugPrint(
-        '[AI_CHAT] stream_token HTTP ${resp.statusCode}: ${resp.body}',
-      );
-      return null;
+
+      try {
+        var resp = await postToken(bearer);
+        if (resp.statusCode == 401 && attempt == 1) {
+          try {
+            await AuthService.refreshSession();
+          } catch (_) {
+            return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+          }
+          final refreshed = AuthService.token;
+          if (refreshed == null) {
+            return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+          }
+          bearer = refreshed;
+          resp = await postToken(bearer);
+        }
+
+        if (resp.statusCode == 200) {
+          final data = json.decode(resp.body) as Map<String, dynamic>;
+          final streamToken = data['stream_token'] as String?;
+          if (streamToken == null || streamToken.isEmpty) {
+            return _StreamTokenResult.error('stream_token 响应为空');
+          }
+          return _StreamTokenResult.ok(streamToken);
+        }
+
+        debugPrint(
+          '[AI_CHAT] stream_token HTTP ${resp.statusCode}: ${resp.body}',
+        );
+        if (resp.statusCode == 404 && attempt < 4) {
+          // Web 弹窗/会话切换时可能短暂拿到旧 session。稍等后再确认，避免误报。
+          lastError = 'HTTP 404';
+          continue;
+        }
+        if (resp.statusCode == 401) {
+          return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
+        }
+        if (resp.statusCode == 403) {
+          return _StreamTokenResult.error('无权访问当前会话，请重新打开对话');
+        }
+        if (resp.statusCode == 404) {
+          return _StreamTokenResult.error('当前会话已过期，请重新打开对话');
+        }
+        if (resp.statusCode >= 500 && attempt < 4) {
+          lastError = 'HTTP ${resp.statusCode}';
+          continue;
+        }
+        return _StreamTokenResult.error(
+          T.fmt(T.current.chatErrServerWithBody, {
+            'code': resp.statusCode,
+            'body': resp.body,
+          }),
+        );
+      } on TimeoutException catch (e) {
+        lastError = e;
+        if (attempt < 4) continue;
+      } on http.ClientException catch (e) {
+        lastError = e;
+        if (attempt < 4) continue;
+      } catch (e) {
+        lastError = e;
+        break;
+      }
     }
 
-    final data = json.decode(resp.body) as Map<String, dynamic>;
-    final streamToken = data['stream_token'] as String?;
-    if (streamToken == null || streamToken.isEmpty) return null;
-    return streamToken;
+    return _StreamTokenResult.error(
+      T.fmt(T.current.chatErrNetworkWith, {'err': lastError ?? ''}),
+    );
   }
 
   Stream<ChatEvent> _readWebEventSourceOnce(_StreamState state) async* {
-    final streamToken = await _fetchStreamToken();
-    if (streamToken == null) {
-      yield ChatEvent(error: T.current.chatErrPleaseLogin);
+    final tokenResult = await _fetchStreamToken();
+    if (tokenResult.error != null) {
+      yield ChatEvent(error: tokenResult.error);
       state.outcome = _StreamOutcome.done;
       return;
     }
+    final streamToken = tokenResult.token!;
 
     final uri = Uri.parse('$_baseUrl/api/ai/chat/$_activeSessionId/stream')
         .replace(
@@ -1698,4 +1753,16 @@ class _StartResult {
   factory _StartResult.ok(String sid) => _StartResult._(sid, null, null);
   factory _StartResult.error(String msg, {Map<String, dynamic>? quota}) =>
       _StartResult._(null, msg, quota);
+}
+
+class _StreamTokenResult {
+  final String? token;
+  final String? error;
+
+  const _StreamTokenResult._(this.token, this.error);
+
+  factory _StreamTokenResult.ok(String token) =>
+      _StreamTokenResult._(token, null);
+  factory _StreamTokenResult.error(String msg) =>
+      _StreamTokenResult._(null, msg);
 }
