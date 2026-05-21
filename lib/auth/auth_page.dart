@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -770,12 +769,16 @@ class _ProfilePageState extends State<ProfilePage> {
         child: SizedBox(
           width: 96,
           height: 96,
-          child: CachedNetworkImage(
-            imageUrl: avatarUrl,
+          child: Image.network(
+            avatarUrl,
             fit: BoxFit.cover,
-            placeholder: (_, __) => fallbackAvatar(),
-            errorWidget: (_, __, error) {
-              debugPrint('[ProfilePage] CachedNetworkImage ERROR: $error');
+            webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return fallbackAvatar();
+            },
+            errorBuilder: (_, error, __) {
+              debugPrint('[ProfilePage] Image.network ERROR: $error');
               return fallbackAvatar();
             },
           ),
