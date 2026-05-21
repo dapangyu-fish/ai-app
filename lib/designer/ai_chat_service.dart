@@ -485,6 +485,7 @@ class AiChatService {
       yield ChatEvent(error: startResult.error, quota: startResult.quota);
       return;
     }
+    final streamSessionId = startResult.sessionId ?? active.id;
     // ⚠️ 关键时机：先把 SessionMeta 标记 committed + 持久化，再开 SSE
     // 不变量：prefs 永远 ≤ backend，所以"持久化"必须发生在 backend 已经接受这条消息之后
     active.lastUserMessage = userMessage;
@@ -499,12 +500,12 @@ class AiChatService {
     //
     // Web 用浏览器原生 EventSource；移动端继续用 package:http + Authorization SSE。
     if (kIsWeb) {
-      yield* _streamWithWebEventSource();
+      yield* _streamWithWebEventSource(streamSessionId);
       return;
     }
 
     // 非 Web：SSE 流式读 + 自动重连
-    yield* _streamWithReconnect();
+    yield* _streamWithReconnect(streamSessionId);
   }
 
   /// 重试上一轮（worker 死了 / 用户主动重试）。复用 active session 的 sid，
@@ -520,7 +521,7 @@ class AiChatService {
 
   /// SSE 主循环：连 → 读 → 断了 → 探活 → 重连 / 报错。
   /// 调用方负责确保 worker 已经在跑（要么刚 _postStart 起来，要么是恢复已有 session）。
-  Stream<ChatEvent> _streamWithReconnect() async* {
+  Stream<ChatEvent> _streamWithReconnect(String sessionId) async* {
     final state = _StreamState();
     int reconnectCount = 0;
     while (true) {
@@ -530,7 +531,7 @@ class AiChatService {
       }
 
       state.outcome = _StreamOutcome.retry; // 默认假设需要重连，_readStreamOnce 内部会改
-      await for (final ev in _readStreamOnce(state)) {
+      await for (final ev in _readStreamOnce(state, sessionId)) {
         yield ev;
       }
 
@@ -542,7 +543,7 @@ class AiChatService {
       // 流断了 → 在重连之前先探活
       // 关键反模式防御：/status 调用本身失败时绝不当成"worker 死了"，
       // 否则坏网络会被误判 → 弹重试按钮 → 用户点重试 → 又失败 → UX 崩
-      final alive = await _checkAliveCarefully();
+      final alive = await _checkAliveCarefully(sessionId);
       if (alive == _AliveCheck.confirmedDead) {
         debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
@@ -573,15 +574,15 @@ class AiChatService {
 
   /// 探活三态：confirmed dead / alive or finished / unknown。
   /// 只有 confirmedDead 才是"worker 真死了"的可信信号。
-  Future<_AliveCheck> _checkAliveCarefully() async {
-    if (_activeSessionId.isEmpty) return _AliveCheck.unknown;
+  Future<_AliveCheck> _checkAliveCarefully(String sessionId) async {
+    if (sessionId.isEmpty) return _AliveCheck.unknown;
     try {
       final token = AuthService.token;
       final headers = <String, String>{};
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/$_activeSessionId/status'),
+            Uri.parse('$_baseUrl/api/ai/chat/$sessionId/status'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 8));
@@ -650,7 +651,7 @@ class AiChatService {
         if (kIsWeb) {
           return ResumeStreaming(
             userMessage: active.lastUserMessage,
-            stream: _streamWithWebEventSource(),
+            stream: _streamWithWebEventSource(active.id),
           );
         }
         // worker 还在跑：续 SSE，不调 /start
@@ -658,7 +659,7 @@ class AiChatService {
         _lastEntryId = '0'; // backend stream 是这一轮的，从头读没问题
         return ResumeStreaming(
           userMessage: active.lastUserMessage,
-          stream: _streamWithReconnect(),
+          stream: _streamWithReconnect(active.id),
         );
       }
       return const ResumeNothing();
@@ -672,7 +673,7 @@ class AiChatService {
   ///
   /// 后端 worker 仍然照常在后台跑；只是 Web 客户端不读 streaming body，避免
   /// dart2js/browser fetch streaming 差异导致 "SSE 连接超时 / Failed to fetch"。
-  Stream<ChatEvent> _pollResultForWeb() async* {
+  Stream<ChatEvent> _pollResultForWeb(String sessionId) async* {
     var pollCount = 0;
     while (true) {
       if (_aborting) return;
@@ -686,7 +687,7 @@ class AiChatService {
 
         final resp = await http
             .get(
-              Uri.parse('$_baseUrl/api/ai/chat/$_activeSessionId/status'),
+              Uri.parse('$_baseUrl/api/ai/chat/$sessionId/status'),
               headers: {'Authorization': 'Bearer $token'},
             )
             .timeout(const Duration(seconds: 10));
@@ -719,7 +720,7 @@ class AiChatService {
         final procAlive = data['process_alive'] == true;
 
         if (status == 'done') {
-          final completed = await _fetchCompletedResult();
+          final completed = await _fetchCompletedResult(sessionId);
           if (completed is ResumeCompleted) {
             await for (final ev in _eventsFromCompleted(completed)) {
               yield ev;
@@ -777,7 +778,7 @@ class AiChatService {
     }
   }
 
-  Stream<ChatEvent> _streamWithWebEventSource() async* {
+  Stream<ChatEvent> _streamWithWebEventSource(String sessionId) async* {
     final state = _StreamState();
     int reconnectCount = 0;
     while (true) {
@@ -788,12 +789,12 @@ class AiChatService {
 
       state.outcome = _StreamOutcome.retry;
       try {
-        await for (final ev in _readWebEventSourceOnce(state)) {
+        await for (final ev in _readWebEventSourceOnce(state, sessionId)) {
           yield ev;
         }
       } on UnsupportedError catch (e) {
         debugPrint('[AI_CHAT] Web EventSource 不可用，降级轮询: $e');
-        yield* _pollResultForWeb();
+        yield* _pollResultForWeb(sessionId);
         return;
       }
 
@@ -802,7 +803,7 @@ class AiChatService {
         return;
       }
 
-      final alive = await _checkAliveCarefully();
+      final alive = await _checkAliveCarefully(sessionId);
       if (alive == _AliveCheck.confirmedDead) {
         debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
@@ -828,7 +829,7 @@ class AiChatService {
     }
   }
 
-  Future<_StreamTokenResult> _fetchStreamToken() async {
+  Future<_StreamTokenResult> _fetchStreamToken(String sessionId) async {
     final token = AuthService.token;
     if (token == null) {
       return _StreamTokenResult.error(T.current.chatErrPleaseLogin);
@@ -837,7 +838,7 @@ class AiChatService {
     Future<http.Response> postToken(String bearer) {
       return http
           .post(
-            Uri.parse('$_baseUrl/api/ai/chat/$_activeSessionId/stream_token'),
+            Uri.parse('$_baseUrl/api/ai/chat/$sessionId/stream_token'),
             headers: {'Authorization': 'Bearer $bearer'},
           )
           .timeout(const Duration(seconds: 10));
@@ -919,8 +920,11 @@ class AiChatService {
     );
   }
 
-  Stream<ChatEvent> _readWebEventSourceOnce(_StreamState state) async* {
-    final tokenResult = await _fetchStreamToken();
+  Stream<ChatEvent> _readWebEventSourceOnce(
+    _StreamState state,
+    String sessionId,
+  ) async* {
+    final tokenResult = await _fetchStreamToken(sessionId);
     if (tokenResult.error != null) {
       yield ChatEvent(error: tokenResult.error);
       state.outcome = _StreamOutcome.done;
@@ -928,13 +932,9 @@ class AiChatService {
     }
     final streamToken = tokenResult.token!;
 
-    final uri = Uri.parse('$_baseUrl/api/ai/chat/$_activeSessionId/stream')
-        .replace(
-          queryParameters: {
-            'last_id': _lastEntryId,
-            'stream_token': streamToken,
-          },
-        );
+    final uri = Uri.parse('$_baseUrl/api/ai/chat/$sessionId/stream').replace(
+      queryParameters: {'last_id': _lastEntryId, 'stream_token': streamToken},
+    );
     debugPrint('[AI_CHAT] >>> Web EventSource GET $uri');
 
     try {
@@ -992,15 +992,16 @@ class AiChatService {
   }
 
   /// 从 /result 拿到上一轮完成的最终文本，并解析其中的 [json_app_url] 标签
-  Future<ResumeResult> _fetchCompletedResult() async {
+  Future<ResumeResult> _fetchCompletedResult([String? sessionId]) async {
     final active = _active;
     if (active == null) return const ResumeNothing();
+    final sid = sessionId ?? active.id;
     try {
       final token = AuthService.token;
       if (token == null) return const ResumeNothing();
       final resp = await http
           .get(
-            Uri.parse('$_baseUrl/api/ai/chat/${active.id}/result'),
+            Uri.parse('$_baseUrl/api/ai/chat/$sid/result'),
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(const Duration(seconds: 8));
@@ -1044,13 +1045,16 @@ class AiChatService {
 
   /// 内部：读一次 SSE 直到流结束或断线，把事件 yield 出去；
   /// 流结束后通过 [state.outcome] 告诉调用方下一步该重连还是退出。
-  Stream<ChatEvent> _readStreamOnce(_StreamState state) async* {
+  Stream<ChatEvent> _readStreamOnce(
+    _StreamState state,
+    String sessionId,
+  ) async* {
     final client = http.Client();
     _activeClient = client;
 
     final token = AuthService.token;
     final url =
-        '$_baseUrl/api/ai/chat/$_activeSessionId/stream?last_id=${Uri.encodeQueryComponent(_lastEntryId)}';
+        '$_baseUrl/api/ai/chat/$sessionId/stream?last_id=${Uri.encodeQueryComponent(_lastEntryId)}';
     debugPrint('[AI_CHAT] >>> SSE GET $url');
 
     try {
