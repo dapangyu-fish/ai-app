@@ -21,7 +21,9 @@ class JsonImagePickerWidget extends JsonBaseWidget {
   ) {
     final bindPath = json['bind'] as String?;
     final placeholder = interpreter.resolveTemplate(
-        json['placeholder']?.toString() ?? T.of(context).widgetImagePickerPlaceholder);
+      json['placeholder']?.toString() ??
+          T.of(context).widgetImagePickerPlaceholder,
+    );
     final width = (json['width'] as num?)?.toDouble() ?? double.infinity;
     final height = (json['height'] as num?)?.toDouble() ?? 200;
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 12;
@@ -44,7 +46,9 @@ class JsonImagePickerWidget extends JsonBaseWidget {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.3),
               width: 1.5,
             ),
           ),
@@ -65,7 +69,10 @@ class JsonImagePickerWidget extends JsonBaseWidget {
                         child: Text(
                           T.of(context).widgetImagePickerReselect,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -75,7 +82,9 @@ class JsonImagePickerWidget extends JsonBaseWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      sourceStr == 'camera' ? Icons.camera_alt : Icons.photo_library,
+                      sourceStr == 'camera'
+                          ? Icons.camera_alt
+                          : Icons.photo_library,
                       size: 40,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -96,6 +105,14 @@ class JsonImagePickerWidget extends JsonBaseWidget {
 
   Widget _buildImagePreview(String path, BuildContext context) {
     if (kIsWeb || path.startsWith('http://') || path.startsWith('https://')) {
+      if (kIsWeb) {
+        return Image.network(
+          path,
+          fit: BoxFit.cover,
+          webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+          errorBuilder: (_, __, ___) => _errorWidget(context),
+        );
+      }
       return CachedNetworkImage(
         imageUrl: path,
         fit: BoxFit.cover,
@@ -111,8 +128,11 @@ class JsonImagePickerWidget extends JsonBaseWidget {
 
   Widget _errorWidget(BuildContext context) {
     return Center(
-      child: Icon(Icons.broken_image,
-          size: 40, color: Theme.of(context).colorScheme.error),
+      child: Icon(
+        Icons.broken_image,
+        size: 40,
+        color: Theme.of(context).colorScheme.error,
+      ),
     );
   }
 

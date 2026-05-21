@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Directory;
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import '../i18n/framework_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
@@ -15,12 +16,12 @@ import 'fcm_service.dart';
 
 /// IMService.friendshipStream 推的事件类型
 enum FriendshipEventKind {
-  applicationAdded,    // 收到一条好友申请
+  applicationAdded, // 收到一条好友申请
   applicationAccepted, // 我发的申请被对方同意
   applicationRejected, // 我发的申请被拒绝
-  added,               // 双向好友建立完成（FriendInfo）
-  deleted,             // 好友被删除
-  infoChanged,         // 好友资料更新
+  added, // 双向好友建立完成（FriendInfo）
+  deleted, // 好友被删除
+  infoChanged, // 好友资料更新
 }
 
 class FriendshipEvent {
@@ -72,12 +73,16 @@ class IMService {
   // ── 事件 stream（broadcast；多个页面可同时订阅）──
   // OpenIM SDK 的 setXxxListener 是"单 listener"语义，谁后调谁覆盖。所以所有 listener
   // 集中在 IMService 这里订一次，页面通过下面的 stream 拿事件，避免相互踩。
-  final StreamController<Message> _newMessageCtrl = StreamController.broadcast();
-  final StreamController<RevokedInfo> _revokedCtrl = StreamController.broadcast();
-  final StreamController<List<ReadReceiptInfo>> _c2cReceiptCtrl = StreamController.broadcast();
+  final StreamController<Message> _newMessageCtrl =
+      StreamController.broadcast();
+  final StreamController<RevokedInfo> _revokedCtrl =
+      StreamController.broadcast();
+  final StreamController<List<ReadReceiptInfo>> _c2cReceiptCtrl =
+      StreamController.broadcast();
   final StreamController<List<ConversationInfo>> _conversationsChangedCtrl =
       StreamController.broadcast();
-  final StreamController<FriendshipEvent> _friendshipCtrl = StreamController.broadcast();
+  final StreamController<FriendshipEvent> _friendshipCtrl =
+      StreamController.broadcast();
 
   Stream<Message> get newMessageStream => _newMessageCtrl.stream;
   Stream<RevokedInfo> get revokedStream => _revokedCtrl.stream;
@@ -126,39 +131,41 @@ class IMService {
       // 兜底超时 —— flutter_openim_sdk 在 Android release 下若缺 ACCESS_NETWORK_STATE
       // 权限 / Go runtime 异常 时 initSDK 会永不返回，导致 _loginInFlight 锁死、UI
       // 后续点击全部无反应。这里 15s 超时让上层能感知到失败并重试
-      await OpenIM.iMManager.initSDK(
-        platformID: _getPlatformID(),
-        apiAddr: _apiUrl ?? AppConfig.imApiUrl,
-        wsAddr: _wsUrl ?? AppConfig.imWsUrl,
-        dataDir: dataDir,
-        listener: OnConnectListener(
-          onConnectSuccess: () {
-            debugPrint('[IM] 连接成功');
-            connectionNotifier.value = true;
-          },
-          onConnecting: () {
-            debugPrint('[IM] 连接中...');
-          },
-          onConnectFailed: (code, error) {
-            debugPrint('[IM] 连接失败: $code $error');
-            connectionNotifier.value = false;
-          },
-          onUserTokenExpired: () {
-            debugPrint('[IM] Token 过期, 尝试刷新');
-            _refreshIMToken();
-          },
-          onUserTokenInvalid: () {
-            debugPrint('[IM] Token 无效');
-            connectionNotifier.value = false;
-            _loggedIn = false;
-          },
-          onKickedOffline: () {
-            debugPrint('[IM] 被踢下线');
-            connectionNotifier.value = false;
-            _loggedIn = false;
-          },
-        ),
-      ).timeout(const Duration(seconds: 15));
+      await OpenIM.iMManager
+          .initSDK(
+            platformID: _getPlatformID(),
+            apiAddr: _apiUrl ?? AppConfig.imApiUrl,
+            wsAddr: _wsUrl ?? AppConfig.imWsUrl,
+            dataDir: dataDir,
+            listener: OnConnectListener(
+              onConnectSuccess: () {
+                debugPrint('[IM] 连接成功');
+                connectionNotifier.value = true;
+              },
+              onConnecting: () {
+                debugPrint('[IM] 连接中...');
+              },
+              onConnectFailed: (code, error) {
+                debugPrint('[IM] 连接失败: $code $error');
+                connectionNotifier.value = false;
+              },
+              onUserTokenExpired: () {
+                debugPrint('[IM] Token 过期, 尝试刷新');
+                _refreshIMToken();
+              },
+              onUserTokenInvalid: () {
+                debugPrint('[IM] Token 无效');
+                connectionNotifier.value = false;
+                _loggedIn = false;
+              },
+              onKickedOffline: () {
+                debugPrint('[IM] 被踢下线');
+                connectionNotifier.value = false;
+                _loggedIn = false;
+              },
+            ),
+          )
+          .timeout(const Duration(seconds: 15));
 
       _setupListeners();
       _initialized = true;
@@ -173,21 +180,23 @@ class IMService {
   /// 设置全局监听 —— 所有 OpenIM listener 都在这里统一订一次
   /// 页面 / 组件不要自己调 setXxxListener（会被覆盖），改订阅本服务的 stream。
   void _setupListeners() {
-    OpenIM.iMManager.messageManager.setAdvancedMsgListener(OnAdvancedMsgListener(
-      onRecvNewMessage: (msg) {
-        debugPrint('[IM] 新消息: ${msg.senderNickname} -> ${msg.contentType}');
-        _newMessageCtrl.add(msg);
-        _updateUnreadCount();
-      },
-      onNewRecvMessageRevoked: (info) {
-        debugPrint('[IM] 消息撤回: ${info.clientMsgID}');
-        _revokedCtrl.add(info);
-      },
-      onRecvC2CReadReceipt: (list) {
-        debugPrint('[IM] 已读回执: ${list.length} 条');
-        _c2cReceiptCtrl.add(list);
-      },
-    ));
+    OpenIM.iMManager.messageManager.setAdvancedMsgListener(
+      OnAdvancedMsgListener(
+        onRecvNewMessage: (msg) {
+          debugPrint('[IM] 新消息: ${msg.senderNickname} -> ${msg.contentType}');
+          _newMessageCtrl.add(msg);
+          _updateUnreadCount();
+        },
+        onNewRecvMessageRevoked: (info) {
+          debugPrint('[IM] 消息撤回: ${info.clientMsgID}');
+          _revokedCtrl.add(info);
+        },
+        onRecvC2CReadReceipt: (list) {
+          debugPrint('[IM] 已读回执: ${list.length} 条');
+          _c2cReceiptCtrl.add(list);
+        },
+      ),
+    );
 
     OpenIM.iMManager.conversationManager.setConversationListener(
       OnConversationListener(
@@ -205,17 +214,20 @@ class IMService {
       ),
     );
 
-    OpenIM.iMManager.friendshipManager.setFriendshipListener(OnFriendshipListener(
-      onFriendApplicationAdded: (a) =>
-          _friendshipCtrl.add(FriendshipEvent.applicationAdded(a)),
-      onFriendApplicationAccepted: (a) =>
-          _friendshipCtrl.add(FriendshipEvent.applicationAccepted(a)),
-      onFriendApplicationRejected: (a) =>
-          _friendshipCtrl.add(FriendshipEvent.applicationRejected(a)),
-      onFriendAdded: (f) => _friendshipCtrl.add(FriendshipEvent.added(f)),
-      onFriendDeleted: (f) => _friendshipCtrl.add(FriendshipEvent.deleted(f)),
-      onFriendInfoChanged: (f) => _friendshipCtrl.add(FriendshipEvent.infoChanged(f)),
-    ));
+    OpenIM.iMManager.friendshipManager.setFriendshipListener(
+      OnFriendshipListener(
+        onFriendApplicationAdded: (a) =>
+            _friendshipCtrl.add(FriendshipEvent.applicationAdded(a)),
+        onFriendApplicationAccepted: (a) =>
+            _friendshipCtrl.add(FriendshipEvent.applicationAccepted(a)),
+        onFriendApplicationRejected: (a) =>
+            _friendshipCtrl.add(FriendshipEvent.applicationRejected(a)),
+        onFriendAdded: (f) => _friendshipCtrl.add(FriendshipEvent.added(f)),
+        onFriendDeleted: (f) => _friendshipCtrl.add(FriendshipEvent.deleted(f)),
+        onFriendInfoChanged: (f) =>
+            _friendshipCtrl.add(FriendshipEvent.infoChanged(f)),
+      ),
+    );
   }
 
   /// 登录 OpenIM
@@ -264,10 +276,7 @@ class IMService {
           // 防止 wipe 删目录后 SDK login 打不开 SQLite
           await init();
 
-          await OpenIM.iMManager.login(
-            userID: _imUserId!,
-            token: _imToken!,
-          );
+          await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
 
           _loggedIn = true;
           connectionNotifier.value = true;
@@ -336,10 +345,7 @@ class IMService {
     if (_imToken != null && _imUserId != null) {
       try {
         await init();
-        await OpenIM.iMManager.login(
-          userID: _imUserId!,
-          token: _imToken!,
-        );
+        await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
         _loggedIn = true;
         connectionNotifier.value = true;
         await _updateUnreadCount();
@@ -384,7 +390,9 @@ class IMService {
         message: message,
         offlinePushInfo: OfflinePushInfo(
           title: T.current.imPushNewMessage,
-          desc: previewText.length > 50 ? '${previewText.substring(0, 50)}...' : previewText,
+          desc: previewText.length > 50
+              ? '${previewText.substring(0, 50)}...'
+              : previewText,
         ),
         userID: userID,
         groupID: groupID,
@@ -428,12 +436,14 @@ class IMService {
       return null;
     }
     try {
-      final msg = await OpenIM.iMManager.messageManager.createImageMessageFromFullPath(
-        imagePath: imagePath,
-      );
+      final msg = await OpenIM.iMManager.messageManager
+          .createImageMessageFromFullPath(imagePath: imagePath);
       return await OpenIM.iMManager.messageManager.sendMessage(
         message: msg,
-        offlinePushInfo: OfflinePushInfo(title: T.current.imPushNewMessage, desc: T.current.imPushImagePreview),
+        offlinePushInfo: OfflinePushInfo(
+          title: T.current.imPushNewMessage,
+          desc: T.current.imPushImagePreview,
+        ),
         userID: userID,
         groupID: groupID,
       );
@@ -476,11 +486,11 @@ class IMService {
     final thumbPic = (thumbUrl == null || thumbUrl.isEmpty)
         ? pic
         : (PictureInfo()
-          ..uuid = '${uuid}_thumb'
-          ..url = thumbUrl
-          ..width = width
-          ..height = height
-          ..type = 'image/jpeg');
+            ..uuid = '${uuid}_thumb'
+            ..url = thumbUrl
+            ..width = width
+            ..height = height
+            ..type = 'image/jpeg');
     try {
       final msg = await OpenIM.iMManager.messageManager.createImageMessageByURL(
         sourcePath: sourcePath,
@@ -644,10 +654,10 @@ class IMService {
     try {
       final result = await OpenIM.iMManager.messageManager
           .getAdvancedHistoryMessageList(
-        conversationID: conversationID,
-        startMsg: startMsg,
-        count: count,
-      );
+            conversationID: conversationID,
+            startMsg: startMsg,
+            count: count,
+          );
       return result.messageList ?? [];
     } catch (e) {
       debugPrint('[IM] 获取历史消息失败: $e');
@@ -661,8 +671,9 @@ class IMService {
   Future<List<PublicUserInfo>> getUsersInfo(List<String> userIDList) async {
     if (userIDList.isEmpty) return [];
     try {
-      return await OpenIM.iMManager.userManager
-          .getUsersInfo(userIDList: userIDList);
+      return await OpenIM.iMManager.userManager.getUsersInfo(
+        userIDList: userIDList,
+      );
     } catch (e) {
       debugPrint('[IM] 获取用户信息失败: $e');
       return [];
@@ -675,27 +686,31 @@ class IMService {
   /// 返回 map: userID → {im_user_id, nickname, email, face_url}。
   /// 找不到的 userID 不会出现在返回 map 里。
   Future<Map<String, Map<String, dynamic>>> lookupUsersFromSupabase(
-      List<String> userIDList) async {
+    List<String> userIDList,
+  ) async {
     if (userIDList.isEmpty) return const {};
     // 去重 + 过滤空 ID
     final uniqIds = userIDList.where((s) => s.isNotEmpty).toSet().toList();
     if (uniqIds.isEmpty) return const {};
 
-    final entries = await Future.wait(uniqIds.map((id) async {
-      try {
-        final hits = await searchUsers(id);
-        for (final u in hits) {
-          if ((u['im_user_id']?.toString() ?? '') == id) {
-            return MapEntry(id, u);
+    final entries = await Future.wait(
+      uniqIds.map((id) async {
+        try {
+          final hits = await searchUsers(id);
+          for (final u in hits) {
+            if ((u['im_user_id']?.toString() ?? '') == id) {
+              return MapEntry(id, u);
+            }
           }
+        } catch (e) {
+          debugPrint('[IM] supabase lookup 失败 user=$id: $e');
         }
-      } catch (e) {
-        debugPrint('[IM] supabase lookup 失败 user=$id: $e');
-      }
-      return null;
-    }));
+        return null;
+      }),
+    );
     return Map.fromEntries(
-        entries.whereType<MapEntry<String, Map<String, dynamic>>>());
+      entries.whereType<MapEntry<String, Map<String, dynamic>>>(),
+    );
   }
 
   // ---------- 群聊操作 ----------
@@ -707,7 +722,11 @@ class IMService {
     String? faceURL,
   }) async {
     try {
-      final info = GroupInfo(groupID: '', groupName: groupName, faceURL: faceURL ?? '');
+      final info = GroupInfo(
+        groupID: '',
+        groupName: groupName,
+        faceURL: faceURL ?? '',
+      );
       final group = await OpenIM.iMManager.groupManager.createGroup(
         groupInfo: info,
         memberUserIDs: memberUserIDs,
@@ -831,10 +850,14 @@ class IMService {
   /// 走后端 /api/im/users/lookup（后端有 admin token 才查得到陌生用户）
   Future<Map<String, dynamic>?> lookupUser(String userID) async {
     try {
-      final resp = await http.get(
-        Uri.parse('$_backendUrl/api/im/users/lookup?user_id=${Uri.encodeQueryComponent(userID)}'),
-        headers: {'Authorization': 'Bearer ${AuthService.token}'},
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(
+            Uri.parse(
+              '$_backendUrl/api/im/users/lookup?user_id=${Uri.encodeQueryComponent(userID)}',
+            ),
+            headers: {'Authorization': 'Bearer ${AuthService.token}'},
+          )
+          .timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200) {
         debugPrint('[IM] lookupUser 失败 ${resp.statusCode}: ${resp.body}');
         return null;
@@ -851,10 +874,14 @@ class IMService {
   Future<List<Map<String, dynamic>>> searchUsers(String q) async {
     if (q.trim().length < 2) return const [];
     try {
-      final resp = await http.get(
-        Uri.parse('$_backendUrl/api/im/users/search?q=${Uri.encodeQueryComponent(q.trim())}'),
-        headers: {'Authorization': 'Bearer ${AuthService.token}'},
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(
+            Uri.parse(
+              '$_backendUrl/api/im/users/search?q=${Uri.encodeQueryComponent(q.trim())}',
+            ),
+            headers: {'Authorization': 'Bearer ${AuthService.token}'},
+          )
+          .timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200) {
         debugPrint('[IM] searchUsers 失败 ${resp.statusCode}: ${resp.body}');
         return const [];
@@ -875,17 +902,19 @@ class IMService {
   /// 注册 FCM token
   Future<void> registerFCMToken(String fcmToken) async {
     try {
-      final resp = await http.post(
-        Uri.parse('$_backendUrl/api/im/push_token'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${AuthService.token}',
-        },
-        body: json.encode({
-          'fcm_token': fcmToken,
-          'platform': _getPlatformID(),
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .post(
+            Uri.parse('$_backendUrl/api/im/push_token'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${AuthService.token}',
+            },
+            body: json.encode({
+              'fcm_token': fcmToken,
+              'platform': _getPlatformID(),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
         debugPrint('[IM] FCM token 注册失败: ${resp.body}');
@@ -899,14 +928,16 @@ class IMService {
 
   Future<Map<String, dynamic>?> _fetchIMCredentials() async {
     try {
-      final resp = await http.post(
-        Uri.parse('$_backendUrl/api/im/token'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${AuthService.token}',
-        },
-        body: json.encode({'platform': _getPlatformID()}),
-      ).timeout(const Duration(seconds: 15));
+      final resp = await http
+          .post(
+            Uri.parse('$_backendUrl/api/im/token'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${AuthService.token}',
+            },
+            body: json.encode({'platform': _getPlatformID()}),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (resp.statusCode != 200) {
         debugPrint('[IM] 获取凭证失败: ${resp.body}');
@@ -925,10 +956,7 @@ class IMService {
       _imToken = credentials['im_token'];
       await _saveCredentials();
       try {
-        await OpenIM.iMManager.login(
-          userID: _imUserId!,
-          token: _imToken!,
-        );
+        await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
         _loggedIn = true;
         connectionNotifier.value = true;
       } catch (e) {
@@ -1006,7 +1034,8 @@ class IMService {
     return friends.map(_friendInfoToMap).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getIncomingFriendApplicationsAsMaps() async {
+  Future<List<Map<String, dynamic>>>
+  getIncomingFriendApplicationsAsMaps() async {
     final apps = await getIncomingFriendApplications();
     return apps.map(_friendApplicationToMap).toList();
   }
@@ -1030,8 +1059,10 @@ class IMService {
     required String conversationID,
     int count = 30,
   }) async {
-    final messages =
-        await getHistoryMessages(conversationID: conversationID, count: count);
+    final messages = await getHistoryMessages(
+      conversationID: conversationID,
+      count: count,
+    );
     return messages.map(_messageToMap).toList();
   }
 
@@ -1041,7 +1072,10 @@ class IMService {
     required String userID,
   }) async {
     final msg = await sendTextMessage(
-        conversationID: conversationID, text: text, userID: userID);
+      conversationID: conversationID,
+      text: text,
+      userID: userID,
+    );
     return msg != null ? _messageToMap(msg) : null;
   }
 
@@ -1072,6 +1106,21 @@ class IMService {
   }
 
   Map<String, dynamic> _messageToMap(Message m) {
+    final imageUrl =
+        m.pictureElem?.bigPicture?.url ??
+        m.pictureElem?.sourcePicture?.url ??
+        m.pictureElem?.snapshotPicture?.url ??
+        '';
+    final imageThumbUrl =
+        m.pictureElem?.snapshotPicture?.url ??
+        m.pictureElem?.sourcePicture?.url ??
+        m.pictureElem?.bigPicture?.url ??
+        '';
+    final videoUrl = m.videoElem?.videoUrl ?? '';
+    final videoSnapshotUrl = m.videoElem?.snapshotUrl ?? '';
+    final fileUrl = m.fileElem?.sourceUrl ?? '';
+    final fileName = m.fileElem?.fileName ?? '';
+    final soundUrl = m.soundElem?.sourceUrl ?? '';
     String text;
     switch (m.contentType) {
       case MessageType.text:
@@ -1118,6 +1167,16 @@ class IMService {
       // 微信风格气泡配色：自己绿色（#95EC69），他人白色
       'bubble_color': isMe ? '#95EC69' : '#FFFFFF',
       'bubble_text_color': '#000000',
+      'image_url': imageUrl,
+      'image_thumb_url': imageThumbUrl,
+      'video_url': videoUrl,
+      'video_snapshot_url': videoSnapshotUrl,
+      'video_duration': m.videoElem?.duration ?? 0,
+      'file_url': fileUrl,
+      'file_name': fileName,
+      'file_size': m.fileElem?.fileSize ?? 0,
+      'sound_url': soundUrl,
+      'sound_duration': m.soundElem?.duration ?? 0,
     };
   }
 

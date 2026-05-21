@@ -10,6 +10,7 @@
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -27,6 +28,55 @@ String _pickSummary(BuildContext ctx, Map<String, dynamic> d) {
   final en = (d['summary_en'] as String?) ?? '';
   if (_isZh(ctx)) return zh.isNotEmpty ? zh : en;
   return en.isNotEmpty ? en : zh;
+}
+
+class _MarketAvatar extends StatelessWidget {
+  final String url;
+  final String nickname;
+  final double radius;
+  final ColorScheme colorScheme;
+
+  const _MarketAvatar({
+    required this.url,
+    required this.nickname,
+    required this.radius,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = CircleAvatar(
+      radius: radius,
+      backgroundColor: colorScheme.primaryContainer,
+      child: Text(
+        nickname.isNotEmpty ? nickname[0].toUpperCase() : '?',
+        style: TextStyle(
+          color: colorScheme.onPrimaryContainer,
+          fontSize: radius * 0.7,
+        ),
+      ),
+    );
+    if (url.isEmpty) return fallback;
+    if (kIsWeb) {
+      return ClipOval(
+        child: Image.network(
+          url,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+          errorBuilder: (_, __, ___) => fallback,
+          loadingBuilder: (_, child, progress) =>
+              progress == null ? child : fallback,
+        ),
+      );
+    }
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: colorScheme.primaryContainer,
+      backgroundImage: CachedNetworkImageProvider(url),
+    );
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -75,8 +125,10 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
       final token = AuthService.token;
       if (token != null) headers['Authorization'] = 'Bearer $token';
       final resp = await http
-          .get(Uri.parse('${AppConfig.registryUrl}/packages/$_name/detail'),
-              headers: headers)
+          .get(
+            Uri.parse('${AppConfig.registryUrl}/packages/$_name/detail'),
+            headers: headers,
+          )
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         _detail = json.decode(resp.body) as Map<String, dynamic>;
@@ -98,15 +150,20 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
       final uri = Uri.parse('${AppConfig.registryUrl}/packages/$_name/like');
       final headers = {'Authorization': 'Bearer $token'};
       final resp = liked
-          ? await http.delete(uri, headers: headers).timeout(const Duration(seconds: 8))
-          : await http.post(uri, headers: headers).timeout(const Duration(seconds: 8));
+          ? await http
+                .delete(uri, headers: headers)
+                .timeout(const Duration(seconds: 8))
+          : await http
+                .post(uri, headers: headers)
+                .timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) throw Exception('like ${resp.statusCode}');
     } catch (_) {
       // 失败回滚
       if (mounted) {
         setState(() {
           _detail!['liked_by_me'] = liked;
-          _detail!['like_count'] = (_detail!['like_count'] ?? 0) + (liked ? 1 : -1);
+          _detail!['like_count'] =
+              (_detail!['like_count'] ?? 0) + (liked ? 1 : -1);
         });
       }
     } finally {
@@ -119,10 +176,13 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
     final token = AuthService.token;
     if (token != null) {
       // ignore: unawaited_futures
-      http.post(
-        Uri.parse('${AppConfig.registryUrl}/packages/$_name/install'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 5)).catchError((_) => http.Response('', 0));
+      http
+          .post(
+            Uri.parse('${AppConfig.registryUrl}/packages/$_name/install'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 5))
+          .catchError((_) => http.Response('', 0));
     }
     if (mounted) Navigator.of(context).pop('run');
   }
@@ -131,9 +191,11 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
     final author = _detail?['author'] as Map<String, dynamic>?;
     final authorId = author?['id']?.toString();
     if (authorId == null || authorId.isEmpty) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => MarketUserProfilePage(authorId: authorId),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MarketUserProfilePage(authorId: authorId),
+      ),
+    );
   }
 
   @override
@@ -149,8 +211,10 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
         actions: [
           IconButton(
             tooltip: _isZh(context) ? '收藏' : 'Favorite',
-            icon: Icon(_favorited ? Icons.bookmark : Icons.bookmark_border,
-                color: _favorited ? cs.primary : null),
+            icon: Icon(
+              _favorited ? Icons.bookmark : Icons.bookmark_border,
+              color: _favorited ? cs.primary : null,
+            ),
             onPressed: _toggleFavorite,
           ),
         ],
@@ -164,7 +228,8 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                 Row(
                   children: [
                     Container(
-                      width: 64, height: 64,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
                         color: cs.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
@@ -176,14 +241,22 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(displayName,
-                              style: GoogleFonts.inter(
-                                  fontSize: 20, fontWeight: FontWeight.w700,
-                                  color: cs.onSurface)),
+                          Text(
+                            displayName,
+                            style: GoogleFonts.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: cs.onSurface,
+                            ),
+                          ),
                           if (version.isNotEmpty)
-                            Text('v$version',
-                                style: TextStyle(
-                                    fontSize: 13, color: cs.onSurfaceVariant)),
+                            Text(
+                              'v$version',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -200,9 +273,12 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                   children: [
                     _statChip(
                       icon: (d?['liked_by_me'] == true)
-                          ? Icons.favorite : Icons.favorite_border,
+                          ? Icons.favorite
+                          : Icons.favorite_border,
                       label: '${d?['like_count'] ?? 0}',
-                      color: (d?['liked_by_me'] == true) ? Colors.red : cs.onSurfaceVariant,
+                      color: (d?['liked_by_me'] == true)
+                          ? Colors.red
+                          : cs.onSurfaceVariant,
                       onTap: AuthService.token != null ? _toggleLike : null,
                       cs: cs,
                     ),
@@ -219,45 +295,87 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
 
                 // summary
                 if (d != null && _pickSummary(context, d).isNotEmpty) ...[
-                  Text(_isZh(context) ? '简介' : 'About',
-                      style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  Text(
+                    _isZh(context) ? '简介' : 'About',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-                  Text(_pickSummary(context, d),
-                      style: TextStyle(fontSize: 14, height: 1.5, color: cs.onSurface)),
+                  Text(
+                    _pickSummary(context, d),
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: cs.onSurface,
+                    ),
+                  ),
                   const SizedBox(height: 20),
                 ],
 
                 // tech_stack 芯片
-                if (d?['tech_stack'] is List && (d!['tech_stack'] as List).isNotEmpty) ...[
-                  Text(_isZh(context) ? '技术栈' : 'Tech stack',
-                      style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                if (d?['tech_stack'] is List &&
+                    (d!['tech_stack'] as List).isNotEmpty) ...[
+                  Text(
+                    _isZh(context) ? '技术栈' : 'Tech stack',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
-                    spacing: 8, runSpacing: 8,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       for (final t in (d['tech_stack'] as List))
-                        Chip(label: Text(t.toString(), style: const TextStyle(fontSize: 12))),
+                        Chip(
+                          label: Text(
+                            t.toString(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 20),
                 ],
 
                 // capabilities
-                if (d?['capabilities'] is List && (d!['capabilities'] as List).isNotEmpty) ...[
-                  Text(_isZh(context) ? '功能' : 'Features',
-                      style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                if (d?['capabilities'] is List &&
+                    (d!['capabilities'] as List).isNotEmpty) ...[
+                  Text(
+                    _isZh(context) ? '功能' : 'Features',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   for (final c in (d['capabilities'] as List))
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('· ', style: TextStyle(color: cs.onSurfaceVariant)),
-                        Expanded(child: Text(c.toString(),
-                            style: TextStyle(fontSize: 14, color: cs.onSurface))),
-                      ]),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '· ',
+                            style: TextStyle(color: cs.onSurfaceVariant),
+                          ),
+                          Expanded(
+                            child: Text(
+                              c.toString(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: cs.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   const SizedBox(height: 24),
                 ],
@@ -271,10 +389,13 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                 child: FilledButton.icon(
                   onPressed: _run,
                   icon: const Icon(Icons.play_arrow),
-                  label: Text(_isZh(context) ? '运行' : 'Run',
-                      style: const TextStyle(fontSize: 16)),
+                  label: Text(
+                    _isZh(context) ? '运行' : 'Run',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                   style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(50)),
+                    minimumSize: const Size.fromHeight(50),
+                  ),
                 ),
               ),
             ),
@@ -291,18 +412,23 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
         padding: const EdgeInsets.all(4),
         child: Row(
           children: [
-            CircleAvatar(
+            _MarketAvatar(
+              url: avatar,
+              nickname: nickname,
               radius: 18,
-              backgroundColor: cs.primaryContainer,
-              backgroundImage: avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
-              child: avatar.isEmpty
-                  ? Text(nickname.isNotEmpty ? nickname[0].toUpperCase() : '?',
-                      style: TextStyle(color: cs.onPrimaryContainer))
-                  : null,
+              colorScheme: cs,
             ),
             const SizedBox(width: 10),
-            Text(nickname.isEmpty ? (_isZh(context) ? '未知作者' : 'Unknown') : nickname,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.onSurface)),
+            Text(
+              nickname.isEmpty
+                  ? (_isZh(context) ? '未知作者' : 'Unknown')
+                  : nickname,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
             Icon(Icons.chevron_right, size: 18, color: cs.onSurfaceVariant),
           ],
         ),
@@ -310,8 +436,13 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
     );
   }
 
-  Widget _statChip({required IconData icon, required String label,
-      required Color color, VoidCallback? onTap, required ColorScheme cs}) {
+  Widget _statChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    VoidCallback? onTap,
+    required ColorScheme cs,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -321,11 +452,14 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
           color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 6),
-          Text(label, style: TextStyle(fontSize: 14, color: cs.onSurface)),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(fontSize: 14, color: cs.onSurface)),
+          ],
+        ),
       ),
     );
   }
@@ -357,7 +491,11 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
     setState(() => _loading = true);
     try {
       final resp = await http
-          .get(Uri.parse('${AppConfig.registryUrl}/users/${widget.authorId}/profile'))
+          .get(
+            Uri.parse(
+              '${AppConfig.registryUrl}/users/${widget.authorId}/profile',
+            ),
+          )
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         _profile = json.decode(resp.body) as Map<String, dynamic>;
@@ -384,37 +522,64 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
               children: [
                 // 头像 + 名字
                 Center(
-                  child: Column(children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: cs.primaryContainer,
-                      backgroundImage: avatar.isNotEmpty ? CachedNetworkImageProvider(avatar) : null,
-                      child: avatar.isEmpty
-                          ? Text(nickname.isNotEmpty ? nickname[0].toUpperCase() : '?',
-                              style: TextStyle(color: cs.onPrimaryContainer, fontSize: 28))
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(nickname.isEmpty ? (_isZh(context) ? '未知作者' : 'Unknown') : nickname,
+                  child: Column(
+                    children: [
+                      _MarketAvatar(
+                        url: avatar,
+                        nickname: nickname,
+                        radius: 40,
+                        colorScheme: cs,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        nickname.isEmpty
+                            ? (_isZh(context) ? '未知作者' : 'Unknown')
+                            : nickname,
                         style: GoogleFonts.inter(
-                            fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface)),
-                  ]),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
                 // 总下载 / 总点赞
-                Row(children: [
-                  Expanded(child: _bigStat(_isZh(context) ? '总下载' : 'Downloads',
-                      '${p?['total_installs'] ?? 0}', Icons.download_outlined, cs)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _bigStat(_isZh(context) ? '总点赞' : 'Likes',
-                      '${p?['total_likes'] ?? 0}', Icons.favorite, cs)),
-                ]),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _bigStat(
+                        _isZh(context) ? '总下载' : 'Downloads',
+                        '${p?['total_installs'] ?? 0}',
+                        Icons.download_outlined,
+                        cs,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _bigStat(
+                        _isZh(context) ? '总点赞' : 'Likes',
+                        '${p?['total_likes'] ?? 0}',
+                        Icons.favorite,
+                        cs,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
 
-                Text(_isZh(context) ? '发布的应用 (${apps.length})' : 'Apps (${apps.length})',
-                    style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                Text(
+                  _isZh(context)
+                      ? '发布的应用 (${apps.length})'
+                      : 'Apps (${apps.length})',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 for (final a in apps) _appTile(a as Map<String, dynamic>, cs),
               ],
@@ -429,13 +594,24 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(children: [
-        Icon(icon, color: cs.primary),
-        const SizedBox(height: 6),
-        Text(value, style: GoogleFonts.inter(
-            fontSize: 22, fontWeight: FontWeight.w700, color: cs.onSurface)),
-        Text(label, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-      ]),
+      child: Column(
+        children: [
+          Icon(icon, color: cs.primary),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: cs.onSurface,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 
@@ -447,14 +623,24 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
       child: ListTile(
         leading: Icon(Icons.apps, color: cs.onSurface),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: summary.isEmpty ? null : Text(summary, maxLines: 2, overflow: TextOverflow.ellipsis),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.favorite, size: 14, color: cs.onSurfaceVariant),
-          Text(' ${a['like_count'] ?? 0}', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-        ]),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => MarketAppDetailPage(app: {'name': name}),
-        )),
+        subtitle: summary.isEmpty
+            ? null
+            : Text(summary, maxLines: 2, overflow: TextOverflow.ellipsis),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.favorite, size: 14, color: cs.onSurfaceVariant),
+            Text(
+              ' ${a['like_count'] ?? 0}',
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MarketAppDetailPage(app: {'name': name}),
+          ),
+        ),
       ),
     );
   }

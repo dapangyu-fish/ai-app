@@ -11,6 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.tools/
+web_openim_bridge/node_modules/
 
 # IntelliJ related
 *.iml
