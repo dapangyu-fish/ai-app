@@ -1,10 +1,10 @@
 // HTTP 客户端封装
 // 基于 dio 实现 GET / POST，供解释器 @http_get / @http_post 调用
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../i18n/framework_strings.dart';
+import '../platform/http_sse_bridge.dart';
 
 class DslHttpClient {
   static final DslHttpClient _instance = DslHttpClient._internal();
@@ -120,6 +120,22 @@ class DslHttpClient {
   }) async {
     final events = <Map<String, dynamic>>[];
     try {
+      if (kIsWeb && HttpSseWebBridge.isSupported) {
+        return await HttpSseWebBridge.stream(
+          {
+            'url': url,
+            'method': method,
+            'body': body,
+            'headers': headers ?? const <String, String>{},
+            'contentType': contentType,
+          },
+          (event) async {
+            events.add(event);
+            if (onEvent != null) await onEvent(event);
+          },
+        );
+      }
+
       final response = await _dio.request<ResponseBody>(
         url,
         data: contentType == 'application/json'
@@ -133,7 +149,7 @@ class DslHttpClient {
           },
           contentType: contentType,
           responseType: ResponseType.stream,
-          receiveTimeout: Duration.zero,
+          receiveTimeout: const Duration(minutes: 10),
         ),
       );
 
