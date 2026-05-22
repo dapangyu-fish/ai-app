@@ -9,6 +9,7 @@ WORKDIR /app
 # 系统依赖：
 # - libpq5      给 psycopg2-binary 运行时
 # - curl + ca-certificates  给 healthcheck + node 装包
+# - procps 给 ai-worker/backend 容器里排查 Claude 进程（ps/top）
 # - gcc + portaudio19-dev + libasound2-dev  给 pyaudio 编译
 # - build-essential 给其他 C-extension
 # - nodejs + npm  给装 claude CLI（backend/claude_chat.py 调用它转发 LLM 请求）
@@ -16,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
         ca-certificates \
+        procps \
         gcc \
         build-essential \
         portaudio19-dev \
