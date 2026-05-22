@@ -16,12 +16,13 @@ cd deploy/test-env
 ./bootstrap.sh
 ```
 
-交互式问 4 件事，按 Enter 接受默认：
+交互式先选择语言（支持 English / 中文 / Deutsch / Español），再询问配置；按 Enter 接受默认：
 
 1. 客户端访问 IP（自动探测）
 2. **DeepSeek API Key（必填）** + 可选 OpenAI/Anthropic/GLM/豆包
-3. **测试账号邮箱 + 密码**（必填）
-4. 端口偏移（默认 0；改成 100 可在同机起第二套）
+3. 测试账号邮箱 + 密码（默认 `test@example.com` / `qwe123`）
+4. Registry mirror（默认镜像生产应用市场；输入 `none` 才独立运行）
+5. 端口偏移（默认 0；改成 100 可在同机起第二套）
 
 ## 部署完后客户端怎么用
 

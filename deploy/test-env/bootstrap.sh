@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Test-env one-click deploy / 测试环境一键部署 —— interactive.
-# First prompt picks UI language (1=English default, 2=中文). All messages are i18n'd.
+# First prompt picks UI language (1=English default, 2=中文, 3=Deutsch, 4=Español).
 #
 # Usage:
 #   ./bootstrap.sh                       # interactive
 #   ./bootstrap.sh --yes                 # all defaults (DeepSeek key still required, from $DEEPSEEK_API_KEY)
-#   ./bootstrap.sh --lang en|zh          # preset language, skip the picker
+#   ./bootstrap.sh --lang en|zh|de|es    # preset language, skip the picker
 #
 # Re-run safe: running again brings services up from existing .env. To start fresh run ./teardown.sh first.
 set -euo pipefail
@@ -17,18 +17,19 @@ cd "$SCRIPT_DIR"
 B="\033[1m"; G="\033[32m"; Y="\033[33m"; R="\033[31m"; C="\033[36m"; N="\033[0m"
 
 # ───────── i18n catalog ─────────
-declare -A T_en T_zh
+declare -A T_en T_zh T_de T_es
 UI_LANG="en"
 
 # t <key> [printf args...] —— emit localized string (falls back en → key)
 t() {
   local key="$1"; shift || true
   local fmt
-  if [[ "$UI_LANG" == "zh" ]]; then
-    fmt="${T_zh[$key]:-${T_en[$key]:-$key}}"
-  else
-    fmt="${T_en[$key]:-$key}"
-  fi
+  case "$UI_LANG" in
+    zh) fmt="${T_zh[$key]:-${T_en[$key]:-$key}}" ;;
+    de) fmt="${T_de[$key]:-${T_en[$key]:-$key}}" ;;
+    es) fmt="${T_es[$key]:-${T_en[$key]:-$key}}" ;;
+    *)  fmt="${T_en[$key]:-$key}" ;;
+  esac
   # shellcheck disable=SC2059
   printf "$fmt" "$@"
 }
@@ -53,6 +54,8 @@ T_en[pkg_manager]="Using package manager: %s"
 T_zh[pkg_manager]="使用包管理器: %s"
 T_en[docker_unusable]="Docker is installed but not usable. Start the Docker daemon/Desktop, or rerun as root / add this user to the docker group and re-login."
 T_zh[docker_unusable]="Docker 已安装但当前不可用。请启动 Docker daemon/Desktop，或用 root 运行 / 把当前用户加入 docker 组后重新登录。"
+T_en[root_needed]="Need root privileges. Re-run as root, or configure passwordless sudo for --yes mode."
+T_zh[root_needed]="需要 root 权限。请用 root 运行，或为 --yes 模式配置免密 sudo。"
 T_en[deps_ok]="Dependencies OK"
 T_zh[deps_ok]="依赖齐"
 T_en[unknown_arg]="Unknown argument: %s"
@@ -162,6 +165,137 @@ T_zh[env_qr_saved]="客户端环境二维码已保存到 ./test-env-environment.
 T_en[env_qr_title]="Scan this QR in the client Service Environment page"
 T_zh[env_qr_title]="在客户端“服务环境”页扫码导入"
 
+T_de[deps_check]="Abhängigkeiten werden geprüft..."
+T_es[deps_check]="Comprobando dependencias..."
+T_de[dep_missing]="%s fehlt — bitte zuerst installieren"
+T_es[dep_missing]="Falta %s — instálalo primero"
+T_de[compose_missing]="docker compose Plugin fehlt (v2 erforderlich, nicht das alte docker-compose)"
+T_es[compose_missing]="Falta el plugin docker compose (se necesita v2, no el docker-compose antiguo)"
+T_de[install_deps]="Fehlende Systempakete werden installiert: %s"
+T_es[install_deps]="Instalando paquetes del sistema faltantes: %s"
+T_de[install_docker]="Docker fehlt; Docker Engine wird über get.docker.com installiert..."
+T_es[install_docker]="Falta Docker; instalando Docker Engine desde get.docker.com..."
+T_de[install_docker_pkg]="Docker fehlt; Docker-Pakete werden installiert..."
+T_es[install_docker_pkg]="Falta Docker; instalando paquetes de Docker..."
+T_de[install_docker_hint]="Docker ist erforderlich. Installiere Docker Desktop / OrbStack / Colima auf macOS oder Docker Engine + compose plugin auf Linux."
+T_es[install_docker_hint]="Docker es obligatorio. Instala Docker Desktop / OrbStack / Colima en macOS, o Docker Engine + compose plugin en Linux."
+T_de[install_hint]="Fehlende Abhängigkeiten: %s. Kein unterstützter Paketmanager gefunden (apt, dnf, yum, brew, apk, pacman, zypper)."
+T_es[install_hint]="Dependencias faltantes: %s. No se encontró un gestor de paquetes compatible (apt, dnf, yum, brew, apk, pacman, zypper)."
+T_de[pkg_manager]="Paketmanager: %s"
+T_es[pkg_manager]="Gestor de paquetes: %s"
+T_de[docker_unusable]="Docker ist installiert, aber nicht nutzbar. Starte Docker daemon/Desktop oder führe das Skript als root aus / füge den Benutzer zur docker-Gruppe hinzu und melde dich neu an."
+T_es[docker_unusable]="Docker está instalado pero no se puede usar. Inicia Docker daemon/Desktop, o ejecuta como root / añade este usuario al grupo docker y vuelve a iniciar sesión."
+T_de[root_needed]="Root-Rechte erforderlich. Als root erneut ausführen oder passwortloses sudo für --yes konfigurieren."
+T_es[root_needed]="Se necesitan privilegios root. Ejecuta como root o configura sudo sin contraseña para modo --yes."
+T_de[deps_ok]="Abhängigkeiten OK"
+T_es[deps_ok]="Dependencias OK"
+T_de[unknown_arg]="Unbekanntes Argument: %s"
+T_es[unknown_arg]="Argumento desconocido: %s"
+T_de[required_yes]="%s ist erforderlich (im --yes Modus per Umgebungsvariable setzen)"
+T_es[required_yes]="%s es obligatorio (en modo --yes debe pasarse por variable de entorno)"
+T_de[required]="erforderlich"
+T_es[required]="obligatorio"
+T_de[banner_title]="AI App Testumgebung Ein-Klick-Deploy (test-env v1)"
+T_es[banner_title]="Despliegue de entorno de prueba AI App (test-env v1)"
+T_de[banner_sub]="Enter übernimmt Defaults; nur DeepSeek key + Testkonto sind erforderlich"
+T_es[banner_sub]="Enter usa valores por defecto; solo DeepSeek key + cuenta de prueba son obligatorios"
+T_de[sec_ip]="[1/5] Client-Zugriffs-IP"
+T_es[sec_ip]="[1/5] IP de acceso del cliente"
+T_de[ask_ip]="  IP für den Client (LAN-Test: interne IP dieses Rechners)"
+T_es[ask_ip]="  IP usada por el cliente (LAN: IP interna de esta máquina)"
+T_de[sec_ai]="[2/5] KI-Anbieter (backend/config.py kennt diese)"
+T_es[sec_ai]="[2/5] Proveedores de IA (backend/config.py reconoce estos)"
+T_de[ask_deepseek]="  DeepSeek API Key (erforderlich)"
+T_es[ask_deepseek]="  DeepSeek API Key (obligatorio)"
+T_de[ask_glm_token]="  GLM (Anthropic-kompatibel) Auth Token (optional)"
+T_es[ask_glm_token]="  GLM (compatible con Anthropic) Auth Token (opcional)"
+T_de[ask_glm_url]="  GLM Base URL (optional)"
+T_es[ask_glm_url]="  GLM Base URL (opcional)"
+T_de[ask_cc_token]="  Claude Code Anthropic Token (optional)"
+T_es[ask_cc_token]="  Claude Code Anthropic Token (opcional)"
+T_de[ask_cc_url]="  Claude Code Base URL (optional)"
+T_es[ask_cc_url]="  Claude Code Base URL (opcional)"
+T_de[sec_account]="[3/5] Testkonto (für Login im Client nach dem Deploy)"
+T_es[sec_account]="[3/5] Cuenta de prueba (para iniciar sesión en el cliente)"
+T_de[ask_email]="  E-Mail"
+T_es[ask_email]="  Email"
+T_de[ask_username]="  Benutzername"
+T_es[ask_username]="  Usuario"
+T_de[ask_password]="  Passwort"
+T_es[ask_password]="  Contraseña"
+T_de[sec_mirror]="[4/5] Registry-Mirror (optional)"
+T_es[sec_mirror]="[4/5] Mirror del Registry (opcional)"
+T_de[mirror_desc1]="  Diese Instanz kann den öffentlichen Paketindex einer anderen Registry spiegeln."
+T_es[mirror_desc1]="  Esta instancia puede replicar el índice público de paquetes de otro Registry."
+T_de[mirror_desc2]="  Enter spiegelt die Produktions-Registry; 'none' startet eigenständig."
+T_es[mirror_desc2]="  Enter replica el Registry de producción; 'none' ejecuta modo independiente."
+T_de[ask_upstream]="  Upstream Registry URL (z.B. https://myapp-registry.dapangyu.work)"
+T_es[ask_upstream]="  Upstream Registry URL (ej. https://myapp-registry.dapangyu.work)"
+T_de[ask_interval]="  Sync-Intervall (Sekunden, <=0 = nur einmal beim Start)"
+T_es[ask_interval]="  Intervalo de sincronización (segundos, <=0 = solo una vez al iniciar)"
+T_de[sec_port]="[5/5] Port-Offset (mehrere Umgebungen auf einem Host, default 0)"
+T_es[sec_port]="[5/5] Offset de puertos (varios entornos en un host, por defecto 0)"
+T_de[ask_offset]="  Port-Offset"
+T_es[ask_offset]="  Offset de puertos"
+T_de[offset_num]="Port-Offset muss eine Zahl sein"
+T_es[offset_num]="El offset de puertos debe ser numérico"
+T_de[gen_secrets]="Secrets werden erzeugt..."
+T_es[gen_secrets]="Generando secretos..."
+T_de[secrets_done]="Secrets erzeugt"
+T_es[secrets_done]="Secretos generados"
+T_de[mint_keys]="Supabase ANON_KEY / SERVICE_ROLE_KEY werden signiert..."
+T_es[mint_keys]="Generando Supabase ANON_KEY / SERVICE_ROLE_KEY..."
+T_de[keys_done]="Supabase Keys erzeugt"
+T_es[keys_done]="Claves de Supabase generadas"
+T_de[render_env]=".env Dateien werden gerendert..."
+T_es[render_env]="Renderizando archivos .env..."
+T_de[env_done]=".env gerendert (3 Dateien)"
+T_es[env_done]=".env renderizado (3 archivos)"
+T_de[pull_images]="Images werden geladen (beim ersten Mal langsam)..."
+T_es[pull_images]="Descargando imágenes (la primera vez tarda)..."
+T_de[images_ready]="Images bereit"
+T_es[images_ready]="Imágenes listas"
+T_de[start_supabase]="Supabase wird gestartet (13 Services, erstmals ~1-2 Min)..."
+T_es[start_supabase]="Iniciando Supabase (13 servicios, ~1-2 min la primera vez)..."
+T_de[wait_supabase]="Warte auf Supabase auth..."
+T_es[wait_supabase]="Esperando Supabase auth..."
+T_de[supabase_ready]="Supabase auth bereit (%ss)"
+T_es[supabase_ready]="Supabase auth listo (%ss)"
+T_de[supabase_timeout]="Supabase auth nach 120s nicht bereit (letztes HTTP %s), docker logs supabase-auth"
+T_es[supabase_timeout]="Supabase auth no está listo tras 120s (último HTTP %s), docker logs supabase-auth"
+T_de[openim_cfg]="OpenIM Default-Konfig wird extrahiert + gepatcht..."
+T_es[openim_cfg]="Extrayendo y parcheando configuración por defecto de OpenIM..."
+T_de[openim_cfg_done]="OpenIM-Konfig gerendert (mongodb/redis/kafka/etcd/minio/share)"
+T_es[openim_cfg_done]="Configuración de OpenIM renderizada (mongodb/redis/kafka/etcd/minio/share)"
+T_de[start_openim]="OpenIM wird gestartet (8 Services, erstmals ~1-2 Min)..."
+T_es[start_openim]="Iniciando OpenIM (8 servicios, ~1-2 min la primera vez)..."
+T_de[wait_openim]="Warte auf OpenIM server..."
+T_es[wait_openim]="Esperando OpenIM server..."
+T_de[openim_ready]="OpenIM API bereit (%ss, HTTP %s)"
+T_es[openim_ready]="OpenIM API lista (%ss, HTTP %s)"
+T_de[openim_timeout]="OpenIM nach 120s nicht bereit, fahre fort; Logs: docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
+T_es[openim_timeout]="OpenIM no está listo tras 120s, continúo; logs: docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
+T_de[start_app]="App-Services werden gebaut + gestartet (backend / registry / config-center / user-center / jsonapp-postgres / app-minio)..."
+T_es[start_app]="Compilando e iniciando servicios de app (backend / registry / config-center / user-center / jsonapp-postgres / app-minio)..."
+T_de[wait_backend]="Warte auf Backend health check..."
+T_es[wait_backend]="Esperando health check del backend..."
+T_de[backend_ready]="backend bereit (%ss)"
+T_es[backend_ready]="backend listo (%ss)"
+T_de[backend_timeout]="backend health check nach 80s fehlgeschlagen, fahre fort; docker compose logs -f backend"
+T_es[backend_timeout]="health check del backend falló tras 80s, continúo; docker compose logs -f backend"
+T_de[init_minio]="App-MinIO Buckets werden initialisiert..."
+T_es[init_minio]="Inicializando buckets de app-minio..."
+T_de[seed_user]="Testkonto wird in Supabase angelegt..."
+T_es[seed_user]="Creando cuenta de prueba en Supabase..."
+T_de[deploy_done]="Deploy abgeschlossen!"
+T_es[deploy_done]="¡Despliegue completado!"
+T_de[info_saved]="Alle Infos auch in ./test-env-info.txt gespeichert (mode 600)"
+T_es[info_saved]="Toda la información también se guardó en ./test-env-info.txt (modo 600)"
+T_de[env_qr_saved]="Client-Umgebungs-QR gespeichert in ./test-env-environment.png und ./test-env-environment.json"
+T_es[env_qr_saved]="QR de entorno del cliente guardado en ./test-env-environment.png y ./test-env-environment.json"
+T_de[env_qr_title]="Diesen QR auf der Service-Umgebungsseite im Client scannen"
+T_es[env_qr_title]="Escanea este QR en la página de entorno de servicio del cliente"
+
 say()  { printf "${C}» %s${N}\n" "$*"; }
 ok()   { printf "${G}✔ %s${N}\n" "$*"; }
 warn() { printf "${Y}! %s${N}\n" "$*"; }
@@ -175,7 +309,7 @@ for arg in "$@"; do
     -y|--yes) NON_INTERACTIVE=1 ;;
     --lang) LANG_PRESET="__next__" ;;
     --lang=*) LANG_PRESET="${arg#*=}" ;;
-    en|zh) [[ "$LANG_PRESET" == "__next__" ]] && LANG_PRESET="$arg" || _args+=("$arg") ;;
+    en|zh|de|es) [[ "$LANG_PRESET" == "__next__" ]] && LANG_PRESET="$arg" || _args+=("$arg") ;;
     -h|--help) sed -n '2,12p' "$SCRIPT_DIR/bootstrap.sh"; exit 0 ;;
     *) die "$(t unknown_arg "$arg")" ;;
   esac
@@ -190,9 +324,13 @@ else
   printf "${B}Select language / 选择语言:${N}\n"
   printf "  1) English (default)\n"
   printf "  2) 中文\n"
+  printf "  3) Deutsch\n"
+  printf "  4) Español\n"
   read -r -p "$(printf "${B}> ${N}")" _lang </dev/tty
   case "${_lang:-1}" in
     2) UI_LANG="zh" ;;
+    3) UI_LANG="de" ;;
+    4) UI_LANG="es" ;;
     *) UI_LANG="en" ;;
   esac
 fi
@@ -216,8 +354,10 @@ ask_required() {
     [[ -n "$default_from_env" ]] && { echo "$default_from_env"; return; }
     die "$(t required_yes "$prompt")"
   fi
+  local hint=""
+  [[ -n "$default_from_env" ]] && hint=" [${default_from_env}]"
   while :; do
-    read -r -p "$(printf "${B}%s${N}: " "$prompt")" ans </dev/tty
+    read -r -p "$(printf "${B}%s${N}${hint}: " "$prompt")" ans </dev/tty
     ans="${ans:-$default_from_env}"
     if [[ -n "$ans" ]]; then echo "$ans"; return; fi
     warn "$(t required)"
@@ -228,7 +368,7 @@ ask_secret() {
   local prompt="$1"; local default="${2:-}"
   if [[ $NON_INTERACTIVE -eq 1 ]]; then echo "$default"; return; fi
   local hint=""
-  [[ -n "$default" ]] && hint=" [auto: ${default:0:8}…]"
+  [[ -n "$default" ]] && hint=" [${default}]"
   local ans
   read -r -p "$(printf "${B}%s${N}${hint}: " "$prompt")" ans </dev/tty
   echo "${ans:-$default}"
@@ -261,9 +401,13 @@ run_as_root() {
   if [[ "$(id -u)" -eq 0 ]]; then
     "$@"
   elif have_cmd sudo; then
-    sudo "$@"
+    if [[ $NON_INTERACTIVE -eq 1 ]]; then
+      sudo -n "$@" || die "$(t root_needed)"
+    else
+      sudo "$@"
+    fi
   else
-    die "Need root privileges. Re-run as root or install sudo."
+    die "$(t root_needed)"
   fi
 }
 
@@ -465,9 +609,9 @@ CC_ANTHROPIC_BASE_URL=$(ask       "$(t ask_cc_url)" "")
 
 echo
 say "$(t sec_account)"
-TEST_USER_EMAIL=$(ask_required    "$(t ask_email)" "test@example.local")
+TEST_USER_EMAIL=$(ask_required    "$(t ask_email)" "test@example.com")
 TEST_USER_USERNAME=$(ask          "$(t ask_username)" "${TEST_USER_EMAIL%%@*}")
-DEFAULT_PASSWORD="Test$(openssl rand -hex 4)"
+DEFAULT_PASSWORD="qwe123"
 TEST_USER_PASSWORD=$(ask_secret   "$(t ask_password)" "$DEFAULT_PASSWORD")
 
 echo
