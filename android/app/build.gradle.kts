@@ -23,6 +23,20 @@ if (keystorePropertiesFile.exists()) {
 val hasReleaseKey = keystorePropertiesFile.exists() &&
     keystoreProperties.getProperty("storeFile") != null
 
+fun androidVersionCodeFromName(versionName: String): Int {
+    val parts = versionName.substringBefore("-").substringBefore("+").split(".")
+    require(parts.size == 3) {
+        "Android versionName must use major.minor.patch, got: $versionName"
+    }
+    val major = parts[0].toInt()
+    val minor = parts[1].toInt()
+    val patch = parts[2].toInt()
+    require(minor in 0..99 && patch in 0..99) {
+        "Android versionName minor/patch must be 0..99 for versionCode mapping, got: $versionName"
+    }
+    return major * 10000 + minor * 100 + patch
+}
+
 android {
     namespace = "dapangyu.fish.myapp"
     compileSdk = flutter.compileSdkVersion
@@ -44,7 +58,9 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
+        // Keep Android build number aligned with versionName:
+        // 1.2.0 -> 010200 -> 10200, 1.12.3 -> 011203 -> 11203.
+        versionCode = androidVersionCodeFromName(flutter.versionName)
         versionName = flutter.versionName
     }
 
