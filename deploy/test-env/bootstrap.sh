@@ -43,10 +43,14 @@ T_en[install_deps]="Installing missing system packages: %s"
 T_zh[install_deps]="安装缺失系统包: %s"
 T_en[install_docker]="Docker is missing; installing Docker Engine via get.docker.com..."
 T_zh[install_docker]="缺少 Docker；通过 get.docker.com 安装 Docker Engine..."
-T_en[install_docker_hint]="Docker is required. On macOS install Docker Desktop / OrbStack / Colima; on non-apt Linux install Docker Engine and the compose plugin manually."
-T_zh[install_docker_hint]="需要 Docker。macOS 请安装 Docker Desktop / OrbStack / Colima；非 apt Linux 请手动安装 Docker Engine 和 compose plugin。"
-T_en[install_hint]="Missing dependencies: %s. This script can auto-install only on Debian/Ubuntu with apt-get."
-T_zh[install_hint]="缺少依赖: %s。本脚本只会在 Debian/Ubuntu 且存在 apt-get 时自动安装。"
+T_en[install_docker_pkg]="Docker is missing; installing Docker packages..."
+T_zh[install_docker_pkg]="缺少 Docker；通过系统包管理器安装 Docker..."
+T_en[install_docker_hint]="Docker is required. Install Docker Desktop / OrbStack / Colima on macOS, or Docker Engine + compose plugin on Linux."
+T_zh[install_docker_hint]="需要 Docker。macOS 请安装 Docker Desktop / OrbStack / Colima；Linux 请安装 Docker Engine 和 compose plugin。"
+T_en[install_hint]="Missing dependencies: %s. No supported package manager found (apt, dnf, yum, brew, apk, pacman, zypper)."
+T_zh[install_hint]="缺少依赖: %s。未找到支持的包管理器（apt, dnf, yum, brew, apk, pacman, zypper）。"
+T_en[pkg_manager]="Using package manager: %s"
+T_zh[pkg_manager]="使用包管理器: %s"
 T_en[docker_unusable]="Docker is installed but not usable. Start the Docker daemon/Desktop, or rerun as root / add this user to the docker group and re-login."
 T_zh[docker_unusable]="Docker 已安装但当前不可用。请启动 Docker daemon/Desktop，或用 root 运行 / 把当前用户加入 docker 组后重新登录。"
 T_en[deps_ok]="Dependencies OK"
@@ -238,10 +242,19 @@ printf "${B}╚═════════════════════�
 
 have_cmd() { command -v "$1" >/dev/null 2>&1; }
 
-is_macos() { [[ "$(uname -s 2>/dev/null || true)" == "Darwin" ]]; }
+os_name() { uname -s 2>/dev/null || true; }
+is_macos() { [[ "$(os_name)" == "Darwin" ]]; }
+is_linux() { [[ "$(os_name)" == "Linux" ]]; }
 
-is_apt_linux() {
-  [[ "$(uname -s 2>/dev/null || true)" == "Linux" ]] && have_cmd apt-get
+detect_pkg_manager() {
+  if have_cmd apt-get; then echo apt; return; fi
+  if have_cmd dnf; then echo dnf; return; fi
+  if have_cmd yum; then echo yum; return; fi
+  if have_cmd brew; then echo brew; return; fi
+  if have_cmd apk; then echo apk; return; fi
+  if have_cmd pacman; then echo pacman; return; fi
+  if have_cmd zypper; then echo zypper; return; fi
+  echo none
 }
 
 run_as_root() {
@@ -254,53 +267,168 @@ run_as_root() {
   fi
 }
 
-ensure_apt_packages() {
+install_packages() {
+  local manager="$1"; shift
   local packages=("$@")
   [[ ${#packages[@]} -eq 0 ]] && return
+  say "$(t pkg_manager "$manager")"
   say "$(t install_deps "${packages[*]}")"
-  run_as_root apt-get update
-  run_as_root apt-get install -y "${packages[@]}"
+  case "$manager" in
+    apt)
+      run_as_root apt-get update
+      run_as_root apt-get install -y "${packages[@]}"
+      ;;
+    dnf)
+      run_as_root dnf install -y "${packages[@]}"
+      ;;
+    yum)
+      run_as_root yum install -y "${packages[@]}"
+      ;;
+    brew)
+      brew install "${packages[@]}"
+      ;;
+    apk)
+      run_as_root apk add --no-cache "${packages[@]}"
+      ;;
+    pacman)
+      run_as_root pacman -Sy --needed --noconfirm "${packages[@]}"
+      ;;
+    zypper)
+      run_as_root zypper --non-interactive install "${packages[@]}"
+      ;;
+    *)
+      die "$(t install_hint "${packages[*]}")"
+      ;;
+  esac
+}
+
+package_for_cmd() {
+  local manager="$1"
+  local cmd="$2"
+  case "$cmd" in
+    curl) echo curl ;;
+    wget) echo wget ;;
+    openssl)
+      case "$manager" in
+        brew) echo openssl@3 ;;
+        *) echo openssl ;;
+      esac
+      ;;
+    python3)
+      case "$manager" in
+        brew) echo python ;;
+        *) echo python3 ;;
+      esac
+      ;;
+    envsubst)
+      case "$manager" in
+        apt) echo gettext-base ;;
+        apk|pacman|zypper|brew) echo gettext ;;
+        dnf|yum) echo gettext ;;
+        *) echo gettext ;;
+      esac
+      ;;
+    qrencode) echo qrencode ;;
+  esac
+}
+
+compose_package() {
+  local manager="$1"
+  case "$manager" in
+    apt|dnf|yum) echo docker-compose-plugin ;;
+    apk) echo docker-cli-compose ;;
+    pacman|zypper|brew) echo docker-compose ;;
+    *) echo "" ;;
+  esac
+}
+
+docker_packages() {
+  local manager="$1"
+  case "$manager" in
+    apk) echo docker docker-cli-compose ;;
+    pacman) echo docker docker-compose ;;
+    zypper) echo docker docker-compose ;;
+    brew) echo "" ;;
+    *) echo "" ;;
+  esac
 }
 
 ensure_docker() {
   if have_cmd docker; then
     return
   fi
-  if is_macos || ! is_apt_linux; then
+
+  local manager="$1"
+  if is_macos; then
+    if [[ "$manager" == "brew" ]]; then
+      say "$(t install_docker)"
+      brew install --cask docker
+      return
+    fi
     die "$(t install_docker_hint)"
   fi
 
-  ensure_apt_packages ca-certificates curl
-  say "$(t install_docker)"
-  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-  run_as_root sh /tmp/get-docker.sh
-  rm -f /tmp/get-docker.sh
+  if ! is_linux; then
+    die "$(t install_docker_hint)"
+  fi
+
+  local docker_pkgs
+  docker_pkgs="$(docker_packages "$manager")"
+  if [[ -n "$docker_pkgs" ]]; then
+    say "$(t install_docker_pkg)"
+    # shellcheck disable=SC2086
+    install_packages "$manager" $docker_pkgs
+    return
+  fi
+
+  case "$manager" in
+    apt|dnf|yum)
+      if ! have_cmd curl; then
+        local curl_pkg
+        curl_pkg="$(package_for_cmd "$manager" curl)"
+        install_packages "$manager" "$curl_pkg"
+      fi
+      if [[ "$manager" == "apt" ]]; then
+        install_packages "$manager" ca-certificates
+      fi
+      say "$(t install_docker)"
+      curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+      run_as_root sh /tmp/get-docker.sh
+      rm -f /tmp/get-docker.sh
+      ;;
+    *)
+      die "$(t install_docker_hint)"
+      ;;
+  esac
 }
 
 ensure_dependencies() {
+  local manager
+  manager="$(detect_pkg_manager)"
   local missing_pkgs=()
   local missing_names=()
 
-  have_cmd curl    || { missing_pkgs+=(curl); missing_names+=(curl); }
-  have_cmd wget    || { missing_pkgs+=(wget); missing_names+=(wget); }
-  have_cmd openssl || { missing_pkgs+=(openssl); missing_names+=(openssl); }
-  have_cmd python3 || { missing_pkgs+=(python3); missing_names+=(python3); }
-  have_cmd envsubst || { missing_pkgs+=(gettext-base); missing_names+=(envsubst); }
-  have_cmd qrencode || { missing_pkgs+=(qrencode); missing_names+=(qrencode); }
+  for cmd in curl wget openssl python3 envsubst qrencode; do
+    if ! have_cmd "$cmd"; then
+      missing_pkgs+=("$(package_for_cmd "$manager" "$cmd")")
+      missing_names+=("$cmd")
+    fi
+  done
 
   if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
-    if is_apt_linux; then
-      ensure_apt_packages "${missing_pkgs[@]}"
-    else
+    if [[ "$manager" == "none" ]]; then
       die "$(t install_hint "${missing_names[*]}")"
     fi
+    install_packages "$manager" "${missing_pkgs[@]}"
   fi
 
-  ensure_docker
+  ensure_docker "$manager"
 
   if ! docker compose version >/dev/null 2>&1; then
-    if is_apt_linux; then
-      ensure_apt_packages docker-compose-plugin
+    local compose_pkg
+    compose_pkg="$(compose_package "$manager")"
+    if [[ -n "$compose_pkg" ]]; then
+      install_packages "$manager" "$compose_pkg"
     fi
   fi
   docker compose version >/dev/null 2>&1 || die "$(t compose_missing)"

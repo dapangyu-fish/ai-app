@@ -5,9 +5,11 @@
 ## 使用
 
 依赖：`docker`、Docker Compose v2、`openssl`、`python3`、`envsubst`、`curl`、`wget`、`qrencode`。
-Debian/Ubuntu 上 `bootstrap.sh` 会自动用 `apt-get` 补齐缺失依赖；如果缺 Docker，会通过
-`https://get.docker.com/` 安装 Docker Engine。macOS 请先安装 Docker Desktop / OrbStack / Colima；
-非 apt Linux 需要手动安装上述依赖。其中 `qrencode` 用于部署完成后生成客户端环境导入二维码。
+`bootstrap.sh` 会尽量自动补齐缺失依赖，支持 `apt-get`、`dnf`、`yum`、`brew`、`apk`、`pacman`、
+`zypper`。Debian/Ubuntu/Fedora/CentOS/RHEL 缺 Docker 时会通过 `https://get.docker.com/`
+安装 Docker Engine；Alpine/Arch/openSUSE 会使用系统包管理器安装 Docker 包；macOS 有 Homebrew
+时会尝试安装 Docker Desktop cask，但仍需要手动启动 Docker Desktop / OrbStack / Colima。
+其中 `qrencode` 用于部署完成后生成客户端环境导入二维码。
 
 ```bash
 cd deploy/test-env
