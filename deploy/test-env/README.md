@@ -4,8 +4,10 @@
 
 ## 使用
 
-依赖：`docker`、Docker Compose v2、`openssl`、`python3`、`envsubst`、`curl`、`qrencode`。
-其中 `qrencode` 用于部署完成后生成客户端环境导入二维码。
+依赖：`docker`、Docker Compose v2、`openssl`、`python3`、`envsubst`、`curl`、`wget`、`qrencode`。
+Debian/Ubuntu 上 `bootstrap.sh` 会自动用 `apt-get` 补齐缺失依赖；如果缺 Docker，会通过
+`https://get.docker.com/` 安装 Docker Engine。macOS 请先安装 Docker Desktop / OrbStack / Colima；
+非 apt Linux 需要手动安装上述依赖。其中 `qrencode` 用于部署完成后生成客户端环境导入二维码。
 
 ```bash
 cd deploy/test-env

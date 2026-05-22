@@ -39,6 +39,16 @@ T_en[dep_missing]="Missing %s — please install it first"
 T_zh[dep_missing]="缺少 %s，请先安装"
 T_en[compose_missing]="docker compose plugin missing (need v2, not the old docker-compose)"
 T_zh[compose_missing]="docker compose 插件缺失（要 v2，不是老的 docker-compose）"
+T_en[install_deps]="Installing missing system packages: %s"
+T_zh[install_deps]="安装缺失系统包: %s"
+T_en[install_docker]="Docker is missing; installing Docker Engine via get.docker.com..."
+T_zh[install_docker]="缺少 Docker；通过 get.docker.com 安装 Docker Engine..."
+T_en[install_docker_hint]="Docker is required. On macOS install Docker Desktop / OrbStack / Colima; on non-apt Linux install Docker Engine and the compose plugin manually."
+T_zh[install_docker_hint]="需要 Docker。macOS 请安装 Docker Desktop / OrbStack / Colima；非 apt Linux 请手动安装 Docker Engine 和 compose plugin。"
+T_en[install_hint]="Missing dependencies: %s. This script can auto-install only on Debian/Ubuntu with apt-get."
+T_zh[install_hint]="缺少依赖: %s。本脚本只会在 Debian/Ubuntu 且存在 apt-get 时自动安装。"
+T_en[docker_unusable]="Docker is installed but not usable. Start the Docker daemon/Desktop, or rerun as root / add this user to the docker group and re-login."
+T_zh[docker_unusable]="Docker 已安装但当前不可用。请启动 Docker daemon/Desktop，或用 root 运行 / 把当前用户加入 docker 组后重新登录。"
 T_en[deps_ok]="Dependencies OK"
 T_zh[deps_ok]="依赖齐"
 T_en[unknown_arg]="Unknown argument: %s"
@@ -162,7 +172,7 @@ for arg in "$@"; do
     --lang) LANG_PRESET="__next__" ;;
     --lang=*) LANG_PRESET="${arg#*=}" ;;
     en|zh) [[ "$LANG_PRESET" == "__next__" ]] && LANG_PRESET="$arg" || _args+=("$arg") ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,12p' "$SCRIPT_DIR/bootstrap.sh"; exit 0 ;;
     *) die "$(t unknown_arg "$arg")" ;;
   esac
 done
@@ -226,11 +236,79 @@ printf "${B}║  %-56s║${N}\n" "$(t banner_title)"
 printf "${B}║  %-56s║${N}\n" "$(t banner_sub)"
 printf "${B}╚══════════════════════════════════════════════════════════╝${N}\n\n"
 
+have_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+is_macos() { [[ "$(uname -s 2>/dev/null || true)" == "Darwin" ]]; }
+
+is_apt_linux() {
+  [[ "$(uname -s 2>/dev/null || true)" == "Linux" ]] && have_cmd apt-get
+}
+
+run_as_root() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    "$@"
+  elif have_cmd sudo; then
+    sudo "$@"
+  else
+    die "Need root privileges. Re-run as root or install sudo."
+  fi
+}
+
+ensure_apt_packages() {
+  local packages=("$@")
+  [[ ${#packages[@]} -eq 0 ]] && return
+  say "$(t install_deps "${packages[*]}")"
+  run_as_root apt-get update
+  run_as_root apt-get install -y "${packages[@]}"
+}
+
+ensure_docker() {
+  if have_cmd docker; then
+    return
+  fi
+  if is_macos || ! is_apt_linux; then
+    die "$(t install_docker_hint)"
+  fi
+
+  ensure_apt_packages ca-certificates curl
+  say "$(t install_docker)"
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  run_as_root sh /tmp/get-docker.sh
+  rm -f /tmp/get-docker.sh
+}
+
+ensure_dependencies() {
+  local missing_pkgs=()
+  local missing_names=()
+
+  have_cmd curl    || { missing_pkgs+=(curl); missing_names+=(curl); }
+  have_cmd wget    || { missing_pkgs+=(wget); missing_names+=(wget); }
+  have_cmd openssl || { missing_pkgs+=(openssl); missing_names+=(openssl); }
+  have_cmd python3 || { missing_pkgs+=(python3); missing_names+=(python3); }
+  have_cmd envsubst || { missing_pkgs+=(gettext-base); missing_names+=(envsubst); }
+  have_cmd qrencode || { missing_pkgs+=(qrencode); missing_names+=(qrencode); }
+
+  if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
+    if is_apt_linux; then
+      ensure_apt_packages "${missing_pkgs[@]}"
+    else
+      die "$(t install_hint "${missing_names[*]}")"
+    fi
+  fi
+
+  ensure_docker
+
+  if ! docker compose version >/dev/null 2>&1; then
+    if is_apt_linux; then
+      ensure_apt_packages docker-compose-plugin
+    fi
+  fi
+  docker compose version >/dev/null 2>&1 || die "$(t compose_missing)"
+  docker info >/dev/null 2>&1 || die "$(t docker_unusable)"
+}
+
 say "$(t deps_check)"
-for cmd in docker openssl python3 envsubst curl qrencode; do
-  command -v "$cmd" >/dev/null 2>&1 || die "$(t dep_missing "$cmd")"
-done
-docker compose version >/dev/null 2>&1 || die "$(t compose_missing)"
+ensure_dependencies
 ok "$(t deps_ok)"
 
 # ───────── detect IP ─────────
