@@ -1,14 +1,15 @@
 # Backend Architecture
 
-最后更新：feat/ai-background-push 分支着手前快照 + 即将进行的改动设计。
+最后更新：Redis 队列 + 独立 AI worker daemon 改造。
 
 ## 0. 服务概览
 
-后端是单 Python 进程的 Flask + Flask-SocketIO 应用，通过 supervisor 管理：
+后端由 Flask API 进程和独立 AI worker daemon 组成，通过 supervisor 管理：
 
 ```
 supervisor
-├─ ai-app   → gunicorn -k eventlet -w 1 -b 0.0.0.0:5566 app:app
+├─ ai-app    → gunicorn -k eventlet -w <N> -b 0.0.0.0:5566 app:app
+├─ ai-worker → cd backend && python ai_worker_daemon.py
 └─ registry → 独立的 registry_server.py（包发布服务，不在本文档范围）
 ```
 
@@ -22,7 +23,8 @@ supervisor
                        ├─ MinIO                            127.0.0.1:19000
                        ├─ Postgres（业务库）                127.0.0.1:5433
                        ├─ Redis (OpenIM 专用)              docker 内网 only
-                       └─ claude CLI（subprocess）          /root/.nvm/.../claude
+                       ├─ AI session Redis                 127.0.0.1:16379
+                       └─ ai-worker → claude CLI            /root/.nvm/.../claude
 ```
 
 ## 1. 模块划分（backend/*.py）
@@ -32,7 +34,9 @@ supervisor
 | `app.py` | Flask app 工厂 + 路由注册 + SocketIO 初始化。`eventlet.monkey_patch()` 必须在最前 |
 | `config.py` | 全部环境变量集中点，`AI_PROVIDERS` / 数据库 / OpenIM / APNs / 路径常量 |
 | `auth.py` | Supabase 鉴权代理（注册/登录/OTP/refresh）+ `require_auth` 装饰器 |
-| `claude_chat.py` | **AI 聊天**：subprocess 起 claude CLI，stream-json 解析后 SSE 转发 |
+| `claude_chat.py` | **AI 聊天 API**：鉴权、配额、提交 Redis 队列、SSE 读 Redis stream |
+| `ai_session.py` | AI session Redis 状态、Redis 队列、Claude CLI worker 执行逻辑 |
+| `ai_worker_daemon.py` | 独立消费 Redis 队列并启动 Claude CLI 的 daemon |
 | `database.py` | Postgres 连接池 + 配额表读写 |
 | `store.py` | 应用市场（apps + components）增删查 |
 | `im.py` | OpenIM 桥接（token 签发 / 用户搜索 / 推送 token） |
@@ -97,49 +101,61 @@ GET  /api/ai/providers         可用 provider 列表
 - 容器名：`ai-session-redis`
 - 端口：宿主 `127.0.0.1:16379` → 容器 `6379`（仅本地，外网不开）
 - 密码：从 `.env` 读 `AI_SESSION_REDIS_PASSWORD`
-- 不开 appendonly（数据可丢，TTL 自动清）
+- 建议开启 appendonly（pending queue / session stream 可在 Redis 重启后恢复），仍保留 TTL 自动清
 - `maxmemory 256mb` + `maxmemory-policy allkeys-lru`
 - `restart: unless-stopped`
 
 ### 3.2 Session 状态模型（Redis 数据结构）
 
-每个 AI session 在 Redis 里映射成两个 key：
+AI session 和全局调度在 Redis 里映射为这些 key：
 
 ```
 ai:session:<session_id>:meta      Hash    元信息（status / quota / provider / 起止时间）
-ai:session:<session_id>:events    List    SSE 事件序列（worker append，订阅者读）
-                                          每条是 JSON 行：{seq, type, payload}
+ai:session:<session_id>:stream    Stream  SSE 事件序列（worker append，客户端按 entry id 续读）
+ai:session:<session_id>:abort     String  取消标记，短 TTL
+ai:queue:pending                  List    等待中的 AI 任务，FIFO
+ai:queue:running                  Hash    运行中任务的 worker/lease 元信息
+ai:queue:running:leases           ZSet    session_id → lease_until_ms，用于全局并发和存活判断
 
-两 key 都设 TTL 86400s（24h），完工后自动清。
+session meta / stream 都设 TTL 86400s（24h），完工后自动清。
 ```
 
 `meta` Hash 字段：
 | 字段 | 含义 |
 |------|------|
-| `status` | `running` \| `done` \| `failed` \| `aborted` |
+| `status` | `queued` \| `running` \| `done` \| `failed` \| `aborted` |
 | `user_id` | 发起用户 |
 | `provider` | AI provider id |
 | `started_at` | epoch 毫秒 |
 | `finished_at` | epoch 毫秒（结束后写） |
 | `error` | 失败时的错误文本 |
-| `event_count` | events list 长度（方便 O(1) 查总数） |
+| `event_count` | stream event 数量（方便 O(1) 查总数） |
 | `final_text` | 完成时的最终文本（result 事件里的 text）|
+| `queued_job` | 当前排队 job 的 JSON，用于 force restart 时跳过旧 job |
 
 ### 3.3 新流程
 
 ```
-[1] POST /chat                     立刻返 {session_id, started: true}
-                                   后端在线程池里 spawn worker(session_id)
-                                   worker：起 claude CLI，输出每行 → Redis events list
+[1] POST /api/ai/chat/start        鉴权 + 配额检查
+                                   Redis Lua 原子判断 pending 是否满
+                                   未满：写 meta status=queued + RPUSH ai:queue:pending
+                                   已满：返回 429 AI_QUEUE_FULL
 
-[2] GET /chat/<id>/stream?last_seq=N    SSE 端点
-                                        - 先把 events[last_seq+1:] 全推回（重放）
-                                        - 然后阻塞读 Redis BRPOP / pubsub 等新事件
-                                        - meta.status != running 时推 [DONE] 关流
+[2] ai_worker_daemon.py            Redis Lua 原子判断 running lease 是否低于 AI_WORKER_MAX_CONCURRENCY
+                                   有空位：LPOP pending + 写 running lease
+                                   daemon 线程池启动 Claude CLI
+                                   CLI 输出每行 → Redis stream
 
-[3] GET /chat/<id>/result          一次性返回 meta.final_text + status
+[3] GET /api/ai/chat/<id>/stream?last_id=N
+                                   SSE 端点可由任意 gunicorn worker 处理
+                                   - 先用 Redis Stream 回放 last_id 之后的事件
+                                   - queued 时定期发排队状态
+                                   - running 但 lease 过期时标 failed + needs_retry
+                                   - terminal 后推 [DONE]
 
-[4] GET /chat/<id>/status          轻量轮询：返回 meta（不含 events）
+[4] GET /api/ai/chat/<id>/result   一次性返回 meta.final_text + status
+
+[5] GET /api/ai/chat/<id>/status   轻量轮询：返回 meta + queue_position + process_alive
 ```
 
 ### 3.4 客户端流程改造
@@ -204,10 +220,22 @@ docker run -d \
     --requirepass "$AI_SESSION_REDIS_PASSWORD" \
     --maxmemory 256mb \
     --maxmemory-policy allkeys-lru \
-    --save ""    # 禁用持久化，数据可丢
+    --appendonly yes
 ```
 
 回滚：`docker rm -f ai-session-redis` —— 不会影响 OpenIM 的 redis。
+
+### 4.2 启动 AI worker daemon
+
+生产必须在启动 Flask/gunicorn 之外，再启动一个 daemon 消费 Redis 队列：
+
+```bash
+cd /root/ai-app/backend
+BACKEND_ENV_PATH=/etc/ai-app/backend.env /opt/ai-app-venv/bin/python ai_worker_daemon.py
+```
+
+确认 daemon 已经启动后，`ai-app` 的 gunicorn worker 数可以按普通 API 吞吐调整。
+AI 并发由 Redis lease 上的 `AI_WORKER_MAX_CONCURRENCY` 全局控制，不再乘以 gunicorn worker 数。
 
 ## 5. 后续阶段（不在本次范围）
 

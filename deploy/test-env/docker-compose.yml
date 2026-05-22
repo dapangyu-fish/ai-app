@@ -1,5 +1,5 @@
-# 主 compose —— 起 app 自有的 6 个服务：
-#   jsonapp-postgres / app-minio / backend-redis / backend / registry / config-center
+# 主 compose —— 起 app 自有服务：
+#   jsonapp-postgres / app-minio / backend-redis / backend / ai-worker / registry / config-center
 #
 # Supabase 全栈 + OpenIM 全栈走独立 compose project 起（分别 supabase / testenv-openim），
 # bootstrap.sh 会按顺序 docker compose -f ... up -d。
@@ -92,6 +92,8 @@ services:
       AI_SESSION_REDIS_TTL_SECONDS: "86400"
       AI_WORKER_MAX_CONCURRENCY: "200"
       AI_WORKER_QUEUE_MAX: "200"
+      AI_WORKER_LEASE_MS: "30000"
+      AI_WORKER_HEARTBEAT_SECONDS: "10"
       # ── Supabase（backend 用 config.py 读 SUPABASE_URL/ANON/SERVICE）──
       SUPABASE_URL: "http://${HOST_IP}:${KONG_HTTP_PORT}"
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
@@ -135,6 +137,34 @@ services:
       - default
       - supabase_default
       - testenv-openim_default
+
+  ai-worker:
+    build:
+      context: ../../
+      dockerfile: deploy/test-env/Dockerfile.backend
+    container_name: testenv-ai-worker
+    restart: unless-stopped
+    depends_on:
+      backend-redis:
+        condition: service_healthy
+    working_dir: /app/backend
+    command: ["python", "ai_worker_daemon.py"]
+    environment:
+      AI_SESSION_REDIS_HOST: backend-redis
+      AI_SESSION_REDIS_PORT: "6379"
+      AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD}"
+      AI_SESSION_REDIS_TTL_SECONDS: "86400"
+      AI_WORKER_MAX_CONCURRENCY: "200"
+      AI_WORKER_QUEUE_MAX: "200"
+      AI_WORKER_LEASE_MS: "30000"
+      AI_WORKER_HEARTBEAT_SECONDS: "10"
+      REGISTRY_BASE_URL: "http://${HOST_IP}:${REGISTRY_PORT}"
+      MINIO_PUBLIC_URL: "http://${HOST_IP}:${APP_MINIO_PORT}"
+      DEEPSEEK_KEY: "${DEEPSEEK_KEY}"
+      GLM_ANTHROPIC_AUTH_TOKEN: "${GLM_ANTHROPIC_AUTH_TOKEN}"
+      GLM_ANTHROPIC_BASE_URL: "${GLM_ANTHROPIC_BASE_URL}"
+      CC_ANTHROPIC_AUTH_TOKEN: "${CC_ANTHROPIC_AUTH_TOKEN}"
+      CC_ANTHROPIC_BASE_URL: "${CC_ANTHROPIC_BASE_URL}"
 
   registry:
     build:

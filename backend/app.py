@@ -3,7 +3,8 @@
 JSON DSL Backend - Flask App
 主入口文件
 
-生产: gunicorn -k eventlet -w 1 -b 0.0.0.0:5566 app:app
+生产: gunicorn -k eventlet -w <N> -b 0.0.0.0:5566 app:app
+      AI 任务由独立 ai_worker_daemon.py 消费 Redis 队列，不依赖 gunicorn 进程内存。
 开发: python backend/app.py（用 socketio.run 的 werkzeug，仅本地）
 """
 
@@ -126,5 +127,5 @@ if __name__ == "__main__":
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
     logger.info("   IM:    /api/im/{token,users/lookup,users/search,push_token,media/upload-url,after_send_msg,offline_push_hook}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
-    logger.info("   ⚠️  本地开发模式（werkzeug）；生产用 gunicorn -k eventlet -w 1 app:app")
+    logger.info("   ⚠️  本地开发模式（werkzeug）；生产用 gunicorn -k eventlet -w <N> app:app + ai_worker_daemon.py")
     socketio.run(app, host="0.0.0.0", port=PORT, allow_unsafe_werkzeug=True)

@@ -1,14 +1,17 @@
-"""AI session 状态管理 + Worker 解耦层 (Phase 1: ai-background-push)
+"""AI session 状态管理 + Redis worker 队列。
 
 设计目标：把 claude CLI 的运行从 HTTP 连接生命周期里抽出来。
-- worker 跑在独立线程（eventlet monkey_patch 后实为 greenlet），把 claude CLI
-  输出实时写到 Redis Stream
+- Flask/gunicorn 只提交任务到 Redis pending queue
+- ai_worker_daemon 独立消费队列、刷新 running lease、启动 claude CLI
+- worker 把 claude CLI 输出实时写到 Redis Stream
 - HTTP 端点 /api/ai/chat/<id>/stream 只是从 Redis 读流，可以随时断重连
 
 Redis 数据：
     ai:session:<id>:meta    Hash    元信息（status / 起止时间 / 配额 / final_text）
     ai:session:<id>:stream  Stream  SSE 事件序列；entry id 即"位置"
     ai:session:<id>:abort   String  存在 = 已请求取消（SETEX 300s 自动失效）
+    ai:queue:pending        List    等待中的 AI 任务
+    ai:queue:running:*      Hash/ZSet 运行中租约与 heartbeat
 
 详见 backend/ARCHITECTURE.md §3。
 """
@@ -18,7 +21,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import queue
 import subprocess
 import threading
 import time
@@ -126,6 +128,18 @@ def _abort_key(session_id: str) -> str:
     return f"ai:session:{session_id}:abort"
 
 
+def _pending_queue_key() -> str:
+    return "ai:queue:pending"
+
+
+def _running_hash_key() -> str:
+    return "ai:queue:running"
+
+
+def _running_lease_key() -> str:
+    return "ai:queue:running:leases"
+
+
 # ────────────────────────────── 状态枚举 ──────────────────────────────
 
 STATUS_RUNNING = "running"
@@ -175,16 +189,17 @@ class SessionStore:
         pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
         pipe.execute()
 
-    def mark_running(self, session_id: str) -> None:
+    def mark_running(self, session_id: str, job_id: Optional[str] = None) -> None:
         """从 queued 切到 running，不写 finished_at。"""
+        update = {
+            "status": STATUS_RUNNING,
+            "started_at": str(int(time.time() * 1000)),
+        }
+        if job_id is not None:
+            update["active_job_id"] = job_id
         pipe = self.r.pipeline()
-        pipe.hset(
-            _meta_key(session_id),
-            mapping={
-                "status": STATUS_RUNNING,
-                "started_at": str(int(time.time() * 1000)),
-            },
-        )
+        pipe.hset(_meta_key(session_id), mapping=update)
+        pipe.hdel(_meta_key(session_id), "queued_job")
         pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
         pipe.execute()
 
@@ -431,10 +446,10 @@ def extract_final_texts(events: List[dict]) -> Tuple[Optional[str], Optional[str
     return final_text, final_thinking
 
 
-# ────────────────────────────── Worker 池 ──────────────────────────────
+# ────────────────────────────── Redis Queue + Worker 池 ──────────────────────────────
 
-# eventlet monkey_patch 后 threading.Thread 实为 greenlet，开销低。
-# 这里限制的是同时跑的 claude CLI 进程数（每个进程独立占 RAM）。
+# ai_worker_daemon 内的本地线程池；全局并发仍由 Redis running lease 控制。
+# 这里也设同样大小，避免单 daemon 本地堆积 executor 内部队列。
 _executor = ThreadPoolExecutor(
     max_workers=AI_WORKER_MAX_CONCURRENCY,
     thread_name_prefix="ai-worker",
@@ -453,12 +468,10 @@ class _WorkerJob:
     quota_remaining: int
 
 
-# 显式等待队列：ThreadPoolExecutor 内部队列不可观测、不可限流。
-# 这里 queue 只存“等待中”的任务；真正运行的任务由 semaphore 控制。
-_worker_queue: "queue.Queue[_WorkerJob]" = queue.Queue(maxsize=AI_WORKER_QUEUE_MAX)
-_worker_slot_sem = threading.BoundedSemaphore(AI_WORKER_MAX_CONCURRENCY)
-_queued_sessions = {}
-_queued_sessions_lock = threading.Lock()
+# Redis 负责全局 pending queue + running lease；Flask 可以多进程。
+_WORKER_LEASE_MS = int(os.environ.get("AI_WORKER_LEASE_MS", "30000"))
+_WORKER_HEARTBEAT_SECONDS = max(1, int(os.environ.get("AI_WORKER_HEARTBEAT_SECONDS", "10")))
+_WORKER_ID = f"{os.uname().nodename}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
 
 # session_id -> Popen，给 abort 杀进程用
 _session_procs: dict = {}
@@ -490,11 +503,15 @@ def _kill_proc(session_id: str) -> bool:
 
 
 def is_session_proc_alive(session_id: str) -> bool:
-    with _session_procs_lock:
-        proc = _session_procs.get(session_id)
-    if proc is None:
+    """跨 gunicorn worker 判断运行租约是否还活着。"""
+    try:
+        score = get_redis().zscore(_running_lease_key(), session_id)
+    except redis.exceptions.RedisError as e:
+        logger.warning(f"[WORKER_QUEUE] 读取 running lease 失败 sid={session_id}: {e}")
         return False
-    return proc.poll() is None
+    if score is None:
+        return False
+    return float(score) > int(time.time() * 1000)
 
 
 def _queue_status_message(position: Optional[int]) -> str:
@@ -508,19 +525,32 @@ def _queue_status_message(position: Optional[int]) -> str:
 
 def get_queue_position(session_id: str) -> Optional[int]:
     """返回 1-based 排队位置；不在等待队列则返回 None。"""
-    with _queued_sessions_lock:
-        current_job_id = _queued_sessions.get(session_id)
-        if current_job_id is None:
-            return None
-        active_queued = dict(_queued_sessions)
-    with _worker_queue.mutex:
-        position = 0
-        for job in list(_worker_queue.queue):
-            if active_queued.get(job.session_id) != job.job_id:
+    r = get_redis()
+    meta = SessionStore().get_meta(session_id)
+    queued_job = meta.get("queued_job")
+    if not queued_job:
+        return None
+    try:
+        raw_jobs = r.lrange(_pending_queue_key(), 0, -1)
+    except redis.exceptions.RedisError as e:
+        logger.warning(f"[WORKER_QUEUE] 读取 pending queue 失败 sid={session_id}: {e}")
+        return None
+    position = 0
+    for raw in raw_jobs:
+        job_text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
+        try:
+            job_data = json.loads(job_text)
+            job_session_id = job_data.get("session_id", "")
+            current_job = r.hget(_meta_key(job_session_id), "queued_job")
+            if isinstance(current_job, bytes):
+                current_job = current_job.decode("utf-8", errors="replace")
+            if current_job != job_text:
                 continue
-            position += 1
-            if job.session_id == session_id and job.job_id == current_job_id:
-                return position
+        except Exception:
+            continue
+        position += 1
+        if job_text == queued_job:
+            return position
     return None
 
 
@@ -528,15 +558,167 @@ def get_queue_message(session_id: str) -> str:
     return _queue_status_message(get_queue_position(session_id))
 
 
-def _run_job_releasing_slot(job: _WorkerJob) -> None:
+def _job_to_json(job: _WorkerJob) -> str:
+    return json.dumps(job.__dict__, ensure_ascii=False, separators=(",", ":"))
+
+
+def _job_from_json(raw) -> _WorkerJob:
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8", errors="replace")
+    data = json.loads(raw)
+    return _WorkerJob(
+        job_id=data["job_id"],
+        session_id=data["session_id"],
+        last_msg=data["last_msg"],
+        provider_id=data.get("provider_id"),
+        user_id=data["user_id"],
+        quota_used=int(data["quota_used"]),
+        quota_limit=int(data["quota_limit"]),
+        quota_remaining=int(data["quota_remaining"]),
+    )
+
+
+_ENQUEUE_SCRIPT = """
+local pending_key = KEYS[1]
+local meta_key = KEYS[2]
+local job_json = ARGV[1]
+local queue_max = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+if redis.call('LLEN', pending_key) >= queue_max then
+  return -1
+end
+redis.call('RPUSH', pending_key, job_json)
+redis.call('HSET', meta_key, 'queued_job', job_json)
+local job = cjson.decode(job_json)
+redis.call('HSET', meta_key, 'active_job_id', job['job_id'])
+redis.call('EXPIRE', meta_key, ttl)
+return redis.call('LLEN', pending_key)
+"""
+
+
+_ACQUIRE_SCRIPT = """
+local pending_key = KEYS[1]
+local running_hash_key = KEYS[2]
+local running_lease_key = KEYS[3]
+local now_ms = tonumber(ARGV[1])
+local lease_until_ms = tonumber(ARGV[2])
+local max_running = tonumber(ARGV[3])
+local worker_id = ARGV[4]
+local expired = redis.call('ZRANGEBYSCORE', running_lease_key, '-inf', now_ms)
+for _, sid in ipairs(expired) do
+  redis.call('HDEL', running_hash_key, sid)
+end
+if #expired > 0 then
+  redis.call('ZREMRANGEBYSCORE', running_lease_key, '-inf', now_ms)
+end
+if redis.call('ZCARD', running_lease_key) >= max_running then
+  return nil
+end
+local job_json = redis.call('LPOP', pending_key)
+if not job_json then
+  return nil
+end
+local job = cjson.decode(job_json)
+local running = cjson.encode({
+  job_id = job['job_id'],
+  worker_id = worker_id,
+  started_at = now_ms,
+  lease_until = lease_until_ms
+})
+redis.call('HSET', running_hash_key, job['session_id'], running)
+redis.call('ZADD', running_lease_key, lease_until_ms, job['session_id'])
+return job_json
+"""
+
+
+def _acquire_redis_job(timeout_seconds: int = 2) -> Optional[_WorkerJob]:
+    r = get_redis()
+    deadline = time.time() + timeout_seconds
+    while True:
+        now_ms = int(time.time() * 1000)
+        try:
+            raw = r.eval(
+                _ACQUIRE_SCRIPT,
+                3,
+                _pending_queue_key(),
+                _running_hash_key(),
+                _running_lease_key(),
+                now_ms,
+                now_ms + _WORKER_LEASE_MS,
+                AI_WORKER_MAX_CONCURRENCY,
+                _WORKER_ID,
+            )
+        except redis.exceptions.RedisError as e:
+            logger.warning(f"[WORKER_QUEUE] acquire 失败: {e}")
+            time.sleep(1)
+            return None
+        if raw:
+            return _job_from_json(raw)
+        if time.time() >= deadline:
+            return None
+        time.sleep(0.2)
+
+
+def _refresh_running_lease(session_id: str) -> None:
+    now_ms = int(time.time() * 1000)
+    lease_until = now_ms + _WORKER_LEASE_MS
+    r = get_redis()
+    pipe = r.pipeline()
+    pipe.zadd(_running_lease_key(), {session_id: lease_until})
+    pipe.hset(
+        _running_hash_key(),
+        session_id,
+        json.dumps(
+            {
+                "worker_id": _WORKER_ID,
+                "lease_until": lease_until,
+                "updated_at": now_ms,
+            },
+            separators=(",", ":"),
+        ),
+    )
+    pipe.execute()
+
+
+def _complete_running(session_id: str) -> None:
+    pipe = get_redis().pipeline()
+    pipe.hdel(_running_hash_key(), session_id)
+    pipe.zrem(_running_lease_key(), session_id)
+    pipe.execute()
+
+
+def _run_redis_job(job: _WorkerJob) -> None:
+    stop_heartbeat = threading.Event()
+
+    def heartbeat_loop() -> None:
+        while not stop_heartbeat.wait(_WORKER_HEARTBEAT_SECONDS):
+            try:
+                _refresh_running_lease(job.session_id)
+            except Exception as e:
+                logger.warning(f"[WORKER_QUEUE] heartbeat 失败 sid={job.session_id}: {e}")
+
+    heartbeat_thread = threading.Thread(
+        target=heartbeat_loop,
+        name=f"ai-heartbeat-{job.session_id[:8]}",
+        daemon=True,
+    )
+    heartbeat_thread.start()
+
     try:
         store = SessionStore()
         meta = store.get_meta(job.session_id)
+        expected_job = _job_to_json(job)
         if not meta or store.is_aborted(job.session_id):
             return
         if meta.get("status") in TERMINAL_STATUSES:
             return
-        store.mark_running(job.session_id)
+        if meta.get("queued_job") and meta.get("queued_job") != expected_job:
+            logger.info(f"[WORKER_QUEUE] sid={job.session_id} 跳过过期 job={job.job_id}")
+            return
+        store.mark_running(job.session_id, job.job_id)
+        if store.get_meta(job.session_id).get("active_job_id") != job.job_id:
+            logger.info(f"[WORKER_QUEUE] sid={job.session_id} job={job.job_id} 刚启动即被替换")
+            return
         store.append_event(
             job.session_id,
             {
@@ -551,39 +733,11 @@ def _run_job_releasing_slot(job: _WorkerJob) -> None:
             job.quota_used,
             job.quota_limit,
             job.quota_remaining,
+            job_id=job.job_id,
         )
     finally:
-        _worker_slot_sem.release()
-
-
-def _dispatcher_loop() -> None:
-    while True:
-        _worker_slot_sem.acquire()
-        job = _worker_queue.get()
-        try:
-            with _queued_sessions_lock:
-                still_queued = _queued_sessions.get(job.session_id) == job.job_id
-                if still_queued:
-                    _queued_sessions.pop(job.session_id, None)
-            if not still_queued:
-                _worker_slot_sem.release()
-                continue
-            _executor.submit(_run_job_releasing_slot, job)
-        except Exception as e:
-            _worker_slot_sem.release()
-            logger.exception(f"[WORKER_QUEUE] dispatch 失败 sid={job.session_id}: {e}")
-            try:
-                SessionStore().set_status(job.session_id, STATUS_FAILED, error=str(e))
-            except Exception:
-                pass
-
-
-_dispatcher_thread = threading.Thread(
-    target=_dispatcher_loop,
-    name="ai-worker-dispatcher",
-    daemon=True,
-)
-_dispatcher_thread.start()
+        stop_heartbeat.set()
+        _complete_running(job.session_id)
 
 
 def _build_cli_cmd(session_id: str, last_msg: str, sys_prompt: str,
@@ -619,7 +773,8 @@ def _provider_env(provider_id: Optional[str]) -> Tuple[dict, dict]:
 
 
 def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
-                 quota_used: int, quota_limit: int, quota_remaining: int) -> None:
+                 quota_used: int, quota_limit: int, quota_remaining: int,
+                 job_id: Optional[str] = None) -> None:
     """线程池 worker 入口。
     把 claude CLI 输出解析为业务事件 + 写到 Redis stream，
     完成后落 meta status。
@@ -631,6 +786,25 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
     final_text: Optional[str] = None
     final_thinking: Optional[str] = None
     all_events: List[dict] = []
+
+    def is_current_job() -> bool:
+        if job_id is None:
+            return True
+        return store.get_meta(session_id).get("active_job_id") == job_id
+
+    def append_event(event: dict) -> bool:
+        if not is_current_job():
+            logger.info(f"[WORKER] sid={session_id} job={job_id} 已被新 job 替换，停止写 stream")
+            return False
+        store.append_event(session_id, event)
+        return True
+
+    def set_status(status: str, **kwargs) -> bool:
+        if not is_current_job():
+            logger.info(f"[WORKER] sid={session_id} job={job_id} 已被新 job 替换，停止写 status={status}")
+            return False
+        store.set_status(session_id, status, **kwargs)
+        return True
 
     try:
         # ─── 1. 起进程 ───
@@ -691,7 +865,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                     "event": "aborted_during_startup",
                     "returncode": proc.returncode,
                 }, ensure_ascii=False))
-                store.set_status(session_id, STATUS_ABORTED)
+                set_status(STATUS_ABORTED)
                 return
 
             stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
@@ -726,8 +900,8 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 # needs_retry=True 让客户端 emit needsRetry → UI 弹重试按钮
                 # 启动失败基本都值得让用户重试一次（CLI 进程问题 / 临时网络等都是瞬态的）
                 err_evt = {"error": err_msg, "needs_retry": True}
-                store.append_event(session_id, err_evt)
-                store.set_status(session_id, STATUS_FAILED, error=err_msg)
+                append_event(err_evt)
+                set_status(STATUS_FAILED, error=err_msg)
                 return
 
         # ─── 4. 主循环：读 CLI 输出 → 解析 → 写 Redis ───
@@ -736,7 +910,12 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             _append_cli_log(session_id, "stdout", buffered)
             line_str = buffered.decode("utf-8", errors="replace")
             for ev in parse_cli_line(line_str):
-                store.append_event(session_id, ev)
+                if not append_event(ev):
+                    try:
+                        proc.terminate()
+                    except Exception:
+                        pass
+                    return
                 all_events.append(ev)
                 line_count += 1
 
@@ -752,7 +931,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                     "event": "aborted_by_flag",
                     "lines": line_count,
                 }, ensure_ascii=False))
-                store.set_status(session_id, STATUS_ABORTED)
+                set_status(STATUS_ABORTED)
                 return
 
             line = proc.stdout.readline()
@@ -763,7 +942,12 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             _append_cli_log(session_id, "stdout", line)
             line_str = line.decode("utf-8", errors="replace")
             for ev in parse_cli_line(line_str):
-                store.append_event(session_id, ev)
+                if not append_event(ev):
+                    try:
+                        proc.terminate()
+                    except Exception:
+                        pass
+                    return
                 all_events.append(ev)
                 line_count += 1
 
@@ -780,7 +964,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 "returncode": proc.returncode,
                 "lines": line_count,
             }, ensure_ascii=False))
-            store.set_status(session_id, STATUS_ABORTED)
+            set_status(STATUS_ABORTED)
             return
 
         # ─── 5. 退出码 != 0 → 失败（含外部 kill） ───
@@ -801,19 +985,19 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             }, ensure_ascii=False))
             # needs_retry=True → 客户端 emit needsRetry → UI 弹重试按钮
             err_evt = {"error": err_msg, "needs_retry": True}
-            store.append_event(session_id, err_evt)
-            store.set_status(session_id, STATUS_FAILED, error=err_msg)
+            append_event(err_evt)
+            set_status(STATUS_FAILED, error=err_msg)
             return
 
         # ─── 6. 正常完成 ───
         # 配额事件 + DONE 标记保留发到 stream（给老客户端兼容；新客户端从 meta 读）
-        store.append_event(session_id, {"quota": {
+        append_event({"quota": {
             "used": quota_used, "limit": quota_limit, "remaining": quota_remaining,
         }})
 
         final_text, final_thinking = extract_final_texts(all_events)
-        store.set_status(
-            session_id, STATUS_DONE,
+        set_status(
+            STATUS_DONE,
             final_text=final_text or "",
             final_thinking=final_thinking or "",
         )
@@ -831,8 +1015,8 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
     except Exception as e:
         logger.exception(f"[WORKER] sid={session_id} 异常: {e}")
         try:
-            store.append_event(session_id, {"error": f"worker 异常: {e}"})
-            store.set_status(session_id, STATUS_FAILED, error=str(e))
+            append_event({"error": f"worker 异常: {e}"})
+            set_status(STATUS_FAILED, error=str(e))
         except Exception:
             pass
 
@@ -854,7 +1038,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
                   *, user_id: str, quota_used: int, quota_limit: int,
                   quota_remaining: int) -> Tuple[bool, Optional[int]]:
-    """提交 worker 到显式等待队列。立刻返回，不等任务完成。
+    """提交 worker 到 Redis 显式等待队列。立刻返回，不等任务完成。
 
     调用前应先 SessionStore.create_meta(status=queued)；这里只负责排队。
     返回 (accepted, queue_position)。
@@ -869,14 +1053,21 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
         quota_limit=quota_limit,
         quota_remaining=quota_remaining,
     )
+    job_json = _job_to_json(job)
     try:
-        with _queued_sessions_lock:
-            _queued_sessions[session_id] = job.job_id
-        _worker_queue.put_nowait(job)
-    except queue.Full:
-        with _queued_sessions_lock:
-            if _queued_sessions.get(session_id) == job.job_id:
-                _queued_sessions.pop(session_id, None)
+        queued_len = get_redis().eval(
+            _ENQUEUE_SCRIPT,
+            2,
+            _pending_queue_key(),
+            _meta_key(session_id),
+            job_json,
+            AI_WORKER_QUEUE_MAX,
+            AI_SESSION_REDIS_TTL_SECONDS,
+        )
+    except redis.exceptions.RedisError as e:
+        logger.exception(f"[WORKER_QUEUE] enqueue 失败 sid={session_id}: {e}")
+        return False, None
+    if int(queued_len) < 0:
         return False, None
 
     position = get_queue_position(session_id)
@@ -893,18 +1084,49 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
 
 
 def abort_session(session_id: str) -> None:
-    """请求 abort：写 abort 标记 + 主动 kill 进程（双保险）。
-    worker 主循环里下一次 readline 唤醒后会检测到 abort 标记并把 status 设为 aborted。
+    """请求 abort：写 abort 标记 + 尝试从 Redis pending 移除 + 本进程主动 kill。
+    运行中的 worker 主循环会检测 abort 标记；跨 gunicorn worker 时不依赖本地进程表。
     """
-    SessionStore().request_abort(session_id)
-    with _queued_sessions_lock:
-        was_queued = session_id in _queued_sessions
-        _queued_sessions.pop(session_id, None)
-    if was_queued:
-        SessionStore().set_status(session_id, STATUS_ABORTED, error="aborted before start")
+    store = SessionStore()
+    store.request_abort(session_id)
+    meta = store.get_meta(session_id)
+    queued_job = meta.get("queued_job")
+    if queued_job:
+        try:
+            removed = get_redis().lrem(_pending_queue_key(), 1, queued_job)
+        except redis.exceptions.RedisError as e:
+            logger.warning(f"[WORKER_QUEUE] pending 移除失败 sid={session_id}: {e}")
+            removed = 0
+        if removed:
+            store.set_status(session_id, STATUS_ABORTED, error="aborted before start")
     _kill_proc(session_id)
 
 
 def clear_abort(session_id: str) -> None:
     """擦掉 abort 标记。force_restart 重启 worker 时用。"""
     SessionStore().clear_abort(session_id)
+
+
+def run_worker_daemon() -> None:
+    """独立 AI worker daemon 入口。
+
+    Flask/gunicorn 进程只提交任务到 Redis；这个进程负责消费队列、启动 Claude CLI、
+    刷新 running lease。这样 backend 可以多 worker，不会让队列和并发计数分裂。
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    logger.info(
+        "[WORKER_DAEMON] start worker_id=%s max_concurrency=%s queue_max=%s",
+        _WORKER_ID,
+        AI_WORKER_MAX_CONCURRENCY,
+        AI_WORKER_QUEUE_MAX,
+    )
+    while True:
+        job = _acquire_redis_job(timeout_seconds=2)
+        if job is None:
+            continue
+        logger.info("[WORKER_DAEMON] acquired sid=%s job=%s", job.session_id, job.job_id)
+        _executor.submit(_run_redis_job, job)

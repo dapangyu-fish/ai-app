@@ -250,6 +250,8 @@ def chat():
     logger.debug(f"[CHAT] CLI 环境变量: {list(cli_env.keys())}")
 
     increment_quota(user_id)
+    # 新一轮被接受前清掉旧 abort 标记；如果旧 running lease 仍存活，上面已经直接返回。
+    ai_session.clear_abort(session_id)
     new_remaining = remaining - 1
     logger.info(f"[CHAT] 配额已扣除，剩余: {new_remaining}")
 
@@ -660,8 +662,12 @@ def chat_start():
                     )
                 else:
                     logger.error(
-                        f"[CHAT_START] sid={session_id} 5s 后 proc 仍存活，非常异常"
+                        f"[CHAT_START] sid={session_id} 5s 后 running lease 仍存活，拒绝覆盖旧 session"
                     )
+                    return jsonify({
+                        "error": "上一轮 AI 任务正在停止，请稍后再试",
+                        "code": "AI_TASK_STOPPING",
+                    }), 409
             ai_session.clear_abort(session_id)
         else:
             # 同一 session 双连接（前后台切换、重连）：幂等返回，让 client 去 /stream 续读

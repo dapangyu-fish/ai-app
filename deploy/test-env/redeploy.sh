@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 只更新后端代码：git pull + 重建 backend / registry / config-center 镜像
+# 只更新后端代码：git pull + 重建 backend / ai-worker / registry / config-center 镜像
 # 数据卷（Postgres / Redis / MinIO）一律不动 —— 它们挂在其他容器上
 #
 # === git 和容器的边界（看脚本前先理清楚）===
@@ -10,7 +10,7 @@
 # 3) 新容器从新镜像启，代码就是最新的；整个过程容器都不联网拉代码
 #
 # 用法:
-#   ./redeploy.sh                     # 三个共用 Dockerfile.backend 的服务都重建
+#   ./redeploy.sh                     # 共用 Dockerfile.backend 的服务都重建
 #   ./redeploy.sh backend             # 只重建 backend
 #   ./redeploy.sh backend registry    # 指定多个
 set -euo pipefail
@@ -30,7 +30,7 @@ for arg in "$@"; do
 done
 
 # 默认重建全部四个吃同一份 Dockerfile.backend 的服务，免得改 config.py / database.py 这种共用模块时漏掉
-SERVICES=("backend" "registry" "config-center" "user-center")
+SERVICES=("backend" "ai-worker" "registry" "config-center" "user-center")
 [[ ${#ARGS[@]} -gt 0 ]] && SERVICES=("${ARGS[@]}")
 
 B="\033[1m"; G="\033[32m"; Y="\033[33m"; R="\033[31m"; N="\033[0m"

@@ -1,5 +1,5 @@
-# 后端 + Registry + Config center + User center 共用镜像。
-# 通过 compose 的 command 字段区分入口（python app.py / registry_server.py / config_center/app.py / user_center/app.py）。
+# 后端 + AI worker + Registry + Config center + User center 共用镜像。
+# 通过 compose 的 command 字段区分入口（python app.py / ai_worker_daemon.py / registry_server.py / config_center/app.py / user_center/app.py）。
 #
 # 跟生产保持一致：Python 3.11 (生产 supervisor 跑的也是 3.11)，pip 装 requirements.txt
 FROM python:3.11-slim
