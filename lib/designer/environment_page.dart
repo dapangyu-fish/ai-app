@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../auth/auth_service.dart';
@@ -114,6 +115,20 @@ class _EnvironmentPageState extends State<EnvironmentPage> {
     );
     if (env == null || !mounted) return;
 
+    await _importEnvironment(env);
+  }
+
+  Future<void> _pasteJsonAndImport() async {
+    final env = await showDialog<Environment>(
+      context: context,
+      builder: (_) => const EnvironmentJsonImportDialog(),
+    );
+    if (env == null || !mounted) return;
+
+    await _importEnvironment(env);
+  }
+
+  Future<void> _importEnvironment(Environment env) async {
     await EnvironmentService.instance.save(env);
     if (!mounted) return;
 
@@ -194,6 +209,11 @@ class _EnvironmentPageState extends State<EnvironmentPage> {
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: '扫码导入',
             onPressed: _switching ? null : _scanAndImport,
+          ),
+          IconButton(
+            icon: const Icon(Icons.content_paste),
+            tooltip: '粘贴 JSON 导入',
+            onPressed: _switching ? null : _pasteJsonAndImport,
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -360,7 +380,7 @@ class _EnvironmentQrScanPageState extends State<EnvironmentQrScanPage> {
       final raw = barcode.rawValue;
       if (raw == null || raw.trim().isEmpty) continue;
       try {
-        final env = _environmentFromQrText(raw);
+        final env = _environmentFromImportText(raw);
         _handled = true;
         Navigator.of(context).pop(env);
         return;
@@ -375,61 +395,6 @@ class _EnvironmentQrScanPageState extends State<EnvironmentQrScanPage> {
         return;
       }
     }
-  }
-
-  static Environment _environmentFromQrText(String text) {
-    final decoded = json.decode(text);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('内容必须是 JSON object');
-    }
-    if (decoded['type'] != 'myapp.environment') {
-      throw const FormatException('type 不匹配');
-    }
-    final version = decoded['version'];
-    if (version != 1) {
-      throw FormatException('不支持的版本：$version');
-    }
-
-    String? cleanUrl(String key, {required bool allowWs}) {
-      final value = decoded[key];
-      if (value == null) return null;
-      if (value is! String || value.trim().isEmpty) return null;
-      final trimmed = value.trim();
-      final uri = Uri.tryParse(trimmed);
-      if (uri == null || !uri.hasAuthority) {
-        throw FormatException('$key 格式无效');
-      }
-      final scheme = uri.scheme.toLowerCase();
-      if (allowWs) {
-        if (scheme != 'ws' && scheme != 'wss') {
-          throw FormatException('$key 必须是 ws:// 或 wss://');
-        }
-      } else if (scheme != 'http' && scheme != 'https') {
-        throw FormatException('$key 必须是 http:// 或 https://');
-      }
-      return trimmed.endsWith('/')
-          ? trimmed.substring(0, trimmed.length - 1)
-          : trimmed;
-    }
-
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final rawName = decoded['name'];
-    final name = rawName is String && rawName.trim().isNotEmpty
-        ? rawName.trim()
-        : '扫码环境';
-
-    return Environment(
-      id: 'env_$now',
-      name: name,
-      backendUrl: cleanUrl('backendUrl', allowWs: false),
-      supabaseUrl: cleanUrl('supabaseUrl', allowWs: false),
-      minioUrl: cleanUrl('minioUrl', allowWs: false),
-      registryUrl: cleanUrl('registryUrl', allowWs: false),
-      imApiUrl: cleanUrl('imApiUrl', allowWs: false),
-      imWsUrl: cleanUrl('imWsUrl', allowWs: true),
-      configCenterUrl: cleanUrl('configCenterUrl', allowWs: false),
-      createdAtMillis: now,
-    );
   }
 
   @override
@@ -472,6 +437,145 @@ class _EnvironmentQrScanPageState extends State<EnvironmentQrScanPage> {
       ),
     );
   }
+}
+
+class EnvironmentJsonImportDialog extends StatefulWidget {
+  const EnvironmentJsonImportDialog({super.key});
+
+  @override
+  State<EnvironmentJsonImportDialog> createState() =>
+      _EnvironmentJsonImportDialogState();
+}
+
+class _EnvironmentJsonImportDialogState
+    extends State<EnvironmentJsonImportDialog> {
+  final TextEditingController _jsonCtl = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _jsonCtl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text;
+      if (text == null || text.trim().isEmpty) {
+        setState(() => _error = '剪贴板为空');
+        return;
+      }
+      setState(() {
+        _jsonCtl.text = text;
+        _error = null;
+      });
+    } catch (e) {
+      setState(() => _error = '读取剪贴板失败，请手动粘贴：$e');
+      return;
+    }
+  }
+
+  void _import() {
+    try {
+      final env = _environmentFromImportText(_jsonCtl.text);
+      Navigator.of(context).pop(env);
+    } catch (e) {
+      setState(() => _error = 'JSON 不是有效的服务环境配置：$e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('粘贴 JSON 导入环境'),
+      content: SizedBox(
+        width: 560,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _jsonCtl,
+              minLines: 8,
+              maxLines: 14,
+              decoration: InputDecoration(
+                hintText: '{"type":"myapp.environment",...}',
+                border: const OutlineInputBorder(),
+                errorText: _error,
+              ),
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              autocorrect: false,
+              enableSuggestions: false,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        TextButton(onPressed: _pasteFromClipboard, child: const Text('从剪贴板粘贴')),
+        FilledButton(onPressed: _import, child: const Text('导入')),
+      ],
+    );
+  }
+}
+
+Environment _environmentFromImportText(String text) {
+  final decoded = json.decode(text.trim());
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('内容必须是 JSON object');
+  }
+  if (decoded['type'] != 'myapp.environment') {
+    throw const FormatException('type 不匹配');
+  }
+  final version = decoded['version'];
+  if (version != 1) {
+    throw FormatException('不支持的版本：$version');
+  }
+
+  String? cleanUrl(String key, {required bool allowWs}) {
+    final value = decoded[key];
+    if (value == null) return null;
+    if (value is! String || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasAuthority) {
+      throw FormatException('$key 格式无效');
+    }
+    final scheme = uri.scheme.toLowerCase();
+    if (allowWs) {
+      if (scheme != 'ws' && scheme != 'wss') {
+        throw FormatException('$key 必须是 ws:// 或 wss://');
+      }
+    } else if (scheme != 'http' && scheme != 'https') {
+      throw FormatException('$key 必须是 http:// 或 https://');
+    }
+    return trimmed.endsWith('/')
+        ? trimmed.substring(0, trimmed.length - 1)
+        : trimmed;
+  }
+
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final rawName = decoded['name'];
+  final name = rawName is String && rawName.trim().isNotEmpty
+      ? rawName.trim()
+      : '导入环境';
+
+  return Environment(
+    id: 'env_$now',
+    name: name,
+    backendUrl: cleanUrl('backendUrl', allowWs: false),
+    supabaseUrl: cleanUrl('supabaseUrl', allowWs: false),
+    minioUrl: cleanUrl('minioUrl', allowWs: false),
+    registryUrl: cleanUrl('registryUrl', allowWs: false),
+    imApiUrl: cleanUrl('imApiUrl', allowWs: false),
+    imWsUrl: cleanUrl('imWsUrl', allowWs: true),
+    configCenterUrl: cleanUrl('configCenterUrl', allowWs: false),
+    createdAtMillis: now,
+  );
 }
 
 /// 编辑/新建单个环境。null = 新建。

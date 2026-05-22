@@ -170,6 +170,8 @@ T_en[env_qr_saved]="Client environment QR saved to ./test-env-environment.png an
 T_zh[env_qr_saved]="客户端环境二维码已保存到 ./test-env-environment.png 和 ./test-env-environment.json"
 T_en[env_qr_title]="Scan this QR in the client Service Environment page"
 T_zh[env_qr_title]="在客户端“服务环境”页扫码导入"
+T_en[env_json_title]="Or copy this JSON into the client Service Environment page"
+T_zh[env_json_title]="也可以复制这段 JSON 到客户端“服务环境”页导入"
 
 T_de[deps_check]="Abhängigkeiten werden geprüft..."
 T_es[deps_check]="Comprobando dependencias..."
@@ -307,6 +309,8 @@ T_de[env_qr_saved]="Client-Umgebungs-QR gespeichert in ./test-env-environment.pn
 T_es[env_qr_saved]="QR de entorno del cliente guardado en ./test-env-environment.png y ./test-env-environment.json"
 T_de[env_qr_title]="Diesen QR auf der Service-Umgebungsseite im Client scannen"
 T_es[env_qr_title]="Escanea este QR en la página de entorno de servicio del cliente"
+T_de[env_json_title]="Oder diese JSON in die Service-Umgebungsseite im Client kopieren"
+T_es[env_json_title]="O copia este JSON en la página de entorno de servicio del cliente"
 
 say()  { printf "${C}» %s${N}\n" "$*"; }
 ok()   { printf "${G}✔ %s${N}\n" "$*"; }
@@ -978,3 +982,7 @@ ok "$(t env_qr_saved)"
 echo
 printf "${B}%s:${N}\n" "$(t env_qr_title)"
 qrencode -t ANSIUTF8 < "$ENV_IMPORT_JSON"
+echo
+printf "${B}%s:${N}\n" "$(t env_json_title)"
+cat "$ENV_IMPORT_JSON"
+echo
