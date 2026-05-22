@@ -634,13 +634,13 @@ def chat_start():
     store = ai_session.SessionStore()
     existing = store.get_meta(session_id)
 
-    if existing and existing.get("status") == ai_session.STATUS_RUNNING:
+    if existing and existing.get("status") in (ai_session.STATUS_RUNNING, ai_session.STATUS_QUEUED):
         if force_restart:
             # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的
             # 关键不变量：必须确认旧 worker 已经写完 STATUS_ABORTED 才能 create_meta，
             # 否则旧 worker 后写的 set_status 会覆盖新 worker 的 fresh meta，
             # 导致客户端 /status 看到 status=aborted → 又触发重试 → 死循环
-            logger.info(f"[CHAT_START] sid={session_id} force_restart：先 abort 旧 worker")
+            logger.info(f"[CHAT_START] sid={session_id} force_restart：先 abort 旧 worker/queued job")
             ai_session.abort_session(session_id)  # 内部 _kill_proc 阻塞最多 2s 等 proc 死
             # abort_session 返回时 proc 已死，worker 线程通常 1-10ms 内 set_status(ABORTED) 完成
             # 5s 是给 Redis 抖动 / GIL 争抢的余量
@@ -665,18 +665,18 @@ def chat_start():
             ai_session.clear_abort(session_id)
         else:
             # 同一 session 双连接（前后台切换、重连）：幂等返回，让 client 去 /stream 续读
-            logger.info(f"[CHAT_START] sid={session_id} 已在跑，复用")
+            status = existing.get("status")
+            logger.info(f"[CHAT_START] sid={session_id} 已存在 status={status}，复用")
             return jsonify({
                 "session_id": session_id,
-                "status": "running",
+                "status": status,
+                "queue_position": ai_session.get_queue_position(session_id) if status == ai_session.STATUS_QUEUED else None,
                 "resumed": True,
             })
 
-    # 扣配额（沿用老逻辑：先扣，worker 失败损 1 容忍）
-    increment_quota(user_id)
     new_remaining = remaining - 1
 
-    # 写 meta + 提交 worker
+    # 写 meta + 提交到显式队列。只有接受入队后才扣配额。
     store.create_meta(
         session_id,
         user_id=user_id,
@@ -684,19 +684,30 @@ def chat_start():
         quota_used=used + 1,
         quota_limit=limit,
         quota_remaining=new_remaining,
+        status=ai_session.STATUS_QUEUED,
     )
-    ai_session.submit_worker(
+    accepted, queue_position = ai_session.submit_worker(
         session_id, last_msg, provider_id,
         user_id=user_id,
         quota_used=used + 1,
         quota_limit=limit,
         quota_remaining=new_remaining,
     )
+    if not accepted:
+        store.set_status(session_id, ai_session.STATUS_FAILED, error="AI worker queue full")
+        return jsonify({
+            "error": "当前 AI 任务过多，请稍后再试",
+            "code": "AI_QUEUE_FULL",
+        }), 429
 
-    logger.info(f"[CHAT_START] sid={session_id} worker 已提交")
+    # 扣配额（沿用老逻辑：worker 失败损 1 容忍；但队列拒绝不扣）
+    increment_quota(user_id)
+
+    logger.info(f"[CHAT_START] sid={session_id} worker 已入队 position={queue_position}")
     return jsonify({
         "session_id": session_id,
-        "status": "running",
+        "status": "queued",
+        "queue_position": queue_position,
         "resumed": False,
     })
 
@@ -717,6 +728,7 @@ def _build_sse_stream(session_id: str, last_id: str):
     started_at = _time.time()
     # 僵尸检测：第一次检查在 5s 后（给 worker 注册 _session_procs 留余量），之后每 10s 检查一次
     next_zombie_check = started_at + 5
+    next_queue_status = started_at
 
     while True:
         items = store.read_events(session_id, last_id=cursor, block_ms=5000, count=100)
@@ -731,6 +743,21 @@ def _build_sse_stream(session_id: str, last_id: str):
 
         meta = store.get_meta(session_id)
         status = meta.get("status", "")
+
+        if status == ai_session.STATUS_QUEUED and _time.time() >= next_queue_status:
+            next_queue_status = _time.time() + 5
+            yield (
+                "data: "
+                + json.dumps(
+                    {
+                        "status": ai_session.STATUS_QUEUED,
+                        "queue_position": ai_session.get_queue_position(session_id),
+                        "message": ai_session.get_queue_message(session_id),
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n\n"
+            )
 
         if status in ai_session.TERMINAL_STATUSES:
             # 任务结束。再读一次（不阻塞）确保没漏事件
@@ -855,13 +882,16 @@ def chat_status_v2(session_id):
         return jsonify({"error": "无权访问此 session"}), 403
 
     # 不返回 final_text 这种大字段；想要完整结果走 /result
+    status = meta.get("status")
     return jsonify({
         "session_id": session_id,
-        "status": meta.get("status"),
+        "status": status,
         "event_count": int(meta.get("event_count", "0") or "0"),
         "started_at": meta.get("started_at"),
         "finished_at": meta.get("finished_at"),
         "error": meta.get("error", ""),
+        "queue_position": ai_session.get_queue_position(session_id) if status == ai_session.STATUS_QUEUED else None,
+        "queue_message": ai_session.get_queue_message(session_id) if status == ai_session.STATUS_QUEUED else "",
         "process_alive": ai_session.is_session_proc_alive(session_id),
     })
 

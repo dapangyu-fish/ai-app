@@ -18,10 +18,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+import queue
 import subprocess
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import redis
@@ -33,6 +36,7 @@ from config import (
     AI_SESSION_REDIS_PORT,
     AI_SESSION_REDIS_TTL_SECONDS,
     AI_WORKER_MAX_CONCURRENCY,
+    AI_WORKER_QUEUE_MAX,
     CLAUDE_BIN,
     DEFAULT_PROVIDER,
     GENERATE_PROMPT_PATH,
@@ -125,6 +129,7 @@ def _abort_key(session_id: str) -> str:
 # ────────────────────────────── 状态枚举 ──────────────────────────────
 
 STATUS_RUNNING = "running"
+STATUS_QUEUED = "queued"
 STATUS_DONE = "done"
 STATUS_FAILED = "failed"
 STATUS_ABORTED = "aborted"
@@ -142,7 +147,8 @@ class SessionStore:
 
     # ─── meta ───
     def create_meta(self, session_id: str, *, user_id: str, provider: str,
-                    quota_used: int, quota_limit: int, quota_remaining: int) -> None:
+                    quota_used: int, quota_limit: int, quota_remaining: int,
+                    status: str = STATUS_RUNNING) -> None:
         """新一轮 worker 起前调。会清掉旧 stream + 旧 meta（避免上一轮的 final_text /
         error / 老事件被新一轮的 client 当成本轮内容读到）。"""
         # 1. 旧 stream 整个删（如果存在）—— 上一轮的事件不能让本轮 client 重放
@@ -157,7 +163,7 @@ class SessionStore:
             "session_id": session_id,
             "user_id": user_id,
             "provider": provider,
-            "status": STATUS_RUNNING,
+            "status": status,
             "started_at": str(int(time.time() * 1000)),
             "event_count": "0",
             "quota_used": str(quota_used),
@@ -166,6 +172,19 @@ class SessionStore:
         }
         pipe = self.r.pipeline()
         pipe.hset(_meta_key(session_id), mapping=meta)
+        pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
+        pipe.execute()
+
+    def mark_running(self, session_id: str) -> None:
+        """从 queued 切到 running，不写 finished_at。"""
+        pipe = self.r.pipeline()
+        pipe.hset(
+            _meta_key(session_id),
+            mapping={
+                "status": STATUS_RUNNING,
+                "started_at": str(int(time.time() * 1000)),
+            },
+        )
         pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
         pipe.execute()
 
@@ -421,6 +440,26 @@ _executor = ThreadPoolExecutor(
     thread_name_prefix="ai-worker",
 )
 
+
+@dataclass(frozen=True)
+class _WorkerJob:
+    job_id: str
+    session_id: str
+    last_msg: str
+    provider_id: Optional[str]
+    user_id: str
+    quota_used: int
+    quota_limit: int
+    quota_remaining: int
+
+
+# 显式等待队列：ThreadPoolExecutor 内部队列不可观测、不可限流。
+# 这里 queue 只存“等待中”的任务；真正运行的任务由 semaphore 控制。
+_worker_queue: "queue.Queue[_WorkerJob]" = queue.Queue(maxsize=AI_WORKER_QUEUE_MAX)
+_worker_slot_sem = threading.BoundedSemaphore(AI_WORKER_MAX_CONCURRENCY)
+_queued_sessions = {}
+_queued_sessions_lock = threading.Lock()
+
 # session_id -> Popen，给 abort 杀进程用
 _session_procs: dict = {}
 _session_procs_lock = threading.Lock()
@@ -456,6 +495,95 @@ def is_session_proc_alive(session_id: str) -> bool:
     if proc is None:
         return False
     return proc.poll() is None
+
+
+def _queue_status_message(position: Optional[int]) -> str:
+    if position is None:
+        return "排队中，正在等待空闲 worker..."
+    ahead = max(position - 1, 0)
+    if ahead == 0:
+        return "排队中，即将开始生成..."
+    return f"排队中，前面还有 {ahead} 个任务..."
+
+
+def get_queue_position(session_id: str) -> Optional[int]:
+    """返回 1-based 排队位置；不在等待队列则返回 None。"""
+    with _queued_sessions_lock:
+        current_job_id = _queued_sessions.get(session_id)
+        if current_job_id is None:
+            return None
+        active_queued = dict(_queued_sessions)
+    with _worker_queue.mutex:
+        position = 0
+        for job in list(_worker_queue.queue):
+            if active_queued.get(job.session_id) != job.job_id:
+                continue
+            position += 1
+            if job.session_id == session_id and job.job_id == current_job_id:
+                return position
+    return None
+
+
+def get_queue_message(session_id: str) -> str:
+    return _queue_status_message(get_queue_position(session_id))
+
+
+def _run_job_releasing_slot(job: _WorkerJob) -> None:
+    try:
+        store = SessionStore()
+        meta = store.get_meta(job.session_id)
+        if not meta or store.is_aborted(job.session_id):
+            return
+        if meta.get("status") in TERMINAL_STATUSES:
+            return
+        store.mark_running(job.session_id)
+        store.append_event(
+            job.session_id,
+            {
+                "status": STATUS_RUNNING,
+                "message": "AI 已开始生成...",
+            },
+        )
+        _worker_main(
+            job.session_id,
+            job.last_msg,
+            job.provider_id,
+            job.quota_used,
+            job.quota_limit,
+            job.quota_remaining,
+        )
+    finally:
+        _worker_slot_sem.release()
+
+
+def _dispatcher_loop() -> None:
+    while True:
+        _worker_slot_sem.acquire()
+        job = _worker_queue.get()
+        try:
+            with _queued_sessions_lock:
+                still_queued = _queued_sessions.get(job.session_id) == job.job_id
+                if still_queued:
+                    _queued_sessions.pop(job.session_id, None)
+            if not still_queued:
+                _worker_slot_sem.release()
+                continue
+            _executor.submit(_run_job_releasing_slot, job)
+        except Exception as e:
+            _worker_slot_sem.release()
+            logger.exception(f"[WORKER_QUEUE] dispatch 失败 sid={job.session_id}: {e}")
+            try:
+                SessionStore().set_status(job.session_id, STATUS_FAILED, error=str(e))
+            except Exception:
+                pass
+
+
+_dispatcher_thread = threading.Thread(
+    target=_dispatcher_loop,
+    name="ai-worker-dispatcher",
+    daemon=True,
+)
+_dispatcher_thread.start()
 
 
 def _build_cli_cmd(session_id: str, last_msg: str, sys_prompt: str,
@@ -725,15 +853,43 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 
 def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
                   *, user_id: str, quota_used: int, quota_limit: int,
-                  quota_remaining: int) -> None:
-    """提交 worker 到线程池。立刻返回，不等任务完成。
+                  quota_remaining: int) -> Tuple[bool, Optional[int]]:
+    """提交 worker 到显式等待队列。立刻返回，不等任务完成。
 
-    调用前应先 SessionStore.create_meta；这里只负责起 worker。
+    调用前应先 SessionStore.create_meta(status=queued)；这里只负责排队。
+    返回 (accepted, queue_position)。
     """
-    _executor.submit(
-        _worker_main, session_id, last_msg, provider_id,
-        quota_used, quota_limit, quota_remaining,
+    job = _WorkerJob(
+        job_id=uuid.uuid4().hex,
+        session_id=session_id,
+        last_msg=last_msg,
+        provider_id=provider_id,
+        user_id=user_id,
+        quota_used=quota_used,
+        quota_limit=quota_limit,
+        quota_remaining=quota_remaining,
     )
+    try:
+        with _queued_sessions_lock:
+            _queued_sessions[session_id] = job.job_id
+        _worker_queue.put_nowait(job)
+    except queue.Full:
+        with _queued_sessions_lock:
+            if _queued_sessions.get(session_id) == job.job_id:
+                _queued_sessions.pop(session_id, None)
+        return False, None
+
+    position = get_queue_position(session_id)
+    if position is not None:
+        SessionStore().append_event(
+            session_id,
+            {
+                "status": STATUS_QUEUED,
+                "queue_position": position,
+                "message": _queue_status_message(position),
+            },
+        )
+    return True, position
 
 
 def abort_session(session_id: str) -> None:
@@ -741,6 +897,11 @@ def abort_session(session_id: str) -> None:
     worker 主循环里下一次 readline 唤醒后会检测到 abort 标记并把 status 设为 aborted。
     """
     SessionStore().request_abort(session_id)
+    with _queued_sessions_lock:
+        was_queued = session_id in _queued_sessions
+        _queued_sessions.pop(session_id, None)
+    if was_queued:
+        SessionStore().set_status(session_id, STATUS_ABORTED, error="aborted before start")
     _kill_proc(session_id)
 
 
