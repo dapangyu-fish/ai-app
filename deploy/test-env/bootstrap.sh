@@ -93,8 +93,8 @@ T_en[sec_mirror]="[4/5] Registry mirror (optional)"
 T_zh[sec_mirror]="[4/5] Registry mirror（可选）"
 T_en[mirror_desc1]="  This instance can mirror another Registry's public package index, syncing every N seconds."
 T_zh[mirror_desc1]="  本实例可以镜像另一个 Registry 的公开包索引，每 N 秒同步一次。"
-T_en[mirror_desc2]="  Leave upstream URL empty = no mirror, run standalone."
-T_zh[mirror_desc2]="  上游 URL 留空 = 不开 mirror，本实例独立运行。"
+T_en[mirror_desc2]="  Press Enter to mirror the production Registry; enter 'none' to run standalone."
+T_zh[mirror_desc2]="  按 Enter 默认镜像生产 Registry；输入 none 则不开 mirror，本实例独立运行。"
 T_en[ask_upstream]="  Upstream Registry URL (e.g. https://myapp-registry.dapangyu.work)"
 T_zh[ask_upstream]="  上游 Registry URL（如 https://myapp-registry.dapangyu.work）"
 T_en[ask_interval]="  Sync interval (seconds, <=0 = sync once at startup only)"
@@ -474,7 +474,11 @@ echo
 say "$(t sec_mirror)"
 echo "$(t mirror_desc1)"
 echo "$(t mirror_desc2)"
-REGISTRY_UPSTREAM=$(ask "$(t ask_upstream)" "")
+DEFAULT_REGISTRY_UPSTREAM="${REGISTRY_UPSTREAM:-https://myapp-registry.dapangyu.work}"
+REGISTRY_UPSTREAM=$(ask "$(t ask_upstream)" "$DEFAULT_REGISTRY_UPSTREAM")
+if [[ "$REGISTRY_UPSTREAM" == "none" || "$REGISTRY_UPSTREAM" == "NONE" ]]; then
+  REGISTRY_UPSTREAM=""
+fi
 if [[ -n "$REGISTRY_UPSTREAM" ]]; then
   REGISTRY_MIRROR_SYNC_INTERVAL_SEC=$(ask "$(t ask_interval)" "600")
 else
