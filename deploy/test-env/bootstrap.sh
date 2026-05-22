@@ -154,6 +154,12 @@ T_en[backend_timeout]="backend health check failed after 80s, continuing; docker
 T_zh[backend_timeout]="backend 健康检查 80s 没过，继续；docker compose logs -f backend 看看"
 T_en[init_minio]="Initializing app-minio buckets..."
 T_zh[init_minio]="初始化 app-minio buckets..."
+T_en[sync_registry]="Syncing Registry mirror..."
+T_zh[sync_registry]="同步 Registry mirror..."
+T_en[registry_synced]="Registry mirror synced: %s"
+T_zh[registry_synced]="Registry mirror 已同步: %s"
+T_en[registry_sync_warn]="Registry mirror sync did not complete during bootstrap; it will retry in the background. Logs: docker logs testenv-registry"
+T_zh[registry_sync_warn]="Registry mirror 未在 bootstrap 期间完成；后台会继续重试。日志：docker logs testenv-registry"
 T_en[seed_user]="Creating test account on Supabase..."
 T_zh[seed_user]="在 Supabase 上创建测试账号..."
 T_en[deploy_done]="Deploy complete!"
@@ -285,6 +291,12 @@ T_de[backend_timeout]="backend health check nach 80s fehlgeschlagen, fahre fort;
 T_es[backend_timeout]="health check del backend falló tras 80s, continúo; docker compose logs -f backend"
 T_de[init_minio]="App-MinIO Buckets werden initialisiert..."
 T_es[init_minio]="Inicializando buckets de app-minio..."
+T_de[sync_registry]="Registry-Mirror wird synchronisiert..."
+T_es[sync_registry]="Sincronizando mirror del Registry..."
+T_de[registry_synced]="Registry-Mirror synchronisiert: %s"
+T_es[registry_synced]="Mirror del Registry sincronizado: %s"
+T_de[registry_sync_warn]="Registry-Mirror wurde während bootstrap nicht fertig; der Hintergrundprozess versucht es weiter. Logs: docker logs testenv-registry"
+T_es[registry_sync_warn]="El mirror del Registry no terminó durante bootstrap; reintentará en segundo plano. Logs: docker logs testenv-registry"
 T_de[seed_user]="Testkonto wird in Supabase angelegt..."
 T_es[seed_user]="Creando cuenta de prueba en Supabase..."
 T_de[deploy_done]="Deploy abgeschlossen!"
@@ -798,6 +810,24 @@ done
 # ───────── init MinIO buckets ─────────
 say "$(t init_minio)"
 bash "$SCRIPT_DIR/lib/init-buckets.sh"
+
+# ───────── force first registry mirror sync after buckets exist ─────────
+if [[ -n "$REGISTRY_UPSTREAM" ]]; then
+  say "$(t sync_registry)"
+  registry_sync_ok=0
+  for i in {1..6}; do
+    sync_resp=$(curl -fsS -m 60 -X POST \
+      -H "Authorization: Bearer ${REGISTRY_ADMIN_TOKEN}" \
+      "http://${HOST_IP}:${REGISTRY_PORT}/mirror/sync" 2>/dev/null || true)
+    if [[ -n "$sync_resp" ]]; then
+      ok "$(t registry_synced "$sync_resp")"
+      registry_sync_ok=1
+      break
+    fi
+    sleep 5
+  done
+  [[ "$registry_sync_ok" -eq 1 ]] || warn "$(t registry_sync_warn)"
+fi
 
 # ───────── seed test account ─────────
 say "$(t seed_user)"
