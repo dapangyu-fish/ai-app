@@ -16,7 +16,7 @@ import '../onboarding/onboarding_keys.dart';
 
 /// 语音识别方式枚举
 enum AsrMode {
-  online,    // 在线识别（speech_to_text）
+  online, // 在线识别（speech_to_text）
   bytedance, // 豆包ASR
 }
 
@@ -68,13 +68,19 @@ class AsrModePrefs {
 class DesignerBall extends StatefulWidget {
   final Widget child;
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
+
   /// 获取当前运行中的 JSON-APP 配置（用于对话上下文）
   final Map<String, dynamic>? Function()? getCurrentConfig;
 
   /// 崩溃分析回调 — 由 _CrashPage 调用，自动进入对话模式发送崩溃报告
   static void Function(String crashReport)? sendCrashReport;
 
-  const DesignerBall({super.key, required this.child, this.onRunJsonApp, this.getCurrentConfig});
+  const DesignerBall({
+    super.key,
+    required this.child,
+    this.onRunJsonApp,
+    this.getCurrentConfig,
+  });
 
   @override
   State<DesignerBall> createState() => _DesignerBallState();
@@ -156,7 +162,8 @@ class _DesignerBallState extends State<DesignerBall>
   // - SSE 内部 20s idle timeout → _checkAliveCarefully 三态探活
   // - 后端 worker 自身在 CLI 异常退出 / 外部 kill 时主动写 needs_retry 事件
   // 两条路径都收敛到 needsRetry → UI 弹重试按钮，不再需要独立 timer。
-  Map<String, dynamic>? _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
+  Map<String, dynamic>?
+  _lastGeneratedJson; // ignore: unused_field — Phase 3 试运行用
   Map<String, dynamic>? _lastQuota; // ignore: unused_field — Phase 3 配额显示用
   // 多会话：消息按 sid 分桶；getter `_messages` 永远返回当前 active 那一桶。
   // 切 active session 时 setState 会重 build，自动展示新桶。
@@ -166,6 +173,7 @@ class _DesignerBallState extends State<DesignerBall>
     final key = sid.isEmpty ? '__pending__' : sid;
     return _messageBuckets.putIfAbsent(key, () => []);
   }
+
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -220,7 +228,9 @@ class _DesignerBallState extends State<DesignerBall>
   void _onAsrModeChanged() {
     if (!mounted) return;
     setState(() {}); // _asrMode 是 getter，rebuild 自然拿新值
-    debugPrint('[DesignerBall] ASR mode changed -> ${AsrModePrefs.notifier.value.name}');
+    debugPrint(
+      '[DesignerBall] ASR mode changed -> ${AsrModePrefs.notifier.value.name}',
+    );
   }
 
   /// 初始化豆包ASR连接
@@ -255,7 +265,12 @@ class _DesignerBallState extends State<DesignerBall>
           debugPrint('[DesignerBall] ByteDance ASR error: $error');
           if (mounted) {
             setState(() {
-              _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrBytedanceWith, {'err': error})));
+              _messages.add(
+                ChatMessage(
+                  role: 'assistant',
+                  content: T.fmt(T.current.asrErrBytedanceWith, {'err': error}),
+                ),
+              );
             });
           }
         };
@@ -285,7 +300,9 @@ class _DesignerBallState extends State<DesignerBall>
           // 不在这里 restart——csdcorp/speech_to_text issue #253 显示在 onError 里
           // restart 会触发 error_busy 级联。errors 不 cancel 引擎（cancelOnError:false），
           // 平台后续会自然给 done status，统一走 onStatus 路径重启。
-          debugPrint('[DesignerBall] Speech error: ${error.errorMsg} permanent=${error.permanent}');
+          debugPrint(
+            '[DesignerBall] Speech error: ${error.errorMsg} permanent=${error.permanent}',
+          );
         },
         onStatus: (status) {
           debugPrint('[DesignerBall] Speech status: $status');
@@ -299,7 +316,9 @@ class _DesignerBallState extends State<DesignerBall>
           }
         },
       );
-      debugPrint('[DesignerBall] Native speech initialized in initState: $_speechInited');
+      debugPrint(
+        '[DesignerBall] Native speech initialized in initState: $_speechInited',
+      );
     } catch (e) {
       debugPrint('[DesignerBall] Native speech init failed: $e');
       _speechInited = false;
@@ -321,7 +340,9 @@ class _DesignerBallState extends State<DesignerBall>
     Future.delayed(const Duration(milliseconds: 80), () async {
       if (!mounted) return;
       if (_intentionalNativeStop) {
-        debugPrint('[DesignerBall] Skip native restart (intentional stop): $reason');
+        debugPrint(
+          '[DesignerBall] Skip native restart (intentional stop): $reason',
+        );
         return;
       }
       if (!_isListening || _editMode) return;
@@ -334,7 +355,9 @@ class _DesignerBallState extends State<DesignerBall>
       // restart 前抢救：如果 live > accumulated，立刻并入。
       final live = _liveTranscript?.trim() ?? '';
       if (live.length > _accumulatedTranscript.length) {
-        debugPrint('[DesignerBall] Rescuing live partial → accumulated: "$live"');
+        debugPrint(
+          '[DesignerBall] Rescuing live partial → accumulated: "$live"',
+        );
         _accumulatedTranscript = live;
       }
 
@@ -351,12 +374,16 @@ class _DesignerBallState extends State<DesignerBall>
 
       if (!mounted) return;
       if (!_isListening || _editMode || !_pointerDown) {
-        debugPrint('[DesignerBall] User released during restart cleanup, abort');
+        debugPrint(
+          '[DesignerBall] User released during restart cleanup, abort',
+        );
         return;
       }
 
       _intentionalNativeStop = false;
-      debugPrint('[DesignerBall] Restarting native ASR segment ($reason), accumulated.len=${_accumulatedTranscript.length}');
+      debugPrint(
+        '[DesignerBall] Restarting native ASR segment ($reason), accumulated.len=${_accumulatedTranscript.length}',
+      );
       _doStartNativeSession();
     });
   }
@@ -398,7 +425,9 @@ class _DesignerBallState extends State<DesignerBall>
       _left = screenSize.width - _ballSize - 16;
       _top = screenSize.height * 0.65;
       _positioned = true;
-      debugPrint('[DesignerBall] Position initialized: left=$_left, top=$_top, screenSize=$screenSize');
+      debugPrint(
+        '[DesignerBall] Position initialized: left=$_left, top=$_top, screenSize=$screenSize',
+      );
     }
   }
 
@@ -458,11 +487,11 @@ class _DesignerBallState extends State<DesignerBall>
     _longPressTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
       final elapsed = DateTime.now().difference(startTime);
       final progress = elapsed.inMilliseconds / durationMs;
-      
+
       if (mounted) {
         _countdownController.value = progress.clamp(0.0, 1.0);
       }
-      
+
       if (progress >= 1.0) {
         timer.cancel();
         if (_pointerDown && !_movedEnough && mounted) {
@@ -552,8 +581,14 @@ class _DesignerBallState extends State<DesignerBall>
       setState(() {
         _left += dx;
         _top += dy;
-        _left = _left.clamp(-_ballSize * 0.5, screenSize.width - _ballSize * 0.5);
-        _top = _top.clamp(-_ballSize * 0.5, screenSize.height - _ballSize * 0.5);
+        _left = _left.clamp(
+          -_ballSize * 0.5,
+          screenSize.width - _ballSize * 0.5,
+        );
+        _top = _top.clamp(
+          -_ballSize * 0.5,
+          screenSize.height - _ballSize * 0.5,
+        );
 
         if (_recordStartPos != null) {
           _dragCancelling = _isInCancelZone(screenSize);
@@ -591,7 +626,9 @@ class _DesignerBallState extends State<DesignerBall>
 
     if (edge == _HideEdge.left || edge == _HideEdge.right) {
       // 左右边缘：吸附到边缘但不隐藏，避免与 Android 系统返回手势冲突
-      final targetLeft = edge == _HideEdge.left ? 0.0 : screenSize.width - _ballSize;
+      final targetLeft = edge == _HideEdge.left
+          ? 0.0
+          : screenSize.width - _ballSize;
       final targetTop = _top.clamp(0.0, screenSize.height - _ballSize);
       _animateTo(targetLeft, targetTop);
     } else if (edge != _HideEdge.none) {
@@ -676,7 +713,9 @@ class _DesignerBallState extends State<DesignerBall>
           // 自动产生对比，不会跟页面底色融成一片。
           return Dialog(
             backgroundColor: cs.surfaceContainerHigh,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             insetPadding: const EdgeInsets.symmetric(horizontal: 32),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
@@ -717,7 +756,9 @@ class _DesignerBallState extends State<DesignerBall>
                         label: s.ballMenuGoHome,
                         // 只要根 Navigator 还能 pop 就启用 —— 表示当前栈里有
                         // push 进来的 JSON-APP / 设置页等，可以一路 pop 回首页
-                        enabled: JsonDslApp.navigatorKey.currentState?.canPop() == true,
+                        enabled:
+                            JsonDslApp.navigatorKey.currentState?.canPop() ==
+                            true,
                         onTap: () {
                           Navigator.of(ctx).pop();
                           _goHome();
@@ -756,12 +797,19 @@ class _DesignerBallState extends State<DesignerBall>
       if (mounted) setState(() {});
     });
 
-    debugPrint('[DesignerBall] 初始状态: asrMode=$_asrMode, speechInited=$_speechInited');
+    debugPrint(
+      '[DesignerBall] 初始状态: asrMode=$_asrMode, speechInited=$_speechInited',
+    );
 
     // 检查原生语音识别是否已初始化（已在 initState 中完成）
     if (!_speechInited && _asrMode == AsrMode.online) {
       setState(() {
-        _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrNativeInitWithHint));
+        _messages.add(
+          ChatMessage(
+            role: 'assistant',
+            content: T.current.asrErrNativeInitWithHint,
+          ),
+        );
       });
       return;
     }
@@ -786,7 +834,9 @@ class _DesignerBallState extends State<DesignerBall>
 
           // 用户手已离开，中止等待
           if (!_pointerDown) {
-            debugPrint('[DesignerBall] Pointer lifted during ByteDance ASR wait, aborting');
+            debugPrint(
+              '[DesignerBall] Pointer lifted during ByteDance ASR wait, aborting',
+            );
             setState(() {
               _isThinking = false;
               _liveTranscript = null;
@@ -802,9 +852,16 @@ class _DesignerBallState extends State<DesignerBall>
 
         // 等待超时，仍未连接
         if (!_bytedanceAsr.isConnected) {
-          debugPrint('[DesignerBall] 豆包ASR连接超时，isConnected=${_bytedanceAsr.isConnected}');
+          debugPrint(
+            '[DesignerBall] 豆包ASR连接超时，isConnected=${_bytedanceAsr.isConnected}',
+          );
           setState(() {
-            _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrBytedanceTimeoutWithHint));
+            _messages.add(
+              ChatMessage(
+                role: 'assistant',
+                content: T.current.asrErrBytedanceTimeoutWithHint,
+              ),
+            );
           });
           return;
         }
@@ -818,7 +875,9 @@ class _DesignerBallState extends State<DesignerBall>
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
     if (!_pointerDown) {
-      debugPrint('[DesignerBall] Pointer lifted before startListening, skipping');
+      debugPrint(
+        '[DesignerBall] Pointer lifted before startListening, skipping',
+      );
       return;
     }
 
@@ -871,7 +930,9 @@ class _DesignerBallState extends State<DesignerBall>
         break;
       default:
         _intentionalNativeStop = true;
-        try { _speech?.stop(); } catch (_) {}
+        try {
+          _speech?.stop();
+        } catch (_) {}
     }
 
     _pulseController.stop();
@@ -894,7 +955,9 @@ class _DesignerBallState extends State<DesignerBall>
     // 注意：_bytedanceAsr.onResult 不在此处清空（在 _initBytedanceAsr 中一次性注册），
     // 改在回调内用 _editMode 守卫拦截。
     _intentionalNativeStop = true;
-    try { _speech?.stop(); } catch (_) {}
+    try {
+      _speech?.stop();
+    } catch (_) {}
 
     _pulseController.stop();
     _pulseController.reset();
@@ -998,7 +1061,10 @@ class _DesignerBallState extends State<DesignerBall>
                 _messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 _messages.last.content.isEmpty) {
-              _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+              _messages.last = ChatMessage(
+                role: 'assistant',
+                content: event.error!,
+              );
             } else if (event.error == null &&
                 _messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
@@ -1007,11 +1073,13 @@ class _DesignerBallState extends State<DesignerBall>
               _messages.removeLast();
             }
             // 已有 partial 内容时不动它，让用户看到 AI 已经流过的部分
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: 'AI 任务被中断，点击重试',
-              action: 'RETRY_LAST_TURN',
-            ));
+            _messages.add(
+              ChatMessage(
+                role: 'system',
+                content: 'AI 任务被中断，点击重试',
+                action: 'RETRY_LAST_TURN',
+              ),
+            );
           });
           _scrollToBottom();
           return;
@@ -1022,9 +1090,14 @@ class _DesignerBallState extends State<DesignerBall>
             _isGeneratingJson = false;
             _generatingStatusMessage = T.current.chatStatusGenerating;
             if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-              _messages.last = ChatMessage(role: 'assistant', content: event.error!);
+              _messages.last = ChatMessage(
+                role: 'assistant',
+                content: event.error!,
+              );
             } else {
-              _messages.add(ChatMessage(role: 'assistant', content: event.error!));
+              _messages.add(
+                ChatMessage(role: 'assistant', content: event.error!),
+              );
             }
           });
           _scrollToBottom();
@@ -1061,8 +1134,12 @@ class _DesignerBallState extends State<DesignerBall>
             // 转圈的关闭由真正的内容到达（event.content）或 onDone 负责。
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
-                (_messages.last.content.isEmpty || _messages.last.content.startsWith('💭'))) {
-              _messages.last = ChatMessage(role: 'assistant', content: '💭 ${event.thinking!}');
+                (_messages.last.content.isEmpty ||
+                    _messages.last.content.startsWith('💭'))) {
+              _messages.last = ChatMessage(
+                role: 'assistant',
+                content: '💭 ${event.thinking!}',
+              );
             }
           });
           _scrollToBottom();
@@ -1075,9 +1152,15 @@ class _DesignerBallState extends State<DesignerBall>
             if (_messages.isNotEmpty &&
                 _messages.last.role == 'assistant' &&
                 _messages.last.content.startsWith('💭')) {
-              _messages.add(ChatMessage(role: 'assistant', content: event.content!));
-            } else if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-              _messages.last = ChatMessage(role: 'assistant', content: event.content!);
+              _messages.add(
+                ChatMessage(role: 'assistant', content: event.content!),
+              );
+            } else if (_messages.isNotEmpty &&
+                _messages.last.role == 'assistant') {
+              _messages.last = ChatMessage(
+                role: 'assistant',
+                content: event.content!,
+              );
             }
           });
           _scrollToBottom();
@@ -1093,19 +1176,29 @@ class _DesignerBallState extends State<DesignerBall>
           _isGeneratingJson = false;
           _generatingStatusMessage = T.current.chatStatusGenerating;
           if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-            _messages.last = ChatMessage(role: 'assistant', content: T.fmt(T.current.chatErrorWith, {'err': e}));
+            _messages.last = ChatMessage(
+              role: 'assistant',
+              content: T.fmt(T.current.chatErrorWith, {'err': e}),
+            );
           } else {
-            _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.chatErrorWith, {'err': e})));
+            _messages.add(
+              ChatMessage(
+                role: 'assistant',
+                content: T.fmt(T.current.chatErrorWith, {'err': e}),
+              ),
+            );
           }
         });
       },
       onDone: () {
         _streamSub = null;
-        debugPrint('[DesignerBall] AI stream onDone: '
-            'pendingRequestAction=$pendingRequestAction, '
-            'pendingJsonUrl=${pendingJsonUrl != null ? "<${pendingJsonUrl!.length} chars>" : "null"}, '
-            'pendingFailedJsonUrl=$pendingFailedJsonUrl, '
-            'pendingJsonApp=${pendingJsonApp != null}');
+        debugPrint(
+          '[DesignerBall] AI stream onDone: '
+          'pendingRequestAction=$pendingRequestAction, '
+          'pendingJsonUrl=${pendingJsonUrl != null ? "<${pendingJsonUrl!.length} chars>" : "null"}, '
+          'pendingFailedJsonUrl=$pendingFailedJsonUrl, '
+          'pendingJsonApp=${pendingJsonApp != null}',
+        );
         setState(() {
           _isGeneratingJson = false;
           _generatingStatusMessage = T.current.chatStatusGenerating;
@@ -1117,32 +1210,41 @@ class _DesignerBallState extends State<DesignerBall>
           // 各按钮语义独立，应该共存：UPLOAD 让用户提供代码、下载让用户拿 app、
           // 试运行让用户直接跑、失败重试让用户重下。
           if (pendingRequestAction == 'upload_current_app') {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: 'AI 需要获取当前应用的代码配置以进行修改：',
-              action: 'UPLOAD_CURRENT_APP',
-            ));
+            _messages.add(
+              ChatMessage(
+                role: 'system',
+                content: 'AI 需要获取当前应用的代码配置以进行修改：',
+                action: 'UPLOAD_CURRENT_APP',
+              ),
+            );
           }
           if (pendingJsonUrl != null) {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: 'JSON-APP 已生成，点击下载并运行：',
-              jsonUrl: pendingJsonUrl,
-            ));
+            _messages.add(
+              ChatMessage(
+                role: 'system',
+                content: 'JSON-APP 已生成，点击下载并运行：',
+                jsonUrl: pendingJsonUrl,
+              ),
+            );
           }
           if (pendingFailedJsonUrl != null) {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: pendingFailedJsonError ?? T.current.chatJsonDownloadFailed,
-              failedJsonUrl: pendingFailedJsonUrl,
-            ));
+            _messages.add(
+              ChatMessage(
+                role: 'system',
+                content:
+                    pendingFailedJsonError ?? T.current.chatJsonDownloadFailed,
+                failedJsonUrl: pendingFailedJsonUrl,
+              ),
+            );
           }
           if (pendingJsonApp != null) {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: '🚀 点击试运行',
-              jsonApp: pendingJsonApp,
-            ));
+            _messages.add(
+              ChatMessage(
+                role: 'system',
+                content: '🚀 点击试运行',
+                jsonApp: pendingJsonApp,
+              ),
+            );
           }
         });
         _scrollToBottom();
@@ -1179,7 +1281,8 @@ class _DesignerBallState extends State<DesignerBall>
 
   /// app 启动/重新打开字幕时：检查后端有没有上一轮未完成 / 已完成的任务，
   /// 并合并到当前消息桶，避免关闭字幕后恢复时重复插入 user/assistant 气泡。
-  Future<void> _maybeResumeUnfinishedSession() => _resumeActiveSessionIfNeeded();
+  Future<void> _maybeResumeUnfinishedSession() =>
+      _resumeActiveSessionIfNeeded();
 
   Future<void> _resumeActiveSessionIfNeeded() async {
     if (!mounted) return;
@@ -1192,29 +1295,33 @@ class _DesignerBallState extends State<DesignerBall>
         case ResumeNothing():
           break;
         case ResumeCompleted(
-            :final userMessage,
-            :final assistantText,
-            :final jsonUrl,
-            :final requestAction,
-          ):
+          :final userMessage,
+          :final assistantText,
+          :final jsonUrl,
+          :final requestAction,
+        ):
           setState(() {
             _ensureUserMessage(userMessage);
             _upsertAssistantMessage(assistantText);
             // 各按钮独立共存（同一回复可能既要 upload 又给 url，参考 6645d35）
             if (requestAction == 'upload_current_app' &&
                 !_hasSystemMessage(action: 'UPLOAD_CURRENT_APP')) {
-              _messages.add(ChatMessage(
-                role: 'system',
-                content: 'AI 需要获取当前应用的代码配置以进行修改：',
-                action: 'UPLOAD_CURRENT_APP',
-              ));
+              _messages.add(
+                ChatMessage(
+                  role: 'system',
+                  content: 'AI 需要获取当前应用的代码配置以进行修改：',
+                  action: 'UPLOAD_CURRENT_APP',
+                ),
+              );
             }
             if (jsonUrl != null && !_hasSystemMessage(jsonUrl: jsonUrl)) {
-              _messages.add(ChatMessage(
-                role: 'system',
-                content: 'JSON-APP 已生成，点击下载并运行：',
-                jsonUrl: jsonUrl,
-              ));
+              _messages.add(
+                ChatMessage(
+                  role: 'system',
+                  content: 'JSON-APP 已生成，点击下载并运行：',
+                  jsonUrl: jsonUrl,
+                ),
+              );
             }
           });
           _scrollToBottom();
@@ -1232,11 +1339,13 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _ensureUserMessage(userMessage);
             if (!_hasSystemMessage(action: 'RETRY_LAST_TURN')) {
-              _messages.add(ChatMessage(
-                role: 'system',
-                content: 'AI 任务被中断（可能服务器进程异常），点击重试',
-                action: 'RETRY_LAST_TURN',
-              ));
+              _messages.add(
+                ChatMessage(
+                  role: 'system',
+                  content: 'AI 任务被中断（可能服务器进程异常），点击重试',
+                  action: 'RETRY_LAST_TURN',
+                ),
+              );
             }
           });
           _scrollToBottom();
@@ -1286,16 +1395,18 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _handleUploadCurrentApp() async {
     final config = widget.getCurrentConfig?.call();
     if (config == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(T.current.chatNoActiveApp)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(T.current.chatNoActiveApp)));
       return;
     }
 
     setState(() {
       // 移除 UPLOAD 按钮那条消息
       _messages.removeLast();
-      _messages.add(ChatMessage(role: 'system', content: T.current.chatUploadingApp));
+      _messages.add(
+        ChatMessage(role: 'system', content: T.current.chatUploadingApp),
+      );
       _isThinking = true;
     });
     _scrollToBottom();
@@ -1315,11 +1426,13 @@ class _DesignerBallState extends State<DesignerBall>
         _messages.removeLast();
         // 失败时重新放出 UPLOAD 按钮，让用户可以再点一次
         // ai_chat_service 内部已自动重试 3 次（指数退避），到这里说明确实有问题
-        _messages.add(ChatMessage(
-          role: 'system',
-          content: '❌ 上传失败：$e\n\n点击下方按钮可再次尝试。',
-          action: 'UPLOAD_CURRENT_APP',
-        ));
+        _messages.add(
+          ChatMessage(
+            role: 'system',
+            content: '❌ 上传失败：$e\n\n点击下方按钮可再次尝试。',
+            action: 'UPLOAD_CURRENT_APP',
+          ),
+        );
       });
       _scrollToBottom();
     }
@@ -1337,21 +1450,25 @@ class _DesignerBallState extends State<DesignerBall>
       _lastGeneratedJson = parsedApp;
       setState(() {
         _isGeneratingJson = false;
-        _messages.add(ChatMessage(
-          role: 'system',
-          content: '🚀 JSON-APP 已成功下载，点击试运行',
-          jsonApp: parsedApp,
-        ));
+        _messages.add(
+          ChatMessage(
+            role: 'system',
+            content: '🚀 JSON-APP 已成功下载，点击试运行',
+            jsonApp: parsedApp,
+          ),
+        );
       });
       _scrollToBottom();
     } catch (e) {
       setState(() {
         _isGeneratingJson = false;
-        _messages.add(ChatMessage(
-          role: 'assistant',
-          content: T.fmt(T.current.chatDownloadRetryFailedWith, {'err': e}),
-          failedJsonUrl: url,
-        ));
+        _messages.add(
+          ChatMessage(
+            role: 'assistant',
+            content: T.fmt(T.current.chatDownloadRetryFailedWith, {'err': e}),
+            failedJsonUrl: url,
+          ),
+        );
       });
       _scrollToBottom();
     }
@@ -1414,7 +1531,12 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] Native listen error: $e');
       setState(() {
         _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrNativeStartWithHint));
+        _messages.add(
+          ChatMessage(
+            role: 'assistant',
+            content: T.current.asrErrNativeStartWithHint,
+          ),
+        );
       });
       _pulseController.stop();
     }
@@ -1429,7 +1551,12 @@ class _DesignerBallState extends State<DesignerBall>
         debugPrint('[DesignerBall] ByteDance ASR not connected');
         setState(() {
           _isListening = false;
-          _messages.add(ChatMessage(role: 'assistant', content: T.current.asrErrBytedanceNotConnected));
+          _messages.add(
+            ChatMessage(
+              role: 'assistant',
+              content: T.current.asrErrBytedanceNotConnected,
+            ),
+          );
         });
         _pulseController.stop();
         _pulseController.reset();
@@ -1441,10 +1568,12 @@ class _DesignerBallState extends State<DesignerBall>
       if (!ok) {
         setState(() {
           _isListening = false;
-          _messages.add(ChatMessage(
-            role: 'assistant',
-            content: T.current.asrErrMicPermissionDenied,
-          ));
+          _messages.add(
+            ChatMessage(
+              role: 'assistant',
+              content: T.current.asrErrMicPermissionDenied,
+            ),
+          );
         });
         _pulseController.stop();
       }
@@ -1452,7 +1581,12 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[ByteDanceASR] Start error: $e');
       setState(() {
         _isListening = false;
-        _messages.add(ChatMessage(role: 'assistant', content: T.fmt(T.current.asrErrBytedanceStartFailWith, {'err': e})));
+        _messages.add(
+          ChatMessage(
+            role: 'assistant',
+            content: T.fmt(T.current.asrErrBytedanceStartFailWith, {'err': e}),
+          ),
+        );
       });
       _pulseController.stop();
     }
@@ -1468,7 +1602,9 @@ class _DesignerBallState extends State<DesignerBall>
         break;
       default:
         _intentionalNativeStop = true;
-        try { await _speech?.stop(); } catch (e) {
+        try {
+          await _speech?.stop();
+        } catch (e) {
           debugPrint('[DesignerBall] speech.stop error: $e');
         }
     }
@@ -1570,48 +1706,63 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 直接发送给 AI
     _cancelCurrentStream();
-    _streamSub = _chatService.sendStream(crashReport).listen(
-      (event) {
-        if (event.error != null && event.content == null) {
-          setState(() {
-            _isThinking = false;
-            _messages.last = ChatMessage(role: 'assistant', content: event.error!);
-          });
-          _scrollToBottom();
-          return;
-        }
-        if (event.content != null) {
-          setState(() {
-            _isThinking = false;
-            _messages.last = ChatMessage(role: 'assistant', content: event.content!);
-          });
-          _scrollToBottom();
-        }
-        if (event.jsonApp != null) {
-          debugPrint('[DesignerBall] AI generated fix JSON-APP!');
-          _lastGeneratedJson = event.jsonApp;
-          setState(() {
-            _messages.add(ChatMessage(
-              role: 'system',
-              content: '🔧 修复版 JSON-APP 已生成，点击试运行',
-              jsonApp: event.jsonApp,
-            ));
-          });
-          _scrollToBottom();
-        }
-      },
-      onError: (e) {
-        setState(() {
-          _isThinking = false;
-          _messages.last = ChatMessage(role: 'assistant', content: T.fmt(T.current.chatAnalysisFailedWith, {'err': e}));
-        });
-      },
-    );
+    _streamSub = _chatService
+        .sendStream(crashReport)
+        .listen(
+          (event) {
+            if (event.error != null && event.content == null) {
+              setState(() {
+                _isThinking = false;
+                _messages.last = ChatMessage(
+                  role: 'assistant',
+                  content: event.error!,
+                );
+              });
+              _scrollToBottom();
+              return;
+            }
+            if (event.content != null) {
+              setState(() {
+                _isThinking = false;
+                _messages.last = ChatMessage(
+                  role: 'assistant',
+                  content: event.content!,
+                );
+              });
+              _scrollToBottom();
+            }
+            if (event.jsonApp != null) {
+              debugPrint('[DesignerBall] AI generated fix JSON-APP!');
+              _lastGeneratedJson = event.jsonApp;
+              setState(() {
+                _messages.add(
+                  ChatMessage(
+                    role: 'system',
+                    content: '🔧 修复版 JSON-APP 已生成，点击试运行',
+                    jsonApp: event.jsonApp,
+                  ),
+                );
+              });
+              _scrollToBottom();
+            }
+          },
+          onError: (e) {
+            setState(() {
+              _isThinking = false;
+              _messages.last = ChatMessage(
+                role: 'assistant',
+                content: T.fmt(T.current.chatAnalysisFailedWith, {'err': e}),
+              );
+            });
+          },
+        );
   }
 
   void _closeChatMode() {
     _intentionalNativeStop = true;
-    try { _speech?.stop(); } catch (_) {}
+    try {
+      _speech?.stop();
+    } catch (_) {}
     _detachCurrentStreamForHide();
     _pulseController.stop();
     _pulseController.reset();
@@ -1628,34 +1779,34 @@ class _DesignerBallState extends State<DesignerBall>
   /// 顶栏垃圾桶按钮：删除当前 session（会发 /abort 杀后端 worker）+ 关闭浮层
   void _deleteCurrentSessionAndClose() {
     final sid = _chatService.sessionId;
-    _cancelCurrentStream();  // 必须先断老流，否则迟到的事件会落进新建占位的桶
+    _cancelCurrentStream(); // 必须先断老流，否则迟到的事件会落进新建占位的桶
     _closeChatMode();
     if (sid.isNotEmpty) {
       _messageBuckets.remove(sid);
-      _chatService.deleteSession(sid);  // fire-and-forget；内部会处理 active 切换
+      _chatService.deleteSession(sid); // fire-and-forget；内部会处理 active 切换
     }
   }
 
   /// session sheet 顶部 [+ 新建会话]：丢弃旧 active 流，建空占位
   Future<void> _handleNewSession() async {
-    _cancelCurrentStream();  // 防止老 session 迟到事件流进新桶
+    _cancelCurrentStream(); // 防止老 session 迟到事件流进新桶
     await _chatService.createNewSession();
     if (!mounted) return;
-    setState(() {});  // 触发 ChatOverlay 渲染新桶（空列表）
+    setState(() {}); // 触发 ChatOverlay 渲染新桶（空列表）
     _scrollToBottom();
   }
 
-  /// session sheet 点某一行：切到那条 sid
-  /// 切过去后如果消息桶是空的（冷启 / 第一次切回），调一次 /status / /result 拉历史。
+  /// session sheet 点某一行：切到那条 sid。
+  /// 切过去后总是调一次 /status / /result：
+  /// - 空桶：冷启 / 第一次切回，需要拉历史
+  /// - 只有 user 气泡：之前本地 SSE 被切断，后端可能已经完成，需要补 assistant
+  /// - 已有 assistant：_upsertAssistantMessage 会覆盖同一轮内容，不会重复插入
   Future<void> _handleSwitchSession(String sid) async {
-    _cancelCurrentStream();  // 同上
+    _cancelCurrentStream(); // 同上
     await _chatService.switchToSession(sid);
     if (!mounted) return;
     setState(() {});
-    // 如果切过去的桶是空的，尝试恢复最近一轮（与 app 启动时的 resume 走同一条路径）
-    if (_messages.isEmpty) {
-      await _maybeResumeUnfinishedSession();
-    }
+    await _maybeResumeUnfinishedSession();
     _scrollToBottom();
   }
 
@@ -1796,156 +1947,177 @@ class _DesignerBallState extends State<DesignerBall>
     return DefaultTextStyle(
       style: const TextStyle(decoration: TextDecoration.none),
       child: Stack(
-      children: [
-        widget.child,
+        children: [
+          widget.child,
 
-        // 字幕覆层 — 编辑模式下隐藏，避免半透明字幕叠在编辑 sheet 上方
-        // （DesignerBall 包在 Navigator 外面，sheet 在 widget.child 内的 Overlay 里，
-        // 自然位于 ChatOverlay 之下；进入编辑模式时摘掉字幕，sheet 才能完整可见）
-        if (_chatMode && !_editMode)
-          ChatOverlay(
-            messages: _messages,
-            isListening: _isListening,
-            isThinking: _isThinking,
-            isGeneratingJson: _isGeneratingJson,
-            generatingStatusMessage: _generatingStatusMessage,
-            liveTranscript:
-                (_liveTranscript?.isNotEmpty ?? false) ? _liveTranscript : null,
-            onClose: _closeChatMode,
-            onClear: _deleteCurrentSessionAndClose,
-            scrollController: _scrollController,
-            activeSessionId: _chatService.sessionId,
-            getSessions: _chatService.listSessions,
-            onUploadCurrentApp: _handleUploadCurrentApp,
-            onRetryDownload: _handleRetryDownload,
-            onDownloadAndRun: _handleDownloadAndRun,
-            onRetryLastTurn: _handleRetryLastTurn,
-            onNewSession: _handleNewSession,
-            onSwitchSession: _handleSwitchSession,
-            onDeleteSession: _handleDeleteSession,
-            onRenameSession: _handleRenameSession,
-            onProbeAllSessionStatus: () => _chatService.probeAllSessionStatus(),
-            getNavigatorContext: () => JsonDslApp.navigatorKey.currentContext,
-            onRunJsonApp: (jsonConfig) {
-              // 先调用外部回调，再关闭聊天浮层（保留 session 历史）
-              widget.onRunJsonApp?.call(jsonConfig);
-              // 延迟关闭，避免 UI 重建冲突
-              Future.microtask(() {
-                if (mounted) {
-                  _closeChatMode();
-                }
-              });
-            },
-          ),
+          // 字幕覆层 — 编辑模式下隐藏，避免半透明字幕叠在编辑 sheet 上方
+          // （DesignerBall 包在 Navigator 外面，sheet 在 widget.child 内的 Overlay 里，
+          // 自然位于 ChatOverlay 之下；进入编辑模式时摘掉字幕，sheet 才能完整可见）
+          if (_chatMode && !_editMode)
+            ChatOverlay(
+              messages: _messages,
+              isListening: _isListening,
+              isThinking: _isThinking,
+              isGeneratingJson: _isGeneratingJson,
+              generatingStatusMessage: _generatingStatusMessage,
+              liveTranscript: (_liveTranscript?.isNotEmpty ?? false)
+                  ? _liveTranscript
+                  : null,
+              onClose: _closeChatMode,
+              onClear: _deleteCurrentSessionAndClose,
+              scrollController: _scrollController,
+              activeSessionId: _chatService.sessionId,
+              getSessions: _chatService.listSessions,
+              onUploadCurrentApp: _handleUploadCurrentApp,
+              onRetryDownload: _handleRetryDownload,
+              onDownloadAndRun: _handleDownloadAndRun,
+              onRetryLastTurn: _handleRetryLastTurn,
+              onNewSession: _handleNewSession,
+              onSwitchSession: _handleSwitchSession,
+              onDeleteSession: _handleDeleteSession,
+              onRenameSession: _handleRenameSession,
+              onProbeAllSessionStatus: () =>
+                  _chatService.probeAllSessionStatus(),
+              getNavigatorContext: () => JsonDslApp.navigatorKey.currentContext,
+              onRunJsonApp: (jsonConfig) {
+                // 先调用外部回调，再关闭聊天浮层（保留 session 历史）
+                widget.onRunJsonApp?.call(jsonConfig);
+                // 延迟关闭，避免 UI 重建冲突
+                Future.microtask(() {
+                  if (mounted) {
+                    _closeChatMode();
+                  }
+                });
+              },
+            ),
 
-        // 录音底部操作栏 — 左取消 / 右编辑
-        if (_isListening && _recordStartPos != null)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: _cancelBottomZoneHeight,
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  border: Border(
-                    top: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+          // 录音底部操作栏 — 左取消 / 右编辑
+          if (_isListening && _recordStartPos != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: _cancelBottomZoneHeight,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    // 左半：取消区域
-                    Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        decoration: BoxDecoration(
-                          color: _dragCancelling
-                              ? Colors.red.withValues(alpha: 0.5)
-                              : Colors.transparent,
-                          border: Border(
-                            right: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                  child: Row(
+                    children: [
+                      // 左半：取消区域
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          decoration: BoxDecoration(
+                            color: _dragCancelling
+                                ? Colors.red.withValues(alpha: 0.5)
+                                : Colors.transparent,
+                            border: Border(
+                              right: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.15),
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.close_rounded,
+                                color: _dragCancelling
+                                    ? Colors.white
+                                    : Colors.white70,
+                                size: 28,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                T.of(context).cancel,
+                                style: TextStyle(
+                                  color: _dragCancelling
+                                      ? Colors.white
+                                      : Colors.white70,
+                                  fontSize: 14,
+                                  fontWeight: _dragCancelling
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.close_rounded,
-                                color: _dragCancelling ? Colors.white : Colors.white70,
-                                size: 28),
-                            const SizedBox(height: 6),
-                            Text(
-                              T.of(context).cancel,
-                              style: TextStyle(
-                                color: _dragCancelling ? Colors.white : Colors.white70,
-                                fontSize: 14,
-                                fontWeight: _dragCancelling ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                      // 右半：编辑区域
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          color: _dragInEditZone
+                              ? Colors.blue.withValues(alpha: 0.5)
+                              : Colors.transparent,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.edit_rounded,
+                                color: _dragInEditZone
+                                    ? Colors.white
+                                    : Colors.white70,
+                                size: 28,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              Text(
+                                T.of(context).chatEditButton,
+                                style: TextStyle(
+                                  color: _dragInEditZone
+                                      ? Colors.white
+                                      : Colors.white70,
+                                  fontSize: 14,
+                                  fontWeight: _dragInEditZone
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    // 右半：编辑区域
-                    Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        color: _dragInEditZone
-                            ? Colors.blue.withValues(alpha: 0.5)
-                            : Colors.transparent,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.edit_rounded,
-                                color: _dragInEditZone ? Colors.white : Colors.white70,
-                                size: 28),
-                            const SizedBox(height: 6),
-                            Text(
-                              T.of(context).chatEditButton,
-                              style: TextStyle(
-                                color: _dragInEditZone ? Colors.white : Colors.white70,
-                                fontSize: 14,
-                                fontWeight: _dragInEditZone ? FontWeight.w600 : FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-        // 编辑窗在 showModalBottomSheet 里渲染，不在此处构建。
+          // 编辑窗在 showModalBottomSheet 里渲染，不在此处构建。
 
-        // 悬浮球 — 编辑模式下隐藏，避免拦截输入框光标/删除事件
-        if (!_editMode)
-          Positioned(
-            left: _left,
-            top: _top,
-            child: Listener(
-              onPointerDown: _onPointerDown,
-              onPointerMove: (e) => _onPointerMove(e, screenSize),
-              onPointerUp: (e) => _onPointerUp(e, screenSize),
-              onPointerCancel: (e) => _onPointerCancel(e, screenSize),
-              child: GestureDetector(
-                onTap: () => _onTap(screenSize),
-                onDoubleTap: _onDoubleTap,
-                // 把 key 挂在 _buildBall 返回的 widget 上：那才是聚光灯切口要圈的"球"本体
-                child: KeyedSubtree(
-                  key: OnboardingKeys.designerBall,
-                  child: _buildBall(context),
+          // 悬浮球 — 编辑模式下隐藏，避免拦截输入框光标/删除事件
+          if (!_editMode)
+            Positioned(
+              left: _left,
+              top: _top,
+              child: Listener(
+                onPointerDown: _onPointerDown,
+                onPointerMove: (e) => _onPointerMove(e, screenSize),
+                onPointerUp: (e) => _onPointerUp(e, screenSize),
+                onPointerCancel: (e) => _onPointerCancel(e, screenSize),
+                child: GestureDetector(
+                  onTap: () => _onTap(screenSize),
+                  onDoubleTap: _onDoubleTap,
+                  // 把 key 挂在 _buildBall 返回的 widget 上：那才是聚光灯切口要圈的"球"本体
+                  child: KeyedSubtree(
+                    key: OnboardingKeys.designerBall,
+                    child: _buildBall(context),
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
-    ),
+        ],
+      ),
     );
   }
-
 
   Widget _buildBall(BuildContext context) {
     final double opacity = _hidden ? 0.6 : 1.0;
@@ -1961,7 +2133,9 @@ class _DesignerBallState extends State<DesignerBall>
     final Color ballColor;
     final Color iconColor;
     if (_isListening) {
-      ballColor = _dragCancelling ? cancelColor : (_dragInEditZone ? editZoneColor : listeningColor);
+      ballColor = _dragCancelling
+          ? cancelColor
+          : (_dragInEditZone ? editZoneColor : listeningColor);
       iconColor = Colors.white;
     } else {
       ballColor = defaultBg;
@@ -1971,7 +2145,9 @@ class _DesignerBallState extends State<DesignerBall>
     // 是否有后台 AI 会话（已经攒了消息或正在 stream）→ 给悬浮球加一圈外环表示
     // 比原来在球内画小红点视觉上更克制
     final hasBackgroundSession = _messages.isNotEmpty || _streamSub != null;
-    final ringColor = isDark ? const Color(0xFFFFB74D) : const Color(0xFFFB8C00);
+    final ringColor = isDark
+        ? const Color(0xFFFFB74D)
+        : const Color(0xFFFB8C00);
 
     Widget ball = Container(
       width: _ballSize,
@@ -2001,7 +2177,9 @@ class _DesignerBallState extends State<DesignerBall>
       child: Center(
         child: _isListening
             ? Icon(
-                _dragCancelling ? Icons.close : (_dragInEditZone ? Icons.edit : Icons.mic),
+                _dragCancelling
+                    ? Icons.close
+                    : (_dragInEditZone ? Icons.edit : Icons.mic),
                 color: iconColor,
                 size: 28,
               )
@@ -2009,11 +2187,7 @@ class _DesignerBallState extends State<DesignerBall>
             // chatMode（有历史会话/正在聊天）以前会切成 chat_bubble，但聊天态
             // 是否在线本来就由 ChatOverlay 自身呈现，球本体不需要再多一种态——
             // 反而会让用户搞不清当前是 mic 默认还是 chat 状态、双击会不会工作
-            : Icon(
-                Icons.mic_none_outlined,
-                color: iconColor,
-                size: 26,
-              ),
+            : Icon(Icons.mic_none_outlined, color: iconColor, size: 26),
       ),
     );
 
@@ -2025,7 +2199,9 @@ class _DesignerBallState extends State<DesignerBall>
           return CustomPaint(
             painter: _PulseRingPainter(
               progress: _pulseController.value,
-              color: _dragCancelling ? cancelColor : (_dragInEditZone ? editZoneColor : listeningColor),
+              color: _dragCancelling
+                  ? cancelColor
+                  : (_dragInEditZone ? editZoneColor : listeningColor),
             ),
             child: child,
           );
@@ -2061,7 +2237,6 @@ class _DesignerBallState extends State<DesignerBall>
 
     return Opacity(opacity: opacity, child: ball);
   }
-
 }
 
 // ── 脉冲光环 ──
@@ -2129,7 +2304,8 @@ class _CountdownRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CountdownRingPainter old) => old.progress != progress || old.ringColor != ringColor;
+  bool shouldRepaint(_CountdownRingPainter old) =>
+      old.progress != progress || old.ringColor != ringColor;
 }
 
 enum _HideEdge { none, left, right, top, bottom }
@@ -2160,7 +2336,9 @@ class _EditSheetState extends State<_EditSheet> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialText);
-    _controller.selection = TextSelection.collapsed(offset: widget.initialText.length);
+    _controller.selection = TextSelection.collapsed(
+      offset: widget.initialText.length,
+    );
     _focusNode = FocusNode();
   }
 
@@ -2213,8 +2391,11 @@ class _EditSheetState extends State<_EditSheet> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.edit_note,
-                        color: Colors.white.withValues(alpha: 0.5), size: 18),
+                    Icon(
+                      Icons.edit_note,
+                      color: Colors.white.withValues(alpha: 0.5),
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       T.of(context).chatEditMessageTitle,
@@ -2239,7 +2420,10 @@ class _EditSheetState extends State<_EditSheet> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 120, maxHeight: 240),
+                  constraints: const BoxConstraints(
+                    minHeight: 120,
+                    maxHeight: 240,
+                  ),
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
@@ -2275,7 +2459,10 @@ class _EditSheetState extends State<_EditSheet> {
                     GestureDetector(
                       onTap: _cancel,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: panelColor,
                           borderRadius: BorderRadius.circular(8),
@@ -2293,7 +2480,10 @@ class _EditSheetState extends State<_EditSheet> {
                     GestureDetector(
                       onTap: _send,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.purple,
                           borderRadius: BorderRadius.circular(8),
@@ -2301,7 +2491,11 @@ class _EditSheetState extends State<_EditSheet> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.send, color: Colors.white, size: 18),
+                            const Icon(
+                              Icons.send,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               T.of(context).chatSendButton,
@@ -2346,8 +2540,12 @@ class _QuickMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final iconColor = enabled ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4);
-    final textColor = enabled ? cs.onSurface : cs.onSurfaceVariant.withValues(alpha: 0.5);
+    final iconColor = enabled
+        ? cs.primary
+        : cs.onSurfaceVariant.withValues(alpha: 0.4);
+    final textColor = enabled
+        ? cs.onSurface
+        : cs.onSurfaceVariant.withValues(alpha: 0.5);
     // 按钮要跟 Dialog 背景（surfaceContainerHigh）形成层级。用 surfaceContainerHighest
     // 提一档；禁用态再降透明度让"灰掉"明显
     final bg = enabled
