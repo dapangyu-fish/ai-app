@@ -294,8 +294,10 @@ class GameLogicEngine {
 
   dynamic _evalJsonLogic(Map<String, dynamic> rule) {
     try {
-      // 先把规则里的字符串模板烤一遍，让 {"var": "vars.x.{{ idx }}"} 能 work
-      final preprocessed = _resolveTemplatesInRule(rule);
+      // 先把规则里的字符串模板和 inline action 预处理掉：
+      // - {"var": "vars.x.{{ idx }}"} 这种动态路径需要烤模板
+      // - {"and": [{"call": "@xxx"}, ...]} 这种条件组合需要先执行表达式 action
+      final preprocessed = _resolveJsonLogicOperands(rule);
       return _jsonlogic.apply(preprocessed, _dataScope());
     } catch (e) {
       // 表达式炸了不能让游戏崩，返回 null 让上游决定
@@ -306,15 +308,18 @@ class GameLogicEngine {
   /// 递归预处理 jsonlogic 规则里的 `{{ x }}` 模板字符串。
   /// 跟主解释器 _resolveTemplatesInRule 同行为，让 `{"var": "vars.board.{{ _i }}"}`
   /// 这种动态路径能用。
-  dynamic _resolveTemplatesInRule(dynamic rule) {
+  dynamic _resolveJsonLogicOperands(dynamic rule) {
     if (rule is String && rule.contains('{{') && rule.contains('}}')) {
       return _resolveString(rule);
     }
     if (rule is List) {
-      return rule.map((e) => _resolveTemplatesInRule(e)).toList();
+      return rule.map((e) => _resolveJsonLogicOperands(e)).toList();
     }
     if (rule is Map<String, dynamic>) {
-      return rule.map((k, v) => MapEntry(k, _resolveTemplatesInRule(v)));
+      if (rule.containsKey('call')) {
+        return runAction(rule);
+      }
+      return rule.map((k, v) => MapEntry(k, _resolveJsonLogicOperands(v)));
     }
     return rule;
   }

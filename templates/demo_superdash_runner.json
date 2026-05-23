@@ -3,7 +3,7 @@
   "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
   "meta": {
     "name": "demo-superdash-runner",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "type": "app",
     "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
     "author": "demo"
@@ -284,10 +284,7 @@
                     "cond": {"==": [{"var": "vars.state"}, "loading"]},
                     "then": [
                       {"call": "@if", "args": {
-                        "cond": {"and": [
-                          {"call": "@tiled.loaded", "args": {"map": "tmx_map"}},
-                          {"call": "@tiled.loaded", "args": {"map": "tmx_front"}}
-                        ]},
+                        "cond": {"call": "@tiled.loaded", "args": {"map": "tmx_map"}},
                         "then": [
                           {"call": "@tiled.first_object", "args": {"map": "tmx_map", "layer": "spawn"}, "assign": "vars._spawn"},
                           {"call": "@entity.set", "args": {"id": "player", "field": "x", "value": {"var": "vars._spawn.x"}}},
