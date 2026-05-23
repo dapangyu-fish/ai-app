@@ -63,7 +63,9 @@ class TiledMapEntity extends GameEntity {
         final tsxSource = ts.getAttribute('source');
         if (tsxSource == null) continue;
         try {
-          tilesets.add(await _loadTileset(firstGid, tsxSource));
+          tilesets.add(
+            await _loadTileset(firstGid, tsxSource, relativeTo: sourceUrl),
+          );
         } catch (e) {
           debugPrint('[tiled_map:$id] tileset failed: $tsxSource $e');
         }
@@ -379,8 +381,12 @@ class TiledMapEntity extends GameEntity {
     );
   }
 
-  Future<TiledTileset> _loadTileset(int firstGid, String tsxSource) async {
-    final tsxUrl = _resolve(tsxSource);
+  Future<TiledTileset> _loadTileset(
+    int firstGid,
+    String tsxSource, {
+    String? relativeTo,
+  }) async {
+    final tsxUrl = _resolve(tsxSource, relativeTo: relativeTo);
     final doc = XmlDocument.parse(await _loadText(tsxUrl));
     final root = doc.rootElement;
     final image = root.getElement('image');
