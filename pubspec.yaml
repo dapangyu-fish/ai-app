@@ -101,11 +101,6 @@ dependencies:
 
   # Game engine (used by `flame_game` widget for embedded mini games)
   flame: ^1.18.0
-  leap:
-    git:
-      url: https://github.com/VeryGoodOpenSource/leap.git
-      ref: vgv
-      path: packages/leap
 
   # Firebase / FCM —— Android 推送通道（iOS 走 APNs 走另一条路）
   # firebase_core 必须，所有 firebase_xxx 插件都依赖它做初始化

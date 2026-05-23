@@ -1,5 +1,3 @@
-import 'package:leap/leap.dart' as leap;
-
 enum PlatformerPhysicsBackend { aabb, leap }
 
 class PlatformerPhysicsConfig {
@@ -68,25 +66,5 @@ class PlatformerPhysicsConfig {
 class LeapPlatformerBridge {
   const LeapPlatformerBridge._();
 
-  static bool get available => true;
-
-  static Type get gameType => leap.LeapGame;
-
-  static Type get mapType => leap.LeapMap;
-
-  static Type get jumperCharacterType => leap.JumperCharacter;
-
-  static leap.LeapConfiguration configuration({
-    String groundLayerName = 'ground',
-    String metadataLayerName = 'metadata',
-    String playerSpawnClass = 'PlayerSpawn',
-  }) {
-    return leap.LeapConfiguration(
-      tiled: leap.TiledOptions(
-        groundLayerName: groundLayerName,
-        metadataLayerName: metadataLayerName,
-        playerSpawnClass: playerSpawnClass,
-      ),
-    );
-  }
+  static bool get available => false;
 }
