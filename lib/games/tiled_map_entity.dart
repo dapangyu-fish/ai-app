@@ -47,7 +47,9 @@ class TiledMapEntity extends GameEntity {
 
   Future<void> load() async {
     try {
-      final tmxText = await _loadText(_resolve(source));
+      final sourceUrl = _resolve(source);
+      debugPrint('[tiled_map:$id] load start: $sourceUrl');
+      final tmxText = await _loadText(sourceUrl);
       final doc = XmlDocument.parse(tmxText);
       final map = doc.rootElement;
       mapWidth = _intAttr(map, 'width', 0);
@@ -60,61 +62,28 @@ class TiledMapEntity extends GameEntity {
         final firstGid = _intAttr(ts, 'firstgid', 1);
         final tsxSource = ts.getAttribute('source');
         if (tsxSource == null) continue;
-        tilesets.add(await _loadTileset(firstGid, tsxSource));
+        try {
+          tilesets.add(await _loadTileset(firstGid, tsxSource));
+        } catch (e) {
+          debugPrint('[tiled_map:$id] tileset failed: $tsxSource $e');
+        }
       }
       tilesets.sort((a, b) => a.firstGid.compareTo(b.firstGid));
 
       layers.clear();
-      for (final layer in map.findElements('layer')) {
-        final data = layer.getElement('data');
-        if (data == null) continue;
-        final encoding = data.getAttribute('encoding') ?? '';
-        if (encoding != 'csv') continue;
-        final csv = data.innerText.trim();
-        final gids = csv
-            .split(',')
-            .map((s) => int.tryParse(s.trim()) ?? 0)
-            .toList(growable: false);
-        layers.add(
-          TiledLayer(
-            name: layer.getAttribute('name') ?? '',
-            width: _intAttr(layer, 'width', mapWidth),
-            height: _intAttr(layer, 'height', mapHeight),
-            offsetX: _doubleAttr(layer, 'offsetx', 0) * scale,
-            offsetY: _doubleAttr(layer, 'offsety', 0) * scale,
-            visible: layer.getAttribute('visible') != '0',
-            parallaxX: _doubleAttr(layer, 'parallaxx', 1),
-            gids: gids,
-          ),
-        );
-      }
-
       objectsByLayer.clear();
-      for (final group in map.findElements('objectgroup')) {
-        final name = group.getAttribute('name') ?? '';
-        objectsByLayer[name] = group
-            .findElements('object')
-            .map((object) {
-              return TiledObject(
-                id: _intAttr(object, 'id', 0),
-                name: object.getAttribute('name') ?? '',
-                type: object.getAttribute('type') ?? '',
-                x: _doubleAttr(object, 'x', 0) * scale,
-                y: _doubleAttr(object, 'y', 0) * scale,
-                width: _doubleAttr(object, 'width', 0) * scale,
-                height: _doubleAttr(object, 'height', 0) * scale,
-                gid: _intAttr(object, 'gid', 0),
-                properties: _readProperties(object),
-              );
-            })
-            .toList(growable: false);
-      }
+      _readMapChildren(map);
 
       loaded = true;
       error = null;
+      debugPrint(
+        '[tiled_map:$id] load success: layers=${layers.length} '
+        'objects=${objectsByLayer.length} tilesets=${tilesets.length}',
+      );
     } catch (e) {
       loaded = false;
       error = e.toString();
+      debugPrint('[tiled_map:$id] load error: $error');
     }
   }
 
@@ -260,6 +229,86 @@ class TiledMapEntity extends GameEntity {
     );
   }
 
+  void _readMapChildren(
+    XmlElement parent, {
+    double offsetX = 0,
+    double offsetY = 0,
+    bool visible = true,
+  }) {
+    for (final child in parent.children.whereType<XmlElement>()) {
+      final childVisible = visible && child.getAttribute('visible') != '0';
+      final childOffsetX = offsetX + _doubleAttr(child, 'offsetx', 0) * scale;
+      final childOffsetY = offsetY + _doubleAttr(child, 'offsety', 0) * scale;
+      if (child.name.local == 'group') {
+        _readMapChildren(
+          child,
+          offsetX: childOffsetX,
+          offsetY: childOffsetY,
+          visible: childVisible,
+        );
+      } else if (child.name.local == 'layer') {
+        _readLayer(child, childOffsetX, childOffsetY, childVisible);
+      } else if (child.name.local == 'objectgroup') {
+        _readObjectGroup(child, childOffsetX, childOffsetY, childVisible);
+      }
+    }
+  }
+
+  void _readLayer(
+    XmlElement layer,
+    double offsetX,
+    double offsetY,
+    bool visible,
+  ) {
+    final data = layer.getElement('data');
+    if (data == null) return;
+    final encoding = data.getAttribute('encoding') ?? '';
+    if (encoding != 'csv') return;
+    final csv = data.innerText.trim();
+    final gids = csv
+        .split(',')
+        .map((s) => int.tryParse(s.trim()) ?? 0)
+        .toList(growable: false);
+    layers.add(
+      TiledLayer(
+        name: layer.getAttribute('name') ?? '',
+        width: _intAttr(layer, 'width', mapWidth),
+        height: _intAttr(layer, 'height', mapHeight),
+        offsetX: offsetX,
+        offsetY: offsetY,
+        visible: visible,
+        parallaxX: _doubleAttr(layer, 'parallaxx', 1),
+        gids: gids,
+      ),
+    );
+  }
+
+  void _readObjectGroup(
+    XmlElement group,
+    double offsetX,
+    double offsetY,
+    bool visible,
+  ) {
+    if (!visible) return;
+    final name = group.getAttribute('name') ?? '';
+    objectsByLayer[name] = group
+        .findElements('object')
+        .map((object) {
+          return TiledObject(
+            id: _intAttr(object, 'id', 0),
+            name: object.getAttribute('name') ?? '',
+            type: object.getAttribute('type') ?? '',
+            x: offsetX + _doubleAttr(object, 'x', 0) * scale,
+            y: offsetY + _doubleAttr(object, 'y', 0) * scale,
+            width: _doubleAttr(object, 'width', 0) * scale,
+            height: _doubleAttr(object, 'height', 0) * scale,
+            gid: _intAttr(object, 'gid', 0),
+            properties: _readProperties(object),
+          );
+        })
+        .toList(growable: false);
+  }
+
   void _renderLayer(Canvas canvas, TiledLayer layer) {
     final tw = tileWidth * scale;
     final th = tileHeight * scale;
@@ -317,8 +366,10 @@ class TiledMapEntity extends GameEntity {
     return TiledTileRef(
       tileset: tileset,
       src: Rect.fromLTWH(
-        col * tileset.tileWidth.toDouble(),
-        row * tileset.tileHeight.toDouble(),
+        (tileset.margin + col * (tileset.tileWidth + tileset.spacing))
+            .toDouble(),
+        (tileset.margin + row * (tileset.tileHeight + tileset.spacing))
+            .toDouble(),
         tileset.tileWidth.toDouble(),
         tileset.tileHeight.toDouble(),
       ),
@@ -372,6 +423,8 @@ class TiledMapEntity extends GameEntity {
       tileHeight: _intAttr(root, 'tileheight', tileHeight),
       tileCount: _intAttr(root, 'tilecount', 0),
       columns: _intAttr(root, 'columns', 1).clamp(1, 1 << 30),
+      spacing: _intAttr(root, 'spacing', 0),
+      margin: _intAttr(root, 'margin', 0),
       image: frame.image,
       tileCollision: tileCollision,
       tileTypes: tileTypes,
@@ -468,6 +521,8 @@ class TiledTileset {
   final int tileHeight;
   final int tileCount;
   final int columns;
+  final int spacing;
+  final int margin;
   final ui.Image? image;
   final Map<int, List<Rect>> tileCollision;
   final Map<int, String> tileTypes;
@@ -481,6 +536,8 @@ class TiledTileset {
     required this.tileHeight,
     required this.tileCount,
     required this.columns,
+    this.spacing = 0,
+    this.margin = 0,
     required this.image,
     required this.tileCollision,
     this.tileTypes = const {},
