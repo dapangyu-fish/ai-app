@@ -3,7 +3,7 @@
   "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
   "meta": {
     "name": "demo-superdash-runner",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "type": "app",
     "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
     "author": "demo"
@@ -152,7 +152,7 @@
                 "section_len": 999999,
                 "gravity": 950,
                 "jump_vy": -380,
-                "speed": 160,
+                "speed": 320,
                 "floor_y": 0,
                 "ground_y": 0,
                 "player_size": 32,
@@ -183,7 +183,7 @@
                   "priority": 0,
                   "source": "map/flutter_runnergame_map_A.tmx",
                   "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/",
-                  "scale": 0.5,
+                  "scale": 1,
                   "exclude_layers": ["treehouse_front"],
                   "solid_layers": ["Ground"],
                   "hazard_layers": ["water/spikes"],
@@ -194,7 +194,7 @@
                   "priority": 90,
                   "source": "map/flutter_runnergame_map_A.tmx",
                   "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/",
-                  "scale": 0.5,
+                  "scale": 1,
                   "include_layers": ["treehouse_front"],
                   "collidable": false,
                   "render": {"shape": "text", "value": "", "color": "#FFFFFF00"}
@@ -290,7 +290,7 @@
                         "then": [
                           {"call": "@tiled.first_object", "args": {"map": "tmx_map", "layer": "spawn"}, "assign": "vars._spawn"},
                           {"call": "@entity.set", "args": {"id": "player", "field": "x", "value": {"var": "vars._spawn.x"}}},
-                          {"call": "@entity.set", "args": {"id": "player", "field": "y", "value": {"-": [{"var": "vars._spawn.y"}, {"var": "vars.player_size"}]}}},
+                          {"call": "@entity.set", "args": {"id": "player", "field": "y", "value": {"var": "vars._spawn.y"}}},
                           {"call": "@entity.set", "args": {"id": "player", "field": "vy", "value": 0}},
                           {"call": "@set", "args": {"var": "vars.on_ground", "value": false}},
                           {"call": "@set", "args": {"var": "vars.state", "value": "ready"}},
