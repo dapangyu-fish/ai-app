@@ -664,6 +664,8 @@ class JsonFlameGame extends FlameGame {
             scale: (spec['scale'] as num?)?.toDouble() ?? 1,
             includeLayers: _readStringSet(spec['include_layers']),
             excludeLayers: _readStringSet(spec['exclude_layers']) ?? const {},
+            solidLayers: _readStringSet(spec['solid_layers']) ?? const {},
+            hazardLayers: _readStringSet(spec['hazard_layers']) ?? const {},
             collidable: spec['collidable'] != false,
           );
         }

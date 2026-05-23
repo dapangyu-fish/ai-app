@@ -20,6 +20,8 @@ class TiledMapEntity extends GameEntity {
   String? error;
   final Set<String>? includeLayers;
   final Set<String> excludeLayers;
+  final Set<String> solidLayers;
+  final Set<String> hazardLayers;
   final bool collidable;
 
   int mapWidth = 0;
@@ -39,6 +41,8 @@ class TiledMapEntity extends GameEntity {
     this.scale = 1,
     this.includeLayers,
     this.excludeLayers = const {},
+    this.solidLayers = const {},
+    this.hazardLayers = const {},
     this.collidable = true,
   });
 
@@ -170,7 +174,16 @@ class TiledMapEntity extends GameEntity {
           if (tile == null) continue;
           final tileX = layer.offsetX + col * tw;
           final tileY = layer.offsetY + row * th;
-          final localRects = tile.collisionRects.isEmpty && tile.solid
+          final layerSolid = solidLayers.contains(layer.name);
+          final layerHazard = hazardLayers.contains(layer.name);
+          final type = layerHazard
+              ? 'Hazard'
+              : layerSolid && tile.type.isEmpty
+              ? 'Platform'
+              : tile.type;
+          final localRects =
+              tile.collisionRects.isEmpty &&
+                  (tile.solid || layerSolid || layerHazard)
               ? [
                   Rect.fromLTWH(
                     0,
@@ -191,7 +204,7 @@ class TiledMapEntity extends GameEntity {
               out.add(
                 TiledTileCollision(
                   rect: rect,
-                  type: tile.type,
+                  type: type,
                   properties: tile.properties,
                 ),
               );
