@@ -107,7 +107,12 @@ class GameLogicEngine {
         return null;
     }
 
-    return GameActions.dispatch(game, call, args, this);
+    final result = GameActions.dispatch(game, call, args, this);
+    final assign = action['assign']?.toString();
+    if (assign != null && assign.isNotEmpty) {
+      setVariable(assign, result);
+    }
+    return result;
   }
 
   // ---------- 内置 ----------
@@ -141,8 +146,7 @@ class GameLogicEngine {
   void _doWhile(Map<String, dynamic> rawArgs) {
     final condRaw = rawArgs['cond'];
     final bodyRaw = rawArgs['body'];
-    final maxIter =
-        (rawArgs['max_iterations'] as num?)?.toInt() ?? 10000;
+    final maxIter = (rawArgs['max_iterations'] as num?)?.toInt() ?? 10000;
     if (bodyRaw is! List) return;
 
     int count = 0;
@@ -229,7 +233,9 @@ class GameLogicEngine {
   /// 多一段 split 出错。详见主解释器 _stringifyForTemplate 同名函数注释。
   static String _stringifyForTemplate(dynamic value) {
     if (value == null) return '';
-    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+    if (value is double &&
+        value.isFinite &&
+        value == value.truncateToDouble()) {
       return value.toInt().toString();
     }
     return value.toString();
@@ -245,10 +251,41 @@ class GameLogicEngine {
 
   /// jsonlogic 操作符识别（粗糙白名单，避免把数据 Map 当表达式）
   static const _jsonLogicOps = {
-    'var', 'if', 'and', 'or', '!', '!!', '==', '!=', '===', '!==',
-    '<', '>', '<=', '>=', '+', '-', '*', '/', '%', 'min', 'max',
-    'in', 'cat', 'substr', 'log', 'missing', 'missing_some',
-    'merge', 'reduce', 'map', 'filter', 'all', 'some', 'none', 'method',
+    'var',
+    'if',
+    'and',
+    'or',
+    '!',
+    '!!',
+    '==',
+    '!=',
+    '===',
+    '!==',
+    '<',
+    '>',
+    '<=',
+    '>=',
+    '+',
+    '-',
+    '*',
+    '/',
+    '%',
+    'min',
+    'max',
+    'in',
+    'cat',
+    'substr',
+    'log',
+    'missing',
+    'missing_some',
+    'merge',
+    'reduce',
+    'map',
+    'filter',
+    'all',
+    'some',
+    'none',
+    'method',
   };
 
   bool _looksLikeJsonLogic(String k) => _jsonLogicOps.contains(k);
@@ -410,7 +447,11 @@ class GameLogicEngine {
 
   /// 写嵌套路径。支持 Map 和 List 中段穿过 + 末段写入。
   /// 跟主解释器 _setNestedValue 行为一致：List 越界 / 非数字段静默 no-op。
-  void _writePath(Map<String, dynamic> root, List<String> parts, dynamic value) {
+  void _writePath(
+    Map<String, dynamic> root,
+    List<String> parts,
+    dynamic value,
+  ) {
     dynamic cur = root;
     for (int i = 0; i < parts.length - 1; i++) {
       final p = parts[i];

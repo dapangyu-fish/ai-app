@@ -12,6 +12,7 @@
 // `{{ entities.x.field }}` 模板读。
 
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -20,8 +21,13 @@ import 'game_world.dart';
 abstract class GameEntity {
   final String id;
   final Map<String, dynamic> renderConfig;
+  final int priority;
 
-  GameEntity({required this.id, required this.renderConfig});
+  GameEntity({
+    required this.id,
+    required this.renderConfig,
+    this.priority = 0,
+  });
 
   /// 自动行为（per-frame）
   void update(double dt, GameWorld world) {}
@@ -31,6 +37,13 @@ abstract class GameEntity {
 
   /// 给 `{{ entities.x.field }}` 模板访问的快照
   Map<String, dynamic> toMap();
+
+  bool get expired => false;
+}
+
+abstract class ImageBackedEntity {
+  String get asset;
+  set image(ui.Image? value);
 }
 
 // ---------- cell ----------
@@ -42,26 +55,22 @@ class CellEntity extends GameEntity {
   CellEntity({
     required super.id,
     required super.renderConfig,
+    super.priority,
     required this.x,
     required this.y,
   });
 
   @override
   void render(Canvas canvas, GameWorld world) {
-    drawShape(
-      canvas,
-      world.cellTopLeft(x, y),
-      world.cellSize(),
-      renderConfig,
-    );
+    drawShape(canvas, world.cellTopLeft(x, y), world.cellSize(), renderConfig);
   }
 
   @override
   Map<String, dynamic> toMap() => {
-        'x': x,
-        'y': y,
-        'cell': [x, y],
-      };
+    'x': x,
+    'y': y,
+    'cell': [x, y],
+  };
 }
 
 // ---------- cell_path ----------
@@ -73,6 +82,7 @@ class CellPathEntity extends GameEntity {
   CellPathEntity({
     required super.id,
     required super.renderConfig,
+    super.priority,
     required this.cells,
   });
 
@@ -168,11 +178,11 @@ class CellPathEntity extends GameEntity {
 
   @override
   Map<String, dynamic> toMap() => {
-        'cells': cells,
-        'head': head,
-        'tail': tail,
-        'length': cells.length,
-      };
+    'cells': cells,
+    'head': head,
+    'tail': tail,
+    'length': cells.length,
+  };
 }
 
 // ---------- pixel ----------
@@ -192,22 +202,81 @@ class PixelEntity extends GameEntity {
   double h;
   double vx;
   double vy;
+  bool autoMove;
+  final Map<String, dynamic> state;
 
   PixelEntity({
     required super.id,
     required super.renderConfig,
+    super.priority,
     required this.x,
     required this.y,
     required this.w,
     required this.h,
     this.vx = 0,
     this.vy = 0,
-  });
+    this.autoMove = true,
+    Map<String, dynamic>? state,
+  }) : state = state ?? {};
 
   @override
   void update(double dt, GameWorld world) {
+    if (!autoMove) return;
+    _updatePath(dt);
     x += vx * dt;
     y += vy * dt;
+  }
+
+  void _updatePath(double dt) {
+    final path = state['path']?.toString();
+    if (path == null || path.isEmpty || dt <= 0) return;
+    final segments = _pathSegments(path);
+    if (segments.isEmpty) return;
+
+    state['pathOriginX'] ??= x;
+    state['pathOriginY'] ??= y;
+    state['pathIndex'] ??= 0;
+    state['pathProgress'] ??= 0.0;
+
+    final tile = (state['pathTile'] as num?)?.toDouble() ?? 64;
+    final speed = (state['pathSpeed'] as num?)?.toDouble() ?? tile * 3;
+    if (speed <= 0) return;
+
+    var index = (state['pathIndex'] as num).toInt();
+    var progress = (state['pathProgress'] as num).toDouble();
+    final infinite = path.trim().startsWith('I');
+    final seg = segments[index.clamp(0, segments.length - 1)];
+    final distance = seg.length * tile;
+    if (distance <= 0) return;
+
+    progress += speed * dt;
+    while (progress >= distance) {
+      progress -= distance;
+      x += seg.dx * tile;
+      y += seg.dy * tile;
+      index += 1;
+      if (index >= segments.length) {
+        if (!infinite) {
+          state['pathIndex'] = segments.length - 1;
+          state['pathProgress'] = distance;
+          vx = 0;
+          vy = 0;
+          return;
+        }
+        index = 0;
+        x = (state['pathOriginX'] as num).toDouble();
+        y = (state['pathOriginY'] as num).toDouble();
+      }
+    }
+
+    final current = segments[index];
+    vx = current.dx.sign * speed;
+    vy = current.dy.sign * speed;
+    if (this is SpriteEntity && vx != 0) {
+      (this as SpriteEntity).flipX = vx > 0;
+    }
+    state['pathIndex'] = index;
+    state['pathProgress'] = progress;
   }
 
   @override
@@ -217,16 +286,308 @@ class PixelEntity extends GameEntity {
 
   @override
   Map<String, dynamic> toMap() => {
-        'position': [x, y],
-        'size': [w, h],
-        'velocity': [vx, vy],
-        'x': x,
-        'y': y,
-        'w': w,
-        'h': h,
-        'vx': vx,
-        'vy': vy,
-      };
+    'position': [x, y],
+    'size': [w, h],
+    'velocity': [vx, vy],
+    'x': x,
+    'y': y,
+    'w': w,
+    'h': h,
+    'vx': vx,
+    'vy': vy,
+    'autoMove': autoMove,
+    'state': state,
+    ...state,
+  };
+}
+
+class _PathSegment {
+  const _PathSegment(this.dx, this.dy, this.length);
+
+  final double dx;
+  final double dy;
+  final double length;
+}
+
+List<_PathSegment> _pathSegments(String path) {
+  final body = RegExp(r'\{(.+)\}').firstMatch(path)?.group(1);
+  if (body == null) return const [];
+  final out = <_PathSegment>[];
+  for (final token in body.split(',')) {
+    final trimmed = token.trim();
+    final match = RegExp(r'^(\d+(?:\.\d+)?)([LRTB])$').firstMatch(trimmed);
+    if (match == null) continue;
+    final length = double.tryParse(match.group(1)!) ?? 0;
+    final dir = match.group(2);
+    switch (dir) {
+      case 'L':
+        out.add(_PathSegment(-length, 0, length));
+      case 'R':
+        out.add(_PathSegment(length, 0, length));
+      case 'T':
+        out.add(_PathSegment(0, -length, length));
+      case 'B':
+        out.add(_PathSegment(0, length, length));
+    }
+  }
+  return out;
+}
+
+// ---------- sprite / animated_sprite ----------
+
+class SpriteEntity extends PixelEntity implements ImageBackedEntity {
+  @override
+  String asset;
+  @override
+  ui.Image? image;
+  double srcX;
+  double srcY;
+  double? srcW;
+  double? srcH;
+  bool flipX;
+
+  SpriteEntity({
+    required super.id,
+    required super.renderConfig,
+    super.priority,
+    required super.x,
+    required super.y,
+    required super.w,
+    required super.h,
+    super.vx,
+    super.vy,
+    super.autoMove,
+    super.state,
+    required this.asset,
+    this.image,
+    this.srcX = 0,
+    this.srcY = 0,
+    this.srcW,
+    this.srcH,
+    this.flipX = false,
+  });
+
+  @override
+  void render(Canvas canvas, GameWorld world) {
+    final img = image;
+    if (img == null) {
+      drawShape(canvas, Offset(x, y), Size(w, h), renderConfig);
+      return;
+    }
+
+    final source = Rect.fromLTWH(
+      srcX,
+      srcY,
+      srcW ?? img.width.toDouble(),
+      srcH ?? img.height.toDouble(),
+    );
+    final offsetX = (state['spriteOffsetX'] as num?)?.toDouble() ?? 0;
+    final offsetY = (state['spriteOffsetY'] as num?)?.toDouble() ?? 0;
+    final renderW = (state['spriteW'] as num?)?.toDouble() ?? w;
+    final renderH = (state['spriteH'] as num?)?.toDouble() ?? h;
+    final opacity = ((state['opacity'] as num?)?.toDouble() ?? 1).clamp(0, 1);
+    final target = Rect.fromLTWH(x + offsetX, y + offsetY, renderW, renderH);
+    final paint = Paint()
+      ..filterQuality = FilterQuality.none
+      ..isAntiAlias = false
+      ..color = Color.fromRGBO(255, 255, 255, opacity.toDouble());
+
+    if (flipX) {
+      canvas.save();
+      canvas.translate(target.center.dx, target.center.dy);
+      canvas.scale(-1, 1);
+      canvas.translate(-target.center.dx, -target.center.dy);
+      canvas.drawImageRect(img, source, target, paint);
+      canvas.restore();
+    } else {
+      canvas.drawImageRect(img, source, target, paint);
+    }
+  }
+
+  @override
+  Map<String, dynamic> toMap() => {
+    ...super.toMap(),
+    'asset': asset,
+    'src': [srcX, srcY, srcW, srcH],
+    'flipX': flipX,
+  };
+}
+
+class AnimatedSpriteEntity extends SpriteEntity {
+  double frameW;
+  double frameH;
+  int frames;
+  int framesPerRow;
+  double stepTime;
+  bool loop;
+  int frameIndex;
+  final Map<String, SpriteAnimationSpec> animations;
+  String? currentAnimation;
+  double _accumulator = 0;
+
+  AnimatedSpriteEntity({
+    required super.id,
+    required super.renderConfig,
+    super.priority,
+    required super.x,
+    required super.y,
+    required super.w,
+    required super.h,
+    super.vx,
+    super.vy,
+    super.autoMove,
+    super.state,
+    required super.asset,
+    required this.frameW,
+    required this.frameH,
+    required this.frames,
+    this.framesPerRow = 0,
+    this.stepTime = 0.12,
+    this.loop = true,
+    this.frameIndex = 0,
+    this.animations = const {},
+    this.currentAnimation,
+    super.flipX,
+  }) : super(srcW: frameW, srcH: frameH);
+
+  SpriteAnimationSpec? setAnimation(String name) {
+    final spec = animations[name];
+    if (spec == null) return null;
+    if (currentAnimation == name) return null;
+    currentAnimation = name;
+    asset = spec.asset;
+    frameW = spec.frameW;
+    frameH = spec.frameH;
+    frames = spec.frames;
+    framesPerRow = spec.framesPerRow;
+    stepTime = spec.stepTime;
+    loop = spec.loop;
+    frameIndex = 0;
+    _accumulator = 0;
+    srcX = 0;
+    srcY = 0;
+    srcW = frameW;
+    srcH = frameH;
+    return spec;
+  }
+
+  bool get finished => !loop && frameIndex >= frames - 1;
+
+  @override
+  bool get expired => state['removeOnFinish'] == true && finished;
+
+  @override
+  void update(double dt, GameWorld world) {
+    super.update(dt, world);
+    if (frames <= 1 || stepTime <= 0) return;
+    _accumulator += dt;
+    while (_accumulator >= stepTime) {
+      _accumulator -= stepTime;
+      if (loop) {
+        frameIndex = (frameIndex + 1) % frames;
+      } else if (frameIndex < frames - 1) {
+        frameIndex++;
+      }
+    }
+    final rowSize = framesPerRow > 0 ? framesPerRow : frames;
+    srcX = (frameIndex % rowSize) * frameW;
+    srcY = (frameIndex ~/ rowSize) * frameH;
+  }
+
+  @override
+  Map<String, dynamic> toMap() => {
+    ...super.toMap(),
+    'frame': frameIndex,
+    'frames': frames,
+    'animation': currentAnimation,
+    'finished': finished,
+  };
+}
+
+class SpriteAnimationSpec {
+  final String asset;
+  final double frameW;
+  final double frameH;
+  final int frames;
+  final int framesPerRow;
+  final double stepTime;
+  final bool loop;
+
+  const SpriteAnimationSpec({
+    required this.asset,
+    required this.frameW,
+    required this.frameH,
+    required this.frames,
+    required this.framesPerRow,
+    required this.stepTime,
+    required this.loop,
+  });
+}
+
+// ---------- parallax ----------
+
+class ParallaxEntity extends GameEntity implements ImageBackedEntity {
+  @override
+  String asset;
+  @override
+  ui.Image? image;
+  double speedX;
+  double y;
+  double? height;
+  double _offsetX = 0;
+
+  ParallaxEntity({
+    required super.id,
+    required super.renderConfig,
+    super.priority,
+    required this.asset,
+    this.image,
+    this.speedX = 0,
+    this.y = 0,
+    this.height,
+  });
+
+  @override
+  void update(double dt, GameWorld world) {
+    _offsetX = (_offsetX + speedX * dt);
+  }
+
+  @override
+  void render(Canvas canvas, GameWorld world) {
+    final img = image;
+    if (img == null) return;
+
+    final drawH = height ?? world.height;
+    final drawW = img.width * drawH / img.height;
+    if (drawW <= 0 || drawH <= 0) return;
+
+    final normalized = _offsetX % drawW;
+    final startX = normalized > 0 ? normalized - drawW : normalized;
+    final paint = Paint()
+      ..filterQuality = FilterQuality.none
+      ..isAntiAlias = false;
+    final src = Rect.fromLTWH(
+      0,
+      0,
+      img.width.toDouble(),
+      img.height.toDouble(),
+    );
+
+    var x = startX;
+    while (x < world.width + drawW) {
+      canvas.drawImageRect(img, src, Rect.fromLTWH(x, y, drawW, drawH), paint);
+      x += drawW;
+    }
+  }
+
+  @override
+  Map<String, dynamic> toMap() => {
+    'asset': asset,
+    'speedX': speedX,
+    'offsetX': _offsetX,
+    'y': y,
+    'height': height,
+  };
 }
 
 // ---------- scroll_list ----------
@@ -258,6 +619,7 @@ class ScrollListEntity extends GameEntity {
   ScrollListEntity({
     required super.id,
     required super.renderConfig,
+    super.priority,
     required this.scrollDirection,
     required this.speed,
     required this.rowHeight,
@@ -303,8 +665,8 @@ class ScrollListEntity extends GameEntity {
     final newY = rows.isEmpty
         ? (scrollDirection == 'down' ? -rowHeight : world.height)
         : (scrollDirection == 'down'
-            ? rows.first.y - rowHeight
-            : rows.last.y + rowHeight);
+              ? rows.first.y - rowHeight
+              : rows.last.y + rowHeight);
     final activeIndex = _random.nextInt(cells);
     final row = ScrollRow(
       y: newY,
@@ -335,8 +697,8 @@ class ScrollListEntity extends GameEntity {
     final cellW = world.width / cellsPerRow;
     final renderActive =
         (rowSpec['render_active'] as Map?)?.cast<String, dynamic>() ?? const {};
-    final renderInactive = (rowSpec['render_inactive'] as Map?)
-            ?.cast<String, dynamic>() ??
+    final renderInactive =
+        (rowSpec['render_inactive'] as Map?)?.cast<String, dynamic>() ??
         const {};
 
     for (final r in rows) {
@@ -347,11 +709,11 @@ class ScrollListEntity extends GameEntity {
         // tapped 之后变更暗色
         final cfg = isActive
             ? (r.tapped
-                ? {
-                    ...renderActive,
-                    'color': renderActive['tapped_color'] ?? '#4A4A4A',
-                  }
-                : renderActive)
+                  ? {
+                      ...renderActive,
+                      'color': renderActive['tapped_color'] ?? '#4A4A4A',
+                    }
+                  : renderActive)
             : renderInactive;
         drawShape(
           canvas,
@@ -365,10 +727,10 @@ class ScrollListEntity extends GameEntity {
 
   @override
   Map<String, dynamic> toMap() => {
-        'speed': speed,
-        'rowHeight': rowHeight,
-        'rowCount': rows.length,
-      };
+    'speed': speed,
+    'rowHeight': rowHeight,
+    'rowCount': rows.length,
+  };
 }
 
 class ScrollRow {
@@ -408,6 +770,7 @@ class ValueGridEntity extends GameEntity {
   ValueGridEntity({
     required super.id,
     required super.renderConfig,
+    super.priority,
     required this.cols,
     required this.rows,
     required this.cells,
@@ -423,15 +786,15 @@ class ValueGridEntity extends GameEntity {
 
     final byValue =
         (renderConfig['by_value'] as Map?)?.cast<String, dynamic>() ?? const {};
-    final defaultCfg =
-        (renderConfig['default'] as Map?)?.cast<String, dynamic>();
+    final defaultCfg = (renderConfig['default'] as Map?)
+        ?.cast<String, dynamic>();
 
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < cols; c++) {
         final v = cells[r][c];
         Map<String, dynamic>? cfg =
             (byValue[v.toString()] as Map?)?.cast<String, dynamic>() ??
-                defaultCfg;
+            defaultCfg;
         if (cfg == null) continue;
         // {{ value }} 占位替换
         if (cfg.containsKey('text')) {
@@ -454,11 +817,7 @@ class ValueGridEntity extends GameEntity {
   }
 
   @override
-  Map<String, dynamic> toMap() => {
-        'cols': cols,
-        'rows': rows,
-        'cells': cells,
-      };
+  Map<String, dynamic> toMap() => {'cols': cols, 'rows': rows, 'cells': cells};
 }
 
 // ---------- 渲染 helper ----------
@@ -528,8 +887,7 @@ void drawShape(
   // 用于 value_grid 的"色块 + 数字"组合
   final overlayText = cfg['text']?.toString();
   if (overlayText != null && overlayText.isNotEmpty) {
-    final textColor =
-        parseColor(cfg['text_color']) ?? const Color(0xFF000000);
+    final textColor = parseColor(cfg['text_color']) ?? const Color(0xFF000000);
     final fontSize = (cfg['font_size'] as num?)?.toDouble() ?? 16;
     final tp = TextPainter(
       text: TextSpan(
@@ -544,10 +902,7 @@ void drawShape(
     )..layout();
     tp.paint(
       canvas,
-      Offset(
-        rect.center.dx - tp.width / 2,
-        rect.center.dy - tp.height / 2,
-      ),
+      Offset(rect.center.dx - tp.width / 2, rect.center.dy - tp.height / 2),
     );
   }
 }

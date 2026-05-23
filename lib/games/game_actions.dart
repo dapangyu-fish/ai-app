@@ -12,10 +12,13 @@
 // - @game_reset   : 重置（关卡内重玩）
 
 import 'dart:math';
+import 'dart:ui' show Rect;
 
 import 'flame_game_engine.dart';
 import 'game_entity.dart';
 import 'game_logic.dart';
+import 'platformer_physics_backend.dart';
+import 'tiled_map_entity.dart';
 
 class GameActions {
   GameActions._();
@@ -48,6 +51,15 @@ class GameActions {
       case '@game_reset':
         game.resetGame();
         return null;
+      case '@emit':
+        {
+          final eventName =
+              args['event']?.toString() ?? args['name']?.toString();
+          if (eventName == null || eventName.isEmpty) return false;
+          final data = (args['data'] as Map?)?.cast<String, dynamic>() ?? {};
+          game.emitEvent(eventName, data);
+          return true;
+        }
 
       // ---------- cell_path ----------
       case '@cell_path.advance':
@@ -76,7 +88,10 @@ class GameActions {
           if (pathId == null) return false;
           final ent = game.entities[pathId];
           if (ent is! CellPathEntity) return false;
-          if (cell is List && cell.length == 2 && cell[0] is num && cell[1] is num) {
+          if (cell is List &&
+              cell.length == 2 &&
+              cell[0] is num &&
+              cell[1] is num) {
             return ent.containsCell(
               (cell[0] as num).toInt(),
               (cell[1] as num).toInt(),
@@ -165,8 +180,7 @@ class GameActions {
       case '@value_grid.spawn':
         {
           final id = args['grid']?.toString();
-          final fourChance =
-              (args['four_chance'] as num?)?.toDouble() ?? 0.1;
+          final fourChance = (args['four_chance'] as num?)?.toDouble() ?? 0.1;
           if (id == null) return false;
           final ent = game.entities[id];
           if (ent is! ValueGridEntity) return false;
@@ -370,6 +384,64 @@ class GameActions {
           if (id == null) return false;
           return game.despawnEntity(id);
         }
+      case '@animated_sprite.set_animation':
+        {
+          final id = args['id']?.toString();
+          final name =
+              args['animation']?.toString() ?? args['name']?.toString();
+          if (id == null || name == null) return false;
+          return game.setSpriteAnimation(id, name);
+        }
+      case '@animated_sprite.effect':
+        {
+          return _spawnAnimationEffect(game, args);
+        }
+      case '@entity.exists':
+        {
+          final id = args['id']?.toString();
+          return id != null && game.entities.containsKey(id);
+        }
+      case '@entity.get':
+        {
+          final id = args['id']?.toString();
+          final field = args['field']?.toString();
+          if (id == null || field == null) return null;
+          return _readEntityField(game.entities[id], field);
+        }
+      case '@entity.set':
+        {
+          final id = args['id']?.toString();
+          final field = args['field']?.toString();
+          if (id == null || field == null) return false;
+          return _writeEntityField(game.entities[id], field, args['value']);
+        }
+      case '@entity.add':
+        {
+          final id = args['id']?.toString();
+          final field = args['field']?.toString();
+          final by = (args['by'] as num?)?.toDouble() ?? 0;
+          if (id == null || field == null) return false;
+          final current = _readEntityField(game.entities[id], field);
+          if (current is! num) return false;
+          var next = current.toDouble() + by;
+          final minV = (args['min'] as num?)?.toDouble();
+          final maxV = (args['max'] as num?)?.toDouble();
+          if (minV != null && next < minV) next = minV;
+          if (maxV != null && next > maxV) next = maxV;
+          return _writeEntityField(game.entities[id], field, next);
+        }
+      case '@entity.flip_by_velocity':
+        {
+          final id = args['id']?.toString();
+          final axis = args['axis']?.toString() ?? 'x';
+          final invert = args['invert'] == true;
+          final entity = game.entities[id];
+          if (entity is! SpriteEntity) return false;
+          final velocity = axis == 'y' ? entity.vy : entity.vx;
+          if (velocity == 0) return false;
+          entity.flipX = invert ? velocity > 0 : velocity < 0;
+          return true;
+        }
 
       // ---------- 碰撞检测 ----------
       case '@collide.rect':
@@ -383,6 +455,136 @@ class GameActions {
               a.x + a.w > b.x &&
               a.y < b.y + b.h &&
               a.y + a.h > b.y;
+        }
+      case '@collision.first':
+        {
+          final a = game.entities[args['a']?.toString()];
+          final wherePrefix = args['where_prefix']?.toString() ?? '';
+          if (a is! PixelEntity || wherePrefix.isEmpty) return null;
+          for (final entry in game.entities.entries) {
+            if (!entry.key.startsWith(wherePrefix)) continue;
+            final b = entry.value;
+            if (b is! PixelEntity) continue;
+            if (_rectsOverlap(a, b)) return entry.key;
+          }
+          return null;
+        }
+
+      // ---------- tiled map / platformer ----------
+      case '@tiled.loaded':
+        {
+          final id = args['id']?.toString() ?? args['map']?.toString();
+          final ent = game.entities[id];
+          return ent is TiledMapEntity && ent.loaded;
+        }
+      case '@tiled.first_object':
+        {
+          final mapId = args['map']?.toString();
+          final layer = args['layer']?.toString();
+          if (mapId == null || layer == null) return null;
+          final ent = game.entities[mapId];
+          if (ent is! TiledMapEntity) return null;
+          return ent.firstObject(layer)?.toMap();
+        }
+      case '@tiled.load':
+        {
+          final mapId = args['map']?.toString() ?? args['id']?.toString();
+          final source = args['source']?.toString();
+          if (mapId == null || source == null || source.isEmpty) return false;
+          final ent = game.entities[mapId];
+          if (ent is! TiledMapEntity) return false;
+          ent.loadSource(source);
+          return true;
+        }
+      case '@tiled.clear_spawned':
+        {
+          final prefix = args['prefix']?.toString() ?? '';
+          if (prefix.isEmpty) return false;
+          final ids = game.entities.keys
+              .where((id) => id.startsWith(prefix))
+              .toList(growable: false);
+          for (final id in ids) {
+            game.despawnEntity(id);
+          }
+          return ids.length;
+        }
+      case '@tiled.spawn_objects':
+        {
+          return _spawnTiledObjects(game, args);
+        }
+      case '@tiled.spawn_objects_near':
+        {
+          return _spawnTiledObjects(game, args, proximityOnly: true);
+        }
+      case '@tiled.collisions':
+        {
+          final mapId = args['map']?.toString();
+          final entityId = args['entity']?.toString() ?? args['id']?.toString();
+          final map = game.entities[mapId];
+          final entity = game.entities[entityId];
+          if (map is! TiledMapEntity || entity is! PixelEntity) return const [];
+          final rect = Rect.fromLTWH(entity.x, entity.y, entity.w, entity.h);
+          return map.collisionRectsIn(rect).map((e) => e.toMap()).toList();
+        }
+      case '@tiled.has_collision_type':
+        {
+          final mapId = args['map']?.toString();
+          final entityId = args['entity']?.toString() ?? args['id']?.toString();
+          final type = args['type']?.toString().toLowerCase();
+          final map = game.entities[mapId];
+          final entity = game.entities[entityId];
+          if (map is! TiledMapEntity ||
+              entity is! PixelEntity ||
+              type == null) {
+            return false;
+          }
+          final rect = Rect.fromLTWH(entity.x, entity.y, entity.w, entity.h);
+          return map
+              .collisionRectsIn(rect)
+              .any((collision) => collision.type.toLowerCase() == type);
+        }
+      case '@tiled.nearest_object':
+        {
+          final mapId = args['map']?.toString();
+          final layer = args['layer']?.toString();
+          final beforeX = (args['before_x'] as num?)?.toDouble();
+          if (mapId == null || layer == null || beforeX == null) return null;
+          final ent = game.entities[mapId];
+          if (ent is! TiledMapEntity) return null;
+          TiledObject? best;
+          for (final object in ent.objectsByLayer[layer] ?? const []) {
+            if (object.x >= beforeX) continue;
+            if (best == null || object.x > best.x) best = object;
+          }
+          return best?.toMap();
+        }
+      case '@platformer.step':
+        {
+          return _platformerStep(game, args);
+        }
+      case '@platformer.backend':
+        {
+          return game.platformerPhysics.toMap();
+        }
+      case '@platformer.respawn':
+        {
+          return _platformerRespawn(game, args);
+        }
+      case '@platformer.stuck_check':
+        {
+          return _platformerStuckCheck(game, args);
+        }
+      case '@platformer.section_exit':
+        {
+          final playerId = args['id']?.toString() ?? args['player']?.toString();
+          final mapId = args['map']?.toString();
+          final margin = (args['margin'] as num?)?.toDouble() ?? 0;
+          final player = game.entities[playerId];
+          final map = game.entities[mapId];
+          if (player is! PixelEntity || map is! TiledMapEntity || !map.loaded) {
+            return false;
+          }
+          return player.x >= map.widthPx - margin;
         }
 
       // ---------- 迭代 ----------
@@ -477,6 +679,562 @@ class GameActions {
     }
     return _SlideResult(result, score, moved);
   }
+
+  static bool _rectsOverlap(PixelEntity a, PixelEntity b) {
+    return a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y;
+  }
+
+  static dynamic _readEntityField(GameEntity? entity, String field) {
+    if (entity is PixelEntity) {
+      if (field.startsWith('state.')) {
+        return entity.state[field.substring('state.'.length)];
+      }
+      switch (field) {
+        case 'x':
+          return entity.x;
+        case 'y':
+          return entity.y;
+        case 'w':
+          return entity.w;
+        case 'h':
+          return entity.h;
+        case 'vx':
+          return entity.vx;
+        case 'vy':
+          return entity.vy;
+        case 'autoMove':
+        case 'auto_update':
+          return entity.autoMove;
+      }
+    }
+    if (entity is ParallaxEntity) {
+      switch (field) {
+        case 'speedX':
+        case 'speed_x':
+          return entity.speedX;
+        case 'y':
+          return entity.y;
+      }
+    }
+    return entity?.toMap()[field];
+  }
+
+  static bool _writeEntityField(
+    GameEntity? entity,
+    String field,
+    dynamic value,
+  ) {
+    if (entity is PixelEntity) {
+      if (field.startsWith('state.')) {
+        entity.state[field.substring('state.'.length)] = value;
+        return true;
+      }
+      switch (field) {
+        case 'autoMove':
+        case 'auto_update':
+          entity.autoMove = value == true;
+          return true;
+      }
+      final n = (value as num?)?.toDouble();
+      if (n == null) return false;
+      switch (field) {
+        case 'x':
+          entity.x = n;
+          return true;
+        case 'y':
+          entity.y = n;
+          return true;
+        case 'w':
+          entity.w = n;
+          return true;
+        case 'h':
+          entity.h = n;
+          return true;
+        case 'vx':
+          entity.vx = n;
+          return true;
+        case 'vy':
+          entity.vy = n;
+          return true;
+      }
+    }
+    if (entity is ParallaxEntity) {
+      final n = (value as num?)?.toDouble();
+      if (n == null) return false;
+      switch (field) {
+        case 'speedX':
+        case 'speed_x':
+          entity.speedX = n;
+          return true;
+        case 'y':
+          entity.y = n;
+          return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _platformerStep(JsonFlameGame game, Map<String, dynamic> args) {
+    final physics = args.containsKey('engine') || args.containsKey('backend')
+        ? PlatformerPhysicsConfig.fromSpec(args)
+        : game.platformerPhysics;
+    if (!physics.usesAabbRuntime) return false;
+
+    final playerId = args['id']?.toString() ?? args['player']?.toString();
+    final mapId = args['map']?.toString();
+    if (playerId == null || mapId == null) return false;
+    final player = game.entities[playerId];
+    final map = game.entities[mapId];
+    if (player is! PixelEntity || map is! TiledMapEntity || !map.loaded) {
+      return false;
+    }
+    player.state['physicsEngine'] = physics.engineName;
+    player.state['physicsRuntime'] = physics.runtimeName;
+    player.state['leapAvailable'] = LeapPlatformerBridge.available;
+
+    final dt = (args['dt'] as num?)?.toDouble() ?? 0;
+    if (dt <= 0) return false;
+    player.state['time'] =
+        ((player.state['time'] as num?)?.toDouble() ?? 0) + dt;
+    final gravity = (args['gravity'] as num?)?.toDouble() ?? 1800;
+    final maxFall = (args['max_fall'] as num?)?.toDouble() ?? 1600;
+    final jumpVelocity = (args['jump_velocity'] as num?)?.toDouble() ?? -720;
+    final jumpPressed = args['jump'] == true || args['jump_pressed'] == true;
+    final allowDoubleJump = args['allow_double_jump'] == true;
+    final autoRun = (args['auto_run'] as num?)?.toDouble();
+    final move = (args['move'] as num?)?.toDouble();
+    final speed = (args['speed'] as num?)?.toDouble() ?? 320;
+
+    if (autoRun != null) {
+      player.vx = autoRun;
+    } else if (move != null) {
+      player.vx = move.clamp(-1, 1) * speed;
+    }
+
+    final onGround = player.state['onGround'] == true;
+    final doubleJumpUsed = player.state['doubleJumpUsed'] == true;
+    if (jumpPressed) {
+      if (onGround) {
+        player.vy = jumpVelocity;
+        player.state['onGround'] = false;
+        player.state['doubleJumpUsed'] = false;
+      } else if (allowDoubleJump && !doubleJumpUsed) {
+        player.vy = jumpVelocity;
+        player.state['doubleJumpUsed'] = true;
+      }
+    }
+
+    player.vy = (player.vy + gravity * dt).clamp(-maxFall, maxFall);
+    _moveAndCollideX(player, map, player.vx * dt);
+    _moveAndCollideY(player, map, player.vy * dt);
+    final rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
+    final hazards = map.collisionRectsIn(rect).where((c) => c.hazard).toList();
+    player.state['hazard'] = hazards.isNotEmpty;
+    player.state['hazardCollision'] = hazards.isEmpty
+        ? null
+        : hazards.first.toMap();
+    return true;
+  }
+
+  static bool _platformerRespawn(
+    JsonFlameGame game,
+    Map<String, dynamic> args,
+  ) {
+    final playerId = args['id']?.toString() ?? args['player']?.toString();
+    final mapId = args['map']?.toString();
+    final layer = args['layer']?.toString() ?? 'respawn';
+    if (playerId == null || mapId == null) return false;
+    final player = game.entities[playerId];
+    final map = game.entities[mapId];
+    if (player is! PixelEntity || map is! TiledMapEntity) return false;
+    TiledObject? best;
+    for (final object in map.objectsByLayer[layer] ?? const <TiledObject>[]) {
+      if (object.x >= player.x) continue;
+      if (best == null || object.x > best.x) best = object;
+    }
+    best ??= map.firstObject('spawn');
+    if (best == null) return false;
+    player.x = best.x;
+    player.y = best.y - player.h;
+    player.vx = 0;
+    player.vy = 0;
+    player.state['onGround'] = false;
+    player.state['doubleJumpUsed'] = false;
+    player.state['hazard'] = false;
+    final invincibleSeconds = (args['invincible_seconds'] as num?)?.toDouble();
+    if (invincibleSeconds != null && invincibleSeconds > 0) {
+      player.state['invincibleUntil'] =
+          ((player.state['time'] as num?)?.toDouble() ?? 0) + invincibleSeconds;
+    }
+    return true;
+  }
+
+  static bool _platformerStuckCheck(
+    JsonFlameGame game,
+    Map<String, dynamic> args,
+  ) {
+    final playerId = args['id']?.toString() ?? args['player']?.toString();
+    final player = game.entities[playerId];
+    if (player is! PixelEntity) return false;
+    final dt = (args['dt'] as num?)?.toDouble() ?? 0;
+    final enabled = args['enabled'] != false;
+    final threshold = (args['threshold'] as num?)?.toDouble() ?? 1;
+    final timeout = (args['timeout'] as num?)?.toDouble() ?? 1;
+    final lastX = (player.state['stuckLastX'] as num?)?.toDouble() ?? player.x;
+    var timer = (player.state['stuckTimer'] as num?)?.toDouble() ?? timeout;
+    if (!enabled || dt <= 0) {
+      player.state['stuckLastX'] = player.x;
+      player.state['stuckTimer'] = timeout;
+      player.state['stuck'] = false;
+      return false;
+    }
+    if ((player.x - lastX).abs() <= threshold) {
+      timer -= dt;
+    } else {
+      timer = timeout;
+    }
+    player.state['stuckLastX'] = player.x;
+    player.state['stuckTimer'] = timer;
+    final stuck = timer <= 0;
+    player.state['stuck'] = stuck;
+    return stuck;
+  }
+
+  static int _spawnTiledObjects(
+    JsonFlameGame game,
+    Map<String, dynamic> args, {
+    bool proximityOnly = false,
+  }) {
+    final mapId = args['map']?.toString();
+    final layer = args['layer']?.toString();
+    final prefix = args['prefix']?.toString() ?? '${layer ?? 'object'}_';
+    if (mapId == null || layer == null) return 0;
+    final map = game.entities[mapId];
+    if (map is! TiledMapEntity || !map.loaded) return 0;
+
+    final kind = args['kind']?.toString() ?? layer;
+    final referenceId = args['reference']?.toString();
+    final reference = game.entities[referenceId];
+    final proximity = (args['proximity'] as num?)?.toDouble() ?? 0;
+    final despawnDistance = (args['despawn_distance'] as num?)?.toDouble();
+    var count = 0;
+    for (final object in map.objectsByLayer[layer] ?? const <TiledObject>[]) {
+      if (proximityOnly) {
+        if (reference is! PixelEntity || proximity <= 0) continue;
+        if ((object.x - reference.x).abs() > proximity) continue;
+      }
+      final type =
+          object.properties['Type']?.toString() ??
+          object.type.ifEmpty('default');
+      final id = '${_objectPrefix(prefix, kind, type)}${object.id}';
+      if (game.entities.containsKey(id)) continue;
+
+      final spec = switch (kind) {
+        'items' || 'item' => _itemSpec(map, object, type),
+        'enemies' || 'enemy' => _enemySpec(map, object, type),
+        _ => _objectSpriteSpec(map, object, type),
+      };
+      if (spec == null) continue;
+      if (despawnDistance != null) {
+        final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
+        state['despawnDistance'] = despawnDistance;
+        state['despawnReference'] = referenceId;
+        spec['state'] = state;
+      }
+      if (game.spawnEntity(id, spec)) count++;
+    }
+    if (despawnDistance != null && reference is PixelEntity) {
+      final ids = game.entities.entries
+          .where((entry) {
+            if (!_matchesObjectPrefix(entry.key, prefix, kind)) return false;
+            final entity = entry.value;
+            return entity is PixelEntity &&
+                (entity.x - reference.x).abs() > despawnDistance;
+          })
+          .map((entry) => entry.key)
+          .toList(growable: false);
+      for (final id in ids) {
+        game.despawnEntity(id);
+      }
+    }
+    return count;
+  }
+
+  static bool _spawnAnimationEffect(
+    JsonFlameGame game,
+    Map<String, dynamic> args,
+  ) {
+    final id =
+        args['id']?.toString() ??
+        'effect_${DateTime.now().microsecondsSinceEpoch}';
+    final asset = args['asset']?.toString();
+    if (asset == null || asset.isEmpty) return false;
+    final atEntity = game.entities[args['at']?.toString()];
+    final pos = args['position'];
+    double x = 0, y = 0;
+    if (atEntity is PixelEntity) {
+      x = atEntity.x + atEntity.w / 2;
+      y = atEntity.y + atEntity.h / 2;
+    } else if (pos is List && pos.length >= 2) {
+      x = (pos[0] as num).toDouble();
+      y = (pos[1] as num).toDouble();
+    }
+    final size = (args['size'] as num?)?.toDouble() ?? 64;
+    return game.spawnEntity(id, {
+      'kind': 'animated_sprite',
+      'priority': (args['priority'] as num?)?.toInt() ?? 45,
+      'asset': asset,
+      'position': [x - size / 2, y - size / 2],
+      'size': [size, size],
+      'frame_size': [
+        (args['frame_w'] as num?)?.toDouble() ?? size,
+        (args['frame_h'] as num?)?.toDouble() ?? size,
+      ],
+      'frames': (args['frames'] as num?)?.toInt() ?? 1,
+      'frames_per_row': (args['frames_per_row'] as num?)?.toInt() ?? 0,
+      'step_time': (args['step_time'] as num?)?.toDouble() ?? 0.042,
+      'loop': false,
+      'state': {'removeOnFinish': true},
+      'render': args['render'] ?? const {},
+    });
+  }
+
+  static String _objectPrefix(String fallback, String kind, String type) {
+    if (kind == 'items' || kind == 'item') {
+      if (type == 'Egg') return 'egg_';
+      if (type == 'Feather') return 'feather_';
+      return 'acorn_';
+    }
+    if (kind == 'enemies' || kind == 'enemy') return 'enemy_';
+    return fallback;
+  }
+
+  static bool _matchesObjectPrefix(String id, String fallback, String kind) {
+    if (kind == 'items' || kind == 'item') {
+      return id.startsWith('acorn_') ||
+          id.startsWith('egg_') ||
+          id.startsWith('feather_');
+    }
+    if (kind == 'enemies' || kind == 'enemy') return id.startsWith('enemy_');
+    return id.startsWith(fallback);
+  }
+
+  static Map<String, dynamic>? _itemSpec(
+    TiledMapEntity map,
+    TiledObject object,
+    String type,
+  ) {
+    final tile = map.tileWidth * map.scale;
+    final size = object.width > 0 ? object.width : tile;
+    final state = {
+      'objectId': object.id,
+      'objectType': type,
+      'itemType': type == 'Egg'
+          ? 'egg'
+          : type == 'Feather'
+          ? 'feather'
+          : 'acorn',
+      'points': type == 'Egg' ? 1000 : 10,
+    };
+    if (type == 'Egg') {
+      return _animatedSpec(
+        asset: _asset(map, 'map/anim/spritesheet_item_egg.png'),
+        x: object.x,
+        y: object.y - size,
+        w: size,
+        h: size,
+        frames: 48,
+        framesPerRow: 8,
+        state: state,
+      );
+    }
+    if (type == 'Feather') {
+      return _animatedSpec(
+        asset: _asset(map, 'map/anim/spritesheet_item_feather.png'),
+        x: object.x,
+        y: object.y - size,
+        w: size,
+        h: size,
+        frames: 30,
+        framesPerRow: 6,
+        state: state,
+      );
+    }
+    final sprite = map.spriteForGid(object.gid);
+    return {
+      'kind': 'sprite',
+      'priority': 25,
+      'asset': sprite?.asset ?? _asset(map, 'map/objects/tile_items_v2.png'),
+      'src': sprite == null
+          ? [0, 0, 64, 64]
+          : [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH],
+      'position': [object.x, object.y - size],
+      'size': [size, size],
+      'state': state,
+      'render': {'shape': 'circle', 'color': '#FFD16655'},
+    };
+  }
+
+  static Map<String, dynamic>? _enemySpec(
+    TiledMapEntity map,
+    TiledObject object,
+    String type,
+  ) {
+    final tile = map.tileWidth * map.scale;
+    final hitbox = tile * 0.5;
+    final info = switch (type) {
+      'Bee' => ('spritesheet_enemy_bee.png', 14, 7),
+      'Butterfly' => ('spritesheet_enemy_butterfly.png', 16, 8),
+      'Grasshopper' => ('spritesheet_enemy_grasshopper.png', 22, 11),
+      'Firefly' => ('spritesheet_enemy_dragonfly.png', 32, 8),
+      'Ant' => ('spritesheet_enemy_ant.png', 12, 6),
+      _ => ('spritesheet_enemy_beetle.png', 16, 8),
+    };
+    return _animatedSpec(
+      asset: _asset(map, 'map/anim/${info.$1}'),
+      x: object.x,
+      y: object.y - hitbox,
+      w: hitbox,
+      h: hitbox,
+      frames: info.$2,
+      framesPerRow: info.$3,
+      state: {
+        'objectId': object.id,
+        'objectType': type,
+        'enemyType': type.ifEmpty('Beetle'),
+        'path': object.properties['Path'],
+        'pathTile': tile,
+        'pathSpeed': tile * 3,
+        'fly':
+            object.properties['Fly'] == true ||
+            object.properties['Fly']?.toString() == 'true',
+      },
+      priority: 25,
+    );
+  }
+
+  static Map<String, dynamic>? _objectSpriteSpec(
+    TiledMapEntity map,
+    TiledObject object,
+    String type,
+  ) {
+    final sprite = map.spriteForGid(object.gid);
+    if (sprite == null) return null;
+    return {
+      'kind': 'sprite',
+      'priority': 20,
+      'asset': sprite.asset,
+      'src': [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH],
+      'position': [object.x, object.y - object.height],
+      'size': [object.width, object.height],
+      'state': {'objectId': object.id, 'objectType': type},
+    };
+  }
+
+  static Map<String, dynamic> _animatedSpec({
+    required String asset,
+    required double x,
+    required double y,
+    required double w,
+    required double h,
+    required int frames,
+    required int framesPerRow,
+    required Map<String, dynamic> state,
+    int priority = 25,
+  }) {
+    return {
+      'kind': 'animated_sprite',
+      'priority': priority,
+      'asset': asset,
+      'position': [x, y],
+      'size': [w, h],
+      'frame_size': [64, 64],
+      'frames': frames,
+      'frames_per_row': framesPerRow,
+      'step_time': 0.04,
+      'state': state,
+      'render': {'shape': 'rect', 'color': '#B24A4A33', 'radius': 4},
+    };
+  }
+
+  static String _asset(TiledMapEntity map, String path) {
+    final base = map.baseUrl;
+    if (base == null || base.isEmpty) return path;
+    return Uri.parse(base).resolve(path).toString();
+  }
+
+  static void _moveAndCollideX(
+    PixelEntity player,
+    TiledMapEntity map,
+    double dx,
+  ) {
+    if (dx == 0) return;
+    player.x += dx;
+    final rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
+    for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
+      final solid = collision.rect;
+      if (!solid.overlaps(
+        Rect.fromLTWH(player.x, player.y, player.w, player.h),
+      )) {
+        continue;
+      }
+      if (dx > 0) {
+        player.x = solid.left - player.w;
+      } else {
+        player.x = solid.right;
+      }
+      player.vx = 0;
+    }
+  }
+
+  static void _moveAndCollideY(
+    PixelEntity player,
+    TiledMapEntity map,
+    double dy,
+  ) {
+    player.state['onGround'] = false;
+    if (dy == 0) return;
+    player.y += dy;
+    var rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
+    for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
+      final solid = collision.rect;
+      rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
+      if (!solid.overlaps(rect)) continue;
+      if (dy > 0) {
+        final slopeTop = _slopeTopAt(collision, rect.center.dx, map.scale);
+        player.y = slopeTop - player.h;
+        player.state['onGround'] = true;
+        player.state['doubleJumpUsed'] = false;
+      } else {
+        player.y = solid.bottom;
+      }
+      player.vy = 0;
+    }
+  }
+
+  static double _slopeTopAt(
+    TiledTileCollision collision,
+    double worldX,
+    double scale,
+  ) {
+    if (collision.type.toLowerCase() != 'slope') return collision.rect.top;
+    final leftTop = (collision.properties['LeftTop'] as num?)?.toDouble();
+    final rightTop = (collision.properties['RightTop'] as num?)?.toDouble();
+    if (leftTop == null || rightTop == null) return collision.rect.top;
+    final ratio = ((worldX - collision.rect.left) / collision.rect.width).clamp(
+      0,
+      1,
+    );
+    return collision.rect.top +
+        (leftTop + (rightTop - leftTop) * ratio) * scale;
+  }
+}
+
+extension on String {
+  String ifEmpty(String fallback) => isEmpty ? fallback : this;
 }
 
 class _SlideResult {

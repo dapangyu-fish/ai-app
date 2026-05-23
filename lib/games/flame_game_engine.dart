@@ -8,18 +8,23 @@
 // 5. emit 事件给外层 widget（onScoreChanged / onGameOver）让 JSON-APP 接
 
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 import 'game_entity.dart';
 import 'game_logic.dart';
+import 'tiled_map_entity.dart';
+import 'platformer_physics_backend.dart';
 import 'game_world.dart';
 import '../i18n/framework_strings.dart';
 
 /// 事件回调签名（跟 A 模式一致，外层 widget 把事件桥到 JSON-DSL action）
-typedef GameEventCallback = void Function(
-    String eventName, Map<String, dynamic> data);
+typedef GameEventCallback =
+    void Function(String eventName, Map<String, dynamic> data);
 
 /// tick 循环
 class _TickLoop {
@@ -53,6 +58,7 @@ class JsonFlameGame extends FlameGame {
   bool isGameOver = false;
 
   late final GameLogicEngine logic;
+  final Map<String, Future<ui.Image>> _imageCache = {};
 
   // 输入 / 循环
   List<dynamic>? _tapAction;
@@ -68,11 +74,29 @@ class JsonFlameGame extends FlameGame {
   // 内置 overlay 配置
   bool _showScore = true;
   bool _showGameOver = true; // overlay.game_over=false 时关掉 canvas
-                              // 浮层 + tap/swipe 自动重置，让 JSON-APP 用
-                              // common-ui dialog 接管结算页
+  // 浮层 + tap/swipe 自动重置，让 JSON-APP 用
+  // common-ui dialog 接管结算页
   // 默认值在构造函数里走 T.current（非 const，所以不能放 field 初始化）
   String _gameOverTitle = '';
   String _gameOverHint = '';
+  String? _cameraFollow;
+  String? _cameraMap;
+  double _cameraX = 0;
+  double _cameraY = 0;
+  double _cameraOffsetX = 0;
+  double _cameraOffsetY = 0;
+  double _cameraDeadzoneY = 0;
+  double _cameraSmoothY = 1;
+  double? _viewportWidth;
+  double? _viewportHeight;
+  String _viewportFit = 'contain';
+  double _viewportScale = 1;
+  double _viewportDx = 0;
+  double _viewportDy = 0;
+  PlatformerPhysicsConfig _platformerPhysics = const PlatformerPhysicsConfig(
+    backend: PlatformerPhysicsBackend.aabb,
+    fallback: PlatformerPhysicsBackend.aabb,
+  );
 
   JsonFlameGame({required this.spec, this.onEvent}) {
     // ⚠️ 必须在构造函数里同步完成所有 spec 解析。
@@ -99,7 +123,8 @@ class JsonFlameGame extends FlameGame {
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    gameWorld.resize(size.x, size.y);
+    _updateViewportTransform(size.x, size.y);
+    gameWorld.resize(_worldWidthForSize(size.x), _worldHeightForSize(size.y));
     // 第一次拿到有效画布尺寸时才铺 entities（scroll_list 等依赖 size）
     if (!_ready && size.x > 0 && size.y > 0) {
       _ready = true;
@@ -117,6 +142,7 @@ class JsonFlameGame extends FlameGame {
     for (final e in entities.values) {
       e.update(dt, gameWorld);
     }
+    entities.removeWhere((_, entity) => entity.expired);
 
     // 2. frame logic
     if (_frameLogic != null) {
@@ -130,7 +156,8 @@ class JsonFlameGame extends FlameGame {
     for (final t in _ticks) {
       t.accumulator += dt;
       // 每次取 interval（让 "{{ vars.tick_interval }}" 可动态变化）
-      final iv = (logic.resolveExpression(t.intervalSpec) as num?)?.toDouble() ?? 0.16;
+      final iv =
+          (logic.resolveExpression(t.intervalSpec) as num?)?.toDouble() ?? 0.16;
       while (t.accumulator >= iv && !isGameOver) {
         t.accumulator -= iv;
         logic.runLogic(t.logic);
@@ -149,15 +176,30 @@ class JsonFlameGame extends FlameGame {
       Paint()..color = gameWorld.bg,
     );
 
+    canvas.save();
+    if (_hasVirtualViewport) {
+      canvas.translate(_viewportDx, _viewportDy);
+      canvas.scale(_viewportScale, _viewportScale);
+      canvas.clipRect(Rect.fromLTWH(0, 0, gameWorld.width, gameWorld.height));
+    }
+
     // 网格线（grid 模式 + 配了 grid_lines 才画）
     if (gameWorld.kind == 'grid' && gameWorld.gridLines != null) {
       _drawGridLines(canvas);
     }
 
     // entities
-    for (final e in entities.values) {
+    _updateCamera();
+    canvas.save();
+    canvas.translate(-_cameraX, -_cameraY);
+    final renderList = entities.values.toList()
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+    for (final e in renderList) {
       e.render(canvas, gameWorld);
     }
+    canvas.restore();
+
+    canvas.restore();
 
     // 内置 overlay
     if (_showScore) _drawScoreOverlay(canvas);
@@ -169,6 +211,7 @@ class JsonFlameGame extends FlameGame {
   /// 外层 GestureDetector.onTapDown 转过来
   void handleTap(double x, double y) {
     if (!_ready) return;
+    final point = _toWorldPoint(x, y);
     if (isGameOver) {
       // 关掉内置浮层 = JSON-APP 自己接管结算页，tap 不再自动重置
       if (!_showGameOver) return;
@@ -176,7 +219,7 @@ class JsonFlameGame extends FlameGame {
       return;
     }
     if (_tapAction != null) {
-      logic.runLogic(_tapAction!, {'x': x, 'y': y});
+      logic.runLogic(_tapAction!, {'x': point.dx, 'y': point.dy});
     }
   }
 
@@ -190,12 +233,13 @@ class JsonFlameGame extends FlameGame {
       return;
     }
     if (_swipeAction != null) {
+      final delta = _toWorldDelta(dx, dy);
       final dir = _swipeDirection(dx, dy);
       if (dir == null) return;
       logic.runLogic(_swipeAction!, {
         'direction': dir,
-        'dx': dx,
-        'dy': dy,
+        'dx': delta.dx,
+        'dy': delta.dy,
       });
     }
   }
@@ -205,10 +249,8 @@ class JsonFlameGame extends FlameGame {
     if (!_ready) return;
     if (isGameOver) return;
     if (_panAction != null) {
-      logic.runLogic(_panAction!, {
-        'dx': dx,
-        'dy': dy,
-      });
+      final delta = _toWorldDelta(dx, dy);
+      logic.runLogic(_panAction!, {'dx': delta.dx, 'dy': delta.dy});
     }
   }
 
@@ -222,13 +264,15 @@ class JsonFlameGame extends FlameGame {
     if (!_ready) return;
     if (isGameOver) return;
     if (_pressEndAction != null) {
+      final point = _toWorldPoint(x, y);
       logic.runLogic(_pressEndAction!, {
-        'x': x,
-        'y': y,
+        'x': point.dx,
+        'y': point.dy,
         'held_ms': heldMs,
       });
     }
   }
+
   double get swipeThreshold => _swipeThreshold;
 
   String? _swipeDirection(double dx, double dy) {
@@ -258,6 +302,11 @@ class JsonFlameGame extends FlameGame {
     onEvent?.call('game_over', {'score': score, 'best': bestScore});
   }
 
+  void emitEvent(String eventName, Map<String, dynamic> data) {
+    if (eventName.isEmpty) return;
+    onEvent?.call(eventName, data);
+  }
+
   void resetGame() => _resetGameState();
 
   /// 动态加 entity（@spawn 用）。spec 跟初始 entities map 里那个 spec 一样：
@@ -267,6 +316,7 @@ class JsonFlameGame extends FlameGame {
     final ent = _buildEntity(id, spec);
     if (ent == null) return false;
     entities[id] = ent;
+    _prepareEntity(ent);
     return true;
   }
 
@@ -274,6 +324,17 @@ class JsonFlameGame extends FlameGame {
   bool despawnEntity(String id) {
     return entities.remove(id) != null;
   }
+
+  bool setSpriteAnimation(String id, String name) {
+    final ent = entities[id];
+    if (ent is! AnimatedSpriteEntity) return false;
+    final spec = ent.setAnimation(name);
+    if (spec == null) return false;
+    _prepareEntity(ent);
+    return true;
+  }
+
+  PlatformerPhysicsConfig get platformerPhysics => _platformerPhysics;
 
   // ---------- 解析 spec ----------
 
@@ -297,17 +358,21 @@ class JsonFlameGame extends FlameGame {
     _ticks.clear();
     final ticksRaw = spec['tick'];
     if (ticksRaw is Map<String, dynamic>) {
-      _ticks.add(_TickLoop(
-        intervalSpec: ticksRaw['interval'],
-        logic: _toLogicList(ticksRaw['logic']) ?? const [],
-      ));
+      _ticks.add(
+        _TickLoop(
+          intervalSpec: ticksRaw['interval'],
+          logic: _toLogicList(ticksRaw['logic']) ?? const [],
+        ),
+      );
     } else if (ticksRaw is List) {
       for (final t in ticksRaw) {
         if (t is Map<String, dynamic>) {
-          _ticks.add(_TickLoop(
-            intervalSpec: t['interval'],
-            logic: _toLogicList(t['logic']) ?? const [],
-          ));
+          _ticks.add(
+            _TickLoop(
+              intervalSpec: t['interval'],
+              logic: _toLogicList(t['logic']) ?? const [],
+            ),
+          );
         }
       }
     }
@@ -320,6 +385,21 @@ class JsonFlameGame extends FlameGame {
       _gameOverTitle = ov['game_over_title']?.toString() ?? _gameOverTitle;
       _gameOverHint = ov['game_over_hint']?.toString() ?? _gameOverHint;
     }
+
+    final camera = spec['camera'] as Map<String, dynamic>?;
+    _cameraFollow = camera?['follow']?.toString();
+    _cameraMap = camera?['map']?.toString();
+    _cameraOffsetX = (camera?['offset_x'] as num?)?.toDouble() ?? 0;
+    _cameraOffsetY = (camera?['offset_y'] as num?)?.toDouble() ?? 0;
+    _cameraDeadzoneY = (camera?['deadzone_y'] as num?)?.toDouble() ?? 0;
+    _cameraSmoothY = (camera?['smooth_y'] as num?)?.toDouble() ?? 1;
+
+    _platformerPhysics = PlatformerPhysicsConfig.fromSpec(spec['physics']);
+
+    final viewport = spec['viewport'] as Map<String, dynamic>?;
+    _viewportWidth = (viewport?['width'] as num?)?.toDouble();
+    _viewportHeight = (viewport?['height'] as num?)?.toDouble();
+    _viewportFit = viewport?['fit']?.toString() ?? 'contain';
   }
 
   List<dynamic>? _toLogicList(dynamic raw) {
@@ -346,7 +426,10 @@ class JsonFlameGame extends FlameGame {
     final ents = (spec['entities'] as Map?)?.cast<String, dynamic>() ?? {};
     ents.forEach((id, raw) {
       final ent = _buildEntity(id, raw as Map<String, dynamic>);
-      if (ent != null) entities[id] = ent;
+      if (ent != null) {
+        entities[id] = ent;
+        _prepareEntity(ent);
+      }
     });
 
     // 重置 tick 累积器
@@ -366,8 +449,10 @@ class JsonFlameGame extends FlameGame {
 
   GameEntity? _buildEntity(String id, Map<String, dynamic> spec) {
     final kind = spec['kind']?.toString() ?? 'cell';
-    final renderRaw = (spec['render'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final renderRaw =
+        (spec['render'] as Map?)?.cast<String, dynamic>() ?? const {};
     final render = renderRaw.map((k, v) => MapEntry(k, v));
+    final priority = (spec['priority'] as num?)?.toInt() ?? 0;
 
     switch (kind) {
       case 'cell':
@@ -378,7 +463,13 @@ class JsonFlameGame extends FlameGame {
             x = (initRaw[0] as num).toInt();
             y = (initRaw[1] as num).toInt();
           }
-          return CellEntity(id: id, renderConfig: render, x: x, y: y);
+          return CellEntity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            x: x,
+            y: y,
+          );
         }
       case 'cell_path':
         {
@@ -391,14 +482,18 @@ class JsonFlameGame extends FlameGame {
               }
             }
           }
-          return CellPathEntity(id: id, renderConfig: render, cells: cells);
+          return CellPathEntity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            cells: cells,
+          );
         }
       case 'value_grid':
         {
           final cols = (spec['cols'] as num?)?.toInt() ?? 4;
           final rows = (spec['rows'] as num?)?.toInt() ?? 4;
-          final fill =
-              (spec['fill'] as num?)?.toInt() ?? 0; // 默认空 (0)
+          final fill = (spec['fill'] as num?)?.toInt() ?? 0; // 默认空 (0)
           final cells = <List<int>>[];
           final initRaw = spec['init'];
           for (int r = 0; r < rows; r++) {
@@ -418,6 +513,7 @@ class JsonFlameGame extends FlameGame {
           return ValueGridEntity(
             id: id,
             renderConfig: render,
+            priority: priority,
             cols: cols,
             rows: rows,
             cells: cells,
@@ -446,7 +542,129 @@ class JsonFlameGame extends FlameGame {
           return PixelEntity(
             id: id,
             renderConfig: render,
-            x: x, y: y, w: w, h: h, vx: vx, vy: vy,
+            priority: priority,
+            x: x,
+            y: y,
+            w: w,
+            h: h,
+            vx: vx,
+            vy: vy,
+            autoMove: spec['auto_update'] != false,
+            state: (spec['state'] as Map?)?.cast<String, dynamic>(),
+          );
+        }
+      case 'sprite':
+        {
+          final pixel = _readPixelSpec(spec);
+          final src = spec['src'];
+          double srcX = 0, srcY = 0;
+          double? srcW, srcH;
+          if (src is List && src.length >= 4) {
+            srcX = (src[0] as num).toDouble();
+            srcY = (src[1] as num).toDouble();
+            srcW = (src[2] as num).toDouble();
+            srcH = (src[3] as num).toDouble();
+          }
+          return SpriteEntity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            x: pixel.x,
+            y: pixel.y,
+            w: pixel.w,
+            h: pixel.h,
+            vx: pixel.vx,
+            vy: pixel.vy,
+            autoMove: pixel.autoMove,
+            state: pixel.state,
+            asset:
+                spec['asset']?.toString() ?? render['asset']?.toString() ?? '',
+            srcX: srcX,
+            srcY: srcY,
+            srcW: srcW,
+            srcH: srcH,
+            flipX: spec['flip_x'] == true || render['flip_x'] == true,
+          );
+        }
+      case 'animated_sprite':
+        {
+          final pixel = _readPixelSpec(spec);
+          final frameSize = spec['frame_size'];
+          double frameW = (spec['frame_w'] as num?)?.toDouble() ?? 16;
+          double frameH = (spec['frame_h'] as num?)?.toDouble() ?? 16;
+          if (frameSize is List && frameSize.length >= 2) {
+            frameW = (frameSize[0] as num).toDouble();
+            frameH = (frameSize[1] as num).toDouble();
+          }
+          final animations = _readAnimations(spec['animations']);
+          final animationName = spec['animation']?.toString();
+          final animationSpec = animationName == null
+              ? null
+              : animations[animationName];
+          if (animationSpec != null) {
+            frameW = animationSpec.frameW;
+            frameH = animationSpec.frameH;
+          }
+          return AnimatedSpriteEntity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            x: pixel.x,
+            y: pixel.y,
+            w: pixel.w,
+            h: pixel.h,
+            vx: pixel.vx,
+            vy: pixel.vy,
+            autoMove: pixel.autoMove,
+            state: pixel.state,
+            asset:
+                animationSpec?.asset ??
+                spec['asset']?.toString() ??
+                render['asset']?.toString() ??
+                '',
+            frameW: frameW,
+            frameH: frameH,
+            frames:
+                animationSpec?.frames ?? (spec['frames'] as num?)?.toInt() ?? 1,
+            framesPerRow:
+                animationSpec?.framesPerRow ??
+                (spec['frames_per_row'] as num?)?.toInt() ??
+                0,
+            stepTime:
+                animationSpec?.stepTime ??
+                (spec['step_time'] as num?)?.toDouble() ??
+                0.12,
+            loop: animationSpec?.loop ?? spec['loop'] != false,
+            animations: animations,
+            currentAnimation: animationName,
+            flipX: spec['flip_x'] == true || render['flip_x'] == true,
+          );
+        }
+      case 'parallax':
+        {
+          return ParallaxEntity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            asset:
+                spec['asset']?.toString() ?? render['asset']?.toString() ?? '',
+            speedX: (spec['speed_x'] as num?)?.toDouble() ?? 0,
+            y: (spec['y'] as num?)?.toDouble() ?? 0,
+            height: (spec['height'] as num?)?.toDouble(),
+          );
+        }
+      case 'tiled_map':
+        {
+          return TiledMapEntity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            source: spec['source']?.toString() ?? spec['map']?.toString() ?? '',
+            baseUrl: spec['base_url']?.toString(),
+            scale: (spec['scale'] as num?)?.toDouble() ?? 1,
+            includeLayers: _readStringSet(spec['include_layers']),
+            excludeLayers: _readStringSet(spec['exclude_layers']) ?? const {},
+            collidable: spec['collidable'] != false,
           );
         }
       case 'scroll_list':
@@ -457,28 +675,32 @@ class JsonFlameGame extends FlameGame {
               (spec['row_spec'] as Map?)?.cast<String, dynamic>() ?? const {};
           final cellsPerRow = (rowSpec['cells'] as num?)?.toInt() ?? 4;
           // 默认行高 = 画布宽度 / 列数（方块），用户也可显式 row_height 覆盖
-          final rowHeight = (spec['row_height'] as num?)?.toDouble() ??
-              (this.size.x > 0 ? this.size.x / cellsPerRow : 95);
+          final rowHeight =
+              (spec['row_height'] as num?)?.toDouble() ??
+              (gameWorld.width > 0 ? gameWorld.width / cellsPerRow : 95);
           final safeBottom = (spec['safe_zone_bottom'] as num?)?.toInt() ?? 2;
           // 初始铺一些行
           final rows = <ScrollRow>[];
           final rand = Random();
-          if (this.size.x > 0 && this.size.y > 0) {
+          if (gameWorld.width > 0 && gameWorld.height > 0) {
             double y = -rowHeight * 5;
-            while (y < this.size.y + rowHeight) {
-              final inSafe = (this.size.y - rowHeight * safeBottom) <= y;
-              rows.add(ScrollRow(
-                y: y,
-                activeIndex: inSafe ? -1 : rand.nextInt(cellsPerRow),
-                cells: cellsPerRow,
-                missedChecked: y >= this.size.y - rowHeight,
-              ));
+            while (y < gameWorld.height + rowHeight) {
+              final inSafe = (gameWorld.height - rowHeight * safeBottom) <= y;
+              rows.add(
+                ScrollRow(
+                  y: y,
+                  activeIndex: inSafe ? -1 : rand.nextInt(cellsPerRow),
+                  cells: cellsPerRow,
+                  missedChecked: y >= gameWorld.height - rowHeight,
+                ),
+              );
               y += rowHeight;
             }
           }
           return ScrollListEntity(
             id: id,
             renderConfig: render,
+            priority: priority,
             scrollDirection: scrollDir,
             speed: speed,
             rowHeight: rowHeight,
@@ -489,6 +711,191 @@ class JsonFlameGame extends FlameGame {
         }
     }
     return null;
+  }
+
+  ({
+    double x,
+    double y,
+    double w,
+    double h,
+    double vx,
+    double vy,
+    bool autoMove,
+    Map<String, dynamic>? state,
+  })
+  _readPixelSpec(Map<String, dynamic> spec) {
+    final pos = spec['position'];
+    final size = spec['size'];
+    final vel = spec['velocity'];
+    double x = 0, y = 0;
+    if (pos is List && pos.length >= 2) {
+      x = (pos[0] as num).toDouble();
+      y = (pos[1] as num).toDouble();
+    }
+    double w = 20, h = 20;
+    if (size is List && size.length >= 2) {
+      w = (size[0] as num).toDouble();
+      h = (size[1] as num).toDouble();
+    }
+    double vx = 0, vy = 0;
+    if (vel is List && vel.length >= 2) {
+      vx = (vel[0] as num).toDouble();
+      vy = (vel[1] as num).toDouble();
+    }
+    return (
+      x: x,
+      y: y,
+      w: w,
+      h: h,
+      vx: vx,
+      vy: vy,
+      autoMove: spec['auto_update'] != false,
+      state: (spec['state'] as Map?)?.cast<String, dynamic>(),
+    );
+  }
+
+  Map<String, SpriteAnimationSpec> _readAnimations(dynamic raw) {
+    if (raw is! Map) return const {};
+    final out = <String, SpriteAnimationSpec>{};
+    raw.forEach((key, value) {
+      if (value is! Map) return;
+      final spec = value.cast<String, dynamic>();
+      final frameSize = spec['frame_size'];
+      double frameW = (spec['frame_w'] as num?)?.toDouble() ?? 64;
+      double frameH = (spec['frame_h'] as num?)?.toDouble() ?? 64;
+      if (frameSize is List && frameSize.length >= 2) {
+        frameW = (frameSize[0] as num).toDouble();
+        frameH = (frameSize[1] as num).toDouble();
+      }
+      out[key.toString()] = SpriteAnimationSpec(
+        asset: spec['asset']?.toString() ?? '',
+        frameW: frameW,
+        frameH: frameH,
+        frames: (spec['frames'] as num?)?.toInt() ?? 1,
+        framesPerRow: (spec['frames_per_row'] as num?)?.toInt() ?? 0,
+        stepTime: (spec['step_time'] as num?)?.toDouble() ?? 0.12,
+        loop: spec['loop'] != false,
+      );
+    });
+    return out;
+  }
+
+  Set<String>? _readStringSet(dynamic raw) {
+    if (raw is String && raw.isNotEmpty) return {raw};
+    if (raw is! List) return null;
+    final out = raw
+        .map((value) => value?.toString())
+        .whereType<String>()
+        .where((value) => value.isNotEmpty)
+        .toSet();
+    return out.isEmpty ? null : out;
+  }
+
+  void _prepareEntity(GameEntity entity) {
+    if (entity is TiledMapEntity) {
+      entity.load();
+      return;
+    }
+    if (entity is! ImageBackedEntity) return;
+    final imageEntity = entity as ImageBackedEntity;
+    final asset = imageEntity.asset;
+    if (asset.isEmpty) return;
+    _loadImage(asset)
+        .then((image) {
+          if (!entities.containsKey(entity.id)) return;
+          imageEntity.image = image;
+        })
+        .catchError((_) {
+          // Asset 加载失败时保留 fallback 渲染，不让游戏循环崩。
+        });
+  }
+
+  void _updateCamera() {
+    final follow = _cameraFollow;
+    if (follow == null || follow.isEmpty) {
+      _cameraX = 0;
+      _cameraY = 0;
+      return;
+    }
+    final target = entities[follow];
+    if (target is! PixelEntity) return;
+    var x = target.x + target.w / 2 - gameWorld.width / 2 + _cameraOffsetX;
+    var y = target.y + target.h / 2 - gameWorld.height / 2 + _cameraOffsetY;
+    if (_cameraDeadzoneY > 0 && (y - _cameraY).abs() < _cameraDeadzoneY) {
+      y = _cameraY;
+    } else if (_cameraSmoothY > 0 && _cameraSmoothY < 1) {
+      y = _cameraY + (y - _cameraY) * _cameraSmoothY;
+    }
+    final mapId = _cameraMap;
+    if (mapId != null) {
+      final map = entities[mapId];
+      if (map is TiledMapEntity && map.loaded) {
+        x = x.clamp(0, max(0, map.widthPx - gameWorld.width));
+        y = y.clamp(0, max(0, map.heightPx - gameWorld.height));
+      }
+    }
+    _cameraX = x;
+    _cameraY = y;
+  }
+
+  bool get _hasVirtualViewport =>
+      (_viewportWidth ?? 0) > 0 && (_viewportHeight ?? 0) > 0;
+
+  double _worldWidthForSize(double width) =>
+      _hasVirtualViewport ? _viewportWidth! : width;
+
+  double _worldHeightForSize(double height) =>
+      _hasVirtualViewport ? _viewportHeight! : height;
+
+  void _updateViewportTransform(double width, double height) {
+    if (!_hasVirtualViewport || width <= 0 || height <= 0) {
+      _viewportScale = 1;
+      _viewportDx = 0;
+      _viewportDy = 0;
+      return;
+    }
+    final scaleX = width / _viewportWidth!;
+    final scaleY = height / _viewportHeight!;
+    _viewportScale = _viewportFit == 'cover'
+        ? max(scaleX, scaleY)
+        : min(scaleX, scaleY);
+    _viewportDx = (width - _viewportWidth! * _viewportScale) / 2;
+    _viewportDy = (height - _viewportHeight! * _viewportScale) / 2;
+  }
+
+  Offset _toWorldPoint(double x, double y) {
+    if (!_hasVirtualViewport || _viewportScale <= 0) return Offset(x, y);
+    return Offset(
+      (x - _viewportDx) / _viewportScale,
+      (y - _viewportDy) / _viewportScale,
+    );
+  }
+
+  Offset _toWorldDelta(double dx, double dy) {
+    if (!_hasVirtualViewport || _viewportScale <= 0) return Offset(dx, dy);
+    return Offset(dx / _viewportScale, dy / _viewportScale);
+  }
+
+  Future<ui.Image> _loadImage(String asset) {
+    return _imageCache.putIfAbsent(asset, () async {
+      final bytes = await _loadImageBytes(asset);
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      return frame.image;
+    });
+  }
+
+  Future<Uint8List> _loadImageBytes(String asset) async {
+    final uri = Uri.tryParse(asset);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      final resp = await http.get(uri);
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw StateError('Failed to load image: $asset (${resp.statusCode})');
+      }
+      return resp.bodyBytes;
+    }
+    final data = await rootBundle.load(asset);
+    return data.buffer.asUint8List();
   }
 
   // ---------- 内置 overlay ----------
@@ -539,12 +946,7 @@ class JsonFlameGame extends FlameGame {
       Rect.fromLTWH(0, 0, size.x, size.y),
       Paint()..color = const Color(0x88000000),
     );
-    final boxRect = Rect.fromLTWH(
-      size.x / 2 - 130,
-      size.y / 2 - 100,
-      260,
-      200,
-    );
+    final boxRect = Rect.fromLTWH(size.x / 2 - 130, size.y / 2 - 100, 260, 200);
     canvas.drawRRect(
       RRect.fromRectAndRadius(boxRect, const Radius.circular(16)),
       Paint()..color = const Color(0xDD333333),
@@ -557,20 +959,40 @@ class JsonFlameGame extends FlameGame {
         ..strokeWidth = 1.5,
     );
 
-    _drawText(canvas, _gameOverTitle, 40, const Color(0xFFFF5555),
-        Offset(size.x / 2, size.y / 2 - 60),
-        centered: true);
-    _drawText(canvas, T.fmt(T.current.gameScoreWith, {'score': score}), 26, Colors.white70,
-        Offset(size.x / 2, size.y / 2 - 10),
-        centered: true);
+    _drawText(
+      canvas,
+      _gameOverTitle,
+      40,
+      const Color(0xFFFF5555),
+      Offset(size.x / 2, size.y / 2 - 60),
+      centered: true,
+    );
+    _drawText(
+      canvas,
+      T.fmt(T.current.gameScoreWith, {'score': score}),
+      26,
+      Colors.white70,
+      Offset(size.x / 2, size.y / 2 - 10),
+      centered: true,
+    );
     if (bestScore > 0) {
-      _drawText(canvas, T.fmt(T.current.gameBestScoreWith, {'score': bestScore}), 16, const Color(0x88FFFFFF),
-          Offset(size.x / 2, size.y / 2 + 25),
-          centered: true);
+      _drawText(
+        canvas,
+        T.fmt(T.current.gameBestScoreWith, {'score': bestScore}),
+        16,
+        const Color(0x88FFFFFF),
+        Offset(size.x / 2, size.y / 2 + 25),
+        centered: true,
+      );
     }
-    _drawText(canvas, _gameOverHint, 16, const Color(0x66FFFFFF),
-        Offset(size.x / 2, size.y / 2 + 60),
-        centered: true);
+    _drawText(
+      canvas,
+      _gameOverHint,
+      16,
+      const Color(0x66FFFFFF),
+      Offset(size.x / 2, size.y / 2 + 60),
+      centered: true,
+    );
   }
 
   void _drawText(
@@ -592,8 +1014,7 @@ class JsonFlameGame extends FlameGame {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    final offset =
-        centered ? pos - Offset(tp.width / 2, tp.height / 2) : pos;
+    final offset = centered ? pos - Offset(tp.width / 2, tp.height / 2) : pos;
     tp.paint(canvas, offset);
   }
 }
