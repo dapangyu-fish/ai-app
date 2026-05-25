@@ -82,6 +82,7 @@ class JsonFlameGame extends FlameGame {
   String _gameOverTitle = '';
   String _gameOverHint = '';
   String _assetLoadingText = 'Loading assets...';
+  bool _initialAssetLoadingComplete = false;
   String? _cameraFollow;
   String? _cameraMap;
   double _cameraX = 0;
@@ -195,7 +196,9 @@ class JsonFlameGame extends FlameGame {
       _drawGridLines(canvas);
     }
 
-    if (_showAssetLoading && _assetsLoading) {
+    final assetsLoading = _assetsLoading;
+    if (!assetsLoading) _initialAssetLoadingComplete = true;
+    if (_showAssetLoading && assetsLoading) {
       canvas.restore();
       _drawAssetLoadingOverlay(canvas);
       return;
@@ -327,6 +330,9 @@ class JsonFlameGame extends FlameGame {
   /// {kind, position/init/..., size, velocity, render}
   bool spawnEntity(String id, Map<String, dynamic> spec) {
     if (entities.containsKey(id)) return false;
+    final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
+    state.putIfAbsent('assetLoadingOverlay', () => false);
+    spec['state'] = state;
     final ent = _buildEntity(id, spec);
     if (ent == null) return false;
     entities[id] = ent;
@@ -429,6 +435,7 @@ class JsonFlameGame extends FlameGame {
   void _resetGameState() {
     score = 0;
     isGameOver = false;
+    _initialAssetLoadingComplete = false;
     vars.clear();
 
     // vars 初始值（spec.vars 里 "{{ ... }}" 用外层 game spec 的 best 等求值
@@ -910,6 +917,7 @@ class JsonFlameGame extends FlameGame {
   }
 
   bool get _assetsLoading {
+    var imageLoading = false;
     for (final entity in entities.values) {
       if (entity is TiledMapEntity && !entity.loaded && entity.error == null) {
         return true;
@@ -917,15 +925,23 @@ class JsonFlameGame extends FlameGame {
       if (entity is SpriteEntity &&
           entity.asset.isNotEmpty &&
           entity.image == null) {
-        return true;
+        if (_blocksAssetLoadingOverlay(entity)) imageLoading = true;
       }
       if (entity is ParallaxEntity &&
           entity.asset.isNotEmpty &&
           entity.image == null) {
-        return true;
+        if (!_initialAssetLoadingComplete) imageLoading = true;
       }
     }
-    return false;
+    return imageLoading && !_initialAssetLoadingComplete;
+  }
+
+  bool _blocksAssetLoadingOverlay(GameEntity entity) {
+    if (_initialAssetLoadingComplete) return false;
+    if (entity is PixelEntity && entity.state['assetLoadingOverlay'] == false) {
+      return false;
+    }
+    return true;
   }
 
   // ---------- 内置 overlay ----------

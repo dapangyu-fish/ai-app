@@ -140,11 +140,14 @@ class _FlameGameMountState extends State<_FlameGameMount> {
     if (!mounted) return;
     final action = widget.spec['on_$event'];
     if (action is! Map<String, dynamic>) return;
-    widget.interpreter.executeActionWithEvent(action, context, data).catchError(
-      (e, st) {
-        debugPrint('[flame_game] on_$event 抛错: $e');
-      },
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.interpreter
+          .executeActionWithEvent(action, context, data)
+          .catchError((e, st) {
+            debugPrint('[flame_game] on_$event 抛错: $e');
+          });
+    });
   }
 
   @override
