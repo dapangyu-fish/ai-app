@@ -1207,6 +1207,8 @@ class GameActions {
     player.x += dx;
     final rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
     for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
+      if (_isOneWayPlatform(collision)) continue;
+      if (_isSlope(collision) && player.vy >= 0) continue;
       final solid = collision.rect;
       if (!solid.overlaps(
         Rect.fromLTWH(player.x, player.y, player.w, player.h),
@@ -1232,6 +1234,7 @@ class GameActions {
     player.y += dy;
     var rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
     for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
+      if (dy < 0 && _isOneWayPlatform(collision)) continue;
       final solid = collision.rect;
       rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
       if (!solid.overlaps(rect)) continue;
@@ -1252,7 +1255,7 @@ class GameActions {
     Rect actor,
     double scale,
   ) {
-    if (collision.type.toLowerCase() != 'slope') return collision.rect.top;
+    if (!_isSlope(collision)) return collision.rect.top;
     final leftTop = (collision.properties['LeftTop'] as num?)?.toDouble();
     final rightTop = (collision.properties['RightTop'] as num?)?.toDouble();
     if (leftTop == null || rightTop == null) return collision.rect.top;
@@ -1277,6 +1280,12 @@ class GameActions {
     }
     return collision.rect.top;
   }
+
+  static bool _isSlope(TiledTileCollision collision) =>
+      collision.type.toLowerCase() == 'slope';
+
+  static bool _isOneWayPlatform(TiledTileCollision collision) =>
+      collision.type.toLowerCase() == 'platform';
 }
 
 extension on String {
