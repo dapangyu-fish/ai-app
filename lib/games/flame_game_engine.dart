@@ -339,7 +339,10 @@ class JsonFlameGame extends FlameGame {
     onEvent?.call(eventName, data);
   }
 
-  void resetGame() => _resetGameState();
+  void resetGame({
+    Map<String, dynamic>? varOverrides,
+    bool keepScore = false,
+  }) => _resetGameState(varOverrides: varOverrides, keepScore: keepScore);
 
   /// 动态加 entity（@spawn 用）。spec 跟初始 entities map 里那个 spec 一样：
   /// {kind, position/init/..., size, velocity, render}
@@ -463,8 +466,11 @@ class JsonFlameGame extends FlameGame {
     return null;
   }
 
-  void _resetGameState() {
-    score = 0;
+  void _resetGameState({
+    Map<String, dynamic>? varOverrides,
+    bool keepScore = false,
+  }) {
+    if (!keepScore) score = 0;
     isGameOver = false;
     _initialAssetLoadingComplete = false;
     consumedTiledObjectKeys.clear();
@@ -476,6 +482,9 @@ class JsonFlameGame extends FlameGame {
     rawVars.forEach((k, v) {
       vars[k] = logic.resolveExpression(v);
     });
+    if (varOverrides != null) {
+      vars.addAll(varOverrides);
+    }
 
     // entities
     entities.clear();
@@ -500,7 +509,7 @@ class JsonFlameGame extends FlameGame {
       logic.runLogic(initLogic);
     }
 
-    onEvent?.call('reset', {'score': 0, 'best': bestScore});
+    onEvent?.call('reset', {'score': score, 'best': bestScore});
   }
 
   GameEntity? _buildEntity(String id, Map<String, dynamic> spec) {

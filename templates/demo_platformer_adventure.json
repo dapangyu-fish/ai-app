@@ -3,7 +3,7 @@
   "appid": "d52cb6ab-b4f0-4e99-8e71-b8e3c68bd5b4",
   "meta": {
     "name": "demo-platformer-adventure",
-    "version": "0.2.6",
+    "version": "0.2.7",
     "type": "app",
     "description": "A CC0 Kenney asset platform adventure demo built with generic JSON game atoms: tiled map, platform physics, coins, enemies, hazards and a finish flag.",
     "author": "zhaolanlan"
@@ -260,6 +260,10 @@
               },
               "vars": {
                 "state": "loading",
+                "level": 1,
+                "max_level": 3,
+                "lives": 3,
+                "max_lives": 3,
                 "gravity": 1700,
                 "jump_vy": -860,
                 "speed": 230,
@@ -271,6 +275,7 @@
                 "walk_tick": 0,
                 "hit_coin": null,
                 "hit_enemy": null,
+                "hit_bullet_enemy": null,
                 "enemy_y": 0,
                 "enemy_dir": 1,
                 "hit_flag": null,
@@ -1241,6 +1246,70 @@
                     }
                   },
                   {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.lives",
+                      "value": {
+                        "var": "vars.max_lives"
+                      }
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.level"
+                          },
+                          1
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@tiled.load",
+                          "args": {
+                            "map": "map",
+                            "source": "map/level_1_v2.tmx"
+                          }
+                        }
+                      ],
+                      "else": [
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "==": [
+                                {
+                                  "var": "vars.level"
+                                },
+                                2
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@tiled.load",
+                                "args": {
+                                  "map": "map",
+                                  "source": "map/level_2.tmx"
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@tiled.load",
+                                "args": {
+                                  "map": "map",
+                                  "source": "map/level_3.tmx"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
                     "call": "@animated_sprite.set_animation",
                     "args": {
                       "id": "player",
@@ -1373,6 +1442,52 @@
                         "var": "event.x"
                       }
                     }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        ">": [
+                          {
+                            "var": "vars.move_dir"
+                          },
+                          0.08
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.facing",
+                            "value": 1
+                          }
+                        }
+                      ],
+                      "else": [
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "<": [
+                                {
+                                  "var": "vars.move_dir"
+                                },
+                                -0.08
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.facing",
+                                  "value": -1
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
                   }
                 ],
                 "jump": [
@@ -1419,6 +1534,86 @@
                   }
                 ],
                 "attack": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.state",
+                      "value": "running"
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "!": {
+                          "call": "@entity.exists",
+                          "args": {
+                            "id": "bullet_1"
+                          }
+                        }
+                      },
+                      "then": [
+                        {
+                          "call": "@spawn",
+                          "args": {
+                            "id": "bullet_1",
+                            "kind": "pixel",
+                            "priority": 45,
+                            "position": [
+                              {
+                                "+": [
+                                  {
+                                    "var": "entities.player.x"
+                                  },
+                                  {
+                                    "if": [
+                                      {
+                                        ">": [
+                                          {
+                                            "var": "vars.facing"
+                                          },
+                                          0
+                                        ]
+                                      },
+                                      38,
+                                      -10
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "+": [
+                                  {
+                                    "var": "entities.player.y"
+                                  },
+                                  18
+                                ]
+                              }
+                            ],
+                            "size": [
+                              22,
+                              12
+                            ],
+                            "velocity": [
+                              {
+                                "*": [
+                                  {
+                                    "var": "vars.facing"
+                                  },
+                                  680
+                                ]
+                              },
+                              0
+                            ],
+                            "render": {
+                              "shape": "circle",
+                              "color": "#FFE16AFF"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
                   {
                     "call": "@set",
                     "args": {
@@ -1508,11 +1703,11 @@
                               {
                                 "call": "@emit",
                                 "args": {
-                                "event": "status",
-                                "data": {
-                                  "text": "方向键移动"
+                                  "event": "status",
+                                  "data": {
+                                    "text": "第{{ vars.level }}关 生命{{ vars.lives }}/{{ vars.max_lives }}"
+                                  }
                                 }
-                              }
                               }
                             ]
                           }
@@ -1697,6 +1892,114 @@
                           }
                         },
                         {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "call": "@entity.exists",
+                              "args": {
+                                "id": "bullet_1"
+                              }
+                            },
+                            "then": [
+                              {
+                                "call": "@collision.first",
+                                "args": {
+                                  "a": "bullet_1",
+                                  "where_prefix": "enemy_"
+                                },
+                                "assign": "vars.hit_bullet_enemy"
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "!=": [
+                                      {
+                                        "var": "vars.hit_bullet_enemy"
+                                      },
+                                      null
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "{{ vars.hit_bullet_enemy }}"
+                                      }
+                                    },
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "bullet_1"
+                                      }
+                                    },
+                                    {
+                                      "call": "@score.add",
+                                      "args": {
+                                        "n": 250
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.hit_bullet_enemy",
+                                        "value": null
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "or": [
+                                      {
+                                        "<": [
+                                          {
+                                            "var": "entities.bullet_1.x"
+                                          },
+                                          {
+                                            "-": [
+                                              {
+                                                "var": "entities.player.x"
+                                              },
+                                              520
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        ">": [
+                                          {
+                                            "var": "entities.bullet_1.x"
+                                          },
+                                          {
+                                            "+": [
+                                              {
+                                                "var": "entities.player.x"
+                                              },
+                                              760
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "bullet_1"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
                           "call": "@set",
                           "args": {
                             "var": "vars.hazard",
@@ -1720,8 +2023,55 @@
                                 }
                               },
                               {
-                                "call": "@game_over",
-                                "args": {}
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    ">": [
+                                      {
+                                        "var": "vars.lives"
+                                      },
+                                      1
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.lives",
+                                        "value": {
+                                          "-": [
+                                            {
+                                              "var": "vars.lives"
+                                            },
+                                            1
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@platformer.respawn",
+                                      "args": {
+                                        "id": "player",
+                                        "map": "map"
+                                      }
+                                    },
+                                    {
+                                      "call": "@emit",
+                                      "args": {
+                                        "event": "status",
+                                        "data": {
+                                          "text": "第{{ vars.level }}关 生命{{ vars.lives }}/{{ vars.max_lives }}"
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@game_over",
+                                      "args": {}
+                                    }
+                                  ]
+                                }
                               }
                             ]
                           }
@@ -2017,8 +2367,55 @@
                                       }
                                     },
                                     {
-                                      "call": "@game_over",
-                                      "args": {}
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "vars.lives"
+                                            },
+                                            1
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.lives",
+                                              "value": {
+                                                "-": [
+                                                  {
+                                                    "var": "vars.lives"
+                                                  },
+                                                  1
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@platformer.respawn",
+                                            "args": {
+                                              "id": "player",
+                                              "map": "map"
+                                            }
+                                          },
+                                          {
+                                            "call": "@emit",
+                                            "args": {
+                                              "event": "status",
+                                              "data": {
+                                                "text": "第{{ vars.level }}关 生命{{ vars.lives }}/{{ vars.max_lives }}"
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@game_over",
+                                            "args": {}
+                                          }
+                                        ]
+                                      }
                                     }
                                   ]
                                 }
@@ -2078,13 +2475,57 @@
                                 "args": {
                                   "event": "status",
                                   "data": {
-                                    "text": "通关"
+                                    "text": "第{{ vars.level }}关完成"
                                   }
                                 }
                               },
                               {
-                                "call": "@game_over",
-                                "args": {}
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "vars.level"
+                                      },
+                                      {
+                                        "var": "vars.max_level"
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@game_reset",
+                                      "args": {
+                                        "keep_score": true,
+                                        "vars": {
+                                          "level": {
+                                            "+": [
+                                              {
+                                                "var": "vars.level"
+                                              },
+                                              1
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@emit",
+                                      "args": {
+                                        "event": "status",
+                                        "data": {
+                                          "text": "全部通关"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@game_over",
+                                      "args": {}
+                                    }
+                                  ]
+                                }
                               }
                             ]
                           }

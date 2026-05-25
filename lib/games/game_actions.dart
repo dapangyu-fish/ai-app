@@ -51,7 +51,10 @@ class GameActions {
         game.triggerGameOver();
         return null;
       case '@game_reset':
-        game.resetGame();
+        game.resetGame(
+          varOverrides: (args['vars'] as Map?)?.cast<String, dynamic>(),
+          keepScore: args['keep_score'] == true,
+        );
         return null;
       case '@emit':
         {
