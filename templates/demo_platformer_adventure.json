@@ -3,7 +3,7 @@
   "appid": "d52cb6ab-b4f0-4e99-8e71-b8e3c68bd5b4",
   "meta": {
     "name": "demo-platformer-adventure",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "type": "app",
     "description": "A CC0 Kenney asset platform adventure demo built with generic JSON game atoms: tiled map, platform physics, coins, enemies, hazards and a finish flag.",
     "author": "zhaolanlan"
@@ -1343,6 +1343,24 @@
                     }
                   }
                 ],
+                "move_axis": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.state",
+                      "value": "running"
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.move_dir",
+                      "value": {
+                        "var": "event.x"
+                      }
+                    }
+                  }
+                ],
                 "jump": [
                   {
                     "call": "@set",
@@ -1540,6 +1558,9 @@
                             "jump_velocity": {
                               "var": "vars.jump_vy"
                             },
+                            "one_way_tilesets": [
+                              "ground_top"
+                            ],
                             "max_fall": 1250
                           }
                         },
@@ -1980,8 +2001,49 @@
           },
           {
             "type": "virtual_gamepad",
+            "mode": "joystick",
             "height": 176,
             "backgroundColor": "#0E3D49",
+            "joystickSize": 132,
+            "joystick": {
+              "backgroundColor": "#174F5F",
+              "knobColor": "#EAF7FF",
+              "deadZone": 0.08,
+              "onChange": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "move_axis",
+                  "data": {
+                    "x": {
+                      "var": "event.x"
+                    },
+                    "y": {
+                      "var": "event.y"
+                    },
+                    "strength": {
+                      "var": "event.strength"
+                    },
+                    "direction": {
+                      "var": "event.direction"
+                    }
+                  }
+                }
+              },
+              "onEnd": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "move_axis",
+                  "data": {
+                    "x": 0,
+                    "y": 0,
+                    "strength": 0,
+                    "direction": "center"
+                  }
+                }
+              }
+            },
             "directions": [
               {
                 "id": "up",
@@ -2050,8 +2112,9 @@
             "actions": [
               {
                 "id": "jump",
-                "label": "跳",
-                "backgroundColor": "#F4B942",
+                "label": "",
+                "symbol": "triangle",
+                "backgroundColor": "#1E222A",
                 "onDown": {
                   "type": "call",
                   "call": "@flame_game_input",
@@ -2062,8 +2125,9 @@
               },
               {
                 "id": "attack",
-                "label": "打",
-                "backgroundColor": "#E95656",
+                "label": "",
+                "symbol": "circle",
+                "backgroundColor": "#1E222A",
                 "onDown": {
                   "type": "call",
                   "call": "@flame_game_input",
@@ -2071,6 +2135,18 @@
                     "input": "attack"
                   }
                 }
+              },
+              {
+                "id": "dash",
+                "label": "",
+                "symbol": "cross",
+                "backgroundColor": "#1E222A"
+              },
+              {
+                "id": "menu",
+                "label": "",
+                "symbol": "square",
+                "backgroundColor": "#1E222A"
               }
             ]
           }

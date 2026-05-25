@@ -836,6 +836,8 @@ class GameActions {
     final autoRun = (args['auto_run'] as num?)?.toDouble();
     final move = (args['move'] as num?)?.toDouble();
     final speed = (args['speed'] as num?)?.toDouble() ?? 320;
+    final oneWayTypes = _readStringSet(args['one_way_types']);
+    final oneWayTilesets = _readStringSet(args['one_way_tilesets']);
 
     final onGround = player.state['onGround'] == true;
     if (autoRun != null) {
@@ -857,7 +859,14 @@ class GameActions {
     }
 
     player.vy = (player.vy + gravity * dt).clamp(-maxFall, maxFall);
-    _moveAndCollideSwept(player, map, player.vx * dt, player.vy * dt);
+    _moveAndCollideSwept(
+      player,
+      map,
+      player.vx * dt,
+      player.vy * dt,
+      oneWayTypes: oneWayTypes,
+      oneWayTilesets: oneWayTilesets,
+    );
     if (player.state['onGround'] == true) {
       player.state['lastGroundXVelocity'] = player.vx.abs();
     }
@@ -1322,16 +1331,30 @@ class GameActions {
     PixelEntity player,
     TiledMapEntity map,
     double dx,
-    double dy,
-  ) {
+    double dy, {
+    Set<String>? oneWayTypes,
+    Set<String>? oneWayTilesets,
+  }) {
     final tile = max(8.0, min(map.tileWidth, map.tileHeight) * map.scale);
     final maxStep = tile * 0.45;
     final steps = max(1, (max(dx.abs(), dy.abs()) / maxStep).ceil());
     final stepX = dx / steps;
     final stepY = dy / steps;
     for (var i = 0; i < steps; i++) {
-      _moveAndCollideX(player, map, stepX);
-      _moveAndCollideY(player, map, stepY);
+      _moveAndCollideX(
+        player,
+        map,
+        stepX,
+        oneWayTypes: oneWayTypes,
+        oneWayTilesets: oneWayTilesets,
+      );
+      _moveAndCollideY(
+        player,
+        map,
+        stepY,
+        oneWayTypes: oneWayTypes,
+        oneWayTilesets: oneWayTilesets,
+      );
       if (_isBelowMap(player, map)) break;
     }
   }
@@ -1344,13 +1367,21 @@ class GameActions {
   static void _moveAndCollideX(
     PixelEntity player,
     TiledMapEntity map,
-    double dx,
-  ) {
+    double dx, {
+    Set<String>? oneWayTypes,
+    Set<String>? oneWayTilesets,
+  }) {
     if (dx == 0) return;
     player.x += dx;
     final rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
     for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
-      if (_isOneWayPlatform(collision)) continue;
+      if (_isOneWayPlatform(
+        collision,
+        oneWayTypes: oneWayTypes,
+        oneWayTilesets: oneWayTilesets,
+      )) {
+        continue;
+      }
       if (_isSlope(collision) && player.vy >= 0) continue;
       final solid = collision.rect;
       if (!solid.overlaps(
@@ -1370,14 +1401,23 @@ class GameActions {
   static void _moveAndCollideY(
     PixelEntity player,
     TiledMapEntity map,
-    double dy,
-  ) {
+    double dy, {
+    Set<String>? oneWayTypes,
+    Set<String>? oneWayTilesets,
+  }) {
     player.state['onGround'] = false;
     if (dy == 0) return;
     player.y += dy;
     var rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
     for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
-      if (dy < 0 && _isOneWayPlatform(collision)) continue;
+      if (dy < 0 &&
+          _isOneWayPlatform(
+            collision,
+            oneWayTypes: oneWayTypes,
+            oneWayTilesets: oneWayTilesets,
+          )) {
+        continue;
+      }
       final solid = collision.rect;
       rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
       if (!solid.overlaps(rect)) continue;
@@ -1427,8 +1467,28 @@ class GameActions {
   static bool _isSlope(TiledTileCollision collision) =>
       collision.type.toLowerCase() == 'slope';
 
-  static bool _isOneWayPlatform(TiledTileCollision collision) =>
-      collision.type.toLowerCase() == 'platform';
+  static bool _isOneWayPlatform(
+    TiledTileCollision collision, {
+    Set<String>? oneWayTypes,
+    Set<String>? oneWayTilesets,
+  }) {
+    final type = collision.type.toLowerCase();
+    final tileset = collision.tileset.toLowerCase();
+    if (oneWayTypes != null || oneWayTilesets != null) {
+      return (oneWayTypes?.contains(type) ?? false) ||
+          (oneWayTilesets?.contains(tileset) ?? false);
+    }
+    return type == 'platform';
+  }
+
+  static Set<String>? _readStringSet(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is String) return {raw.toLowerCase()};
+    if (raw is List) {
+      return raw.map((e) => e.toString().toLowerCase()).toSet();
+    }
+    return null;
+  }
 }
 
 extension on String {

@@ -211,6 +211,7 @@ class TiledMapEntity extends GameEntity {
                 TiledTileCollision(
                   rect: rect,
                   type: type,
+                  tileset: tile.tileset.name,
                   properties: tile.properties,
                 ),
               );
@@ -494,6 +495,7 @@ class TiledMapEntity extends GameEntity {
     }
     return TiledTileset(
       firstGid: firstGid,
+      name: root.getAttribute('name') ?? '',
       source: tsxUrl,
       imageSource: imageUrl,
       tileWidth: _intAttr(root, 'tilewidth', tileWidth),
@@ -576,6 +578,7 @@ class TiledLayer {
 
 class TiledTileset {
   final int firstGid;
+  final String name;
   final String source;
   final String imageSource;
   final int tileWidth;
@@ -591,6 +594,7 @@ class TiledTileset {
 
   const TiledTileset({
     required this.firstGid,
+    required this.name,
     required this.source,
     required this.imageSource,
     required this.tileWidth,
@@ -654,11 +658,13 @@ class TiledTileRef {
 class TiledTileCollision {
   final Rect rect;
   final String type;
+  final String tileset;
   final Map<String, dynamic> properties;
 
   const TiledTileCollision({
     required this.rect,
     required this.type,
+    this.tileset = '',
     this.properties = const {},
   });
 
@@ -672,6 +678,7 @@ class TiledTileCollision {
     'w': rect.width,
     'h': rect.height,
     'type': type,
+    'tileset': tileset,
     'properties': properties,
     ...properties,
   };
