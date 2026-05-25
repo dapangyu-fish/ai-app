@@ -21,6 +21,9 @@ class JsonVirtualGamepadWidget extends JsonBaseWidget {
     final mode = (json['mode'] ?? json['leftMode'] ?? 'dpad')
         .toString()
         .toLowerCase();
+    final actionLayout = (json['actionLayout'] ?? 'wrap')
+        .toString()
+        .toLowerCase();
     final joystick = json['joystick'] is Map
         ? (json['joystick'] as Map).map((k, v) => MapEntry(k.toString(), v))
         : <String, dynamic>{};
@@ -38,64 +41,135 @@ class JsonVirtualGamepadWidget extends JsonBaseWidget {
               _num(json['paddingHorizontal'], 18),
               _num(json['paddingBottom'], 12),
             ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: _num(
-                    mode == 'joystick'
-                        ? json['joystickSize']
-                        : json['dpadSize'],
-                    128,
-                  ),
-                  height: _num(
-                    mode == 'joystick'
-                        ? json['joystickSize']
-                        : json['dpadSize'],
-                    128,
-                  ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final gap = _num(json['gap'], 20);
+                final available = math.max(120.0, constraints.maxWidth - gap);
+                final leftWanted = _num(
+                  mode == 'joystick' ? json['joystickSize'] : json['dpadSize'],
+                  128,
+                );
+                final clusterWanted = _num(json['actionClusterSize'], 142);
+                final maxSide = math.max(92.0, available / 2);
+                final leftSize = math.min(leftWanted, maxSide);
+                final clusterSize = math.min(clusterWanted, maxSide);
+                final left = SizedBox.square(
+                  dimension: leftSize,
                   child: mode == 'joystick'
                       ? _Joystick(spec: joystick, interpreter: interpreter)
                       : _DPad(items: directions, interpreter: interpreter),
-                ),
-                const Spacer(),
-                Wrap(
-                  spacing: _num(json['actionSpacing'], 12),
-                  runSpacing: _num(json['actionSpacing'], 12),
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                );
+                final right =
+                    actionLayout == 'ps' ||
+                        actionLayout == 'playstation' ||
+                        actionLayout == 'diamond'
+                    ? _ActionCluster(
+                        items: actions,
+                        size: clusterSize,
+                        interpreter: interpreter,
+                      )
+                    : _ActionWrap(
+                        items: actions,
+                        interpreter: interpreter,
+                        spacing: _num(json['actionSpacing'], 12),
+                      );
+                return Row(
                   children: [
-                    for (final item in actions)
-                      _PadButton(
-                        label:
-                            item['label']?.toString() ??
-                            item['id']?.toString() ??
-                            '',
-                        symbol: item['symbol']?.toString(),
-                        size: _num(item['size'], 64),
-                        backgroundColor:
-                            _color(item['backgroundColor']) ??
-                            const Color(0xFF1E222A),
-                        foregroundColor:
-                            _color(item['color']) ?? const Color(0xFFFFFFFF),
-                        onDown: () => _runAction(
-                          interpreter,
-                          context,
-                          item['onDown'] ?? item['onPressed'],
-                          item['id']?.toString(),
-                        ),
-                        onUp: () => _runAction(
-                          interpreter,
-                          context,
-                          item['onUp'] ?? item['onReleased'],
-                          item['id']?.toString(),
-                        ),
+                    left,
+                    SizedBox(width: gap),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: right,
                       ),
+                    ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ActionWrap extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  final JsonInterpreter interpreter;
+  final double spacing;
+
+  const _ActionWrap({
+    required this.items,
+    required this.interpreter,
+    required this.spacing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final item in items)
+          _buildActionButton(
+            context,
+            item,
+            interpreter,
+            _num(item['size'], 64),
+          ),
+      ],
+    );
+  }
+}
+
+class _ActionCluster extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  final JsonInterpreter interpreter;
+  final double size;
+
+  const _ActionCluster({
+    required this.items,
+    required this.interpreter,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bySymbol = {
+      for (final item in items)
+        if (item['symbol'] != null)
+          item['symbol'].toString().toLowerCase(): item,
+    };
+    final byId = {
+      for (final item in items)
+        if (item['id'] != null) item['id'].toString().toLowerCase(): item,
+    };
+    Map<String, dynamic>? pick(String symbol, String fallbackId) {
+      return bySymbol[symbol] ?? byId[fallbackId];
+    }
+
+    final buttonSize = size * 0.43;
+    Widget positioned(String symbol, String fallbackId, Alignment alignment) {
+      final item = pick(symbol, fallbackId);
+      if (item == null) return const SizedBox.shrink();
+      return Align(
+        alignment: alignment,
+        child: _buildActionButton(context, item, interpreter, buttonSize),
+      );
+    }
+
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        children: [
+          positioned('triangle', 'triangle', Alignment.topCenter),
+          positioned('circle', 'circle', Alignment.centerRight),
+          positioned('cross', 'cross', Alignment.bottomCenter),
+          positioned('square', 'square', Alignment.centerLeft),
+        ],
       ),
     );
   }
@@ -171,6 +245,33 @@ class _DPad extends StatelessWidget {
       ],
     );
   }
+}
+
+Widget _buildActionButton(
+  BuildContext context,
+  Map<String, dynamic> item,
+  JsonInterpreter interpreter,
+  double size,
+) {
+  return _PadButton(
+    label: item['label']?.toString() ?? item['id']?.toString() ?? '',
+    symbol: item['symbol']?.toString(),
+    size: size,
+    backgroundColor: _color(item['backgroundColor']) ?? const Color(0xFF1E222A),
+    foregroundColor: _color(item['color']) ?? const Color(0xFFFFFFFF),
+    onDown: () => _runAction(
+      interpreter,
+      context,
+      item['onDown'] ?? item['onPressed'],
+      item['id']?.toString(),
+    ),
+    onUp: () => _runAction(
+      interpreter,
+      context,
+      item['onUp'] ?? item['onReleased'],
+      item['id']?.toString(),
+    ),
+  );
 }
 
 class _Joystick extends StatefulWidget {
