@@ -18,8 +18,6 @@
 
 import 'dart:math' as math;
 
-import 'package:jsonlogic/jsonlogic.dart';
-
 import 'flame_game_engine.dart';
 import 'game_actions.dart';
 
@@ -292,8 +290,6 @@ class GameLogicEngine {
 
   bool _looksLikeJsonLogic(String k) => _jsonLogicOps.contains(k);
 
-  static final Jsonlogic _jsonlogic = Jsonlogic();
-
   dynamic _evalJsonLogic(Map<String, dynamic> rule) {
     try {
       // 先把规则里的字符串模板和 inline action 预处理掉：
@@ -302,9 +298,16 @@ class GameLogicEngine {
       final preprocessed = _resolveJsonLogicOperands(rule);
       final local = _evalBooleanLogic(preprocessed);
       if (local != _notHandled) return local;
-      return _jsonlogic.apply(preprocessed, _dataScope());
+      // 游戏循环不能依赖 jsonlogic 包的动态 bool 语义；Web 下它可能把
+      // 0/0.008 等中间值带进 bool 位。游戏 DSL 只支持本文件显式实现的
+      // 小集合操作，未支持的 op 返回 null，让上游 truthy/数值转换兜底。
+      // ignore: avoid_print
+      print('[GameLogic] unsupported expression: $preprocessed');
+      return null;
     } catch (e) {
       // 表达式炸了不能让游戏崩，返回 null 让上游决定
+      // ignore: avoid_print
+      print('[GameLogic] expression error: $rule -> $e');
       return null;
     }
   }
@@ -492,29 +495,6 @@ class GameLogicEngine {
       return rule.map((k, v) => MapEntry(k, _resolveJsonLogicOperands(v)));
     }
     return rule;
-  }
-
-  /// 给 jsonlogic / `{{ ... }}` 用的全局数据
-  Map<String, dynamic> _dataScope() {
-    final entitiesMap = <String, dynamic>{};
-    game.entities.forEach((id, e) => entitiesMap[id] = e.toMap());
-    return {
-      'vars': game.vars,
-      'entities': entitiesMap,
-      'event': _eventStack.isNotEmpty ? _eventStack.last : <String, dynamic>{},
-      'loop': _loopStack.isNotEmpty ? _loopStack.last : <String, dynamic>{},
-      'world': {
-        'cols': game.gameWorld.cols,
-        'rows': game.gameWorld.rows,
-        'width': game.gameWorld.width,
-        'height': game.gameWorld.height,
-        'cell_w': game.gameWorld.cellW,
-        'cell_h': game.gameWorld.cellH,
-      },
-      'score': game.score,
-      'best': game.bestScore,
-      'game_over': game.isGameOver,
-    };
   }
 
   /// 读变量（点路径）
