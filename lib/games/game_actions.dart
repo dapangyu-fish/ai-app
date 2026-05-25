@@ -973,19 +973,33 @@ class GameActions {
       if (game.entities.containsKey(id)) continue;
       final spawnKey = '$mapId/$layer/${object.id}';
       if (game.consumedTiledObjectKeys.contains(spawnKey)) continue;
-      final spec = _objectSpecFromTemplate(map, object, type, rawTemplate);
+      var spec = _objectSpecFromTemplate(map, object, type, rawTemplate);
       if (spec == null) continue;
       spec.remove('id_prefix');
-      final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
-      state['tiledSpawnKey'] = spawnKey;
-      state['tiledLayer'] = layer;
-      state['tiledObjectId'] = object.id;
-      spec['state'] = state;
-      if (despawnDistance != null) {
-        state['despawnDistance'] = despawnDistance;
-        state['despawnReference'] = referenceId;
+      _attachTiledObjectState(
+        spec,
+        spawnKey: spawnKey,
+        layer: layer,
+        objectId: object.id,
+        despawnDistance: despawnDistance,
+        despawnReference: referenceId,
+      );
+      var spawned = game.spawnEntity(id, spec);
+      if (!spawned) {
+        spec = _objectSpriteSpec(map, object, type);
+        if (spec != null) {
+          _attachTiledObjectState(
+            spec,
+            spawnKey: spawnKey,
+            layer: layer,
+            objectId: object.id,
+            despawnDistance: despawnDistance,
+            despawnReference: referenceId,
+          );
+          spawned = game.spawnEntity(id, spec);
+        }
       }
-      if (game.spawnEntity(id, spec)) count++;
+      if (spawned) count++;
     }
     if (despawnDistance != null && reference is PixelEntity) {
       final ids = game.entities.entries
@@ -1002,6 +1016,25 @@ class GameActions {
       }
     }
     return count;
+  }
+
+  static void _attachTiledObjectState(
+    Map<String, dynamic> spec, {
+    required String spawnKey,
+    required String layer,
+    required int objectId,
+    double? despawnDistance,
+    String? despawnReference,
+  }) {
+    final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
+    state['tiledSpawnKey'] = spawnKey;
+    state['tiledLayer'] = layer;
+    state['tiledObjectId'] = objectId;
+    if (despawnDistance != null) {
+      state['despawnDistance'] = despawnDistance;
+      state['despawnReference'] = despawnReference;
+    }
+    spec['state'] = state;
   }
 
   static bool _spawnAnimationEffect(
