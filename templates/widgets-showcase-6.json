@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "第六批 Widget 演示 — inkwell / gesture_detector / dismissible / draggable / refresh",
-    "author": "Claude"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.2.0"

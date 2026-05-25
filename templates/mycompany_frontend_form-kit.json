@@ -3,7 +3,8 @@
     "name": "mycompany/frontend/form-kit",
     "version": "1.0.0",
     "type": "library",
-    "description": "Form Components Kit"
+    "description": "Form Components Kit",
+    "author": "fish"
   },
   "components": {
     "FormInput": {

@@ -12,7 +12,7 @@
       "es": "Mi launcher"
     },
     "description": "用 launcher 组件库拼出来的三 tab 启动器 demo —— 本地 / 市场 / 设置。设成默认启动 App 就完全替代了原生主页。",
-    "author": "framework"
+    "author": "fish"
   },
 
   "dependencies": {

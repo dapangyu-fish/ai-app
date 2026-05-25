@@ -12,7 +12,7 @@
       "es": "Componente launcher · Mercado"
     },
     "description": "可嵌入的'市场'组件库——浏览 Registry 上的 JSON-APP / 组件库，一键启动。",
-    "author": "framework",
+    "author": "fish",
     "exports": ["marketBrowser", "init", "refresh", "search", "switchType"]
   },
 

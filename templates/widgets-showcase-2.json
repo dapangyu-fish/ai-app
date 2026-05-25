@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "第二批 Widget 演示 — dropdown / radio / wrap / grid + @show_choice_dialog",
-    "author": "Claude"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.2.0"

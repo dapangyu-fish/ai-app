@@ -1,0 +1,243 @@
+{
+  "dsl": "3.3",
+  "appid": "435a779c-0f12-4993-b19c-0991b681cc7a",
+  "meta": {
+    "name": "game-controls",
+    "version": "1.0.0",
+    "type": "library",
+    "description": "Reusable JSON game controls: default PS-style joystick gamepad and D-pad presets built on generic virtual_gamepad atoms.",
+    "author": "fish",
+    "exports": [
+      "psJoystickGamepad",
+      "dpadGamepad"
+    ],
+    "modes": [
+      "psJoystickGamepad",
+      "dpadGamepad",
+      "reserved:floatingJoystick",
+      "reserved:screenOriginJoystick"
+    ]
+  },
+  "ui": {
+    "templates": {
+      "psJoystickGamepad": {
+        "props": [
+          "moveInput",
+          "moveEndInput",
+          "jumpInput",
+          "attackInput",
+          "height",
+          "backgroundColor"
+        ],
+        "root": {
+          "type": "virtual_gamepad",
+          "mode": "joystick",
+          "actionLayout": "ps",
+          "height": "{{ props.height }}",
+          "backgroundColor": "{{ props.backgroundColor }}",
+          "joystickSize": 122,
+          "actionClusterSize": 132,
+          "gap": 16,
+          "joystick": {
+            "backgroundColor": "#174F5F",
+            "knobColor": "#EAF7FF",
+            "deadZone": 0.08,
+            "onChange": {
+              "type": "call",
+              "call": "@flame_game_input",
+              "args": {
+                "input": "{{ props.moveInput }}",
+                "data": {
+                  "x": "{{ event.x }}",
+                  "y": "{{ event.y }}",
+                  "strength": "{{ event.strength }}",
+                  "angle": "{{ event.angle }}",
+                  "direction": "{{ event.direction }}"
+                }
+              }
+            },
+            "onEnd": {
+              "type": "call",
+              "call": "@flame_game_input",
+              "args": {
+                "input": "{{ props.moveEndInput }}",
+                "data": {
+                  "x": 0,
+                  "y": 0,
+                  "strength": 0,
+                  "angle": 0,
+                  "direction": "center"
+                }
+              }
+            }
+          },
+          "actions": [
+            {
+              "id": "jump",
+              "label": "",
+              "symbol": "triangle",
+              "backgroundColor": "#1E222A",
+              "onDown": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.jumpInput }}"
+                }
+              }
+            },
+            {
+              "id": "attack",
+              "label": "",
+              "symbol": "circle",
+              "backgroundColor": "#1E222A",
+              "onDown": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.attackInput }}"
+                }
+              }
+            },
+            {
+              "id": "cross",
+              "label": "",
+              "symbol": "cross",
+              "backgroundColor": "#1E222A"
+            },
+            {
+              "id": "square",
+              "label": "",
+              "symbol": "square",
+              "backgroundColor": "#1E222A"
+            }
+          ]
+        }
+      },
+      "dpadGamepad": {
+        "props": [
+          "moveDownInput",
+          "moveUpInput",
+          "jumpInput",
+          "attackInput",
+          "height",
+          "backgroundColor"
+        ],
+        "root": {
+          "type": "virtual_gamepad",
+          "mode": "dpad",
+          "actionLayout": "ps",
+          "height": "{{ props.height }}",
+          "backgroundColor": "{{ props.backgroundColor }}",
+          "dpadSize": 122,
+          "actionClusterSize": 132,
+          "gap": 16,
+          "directions": [
+            {
+              "id": "up",
+              "label": "↑",
+              "onDown": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.jumpInput }}"
+                }
+              }
+            },
+            {
+              "id": "left",
+              "label": "←",
+              "onDown": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.moveDownInput }}",
+                  "data": {
+                    "direction": "left"
+                  }
+                }
+              },
+              "onUp": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.moveUpInput }}",
+                  "data": {
+                    "direction": "left"
+                  }
+                }
+              }
+            },
+            {
+              "id": "right",
+              "label": "→",
+              "onDown": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.moveDownInput }}",
+                  "data": {
+                    "direction": "right"
+                  }
+                }
+              },
+              "onUp": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.moveUpInput }}",
+                  "data": {
+                    "direction": "right"
+                  }
+                }
+              }
+            },
+            {
+              "id": "down",
+              "label": "↓"
+            }
+          ],
+          "actions": [
+            {
+              "id": "jump",
+              "label": "",
+              "symbol": "triangle",
+              "backgroundColor": "#1E222A",
+              "onDown": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.jumpInput }}"
+                }
+              }
+            },
+            {
+              "id": "attack",
+              "label": "",
+              "symbol": "circle",
+              "backgroundColor": "#1E222A",
+              "onDown": {
+                "type": "call",
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "{{ props.attackInput }}"
+                }
+              }
+            },
+            {
+              "id": "cross",
+              "label": "",
+              "symbol": "cross",
+              "backgroundColor": "#1E222A"
+            },
+            {
+              "id": "square",
+              "label": "",
+              "symbol": "square",
+              "backgroundColor": "#1E222A"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

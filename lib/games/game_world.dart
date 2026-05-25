@@ -21,6 +21,8 @@ class GameWorld {
   double height = 0;
   double cellW = 1;
   double cellH = 1;
+  double cameraX = 0;
+  double cameraY = 0;
 
   GameWorld({
     required this.kind,
@@ -54,7 +56,8 @@ class GameWorld {
   }
 
   Offset cellTopLeft(int x, int y) => Offset(x * cellW, y * cellH);
-  Offset cellCenter(int x, int y) => Offset((x + 0.5) * cellW, (y + 0.5) * cellH);
+  Offset cellCenter(int x, int y) =>
+      Offset((x + 0.5) * cellW, (y + 0.5) * cellH);
   Size cellSize() => Size(cellW, cellH);
 
   bool inGrid(int x, int y) =>
@@ -63,7 +66,10 @@ class GameWorld {
   /// 像素 → 网格（用于 tap 命中检测）
   List<int> pixelToCell(double px, double py) {
     if (kind != 'grid') return [px.floor(), py.floor()];
-    return [(px / cellW).floor().clamp(0, cols - 1), (py / cellH).floor().clamp(0, rows - 1)];
+    return [
+      (px / cellW).floor().clamp(0, cols - 1),
+      (py / cellH).floor().clamp(0, rows - 1),
+    ];
   }
 }
 

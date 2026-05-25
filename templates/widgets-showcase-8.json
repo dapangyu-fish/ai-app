@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "第八批 — webview / qr_code / chart / map / camera（特殊控件，需要新加包）",
-    "author": "Claude"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.2.0"

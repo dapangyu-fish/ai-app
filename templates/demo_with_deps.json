@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "演示依赖引用：引用 common-ui 库的函数",
-    "author": "demo"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.0.0"

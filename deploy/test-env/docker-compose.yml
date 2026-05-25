@@ -187,6 +187,9 @@ services:
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY}"
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY}"
       REGISTRY_ADMIN_TOKEN: "${REGISTRY_ADMIN_TOKEN}"
+      REGISTRY_ADMIN_AUTHOR_EMAIL: "${REGISTRY_ADMIN_AUTHOR_EMAIL}"
+      REGISTRY_ADMIN_AUTHOR_NAME: "${REGISTRY_ADMIN_AUTHOR_NAME}"
+      REGISTRY_ADMIN_AUTHOR_ID: "${REGISTRY_ADMIN_AUTHOR_ID}"
       # 自己对外的 base URL（mirror manifest 里嵌的 URL 用它，让下游链式镜像找回这里）
       REGISTRY_BASE_URL: "http://${HOST_IP}:${REGISTRY_PORT}"
       # ── Mirror 配置 ── 空字符串 = 不开 mirror；非空 = 周期性同步上游 manifest

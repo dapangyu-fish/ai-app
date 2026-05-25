@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "OpenAI-compatible streaming chat demo. The API key stays on the user's device and requests are sent directly from the client.",
-    "author": "demo"
+    "author": "fish"
   },
   "dependencies": {
     "lib_openai": "^1.0.0",

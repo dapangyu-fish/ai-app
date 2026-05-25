@@ -94,7 +94,19 @@ class GameLogicEngine {
       rawArgs.forEach((k, v) {
         partial[k] = (k == 'do') ? v : resolveExpression(v);
       });
-      return GameActions.dispatch(game, call, partial, this);
+      final result = GameActions.dispatch(game, call, partial, this);
+      _assignResult(action, result);
+      return result;
+    }
+    if (call == '@tiled.spawn_objects' || call == '@tiled.spawn_objects_near') {
+      final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
+      final partial = <String, dynamic>{};
+      rawArgs.forEach((k, v) {
+        partial[k] = (k == 'templates') ? v : resolveExpression(v);
+      });
+      final result = GameActions.dispatch(game, call, partial, this);
+      _assignResult(action, result);
+      return result;
     }
 
     final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -107,7 +119,16 @@ class GameLogicEngine {
         return null;
     }
 
-    return GameActions.dispatch(game, call, args, this);
+    final result = GameActions.dispatch(game, call, args, this);
+    _assignResult(action, result);
+    return result;
+  }
+
+  void _assignResult(Map<String, dynamic> action, dynamic result) {
+    final assign = action['assign']?.toString();
+    if (assign != null && assign.isNotEmpty) {
+      setVariable(assign, result);
+    }
   }
 
   // ---------- 内置 ----------
@@ -141,8 +162,7 @@ class GameLogicEngine {
   void _doWhile(Map<String, dynamic> rawArgs) {
     final condRaw = rawArgs['cond'];
     final bodyRaw = rawArgs['body'];
-    final maxIter =
-        (rawArgs['max_iterations'] as num?)?.toInt() ?? 10000;
+    final maxIter = (rawArgs['max_iterations'] as num?)?.toInt() ?? 10000;
     if (bodyRaw is! List) return;
 
     int count = 0;
@@ -229,7 +249,9 @@ class GameLogicEngine {
   /// 多一段 split 出错。详见主解释器 _stringifyForTemplate 同名函数注释。
   static String _stringifyForTemplate(dynamic value) {
     if (value == null) return '';
-    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+    if (value is double &&
+        value.isFinite &&
+        value == value.truncateToDouble()) {
       return value.toInt().toString();
     }
     return value.toString();
@@ -245,10 +267,41 @@ class GameLogicEngine {
 
   /// jsonlogic 操作符识别（粗糙白名单，避免把数据 Map 当表达式）
   static const _jsonLogicOps = {
-    'var', 'if', 'and', 'or', '!', '!!', '==', '!=', '===', '!==',
-    '<', '>', '<=', '>=', '+', '-', '*', '/', '%', 'min', 'max',
-    'in', 'cat', 'substr', 'log', 'missing', 'missing_some',
-    'merge', 'reduce', 'map', 'filter', 'all', 'some', 'none', 'method',
+    'var',
+    'if',
+    'and',
+    'or',
+    '!',
+    '!!',
+    '==',
+    '!=',
+    '===',
+    '!==',
+    '<',
+    '>',
+    '<=',
+    '>=',
+    '+',
+    '-',
+    '*',
+    '/',
+    '%',
+    'min',
+    'max',
+    'in',
+    'cat',
+    'substr',
+    'log',
+    'missing',
+    'missing_some',
+    'merge',
+    'reduce',
+    'map',
+    'filter',
+    'all',
+    'some',
+    'none',
+    'method',
   };
 
   bool _looksLikeJsonLogic(String k) => _jsonLogicOps.contains(k);
@@ -257,8 +310,10 @@ class GameLogicEngine {
 
   dynamic _evalJsonLogic(Map<String, dynamic> rule) {
     try {
-      // 先把规则里的字符串模板烤一遍，让 {"var": "vars.x.{{ idx }}"} 能 work
-      final preprocessed = _resolveTemplatesInRule(rule);
+      // 先把规则里的字符串模板和 inline action 预处理掉：
+      // - {"var": "vars.x.{{ idx }}"} 这种动态路径需要烤模板
+      // - {"and": [{"call": "@xxx"}, ...]} 这种条件组合需要先执行表达式 action
+      final preprocessed = _resolveJsonLogicOperands(rule);
       return _jsonlogic.apply(preprocessed, _dataScope());
     } catch (e) {
       // 表达式炸了不能让游戏崩，返回 null 让上游决定
@@ -269,15 +324,18 @@ class GameLogicEngine {
   /// 递归预处理 jsonlogic 规则里的 `{{ x }}` 模板字符串。
   /// 跟主解释器 _resolveTemplatesInRule 同行为，让 `{"var": "vars.board.{{ _i }}"}`
   /// 这种动态路径能用。
-  dynamic _resolveTemplatesInRule(dynamic rule) {
+  dynamic _resolveJsonLogicOperands(dynamic rule) {
     if (rule is String && rule.contains('{{') && rule.contains('}}')) {
       return _resolveString(rule);
     }
     if (rule is List) {
-      return rule.map((e) => _resolveTemplatesInRule(e)).toList();
+      return rule.map((e) => _resolveJsonLogicOperands(e)).toList();
     }
     if (rule is Map<String, dynamic>) {
-      return rule.map((k, v) => MapEntry(k, _resolveTemplatesInRule(v)));
+      if (rule.containsKey('call')) {
+        return runAction(rule);
+      }
+      return rule.map((k, v) => MapEntry(k, _resolveJsonLogicOperands(v)));
     }
     return rule;
   }
@@ -410,7 +468,11 @@ class GameLogicEngine {
 
   /// 写嵌套路径。支持 Map 和 List 中段穿过 + 末段写入。
   /// 跟主解释器 _setNestedValue 行为一致：List 越界 / 非数字段静默 no-op。
-  void _writePath(Map<String, dynamic> root, List<String> parts, dynamic value) {
+  void _writePath(
+    Map<String, dynamic> root,
+    List<String> parts,
+    dynamic value,
+  ) {
     dynamic cur = root;
     for (int i = 0; i < parts.length - 1; i++) {
       final p = parts[i];

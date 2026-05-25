@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "library",
     "description": "OpenAI-compatible chat helpers for JSON APPs. Requests are sent directly from the client.",
-    "author": "AI Designer",
+    "author": "fish",
     "exports": [
       "chatStream",
       "chatOnce"
