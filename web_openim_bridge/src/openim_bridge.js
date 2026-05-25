@@ -61,23 +61,19 @@ function installGzipWasmFallback() {
 
   const originalInstantiateStreaming = WebAssembly.instantiateStreaming.bind(WebAssembly);
   WebAssembly.instantiateStreaming = async (source, importObject) => {
-    try {
-      return await originalInstantiateStreaming(source, importObject);
-    } catch (error) {
-      const response = await Promise.resolve(source);
-      if (!(response instanceof Response)) throw error;
-
-      const compressed = new Uint8Array(await response.clone().arrayBuffer());
-      const isGzip = compressed.length >= 2 && compressed[0] === 0x1f && compressed[1] === 0x8b;
-      if (!isGzip || typeof DecompressionStream !== 'function') {
-        throw error;
-      }
-
-      const decompressed = await new Response(
-        new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip')),
-      ).arrayBuffer();
-      return WebAssembly.instantiate(decompressed, importObject);
+    const response = await Promise.resolve(source);
+    if (!(response instanceof Response)) {
+      return originalInstantiateStreaming(source, importObject);
     }
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+    const wasmBytes = isGzip
+      ? await new Response(
+          new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')),
+        ).arrayBuffer()
+      : bytes.buffer;
+    return WebAssembly.instantiate(wasmBytes, importObject);
   };
 }
 
