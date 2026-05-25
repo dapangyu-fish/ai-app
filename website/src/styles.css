@@ -161,6 +161,32 @@ select {
   cursor: pointer;
 }
 
+.languageSelect {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.languageSelect select {
+  min-width: 108px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.languageSelect option {
+  background: #0b0e12;
+  color: #f8fafc;
+}
+
 .hero {
   position: relative;
   overflow: hidden;
@@ -181,7 +207,7 @@ select {
 .heroGrid {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-columns: minmax(0, 1fr) minmax(390px, 44vw);
   align-items: center;
   gap: 58px;
 }
@@ -323,13 +349,13 @@ select {
 
 .phoneStage {
   position: relative;
-  width: min(100%, 390px);
+  width: min(100%, 520px);
   justify-self: center;
   padding: 18px;
 }
 
 .phoneStage.compact {
-  width: min(100%, 360px);
+  width: min(100%, 420px);
 }
 
 .phoneGlow {
@@ -343,43 +369,124 @@ select {
 .phoneShell {
   position: relative;
   margin: 0 auto;
-  width: 320px;
+  width: 360px;
+  height: 752px;
   max-width: 100%;
-  aspect-ratio: 9 / 18.8;
   border: 1px solid color-mix(in srgb, var(--line) 86%, #ffffff 8%);
-  border-radius: 42px;
-  padding: 12px;
+  border-radius: 48px;
+  padding: 14px;
   background: #06070a;
   box-shadow:
     0 30px 90px rgba(0, 0, 0, 0.46),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.045),
     0 0 0 8px rgba(255, 255, 255, 0.025);
+  touch-action: none;
 }
 
 .phoneSpeaker {
   position: absolute;
-  top: 10px;
+  top: 13px;
   left: 50%;
   z-index: 2;
-  width: 86px;
-  height: 21px;
+  width: 96px;
+  height: 24px;
   transform: translateX(-50%);
-  border-radius: 0 0 14px 14px;
+  border-radius: 0 0 16px 16px;
   background: #06070a;
+}
+
+.sideButton {
+  position: absolute;
+  z-index: 0;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #202633, #0a0d12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sideButtonPower {
+  right: -6px;
+  top: 22%;
+  height: 74px;
+}
+
+.sideButtonVolumeUp,
+.sideButtonVolumeDown {
+  left: -6px;
+  height: 58px;
+}
+
+.sideButtonVolumeUp {
+  top: 18%;
+}
+
+.sideButtonVolumeDown {
+  top: calc(18% + 70px);
 }
 
 .phoneScreen {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border-radius: 31px;
-  background: #ffffff;
+  border-radius: 34px;
+  background: #07080b;
 }
 
 .phoneScreen iframe {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #ffffff;
+  display: block;
+  overflow: hidden;
+  background: #07080b;
+  overscroll-behavior: none;
+  scrollbar-width: none;
+}
+
+.phoneScreen iframe::-webkit-scrollbar {
+  display: none;
+}
+
+.resizeHandle {
+  position: absolute;
+  z-index: 4;
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--primary2) 70%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 28%, transparent);
+  cursor: nwse-resize;
+}
+
+.resizeHandle::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  background: var(--primary2);
+}
+
+.resizeHandle-nw {
+  top: -4px;
+  left: -4px;
+}
+
+.resizeHandle-ne {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.resizeHandle-sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+.resizeHandle-se {
+  right: -4px;
+  bottom: -4px;
 }
 
 .phoneCaption {
@@ -428,6 +535,7 @@ section {
 }
 
 .playground,
+.videosSection,
 .featuresSection,
 .downloadSection {
   border-top: 1px solid var(--line);
@@ -519,6 +627,67 @@ section {
 
 .swatch-slate {
   background: linear-gradient(135deg, #111827, #e5e7eb);
+}
+
+.videoGrid,
+.deployCards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.videoCard,
+.deployCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 18px;
+}
+
+.videoCard {
+  min-height: 260px;
+}
+
+.videoThumb {
+  display: grid;
+  place-items: center;
+  height: 128px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 24%, transparent), transparent),
+    color-mix(in srgb, var(--bg2) 78%, transparent);
+  color: var(--primary2);
+}
+
+.videoCard span {
+  display: block;
+  margin-top: 14px;
+  color: var(--primary2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+}
+
+.videoCard h3,
+.deployCard h3 {
+  margin: 8px 0 0;
+  font-size: 18px;
+}
+
+.videoCard p,
+.deployCard p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.deployCards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.deployCard .terminalBox {
+  width: 100%;
+  margin-top: 14px;
 }
 
 .tryGrid {
@@ -684,6 +853,11 @@ section {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .videoGrid,
+  .deployCards {
+    grid-template-columns: 1fr;
+  }
+
   .sectionHeader.split,
   .deployGrid,
   .downloadPanel {
@@ -705,6 +879,11 @@ section {
     display: none;
   }
 
+  .languageSelect select {
+    width: 72px;
+    min-width: 72px;
+  }
+
   .hero {
     padding-top: 48px;
   }
@@ -712,7 +891,9 @@ section {
   .metricRow,
   .stepsGrid,
   .featureGrid,
-  .themeGrid {
+  .themeGrid,
+  .videoGrid,
+  .deployCards {
     grid-template-columns: 1fr;
   }
 
@@ -738,6 +919,11 @@ section {
   }
 
   .phoneShell {
-    width: min(100%, 300px);
+    width: min(100%, 300px) !important;
+    height: 626px !important;
+  }
+
+  .resizeHandle {
+    display: none;
   }
 }

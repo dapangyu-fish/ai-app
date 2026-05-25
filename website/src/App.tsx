@@ -5,6 +5,7 @@ import {
   Cloud,
   Code2,
   Download,
+  Film,
   Globe2,
   MessageCircle,
   Play,
@@ -13,12 +14,19 @@ import {
   Sparkles,
   Terminal,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { type PointerEvent as ReactPointerEvent, useMemo, useState } from 'react';
 
-type Lang = 'zh' | 'en';
+type Lang = 'zh' | 'en' | 'de' | 'es';
 type ThemeKey = 'orbit' | 'matrix' | 'prism' | 'slate';
 
 const WEB_APP_URL = 'https://myapp-web.dapangyu.work/';
+
+const languageOptions: Array<{ key: Lang; label: string; flag: string }> = [
+  { key: 'zh', label: '中文', flag: '🇨🇳' },
+  { key: 'en', label: 'English', flag: '🇺🇸' },
+  { key: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { key: 'es', label: 'Español', flag: '🇪🇸' },
+];
 
 const themes: Array<{
   key: ThemeKey;
@@ -55,7 +63,7 @@ const themes: Array<{
 const copy = {
   zh: {
     navHow: '部署',
-    navTry: '体验',
+    navTry: '视频',
     navFeatures: '能力',
     navDownload: '下载',
     badge: 'AI 造 App · 服务端驱动 · Web / iOS / Android',
@@ -68,17 +76,27 @@ const copy = {
     phoneCaption: '线上 Web 客户端，嵌在手机外框里做快速演示。',
     playgroundTitle: '选择官网科技风格',
     playgroundSubtitle: '同一套内容，切换不同视觉方向，后续可以按你选中的风格继续打磨。',
-    tryTitle: '先在浏览器里试一下',
-    tryBody:
-      '右侧就是线上 Web 客户端。它和移动端共用同一套 JSON App 运行时，适合快速演示、体验应用市场和验证 AI 生成出来的应用。',
-    deployTitle: '自部署入口',
-    deployHint: 'bootstrap 会输出二维码和整段 JSON，客户端可扫码或粘贴后切换环境。',
+    videosTitle: '演示视频',
+    videosSubtitle: '这里先放占位卡片，后续把视频链接补进去即可。',
+    videoCards: [
+      ['AI 生成 App', '从一句话开始生成可运行 JSON App。'],
+      ['应用市场', '安装、搜索、运行 JSON App 和组件。'],
+      ['切换环境', '扫码或粘贴 bootstrap JSON，连接你的后端。'],
+    ],
+    deployTitle: '私有部署与客户端接入',
+    deployHint: '私有部署主要是后端；客户端可以使用线上 Web，也可以自己 build iOS / Android / Web，然后在客户端切换环境。',
+    backendDeployTitle: '1. 部署后端测试环境',
+    clientBuildTitle: '2. 构建客户端',
+    switchEnvTitle: '3. 客户端切换环境',
+    switchEnvBody: '打开客户端的 Service Environment 页面，扫码 bootstrap 输出的二维码，或粘贴整段 JSON。保存后重新登录，客户端就会连接到你的后端。',
+    usageTitle: '4. 怎么使用',
+    usageBody: '登录测试账号后，可以打开应用市场安装 JSON App，也可以用悬浮 AI 入口描述需求，让 AI 生成应用，再继续通过对话迭代。',
     howTitle: '从想法到应用',
-    howSubtitle: '官网第一屏直接给出路径，避免变成空泛营销页。',
+    howSubtitle: '完整流程是部署后端、构建或打开客户端、切换环境、安装或生成应用。',
     steps: [
-      ['描述需求', '像聊天一样告诉 AI 你要什么应用。'],
-      ['生成 JSON App', 'AI 输出可执行配置，调用框架里的组件、数据和网络能力。'],
-      ['即时运行', 'Web / iOS / Android 使用同一套应用描述。'],
+      ['准备环境', '先运行 bootstrap，拿到服务地址、测试账号和环境 JSON。'],
+      ['连接客户端', 'Web / iOS / Android 都通过环境切换页连接到你的后端。'],
+      ['生成或安装 App', '在应用市场安装 JSON App，或让 AI 生成新的应用。'],
     ],
     featuresTitle: '平台能力',
     featuresSubtitle: '围绕 AI 生成、运行时渲染、应用市场和自部署构建。',
@@ -99,7 +117,7 @@ const copy = {
   },
   en: {
     navHow: 'Deploy',
-    navTry: 'Try',
+    navTry: 'Videos',
     navFeatures: 'Capabilities',
     navDownload: 'Download',
     badge: 'AI-built apps · Server-driven · Web / iOS / Android',
@@ -112,17 +130,27 @@ const copy = {
     phoneCaption: 'Live Web client embedded in a phone frame for quick demos.',
     playgroundTitle: 'Choose a tech visual direction',
     playgroundSubtitle: 'Same product content, multiple visual directions. Pick one and we can refine from there.',
-    tryTitle: 'Try it in the browser first',
-    tryBody:
-      'The live Web client is embedded on the right. It shares the same JSON App runtime as mobile, so it works for demos, marketplace browsing and checking AI-generated apps.',
-    deployTitle: 'Self-host entry',
-    deployHint: 'bootstrap outputs a QR code and full JSON. The client can scan or paste it to switch environments.',
+    videosTitle: 'Demo videos',
+    videosSubtitle: 'Placeholder cards for now. Drop in real video links later.',
+    videoCards: [
+      ['AI app generation', 'Generate a runnable JSON App from one prompt.'],
+      ['Marketplace', 'Search, install and run JSON Apps and components.'],
+      ['Environment switch', 'Scan or paste bootstrap JSON to connect your backend.'],
+    ],
+    deployTitle: 'Private backend and client setup',
+    deployHint: 'Private deployment mainly means the backend. The client can use the hosted Web app, or you can build iOS / Android / Web yourself and switch environments in the client.',
+    backendDeployTitle: '1. Deploy backend test environment',
+    clientBuildTitle: '2. Build clients',
+    switchEnvTitle: '3. Switch client environment',
+    switchEnvBody: 'Open Service Environment in the client, scan the QR code from bootstrap, or paste the full JSON. Save and sign in again to connect to your backend.',
+    usageTitle: '4. How to use it',
+    usageBody: 'After signing in with the test account, install JSON Apps from the marketplace or use the floating AI entry to describe an app and iterate through chat.',
     howTitle: 'Idea to app',
-    howSubtitle: 'The homepage starts from the actual path instead of generic marketing copy.',
+    howSubtitle: 'The full flow is backend bootstrap, client build/open, environment switch, then install or generate apps.',
     steps: [
-      ['Describe it', 'Tell AI what app you want in natural language.'],
-      ['Generate JSON App', 'AI outputs executable config using framework components, data and network capabilities.'],
-      ['Run instantly', 'Web / iOS / Android share the same app description.'],
+      ['Prepare environment', 'Run bootstrap to get service URLs, test account and environment JSON.'],
+      ['Connect client', 'Web / iOS / Android all connect through the environment switch page.'],
+      ['Generate or install apps', 'Install JSON Apps from the marketplace or ask AI to generate new ones.'],
     ],
     featuresTitle: 'Platform capabilities',
     featuresSubtitle: 'Built around AI generation, runtime rendering, marketplace distribution and self-hosting.',
@@ -141,13 +169,166 @@ const copy = {
     googlePlay: 'Google Play',
     soon: 'Coming soon',
   },
+  de: {
+    navHow: 'Deployment',
+    navTry: 'Videos',
+    navFeatures: 'Funktionen',
+    navDownload: 'Download',
+    badge: 'AI-App-Erstellung · Server-driven · Web / iOS / Android',
+    titleA: 'Sag der KI, was du brauchst',
+    titleB: 'und erhalte eine lauffähige App',
+    subtitle:
+      'Beschreibe deine App. Die KI erzeugt eine JSON App, die sofort in der Web-Vorschau und auf mobilen Clients läuft. Kein Rebuild, kein Store-Review.',
+    primaryCta: 'Live-Demo öffnen',
+    secondaryCta: 'Deployment ansehen',
+    phoneCaption: 'Live-Web-Client im Smartphone-Rahmen für schnelle Demos.',
+    playgroundTitle: 'Technischen Look wählen',
+    playgroundSubtitle: 'Gleicher Inhalt, mehrere visuelle Richtungen. Wähle eine aus und wir feilen daran weiter.',
+    videosTitle: 'Demo-Videos',
+    videosSubtitle: 'Noch Platzhalter. Später können hier echte Videolinks ergänzt werden.',
+    videoCards: [
+      ['KI generiert Apps', 'Aus einem Prompt entsteht eine lauffähige JSON App.'],
+      ['App-Marktplatz', 'JSON Apps und Komponenten suchen, installieren und starten.'],
+      ['Umgebung wechseln', 'QR-Code scannen oder bootstrap JSON einfügen.'],
+    ],
+    deployTitle: 'Private Backend-Bereitstellung und Client-Setup',
+    deployHint: 'Privates Deployment betrifft vor allem das Backend. Den Client kannst du als gehostete Web-App nutzen oder iOS / Android / Web selbst bauen.',
+    backendDeployTitle: '1. Backend-Testumgebung starten',
+    clientBuildTitle: '2. Clients bauen',
+    switchEnvTitle: '3. Client-Umgebung wechseln',
+    switchEnvBody: 'Öffne im Client Service Environment, scanne den QR-Code aus bootstrap oder füge das vollständige JSON ein. Danach speichern und neu anmelden.',
+    usageTitle: '4. Nutzung',
+    usageBody: 'Nach dem Login mit dem Testkonto kannst du Apps aus dem Marktplatz installieren oder über den schwebenden KI-Einstieg neue Apps beschreiben und iterieren.',
+    howTitle: 'Von der Idee zur App',
+    howSubtitle: 'Der Ablauf: Backend starten, Client bauen oder öffnen, Umgebung wechseln, App installieren oder generieren.',
+    steps: [
+      ['Umgebung vorbereiten', 'bootstrap liefert Service-URLs, Testkonto und Umgebungs-JSON.'],
+      ['Client verbinden', 'Web / iOS / Android verbinden sich über die Environment-Seite.'],
+      ['Apps nutzen', 'Apps aus dem Marktplatz installieren oder per KI generieren.'],
+    ],
+    featuresTitle: 'Plattformfunktionen',
+    featuresSubtitle: 'Gebaut für KI-Generierung, Runtime-Rendering, Marktplatz und Self-Hosting.',
+    features: [
+      ['AI-native DSL', 'Struktur für LLM-Generierung statt nur manuelle Konfiguration.'],
+      ['Web-kompatibel', 'Dieselbe JSON App im Web-Client validieren und demonstrieren.'],
+      ['Integriertes IM', 'Freunde, Gruppen, Sync und OpenIM-Kompatibilität für Web.'],
+      ['Marktplatz', 'Paketindex, Versionen, Suche, Pagination und Komponenten-Wiederverwendung.'],
+      ['Server-driven', 'UI und Verhalten ohne Store-Review ausliefern.'],
+      ['Self-hostable', 'test-env bootstrap startet die Kernservices Ende zu Ende.'],
+    ],
+    downloadTitle: 'Mobile Downloads folgen',
+    downloadBody: 'Nutze jetzt die Web-Version. Mobile Clients teilen dasselbe App-Ökosystem.',
+    openWeb: 'Web-App öffnen',
+    appStore: 'App Store',
+    googlePlay: 'Google Play',
+    soon: 'Demnächst',
+  },
+  es: {
+    navHow: 'Despliegue',
+    navTry: 'Videos',
+    navFeatures: 'Capacidades',
+    navDownload: 'Descargar',
+    badge: 'Apps con IA · Server-driven · Web / iOS / Android',
+    titleA: 'Dile a la IA lo que quieres',
+    titleB: 'y obtén una app funcional',
+    subtitle:
+      'Describe la app que necesitas. La IA genera una JSON App que corre al instante en la vista Web y en clientes móviles. Sin recompilar, sin revisión de tienda.',
+    primaryCta: 'Abrir demo',
+    secondaryCta: 'Ver despliegue',
+    phoneCaption: 'Cliente Web en vivo dentro de un marco de teléfono para demos rápidas.',
+    playgroundTitle: 'Elige un estilo tecnológico',
+    playgroundSubtitle: 'Mismo contenido, varias direcciones visuales. Elige una y seguimos puliéndola.',
+    videosTitle: 'Videos demo',
+    videosSubtitle: 'Tarjetas de marcador por ahora. Luego puedes agregar enlaces reales.',
+    videoCards: [
+      ['Generación con IA', 'Crea una JSON App ejecutable desde un prompt.'],
+      ['Marketplace', 'Busca, instala y ejecuta JSON Apps y componentes.'],
+      ['Cambio de entorno', 'Escanea o pega el JSON de bootstrap para conectar tu backend.'],
+    ],
+    deployTitle: 'Backend privado y configuración del cliente',
+    deployHint: 'El despliegue privado es principalmente el backend. Puedes usar la Web hospedada o compilar iOS / Android / Web por tu cuenta.',
+    backendDeployTitle: '1. Desplegar backend de prueba',
+    clientBuildTitle: '2. Compilar clientes',
+    switchEnvTitle: '3. Cambiar entorno del cliente',
+    switchEnvBody: 'Abre Service Environment en el cliente, escanea el QR de bootstrap o pega el JSON completo. Guarda e inicia sesión de nuevo.',
+    usageTitle: '4. Cómo usarlo',
+    usageBody: 'Después de iniciar sesión con la cuenta de prueba, instala JSON Apps desde el marketplace o usa la entrada flotante de IA para describir una app e iterar por chat.',
+    howTitle: 'De idea a app',
+    howSubtitle: 'El flujo completo: bootstrap del backend, abrir o compilar cliente, cambiar entorno y luego instalar o generar apps.',
+    steps: [
+      ['Preparar entorno', 'bootstrap entrega URLs, cuenta de prueba y JSON de entorno.'],
+      ['Conectar cliente', 'Web / iOS / Android se conectan desde la página de entorno.'],
+      ['Crear o instalar apps', 'Instala desde el marketplace o pide a la IA que genere una nueva app.'],
+    ],
+    featuresTitle: 'Capacidades de la plataforma',
+    featuresSubtitle: 'Diseñada para generación con IA, runtime, marketplace y self-hosting.',
+    features: [
+      ['DSL nativa para IA', 'Estructura pensada para LLMs, no solo configuración manual.'],
+      ['Compatible con Web', 'Valida y muestra la misma JSON App en el cliente Web.'],
+      ['IM integrado', 'Amigos, grupos, sincronización y compatibilidad OpenIM para Web.'],
+      ['Marketplace', 'Índice, versiones, búsqueda, paginación y reutilización de componentes.'],
+      ['Server-driven', 'Envía UI y comportamiento sin ciclos de revisión de tiendas.'],
+      ['Autoalojable', 'test-env bootstrap levanta los servicios centrales de punta a punta.'],
+    ],
+    downloadTitle: 'Descargas móviles próximamente',
+    downloadBody: 'Usa ahora la versión Web. Los clientes móviles compartirán el mismo ecosistema.',
+    openWeb: 'Abrir Web app',
+    appStore: 'App Store',
+    googlePlay: 'Google Play',
+    soon: 'Próximamente',
+  },
 };
 
+type PhoneSize = {
+  width: number;
+  height: number;
+};
+
+function initialPhoneSize(compact: boolean): PhoneSize {
+  if (compact) {
+    return { width: 318, height: 664 };
+  }
+  const viewportHeight = typeof window === 'undefined' ? 800 : window.innerHeight;
+  const height = Math.min(Math.max(viewportHeight - 132, 680), 860);
+  return { width: Math.round((height * 9) / 18.8), height };
+}
+
 function PhonePreview({ compact = false }: { compact?: boolean }) {
+  const [size, setSize] = useState<PhoneSize>(() => initialPhoneSize(compact));
+
+  function startResize(corner: 'nw' | 'ne' | 'sw' | 'se', event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const start = size;
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      const xSign = corner.includes('e') ? 1 : -1;
+      const ySign = corner.includes('s') ? 1 : -1;
+      const width = Math.max(260, Math.min(520, start.width + dx * xSign));
+      const height = Math.max(540, Math.min(920, start.height + dy * ySign));
+      setSize({ width, height });
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
   return (
     <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp Web live preview">
       <div className="phoneGlow" />
-      <div className="phoneShell">
+      <div className="phoneShell" style={{ width: size.width, height: size.height }}>
+        <div className="sideButton sideButtonPower" />
+        <div className="sideButton sideButtonVolumeUp" />
+        <div className="sideButton sideButtonVolumeDown" />
         <div className="phoneSpeaker" />
         <div className="phoneScreen">
           <iframe
@@ -155,9 +336,32 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
             title="MyApp Web demo"
             loading={compact ? 'lazy' : 'eager'}
             allow="clipboard-read; clipboard-write; microphone; camera"
+            scrolling="no"
           />
         </div>
+        {(['nw', 'ne', 'sw', 'se'] as const).map((corner) => (
+          <button
+            aria-label={`Resize phone ${corner}`}
+            className={`resizeHandle resizeHandle-${corner}`}
+            key={corner}
+            type="button"
+            onPointerDown={(event) => startResize(corner, event)}
+          />
+        ))}
       </div>
+    </div>
+  );
+}
+
+function TerminalBox({ lines }: { lines: string[] }) {
+  return (
+    <div className="terminalBox">
+      <div className="terminalTop">
+        <span />
+        <span />
+        <span />
+      </div>
+      <pre>{lines.join('\n')}</pre>
     </div>
   );
 }
@@ -169,6 +373,7 @@ function App() {
   const [theme, setTheme] = useState<ThemeKey>('orbit');
   const t = copy[lang];
   const activeTheme = useMemo(() => themes.find((item) => item.key === theme)!, [theme]);
+  const activeLanguage = languageOptions.find((item) => item.key === lang) ?? languageOptions[1];
 
   return (
     <main className={`site theme-${theme}`}>
@@ -179,14 +384,21 @@ function App() {
           </a>
           <div className="navLinks">
             <a href="#deploy">{t.navHow}</a>
-            <a href="#try">{t.navTry}</a>
+            <a href="#videos">{t.navTry}</a>
             <a href="#features">{t.navFeatures}</a>
             <a href="#download">{t.navDownload}</a>
           </div>
-          <button className="iconButton" type="button" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}>
+          <label className="languageSelect" aria-label="Language">
             <Globe2 size={16} />
-            <span>{lang === 'zh' ? 'EN' : '中文'}</span>
-          </button>
+            <span>{activeLanguage.flag}</span>
+            <select value={lang} onChange={(event) => setLang(event.target.value as Lang)}>
+              {languageOptions.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </nav>
 
@@ -266,37 +478,76 @@ function App() {
         </div>
       </section>
 
-      <section className="trySection" id="try">
-        <div className="shell tryGrid">
-          <div className="panel copyPanel">
-            <p className="eyebrow">Live preview</p>
-            <h2>{t.tryTitle}</h2>
-            <p>{t.tryBody}</p>
-            <a className="inlineLink" href={WEB_APP_URL} target="_blank" rel="noreferrer">
-              {t.openWeb}
-              <ChevronRight size={16} />
+      <section className="videosSection" id="videos">
+        <div className="shell">
+          <div className="sectionHeader split">
+            <div>
+              <p className="eyebrow">Demo library</p>
+              <h2>{t.videosTitle}</h2>
+              <p>{t.videosSubtitle}</p>
+            </div>
+            <a className="button secondary" href="#videos">
+              <Film size={17} />
+              Video slots
             </a>
           </div>
-          <PhonePreview compact />
+          <div className="videoGrid">
+            {t.videoCards.map(([title, body], index) => (
+              <article className="videoCard" key={title}>
+                <div className="videoThumb">
+                  <Play size={28} />
+                </div>
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="deploySection" id="deploy">
-        <div className="shell deployGrid">
-          <div>
+        <div className="shell">
+          <div className="sectionHeader">
             <p className="eyebrow">Deploy first</p>
             <h2>{t.deployTitle}</h2>
             <p>{t.deployHint}</p>
           </div>
-          <div className="terminalBox">
-            <div className="terminalTop">
-              <span />
-              <span />
-              <span />
-            </div>
-            <pre>{`$ ./deploy/test-env/bootstrap.sh
-# scan QR or paste generated JSON
-$ open ${WEB_APP_URL}`}</pre>
+          <div className="deployCards">
+            <article className="deployCard">
+              <h3>{t.backendDeployTitle}</h3>
+              <TerminalBox
+                lines={[
+                  '$ cd deploy/test-env',
+                  '$ ./bootstrap.sh',
+                  '# save the QR / JSON / test account from output',
+                ]}
+              />
+            </article>
+            <article className="deployCard">
+              <h3>{t.clientBuildTitle}</h3>
+              <TerminalBox
+                lines={[
+                  '$ flutter pub get',
+                  '$ flutter run -d chrome',
+                  '$ flutter build apk --release',
+                  '$ flutter build ios --release',
+                  '$ ./scripts/build_cloudflare_pages.sh',
+                ]}
+              />
+            </article>
+            <article className="deployCard">
+              <h3>{t.switchEnvTitle}</h3>
+              <p>{t.switchEnvBody}</p>
+            </article>
+            <article className="deployCard">
+              <h3>{t.usageTitle}</h3>
+              <p>{t.usageBody}</p>
+              <a className="inlineLink" href={WEB_APP_URL} target="_blank" rel="noreferrer">
+                {t.openWeb}
+                <ChevronRight size={16} />
+              </a>
+            </article>
           </div>
         </div>
       </section>
