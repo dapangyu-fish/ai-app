@@ -347,8 +347,6 @@ class JsonInterpreter extends ChangeNotifier {
     if (value is Map<String, dynamic>) {
       if (_looksLikeJsonLogic(value)) {
         final preprocessed = _resolveTemplatesInRule(value);
-        final local = _evaluateLocalJsonLogic(preprocessed);
-        if (local != _notHandled) return local;
         return _jl.apply(preprocessed, _buildDataContext());
       }
       // 数据 Map：值再走一遍 evaluate，模板 / 嵌套 jsonlogic 都能正确展开
@@ -366,91 +364,6 @@ class JsonInterpreter extends ChangeNotifier {
     }
 
     return value;
-  }
-
-  static const Object _notHandled = Object();
-
-  dynamic _evaluateLocalJsonLogic(dynamic rule) {
-    if (rule is! Map || rule.length != 1) return _notHandled;
-    final entry = rule.entries.first;
-    final op = entry.key.toString();
-    final value = entry.value;
-    switch (op) {
-      case 'var':
-        if (value is List) {
-          if (value.isEmpty) return null;
-          final resolved = getVariable(value.first?.toString() ?? '');
-          return resolved ??
-              (value.length > 1 ? _evaluateExpression(value[1]) : null);
-        }
-        return getVariable(value?.toString() ?? '');
-      case '!':
-        return !_truthy(_evaluateExpression(value));
-      case '!!':
-        return _truthy(_evaluateExpression(value));
-      case '==':
-      case '===':
-        final values = value is List ? value : [value];
-        if (values.length < 2) return false;
-        return _evaluateExpression(values[0]) == _evaluateExpression(values[1]);
-      case '!=':
-      case '!==':
-        final values = value is List ? value : [value];
-        if (values.length < 2) return true;
-        return _evaluateExpression(values[0]) != _evaluateExpression(values[1]);
-      case '<':
-      case '>':
-      case '<=':
-      case '>=':
-        final values = value is List ? value : [value];
-        if (values.length < 2) return false;
-        return _compareValues(
-          _evaluateExpression(values[0]),
-          _evaluateExpression(values[1]),
-          op,
-        );
-      case 'and':
-        final values = value is List ? value : [value];
-        dynamic last = true;
-        for (final item in values) {
-          last = _evaluateExpression(item);
-          if (!_truthy(last)) return false;
-        }
-        return _truthy(last);
-      case 'or':
-        final values = value is List ? value : [value];
-        for (final item in values) {
-          final current = _evaluateExpression(item);
-          if (_truthy(current)) return true;
-        }
-        return false;
-    }
-    return _notHandled;
-  }
-
-  bool _truthy(dynamic value) {
-    if (value == null) return false;
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    if (value is String) return value.isNotEmpty;
-    if (value is List) return value.isNotEmpty;
-    if (value is Map) return value.isNotEmpty;
-    return true;
-  }
-
-  bool _compareValues(dynamic left, dynamic right, String op) {
-    final lNum = left is num ? left.toDouble() : double.tryParse('$left');
-    final rNum = right is num ? right.toDouble() : double.tryParse('$right');
-    final cmp = lNum != null && rNum != null
-        ? lNum.compareTo(rNum)
-        : '$left'.compareTo('$right');
-    return switch (op) {
-      '<' => cmp < 0,
-      '>' => cmp > 0,
-      '<=' => cmp <= 0,
-      '>=' => cmp >= 0,
-      _ => false,
-    };
   }
 
   /// 判断一个 Map 是否是 jsonlogic 表达式（而不是普通数据 Map）：

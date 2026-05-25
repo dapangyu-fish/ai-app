@@ -16,7 +16,7 @@
 // - 内置 @set / @if 等通用流程控制（少量复制 JsonInterpreter 的实现）
 // - 把 game-specific @action 委派给 GameActions（cell_path.* / scroll_list.* 等）
 
-import 'dart:math' as math;
+import 'package:jsonlogic/jsonlogic.dart';
 
 import 'flame_game_engine.dart';
 import 'game_actions.dart';
@@ -290,192 +290,19 @@ class GameLogicEngine {
 
   bool _looksLikeJsonLogic(String k) => _jsonLogicOps.contains(k);
 
+  static final Jsonlogic _jsonlogic = Jsonlogic();
+
   dynamic _evalJsonLogic(Map<String, dynamic> rule) {
     try {
       // 先把规则里的字符串模板和 inline action 预处理掉：
       // - {"var": "vars.x.{{ idx }}"} 这种动态路径需要烤模板
       // - {"and": [{"call": "@xxx"}, ...]} 这种条件组合需要先执行表达式 action
       final preprocessed = _resolveJsonLogicOperands(rule);
-      final local = _evalBooleanLogic(preprocessed);
-      if (local != _notHandled) return local;
-      // 游戏循环不能依赖 jsonlogic 包的动态 bool 语义；Web 下它可能把
-      // 0/0.008 等中间值带进 bool 位。游戏 DSL 只支持本文件显式实现的
-      // 小集合操作，未支持的 op 返回 null，让上游 truthy/数值转换兜底。
-      // ignore: avoid_print
-      print('[GameLogic] unsupported expression: $preprocessed');
-      return null;
+      return _jsonlogic.apply(preprocessed, _dataScope());
     } catch (e) {
       // 表达式炸了不能让游戏崩，返回 null 让上游决定
-      // ignore: avoid_print
-      print('[GameLogic] expression error: $rule -> $e');
       return null;
     }
-  }
-
-  static const Object _notHandled = Object();
-
-  dynamic _evalBooleanLogic(dynamic rule) {
-    if (rule is! Map || rule.length != 1) return _notHandled;
-    final entry = rule.entries.first;
-    final op = entry.key.toString();
-    final value = entry.value;
-    switch (op) {
-      case 'var':
-        if (value is List) {
-          if (value.isEmpty) return null;
-          final resolved = getVariable(value.first?.toString() ?? '');
-          return resolved ??
-              (value.length > 1 ? resolveExpression(value[1]) : null);
-        }
-        return getVariable(value?.toString() ?? '');
-      case '!':
-        return !_truthy(resolveExpression(value));
-      case '!!':
-        return _truthy(resolveExpression(value));
-      case '+':
-        return _sumValues(value);
-      case '-':
-        return _subtractValues(value);
-      case '*':
-        return _multiplyValues(value);
-      case '/':
-        return _divideValues(value);
-      case '%':
-        return _modValues(value);
-      case 'min':
-        return _minMaxValue(value, min: true);
-      case 'max':
-        return _minMaxValue(value, min: false);
-      case '==':
-      case '===':
-        final values = value is List ? value : [value];
-        if (values.length < 2) return false;
-        return resolveExpression(values[0]) == resolveExpression(values[1]);
-      case '!=':
-      case '!==':
-        final values = value is List ? value : [value];
-        if (values.length < 2) return true;
-        return resolveExpression(values[0]) != resolveExpression(values[1]);
-      case '<':
-      case '>':
-      case '<=':
-      case '>=':
-        final values = value is List ? value : [value];
-        if (values.length < 2) return false;
-        return _compareValues(
-          resolveExpression(values[0]),
-          resolveExpression(values[1]),
-          op,
-        );
-      case 'and':
-        final values = value is List ? value : [value];
-        dynamic last = true;
-        for (final item in values) {
-          last = resolveExpression(item);
-          if (!_truthy(last)) return false;
-        }
-        return _truthy(last);
-      case 'or':
-        final values = value is List ? value : [value];
-        for (final item in values) {
-          final current = resolveExpression(item);
-          if (_truthy(current)) return true;
-        }
-        return false;
-    }
-    return _notHandled;
-  }
-
-  num _numValue(dynamic raw) {
-    final value = resolveExpression(raw);
-    if (value is num) return value;
-    if (value is String) return num.tryParse(value) ?? 0;
-    if (value is bool) return value ? 1 : 0;
-    return 0;
-  }
-
-  num _normalizeNum(num value) {
-    if (value is double &&
-        value.isFinite &&
-        value == value.truncateToDouble()) {
-      return value.toInt();
-    }
-    return value;
-  }
-
-  num _sumValues(dynamic raw) {
-    final values = raw is List ? raw : [raw];
-    num total = 0;
-    for (final value in values) {
-      total += _numValue(value);
-    }
-    return _normalizeNum(total);
-  }
-
-  num _subtractValues(dynamic raw) {
-    final values = raw is List ? raw : [raw];
-    if (values.isEmpty) return 0;
-    if (values.length == 1) return _normalizeNum(-_numValue(values.first));
-    num total = _numValue(values.first);
-    for (final value in values.skip(1)) {
-      total -= _numValue(value);
-    }
-    return _normalizeNum(total);
-  }
-
-  num _multiplyValues(dynamic raw) {
-    final values = raw is List ? raw : [raw];
-    num total = 1;
-    for (final value in values) {
-      total *= _numValue(value);
-    }
-    return _normalizeNum(total);
-  }
-
-  num _divideValues(dynamic raw) {
-    final values = raw is List ? raw : [raw];
-    if (values.isEmpty) return 0;
-    num total = _numValue(values.first);
-    for (final value in values.skip(1)) {
-      final divisor = _numValue(value);
-      if (divisor == 0) return 0;
-      total /= divisor;
-    }
-    return _normalizeNum(total);
-  }
-
-  num _modValues(dynamic raw) {
-    final values = raw is List ? raw : [raw];
-    if (values.length < 2) return 0;
-    final divisor = _numValue(values[1]);
-    if (divisor == 0) return 0;
-    return _normalizeNum(_numValue(values[0]) % divisor);
-  }
-
-  num _minMaxValue(dynamic raw, {required bool min}) {
-    final values = raw is List ? raw : [raw];
-    if (values.isEmpty) return 0;
-    num result = _numValue(values.first);
-    for (final value in values.skip(1)) {
-      final n = _numValue(value);
-      result = min ? math.min(result, n) : math.max(result, n);
-    }
-    return _normalizeNum(result);
-  }
-
-  bool _compareValues(dynamic left, dynamic right, String op) {
-    final lNum = left is num ? left.toDouble() : double.tryParse('$left');
-    final rNum = right is num ? right.toDouble() : double.tryParse('$right');
-    final cmp = lNum != null && rNum != null
-        ? lNum.compareTo(rNum)
-        : '$left'.compareTo('$right');
-    return switch (op) {
-      '<' => cmp < 0,
-      '>' => cmp > 0,
-      '<=' => cmp <= 0,
-      '>=' => cmp >= 0,
-      _ => false,
-    };
   }
 
   /// 递归预处理 jsonlogic 规则里的 `{{ x }}` 模板字符串。
@@ -495,6 +322,29 @@ class GameLogicEngine {
       return rule.map((k, v) => MapEntry(k, _resolveJsonLogicOperands(v)));
     }
     return rule;
+  }
+
+  /// 给 jsonlogic / `{{ ... }}` 用的全局数据
+  Map<String, dynamic> _dataScope() {
+    final entitiesMap = <String, dynamic>{};
+    game.entities.forEach((id, e) => entitiesMap[id] = e.toMap());
+    return {
+      'vars': game.vars,
+      'entities': entitiesMap,
+      'event': _eventStack.isNotEmpty ? _eventStack.last : <String, dynamic>{},
+      'loop': _loopStack.isNotEmpty ? _loopStack.last : <String, dynamic>{},
+      'world': {
+        'cols': game.gameWorld.cols,
+        'rows': game.gameWorld.rows,
+        'width': game.gameWorld.width,
+        'height': game.gameWorld.height,
+        'cell_w': game.gameWorld.cellW,
+        'cell_h': game.gameWorld.cellH,
+      },
+      'score': game.score,
+      'best': game.bestScore,
+      'game_over': game.isGameOver,
+    };
   }
 
   /// 读变量（点路径）
