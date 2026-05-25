@@ -8,12 +8,11 @@
 // 5. emit 事件给外层 widget（onScoreChanged / onGameOver）让 JSON-APP 接
 
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
 import 'game_entity.dart';
 import 'game_logic.dart';
@@ -21,6 +20,7 @@ import 'tiled_map_entity.dart';
 import 'platformer_physics_backend.dart';
 import 'game_world.dart';
 import '../i18n/framework_strings.dart';
+import '../json_ui/asset_manager.dart';
 
 /// 事件回调签名（跟 A 模式一致，外层 widget 把事件桥到 JSON-DSL action）
 typedef GameEventCallback =
@@ -45,6 +45,7 @@ class JsonFlameGame extends FlameGame {
 
   /// 外部回调（emit 给 JSON-APP）
   final GameEventCallback? onEvent;
+  final JsonAppAssetManager assetManager;
 
   // ---- 运行时状态 ----
   /// 我们的世界定义（命名 gameWorld 避免跟 FlameGame.world 冲突 —— 后者
@@ -74,11 +75,13 @@ class JsonFlameGame extends FlameGame {
   // 内置 overlay 配置
   bool _showScore = true;
   bool _showGameOver = true; // overlay.game_over=false 时关掉 canvas
+  bool _showAssetLoading = true;
   // 浮层 + tap/swipe 自动重置，让 JSON-APP 用
   // common-ui dialog 接管结算页
   // 默认值在构造函数里走 T.current（非 const，所以不能放 field 初始化）
   String _gameOverTitle = '';
   String _gameOverHint = '';
+  String _assetLoadingText = 'Loading assets...';
   String? _cameraFollow;
   String? _cameraMap;
   double _cameraX = 0;
@@ -98,7 +101,11 @@ class JsonFlameGame extends FlameGame {
     fallback: PlatformerPhysicsBackend.aabb,
   );
 
-  JsonFlameGame({required this.spec, this.onEvent}) {
+  JsonFlameGame({
+    required this.spec,
+    required this.assetManager,
+    this.onEvent,
+  }) {
     // ⚠️ 必须在构造函数里同步完成所有 spec 解析。
     //
     // 原因：Flame 的 onGameResize 可能在 onLoad（async）之前被调，
@@ -188,6 +195,12 @@ class JsonFlameGame extends FlameGame {
       _drawGridLines(canvas);
     }
 
+    if (_showAssetLoading && _assetsLoading) {
+      canvas.restore();
+      _drawAssetLoadingOverlay(canvas);
+      return;
+    }
+
     // entities
     _updateCamera();
     canvas.save();
@@ -211,6 +224,7 @@ class JsonFlameGame extends FlameGame {
   /// 外层 GestureDetector.onTapDown 转过来
   void handleTap(double x, double y) {
     if (!_ready) return;
+    if (_showAssetLoading && _assetsLoading) return;
     final point = _toWorldPoint(x, y);
     if (isGameOver) {
       // 关掉内置浮层 = JSON-APP 自己接管结算页，tap 不再自动重置
@@ -382,6 +396,9 @@ class JsonFlameGame extends FlameGame {
     if (ov != null) {
       _showScore = ov['score'] != false;
       _showGameOver = ov['game_over'] != false;
+      _showAssetLoading = ov['asset_loading'] != false;
+      _assetLoadingText =
+          ov['asset_loading_text']?.toString() ?? _assetLoadingText;
       _gameOverTitle = ov['game_over_title']?.toString() ?? _gameOverTitle;
       _gameOverHint = ov['game_over_hint']?.toString() ?? _gameOverHint;
     }
@@ -667,6 +684,7 @@ class JsonFlameGame extends FlameGame {
             solidLayers: _readStringSet(spec['solid_layers']) ?? const {},
             hazardLayers: _readStringSet(spec['hazard_layers']) ?? const {},
             collidable: spec['collidable'] != false,
+            assetManager: assetManager,
           );
         }
       case 'scroll_list':
@@ -888,16 +906,26 @@ class JsonFlameGame extends FlameGame {
   }
 
   Future<Uint8List> _loadImageBytes(String asset) async {
-    final uri = Uri.tryParse(asset);
-    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      final resp = await http.get(uri);
-      if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        throw StateError('Failed to load image: $asset (${resp.statusCode})');
+    return assetManager.loadBytes(asset);
+  }
+
+  bool get _assetsLoading {
+    for (final entity in entities.values) {
+      if (entity is TiledMapEntity && !entity.loaded && entity.error == null) {
+        return true;
       }
-      return resp.bodyBytes;
+      if (entity is SpriteEntity &&
+          entity.asset.isNotEmpty &&
+          entity.image == null) {
+        return true;
+      }
+      if (entity is ParallaxEntity &&
+          entity.asset.isNotEmpty &&
+          entity.image == null) {
+        return true;
+      }
     }
-    final data = await rootBundle.load(asset);
-    return data.buffer.asUint8List();
+    return false;
   }
 
   // ---------- 内置 overlay ----------
@@ -920,6 +948,30 @@ class JsonFlameGame extends FlameGame {
         p,
       );
     }
+  }
+
+  void _drawAssetLoadingOverlay(Canvas canvas) {
+    final rect = Rect.fromLTWH(0, 0, size.x, size.y);
+    canvas.drawRect(rect, Paint()..color = gameWorld.bg);
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: _assetLoadingText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout(maxWidth: size.x * 0.8);
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size.x - textPainter.width) / 2,
+        (size.y - textPainter.height) / 2,
+      ),
+    );
   }
 
   void _drawScoreOverlay(Canvas canvas) {

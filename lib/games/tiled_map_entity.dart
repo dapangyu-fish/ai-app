@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 
+import '../json_ui/asset_manager.dart';
 import 'game_entity.dart';
 import 'game_world.dart';
 
@@ -23,6 +23,7 @@ class TiledMapEntity extends GameEntity {
   final Set<String> solidLayers;
   final Set<String> hazardLayers;
   final bool collidable;
+  final JsonAppAssetManager assetManager;
 
   int mapWidth = 0;
   int mapHeight = 0;
@@ -44,6 +45,7 @@ class TiledMapEntity extends GameEntity {
     this.solidLayers = const {},
     this.hazardLayers = const {},
     this.collidable = true,
+    required this.assetManager,
   });
 
   double get widthPx => mapWidth * tileWidth * scale;
@@ -452,16 +454,7 @@ class TiledMapEntity extends GameEntity {
   }
 
   String _resolve(String path, {String? relativeTo}) {
-    final uri = Uri.tryParse(path);
-    if (uri != null && uri.hasScheme) return path;
-    if (relativeTo != null) {
-      final base = Uri.parse(relativeTo);
-      return base.resolve(path).toString();
-    }
-    if (baseUrl != null && baseUrl!.isNotEmpty) {
-      return Uri.parse(baseUrl!).resolve(path).toString();
-    }
-    return path;
+    return assetManager.resolve(path, baseUrl: baseUrl, relativeTo: relativeTo);
   }
 
   Future<String> _loadText(String path) async {
@@ -470,16 +463,7 @@ class TiledMapEntity extends GameEntity {
   }
 
   Future<Uint8List> _loadBytes(String path) async {
-    final uri = Uri.tryParse(path);
-    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      final resp = await http.get(uri);
-      if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        throw StateError('Failed to load $path (${resp.statusCode})');
-      }
-      return resp.bodyBytes;
-    }
-    final data = await rootBundle.load(path);
-    return data.buffer.asUint8List();
+    return assetManager.loadBytes(path);
   }
 
   static Map<String, dynamic> _readProperties(XmlElement object) {

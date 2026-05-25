@@ -805,16 +805,23 @@ class GameActions {
     final jumpPressed = args['jump'] == true || args['jump_pressed'] == true;
     final allowDoubleJump = args['allow_double_jump'] == true;
     final autoRun = (args['auto_run'] as num?)?.toDouble();
+    final groundedAutoRun = args['grounded_auto_run'] == true;
     final move = (args['move'] as num?)?.toDouble();
     final speed = (args['speed'] as num?)?.toDouble() ?? 320;
 
+    final onGround = player.state['onGround'] == true;
+    final lastGroundXVelocity =
+        (player.state['lastGroundXVelocity'] as num?)?.toDouble() ?? 0;
     if (autoRun != null) {
-      player.vx = autoRun;
+      if (groundedAutoRun) {
+        player.vx = onGround ? autoRun : autoRun.sign * lastGroundXVelocity;
+      } else {
+        player.vx = autoRun;
+      }
     } else if (move != null) {
       player.vx = move.clamp(-1, 1) * speed;
     }
 
-    final onGround = player.state['onGround'] == true;
     final doubleJumpUsed = player.state['doubleJumpUsed'] == true;
     if (jumpPressed) {
       if (onGround) {
@@ -830,7 +837,13 @@ class GameActions {
     player.vy = (player.vy + gravity * dt).clamp(-maxFall, maxFall);
     _moveAndCollideX(player, map, player.vx * dt);
     _moveAndCollideY(player, map, player.vy * dt);
-    final rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
+    if (player.state['onGround'] == true) {
+      player.state['lastGroundXVelocity'] = player.vx.abs();
+    }
+    final hazardMode = args['hazard_mode']?.toString();
+    final rect = hazardMode == 'feet'
+        ? Rect.fromLTWH(player.x, player.y + player.h - 2, player.w, 4)
+        : Rect.fromLTWH(player.x, player.y, player.w, player.h);
     final hazards = map.collisionRectsIn(rect).where((c) => c.hazard).toList();
     player.state['hazard'] = hazards.isNotEmpty;
     player.state['hazardCollision'] = hazards.isEmpty
@@ -857,12 +870,14 @@ class GameActions {
     }
     best ??= map.firstObject('spawn');
     if (best == null) return false;
+    final anchor = args['anchor']?.toString();
     player.x = best.x;
-    player.y = best.y - player.h;
+    player.y = anchor == 'tiled_position' ? best.y : best.y - player.h;
     player.vx = 0;
     player.vy = 0;
     player.state['onGround'] = false;
     player.state['doubleJumpUsed'] = false;
+    player.state['lastGroundXVelocity'] = 0;
     player.state['hazard'] = false;
     final invincibleSeconds = (args['invincible_seconds'] as num?)?.toDouble();
     if (invincibleSeconds != null && invincibleSeconds > 0) {

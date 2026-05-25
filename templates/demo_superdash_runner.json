@@ -3,7 +3,7 @@
   "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
   "meta": {
     "name": "demo-superdash-runner",
-    "version": "0.2.3",
+    "version": "0.2.5",
     "type": "app",
     "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
     "author": "demo"
@@ -144,14 +144,18 @@
                 "deadzone_y": 64,
                 "smooth_y": 0.18
               },
-              "overlay": {"game_over": false},
+              "overlay": {
+                "game_over": false,
+                "asset_loading": true,
+                "asset_loading_text": "正在加载游戏资源..."
+              },
               "vars": {
                 "state": "loading",
                 "section": 1,
                 "progress": 0,
                 "section_len": 999999,
-                "gravity": 950,
-                "jump_vy": -380,
+                "gravity": 2048,
+                "jump_vy": -1229,
                 "speed": 320,
                 "floor_y": 0,
                 "ground_y": 0,
@@ -314,7 +318,9 @@
                         "gravity": {"var": "vars.gravity"},
                         "jump_velocity": {"var": "vars.jump_vy"},
                         "auto_run": {"var": "vars.speed"},
-                        "max_fall": 900
+                        "grounded_auto_run": true,
+                        "max_fall": 1280,
+                        "hazard_mode": "feet"
                       }},
                       {"call": "@set", "args": {"var": "vars.on_ground", "value": {"var": "entities.player.onGround"}}},
                       {"call": "@platformer.stuck_check", "args": {"id": "player", "dt": {"var": "event.dt"}, "enabled": {"==": [{"var": "vars.state"}, "running"]}, "threshold": 0.5, "timeout": 1.0}, "assign": "vars._stuck"},
@@ -332,7 +338,7 @@
                             "cond": {"var": "vars.has_feather"},
                             "then": [
                               {"call": "@set", "args": {"var": "vars.has_feather", "value": false}},
-                              {"call": "@platformer.respawn", "args": {"id": "player", "map": "tmx_map", "layer": "respawn"}},
+                              {"call": "@platformer.respawn", "args": {"id": "player", "map": "tmx_map", "layer": "respawn", "anchor": "tiled_position"}},
                               {"call": "@animated_sprite.set_animation", "args": {"id": "player", "animation": "run"}}
                             ],
                             "else": [
@@ -403,7 +409,7 @@
                             "cond": {"var": "vars.has_feather"},
                             "then": [
                               {"call": "@set", "args": {"var": "vars.has_feather", "value": false}},
-                              {"call": "@platformer.respawn", "args": {"id": "player", "map": "tmx_map", "layer": "respawn"}},
+                              {"call": "@platformer.respawn", "args": {"id": "player", "map": "tmx_map", "layer": "respawn", "anchor": "tiled_position"}},
                               {"call": "@animated_sprite.set_animation", "args": {"id": "player", "animation": "run"}}
                             ],
                             "else": [

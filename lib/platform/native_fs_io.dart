@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 
 /// 原生实现：直接走 dart:io + path_provider。
@@ -52,12 +53,33 @@ class NativeFs {
     }
   }
 
+  static Future<Uint8List?> readBytesAbs(String absPath) async {
+    try {
+      final f = File(absPath);
+      if (!f.existsSync()) return null;
+      return await f.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 写字符串（自动创建父目录）。成功返回 true。
   static Future<bool> writeStringAbs(String absPath, String content) async {
     try {
       final f = File(absPath);
       if (!f.parent.existsSync()) f.parent.createSync(recursive: true);
       await f.writeAsString(content);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> writeBytesAbs(String absPath, List<int> bytes) async {
+    try {
+      final f = File(absPath);
+      if (!f.parent.existsSync()) f.parent.createSync(recursive: true);
+      await f.writeAsBytes(bytes, flush: true);
       return true;
     } catch (_) {
       return false;
