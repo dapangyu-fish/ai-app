@@ -3,7 +3,7 @@
   "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
   "meta": {
     "name": "demo-superdash-runner",
-    "version": "0.2.18",
+    "version": "0.2.19",
     "type": "app",
     "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
     "author": "demo"
@@ -29,7 +29,70 @@
       "currentScore": 0,
       "bestScore": 0,
       "section": 1,
-      "status": "点击开始"
+      "status": "点击开始",
+      "licenseAccepted": false
+    },
+    "i18n": {
+      "zh": {
+        "score": "得分 {{ global.currentScore }}",
+        "section_status": "第 {{ global.section }} 段 · {{ global.status }}",
+        "best": "最佳 {{ global.bestScore }}",
+        "license": {
+          "title": "开源许可说明",
+          "intro": "本 JSON 游戏演示使用 Flutter SuperDash 项目的开源素材与设计参考。",
+          "repo_label": "原始仓库",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "许可协议",
+          "license": "BSD-3-Clause License",
+          "notice": "请在继续前确认：本演示保留原项目许可声明，相关素材与代码来源遵循 BSD-3-Clause License。点击确认后开始游戏。",
+          "confirm": "我已了解，开始游戏"
+        }
+      },
+      "en": {
+        "score": "Score {{ global.currentScore }}",
+        "section_status": "Section {{ global.section }} · {{ global.status }}",
+        "best": "Best {{ global.bestScore }}",
+        "license": {
+          "title": "Open source license notice",
+          "intro": "This JSON game demo uses open-source assets and design references from Flutter SuperDash.",
+          "repo_label": "Original repository",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "License",
+          "license": "BSD-3-Clause License",
+          "notice": "Before continuing, please acknowledge that this demo keeps the original license notice and that related assets/code references are governed by the BSD-3-Clause License.",
+          "confirm": "I understand, start game"
+        }
+      },
+      "de": {
+        "score": "Punkte {{ global.currentScore }}",
+        "section_status": "Abschnitt {{ global.section }} · {{ global.status }}",
+        "best": "Bestwert {{ global.bestScore }}",
+        "license": {
+          "title": "Open-Source-Lizenzhinweis",
+          "intro": "Diese JSON-Spiel-Demo verwendet Open-Source-Assets und Designreferenzen aus Flutter SuperDash.",
+          "repo_label": "Original-Repository",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "Lizenz",
+          "license": "BSD-3-Clause License",
+          "notice": "Bitte bestaetige vor dem Fortfahren, dass diese Demo den urspruenglichen Lizenzhinweis beibehaelt und zugehoerige Assets/Code-Referenzen der BSD-3-Clause License unterliegen.",
+          "confirm": "Verstanden, Spiel starten"
+        }
+      },
+      "es": {
+        "score": "Puntuacion {{ global.currentScore }}",
+        "section_status": "Seccion {{ global.section }} · {{ global.status }}",
+        "best": "Mejor {{ global.bestScore }}",
+        "license": {
+          "title": "Aviso de licencia open source",
+          "intro": "Esta demo de juego JSON usa assets open source y referencias de diseno de Flutter SuperDash.",
+          "repo_label": "Repositorio original",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "Licencia",
+          "license": "BSD-3-Clause License",
+          "notice": "Antes de continuar, confirma que esta demo conserva el aviso de licencia original y que los assets/referencias de codigo relacionados se rigen por la BSD-3-Clause License.",
+          "confirm": "Entendido, iniciar juego"
+        }
+      }
     },
     "functions": {
       "handleScoreChanged": {
@@ -164,7 +227,111 @@
         "padding": 0,
         "children": [
           {
+            "type": "expanded",
+            "visible": {
+              "!": {
+                "var": "global.licenseAccepted"
+              }
+            },
+            "child": {
+              "type": "container",
+              "padding": 24,
+              "color": "#DADEF6",
+              "layout": "column",
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "stretch",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ t('license.title') }}",
+                  "style": {
+                    "fontSize": 26,
+                    "fontWeight": "bold",
+                    "color": "#26335F"
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "{{ t('license.intro') }}",
+                  "style": {
+                    "fontSize": 15,
+                    "lineHeight": 1.45,
+                    "color": "#334155"
+                  }
+                },
+                {
+                  "type": "container",
+                  "padding": 14,
+                  "color": "#EEF3FF",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.repo_label') }}",
+                      "style": {
+                        "fontSize": 12,
+                        "fontWeight": "bold",
+                        "color": "#64748B"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.repo') }}",
+                      "style": {
+                        "fontSize": 13,
+                        "color": "#1D4ED8"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.license_label') }}",
+                      "style": {
+                        "fontSize": 12,
+                        "fontWeight": "bold",
+                        "color": "#64748B"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.license') }}",
+                      "style": {
+                        "fontSize": 14,
+                        "fontWeight": "bold",
+                        "color": "#0F172A"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "value": "{{ t('license.notice') }}",
+                  "style": {
+                    "fontSize": 13,
+                    "lineHeight": 1.45,
+                    "color": "#475569"
+                  }
+                },
+                {
+                  "type": "button",
+                  "label": "{{ t('license.confirm') }}",
+                  "icon": "play",
+                  "action": {
+                    "type": "call",
+                    "call": "@set",
+                    "args": {
+                      "var": "global.licenseAccepted",
+                      "value": true
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
             "type": "container",
+            "visible": {
+              "var": "global.licenseAccepted"
+            },
             "padding": 12,
             "color": "#26335F",
             "layout": "row",
@@ -172,7 +339,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "得分 {{ global.currentScore }}",
+                "value": "{{ t('score') }}",
                 "style": {
                   "fontSize": 15,
                   "color": "#FFFFFF",
@@ -185,7 +352,7 @@
               },
               {
                 "type": "text",
-                "value": "第 {{ global.section }} 段 · {{ global.status }}",
+                "value": "{{ t('section_status') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#DDE7FF"
@@ -197,7 +364,7 @@
               },
               {
                 "type": "text",
-                "value": "最佳 {{ global.bestScore }}",
+                "value": "{{ t('best') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#FFE9A6"
@@ -207,6 +374,9 @@
           },
           {
             "type": "expanded",
+            "visible": {
+              "var": "global.licenseAccepted"
+            },
             "child": {
               "type": "flame_game",
               "world": {
