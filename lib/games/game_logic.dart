@@ -319,6 +319,27 @@ class GameLogicEngine {
         return !_truthy(resolveExpression(value));
       case '!!':
         return _truthy(resolveExpression(value));
+      case '==':
+      case '===':
+        final values = value is List ? value : [value];
+        if (values.length < 2) return false;
+        return resolveExpression(values[0]) == resolveExpression(values[1]);
+      case '!=':
+      case '!==':
+        final values = value is List ? value : [value];
+        if (values.length < 2) return true;
+        return resolveExpression(values[0]) != resolveExpression(values[1]);
+      case '<':
+      case '>':
+      case '<=':
+      case '>=':
+        final values = value is List ? value : [value];
+        if (values.length < 2) return false;
+        return _compareValues(
+          resolveExpression(values[0]),
+          resolveExpression(values[1]),
+          op,
+        );
       case 'and':
         final values = value is List ? value : [value];
         dynamic last = true;
@@ -336,6 +357,21 @@ class GameLogicEngine {
         return false;
     }
     return _notHandled;
+  }
+
+  bool _compareValues(dynamic left, dynamic right, String op) {
+    final lNum = left is num ? left.toDouble() : double.tryParse('$left');
+    final rNum = right is num ? right.toDouble() : double.tryParse('$right');
+    final cmp = lNum != null && rNum != null
+        ? lNum.compareTo(rNum)
+        : '$left'.compareTo('$right');
+    return switch (op) {
+      '<' => cmp < 0,
+      '>' => cmp > 0,
+      '<=' => cmp <= 0,
+      '>=' => cmp >= 0,
+      _ => false,
+    };
   }
 
   /// 递归预处理 jsonlogic 规则里的 `{{ x }}` 模板字符串。
