@@ -2021,6 +2021,7 @@ var sdk;
 var currentUserID = "";
 var initialized2 = false;
 var listeners = /* @__PURE__ */ new Map();
+var gzipWasmFallbackInstalled = false;
 function operationID(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
@@ -2060,6 +2061,31 @@ function ensureSDK() {
     throw new Error("OpenIM bridge is not initialized");
   }
   return sdk;
+}
+function installGzipWasmFallback() {
+  if (gzipWasmFallbackInstalled) return;
+  gzipWasmFallbackInstalled = true;
+  if (typeof WebAssembly === "undefined" || typeof WebAssembly.instantiateStreaming !== "function") {
+    return;
+  }
+  const originalInstantiateStreaming = WebAssembly.instantiateStreaming.bind(WebAssembly);
+  WebAssembly.instantiateStreaming = async (source, importObject) => {
+    try {
+      return await originalInstantiateStreaming(source, importObject);
+    } catch (error) {
+      const response = await Promise.resolve(source);
+      if (!(response instanceof Response)) throw error;
+      const compressed = new Uint8Array(await response.clone().arrayBuffer());
+      const isGzip = compressed.length >= 2 && compressed[0] === 31 && compressed[1] === 139;
+      if (!isGzip || typeof DecompressionStream !== "function") {
+        throw error;
+      }
+      const decompressed = await new Response(
+        new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"))
+      ).arrayBuffer();
+      return WebAssembly.instantiate(decompressed, importObject);
+    }
+  };
 }
 async function waitForWindowFunction(name, timeoutMs = 8e3) {
   const startedAt = Date.now();
@@ -2110,6 +2136,7 @@ function receiverFromConversation(params) {
 window.MyAppOpenIM = {
   init(config = {}) {
     if (initialized2) return true;
+    installGzipWasmFallback();
     sdk = getSDK({
       coreWasmPath: config.coreWasmPath || "/openIM.wasm",
       sqlWasmPath: config.sqlWasmPath || "/sql-wasm.wasm",
