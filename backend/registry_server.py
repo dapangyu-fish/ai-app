@@ -284,6 +284,37 @@ def _match_version(version, constraint_str):
     return False
 
 
+def _parse_positive_int(value, default, *, min_value=1, max_value=None):
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        n = default
+    n = max(min_value, n)
+    if max_value is not None:
+        n = min(max_value, n)
+    return n
+
+
+def _normalize_search_text(value):
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        return " ".join(_normalize_search_text(v) for v in value.values())
+    if isinstance(value, (list, tuple)):
+        return " ".join(_normalize_search_text(v) for v in value)
+    return str(value).lower()
+
+
+def _package_matches_query(pkg, query):
+    if not query:
+        return True
+    haystack = " ".join(
+        _normalize_search_text(pkg.get(k))
+        for k in ("name", "displayName", "description", "author", "type")
+    )
+    return query in haystack
+
+
 def _select_best_version(versions, constraint):
     """从版本列表中选择最佳匹配版本"""
     constraint_str = _parse_version_constraint(constraint)
@@ -364,9 +395,12 @@ def resolve():
 def list_packages():
     """
     列出所有可用的包
-    GET /packages?type=app  # 可选：过滤类型（app/library）
+    GET /packages?type=app&page=1&per_page=20&q=chat
     """
     filter_type = request.args.get('type', '').strip()
+    query = (request.args.get('q') or request.args.get('search') or '').strip().lower()
+    page = _parse_positive_int(request.args.get('page'), 1)
+    per_page = _parse_positive_int(request.args.get('per_page'), 20, max_value=100)
 
     # 加载索引
     index = _load_index()
@@ -386,8 +420,9 @@ def list_packages():
         meta_type = info.get('meta_type')
         description = info.get('description', '')
         author = info.get('author', '')
+        display_name = info.get('displayName') or info.get('display_name')
 
-        if meta_type is None and (is_local_version(info, latest_version) or file_exists_in_minio(
+        if (meta_type is None or display_name is None) and (is_local_version(info, latest_version) or file_exists_in_minio(
             minio_client, BUCKET_COMPONENT, f"{path}/{filename}"
         )):
             try:
@@ -397,6 +432,7 @@ def list_packages():
                 meta_type = meta.get('type', 'library')
                 description = description or meta.get('description', '')
                 author = author or meta.get('author', '')
+                display_name = display_name if display_name is not None else meta.get('displayName')
             except Exception:
                 pass
 
@@ -406,9 +442,10 @@ def list_packages():
         if filter_type and package_type != filter_type:
             continue
 
-        packages.append({
+        pkg = {
             "name": name,
             "version": latest_version,
+            "displayName": display_name,
             "description": description,
             "author": author,
             "type": package_type,
@@ -416,11 +453,25 @@ def list_packages():
             "created_at": info.get('created_at'),
             "registry_type": info.get('type', 'user'),  # official/user
             "source": get_version_source(info, latest_version),
-        })
+        }
+        if not _package_matches_query(pkg, query):
+            continue
+        packages.append(pkg)
+
+    packages.sort(key=lambda p: (p.get("created_at") or ""), reverse=True)
+    total = len(packages)
+    start = (page - 1) * per_page
+    end = start + per_page
+    paged = packages[start:end]
 
     return jsonify({
-        "packages": packages,
-        "total": len(packages)
+        "packages": paged,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page if total else 0,
+        "has_more": end < total,
+        "q": query,
     })
 
 
@@ -755,7 +806,9 @@ def publish():
         json_content['meta']['version'] = version
         json_content['meta']['description'] = description
         json_content['meta']['type'] = package_type
+        json_content['meta']['author'] = author_name or json_content['meta'].get('author', '')
         json_content['appid'] = appid
+        display_name = json_content['meta'].get('displayName')
 
         # ── 上传到 MinIO ──
         path = full_name
@@ -789,6 +842,8 @@ def publish():
                 # 存 latest 视角的 meta，避免 /packages?type 还要去读文件
                 "meta_type": package_type,
                 "description": description,
+                "author": author_name,
+                "displayName": display_name,
             }
         else:
             pkg = index['packages'][full_name]
@@ -803,6 +858,8 @@ def publish():
             if version == pkg['latest']:
                 pkg["meta_type"] = package_type
                 pkg["description"] = description
+                pkg["author"] = author_name
+                pkg["displayName"] = display_name
 
         _save_index(index)
 

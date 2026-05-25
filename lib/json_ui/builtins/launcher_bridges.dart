@@ -38,13 +38,19 @@ class LauncherBridges {
   ) async {
     switch (callTarget) {
       case '@my_apps_list':
-        return (handled: true, value: await _myAppsList(resolvedArgs, interpreter));
+        return (
+          handled: true,
+          value: await _myAppsList(resolvedArgs, interpreter),
+        );
       case '@my_apps_delete':
         return (handled: true, value: await _myAppsDelete(resolvedArgs));
       case '@my_apps_share':
         return (handled: true, value: await _myAppsShare(resolvedArgs));
       case '@launch_app':
-        return (handled: true, value: await _launchApp(resolvedArgs, interpreter));
+        return (
+          handled: true,
+          value: await _launchApp(resolvedArgs, interpreter),
+        );
       case '@market_list':
         return (handled: true, value: await _marketList(resolvedArgs));
       case '@startup_default_get':
@@ -58,7 +64,10 @@ class LauncherBridges {
       case '@get_framework_locale':
         return (handled: true, value: _getFrameworkLocale());
       case '@set_framework_locale':
-        return (handled: true, value: await _setFrameworkLocale(resolvedArgs, interpreter));
+        return (
+          handled: true,
+          value: await _setFrameworkLocale(resolvedArgs, interpreter),
+        );
       case '@auth_logout':
         return (handled: true, value: await _authLogout());
       default:
@@ -132,10 +141,9 @@ class LauncherBridges {
       await NativeFs.writeStringAbs(tempPath, json.encode(config));
       final meta = config['meta'] as Map<String, dynamic>? ?? {};
       final displayName = resolveDisplayName(meta, fallback: fileName);
-      final result = await Share.shareXFiles(
-        [XFile(tempPath, mimeType: 'application/json')],
-        subject: displayName,
-      );
+      final result = await Share.shareXFiles([
+        XFile(tempPath, mimeType: 'application/json'),
+      ], subject: displayName);
       return result.status == ShareResultStatus.success;
     } catch (e) {
       debugPrint('[@my_apps_share] 失败: $e');
@@ -145,9 +153,8 @@ class LauncherBridges {
 
   // ========== market ==========
 
-  /// @market_list({type: "app"|"library", search?})  → List<Map>
-  /// 从 Registry 拉市场列表。type 缺省为 "app"。search 给了就客户端过滤
-  /// 名称/displayName/description/author 任一字段包含子串即命中。
+  /// @market_list({type: "app"|"library", search?, page?, perPage?})  → List<Map>
+  /// 从 Registry 分页拉市场列表。search 由服务端模糊匹配。
   ///
   /// 返回字段：name / displayName / description / version / author / type
   /// （和 @my_apps_list 同 schema，方便组件库共享 item 模板）
@@ -155,18 +162,26 @@ class LauncherBridges {
     Map<String, dynamic> args,
   ) async {
     final type = (args['type']?.toString() ?? 'app').trim();
-    final search = args['search']?.toString().trim().toLowerCase() ?? '';
+    final search = args['search']?.toString().trim() ?? '';
+    final page = (args['page'] as num?)?.toInt() ?? 1;
+    final perPage = (args['perPage'] as num?)?.toInt() ?? 50;
     try {
-      final resp = await http
-          .get(Uri.parse('${AppConfig.registryUrl}/packages?type=$type'))
-          .timeout(const Duration(seconds: 10));
+      final uri = Uri.parse('${AppConfig.registryUrl}/packages').replace(
+        queryParameters: {
+          'type': type,
+          'page': page.toString(),
+          'per_page': perPage.toString(),
+          if (search.isNotEmpty) 'q': search,
+        },
+      );
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200) {
         debugPrint('[@market_list] HTTP ${resp.statusCode}');
         return const [];
       }
       final body = json.decode(resp.body) as Map<String, dynamic>;
-      final packages =
-          (body['packages'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+      final packages = (body['packages'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
       // 规整字段：保证 displayName 已被 resolveDisplayName 解析、其它键也填齐
       final mapped = packages.map((pkg) {
         final name = pkg['name']?.toString() ?? '';
@@ -179,13 +194,7 @@ class LauncherBridges {
           'type': pkg['type']?.toString() ?? type,
         };
       }).toList();
-      if (search.isEmpty) return mapped;
-      return mapped.where((p) {
-        return p['name']!.toString().toLowerCase().contains(search) ||
-            p['displayName']!.toString().toLowerCase().contains(search) ||
-            p['description']!.toString().toLowerCase().contains(search) ||
-            p['author']!.toString().toLowerCase().contains(search);
-      }).toList();
+      return mapped;
     } catch (e) {
       debugPrint('[@market_list] 失败: $e');
       return const [];
@@ -234,7 +243,10 @@ class LauncherBridges {
           return false;
         }
         final meta = config['meta'] as Map<String, dynamic>?;
-        displayName = resolveDisplayName(meta ?? {'name': name}, fallback: name);
+        displayName = resolveDisplayName(
+          meta ?? {'name': name},
+          fallback: name,
+        );
       } else if (kind == 'local') {
         final fileName = args['fileName']?.toString();
         if (fileName == null || fileName.isEmpty) {
@@ -323,7 +335,10 @@ class LauncherBridges {
       if (kind == 'market') {
         final name = args['name']?.toString();
         final version = args['version']?.toString();
-        if (name == null || name.isEmpty || version == null || version.isEmpty) {
+        if (name == null ||
+            name.isEmpty ||
+            version == null ||
+            version.isEmpty) {
           debugPrint('[@startup_default_set] kind=market 必须传 name 和 version');
           return false;
         }
