@@ -556,36 +556,19 @@ class JsonFlameGame extends FlameGame {
         }
       case 'pixel':
         {
-          final pos = spec['position'];
-          final size = spec['size'];
-          final vel = spec['velocity'];
-          double x = 0, y = 0;
-          if (pos is List && pos.length >= 2) {
-            x = (pos[0] as num).toDouble();
-            y = (pos[1] as num).toDouble();
-          }
-          double w = 20, h = 20;
-          if (size is List && size.length >= 2) {
-            w = (size[0] as num).toDouble();
-            h = (size[1] as num).toDouble();
-          }
-          double vx = 0, vy = 0;
-          if (vel is List && vel.length >= 2) {
-            vx = (vel[0] as num).toDouble();
-            vy = (vel[1] as num).toDouble();
-          }
+          final pixel = _readPixelSpec(spec);
           return PixelEntity(
             id: id,
             renderConfig: render,
             priority: priority,
-            x: x,
-            y: y,
-            w: w,
-            h: h,
-            vx: vx,
-            vy: vy,
-            autoMove: spec['auto_update'] != false,
-            state: (spec['state'] as Map?)?.cast<String, dynamic>(),
+            x: pixel.x,
+            y: pixel.y,
+            w: pixel.w,
+            h: pixel.h,
+            vx: pixel.vx,
+            vy: pixel.vy,
+            autoMove: pixel.autoMove,
+            state: pixel.state,
           );
         }
       case 'sprite':
@@ -595,10 +578,10 @@ class JsonFlameGame extends FlameGame {
           double srcX = 0, srcY = 0;
           double? srcW, srcH;
           if (src is List && src.length >= 4) {
-            srcX = (src[0] as num).toDouble();
-            srcY = (src[1] as num).toDouble();
-            srcW = (src[2] as num).toDouble();
-            srcH = (src[3] as num).toDouble();
+            srcX = _readDouble(src[0]);
+            srcY = _readDouble(src[1]);
+            srcW = _readDouble(src[2]);
+            srcH = _readDouble(src[3]);
           }
           return SpriteEntity(
             id: id,
@@ -628,8 +611,8 @@ class JsonFlameGame extends FlameGame {
           double frameW = (spec['frame_w'] as num?)?.toDouble() ?? 16;
           double frameH = (spec['frame_h'] as num?)?.toDouble() ?? 16;
           if (frameSize is List && frameSize.length >= 2) {
-            frameW = (frameSize[0] as num).toDouble();
-            frameH = (frameSize[1] as num).toDouble();
+            frameW = _readDouble(frameSize[0], 16);
+            frameH = _readDouble(frameSize[1], 16);
           }
           final animations = _readAnimations(spec['animations']);
           final animationName = spec['animation']?.toString();
@@ -767,18 +750,18 @@ class JsonFlameGame extends FlameGame {
     final vel = spec['velocity'];
     double x = 0, y = 0;
     if (pos is List && pos.length >= 2) {
-      x = (pos[0] as num).toDouble();
-      y = (pos[1] as num).toDouble();
+      x = _readDouble(pos[0]);
+      y = _readDouble(pos[1]);
     }
     double w = 20, h = 20;
     if (size is List && size.length >= 2) {
-      w = (size[0] as num).toDouble();
-      h = (size[1] as num).toDouble();
+      w = _readDouble(size[0], 20);
+      h = _readDouble(size[1], 20);
     }
     double vx = 0, vy = 0;
     if (vel is List && vel.length >= 2) {
-      vx = (vel[0] as num).toDouble();
-      vy = (vel[1] as num).toDouble();
+      vx = _readDouble(vel[0]);
+      vy = _readDouble(vel[1]);
     }
     return (
       x: x,
@@ -790,6 +773,12 @@ class JsonFlameGame extends FlameGame {
       autoMove: spec['auto_update'] != false,
       state: (spec['state'] as Map?)?.cast<String, dynamic>(),
     );
+  }
+
+  double _readDouble(dynamic value, [double fallback = 0]) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim()) ?? fallback;
+    return fallback;
   }
 
   Map<String, SpriteAnimationSpec> _readAnimations(dynamic raw) {
