@@ -3,7 +3,7 @@
   "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
   "meta": {
     "name": "demo-superdash-runner",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "type": "app",
     "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
     "author": "demo"
@@ -311,18 +311,22 @@
                       {"call": "@tiled.spawn_objects_near", "args": {"map": "tmx_map", "layer": "items", "kind": "items", "reference": "player", "proximity": {"var": "vars.spawn_proximity"}, "despawn_distance": {"var": "vars.despawn_distance"}}},
                       {"call": "@tiled.spawn_objects_near", "args": {"map": "tmx_map", "layer": "enemies", "kind": "enemies", "reference": "player", "proximity": {"var": "vars.spawn_proximity"}, "despawn_distance": {"var": "vars.despawn_distance"}}},
                       {"call": "@set", "args": {"var": "vars._was_on_ground", "value": {"var": "vars.on_ground"}}},
+                      {"call": "@if", "args": {
+                        "cond": {"var": "vars.on_ground"},
+                        "then": [
+                          {"call": "@entity.set", "args": {"id": "player", "field": "vx", "value": {"var": "vars.speed"}}}
+                        ]
+                      }},
                       {"call": "@platformer.step", "args": {
                         "id": "player",
                         "map": "tmx_map",
                         "dt": {"var": "event.dt"},
                         "gravity": {"var": "vars.gravity"},
                         "jump_velocity": {"var": "vars.jump_vy"},
-                        "auto_run": {"var": "vars.speed"},
-                        "grounded_auto_run": true,
-                        "max_fall": 1280,
-                        "hazard_mode": "feet"
+                        "max_fall": 1280
                       }},
                       {"call": "@set", "args": {"var": "vars.on_ground", "value": {"var": "entities.player.onGround"}}},
+                      {"call": "@tiled.has_collision_type", "args": {"map": "tmx_map", "type": "Hazard", "rect": [{"var": "entities.player.x"}, {"+": [{"var": "entities.player.y"}, {"var": "entities.player.h"}, -2]}, {"var": "entities.player.w"}, 4]}, "assign": "vars._hazard"},
                       {"call": "@platformer.stuck_check", "args": {"id": "player", "dt": {"var": "event.dt"}, "enabled": {"==": [{"var": "vars.state"}, "running"]}, "threshold": 0.5, "timeout": 1.0}, "assign": "vars._stuck"},
                       {"call": "@if", "args": {
                         "cond": {"var": "vars._stuck"},
@@ -332,13 +336,22 @@
                         ]
                       }},
                       {"call": "@if", "args": {
-                        "cond": {"var": "entities.player.hazard"},
+                        "cond": {"var": "vars._hazard"},
                         "then": [
                           {"call": "@if", "args": {
                             "cond": {"var": "vars.has_feather"},
                             "then": [
                               {"call": "@set", "args": {"var": "vars.has_feather", "value": false}},
-                              {"call": "@platformer.respawn", "args": {"id": "player", "map": "tmx_map", "layer": "respawn", "anchor": "tiled_position"}},
+                              {"call": "@tiled.nearest_object", "args": {"map": "tmx_map", "layer": "respawn", "before_x": {"var": "entities.player.x"}}, "assign": "vars._respawn"},
+                              {"call": "@if", "args": {"cond": {"!": {"var": "vars._respawn"}}, "then": [
+                                {"call": "@tiled.first_object", "args": {"map": "tmx_map", "layer": "spawn"}, "assign": "vars._respawn"}
+                              ]}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "x", "value": {"var": "vars._respawn.x"}}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "y", "value": {"var": "vars._respawn.y"}}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "vx", "value": 0}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "vy", "value": 0}},
+                              {"call": "@set", "args": {"var": "vars.on_ground", "value": false}},
+                              {"call": "@set", "args": {"var": "vars.double_jump_used", "value": false}},
                               {"call": "@animated_sprite.set_animation", "args": {"id": "player", "animation": "run"}}
                             ],
                             "else": [
@@ -409,7 +422,16 @@
                             "cond": {"var": "vars.has_feather"},
                             "then": [
                               {"call": "@set", "args": {"var": "vars.has_feather", "value": false}},
-                              {"call": "@platformer.respawn", "args": {"id": "player", "map": "tmx_map", "layer": "respawn", "anchor": "tiled_position"}},
+                              {"call": "@tiled.nearest_object", "args": {"map": "tmx_map", "layer": "respawn", "before_x": {"var": "entities.player.x"}}, "assign": "vars._respawn"},
+                              {"call": "@if", "args": {"cond": {"!": {"var": "vars._respawn"}}, "then": [
+                                {"call": "@tiled.first_object", "args": {"map": "tmx_map", "layer": "spawn"}, "assign": "vars._respawn"}
+                              ]}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "x", "value": {"var": "vars._respawn.x"}}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "y", "value": {"var": "vars._respawn.y"}}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "vx", "value": 0}},
+                              {"call": "@entity.set", "args": {"id": "player", "field": "vy", "value": 0}},
+                              {"call": "@set", "args": {"var": "vars.on_ground", "value": false}},
+                              {"call": "@set", "args": {"var": "vars.double_jump_used", "value": false}},
                               {"call": "@animated_sprite.set_animation", "args": {"id": "player", "animation": "run"}}
                             ],
                             "else": [

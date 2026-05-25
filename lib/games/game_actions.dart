@@ -522,8 +522,9 @@ class GameActions {
           final entityId = args['entity']?.toString() ?? args['id']?.toString();
           final map = game.entities[mapId];
           final entity = game.entities[entityId];
-          if (map is! TiledMapEntity || entity is! PixelEntity) return const [];
-          final rect = Rect.fromLTWH(entity.x, entity.y, entity.w, entity.h);
+          if (map is! TiledMapEntity) return const [];
+          final rect = _rectFromArgs(args, entity);
+          if (rect == null) return const [];
           return map.collisionRectsIn(rect).map((e) => e.toMap()).toList();
         }
       case '@tiled.has_collision_type':
@@ -533,12 +534,11 @@ class GameActions {
           final type = args['type']?.toString().toLowerCase();
           final map = game.entities[mapId];
           final entity = game.entities[entityId];
-          if (map is! TiledMapEntity ||
-              entity is! PixelEntity ||
-              type == null) {
+          if (map is! TiledMapEntity || type == null) {
             return false;
           }
-          final rect = Rect.fromLTWH(entity.x, entity.y, entity.w, entity.h);
+          final rect = _rectFromArgs(args, entity);
+          if (rect == null) return false;
           return map
               .collisionRectsIn(rect)
               .any((collision) => collision.type.toLowerCase() == type);
@@ -777,6 +777,34 @@ class GameActions {
     return false;
   }
 
+  static Rect? _rectFromArgs(Map<String, dynamic> args, GameEntity? entity) {
+    final raw = args['rect'];
+    if (raw is List && raw.length >= 4) {
+      final x = (raw[0] as num?)?.toDouble();
+      final y = (raw[1] as num?)?.toDouble();
+      final w = (raw[2] as num?)?.toDouble();
+      final h = (raw[3] as num?)?.toDouble();
+      if (x != null && y != null && w != null && h != null) {
+        return Rect.fromLTWH(x, y, w, h);
+      }
+    }
+    if (raw is Map) {
+      final x = (raw['x'] as num?)?.toDouble();
+      final y = (raw['y'] as num?)?.toDouble();
+      final w =
+          (raw['w'] as num?)?.toDouble() ?? (raw['width'] as num?)?.toDouble();
+      final h =
+          (raw['h'] as num?)?.toDouble() ?? (raw['height'] as num?)?.toDouble();
+      if (x != null && y != null && w != null && h != null) {
+        return Rect.fromLTWH(x, y, w, h);
+      }
+    }
+    if (entity is PixelEntity) {
+      return Rect.fromLTWH(entity.x, entity.y, entity.w, entity.h);
+    }
+    return null;
+  }
+
   static bool _platformerStep(JsonFlameGame game, Map<String, dynamic> args) {
     final physics = args.containsKey('engine') || args.containsKey('backend')
         ? PlatformerPhysicsConfig.fromSpec(args)
@@ -805,19 +833,12 @@ class GameActions {
     final jumpPressed = args['jump'] == true || args['jump_pressed'] == true;
     final allowDoubleJump = args['allow_double_jump'] == true;
     final autoRun = (args['auto_run'] as num?)?.toDouble();
-    final groundedAutoRun = args['grounded_auto_run'] == true;
     final move = (args['move'] as num?)?.toDouble();
     final speed = (args['speed'] as num?)?.toDouble() ?? 320;
 
     final onGround = player.state['onGround'] == true;
-    final lastGroundXVelocity =
-        (player.state['lastGroundXVelocity'] as num?)?.toDouble() ?? 0;
     if (autoRun != null) {
-      if (groundedAutoRun) {
-        player.vx = onGround ? autoRun : autoRun.sign * lastGroundXVelocity;
-      } else {
-        player.vx = autoRun;
-      }
+      player.vx = autoRun;
     } else if (move != null) {
       player.vx = move.clamp(-1, 1) * speed;
     }
@@ -840,10 +861,7 @@ class GameActions {
     if (player.state['onGround'] == true) {
       player.state['lastGroundXVelocity'] = player.vx.abs();
     }
-    final hazardMode = args['hazard_mode']?.toString();
-    final rect = hazardMode == 'feet'
-        ? Rect.fromLTWH(player.x, player.y + player.h - 2, player.w, 4)
-        : Rect.fromLTWH(player.x, player.y, player.w, player.h);
+    final rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
     final hazards = map.collisionRectsIn(rect).where((c) => c.hazard).toList();
     player.state['hazard'] = hazards.isNotEmpty;
     player.state['hazardCollision'] = hazards.isEmpty
@@ -870,9 +888,8 @@ class GameActions {
     }
     best ??= map.firstObject('spawn');
     if (best == null) return false;
-    final anchor = args['anchor']?.toString();
     player.x = best.x;
-    player.y = anchor == 'tiled_position' ? best.y : best.y - player.h;
+    player.y = best.y - player.h;
     player.vx = 0;
     player.vy = 0;
     player.state['onGround'] = false;
