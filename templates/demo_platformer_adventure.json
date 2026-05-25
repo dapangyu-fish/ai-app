@@ -3,7 +3,7 @@
   "appid": "d52cb6ab-b4f0-4e99-8e71-b8e3c68bd5b4",
   "meta": {
     "name": "demo-platformer-adventure",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "type": "app",
     "description": "A CC0 Kenney asset platform adventure demo built with generic JSON game atoms: tiled map, platform physics, coins, enemies, hazards and a finish flag.",
     "author": "demo"
@@ -81,7 +81,7 @@
             "call": "@set",
             "args": {
               "var": "global.status",
-              "value": "点击开始"
+              "value": "方向键移动"
             }
           }
         ]
@@ -236,8 +236,8 @@
               },
               "viewport": {
                 "width": 540,
-                "height": 960,
-                "fit": "cover"
+                "height": 760,
+                "fit": "contain"
               },
               "physics": {
                 "engine": "leap_platformer",
@@ -261,7 +261,10 @@
                 "state": "loading",
                 "gravity": 1700,
                 "jump_vy": -810,
-                "speed": 258,
+                "speed": 230,
+                "move_dir": 0,
+                "facing": 1,
+                "attacking": false,
                 "on_ground": false,
                 "was_on_ground": false,
                 "walk_tick": 0,
@@ -1233,101 +1236,169 @@
                 ]
               },
               "input": {
-                "tap": [
+                "move_down": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.state",
+                      "value": "running"
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.move_dir",
+                      "value": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "var": "event.direction"
+                              },
+                              "left"
+                            ]
+                          },
+                          -1,
+                          1
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.facing",
+                      "value": {
+                        "var": "vars.move_dir"
+                      }
+                    }
+                  },
+                  {
+                    "call": "@emit",
+                    "args": {
+                      "event": "status",
+                      "data": {
+                        "text": "探索中"
+                      }
+                    }
+                  }
+                ],
+                "move_up": [
                   {
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "==": [
+                        "or": [
                           {
-                            "var": "vars.state"
+                            "and": [
+                              {
+                                "==": [
+                                  {
+                                    "var": "event.direction"
+                                  },
+                                  "left"
+                                ]
+                              },
+                              {
+                                "==": [
+                                  {
+                                    "var": "vars.move_dir"
+                                  },
+                                  -1
+                                ]
+                              }
+                            ]
                           },
-                          "ready"
+                          {
+                            "and": [
+                              {
+                                "==": [
+                                  {
+                                    "var": "event.direction"
+                                  },
+                                  "right"
+                                ]
+                              },
+                              {
+                                "==": [
+                                  {
+                                    "var": "vars.move_dir"
+                                  },
+                                  1
+                                ]
+                              }
+                            ]
+                          }
                         ]
                       },
                       "then": [
                         {
                           "call": "@set",
                           "args": {
-                            "var": "vars.state",
-                            "value": "running"
+                            "var": "vars.move_dir",
+                            "value": 0
                           }
-                        },
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "jump": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.state",
+                      "value": "running"
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "var": "vars.on_ground"
+                      },
+                      "then": [
                         {
                           "call": "@entity.set",
                           "args": {
                             "id": "player",
-                            "field": "vx",
+                            "field": "vy",
                             "value": {
-                              "var": "vars.speed"
+                              "var": "vars.jump_vy"
                             }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.on_ground",
+                            "value": false
                           }
                         },
                         {
                           "call": "@animated_sprite.set_animation",
                           "args": {
                             "id": "player",
-                            "animation": "walkA"
-                          }
-                        },
-                        {
-                          "call": "@emit",
-                          "args": {
-                            "event": "status",
-                            "data": {
-                              "text": "奔跑中"
-                            }
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              "and": [
-                                {
-                                  "==": [
-                                    {
-                                      "var": "vars.state"
-                                    },
-                                    "running"
-                                  ]
-                                },
-                                {
-                                  "var": "vars.on_ground"
-                                }
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@entity.set",
-                                "args": {
-                                  "id": "player",
-                                  "field": "vy",
-                                  "value": {
-                                    "var": "vars.jump_vy"
-                                  }
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars.on_ground",
-                                  "value": false
-                                }
-                              },
-                              {
-                                "call": "@animated_sprite.set_animation",
-                                "args": {
-                                  "id": "player",
-                                  "animation": "jump"
-                                }
-                              }
-                            ]
+                            "animation": "jump"
                           }
                         }
                       ]
+                    }
+                  }
+                ],
+                "attack": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.attacking",
+                      "value": true
+                    }
+                  },
+                  {
+                    "call": "@animated_sprite.set_animation",
+                    "args": {
+                      "id": "player",
+                      "animation": "hit"
                     }
                   }
                 ]
@@ -1405,11 +1476,11 @@
                               {
                                 "call": "@emit",
                                 "args": {
-                                  "event": "status",
-                                  "data": {
-                                    "text": "点击开始"
-                                  }
+                                "event": "status",
+                                "data": {
+                                  "text": "方向键移动"
                                 }
+                              }
                               }
                             ]
                           }
@@ -1444,7 +1515,14 @@
                             "id": "player",
                             "field": "vx",
                             "value": {
-                              "var": "vars.speed"
+                              "*": [
+                                {
+                                  "var": "vars.speed"
+                                },
+                                {
+                                  "var": "vars.move_dir"
+                                }
+                              ]
                             }
                           }
                         },
@@ -1549,30 +1627,14 @@
                             ],
                             "else": [
                               {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars.walk_tick",
-                                  "value": {
-                                    "+": [
-                                      {
-                                        "var": "vars.walk_tick"
-                                      },
-                                      {
-                                        "var": "event.dt"
-                                      }
-                                    ]
-                                  }
-                                }
-                              },
-                              {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    ">": [
+                                    "==": [
                                       {
-                                        "var": "vars.walk_tick"
+                                        "var": "vars.move_dir"
                                       },
-                                      0.18
+                                      0
                                     ]
                                   },
                                   "then": [
@@ -1584,31 +1646,84 @@
                                       }
                                     },
                                     {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "idle"
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@entity.flip_by_velocity",
+                                      "args": {
+                                        "id": "player"
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.walk_tick",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars.walk_tick"
+                                            },
+                                            {
+                                              "var": "event.dt"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
                                       "call": "@if",
                                       "args": {
                                         "cond": {
-                                          "==": [
+                                          ">": [
                                             {
-                                              "var": "entities.player.animation"
+                                              "var": "vars.walk_tick"
                                             },
-                                            "walkA"
+                                            0.18
                                           ]
                                         },
                                         "then": [
                                           {
-                                            "call": "@animated_sprite.set_animation",
+                                            "call": "@set",
                                             "args": {
-                                              "id": "player",
-                                              "animation": "walkB"
+                                              "var": "vars.walk_tick",
+                                              "value": 0
                                             }
-                                          }
-                                        ],
-                                        "else": [
+                                          },
                                           {
-                                            "call": "@animated_sprite.set_animation",
+                                            "call": "@if",
                                             "args": {
-                                              "id": "player",
-                                              "animation": "walkA"
+                                              "cond": {
+                                                "==": [
+                                                  {
+                                                    "var": "entities.player.animation"
+                                                  },
+                                                  "walkA"
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@animated_sprite.set_animation",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "animation": "walkB"
+                                                  }
+                                                }
+                                              ],
+                                              "else": [
+                                                {
+                                                  "call": "@animated_sprite.set_animation",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "animation": "walkA"
+                                                  }
+                                                }
+                                              ]
                                             }
                                           }
                                         ]
@@ -1862,6 +1977,102 @@
                 "args": {}
               }
             }
+          },
+          {
+            "type": "virtual_gamepad",
+            "height": 176,
+            "backgroundColor": "#0E3D49",
+            "directions": [
+              {
+                "id": "up",
+                "label": "↑",
+                "onDown": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "jump"
+                  }
+                }
+              },
+              {
+                "id": "left",
+                "label": "←",
+                "onDown": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "move_down",
+                    "data": {
+                      "direction": "left"
+                    }
+                  }
+                },
+                "onUp": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "move_up",
+                    "data": {
+                      "direction": "left"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "right",
+                "label": "→",
+                "onDown": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "move_down",
+                    "data": {
+                      "direction": "right"
+                    }
+                  }
+                },
+                "onUp": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "move_up",
+                    "data": {
+                      "direction": "right"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "down",
+                "label": "↓"
+              }
+            ],
+            "actions": [
+              {
+                "id": "jump",
+                "label": "跳",
+                "backgroundColor": "#F4B942",
+                "onDown": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "jump"
+                  }
+                }
+              },
+              {
+                "id": "attack",
+                "label": "打",
+                "backgroundColor": "#E95656",
+                "onDown": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "attack"
+                  }
+                }
+              }
+            ]
           }
         ]
       }

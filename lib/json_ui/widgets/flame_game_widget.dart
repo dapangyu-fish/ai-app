@@ -115,6 +115,7 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   DateTime? _pressDownTime;
 
   late final void Function() _resetter;
+  late final void Function(String, Map<String, dynamic>) _inputHandler;
 
   @override
   void initState() {
@@ -126,12 +127,15 @@ class _FlameGameMountState extends State<_FlameGameMount> {
     );
     // 注册到 interpreter，让 @flame_game_reset 这个 action 能找到我们
     _resetter = () => _game.resetGame();
+    _inputHandler = (name, data) => _game.handleNamedInput(name, data);
     widget.interpreter.registerFlameGameResetter(_resetter);
+    widget.interpreter.registerFlameGameInputHandler(_inputHandler);
   }
 
   @override
   void dispose() {
     widget.interpreter.unregisterFlameGameResetter(_resetter);
+    widget.interpreter.unregisterFlameGameInputHandler(_inputHandler);
     super.dispose();
   }
 

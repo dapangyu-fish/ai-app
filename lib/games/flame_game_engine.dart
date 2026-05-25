@@ -67,6 +67,7 @@ class JsonFlameGame extends FlameGame {
   List<dynamic>? _swipeAction;
   List<dynamic>? _panAction;
   List<dynamic>? _pressEndAction;
+  final Map<String, List<dynamic>> _namedInputActions = {};
   List<dynamic>? _frameLogic;
 
   // swipe 的离散触发阈值（像素）—— JSON 可在 input.swipe_threshold 里覆盖
@@ -293,6 +294,17 @@ class JsonFlameGame extends FlameGame {
     }
   }
 
+  /// 外部 JSON 控件触发的命名输入。用于虚拟手柄、外置按钮等通用 UI，
+  /// 具体动作仍由 flame_game.input 的对应命名 JSON logic 决定。
+  void handleNamedInput(String name, Map<String, dynamic> data) {
+    if (!_ready) return;
+    if (_showAssetLoading && _assetsLoading) return;
+    if (isGameOver) return;
+    final action = _namedInputActions[name];
+    if (action == null) return;
+    logic.runLogic(action, data);
+  }
+
   double get swipeThreshold => _swipeThreshold;
 
   String? _swipeDirection(double dx, double dy) {
@@ -377,6 +389,15 @@ class JsonFlameGame extends FlameGame {
     _swipeAction = _toLogicList(input?['swipe']);
     _panAction = _toLogicList(input?['pan']);
     _pressEndAction = _toLogicList(input?['press_end']);
+    _namedInputActions.clear();
+    if (input != null) {
+      const reserved = {'tap', 'swipe', 'pan', 'press_end', 'swipe_threshold'};
+      input.forEach((key, value) {
+        if (reserved.contains(key)) return;
+        final logic = _toLogicList(value);
+        if (logic != null) _namedInputActions[key] = logic;
+      });
+    }
     final th = (input?['swipe_threshold'] as num?)?.toDouble();
     if (th != null && th > 0) _swipeThreshold = th;
 

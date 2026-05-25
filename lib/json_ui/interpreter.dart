@@ -51,6 +51,8 @@ class JsonInterpreter extends ChangeNotifier {
   /// 给 @flame_game_reset 这个 action 用 — JSON-APP 层（比如结算 dialog
   /// 的"再来一局"按钮）能从外面调进去重置游戏。
   final List<void Function()> _flameGameResetters = [];
+  final List<void Function(String name, Map<String, dynamic> data)>
+  _flameGameInputHandlers = [];
 
   void registerFlameGameResetter(void Function() resetter) {
     _flameGameResetters.add(resetter);
@@ -58,6 +60,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   void unregisterFlameGameResetter(void Function() resetter) {
     _flameGameResetters.remove(resetter);
+  }
+
+  void registerFlameGameInputHandler(
+    void Function(String name, Map<String, dynamic> data) handler,
+  ) {
+    _flameGameInputHandlers.add(handler);
+  }
+
+  void unregisterFlameGameInputHandler(
+    void Function(String name, Map<String, dynamic> data) handler,
+  ) {
+    _flameGameInputHandlers.remove(handler);
   }
 
   /// 当前还活着的 modal route（dialog / bottom sheet / picker）数。
@@ -198,8 +212,9 @@ class JsonInterpreter extends ChangeNotifier {
       return str.replaceAll(from, to);
     });
     jl.add('str_split', (applier, data, params) {
-      if (params.length < 2)
+      if (params.length < 2) {
         return [applier(params[0], data)?.toString() ?? ''];
+      }
       final str = applier(params[0], data)?.toString() ?? '';
       final sep = applier(params[1], data)?.toString() ?? '';
       return str.split(sep);
@@ -651,7 +666,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   /// 在 global.computed 字典里查表达式（按 dot 路径匹配）
-  /// 例: global.computed = { fullName: <expr> }, subPath="fullName" → 命中
+  /// 例: global.computed = { fullName: expr }, subPath="fullName" → 命中
   dynamic _findComputedExpr(String subPath) {
     final computed = (_config['global'] as Map<String, dynamic>?)?['computed'];
     if (computed is! Map) return null;
@@ -1177,6 +1192,21 @@ class JsonInterpreter extends ChangeNotifier {
           r();
         }
         return null;
+      case '@flame_game_input':
+        // 外部 JSON 控件向当前 flame_game 发送命名输入。具体输入名如何
+        // 响应由游戏 JSON 的 input.<name> 决定，框架不理解任何游戏规则。
+        final name =
+            resolvedArgs['input']?.toString() ??
+            resolvedArgs['name']?.toString();
+        if (name == null || name.isEmpty) return null;
+        final rawData = resolvedArgs['data'];
+        final data = rawData is Map
+            ? rawData.map((k, v) => MapEntry(k.toString(), v))
+            : <String, dynamic>{};
+        for (final handler in _flameGameInputHandlers) {
+          handler(name, data);
+        }
+        return null;
       case '@haptic':
         // style: light / medium / heavy / selection / vibrate（默认 light）
         final style = resolvedArgs['style']?.toString() ?? 'light';
@@ -1641,8 +1671,9 @@ class JsonInterpreter extends ChangeNotifier {
           final matchField = resolvedArgs['field']?.toString();
           final matchValue = resolvedArgs['value'];
           final updates = resolvedArgs['updates'];
-          if (relPath == null || matchField == null || updates is! Map)
+          if (relPath == null || matchField == null || updates is! Map) {
             return false;
+          }
           final content = await AppFs.readString(relPath);
           if (content == null) return false;
           final decoded = json.decode(content);
