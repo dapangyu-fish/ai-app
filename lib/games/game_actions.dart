@@ -1139,10 +1139,14 @@ class GameActions {
       'Ant' => ('spritesheet_enemy_ant.png', 12, 6),
       _ => ('spritesheet_enemy_beetle.png', 16, 8),
     };
+    final fly =
+        object.properties['Fly'] == true ||
+        object.properties['Fly']?.toString() == 'true';
+    final y = fly ? object.y : object.y + hitbox;
     return _animatedSpec(
       asset: _asset(map, 'map/anim/${info.$1}'),
       x: object.x,
-      y: object.y,
+      y: y,
       w: hitbox,
       h: hitbox,
       frames: info.$2,
@@ -1154,9 +1158,7 @@ class GameActions {
         'path': object.properties['Path'],
         'pathTile': tile,
         'pathSpeed': tile / 3,
-        'fly':
-            object.properties['Fly'] == true ||
-            object.properties['Fly']?.toString() == 'true',
+        'fly': fly,
         'spriteW': tile,
         'spriteH': tile,
         'spriteOffsetX': -hitbox / 2,
