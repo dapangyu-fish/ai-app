@@ -235,12 +235,12 @@ class PixelEntity extends GameEntity {
     state['pathIndex'] ??= 0;
     state['pathProgress'] ??= 0.0;
 
-    final tile = (state['pathTile'] as num?)?.toDouble() ?? 64;
-    final speed = (state['pathSpeed'] as num?)?.toDouble() ?? tile * 3;
+    final tile = _stateDouble(state['pathTile'], 64);
+    final speed = _stateDouble(state['pathSpeed'], tile * 3);
     if (speed <= 0) return;
 
-    var index = (state['pathIndex'] as num).toInt();
-    var progress = (state['pathProgress'] as num).toDouble();
+    var index = _stateDouble(state['pathIndex']).toInt();
+    var progress = _stateDouble(state['pathProgress']);
     final infinite = path.trim().startsWith('I');
     final seg = segments[index.clamp(0, segments.length - 1)];
     final distance = seg.length * tile;
@@ -261,8 +261,8 @@ class PixelEntity extends GameEntity {
           return;
         }
         index = 0;
-        x = (state['pathOriginX'] as num).toDouble();
-        y = (state['pathOriginY'] as num).toDouble();
+        x = _stateDouble(state['pathOriginX'], x);
+        y = _stateDouble(state['pathOriginY'], y);
       }
     }
 
@@ -378,19 +378,19 @@ class SpriteEntity extends PixelEntity implements ImageBackedEntity {
       srcW ?? img.width.toDouble(),
       srcH ?? img.height.toDouble(),
     );
-    final offsetX = (state['spriteOffsetX'] as num?)?.toDouble() ?? 0;
-    var offsetY = (state['spriteOffsetY'] as num?)?.toDouble() ?? 0;
-    final bobAmplitude = (state['bobAmplitude'] as num?)?.toDouble() ?? 0;
-    final bobPeriod = (state['bobPeriod'] as num?)?.toDouble() ?? 0;
+    final offsetX = _stateDouble(state['spriteOffsetX']);
+    var offsetY = _stateDouble(state['spriteOffsetY']);
+    final bobAmplitude = _stateDouble(state['bobAmplitude']);
+    final bobPeriod = _stateDouble(state['bobPeriod']);
     if (bobAmplitude != 0 && bobPeriod > 0) {
-      final time = (state['time'] as num?)?.toDouble() ?? 0;
-      final phase = (state['bobPhase'] as num?)?.toDouble() ?? 0;
+      final time = _stateDouble(state['time']);
+      final phase = _stateDouble(state['bobPhase']);
       final wave = (1 - cos(((time / bobPeriod) + phase) * pi * 2)) / 2;
       offsetY -= bobAmplitude * wave;
     }
-    final renderW = (state['spriteW'] as num?)?.toDouble() ?? w;
-    final renderH = (state['spriteH'] as num?)?.toDouble() ?? h;
-    final opacity = ((state['opacity'] as num?)?.toDouble() ?? 1).clamp(0, 1);
+    final renderW = _stateDouble(state['spriteW'], w);
+    final renderH = _stateDouble(state['spriteH'], h);
+    final opacity = _stateDouble(state['opacity'], 1).clamp(0, 1);
     final target = Rect.fromLTWH(x + offsetX, y + offsetY, renderW, renderH);
     final paint = Paint()
       ..filterQuality = FilterQuality.none
@@ -507,6 +507,12 @@ class AnimatedSpriteEntity extends SpriteEntity {
     'animation': currentAnimation,
     'finished': finished,
   };
+}
+
+double _stateDouble(dynamic value, [double fallback = 0]) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value.trim()) ?? fallback;
+  return fallback;
 }
 
 class SpriteAnimationSpec {
