@@ -1337,9 +1337,27 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
               // Version
               Center(
-                child: Text(
-                  'v${AppConfig.appVersion}',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'v${AppConfig.appVersion}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    if (AppConfig.gitCommit.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        AppConfig.gitCommit,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.72),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
