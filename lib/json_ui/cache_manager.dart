@@ -94,19 +94,20 @@ class CacheManager {
       final filePath = localMatch['file_path'] as String;
 
       try {
-        if (_cacheDir == null) {
-          return null;
-        }
-        final content = await NativeFs.readStringAbs('$_cacheDir/$filePath');
-        if (content != null) {
-          final config = json.decode(content) as Map<String, dynamic>;
+        if (_cacheDir != null) {
+          final content = await NativeFs.readStringAbs('$_cacheDir/$filePath');
+          if (content != null) {
+            final config = json.decode(content) as Map<String, dynamic>;
 
-          debugPrint('[CacheManager] 命中本地缓存: $name@$version (约束: $constraint)');
+            debugPrint(
+              '[CacheManager] 命中本地缓存: $name@$version (约束: $constraint)',
+            );
 
-          // 后台静默更新
-          _revalidateResourceAsync(name, constraint, type);
+            // 后台静默更新
+            _revalidateResourceAsync(name, constraint, type);
 
-          return config;
+            return config;
+          }
         }
       } catch (e) {
         debugPrint('[CacheManager] 读取本地缓存失败: $e');
