@@ -1136,10 +1136,61 @@ class GameActions {
     if (rawTemplate is Map) {
       final context = _objectTemplateContext(map, object, type);
       final resolved = _resolveObjectTemplate(rawTemplate, context);
-      if (resolved is Map) return resolved.cast<String, dynamic>();
+      if (resolved is Map) {
+        final spec = resolved.cast<String, dynamic>();
+        _applyObjectSpecDefaults(map, object, spec);
+        return spec;
+      }
       return null;
     }
     return _objectSpriteSpec(map, object, type);
+  }
+
+  static void _applyObjectSpecDefaults(
+    TiledMapEntity map,
+    TiledObject object,
+    Map<String, dynamic> spec,
+  ) {
+    final tile = map.tileWidth * map.scale;
+    final width = object.width > 0 ? object.width : tile;
+    final height = object.height > 0 ? object.height : width;
+    final pos = spec['position'];
+    if (pos is! List ||
+        pos.length < 2 ||
+        !_isNumericLike(pos[0]) ||
+        !_isNumericLike(pos[1])) {
+      spec['position'] = [object.x, object.y];
+    }
+    final size = spec['size'];
+    if (size is! List ||
+        size.length < 2 ||
+        !_isNumericLike(size[0]) ||
+        !_isNumericLike(size[1])) {
+      spec['size'] = [width, height];
+    }
+
+    final kind = spec['kind']?.toString();
+    if (kind == 'sprite') {
+      final sprite = map.spriteForGid(object.gid);
+      if (sprite != null) {
+        final asset = spec['asset']?.toString() ?? '';
+        if (asset.isEmpty || asset.contains('{{')) {
+          spec['asset'] = sprite.asset;
+        }
+        final src = spec['src'];
+        if (src is! List ||
+            src.length < 4 ||
+            src.any((value) => !_isNumericLike(value))) {
+          spec['src'] = [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH];
+        }
+      }
+    }
+  }
+
+  static bool _isNumericLike(dynamic value) {
+    if (value is num) return true;
+    if (value is String) return double.tryParse(value.trim()) != null;
+    return false;
   }
 
   static dynamic _objectTemplate(String type, Map<String, dynamic>? templates) {
