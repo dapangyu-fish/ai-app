@@ -4,30 +4,44 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/games/flame_game_engine.dart';
+import 'package:flutter_application_1/json_ui/asset_manager.dart';
+
+JsonAppAssetManager _testAssetManager() {
+  return JsonAppAssetManager(
+    appId: 'test-flame-loop',
+    appName: 'test-flame-loop',
+    appVersion: '0.0.0',
+  );
+}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late JsonFlameGame game;
 
   setUp(() {
-    game = JsonFlameGame(spec: {
-      'world': {'kind': 'free', 'width': 100, 'height': 100, 'bg': '#000000'},
-      'entities': {
-        'g7': {
-          'kind': 'pixel',
-          'init': [10, 20],
-          'size': [16, 16],
-          'render': {'shape': 'rect', 'color': '#FF0000'},
+    game = JsonFlameGame(
+      spec: {
+        'world': {'kind': 'free', 'width': 100, 'height': 100, 'bg': '#000000'},
+        'entities': {
+          'g7': {
+            'kind': 'pixel',
+            'init': [10, 20],
+            'size': [16, 16],
+            'render': {'shape': 'rect', 'color': '#FF0000'},
+          },
+        },
+        'vars': {
+          'targets': {'g7': [99.0, 88.0]},
+          '_uid': 'g7',
+          'via_jsonlogic': null,
+          'via_template': null,
+          'read_loop': null,
+          'read_vars': null,
         },
       },
-      'vars': {
-        'targets': {'g7': [99.0, 88.0]},
-        '_uid': 'g7',
-        'via_jsonlogic': null,
-        'via_template': null,
-        'read_loop': null,
-        'read_vars': null,
-      },
-    });
+      assetManager: _testAssetManager(),
+    );
     game.resetGame(); // 直接初始化 vars + entities
   });
 
@@ -158,7 +172,7 @@ void main() {
         'render': {'shape': 'rect', 'color': '#FF0000'},
       };
     }
-    final big = JsonFlameGame(spec: spec);
+    final big = JsonFlameGame(spec: spec, assetManager: _testAssetManager());
     big.resetGame();
 
     // 模拟 update(dt) 调 frame.logic
@@ -233,7 +247,7 @@ void main() {
         'hits': 0,
       },
     };
-    final g = JsonFlameGame(spec: spec);
+    final g = JsonFlameGame(spec: spec, assetManager: _testAssetManager());
     g.resetGame();
 
     // step 1: 写 targets[_uid] = [10, 20]，跟 tap_logic 一样路径
@@ -332,7 +346,7 @@ void main() {
         ]
       }
     };
-    final g = JsonFlameGame(spec: spec);
+    final g = JsonFlameGame(spec: spec, assetManager: _testAssetManager());
     g.resetGame();
     expect(g.entities.keys.toList(), ['g0', 'g1'],
         reason: 'init.logic should @spawn 2 entities');
