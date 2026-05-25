@@ -1236,7 +1236,7 @@ class GameActions {
       rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
       if (!solid.overlaps(rect)) continue;
       if (dy > 0) {
-        final slopeTop = _slopeTopAt(collision, rect.center.dx, map.scale);
+        final slopeTop = _slopeTopAt(collision, rect, map.scale);
         player.y = slopeTop - player.h;
         player.state['onGround'] = true;
         player.state['doubleJumpUsed'] = false;
@@ -1249,19 +1249,33 @@ class GameActions {
 
   static double _slopeTopAt(
     TiledTileCollision collision,
-    double worldX,
+    Rect actor,
     double scale,
   ) {
     if (collision.type.toLowerCase() != 'slope') return collision.rect.top;
     final leftTop = (collision.properties['LeftTop'] as num?)?.toDouble();
     final rightTop = (collision.properties['RightTop'] as num?)?.toDouble();
     if (leftTop == null || rightTop == null) return collision.rect.top;
-    final ratio = ((worldX - collision.rect.left) / collision.rect.width).clamp(
-      0,
-      1,
-    );
-    return collision.rect.top +
-        (leftTop + (rightTop - leftTop) * ratio) * scale;
+
+    final left = leftTop * scale;
+    final right = rightTop * scale;
+    if (left < right) {
+      final delta = right - left;
+      final fromLeft = (actor.right - collision.rect.left)
+          .clamp(0, collision.rect.width)
+          .toDouble();
+      final ratio = fromLeft / collision.rect.width;
+      return (collision.rect.bottom - left) - (delta * ratio);
+    }
+    if (left > right) {
+      final delta = left - right;
+      final fromRight = (actor.left - collision.rect.left)
+          .clamp(0, collision.rect.width)
+          .toDouble();
+      final ratio = 1 - (fromRight / collision.rect.width);
+      return (collision.rect.bottom - right) - (delta * ratio);
+    }
+    return collision.rect.top;
   }
 }
 
