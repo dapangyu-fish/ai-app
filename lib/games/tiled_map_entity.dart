@@ -121,7 +121,7 @@ class TiledMapEntity extends GameEntity {
     }
     for (final layer in layers) {
       if (!_usesLayer(layer)) continue;
-      _renderLayer(canvas, layer);
+      _renderLayer(canvas, world, layer);
     }
   }
 
@@ -298,6 +298,7 @@ class TiledMapEntity extends GameEntity {
         offsetY: offsetY,
         visible: visible,
         parallaxX: _doubleAttr(layer, 'parallaxx', 1),
+        parallaxY: _doubleAttr(layer, 'parallaxy', 1),
         gids: gids,
       ),
     );
@@ -314,22 +315,26 @@ class TiledMapEntity extends GameEntity {
     objectsByLayer[name] = group
         .findElements('object')
         .map((object) {
+          final gid = _intAttr(object, 'gid', 0);
+          final width = _doubleAttr(object, 'width', 0) * scale;
+          final height = _doubleAttr(object, 'height', 0) * scale;
+          final rawY = _doubleAttr(object, 'y', 0) * scale;
           return TiledObject(
             id: _intAttr(object, 'id', 0),
             name: object.getAttribute('name') ?? '',
             type: object.getAttribute('type') ?? '',
             x: offsetX + _doubleAttr(object, 'x', 0) * scale,
-            y: offsetY + _doubleAttr(object, 'y', 0) * scale,
-            width: _doubleAttr(object, 'width', 0) * scale,
-            height: _doubleAttr(object, 'height', 0) * scale,
-            gid: _intAttr(object, 'gid', 0),
+            y: offsetY + rawY - (gid != 0 ? height : 0),
+            width: width,
+            height: height,
+            gid: gid,
             properties: _readProperties(object),
           );
         })
         .toList(growable: false);
   }
 
-  void _renderLayer(Canvas canvas, TiledLayer layer) {
+  void _renderLayer(Canvas canvas, GameWorld world, TiledLayer layer) {
     final tw = tileWidth * scale;
     final th = tileHeight * scale;
     final clip = canvas.getLocalClipBounds().inflate(math.max(tw, th) * 2);
@@ -363,8 +368,8 @@ class TiledMapEntity extends GameEntity {
         final tile = _tileForGid(gid);
         if (tile == null || tile.tileset.image == null) continue;
         final dst = Rect.fromLTWH(
-          layer.offsetX + col * tw,
-          layer.offsetY + row * th,
+          layer.offsetX + col * tw + world.cameraX * (1 - layer.parallaxX),
+          layer.offsetY + row * th + world.cameraY * (1 - layer.parallaxY),
           tw,
           th,
         );
@@ -538,6 +543,7 @@ class TiledLayer {
   final double offsetY;
   final bool visible;
   final double parallaxX;
+  final double parallaxY;
   final List<int> gids;
 
   const TiledLayer({
@@ -548,6 +554,7 @@ class TiledLayer {
     required this.offsetY,
     required this.visible,
     required this.parallaxX,
+    required this.parallaxY,
     required this.gids,
   });
 }

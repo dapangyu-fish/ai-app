@@ -1164,7 +1164,7 @@ class GameActions {
       'priority': 20,
       'asset': sprite.asset,
       'src': [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH],
-      'position': [object.x, object.y - object.height],
+      'position': [object.x, object.y],
       'size': [object.width, object.height],
       'state': {'objectId': object.id, 'objectType': type},
     };

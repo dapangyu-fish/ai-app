@@ -206,6 +206,8 @@ class JsonFlameGame extends FlameGame {
 
     // entities
     _updateCamera();
+    gameWorld.cameraX = _cameraX;
+    gameWorld.cameraY = _cameraY;
     canvas.save();
     canvas.translate(-_cameraX, -_cameraY);
     final renderList = entities.values.toList()
