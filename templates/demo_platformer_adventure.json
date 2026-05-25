@@ -3,13 +3,14 @@
   "appid": "d52cb6ab-b4f0-4e99-8e71-b8e3c68bd5b4",
   "meta": {
     "name": "demo-platformer-adventure",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "type": "app",
     "description": "A CC0 Kenney asset platform adventure demo built with generic JSON game atoms: tiled map, platform physics, coins, enemies, hazards and a finish flag.",
     "author": "zhaolanlan"
   },
   "dependencies": {
-    "common-ui": "^1.3.0"
+    "common-ui": "^1.3.0",
+    "game-controls": "^1.0.0"
   },
   "assets": {
     "bundles": {
@@ -2000,150 +2001,17 @@
             }
           },
           {
-            "type": "virtual_gamepad",
-            "mode": "joystick",
-            "actionLayout": "ps",
-            "height": 176,
-            "backgroundColor": "#0E3D49",
-            "joystickSize": 122,
-            "actionClusterSize": 132,
-            "gap": 16,
-            "joystick": {
-              "backgroundColor": "#174F5F",
-              "knobColor": "#EAF7FF",
-              "deadZone": 0.08,
-              "onChange": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "move_axis",
-                  "data": {
-                    "x": "{{ event.x }}",
-                    "y": "{{ event.y }}",
-                    "strength": "{{ event.strength }}",
-                    "direction": "{{ event.direction }}"
-                  }
-                }
-              },
-              "onEnd": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "move_axis",
-                  "data": {
-                    "x": 0,
-                    "y": 0,
-                    "strength": 0,
-                    "direction": "center"
-                  }
-                }
-              }
-            },
-            "directions": [
-              {
-                "id": "up",
-                "label": "↑",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "jump"
-                  }
-                }
-              },
-              {
-                "id": "left",
-                "label": "←",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "move_down",
-                    "data": {
-                      "direction": "left"
-                    }
-                  }
-                },
-                "onUp": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "move_up",
-                    "data": {
-                      "direction": "left"
-                    }
-                  }
-                }
-              },
-              {
-                "id": "right",
-                "label": "→",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "move_down",
-                    "data": {
-                      "direction": "right"
-                    }
-                  }
-                },
-                "onUp": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "move_up",
-                    "data": {
-                      "direction": "right"
-                    }
-                  }
-                }
-              },
-              {
-                "id": "down",
-                "label": "↓"
-              }
-            ],
-            "actions": [
-              {
-                "id": "jump",
-                "label": "",
-                "symbol": "triangle",
-                "backgroundColor": "#1E222A",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "jump"
-                  }
-                }
-              },
-              {
-                "id": "attack",
-                "label": "",
-                "symbol": "circle",
-                "backgroundColor": "#1E222A",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "attack"
-                  }
-                }
-              },
-              {
-                "id": "cross",
-                "label": "",
-                "symbol": "cross",
-                "backgroundColor": "#1E222A"
-              },
-              {
-                "id": "square",
-                "label": "",
-                "symbol": "square",
-                "backgroundColor": "#1E222A"
-              }
-            ]
+            "type": "ref",
+            "from": "game-controls",
+            "widget": "psJoystickGamepad",
+            "props": {
+              "moveInput": "move_axis",
+              "moveEndInput": "move_axis",
+              "jumpInput": "jump",
+              "attackInput": "attack",
+              "height": 176,
+              "backgroundColor": "#0E3D49"
+            }
           }
         ]
       }
