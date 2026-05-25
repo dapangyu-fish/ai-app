@@ -1075,7 +1075,7 @@ class GameActions {
       return _animatedSpec(
         asset: _asset(map, 'map/anim/spritesheet_item_egg.png'),
         x: object.x,
-        y: object.y - size,
+        y: object.y,
         w: size,
         h: size,
         frames: 48,
@@ -1087,7 +1087,7 @@ class GameActions {
       return _animatedSpec(
         asset: _asset(map, 'map/anim/spritesheet_item_feather.png'),
         x: object.x,
-        y: object.y - size,
+        y: object.y,
         w: size,
         h: size,
         frames: 30,
@@ -1103,7 +1103,7 @@ class GameActions {
       'src': sprite == null
           ? [0, 0, 64, 64]
           : [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH],
-      'position': [object.x, object.y - size],
+      'position': [object.x, object.y],
       'size': [size, size],
       'state': state,
       'render': {'shape': 'circle', 'color': '#FFD16655'},
@@ -1128,7 +1128,7 @@ class GameActions {
     return _animatedSpec(
       asset: _asset(map, 'map/anim/${info.$1}'),
       x: object.x,
-      y: object.y - hitbox,
+      y: object.y,
       w: hitbox,
       h: hitbox,
       frames: info.$2,
@@ -1139,10 +1139,14 @@ class GameActions {
         'enemyType': type.ifEmpty('Beetle'),
         'path': object.properties['Path'],
         'pathTile': tile,
-        'pathSpeed': tile * 3,
+        'pathSpeed': tile / 3,
         'fly':
             object.properties['Fly'] == true ||
             object.properties['Fly']?.toString() == 'true',
+        'spriteW': tile,
+        'spriteH': tile,
+        'spriteOffsetX': -hitbox / 2,
+        'spriteOffsetY': -hitbox,
       },
       priority: 25,
     );

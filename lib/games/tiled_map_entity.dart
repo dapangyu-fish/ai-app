@@ -11,6 +11,9 @@ import 'game_entity.dart';
 import 'game_world.dart';
 
 const int _flipMask = 0xE0000000;
+const int _flipHorizontal = 0x80000000;
+const int _flipVertical = 0x40000000;
+const int _flipDiagonal = 0x20000000;
 
 class TiledMapEntity extends GameEntity {
   String source;
@@ -365,9 +368,42 @@ class TiledMapEntity extends GameEntity {
           tw,
           th,
         );
-        canvas.drawImageRect(tile.tileset.image!, tile.src, dst, paint);
+        _drawTile(canvas, tile.tileset.image!, tile.src, dst, rawGid, paint);
       }
     }
+  }
+
+  void _drawTile(
+    Canvas canvas,
+    ui.Image image,
+    Rect src,
+    Rect dst,
+    int rawGid,
+    Paint paint,
+  ) {
+    final flipH = (rawGid & _flipHorizontal) != 0;
+    final flipV = (rawGid & _flipVertical) != 0;
+    final flipD = (rawGid & _flipDiagonal) != 0;
+    if (!flipH && !flipV && !flipD) {
+      canvas.drawImageRect(image, src, dst, paint);
+      return;
+    }
+
+    canvas.save();
+    canvas.translate(dst.center.dx, dst.center.dy);
+    if (flipD) {
+      canvas.rotate(math.pi / 2);
+      canvas.scale(flipV ? -1.0 : 1.0, flipH ? -1.0 : 1.0);
+    } else {
+      canvas.scale(flipH ? -1.0 : 1.0, flipV ? -1.0 : 1.0);
+    }
+    final localDst = Rect.fromCenter(
+      center: Offset.zero,
+      width: dst.width,
+      height: dst.height,
+    );
+    canvas.drawImageRect(image, src, localDst, paint);
+    canvas.restore();
   }
 
   TiledTileRef? _tileForGid(int gid) {

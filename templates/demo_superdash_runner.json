@@ -3,7 +3,7 @@
   "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
   "meta": {
     "name": "demo-superdash-runner",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "type": "app",
     "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
     "author": "demo"
@@ -155,7 +155,7 @@
                 "progress": 0,
                 "section_len": 999999,
                 "gravity": 2048,
-                "jump_vy": -1229,
+                "jump_vy": -1080,
                 "speed": 320,
                 "floor_y": 0,
                 "ground_y": 0,
