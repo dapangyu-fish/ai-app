@@ -504,7 +504,7 @@ class GameActions {
               .where((id) => id.startsWith(prefix))
               .toList(growable: false);
           for (final id in ids) {
-            game.despawnEntity(id);
+            game.despawnEntity(id, consumeTiledObject: false);
           }
           return ids.length;
         }
@@ -825,8 +825,6 @@ class GameActions {
 
     final dt = (args['dt'] as num?)?.toDouble() ?? 0;
     if (dt <= 0) return false;
-    player.state['time'] =
-        ((player.state['time'] as num?)?.toDouble() ?? 0) + dt;
     final gravity = (args['gravity'] as num?)?.toDouble() ?? 1800;
     final maxFall = (args['max_fall'] as num?)?.toDouble() ?? 1600;
     final jumpVelocity = (args['jump_velocity'] as num?)?.toDouble() ?? -720;
@@ -963,6 +961,8 @@ class GameActions {
           object.type.ifEmpty('default');
       final id = '${_objectPrefix(prefix, kind, type)}${object.id}';
       if (game.entities.containsKey(id)) continue;
+      final spawnKey = '$mapId/$layer/${object.id}';
+      if (game.consumedTiledObjectKeys.contains(spawnKey)) continue;
 
       final spec = switch (kind) {
         'items' || 'item' => _itemSpec(map, object, type),
@@ -970,11 +970,14 @@ class GameActions {
         _ => _objectSpriteSpec(map, object, type),
       };
       if (spec == null) continue;
+      final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
+      state['tiledSpawnKey'] = spawnKey;
+      state['tiledLayer'] = layer;
+      state['tiledObjectId'] = object.id;
+      spec['state'] = state;
       if (despawnDistance != null) {
-        final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
         state['despawnDistance'] = despawnDistance;
         state['despawnReference'] = referenceId;
-        spec['state'] = state;
       }
       if (game.spawnEntity(id, spec)) count++;
     }
@@ -989,7 +992,7 @@ class GameActions {
           .map((entry) => entry.key)
           .toList(growable: false);
       for (final id in ids) {
-        game.despawnEntity(id);
+        game.despawnEntity(id, consumeTiledObject: false);
       }
     }
     return count;
@@ -1096,6 +1099,7 @@ class GameActions {
       );
     }
     final sprite = map.spriteForGid(object.gid);
+    final spriteState = {...state, 'bobAmplitude': tile / 2, 'bobPeriod': 1.6};
     return {
       'kind': 'sprite',
       'priority': 25,
@@ -1105,7 +1109,7 @@ class GameActions {
           : [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH],
       'position': [object.x, object.y],
       'size': [size, size],
-      'state': state,
+      'state': spriteState,
       'render': {'shape': 'circle', 'color': '#FFD16655'},
     };
   }

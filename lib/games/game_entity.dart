@@ -23,11 +23,7 @@ abstract class GameEntity {
   final Map<String, dynamic> renderConfig;
   final int priority;
 
-  GameEntity({
-    required this.id,
-    required this.renderConfig,
-    this.priority = 0,
-  });
+  GameEntity({required this.id, required this.renderConfig, this.priority = 0});
 
   /// 自动行为（per-frame）
   void update(double dt, GameWorld world) {}
@@ -221,6 +217,7 @@ class PixelEntity extends GameEntity {
 
   @override
   void update(double dt, GameWorld world) {
+    state['time'] = ((state['time'] as num?)?.toDouble() ?? 0) + dt;
     if (!autoMove) return;
     _updatePath(dt);
     x += vx * dt;
@@ -382,7 +379,15 @@ class SpriteEntity extends PixelEntity implements ImageBackedEntity {
       srcH ?? img.height.toDouble(),
     );
     final offsetX = (state['spriteOffsetX'] as num?)?.toDouble() ?? 0;
-    final offsetY = (state['spriteOffsetY'] as num?)?.toDouble() ?? 0;
+    var offsetY = (state['spriteOffsetY'] as num?)?.toDouble() ?? 0;
+    final bobAmplitude = (state['bobAmplitude'] as num?)?.toDouble() ?? 0;
+    final bobPeriod = (state['bobPeriod'] as num?)?.toDouble() ?? 0;
+    if (bobAmplitude != 0 && bobPeriod > 0) {
+      final time = (state['time'] as num?)?.toDouble() ?? 0;
+      final phase = (state['bobPhase'] as num?)?.toDouble() ?? 0;
+      final wave = (1 - cos(((time / bobPeriod) + phase) * pi * 2)) / 2;
+      offsetY -= bobAmplitude * wave;
+    }
     final renderW = (state['spriteW'] as num?)?.toDouble() ?? w;
     final renderH = (state['spriteH'] as num?)?.toDouble() ?? h;
     final opacity = ((state['opacity'] as num?)?.toDouble() ?? 1).clamp(0, 1);

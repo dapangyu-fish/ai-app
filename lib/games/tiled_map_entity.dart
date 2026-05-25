@@ -177,8 +177,9 @@ class TiledMapEntity extends GameEntity {
           if (gid == 0) continue;
           final tile = _tileForGid(gid);
           if (tile == null) continue;
+          final visualH = tile.tileset.tileHeight * scale;
           final tileX = layer.offsetX + col * tw;
-          final tileY = layer.offsetY + row * th;
+          final tileY = layer.offsetY + row * th + th - visualH;
           final layerSolid = solidLayers.contains(layer.name);
           final layerHazard = hazardLayers.contains(layer.name);
           final type = layerHazard
@@ -337,7 +338,16 @@ class TiledMapEntity extends GameEntity {
   void _renderLayer(Canvas canvas, GameWorld world, TiledLayer layer) {
     final tw = tileWidth * scale;
     final th = tileHeight * scale;
-    final clip = canvas.getLocalClipBounds().inflate(math.max(tw, th) * 2);
+    final maxTileExtent = tilesets.fold<double>(math.max(tw, th), (
+      current,
+      tileset,
+    ) {
+      return math.max(
+        current,
+        math.max(tileset.tileWidth * scale, tileset.tileHeight * scale),
+      );
+    });
+    final clip = canvas.getLocalClipBounds().inflate(maxTileExtent * 2);
     final minCol = ((clip.left - layer.offsetX) / tw).floor().clamp(
       0,
       layer.width - 1,
@@ -367,11 +377,17 @@ class TiledMapEntity extends GameEntity {
         if (gid == 0) continue;
         final tile = _tileForGid(gid);
         if (tile == null || tile.tileset.image == null) continue;
+        final drawW = tile.tileset.tileWidth * scale;
+        final drawH = tile.tileset.tileHeight * scale;
         final dst = Rect.fromLTWH(
           layer.offsetX + col * tw + world.cameraX * (1 - layer.parallaxX),
-          layer.offsetY + row * th + world.cameraY * (1 - layer.parallaxY),
-          tw,
-          th,
+          layer.offsetY +
+              row * th +
+              th -
+              drawH +
+              world.cameraY * (1 - layer.parallaxY),
+          drawW,
+          drawH,
         );
         _drawTile(canvas, tile.tileset.image!, tile.src, dst, rawGid, paint);
       }

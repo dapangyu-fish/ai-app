@@ -57,6 +57,7 @@ class JsonFlameGame extends FlameGame {
   int score = 0;
   int bestScore = 0;
   bool isGameOver = false;
+  final Set<String> consumedTiledObjectKeys = {};
 
   late final GameLogicEngine logic;
   final Map<String, Future<ui.Image>> _imageCache = {};
@@ -343,7 +344,14 @@ class JsonFlameGame extends FlameGame {
   }
 
   /// 动态删 entity（@despawn 用）
-  bool despawnEntity(String id) {
+  bool despawnEntity(String id, {bool consumeTiledObject = true}) {
+    final entity = entities[id];
+    if (consumeTiledObject && entity is PixelEntity) {
+      final key = entity.state['tiledSpawnKey']?.toString();
+      if (key != null && key.isNotEmpty) {
+        consumedTiledObjectKeys.add(key);
+      }
+    }
     return entities.remove(id) != null;
   }
 
@@ -438,6 +446,7 @@ class JsonFlameGame extends FlameGame {
     score = 0;
     isGameOver = false;
     _initialAssetLoadingComplete = false;
+    consumedTiledObjectKeys.clear();
     vars.clear();
 
     // vars 初始值（spec.vars 里 "{{ ... }}" 用外层 game spec 的 best 等求值
