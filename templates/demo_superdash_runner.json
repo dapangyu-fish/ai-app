@@ -3,7 +3,7 @@
   "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
   "meta": {
     "name": "demo-superdash-runner",
-    "version": "0.2.7",
+    "version": "0.2.8",
     "type": "app",
     "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
     "author": "demo"
@@ -314,12 +314,7 @@
                       {"call": "@tiled.spawn_objects_near", "args": {"map": "tmx_map", "layer": "items", "kind": "items", "reference": "player", "proximity": {"var": "vars.spawn_proximity"}, "despawn_distance": {"var": "vars.despawn_distance"}}},
                       {"call": "@tiled.spawn_objects_near", "args": {"map": "tmx_map", "layer": "enemies", "kind": "enemies", "reference": "player", "proximity": {"var": "vars.spawn_proximity"}, "despawn_distance": {"var": "vars.despawn_distance"}}},
                       {"call": "@set", "args": {"var": "vars._was_on_ground", "value": {"var": "vars.on_ground"}}},
-                      {"call": "@if", "args": {
-                        "cond": {"var": "vars.on_ground"},
-                        "then": [
-                          {"call": "@entity.set", "args": {"id": "player", "field": "vx", "value": {"var": "vars.speed"}}}
-                        ]
-                      }},
+                      {"call": "@entity.set", "args": {"id": "player", "field": "vx", "value": {"var": "vars.speed"}}},
                       {"call": "@platformer.step", "args": {
                         "id": "player",
                         "map": "tmx_map",
