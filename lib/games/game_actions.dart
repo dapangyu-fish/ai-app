@@ -969,6 +969,7 @@ class GameActions {
     var skippedConsumed = 0;
     var skippedNoSpec = 0;
     var failed = 0;
+    final spawnedSamples = <String>[];
     for (final object in map.objectsByLayer[layer] ?? const <TiledObject>[]) {
       seen++;
       if (proximityOnly) {
@@ -1021,6 +1022,20 @@ class GameActions {
       }
       if (spawned) {
         count++;
+        if (debugSpawn && spawnedSamples.length < 6) {
+          final entity = game.entities[id];
+          if (entity is PixelEntity) {
+            final asset = entity is SpriteEntity ? entity.asset : '';
+            spawnedSamples.add(
+              '$id@${entity.x.toStringAsFixed(1)},'
+              '${entity.y.toStringAsFixed(1)} '
+              '${entity.w.toStringAsFixed(1)}x${entity.h.toStringAsFixed(1)}'
+              '${asset.isEmpty ? '' : ' asset=$asset'}',
+            );
+          } else {
+            spawnedSamples.add('$id kind=${spec?['kind']}');
+          }
+        }
       } else {
         failed++;
       }
@@ -1040,11 +1055,15 @@ class GameActions {
       }
     }
     if (debugSpawn) {
+      final refInfo = reference is PixelEntity
+          ? '${reference.x.toStringAsFixed(1)},${reference.y.toStringAsFixed(1)}'
+          : 'none';
       debugPrint(
         '[tiled.spawn_objects] map=$mapId layer=$layer seen=$seen near=$near '
         'spawned=$count existing=$skippedExisting consumed=$skippedConsumed '
         'noSpec=$skippedNoSpec failed=$failed reference=$referenceId '
-        'proximity=$proximity despawn=$despawnDistance',
+        'ref=$refInfo proximity=$proximity despawn=$despawnDistance'
+        '${spawnedSamples.isEmpty ? '' : ' samples=${spawnedSamples.join(' | ')}'}',
       );
     }
     return count;
