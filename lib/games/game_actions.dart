@@ -14,6 +14,8 @@
 import 'dart:math';
 import 'dart:ui' show Rect;
 
+import 'package:flutter/foundation.dart';
+
 import 'flame_game_engine.dart';
 import 'game_entity.dart';
 import 'game_logic.dart';
@@ -959,22 +961,40 @@ class GameActions {
     final reference = game.entities[referenceId];
     final proximity = (args['proximity'] as num?)?.toDouble() ?? 0;
     final despawnDistance = (args['despawn_distance'] as num?)?.toDouble();
+    final debugSpawn = args['debug'] == true || args['debug_spawn'] == true;
     var count = 0;
+    var seen = 0;
+    var near = 0;
+    var skippedExisting = 0;
+    var skippedConsumed = 0;
+    var skippedNoSpec = 0;
+    var failed = 0;
     for (final object in map.objectsByLayer[layer] ?? const <TiledObject>[]) {
+      seen++;
       if (proximityOnly) {
         if (reference is! PixelEntity || proximity <= 0) continue;
         if ((object.x - reference.x).abs() > proximity) continue;
       }
+      near++;
       final type = _objectType(object);
       final templates = (args['templates'] as Map?)?.cast<String, dynamic>();
       final rawTemplate = _objectTemplate(type, templates);
       final idPrefix = _objectTemplateIdPrefix(rawTemplate, prefix);
       final id = '$idPrefix${object.id}';
-      if (game.entities.containsKey(id)) continue;
+      if (game.entities.containsKey(id)) {
+        skippedExisting++;
+        continue;
+      }
       final spawnKey = '$mapId/$layer/${object.id}';
-      if (game.consumedTiledObjectKeys.contains(spawnKey)) continue;
+      if (game.consumedTiledObjectKeys.contains(spawnKey)) {
+        skippedConsumed++;
+        continue;
+      }
       var spec = _objectSpecFromTemplate(map, object, type, rawTemplate);
-      if (spec == null) continue;
+      if (spec == null) {
+        skippedNoSpec++;
+        continue;
+      }
       spec.remove('id_prefix');
       _attachTiledObjectState(
         spec,
@@ -999,7 +1019,11 @@ class GameActions {
           spawned = game.spawnEntity(id, spec);
         }
       }
-      if (spawned) count++;
+      if (spawned) {
+        count++;
+      } else {
+        failed++;
+      }
     }
     if (despawnDistance != null && reference is PixelEntity) {
       final ids = game.entities.entries
@@ -1014,6 +1038,14 @@ class GameActions {
       for (final id in ids) {
         game.despawnEntity(id, consumeTiledObject: false);
       }
+    }
+    if (debugSpawn) {
+      debugPrint(
+        '[tiled.spawn_objects] map=$mapId layer=$layer seen=$seen near=$near '
+        'spawned=$count existing=$skippedExisting consumed=$skippedConsumed '
+        'noSpec=$skippedNoSpec failed=$failed reference=$referenceId '
+        'proximity=$proximity despawn=$despawnDistance',
+      );
     }
     return count;
   }
