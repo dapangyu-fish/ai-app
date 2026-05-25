@@ -1030,7 +1030,7 @@ class GameActions {
       'step_time': (args['step_time'] as num?)?.toDouble() ?? 0.042,
       'loop': false,
       'state': {'removeOnFinish': true},
-      'render': args['render'] ?? const {},
+      'render': args['render'] ?? const {'shape': 'rect', 'color': '#FFFFFF00'},
     });
   }
 
