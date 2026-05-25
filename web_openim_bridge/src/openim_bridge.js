@@ -51,6 +51,16 @@ function ensureSDK() {
   return sdk;
 }
 
+async function waitForWindowFunction(name, timeoutMs = 8000) {
+  const startedAt = Date.now();
+  while (typeof window[name] !== 'function') {
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error(`OpenIM WASM did not expose window.${name}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 function bindSDKEvents() {
   const im = ensureSDK();
 
@@ -121,6 +131,8 @@ window.MyAppOpenIM = {
   async login(params) {
     const im = ensureSDK();
     currentUserID = params.userID || '';
+    await im.wasmInitializedPromise;
+    await waitForWindowFunction('commonEventFunc');
     const result = await im.login({
       userID: params.userID,
       token: params.token,

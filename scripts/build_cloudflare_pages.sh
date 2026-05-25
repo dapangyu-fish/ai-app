@@ -24,6 +24,11 @@ cat > "$BUILD_DIR/_headers" <<'EOF'
   Content-Encoding: gzip
   Cache-Control: public, max-age=31536000, immutable
 
+/openIM.wasm.gz
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+  Cache-Control: public, max-age=31536000, immutable
+
 /sql-wasm.wasm
   Content-Type: application/wasm
   Cache-Control: public, max-age=31536000, immutable
