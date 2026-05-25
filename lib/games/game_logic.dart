@@ -16,6 +16,8 @@
 // - 内置 @set / @if 等通用流程控制（少量复制 JsonInterpreter 的实现）
 // - 把 game-specific @action 委派给 GameActions（cell_path.* / scroll_list.* 等）
 
+import 'dart:math' as math;
+
 import 'package:jsonlogic/jsonlogic.dart';
 
 import 'flame_game_engine.dart';
@@ -315,10 +317,32 @@ class GameLogicEngine {
     final op = entry.key.toString();
     final value = entry.value;
     switch (op) {
+      case 'var':
+        if (value is List) {
+          if (value.isEmpty) return null;
+          final resolved = getVariable(value.first?.toString() ?? '');
+          return resolved ??
+              (value.length > 1 ? resolveExpression(value[1]) : null);
+        }
+        return getVariable(value?.toString() ?? '');
       case '!':
         return !_truthy(resolveExpression(value));
       case '!!':
         return _truthy(resolveExpression(value));
+      case '+':
+        return _sumValues(value);
+      case '-':
+        return _subtractValues(value);
+      case '*':
+        return _multiplyValues(value);
+      case '/':
+        return _divideValues(value);
+      case '%':
+        return _modValues(value);
+      case 'min':
+        return _minMaxValue(value, min: true);
+      case 'max':
+        return _minMaxValue(value, min: false);
       case '==':
       case '===':
         final values = value is List ? value : [value];
@@ -357,6 +381,83 @@ class GameLogicEngine {
         return false;
     }
     return _notHandled;
+  }
+
+  num _numValue(dynamic raw) {
+    final value = resolveExpression(raw);
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value) ?? 0;
+    if (value is bool) return value ? 1 : 0;
+    return 0;
+  }
+
+  num _normalizeNum(num value) {
+    if (value is double &&
+        value.isFinite &&
+        value == value.truncateToDouble()) {
+      return value.toInt();
+    }
+    return value;
+  }
+
+  num _sumValues(dynamic raw) {
+    final values = raw is List ? raw : [raw];
+    num total = 0;
+    for (final value in values) {
+      total += _numValue(value);
+    }
+    return _normalizeNum(total);
+  }
+
+  num _subtractValues(dynamic raw) {
+    final values = raw is List ? raw : [raw];
+    if (values.isEmpty) return 0;
+    if (values.length == 1) return _normalizeNum(-_numValue(values.first));
+    num total = _numValue(values.first);
+    for (final value in values.skip(1)) {
+      total -= _numValue(value);
+    }
+    return _normalizeNum(total);
+  }
+
+  num _multiplyValues(dynamic raw) {
+    final values = raw is List ? raw : [raw];
+    num total = 1;
+    for (final value in values) {
+      total *= _numValue(value);
+    }
+    return _normalizeNum(total);
+  }
+
+  num _divideValues(dynamic raw) {
+    final values = raw is List ? raw : [raw];
+    if (values.isEmpty) return 0;
+    num total = _numValue(values.first);
+    for (final value in values.skip(1)) {
+      final divisor = _numValue(value);
+      if (divisor == 0) return 0;
+      total /= divisor;
+    }
+    return _normalizeNum(total);
+  }
+
+  num _modValues(dynamic raw) {
+    final values = raw is List ? raw : [raw];
+    if (values.length < 2) return 0;
+    final divisor = _numValue(values[1]);
+    if (divisor == 0) return 0;
+    return _normalizeNum(_numValue(values[0]) % divisor);
+  }
+
+  num _minMaxValue(dynamic raw, {required bool min}) {
+    final values = raw is List ? raw : [raw];
+    if (values.isEmpty) return 0;
+    num result = _numValue(values.first);
+    for (final value in values.skip(1)) {
+      final n = _numValue(value);
+      result = min ? math.min(result, n) : math.max(result, n);
+    }
+    return _normalizeNum(result);
   }
 
   bool _compareValues(dynamic left, dynamic right, String op) {
