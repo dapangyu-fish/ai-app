@@ -3,7 +3,7 @@
   "appid": "d52cb6ab-b4f0-4e99-8e71-b8e3c68bd5b4",
   "meta": {
     "name": "demo-platformer-adventure",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "type": "app",
     "description": "A CC0 Kenney asset platform adventure demo built with generic JSON game atoms: tiled map, platform physics, coins, enemies, hazards and a finish flag.",
     "author": "zhaolanlan"
@@ -272,6 +272,7 @@
                 "hit_coin": null,
                 "hit_enemy": null,
                 "enemy_y": 0,
+                "enemy_dir": 1,
                 "hit_flag": null,
                 "won": false,
                 "hazard": false
@@ -539,7 +540,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     580,
-                    540
+                    466
                   ],
                   "size": [
                     34,
@@ -562,7 +563,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     660,
-                    540
+                    466
                   ],
                   "size": [
                     34,
@@ -585,7 +586,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     740,
-                    540
+                    466
                   ],
                   "size": [
                     34,
@@ -608,7 +609,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     1580,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -631,7 +632,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     1660,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -654,7 +655,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     1740,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -677,7 +678,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     1820,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -723,7 +724,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     2820,
-                    540
+                    466
                   ],
                   "size": [
                     34,
@@ -746,7 +747,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     2900,
-                    540
+                    466
                   ],
                   "size": [
                     34,
@@ -769,7 +770,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     2980,
-                    540
+                    466
                   ],
                   "size": [
                     34,
@@ -792,7 +793,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     3060,
-                    540
+                    466
                   ],
                   "size": [
                     34,
@@ -815,7 +816,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     4120,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -838,7 +839,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     4200,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -861,7 +862,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     4280,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -884,7 +885,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/tiles/coin_gold.png",
                   "position": [
                     4360,
-                    470
+                    402
                   ],
                   "size": [
                     34,
@@ -1022,7 +1023,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/enemies/slime_a.png",
                   "animation": "walk",
                   "position": [
-                    980,
+                    1180,
                     655
                   ],
                   "size": [
@@ -1033,9 +1034,12 @@
                     0,
                     0
                   ],
+                  "auto_update": false,
                   "state": {
-                    "path": "I{2L,2R}",
-                    "pathSpeed": 70,
+                    "minX": 1130,
+                    "maxX": 1530,
+                    "dir": 1,
+                    "speed": 66,
                     "spriteW": 64,
                     "spriteH": 64,
                     "spriteOffsetX": -5,
@@ -1070,7 +1074,7 @@
                   "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-platformer-adventure/0.1.0/enemies/snail_a.png",
                   "animation": "walk",
                   "position": [
-                    2100,
+                    1980,
                     655
                   ],
                   "size": [
@@ -1081,9 +1085,12 @@
                     0,
                     0
                   ],
+                  "auto_update": false,
                   "state": {
-                    "path": "I{2R,2L}",
-                    "pathSpeed": 70,
+                    "minX": 1760,
+                    "maxX": 2090,
+                    "dir": -1,
+                    "speed": 58,
                     "spriteW": 64,
                     "spriteH": 64,
                     "spriteOffsetX": -5,
@@ -1129,9 +1136,12 @@
                     0,
                     0
                   ],
+                  "auto_update": false,
                   "state": {
-                    "path": "I{2L,2R}",
-                    "pathSpeed": 70,
+                    "minX": 2920,
+                    "maxX": 3470,
+                    "dir": -1,
+                    "speed": 68,
                     "spriteW": 64,
                     "spriteH": 64,
                     "spriteOffsetX": -5,
@@ -1177,9 +1187,12 @@
                     0,
                     0
                   ],
+                  "auto_update": false,
                   "state": {
-                    "path": "I{2R,2L}",
-                    "pathSpeed": 70,
+                    "minX": 4300,
+                    "maxX": 4820,
+                    "dir": 1,
+                    "speed": 60,
                     "spriteW": 64,
                     "spriteH": 64,
                     "spriteOffsetX": -5,
@@ -1572,6 +1585,115 @@
                             "value": {
                               "var": "entities.player.onGround"
                             }
+                          }
+                        },
+                        {
+                          "call": "@for_each_entity",
+                          "args": {
+                            "where_prefix": "enemy_",
+                            "do": [
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "state.dir"
+                                },
+                                "assign": "vars.enemy_dir"
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<=": [
+                                      {
+                                        "var": "loop.entity.x"
+                                      },
+                                      {
+                                        "var": "loop.entity.minX"
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "state.dir",
+                                        "value": 1
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.enemy_dir",
+                                        "value": 1
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    ">=": [
+                                      {
+                                        "var": "loop.entity.x"
+                                      },
+                                      {
+                                        "var": "loop.entity.maxX"
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "state.dir",
+                                        "value": -1
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.enemy_dir",
+                                        "value": -1
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@platformer.step",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "map": "map",
+                                  "dt": {
+                                    "var": "event.dt"
+                                  },
+                                  "gravity": {
+                                    "var": "vars.gravity"
+                                  },
+                                  "move": {
+                                    "var": "vars.enemy_dir"
+                                  },
+                                  "speed": {
+                                    "var": "loop.entity.speed"
+                                  },
+                                  "one_way_tilesets": [
+                                    "ground_top"
+                                  ],
+                                  "max_fall": 1250
+                                }
+                              },
+                              {
+                                "call": "@entity.flip_by_velocity",
+                                "args": {
+                                  "id": "{{ loop.id }}"
+                                }
+                              }
+                            ]
                           }
                         },
                         {
