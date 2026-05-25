@@ -5,7 +5,7 @@
     "version": "1.3.0",
     "type": "library",
     "description": "用户信息组件库 — 读取/修改用户资料 + 按 userId 取对方头像/昵称",
-    "author": "demo",
+    "author": "2501808198@qq.com",
     "exports": [
       "loadUserInfo",
       "getUserAvatar",

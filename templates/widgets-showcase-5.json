@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "第五批 Widget 演示 — chip / badge / avatar / rich_text / progress",
-    "author": "Claude"
+    "author": "2501808198@qq.com"
   },
   "dependencies": {
     "common-ui": "^1.2.0"

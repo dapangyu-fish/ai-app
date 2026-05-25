@@ -6,7 +6,7 @@
     "version": "0.2.7",
     "type": "app",
     "description": "A CC0 Kenney asset platform adventure demo built with generic JSON game atoms: tiled map, platform physics, coins, enemies, hazards and a finish flag.",
-    "author": "zhaolanlan"
+    "author": "2501808198@qq.com"
   },
   "dependencies": {
     "common-ui": "^1.3.0",

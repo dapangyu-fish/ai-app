@@ -6,7 +6,7 @@
     "version": "1.1.6",
     "type": "app",
     "description": "使用 Drift/SQLite 持久化存储的日记应用 — 支持心情标签、增删改查",
-    "author": "AI Designer",
+    "author": "2501808198@qq.com",
     "display_name": "日记本(Drift版)"
   },
   "global": {

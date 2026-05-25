@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "演示新的简化依赖声明格式",
-    "author": "demo"
+    "author": "2501808198@qq.com"
   },
   "dependencies": {
     "common-ui": "^1.0.0",

@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "用户信息演示 — 展示登录状态、用户资料查看与编辑",
-    "author": "demo"
+    "author": "2501808198@qq.com"
   },
   "global": {
     "variables": {

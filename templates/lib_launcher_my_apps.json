@@ -12,7 +12,7 @@
       "es": "Componente launcher · Mis apps"
     },
     "description": "可嵌入的'我的 APP'组件库——从本地 JSON-APP 列表里一键启动。",
-    "author": "framework",
+    "author": "2501808198@qq.com",
     "exports": ["myAppsGrid", "init", "refresh", "deleteApp"]
   },
 

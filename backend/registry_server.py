@@ -88,9 +88,24 @@ def require_auth(f):
         # 用于发布脚本 / migrate_templates 等 server-side 工具绕过 supabase 鉴权
         admin_token = os.environ.get("REGISTRY_ADMIN_TOKEN", "")
         if admin_token and token == admin_token:
+            admin_author_email = os.environ.get(
+                "REGISTRY_ADMIN_AUTHOR_EMAIL",
+                "2501808198@qq.com",
+            ).strip()
+            admin_author_id = os.environ.get(
+                "REGISTRY_ADMIN_AUTHOR_ID",
+                admin_author_email,
+            ).strip() or admin_author_email
+            admin_author_name = os.environ.get(
+                "REGISTRY_ADMIN_AUTHOR_NAME",
+                admin_author_email,
+            ).strip() or admin_author_email
             request.supabase_user = {
-                "id": "registry-admin",
-                "email": "admin@registry.local"
+                "id": admin_author_id,
+                "email": admin_author_email,
+                "user_metadata": {
+                    "username": admin_author_name,
+                },
             }
             request.supabase_token = token
             request.user_role = "admin"

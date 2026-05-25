@@ -6,7 +6,7 @@
     "version": "1.2.0",
     "type": "library",
     "description": "私信组件库 — 搜好友 / 加好友 / 好友列表 / 单聊历史 / 发文本，配合 lib_user 用",
-    "author": "demo",
+    "author": "2501808198@qq.com",
     "exports": [
       "currentUserId",
       "searchUsers",

@@ -12,7 +12,7 @@
       "es": "Componente launcher · Ajustes"
     },
     "description": "可嵌入的'设置'组件库——主题/语言/默认启动 App/缓存/账号管理。所有 UI 字符串走消费方的 global.i18n（t('settings.xxx')），加语言只改消费方 JSON。",
-    "author": "framework",
+    "author": "2501808198@qq.com",
     "exports": [
       "settingsPanel",
       "init",

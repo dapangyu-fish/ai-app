@@ -6,7 +6,7 @@
     "version": "1.0.5",
     "type": "library",
     "description": "数据处理工具库 — 随机数/UUID/时间日期/字符串处理/数组操作",
-    "author": "AI Designer",
+    "author": "2501808198@qq.com",
     "exports": [
       "randomInt",
       "randomFloat",

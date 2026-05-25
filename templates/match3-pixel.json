@@ -7,7 +7,7 @@
     "version": "0.4.0",
     "type": "app",
     "description": "match3 用 flame_game pixel + frame ease。v0.4.0: match 检测 + 消除 + 重力下落 + 顶部补充 + 连锁",
-    "author": "AI"
+    "author": "2501808198@qq.com"
   },
   "dependencies": {},
   "global": {

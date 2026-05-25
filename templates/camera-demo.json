@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "拍照 Demo — 通过 common-ui 库演示拍照和图片选择功能",
-    "author": "AI Designer"
+    "author": "2501808198@qq.com"
   },
   "dependencies": {
     "common-ui": "^1.0.0"

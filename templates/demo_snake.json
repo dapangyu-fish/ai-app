@@ -6,7 +6,7 @@
     "version": "1.4.1",
     "type": "app",
     "description": "贪吃蛇 — 纯 JSON 实现，最高纪录与历史记录通过 lib_database 持久化",
-    "author": "demo"
+    "author": "2501808198@qq.com"
   },
   "dependencies": {
     "lib_database": "^1.0.0",
