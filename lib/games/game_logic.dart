@@ -298,11 +298,44 @@ class GameLogicEngine {
       // - {"var": "vars.x.{{ idx }}"} 这种动态路径需要烤模板
       // - {"and": [{"call": "@xxx"}, ...]} 这种条件组合需要先执行表达式 action
       final preprocessed = _resolveJsonLogicOperands(rule);
+      final local = _evalBooleanLogic(preprocessed);
+      if (local != _notHandled) return local;
       return _jsonlogic.apply(preprocessed, _dataScope());
     } catch (e) {
       // 表达式炸了不能让游戏崩，返回 null 让上游决定
       return null;
     }
+  }
+
+  static const Object _notHandled = Object();
+
+  dynamic _evalBooleanLogic(dynamic rule) {
+    if (rule is! Map || rule.length != 1) return _notHandled;
+    final entry = rule.entries.first;
+    final op = entry.key.toString();
+    final value = entry.value;
+    switch (op) {
+      case '!':
+        return !_truthy(resolveExpression(value));
+      case '!!':
+        return _truthy(resolveExpression(value));
+      case 'and':
+        final values = value is List ? value : [value];
+        dynamic last = true;
+        for (final item in values) {
+          last = resolveExpression(item);
+          if (!_truthy(last)) return false;
+        }
+        return _truthy(last);
+      case 'or':
+        final values = value is List ? value : [value];
+        for (final item in values) {
+          final current = resolveExpression(item);
+          if (_truthy(current)) return true;
+        }
+        return false;
+    }
+    return _notHandled;
   }
 
   /// 递归预处理 jsonlogic 规则里的 `{{ x }}` 模板字符串。
