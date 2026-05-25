@@ -539,6 +539,7 @@ class GameActions {
           }
           final rect = _rectFromArgs(args, entity);
           if (rect == null) return false;
+          if (type == 'hazard' && rect.top > map.heightPx) return true;
           return map
               .collisionRectsIn(rect)
               .any((collision) => collision.type.toLowerCase() == type);
@@ -854,17 +855,26 @@ class GameActions {
     }
 
     player.vy = (player.vy + gravity * dt).clamp(-maxFall, maxFall);
-    _moveAndCollideX(player, map, player.vx * dt);
-    _moveAndCollideY(player, map, player.vy * dt);
+    _moveAndCollideSwept(player, map, player.vx * dt, player.vy * dt);
     if (player.state['onGround'] == true) {
       player.state['lastGroundXVelocity'] = player.vx.abs();
     }
     final rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
     final hazards = map.collisionRectsIn(rect).where((c) => c.hazard).toList();
-    player.state['hazard'] = hazards.isNotEmpty;
-    player.state['hazardCollision'] = hazards.isEmpty
-        ? null
-        : hazards.first.toMap();
+    final fellOut = _isBelowMap(player, map);
+    player.state['outOfBounds'] = fellOut;
+    player.state['hazard'] = hazards.isNotEmpty || fellOut;
+    player.state['hazardCollision'] = hazards.isNotEmpty
+        ? hazards.first.toMap()
+        : fellOut
+        ? {
+            'x': player.x,
+            'y': player.y,
+            'w': player.w,
+            'h': player.h,
+            'type': 'Pit',
+          }
+        : null;
     return true;
   }
 
@@ -1204,6 +1214,29 @@ class GameActions {
     final base = map.baseUrl;
     if (base == null || base.isEmpty) return path;
     return Uri.parse(base).resolve(path).toString();
+  }
+
+  static void _moveAndCollideSwept(
+    PixelEntity player,
+    TiledMapEntity map,
+    double dx,
+    double dy,
+  ) {
+    final tile = max(8.0, min(map.tileWidth, map.tileHeight) * map.scale);
+    final maxStep = tile * 0.45;
+    final steps = max(1, (max(dx.abs(), dy.abs()) / maxStep).ceil());
+    final stepX = dx / steps;
+    final stepY = dy / steps;
+    for (var i = 0; i < steps; i++) {
+      _moveAndCollideX(player, map, stepX);
+      _moveAndCollideY(player, map, stepY);
+      if (_isBelowMap(player, map)) break;
+    }
+  }
+
+  static bool _isBelowMap(PixelEntity player, TiledMapEntity map) {
+    final margin = max(player.h, map.tileHeight * map.scale);
+    return player.y > map.heightPx + margin;
   }
 
   static void _moveAndCollideX(
