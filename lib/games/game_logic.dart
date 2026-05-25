@@ -94,7 +94,9 @@ class GameLogicEngine {
       rawArgs.forEach((k, v) {
         partial[k] = (k == 'do') ? v : resolveExpression(v);
       });
-      return GameActions.dispatch(game, call, partial, this);
+      final result = GameActions.dispatch(game, call, partial, this);
+      _assignResult(action, result);
+      return result;
     }
     if (call == '@tiled.spawn_objects' || call == '@tiled.spawn_objects_near') {
       final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -102,7 +104,9 @@ class GameLogicEngine {
       rawArgs.forEach((k, v) {
         partial[k] = (k == 'templates') ? v : resolveExpression(v);
       });
-      return GameActions.dispatch(game, call, partial, this);
+      final result = GameActions.dispatch(game, call, partial, this);
+      _assignResult(action, result);
+      return result;
     }
 
     final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -116,11 +120,15 @@ class GameLogicEngine {
     }
 
     final result = GameActions.dispatch(game, call, args, this);
+    _assignResult(action, result);
+    return result;
+  }
+
+  void _assignResult(Map<String, dynamic> action, dynamic result) {
     final assign = action['assign']?.toString();
     if (assign != null && assign.isNotEmpty) {
       setVariable(assign, result);
     }
-    return result;
   }
 
   // ---------- 内置 ----------

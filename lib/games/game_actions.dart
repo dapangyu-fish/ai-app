@@ -967,13 +967,15 @@ class GameActions {
       }
       final type = _objectType(object);
       final templates = (args['templates'] as Map?)?.cast<String, dynamic>();
-      final spec = _objectSpecFromTemplate(map, object, type, templates);
-      if (spec == null) continue;
-      final idPrefix = spec.remove('id_prefix')?.toString() ?? prefix;
+      final rawTemplate = _objectTemplate(type, templates);
+      final idPrefix = _objectTemplateIdPrefix(rawTemplate, prefix);
       final id = '$idPrefix${object.id}';
       if (game.entities.containsKey(id)) continue;
       final spawnKey = '$mapId/$layer/${object.id}';
       if (game.consumedTiledObjectKeys.contains(spawnKey)) continue;
+      final spec = _objectSpecFromTemplate(map, object, type, rawTemplate);
+      if (spec == null) continue;
+      spec.remove('id_prefix');
       final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
       state['tiledSpawnKey'] = spawnKey;
       state['tiledLayer'] = layer;
@@ -1045,10 +1047,8 @@ class GameActions {
     TiledMapEntity map,
     TiledObject object,
     String type,
-    Map<String, dynamic>? templates,
+    dynamic rawTemplate,
   ) {
-    final rawTemplate =
-        templates?[type] ?? templates?['default'] ?? templates?['*'];
     if (rawTemplate is Map) {
       final context = _objectTemplateContext(map, object, type);
       final resolved = _resolveObjectTemplate(rawTemplate, context);
@@ -1056,6 +1056,18 @@ class GameActions {
       return null;
     }
     return _objectSpriteSpec(map, object, type);
+  }
+
+  static dynamic _objectTemplate(String type, Map<String, dynamic>? templates) {
+    return templates?[type] ?? templates?['default'] ?? templates?['*'];
+  }
+
+  static String _objectTemplateIdPrefix(dynamic rawTemplate, String fallback) {
+    if (rawTemplate is Map) {
+      final raw = rawTemplate['id_prefix'];
+      if (raw is String && raw.isNotEmpty && !raw.contains('{{')) return raw;
+    }
+    return fallback;
   }
 
   static String _objectType(TiledObject object) {
