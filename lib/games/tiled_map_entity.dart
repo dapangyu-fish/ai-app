@@ -319,13 +319,12 @@ class TiledMapEntity extends GameEntity {
           final gid = _intAttr(object, 'gid', 0);
           final width = _doubleAttr(object, 'width', 0) * scale;
           final height = _doubleAttr(object, 'height', 0) * scale;
-          final rawY = _doubleAttr(object, 'y', 0) * scale;
           return TiledObject(
             id: _intAttr(object, 'id', 0),
             name: object.getAttribute('name') ?? '',
             type: object.getAttribute('type') ?? '',
             x: offsetX + _doubleAttr(object, 'x', 0) * scale,
-            y: offsetY + rawY - (gid != 0 ? height : 0),
+            y: offsetY + _doubleAttr(object, 'y', 0) * scale,
             width: width,
             height: height,
             gid: gid,
