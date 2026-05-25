@@ -955,7 +955,6 @@ class GameActions {
     final map = game.entities[mapId];
     if (map is! TiledMapEntity || !map.loaded) return 0;
 
-    final kind = args['kind']?.toString() ?? layer;
     final referenceId = args['reference']?.toString();
     final reference = game.entities[referenceId];
     final proximity = (args['proximity'] as num?)?.toDouble() ?? 0;
@@ -966,20 +965,15 @@ class GameActions {
         if (reference is! PixelEntity || proximity <= 0) continue;
         if ((object.x - reference.x).abs() > proximity) continue;
       }
-      final type =
-          object.properties['Type']?.toString() ??
-          object.type.ifEmpty('default');
-      final id = '${_objectPrefix(prefix, kind, type)}${object.id}';
+      final type = _objectType(object);
+      final templates = (args['templates'] as Map?)?.cast<String, dynamic>();
+      final spec = _objectSpecFromTemplate(map, object, type, templates);
+      if (spec == null) continue;
+      final idPrefix = spec.remove('id_prefix')?.toString() ?? prefix;
+      final id = '$idPrefix${object.id}';
       if (game.entities.containsKey(id)) continue;
       final spawnKey = '$mapId/$layer/${object.id}';
       if (game.consumedTiledObjectKeys.contains(spawnKey)) continue;
-
-      final spec = switch (kind) {
-        'items' || 'item' => _itemSpec(map, object, type),
-        'enemies' || 'enemy' => _enemySpec(map, object, type),
-        _ => _objectSpriteSpec(map, object, type),
-      };
-      if (spec == null) continue;
       final state = (spec['state'] as Map?)?.cast<String, dynamic>() ?? {};
       state['tiledSpawnKey'] = spawnKey;
       state['tiledLayer'] = layer;
@@ -994,9 +988,9 @@ class GameActions {
     if (despawnDistance != null && reference is PixelEntity) {
       final ids = game.entities.entries
           .where((entry) {
-            if (!_matchesObjectPrefix(entry.key, prefix, kind)) return false;
             final entity = entry.value;
             return entity is PixelEntity &&
+                entity.state['tiledLayer'] == layer &&
                 (entity.x - reference.x).abs() > despawnDistance;
           })
           .map((entry) => entry.key)
@@ -1047,125 +1041,116 @@ class GameActions {
     });
   }
 
-  static String _objectPrefix(String fallback, String kind, String type) {
-    if (kind == 'items' || kind == 'item') {
-      if (type == 'Egg') return 'egg_';
-      if (type == 'Feather') return 'feather_';
-      return 'acorn_';
+  static Map<String, dynamic>? _objectSpecFromTemplate(
+    TiledMapEntity map,
+    TiledObject object,
+    String type,
+    Map<String, dynamic>? templates,
+  ) {
+    final rawTemplate =
+        templates?[type] ?? templates?['default'] ?? templates?['*'];
+    if (rawTemplate is Map) {
+      final context = _objectTemplateContext(map, object, type);
+      final resolved = _resolveObjectTemplate(rawTemplate, context);
+      if (resolved is Map) return resolved.cast<String, dynamic>();
+      return null;
     }
-    if (kind == 'enemies' || kind == 'enemy') return 'enemy_';
-    return fallback;
+    return _objectSpriteSpec(map, object, type);
   }
 
-  static bool _matchesObjectPrefix(String id, String fallback, String kind) {
-    if (kind == 'items' || kind == 'item') {
-      return id.startsWith('acorn_') ||
-          id.startsWith('egg_') ||
-          id.startsWith('feather_');
-    }
-    if (kind == 'enemies' || kind == 'enemy') return id.startsWith('enemy_');
-    return id.startsWith(fallback);
+  static String _objectType(TiledObject object) {
+    return object.properties['Type']?.toString() ??
+        object.type.ifEmpty('default');
   }
 
-  static Map<String, dynamic>? _itemSpec(
+  static Map<String, dynamic> _objectTemplateContext(
     TiledMapEntity map,
     TiledObject object,
     String type,
   ) {
     final tile = map.tileWidth * map.scale;
     final size = object.width > 0 ? object.width : tile;
-    final state = {
-      'objectId': object.id,
-      'objectType': type,
-      'itemType': type == 'Egg'
-          ? 'egg'
-          : type == 'Feather'
-          ? 'feather'
-          : 'acorn',
-      'points': type == 'Egg' ? 1000 : 10,
-    };
-    if (type == 'Egg') {
-      return _animatedSpec(
-        asset: _asset(map, 'map/anim/spritesheet_item_egg.png'),
-        x: object.x,
-        y: object.y,
-        w: size,
-        h: size,
-        frames: 48,
-        framesPerRow: 8,
-        state: state,
-      );
-    }
-    if (type == 'Feather') {
-      return _animatedSpec(
-        asset: _asset(map, 'map/anim/spritesheet_item_feather.png'),
-        x: object.x,
-        y: object.y,
-        w: size,
-        h: size,
-        frames: 30,
-        framesPerRow: 6,
-        state: state,
-      );
-    }
-    final sprite = map.spriteForGid(object.gid);
-    final spriteState = {...state, 'bobAmplitude': tile / 2, 'bobPeriod': 1.6};
-    return {
-      'kind': 'sprite',
-      'priority': 25,
-      'asset': sprite?.asset ?? _asset(map, 'map/objects/tile_items_v2.png'),
-      'src': sprite == null
-          ? [0, 0, 64, 64]
-          : [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH],
-      'position': [object.x, object.y],
-      'size': [size, size],
-      'state': spriteState,
-      'render': {'shape': 'circle', 'color': '#FFD16655'},
-    };
-  }
-
-  static Map<String, dynamic>? _enemySpec(
-    TiledMapEntity map,
-    TiledObject object,
-    String type,
-  ) {
-    final tile = map.tileWidth * map.scale;
     final hitbox = tile * 0.5;
-    final info = switch (type) {
-      'Bee' => ('spritesheet_enemy_bee.png', 14, 7),
-      'Butterfly' => ('spritesheet_enemy_butterfly.png', 16, 8),
-      'Grasshopper' => ('spritesheet_enemy_grasshopper.png', 22, 11),
-      'Firefly' => ('spritesheet_enemy_dragonfly.png', 32, 8),
-      'Ant' => ('spritesheet_enemy_ant.png', 12, 6),
-      _ => ('spritesheet_enemy_beetle.png', 16, 8),
-    };
     final fly =
         object.properties['Fly'] == true ||
         object.properties['Fly']?.toString() == 'true';
-    final y = fly ? object.y : object.y + hitbox;
-    return _animatedSpec(
-      asset: _asset(map, 'map/anim/${info.$1}'),
-      x: object.x,
-      y: y,
-      w: hitbox,
-      h: hitbox,
-      frames: info.$2,
-      framesPerRow: info.$3,
-      state: {
-        'objectId': object.id,
-        'objectType': type,
-        'enemyType': type.ifEmpty('Beetle'),
-        'path': object.properties['Path'],
-        'pathTile': tile,
-        'pathSpeed': tile / 3,
+    final sprite = map.spriteForGid(object.gid);
+    return {
+      'tile': tile,
+      'hitbox': hitbox,
+      'object': {
+        'id': object.id,
+        'name': object.name,
+        'type': type,
+        'x': object.x,
+        'y': object.y,
+        'yPlusHitbox': object.y + hitbox,
+        'w': object.width,
+        'h': object.height,
+        'width': object.width,
+        'height': object.height,
+        'size': size,
+        'gid': object.gid,
         'fly': fly,
-        'spriteW': tile,
-        'spriteH': tile,
-        'spriteOffsetX': -hitbox / 2,
-        'spriteOffsetY': -hitbox,
+        'properties': object.properties,
+        'sprite': sprite == null
+            ? null
+            : {
+                'asset': sprite.asset,
+                'src': [sprite.srcX, sprite.srcY, sprite.srcW, sprite.srcH],
+                'srcX': sprite.srcX,
+                'srcY': sprite.srcY,
+                'srcW': sprite.srcW,
+                'srcH': sprite.srcH,
+              },
       },
-      priority: 25,
-    );
+    };
+  }
+
+  static dynamic _resolveObjectTemplate(
+    dynamic node,
+    Map<String, dynamic> context,
+  ) {
+    if (node is String) return _resolveObjectTemplateString(node, context);
+    if (node is List) {
+      return node
+          .map((value) => _resolveObjectTemplate(value, context))
+          .toList();
+    }
+    if (node is Map) {
+      return node.map(
+        (key, value) =>
+            MapEntry(key.toString(), _resolveObjectTemplate(value, context)),
+      );
+    }
+    return node;
+  }
+
+  static dynamic _resolveObjectTemplateString(
+    String text,
+    Map<String, dynamic> context,
+  ) {
+    final fullMatch = RegExp(r'^\s*\{\{\s*(.+?)\s*\}\}\s*$').firstMatch(text);
+    if (fullMatch != null) {
+      return _readTemplatePath(context, fullMatch.group(1)!.trim());
+    }
+    if (!text.contains('{{')) return text;
+    return text.replaceAllMapped(RegExp(r'\{\{\s*(.+?)\s*\}\}'), (match) {
+      final value = _readTemplatePath(context, match.group(1)!.trim());
+      return value?.toString() ?? '';
+    });
+  }
+
+  static dynamic _readTemplatePath(Map<String, dynamic> context, String path) {
+    dynamic current = context;
+    for (final part in path.split('.')) {
+      if (current is Map) {
+        current = current[part];
+      } else {
+        return null;
+      }
+    }
+    return current;
   }
 
   static Map<String, dynamic>? _objectSpriteSpec(
@@ -1184,38 +1169,6 @@ class GameActions {
       'size': [object.width, object.height],
       'state': {'objectId': object.id, 'objectType': type},
     };
-  }
-
-  static Map<String, dynamic> _animatedSpec({
-    required String asset,
-    required double x,
-    required double y,
-    required double w,
-    required double h,
-    required int frames,
-    required int framesPerRow,
-    required Map<String, dynamic> state,
-    int priority = 25,
-  }) {
-    return {
-      'kind': 'animated_sprite',
-      'priority': priority,
-      'asset': asset,
-      'position': [x, y],
-      'size': [w, h],
-      'frame_size': [64, 64],
-      'frames': frames,
-      'frames_per_row': framesPerRow,
-      'step_time': 0.04,
-      'state': state,
-      'render': {'shape': 'rect', 'color': '#B24A4A33', 'radius': 4},
-    };
-  }
-
-  static String _asset(TiledMapEntity map, String path) {
-    final base = map.baseUrl;
-    if (base == null || base.isEmpty) return path;
-    return Uri.parse(base).resolve(path).toString();
   }
 
   static void _moveAndCollideSwept(

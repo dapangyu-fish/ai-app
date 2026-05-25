@@ -96,6 +96,14 @@ class GameLogicEngine {
       });
       return GameActions.dispatch(game, call, partial, this);
     }
+    if (call == '@tiled.spawn_objects' || call == '@tiled.spawn_objects_near') {
+      final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
+      final partial = <String, dynamic>{};
+      rawArgs.forEach((k, v) {
+        partial[k] = (k == 'templates') ? v : resolveExpression(v);
+      });
+      return GameActions.dispatch(game, call, partial, this);
+    }
 
     final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
     final args = _resolveMap(rawArgs);
