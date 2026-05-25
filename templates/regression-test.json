@@ -11,7 +11,7 @@
     "version": "1.4.1",
     "type": "app",
     "description": "JSON-DSL framework regression test suite",
-    "author": "2501808198@qq.com"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.0.0"

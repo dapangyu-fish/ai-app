@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "P0 演示：Tab导航 + 下拉刷新 + 本地存储",
-    "author": "2501808198@qq.com"
+    "author": "fish"
   },
   "global": {
     "variables": {

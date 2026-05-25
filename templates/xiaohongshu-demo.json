@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "一个小红书风格的示例应用：帖子列表 + 详情页 + 点赞",
-    "author": "2501808198@qq.com",
+    "author": "fish",
     "icon_url": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop"
   },
   "global": {

@@ -5,7 +5,7 @@
     "name": "demo-video-browser",
     "version": "1.0.0",
     "description": "从流媒体服务器获取播放列表 → 选择视频 → 播放",
-    "author": "2501808198@qq.com",
+    "author": "fish",
     "type": "app"
   },
   "global": {

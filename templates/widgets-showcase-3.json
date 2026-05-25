@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "第三批 Widget 演示 — padding / center / align / flexible / stack",
-    "author": "2501808198@qq.com"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.2.0"

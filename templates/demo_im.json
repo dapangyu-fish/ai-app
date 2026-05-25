@@ -6,7 +6,7 @@
     "version": "1.5.1",
     "type": "app",
     "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
-    "author": "2501808198@qq.com"
+    "author": "fish"
   },
   "dependencies": {
     "lib_im": "^1.1.0",

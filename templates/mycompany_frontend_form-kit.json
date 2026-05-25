@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "type": "library",
     "description": "Form Components Kit",
-    "author": "2501808198@qq.com"
+    "author": "fish"
   },
   "components": {
     "FormInput": {

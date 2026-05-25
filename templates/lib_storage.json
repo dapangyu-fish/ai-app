@@ -5,7 +5,7 @@
     "version": "1.0.1",
     "type": "library",
     "description": "本地文件持久化组件库 — 提供 JSON 文件的增删改查、追加、列表等完整 CRUD 操作",
-    "author": "2501808198@qq.com",
+    "author": "fish",
     "exports": [
       "saveData",
       "loadData",

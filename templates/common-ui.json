@@ -6,7 +6,7 @@
     "version": "1.3.0",
     "type": "library",
     "description": "通用 UI 函数库 — toast / confirm / 自定义对话框 / Modal Bottom Sheet / 数值格式化 / 进度计算",
-    "author": "2501808198@qq.com",
+    "author": "fish",
     "exports": [
       "showSuccess",
       "showError",

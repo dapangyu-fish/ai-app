@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "第七批 — tab_view / app_bar / drawer / bottom_sheet (含 screen.appBar / drawer 覆写演示)",
-    "author": "2501808198@qq.com"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.2.0"

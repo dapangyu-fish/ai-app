@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "运动记录App - 记录运动、查看历史、统计进展",
-    "author": "2501808198@qq.com",
+    "author": "fish",
     "display_name": "运动记录"
   },
   "global": {
