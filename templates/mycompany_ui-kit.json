@@ -3,7 +3,8 @@
     "name": "mycompany/ui-kit",
     "version": "1.0.0",
     "type": "library",
-    "description": "My Company UI Kit"
+    "description": "My Company UI Kit",
+    "author": "fish"
   },
   "components": {
     "CustomButton": {

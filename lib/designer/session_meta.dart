@@ -11,13 +11,14 @@ import '../i18n/framework_strings.dart';
 class SessionMeta {
   final String id;
   String? customTitle;
-  String firstMessage;       // 首条 user message，title 来源；committed 后不再变
-  String lastUserMessage;    // 最近一条已被 backend 接受的 user message，用于 retry/resume
+  String firstMessage; // 首条 user message，title 来源；committed 后不再变
+  String lastUserMessage; // 最近一条已被 backend 接受的 user message，用于 retry/resume
   int updatedAt;
   bool committed;
-  String? lastKnownStatus;   // 上次 /status 探到的 status: running/done/failed/aborted
-  bool processAlive;          // 上次 /status 探到的 process_alive
-  String lastEntryId;         // SSE 续读游标，仅 active session 有意义
+  String?
+  lastKnownStatus; // 上次 /status 探到的 status: queued/running/done/failed/aborted
+  bool processAlive; // 上次 /status 探到的 process_alive
+  String lastEntryId; // SSE 续读游标，仅 active session 有意义
 
   SessionMeta({
     required this.id,
@@ -32,28 +33,28 @@ class SessionMeta {
   }) : updatedAt = updatedAt ?? DateTime.now().millisecondsSinceEpoch;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        if (customTitle != null) 'customTitle': customTitle,
-        'firstMessage': firstMessage,
-        'lastUserMessage': lastUserMessage,
-        'updatedAt': updatedAt,
-        'committed': committed,
-        if (lastKnownStatus != null) 'lastKnownStatus': lastKnownStatus,
-        'processAlive': processAlive,
-        'lastEntryId': lastEntryId,
-      };
+    'id': id,
+    if (customTitle != null) 'customTitle': customTitle,
+    'firstMessage': firstMessage,
+    'lastUserMessage': lastUserMessage,
+    'updatedAt': updatedAt,
+    'committed': committed,
+    if (lastKnownStatus != null) 'lastKnownStatus': lastKnownStatus,
+    'processAlive': processAlive,
+    'lastEntryId': lastEntryId,
+  };
 
   factory SessionMeta.fromJson(Map<String, dynamic> j) => SessionMeta(
-        id: j['id'] as String,
-        customTitle: j['customTitle'] as String?,
-        firstMessage: j['firstMessage'] as String? ?? '',
-        lastUserMessage: j['lastUserMessage'] as String? ?? '',
-        updatedAt: j['updatedAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-        committed: j['committed'] as bool? ?? true,  // 老数据视为已提交
-        lastKnownStatus: j['lastKnownStatus'] as String?,
-        processAlive: j['processAlive'] as bool? ?? false,
-        lastEntryId: j['lastEntryId'] as String? ?? '0',
-      );
+    id: j['id'] as String,
+    customTitle: j['customTitle'] as String?,
+    firstMessage: j['firstMessage'] as String? ?? '',
+    lastUserMessage: j['lastUserMessage'] as String? ?? '',
+    updatedAt: j['updatedAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+    committed: j['committed'] as bool? ?? true, // 老数据视为已提交
+    lastKnownStatus: j['lastKnownStatus'] as String?,
+    processAlive: j['processAlive'] as bool? ?? false,
+    lastEntryId: j['lastEntryId'] as String? ?? '0',
+  );
 
   /// 显示用标题。maxVisualWidth 是"视觉宽度"——中文按 1.0、ASCII 按 0.5 计。
   /// 顶栏 chip 建议 8，sheet 列表行建议 22。
@@ -62,8 +63,8 @@ class SessionMeta {
     final raw = (customTitle?.isNotEmpty ?? false)
         ? customTitle!
         : (firstMessage.isNotEmpty
-            ? firstMessage
-            : T.current.chatSessionDefaultTitle);
+              ? firstMessage
+              : T.current.chatSessionDefaultTitle);
     return _truncateByVisualWidth(raw, maxVisualWidth);
   }
 

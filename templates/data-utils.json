@@ -3,10 +3,10 @@
   "appid": "db8894c7-9c8f-4f17-aa70-6e4f528c0e61",
   "meta": {
     "name": "data-utils",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "type": "library",
     "description": "数据处理工具库 — 随机数/UUID/时间日期/字符串处理/数组操作",
-    "author": "AI Designer",
+    "author": "fish",
     "exports": [
       "randomInt",
       "randomFloat",
@@ -41,7 +41,8 @@
       "listReverse",
       "listSlice",
       "generateId",
-      "generateOrderNo"
+      "generateOrderNo",
+      "appendText"
     ]
   },
   "global": {
@@ -798,6 +799,48 @@
                 "{{ global._datePart }}",
                 "{{ global._randPart }}"
               ]
+            },
+            "assign": "global._result"
+          },
+          {
+            "expression": {
+              "var": "global._result"
+            }
+          }
+        ]
+      },
+      "appendText": {
+        "params": [
+          "var",
+          "text"
+        ],
+        "description": "Append text to a string variable. Useful for streaming output.",
+        "logic": [
+          {
+            "call": "@var_get",
+            "args": {
+              "var": "{{ params.var }}",
+              "default": ""
+            },
+            "assign": "global._currentText"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.var }}",
+              "value": {
+                "cat": [
+                  "{{ global._currentText }}",
+                  "{{ params.text }}"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@var_get",
+            "args": {
+              "var": "{{ params.var }}",
+              "default": ""
             },
             "assign": "global._result"
           },

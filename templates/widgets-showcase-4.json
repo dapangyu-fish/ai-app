@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "第四批 Widget 演示 — slider / date_picker / time_picker / tooltip + 增强 SnackBar / DatePicker / TimePicker action",
-    "author": "Claude"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.2.0"

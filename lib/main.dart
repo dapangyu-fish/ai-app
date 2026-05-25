@@ -1337,9 +1337,27 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 
               // Version
               Center(
-                child: Text(
-                  'v${AppConfig.appVersion}',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'v${AppConfig.appVersion}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    if (AppConfig.gitCommit.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        AppConfig.gitCommit,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.72),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -1364,10 +1382,17 @@ class _MarketPage extends StatefulWidget {
 }
 
 class _MarketPageState extends State<_MarketPage> {
+  static const int _pageSize = 20;
+
   List<Map<String, dynamic>> _apps = [];
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _page = 1;
   String? _error;
   int _selectedTabIndex = 0; // 0: App, 1: Library
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -1375,14 +1400,28 @@ class _MarketPageState extends State<_MarketPage> {
     _fetchApps();
   }
 
-  Future<void> _fetchApps() async {
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchApps({bool reset = true}) async {
     // ⚠️ 不能用 T.of(context) —— initState 第一次调 _fetchApps 时
     // InheritedWidget 还没挂上，dependOnInheritedWidgetOfExactType 会同步抛，
     // 且 throw 发生在 try 之前 → catch 接不到 → _loading 永远 true。
     // 用 T.current 走 LocaleController，不依赖 context。
+    if (!reset && (_loadingMore || !_hasMore || _loading)) return;
     if (mounted) {
       setState(() {
-        _loading = true;
+        if (reset) {
+          _loading = true;
+          _page = 1;
+          _hasMore = false;
+        } else {
+          _loadingMore = true;
+        }
         _error = null;
       });
     }
@@ -1391,6 +1430,7 @@ class _MarketPageState extends State<_MarketPage> {
       // 收藏 tab：从本地 SharedPreferences 读，不打 registry
       if (_selectedTabIndex == 2) {
         final favs = await MarketFavorites.list();
+        final query = _searchController.text.trim().toLowerCase();
         if (!mounted) return;
         setState(() {
           _apps = favs
@@ -1400,6 +1440,14 @@ class _MarketPageState extends State<_MarketPage> {
                   'display_name': e['display_name'],
                 },
               )
+              .where((e) {
+                if (query.isEmpty) return true;
+                return (e['name']?.toString().toLowerCase() ?? '').contains(
+                      query,
+                    ) ||
+                    (e['display_name']?.toString().toLowerCase() ?? '')
+                        .contains(query);
+              })
               .toList();
           _loading = false;
         });
@@ -1407,9 +1455,17 @@ class _MarketPageState extends State<_MarketPage> {
       }
 
       final type = _selectedTabIndex == 0 ? 'app' : 'library';
-      final resp = await http
-          .get(Uri.parse('${AppConfig.registryUrl}/packages?type=$type'))
-          .timeout(const Duration(seconds: 10));
+      final nextPage = reset ? 1 : _page + 1;
+      final query = _searchController.text.trim();
+      final uri = Uri.parse('${AppConfig.registryUrl}/packages').replace(
+        queryParameters: {
+          'type': type,
+          'page': nextPage.toString(),
+          'per_page': _pageSize.toString(),
+          if (query.isNotEmpty) 'q': query,
+        },
+      );
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
         throw Exception(
@@ -1423,16 +1479,31 @@ class _MarketPageState extends State<_MarketPage> {
 
       if (!mounted) return;
       setState(() {
-        _apps = packages;
+        _apps = reset ? packages : [..._apps, ...packages];
         _loading = false;
+        _loadingMore = false;
+        _page = nextPage;
+        _hasMore = data['has_more'] == true;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
+        _loadingMore = false;
         _error = e.toString();
       });
     }
+  }
+
+  void _onSearchChanged(String _) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted && _selectedTabIndex != 2) {
+        _fetchApps();
+      } else if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _onTabChanged(int index) {
@@ -1568,37 +1639,88 @@ class _MarketPageState extends State<_MarketPage> {
           ),
         ),
       ),
-      body: _loading
-          ? Center(child: CircularProgressIndicator(color: cs.onSurface))
-          : _error != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.cloud_off, size: 48, color: cs.onSurfaceVariant),
-                  const SizedBox(height: 16),
-                  Text(_error!, style: TextStyle(color: cs.onSurfaceVariant)),
-                  const SizedBox(height: 16),
-                  FilledButton(onPressed: _fetchApps, child: Text(t.retry)),
-                ],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _fetchApps(),
+              decoration: InputDecoration(
+                hintText: t.marketSearchHint,
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _fetchApps();
+                        },
+                      ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                isDense: true,
               ),
-            )
-          : _apps.isEmpty
-          ? Center(
-              child: Text(
-                t.marketEmpty,
-                style: TextStyle(color: cs.onSurfaceVariant),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _apps.length,
-              itemBuilder: (context, index) {
-                final app = _apps[index];
-                return _buildAppCard(context, app, cs);
-              },
             ),
+          ),
+          Expanded(child: _buildMarketBody(context, cs, t)),
+        ],
+      ),
     );
+  }
+
+  Widget _buildMarketBody(
+    BuildContext context,
+    ColorScheme cs,
+    FrameworkStrings t,
+  ) {
+    return _loading
+        ? Center(child: CircularProgressIndicator(color: cs.onSurface))
+        : _error != null
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.cloud_off, size: 48, color: cs.onSurfaceVariant),
+                const SizedBox(height: 16),
+                Text(_error!, style: TextStyle(color: cs.onSurfaceVariant)),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: _fetchApps, child: Text(t.retry)),
+              ],
+            ),
+          )
+        : _apps.isEmpty
+        ? Center(
+            child: Text(
+              t.marketEmpty,
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _apps.length + (_hasMore || _loadingMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index >= _apps.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                    child: _loadingMore
+                        ? const CircularProgressIndicator()
+                        : OutlinedButton(
+                            onPressed: () => _fetchApps(reset: false),
+                            child: Text(t.marketLoadMore),
+                          ),
+                  ),
+                );
+              }
+              final app = _apps[index];
+              return _buildAppCard(context, app, cs);
+            },
+          );
   }
 
   Future<void> _confirmDelete(BuildContext context, String packageName) async {

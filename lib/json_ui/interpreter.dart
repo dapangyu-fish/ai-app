@@ -51,6 +51,8 @@ class JsonInterpreter extends ChangeNotifier {
   /// 给 @flame_game_reset 这个 action 用 — JSON-APP 层（比如结算 dialog
   /// 的"再来一局"按钮）能从外面调进去重置游戏。
   final List<void Function()> _flameGameResetters = [];
+  final List<void Function(String name, Map<String, dynamic> data)>
+  _flameGameInputHandlers = [];
 
   void registerFlameGameResetter(void Function() resetter) {
     _flameGameResetters.add(resetter);
@@ -58,6 +60,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   void unregisterFlameGameResetter(void Function() resetter) {
     _flameGameResetters.remove(resetter);
+  }
+
+  void registerFlameGameInputHandler(
+    void Function(String name, Map<String, dynamic> data) handler,
+  ) {
+    _flameGameInputHandlers.add(handler);
+  }
+
+  void unregisterFlameGameInputHandler(
+    void Function(String name, Map<String, dynamic> data) handler,
+  ) {
+    _flameGameInputHandlers.remove(handler);
   }
 
   /// 当前还活着的 modal route（dialog / bottom sheet / picker）数。
@@ -198,8 +212,9 @@ class JsonInterpreter extends ChangeNotifier {
       return str.replaceAll(from, to);
     });
     jl.add('str_split', (applier, data, params) {
-      if (params.length < 2)
+      if (params.length < 2) {
         return [applier(params[0], data)?.toString() ?? ''];
+      }
       final str = applier(params[0], data)?.toString() ?? '';
       final sep = applier(params[1], data)?.toString() ?? '';
       return str.split(sep);
@@ -651,7 +666,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   /// 在 global.computed 字典里查表达式（按 dot 路径匹配）
-  /// 例: global.computed = { fullName: <expr> }, subPath="fullName" → 命中
+  /// 例: global.computed = { fullName: expr }, subPath="fullName" → 命中
   dynamic _findComputedExpr(String subPath) {
     final computed = (_config['global'] as Map<String, dynamic>?)?['computed'];
     if (computed is! Map) return null;
@@ -1124,6 +1139,13 @@ class JsonInterpreter extends ChangeNotifier {
         }
         return null;
 
+      case '@var_get':
+        final varPath = resolvedArgs['var']?.toString();
+        final defaultValue = resolvedArgs['default'];
+        if (varPath == null || varPath.isEmpty) return defaultValue;
+        final value = getVariable(varPath);
+        return value ?? defaultValue;
+
       case '@navigate':
         final screen = resolvedArgs['screen'] as String?;
         if (screen != null) navigateTo(screen);
@@ -1168,6 +1190,21 @@ class JsonInterpreter extends ChangeNotifier {
         // 按钮）从外面重置游戏用。
         for (final r in _flameGameResetters) {
           r();
+        }
+        return null;
+      case '@flame_game_input':
+        // 外部 JSON 控件向当前 flame_game 发送命名输入。具体输入名如何
+        // 响应由游戏 JSON 的 input.<name> 决定，框架不理解任何游戏规则。
+        final name =
+            resolvedArgs['input']?.toString() ??
+            resolvedArgs['name']?.toString();
+        if (name == null || name.isEmpty) return null;
+        final rawData = resolvedArgs['data'];
+        final data = rawData is Map
+            ? rawData.map((k, v) => MapEntry(k.toString(), v))
+            : <String, dynamic>{};
+        for (final handler in _flameGameInputHandlers) {
+          handler(name, data);
         }
         return null;
       case '@haptic':
@@ -1293,6 +1330,8 @@ class JsonInterpreter extends ChangeNotifier {
         return await _builtinHttpPut(resolvedArgs);
       case '@http_delete':
         return await _builtinHttpDelete(resolvedArgs);
+      case '@http_sse':
+        return await _builtinHttpSse(args, resolvedArgs);
 
       // ── JSON ──
       case '@json_decode':
@@ -1632,8 +1671,9 @@ class JsonInterpreter extends ChangeNotifier {
           final matchField = resolvedArgs['field']?.toString();
           final matchValue = resolvedArgs['value'];
           final updates = resolvedArgs['updates'];
-          if (relPath == null || matchField == null || updates is! Map)
+          if (relPath == null || matchField == null || updates is! Map) {
             return false;
+          }
           final content = await AppFs.readString(relPath);
           if (content == null) return false;
           final decoded = json.decode(content);
@@ -2708,6 +2748,114 @@ class JsonInterpreter extends ChangeNotifier {
     final url = args['url']?.toString() ?? '';
     final headers = _toStringMap(args['headers']);
     return await _httpClient.delete(url, headers: headers);
+  }
+
+  Future<Map<String, dynamic>> _builtinHttpSse(
+    Map<String, dynamic> rawArgs,
+    Map<String, dynamic> args,
+  ) async {
+    final url = args['url']?.toString() ?? '';
+    if (url.isEmpty) {
+      return {
+        'status': -1,
+        'events': const [],
+        'done': false,
+        'error': 'Missing url',
+      };
+    }
+
+    final method = args['method']?.toString() ?? 'POST';
+    final body = _evaluateExpression(args['body']);
+    final headers = _toStringMap(args['headers']);
+    final contentType = args['content_type']?.toString() ?? 'application/json';
+    final bindPath = args['bind']?.toString();
+    final onOpen = _callbackSteps(rawArgs['onOpen'], args['onOpen']);
+    final onEvent = _callbackSteps(rawArgs['onEvent'], args['onEvent']);
+    final onDone = _callbackSteps(rawArgs['onDone'], args['onDone']);
+    final onError = _callbackSteps(rawArgs['onError'], args['onError']);
+
+    if (bindPath != null && bindPath.isNotEmpty) {
+      setVariable(bindPath, {
+        'status': 'running',
+        'events': const [],
+        'last_event': null,
+        'error': null,
+      });
+    }
+
+    await _runStepListWithEvent(onOpen, const {
+      'status': 'open',
+      'done': false,
+    });
+
+    final result = await _httpClient.sse(
+      url,
+      method: method,
+      body: body,
+      headers: headers,
+      contentType: contentType,
+      onEvent: (event) async {
+        if (bindPath != null && bindPath.isNotEmpty) {
+          setVariable(bindPath, {
+            'status': event['done'] == true ? 'done' : 'running',
+            'events': null,
+            'last_event': event,
+            'error': null,
+          });
+        }
+        await _runStepListWithEvent(onEvent, event);
+      },
+    );
+
+    if (bindPath != null && bindPath.isNotEmpty) {
+      setVariable(bindPath, {
+        'status': result['error'] == null ? 'done' : 'error',
+        'events': result['events'],
+        'last_event':
+            (result['events'] is List && (result['events'] as List).isNotEmpty)
+            ? (result['events'] as List).last
+            : null,
+        'error': result['error'],
+      });
+    }
+
+    if (result['error'] == null) {
+      await _runStepListWithEvent(onDone, {
+        'status': 'done',
+        'result': result,
+        'done': true,
+      });
+    } else {
+      await _runStepListWithEvent(onError, {
+        'status': 'error',
+        'result': result,
+        'error': result['error'],
+        'done': false,
+      });
+    }
+    return result;
+  }
+
+  Future<void> _runStepListWithEvent(
+    List<dynamic> steps,
+    Map<String, dynamic> eventData,
+  ) async {
+    _eventContextStack.add(eventData);
+    try {
+      for (final step in steps) {
+        if (step is Map<String, dynamic>) {
+          await _executeStep(step);
+        }
+      }
+    } finally {
+      _eventContextStack.removeLast();
+    }
+  }
+
+  List<dynamic> _callbackSteps(dynamic raw, dynamic resolved) {
+    if (resolved is List) return resolved;
+    if (raw is List) return raw;
+    return const [];
   }
 
   // ============ JSON ============

@@ -176,6 +176,7 @@ AI_SESSION_REDIS_TTL_SECONDS = int(os.environ.get("AI_SESSION_REDIS_TTL_SECONDS"
 # AI worker 并发上限（线程池大小）
 # eventlet monkey_patch 后 thread 实际是 greenlet，开销低；瓶颈是同时跑的 claude CLI 进程数 + RAM
 AI_WORKER_MAX_CONCURRENCY = int(os.environ.get("AI_WORKER_MAX_CONCURRENCY", "200"))
+AI_WORKER_QUEUE_MAX = int(os.environ.get("AI_WORKER_QUEUE_MAX", "200"))
 
 # Registry summary 富化：后台批量摘要的 CLI 小池（跟生成的大池隔离，饿不死用户生成）
 SUMMARY_MAX_CONCURRENCY = int(os.environ.get("SUMMARY_MAX_CONCURRENCY", "3"))

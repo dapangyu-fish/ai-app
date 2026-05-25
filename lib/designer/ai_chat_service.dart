@@ -644,19 +644,19 @@ class AiChatService {
         // 已完成：取 /result 拿最终文本
         return await _fetchCompletedResult();
       }
-      if (status == 'running') {
-        if (!procAlive) {
+      if (status == 'running' || status == 'queued') {
+        if (status == 'running' && !procAlive) {
           return ResumeNeedsRetry(active.lastUserMessage);
         }
+        _aborting = false;
+        _lastEntryId = '0'; // backend stream 是这一轮的，从头读没问题
         if (kIsWeb) {
           return ResumeStreaming(
             userMessage: active.lastUserMessage,
             stream: _streamWithWebEventSource(active.id),
           );
         }
-        // worker 还在跑：续 SSE，不调 /start
-        _aborting = false;
-        _lastEntryId = '0'; // backend stream 是这一轮的，从头读没问题
+        // worker 还在跑或还在排队：续 SSE，不调 /start
         return ResumeStreaming(
           userMessage: active.lastUserMessage,
           stream: _streamWithReconnect(active.id),
@@ -747,7 +747,13 @@ class AiChatService {
 
         pollCount++;
         if (pollCount == 1 || pollCount % 5 == 0) {
-          yield ChatEvent(statusMessage: T.current.chatStatusGenerating);
+          if (status == 'queued') {
+            yield ChatEvent(
+              statusMessage: data['queue_message'] as String? ?? '排队中...',
+            );
+          } else {
+            yield ChatEvent(statusMessage: T.current.chatStatusGenerating);
+          }
         }
         await Future.delayed(const Duration(seconds: 2));
       } on TimeoutException {

@@ -6,7 +6,7 @@
     "version": "1.0.3",
     "type": "app",
     "description": "Flappy 🐦 — 纯 JSON 实现，物理 + spawn/despawn + 碰撞全部由 JSON 编排",
-    "author": "demo"
+    "author": "fish"
   },
   "dependencies": {
     "lib_database": "^1.0.0",

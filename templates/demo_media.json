@@ -5,7 +5,7 @@
     "name": "demo-media",
     "version": "1.0.0",
     "description": "演示 image_picker + image 控件：选择图片、展示网络图片/GIF",
-    "author": "demo",
+    "author": "fish",
     "type": "app"
   },
   "global": {

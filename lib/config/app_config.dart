@@ -65,16 +65,20 @@ class AppConfig {
       _pick(EnvironmentService.instance.active.backendUrl, _defaultBackendUrl);
 
   /// Supabase 认证服务器地址
-  static String get supabaseUrl =>
-      _pick(EnvironmentService.instance.active.supabaseUrl, _defaultSupabaseUrl);
+  static String get supabaseUrl => _pick(
+    EnvironmentService.instance.active.supabaseUrl,
+    _defaultSupabaseUrl,
+  );
 
   /// MinIO 对象存储服务器地址
   static String get minioUrl =>
       _pick(EnvironmentService.instance.active.minioUrl, _defaultMinioUrl);
 
   /// 组件注册中心地址
-  static String get registryUrl =>
-      _pick(EnvironmentService.instance.active.registryUrl, _defaultRegistryUrl);
+  static String get registryUrl => _pick(
+    EnvironmentService.instance.active.registryUrl,
+    _defaultRegistryUrl,
+  );
 
   /// OpenIM HTTP API 地址（fallback；正常由后端 /api/im/token 下发覆盖）
   static String get imApiUrl =>
@@ -86,7 +90,9 @@ class AppConfig {
 
   /// 配置中心地址（独立服务，物理隔离于主后端，主后端挂了它仍可下发紧急配置）
   static String get configCenterUrl => _pick(
-      EnvironmentService.instance.active.configCenterUrl, _defaultConfigCenterUrl);
+    EnvironmentService.instance.active.configCenterUrl,
+    _defaultConfigCenterUrl,
+  );
 
   // ==================== API端点配置 ====================
 
@@ -108,11 +114,20 @@ class AppConfig {
   /// number。改 pubspec 时记得改这里。主页那个 v 标签读的就是这个常量。）
   static const String appVersion = '1.1.0+18';
 
+  /// 构建时注入的 Git commit。默认空字符串，避免把具体 commit 写死进代码。
+  static const String gitCommit = String.fromEnvironment('APP_GIT_COMMIT');
+
   /// 是否为调试模式
-  static const bool isDebug = bool.fromEnvironment('DEBUG', defaultValue: false);
+  static const bool isDebug = bool.fromEnvironment(
+    'DEBUG',
+    defaultValue: false,
+  );
 
   /// 是否启用日志
-  static const bool enableLogging = bool.fromEnvironment('ENABLE_LOGGING', defaultValue: true);
+  static const bool enableLogging = bool.fromEnvironment(
+    'ENABLE_LOGGING',
+    defaultValue: true,
+  );
 
   // ==================== 环境检测 ====================
 
@@ -132,7 +147,8 @@ class AppConfig {
   static bool get isProduction => environmentKind == EnvironmentKind.production;
 
   /// 是否为开发环境
-  static bool get isDevelopment => environmentKind == EnvironmentKind.development;
+  static bool get isDevelopment =>
+      environmentKind == EnvironmentKind.development;
 
   // ==================== 辅助方法 ====================
 
@@ -140,7 +156,9 @@ class AppConfig {
   static void printConfig() {
     print('========== App Configuration ==========');
     print('Environment: ${environmentKind.name}');
-    print('Active env: ${EnvironmentService.instance.active.name} (${EnvironmentService.instance.active.id})');
+    print(
+      'Active env: ${EnvironmentService.instance.active.name} (${EnvironmentService.instance.active.id})',
+    );
     print('Backend URL: $backendUrl');
     print('Supabase URL: $supabaseUrl');
     print('MinIO URL: $minioUrl');
@@ -155,8 +173,4 @@ class AppConfig {
 }
 
 /// 环境类型枚举（按 backendUrl 推断）
-enum EnvironmentKind {
-  development,
-  staging,
-  production,
-}
+enum EnvironmentKind { development, staging, production }

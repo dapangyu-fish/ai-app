@@ -61,14 +61,18 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
   Future<void> _loadMarket() async {
     try {
       final resp = await http
-          .get(Uri.parse('${AppConfig.registryUrl}/packages?type=app'))
+          .get(
+            Uri.parse('${AppConfig.registryUrl}/packages').replace(
+              queryParameters: {'type': 'app', 'page': '1', 'per_page': '100'},
+            ),
+          )
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200) {
         throw Exception('HTTP ${resp.statusCode}');
       }
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      final pkgs =
-          (data['packages'] as List<dynamic>).cast<Map<String, dynamic>>();
+      final pkgs = (data['packages'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
       final apps = pkgs.where((p) => (p['type'] ?? 'app') == 'app').toList();
       if (!mounted) return;
       setState(() {
@@ -123,9 +127,9 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
   Future<void> _afterSet() async {
     if (!mounted) return;
     final s = T.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.defaultStartupSavedToast)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.defaultStartupSavedToast)));
     Navigator.of(context).pop();
   }
 
@@ -136,8 +140,10 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(s.defaultStartupTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          s.defaultStartupTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -174,10 +180,7 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
           Expanded(
             child: TabBarView(
               controller: _tab,
-              children: [
-                _buildMarketList(s, cs),
-                _buildLocalList(s, cs),
-              ],
+              children: [_buildMarketList(s, cs), _buildLocalList(s, cs)],
             ),
           ),
         ],
@@ -193,15 +196,20 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(_marketError!,
-              style: TextStyle(color: cs.error), textAlign: TextAlign.center),
+          child: Text(
+            _marketError!,
+            style: TextStyle(color: cs.error),
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
     if (_marketApps.isEmpty) {
       return Center(
-        child: Text(s.defaultStartupEmptyMarket,
-            style: TextStyle(color: cs.onSurfaceVariant)),
+        child: Text(
+          s.defaultStartupEmptyMarket,
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
       );
     }
     return ListView.builder(
@@ -214,7 +222,8 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
         final desc = app['description']?.toString() ?? '';
         final version = app['version']?.toString() ?? '';
         final author = app['author']?.toString() ?? '';
-        final isCurrent = _current.kind == DefaultStartupKind.market &&
+        final isCurrent =
+            _current.kind == DefaultStartupKind.market &&
             _current.marketName == name;
 
         return _AppCard(
@@ -238,8 +247,10 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
     if (_localLoading) return const Center(child: CircularProgressIndicator());
     if (_localApps.isEmpty) {
       return Center(
-        child: Text(s.defaultStartupEmptyLocal,
-            style: TextStyle(color: cs.onSurfaceVariant)),
+        child: Text(
+          s.defaultStartupEmptyLocal,
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
       );
     }
     return ListView.builder(
@@ -251,7 +262,8 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
         final dn = resolveDisplayName(meta, fallback: app.name);
         final version = (meta?['version'])?.toString() ?? '';
         final author = (meta?['author'])?.toString() ?? '';
-        final isCurrent = _current.kind == DefaultStartupKind.local &&
+        final isCurrent =
+            _current.kind == DefaultStartupKind.local &&
             _current.localFileName == app.fileName;
 
         return _AppCard(
@@ -340,7 +352,9 @@ class _AppCard extends StatelessWidget {
                       if (version.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: cs.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
@@ -359,7 +373,10 @@ class _AppCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurfaceVariant,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -368,17 +385,20 @@ class _AppCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       T.fmt(s.marketAuthor, {'author': author}),
-                      style:
-                          TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ] else if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: TextStyle(
-                          fontSize: 11,
-                          color: cs.onSurfaceVariant,
-                          fontFamily: 'monospace'),
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -389,14 +409,18 @@ class _AppCard extends StatelessWidget {
                     child: isCurrent
                         ? OutlinedButton.icon(
                             onPressed: null,
-                            icon: const Icon(Icons.check_circle_outline,
-                                size: 16),
+                            icon: const Icon(
+                              Icons.check_circle_outline,
+                              size: 16,
+                            ),
                             label: Text(s.defaultStartupCurrent),
                           )
                         : FilledButton.tonalIcon(
                             onPressed: onSelect,
-                            icon: const Icon(Icons.rocket_launch_outlined,
-                                size: 16),
+                            icon: const Icon(
+                              Icons.rocket_launch_outlined,
+                              size: 16,
+                            ),
                             label: Text(s.defaultStartupSetAsStartup),
                           ),
                   ),

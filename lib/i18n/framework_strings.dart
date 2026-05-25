@@ -134,6 +134,8 @@ class _Strings {
   final String marketEmpty;
   final String marketLoadFailed;
   final String marketRunButton;
+  final String marketSearchHint;
+  final String marketLoadMore;
 
   // ── 我的 APP ──
   final String myAppsTitle;
@@ -647,6 +649,8 @@ class _Strings {
     required this.marketEmpty,
     required this.marketLoadFailed,
     required this.marketRunButton,
+    required this.marketSearchHint,
+    required this.marketLoadMore,
     required this.myAppsTitle,
     required this.myAppsEmpty,
     required this.myAppsRun,
@@ -1102,6 +1106,8 @@ const _Strings _zhCN = _Strings(
   marketEmpty: '暂无应用',
   marketLoadFailed: '加载失败',
   marketRunButton: '运行',
+  marketSearchHint: '搜索应用、组件、作者',
+  marketLoadMore: '加载更多',
   myAppsTitle: '我的 APP',
   myAppsEmpty: '还没有应用',
   myAppsRun: '运行',
@@ -1556,6 +1562,8 @@ const _Strings _enUS = _Strings(
   marketEmpty: 'No apps yet',
   marketLoadFailed: 'Load failed',
   marketRunButton: 'Run',
+  marketSearchHint: 'Search apps, libraries, authors',
+  marketLoadMore: 'Load more',
   myAppsTitle: 'My apps',
   myAppsEmpty: 'No apps yet',
   myAppsRun: 'Run',
@@ -2010,6 +2018,8 @@ const _Strings _deDE = _Strings(
   marketEmpty: 'Noch keine Apps',
   marketLoadFailed: 'Laden fehlgeschlagen',
   marketRunButton: 'Starten',
+  marketSearchHint: 'Apps, Bibliotheken, Autoren suchen',
+  marketLoadMore: 'Mehr laden',
   myAppsTitle: 'Meine Apps',
   myAppsEmpty: 'Noch keine Apps',
   myAppsRun: 'Starten',
@@ -2464,6 +2474,8 @@ const _Strings _esES = _Strings(
   marketEmpty: 'Aún no hay apps',
   marketLoadFailed: 'Error al cargar',
   marketRunButton: 'Ejecutar',
+  marketSearchHint: 'Buscar apps, bibliotecas, autores',
+  marketLoadMore: 'Cargar más',
   myAppsTitle: 'Mis apps',
   myAppsEmpty: 'Aún no hay apps',
   myAppsRun: 'Ejecutar',

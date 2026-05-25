@@ -13,6 +13,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../../games/flame_game_engine.dart';
+import '../asset_manager.dart';
 import '../interpreter.dart';
 import 'base_widget.dart';
 
@@ -30,6 +31,9 @@ class JsonFlameGameWidget extends JsonBaseWidget {
     return _FlameGameMount(
       spec: bakedSpec,
       interpreter: interpreter,
+      assetManager: JsonAppAssetManager.fromConfig(
+        interpreter.rawConfig ?? const <String, dynamic>{},
+      ),
       height: (json['height'] as num?)?.toDouble(),
     );
   }
@@ -58,6 +62,7 @@ class JsonFlameGameWidget extends JsonBaseWidget {
       }
       return node;
     }
+
     return walk(json) as Map<String, dynamic>;
   }
 
@@ -85,11 +90,13 @@ class JsonFlameGameWidget extends JsonBaseWidget {
 class _FlameGameMount extends StatefulWidget {
   final Map<String, dynamic> spec;
   final JsonInterpreter interpreter;
+  final JsonAppAssetManager assetManager;
   final double? height;
 
   const _FlameGameMount({
     required this.spec,
     required this.interpreter,
+    required this.assetManager,
     this.height,
   });
 
@@ -108,22 +115,27 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   DateTime? _pressDownTime;
 
   late final void Function() _resetter;
+  late final void Function(String, Map<String, dynamic>) _inputHandler;
 
   @override
   void initState() {
     super.initState();
     _game = JsonFlameGame(
       spec: widget.spec,
+      assetManager: widget.assetManager,
       onEvent: _dispatchEvent,
     );
     // 注册到 interpreter，让 @flame_game_reset 这个 action 能找到我们
     _resetter = () => _game.resetGame();
+    _inputHandler = (name, data) => _game.handleNamedInput(name, data);
     widget.interpreter.registerFlameGameResetter(_resetter);
+    widget.interpreter.registerFlameGameInputHandler(_inputHandler);
   }
 
   @override
   void dispose() {
     widget.interpreter.unregisterFlameGameResetter(_resetter);
+    widget.interpreter.unregisterFlameGameInputHandler(_inputHandler);
     super.dispose();
   }
 
@@ -132,10 +144,13 @@ class _FlameGameMountState extends State<_FlameGameMount> {
     if (!mounted) return;
     final action = widget.spec['on_$event'];
     if (action is! Map<String, dynamic>) return;
-    widget.interpreter
-        .executeActionWithEvent(action, context, data)
-        .catchError((e, st) {
-      debugPrint('[flame_game] on_$event 抛错: $e');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.interpreter
+          .executeActionWithEvent(action, context, data)
+          .catchError((e, st) {
+            debugPrint('[flame_game] on_$event 抛错: $e');
+          });
     });
   }
 

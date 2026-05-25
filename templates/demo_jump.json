@@ -6,7 +6,7 @@
     "version": "1.0.1",
     "type": "app",
     "description": "跳一跳 — 纯 JSON 实现，蓄力 / 抛物线 / 平台滚动全部由 JSON 编排",
-    "author": "demo"
+    "author": "fish"
   },
   "dependencies": {
     "lib_database": "^1.0.0",

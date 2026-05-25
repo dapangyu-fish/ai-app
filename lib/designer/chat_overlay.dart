@@ -10,7 +10,14 @@ class ChatMessage {
   final String? action; // 客户端动作，例如 'UPLOAD_CURRENT_APP'
   final String? failedJsonUrl; // 下载失败的 URL
   final String? jsonUrl; // 待用户点击下载并运行的 JSON URL
-  ChatMessage({required this.role, required this.content, this.jsonApp, this.action, this.failedJsonUrl, this.jsonUrl});
+  ChatMessage({
+    required this.role,
+    required this.content,
+    this.jsonApp,
+    this.action,
+    this.failedJsonUrl,
+    this.jsonUrl,
+  });
 }
 
 /// 纯字幕式覆层 — 半透明浮在屏幕底部，带窗口框和标题栏。
@@ -28,7 +35,7 @@ class ChatOverlay extends StatefulWidget {
   final VoidCallback? onUploadCurrentApp;
   final void Function(String url)? onRetryDownload;
   final Future<void> Function(String url)? onDownloadAndRun;
-  final VoidCallback? onRetryLastTurn;  // worker 死了时的重试按钮
+  final VoidCallback? onRetryLastTurn; // worker 死了时的重试按钮
 
   // 多会话回调（由 designer_ball 注入；service 完成实际状态变更）
   final String activeSessionId;
@@ -37,9 +44,11 @@ class ChatOverlay extends StatefulWidget {
   final Future<void> Function(String sid)? onSwitchSession;
   final Future<void> Function(String sid)? onDeleteSession;
   final Future<void> Function(String sid, String newTitle)? onRenameSession;
+
   /// 打开 sheet 时调一次：对最近的 N 条 committed session 调 /status，
   /// 返回 SessionMeta 已被原地更新过的 sid 集合（不需要用，调完 setState 拿最新就行）
   final Future<Set<String>> Function()? onProbeAllSessionStatus;
+
   /// DesignerBall 挂在 MaterialApp.builder 上，ChatOverlay 自身的 context
   /// 找不到 Navigator 祖先（实测会抛 "Navigator operation requested with a
   /// context that does not include a Navigator"）。需要由 designer_ball 注入
@@ -52,7 +61,7 @@ class ChatOverlay extends StatefulWidget {
     required this.isListening,
     required this.isThinking,
     this.isGeneratingJson = false,
-    this.generatingStatusMessage,  // null → i18n 默认值（chatStatusGenerating）
+    this.generatingStatusMessage, // null → i18n 默认值（chatStatusGenerating）
     required this.onClose,
     required this.scrollController,
     required this.activeSessionId,
@@ -112,9 +121,9 @@ class _ChatOverlayState extends State<ChatOverlay> {
   /// 二级 action 菜单：重命名 / 删除（从 ⋮ 进入）
   Future<void> _openSessionActions(BuildContext navCtx, String sid) async {
     final s = widget.getSessions().firstWhere(
-          (x) => x.id == sid,
-          orElse: () => SessionMeta(id: ''),
-        );
+      (x) => x.id == sid,
+      orElse: () => SessionMeta(id: ''),
+    );
     if (s.id.isEmpty) return;
 
     final action = await showModalBottomSheet<String>(
@@ -132,20 +141,26 @@ class _ChatOverlayState extends State<ChatOverlay> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 s.displayTitle(maxVisualWidth: 22),
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 13),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.edit_outlined, color: Colors.white),
-              title: Text(T.of(ctx).chatSessionActionRename,
-                  style: const TextStyle(color: Colors.white)),
+              title: Text(
+                T.of(ctx).chatSessionActionRename,
+                style: const TextStyle(color: Colors.white),
+              ),
               onTap: () => Navigator.of(ctx).pop('rename'),
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              title: Text(T.of(ctx).chatSessionDeleteTitle,
-                  style: const TextStyle(color: Colors.redAccent)),
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Colors.redAccent,
+              ),
+              title: Text(
+                T.of(ctx).chatSessionDeleteTitle,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
               onTap: () => Navigator.of(ctx).pop('delete'),
             ),
             const SizedBox(height: 8),
@@ -165,8 +180,9 @@ class _ChatOverlayState extends State<ChatOverlay> {
   }
 
   Future<void> _promptRename(BuildContext navCtx, SessionMeta s) async {
-    final controller =
-        TextEditingController(text: s.customTitle ?? s.firstMessage);
+    final controller = TextEditingController(
+      text: s.customTitle ?? s.firstMessage,
+    );
     final newTitle = await showDialog<String>(
       context: navCtx,
       builder: (ctx) {
@@ -180,11 +196,13 @@ class _ChatOverlayState extends State<ChatOverlay> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(t.cancel)),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(t.cancel),
+            ),
             TextButton(
-                onPressed: () => Navigator.of(ctx).pop(controller.text),
-                child: Text(t.save)),
+              onPressed: () => Navigator.of(ctx).pop(controller.text),
+              child: Text(t.save),
+            ),
           ],
         );
       },
@@ -201,12 +219,16 @@ class _ChatOverlayState extends State<ChatOverlay> {
         final t = T.of(ctx);
         return AlertDialog(
           title: Text(t.chatSessionDeleteTitle),
-          content: Text(T.fmt(t.chatSessionDeleteContent,
-              {'title': s.displayTitle(maxVisualWidth: 16)})),
+          content: Text(
+            T.fmt(t.chatSessionDeleteContent, {
+              'title': s.displayTitle(maxVisualWidth: 16),
+            }),
+          ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(t.cancel)),
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(t.cancel),
+            ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -223,9 +245,11 @@ class _ChatOverlayState extends State<ChatOverlay> {
     final screen = MediaQuery.of(context).size;
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
-    final visibleMessages =
-        widget.messages.where((m) => m.content.isNotEmpty).toList();
-    final hasLive = widget.liveTranscript != null && widget.liveTranscript!.isNotEmpty;
+    final visibleMessages = widget.messages
+        .where((m) => m.content.isNotEmpty)
+        .toList();
+    final hasLive =
+        widget.liveTranscript != null && widget.liveTranscript!.isNotEmpty;
 
     // 多会话场景下不再因"没消息"就整个 SizedBox.shrink —— 否则空 session 看不到 chip，
     // 没法切换回有内容的 session。chat overlay 永远渲染至少一条标题栏。
@@ -233,206 +257,240 @@ class _ChatOverlayState extends State<ChatOverlay> {
     // 顶部锚定：用 top 而非 bottom，content 变短只缩底部不让顶部跳来跳去
     final maxHeight = screen.height * 0.4;
     final containerTop =
-        (screen.height - bottomPadding - 80 - maxHeight - _offsetY)
-            .clamp(0.0, screen.height - 60);
+        (screen.height - bottomPadding - 80 - maxHeight - _offsetY).clamp(
+          0.0,
+          screen.height - 60,
+        );
 
     // 用 Positioned.fill 强制内部 Stack 占满 DesignerBall 外层 Stack，否则
     // 仅 Positioned 子节点的 Stack 会塌成 0×0，inner Positioned 的 top
     // 算出来贴到外层 Stack 顶（被灵动岛挡）
     return Positioned.fill(
       child: Stack(
-      children: [
-        // 1. 字幕容器（被 hardEdge 裁剪，内容不会跑出来）
-        Positioned(
-          left: 12,
-          right: 12,
-          top: containerTop,
-          child: Container(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-                width: 1,
-              ),
-            ),
-            clipBehavior: Clip.hardEdge,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-            // 标题栏
-            Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+        children: [
+          // 1. 字幕容器（被 hardEdge 裁剪，内容不会跑出来）
+          Positioned(
+            left: 12,
+            right: 12,
+            top: containerTop,
+            child: Container(
+              constraints: BoxConstraints(maxHeight: maxHeight),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  width: 1,
                 ),
               ),
-              child: Row(
+              clipBehavior: Clip.hardEdge,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.chat_bubble_outline,
-                      color: Colors.white.withValues(alpha: 0.5), size: 14),
-                  const SizedBox(width: 6),
-                  if (widget.onNewSession != null) ...[
-                    _TitleBarButton(
-                      icon: Icons.add_circle_outline,
-                      onTap: () { widget.onNewSession!(); },
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  _SessionChip(
-                    title: _currentSessionTitle(),
-                    onTap: _toggleMenu,
-                  ),
-                  // 可拖动区域
-                  Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanUpdate: (details) {
-                        setState(() {
-                          // 向上拖动时 dy 为负，增加 offsetY（窗口上移）
-                          // 向下拖动时 dy 为正，减少 offsetY（窗口下移）
-                          _offsetY -= details.delta.dy;
-
-                          // 限制拖动范围：不能超出屏幕
-                          final maxOffset = screen.height - bottomPadding - 200; // 至少保留200px在屏幕内
-                          final minOffset = -80.0; // 不能低于初始位置
-                          _offsetY = _offsetY.clamp(minOffset, maxOffset);
-                        });
-                      },
-                      child: Container(
-                        alignment: Alignment.center,
-                        child: Container(
-                          width: 30,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                  // 标题栏
+                  Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
                     ),
-                  ),
-                  if (widget.onClear != null && visibleMessages.isNotEmpty)
-                    _TitleBarButton(
-                      icon: Icons.delete_outline,
-                      onTap: widget.onClear!,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          size: 14,
+                        ),
+                        const SizedBox(width: 6),
+                        if (widget.onNewSession != null) ...[
+                          _TitleBarButton(
+                            icon: Icons.add_circle_outline,
+                            onTap: () {
+                              widget.onNewSession!();
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        _SessionChip(
+                          title: _currentSessionTitle(),
+                          onTap: _toggleMenu,
+                        ),
+                        // 可拖动区域
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onPanUpdate: (details) {
+                              setState(() {
+                                // 向上拖动时 dy 为负，增加 offsetY（窗口上移）
+                                // 向下拖动时 dy 为正，减少 offsetY（窗口下移）
+                                _offsetY -= details.delta.dy;
+
+                                // 限制拖动范围：不能超出屏幕
+                                final maxOffset =
+                                    screen.height -
+                                    bottomPadding -
+                                    200; // 至少保留200px在屏幕内
+                                final minOffset = -80.0; // 不能低于初始位置
+                                _offsetY = _offsetY.clamp(minOffset, maxOffset);
+                              });
+                            },
+                            child: Container(
+                              alignment: Alignment.center,
+                              child: Container(
+                                width: 30,
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (widget.onClear != null &&
+                            visibleMessages.isNotEmpty)
+                          _TitleBarButton(
+                            icon: Icons.delete_outline,
+                            onTap: widget.onClear!,
+                          ),
+                        const SizedBox(width: 4),
+                        _TitleBarButton(
+                          icon: Icons.close,
+                          onTap: widget.onClose,
+                        ),
+                      ],
                     ),
-                  const SizedBox(width: 4),
-                  _TitleBarButton(
-                    icon: Icons.close,
-                    onTap: widget.onClose,
+                  ),
+                  // 消息列表
+                  Flexible(
+                    child: ScrollConfiguration(
+                      behavior: _NoGlowBehavior(),
+                      child: ListView.builder(
+                        controller: widget.scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        shrinkWrap: true,
+                        itemCount:
+                            visibleMessages.length +
+                            (hasLive ? 1 : 0) +
+                            (widget.isThinking ? 1 : 0) +
+                            (widget.isGeneratingJson ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (hasLive && index == visibleMessages.length) {
+                            return _buildLine(
+                              'you',
+                              widget.liveTranscript!,
+                              live: true,
+                            );
+                          }
+                          if (widget.isThinking &&
+                              index ==
+                                  visibleMessages.length + (hasLive ? 1 : 0)) {
+                            return _buildThinkingLine();
+                          }
+                          if (widget.isGeneratingJson &&
+                              index ==
+                                  visibleMessages.length +
+                                      (hasLive ? 1 : 0) +
+                                      (widget.isThinking ? 1 : 0)) {
+                            return _buildGeneratingLine();
+                          }
+                          final msg = visibleMessages[index];
+                          if (msg.action == 'UPLOAD_CURRENT_APP') {
+                            return _buildActionLine(
+                              msg.content,
+                              T.of(context).chatActionUploadCurrentApp,
+                              widget.onUploadCurrentApp,
+                            );
+                          }
+                          if (msg.action == 'RETRY_LAST_TURN') {
+                            return _buildActionLine(
+                              msg.content,
+                              T.of(context).retry,
+                              widget.onRetryLastTurn,
+                            );
+                          }
+                          if (msg.failedJsonUrl != null) {
+                            return _buildRetryLine(
+                              msg.content,
+                              msg.failedJsonUrl!,
+                            );
+                          }
+                          if (msg.jsonUrl != null) {
+                            return _buildDownloadLine(
+                              msg.content,
+                              msg.jsonUrl!,
+                            );
+                          }
+                          if (msg.role == 'system' && msg.jsonApp != null) {
+                            return _buildRunButton(msg.content, msg.jsonApp!);
+                          }
+                          return _buildLine(
+                            msg.role == 'user' ? 'you' : 'AI',
+                            msg.content,
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            // 消息列表
-            Flexible(
-              child: ScrollConfiguration(
-                behavior: _NoGlowBehavior(),
-                child: ListView.builder(
-                  controller: widget.scrollController,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shrinkWrap: true,
-                  itemCount: visibleMessages.length +
-                      (hasLive ? 1 : 0) +
-                      (widget.isThinking ? 1 : 0) +
-                      (widget.isGeneratingJson ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (hasLive && index == visibleMessages.length) {
-                      return _buildLine('you', widget.liveTranscript!, live: true);
-                    }
-                    if (widget.isThinking && index == visibleMessages.length + (hasLive ? 1 : 0)) {
-                      return _buildThinkingLine();
-                    }
-                    if (widget.isGeneratingJson && index == visibleMessages.length + (hasLive ? 1 : 0) + (widget.isThinking ? 1 : 0)) {
-                      return _buildGeneratingLine();
-                    }
-                    final msg = visibleMessages[index];
-                    if (msg.action == 'UPLOAD_CURRENT_APP') {
-                      return _buildActionLine(msg.content,
-                          T.of(context).chatActionUploadCurrentApp,
-                          widget.onUploadCurrentApp);
-                    }
-                    if (msg.action == 'RETRY_LAST_TURN') {
-                      return _buildActionLine(msg.content,
-                          T.of(context).retry, widget.onRetryLastTurn);
-                    }
-                    if (msg.failedJsonUrl != null) {
-                      return _buildRetryLine(msg.content, msg.failedJsonUrl!);
-                    }
-                    if (msg.jsonUrl != null) {
-                      return _buildDownloadLine(msg.content, msg.jsonUrl!);
-                    }
-                    if (msg.role == 'system' && msg.jsonApp != null) {
-                      return _buildRunButton(msg.content, msg.jsonApp!);
-                    }
-                    return _buildLine(
-                      msg.role == 'user' ? 'you' : 'AI',
-                      msg.content,
-                    );
-                  },
-                ),
+          ),
+          // 2. 下拉菜单：作为 outer Stack 的兄弟节点而不是嵌在字幕容器里；
+          //    这样既不会被 Clip.hardEdge 截掉、也不受字幕容器宽高变化影响
+          if (_menuOpen) ...[
+            // backdrop 覆盖标题栏下方所有屏幕区域，点空白处关菜单
+            Positioned(
+              left: 0,
+              right: 0,
+              top: containerTop + 36,
+              bottom: 0,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _closeMenu,
+                child: Container(color: Colors.black.withValues(alpha: 0.3)),
               ),
             ),
-              ],
-            ),
-          ),
-        ),
-        // 2. 下拉菜单：作为 outer Stack 的兄弟节点而不是嵌在字幕容器里；
-        //    这样既不会被 Clip.hardEdge 截掉、也不受字幕容器宽高变化影响
-        if (_menuOpen) ...[
-          // backdrop 覆盖标题栏下方所有屏幕区域，点空白处关菜单
-          Positioned(
-            left: 0,
-            right: 0,
-            top: containerTop + 36,
-            bottom: 0,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _closeMenu,
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
+            // 菜单面板本体，锚定在标题栏正下方
+            Positioned(
+              top: containerTop + 40,
+              left: 12 + 38, // chat overlay 左缘 12 + chip 在标题栏内的偏移 ~38
+              child: _SessionDropdownPanel(
+                sessions: widget.getSessions(),
+                activeSessionId: widget.activeSessionId,
+                statusProbeFuture: _statusProbeFuture,
+                // 最多顶到屏幕底部留点边界
+                maxHeight:
+                    screen.height - containerTop - 40 - bottomPadding - 20,
+                onNewSession: () async {
+                  _closeMenu();
+                  await widget.onNewSession?.call();
+                },
+                onSwitchSession: (sid) async {
+                  _closeMenu();
+                  if (sid != widget.activeSessionId) {
+                    await widget.onSwitchSession?.call(sid);
+                  }
+                },
+                onMoreTap: (sid) async {
+                  _closeMenu();
+                  final navCtx = widget.getNavigatorContext?.call();
+                  if (navCtx != null) {
+                    await _openSessionActions(navCtx, sid);
+                  }
+                },
               ),
             ),
-          ),
-          // 菜单面板本体，锚定在标题栏正下方
-          Positioned(
-            top: containerTop + 40,
-            left: 12 + 38, // chat overlay 左缘 12 + chip 在标题栏内的偏移 ~38
-            child: _SessionDropdownPanel(
-              sessions: widget.getSessions(),
-              activeSessionId: widget.activeSessionId,
-              statusProbeFuture: _statusProbeFuture,
-              // 最多顶到屏幕底部留点边界
-              maxHeight: screen.height - containerTop - 40 - bottomPadding - 20,
-              onNewSession: () async {
-                _closeMenu();
-                await widget.onNewSession?.call();
-              },
-              onSwitchSession: (sid) async {
-                _closeMenu();
-                if (sid != widget.activeSessionId) {
-                  await widget.onSwitchSession?.call(sid);
-                }
-              },
-              onMoreTap: (sid) async {
-                _closeMenu();
-                final navCtx = widget.getNavigatorContext?.call();
-                if (navCtx != null) {
-                  await _openSessionActions(navCtx, sid);
-                }
-              },
-            ),
-          ),
+          ],
         ],
-      ],
       ),
     );
   }
@@ -545,7 +603,11 @@ class _ChatOverlayState extends State<ChatOverlay> {
     );
   }
 
-  Widget _buildActionLine(String content, String buttonText, VoidCallback? onTap) {
+  Widget _buildActionLine(
+    String content,
+    String buttonText,
+    VoidCallback? onTap,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Column(
@@ -629,13 +691,16 @@ class _ChatOverlayState extends State<ChatOverlay> {
               height: 14,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.purpleAccent.shade100),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Colors.purpleAccent.shade100,
+                ),
               ),
             ),
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                widget.generatingStatusMessage ?? T.of(context).chatStatusGenerating,
+                widget.generatingStatusMessage ??
+                    T.of(context).chatStatusGenerating,
                 style: TextStyle(
                   color: Colors.purpleAccent.shade100,
                   fontSize: 13,
@@ -678,7 +743,10 @@ class _TitleBarButton extends StatelessWidget {
 class _NoGlowBehavior extends ScrollBehavior {
   @override
   Widget buildOverscrollIndicator(
-      BuildContext context, Widget child, ScrollableDetails details) {
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
     return child;
   }
 }
@@ -695,45 +763,51 @@ class _SessionChip extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 0.5,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.forum_outlined,
-                    color: Colors.white.withValues(alpha: 0.7), size: 12),
-                const SizedBox(width: 5),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 110),
-                  child: Text(
-                    title,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Icon(Icons.expand_more,
-                    color: Colors.white.withValues(alpha: 0.5), size: 14),
-              ],
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 0.5,
             ),
           ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.forum_outlined,
+                color: Colors.white.withValues(alpha: 0.7),
+                size: 12,
+              ),
+              const SizedBox(width: 5),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 110),
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(
+                Icons.expand_more,
+                color: Colors.white.withValues(alpha: 0.5),
+                size: 14,
+              ),
+            ],
+          ),
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -784,12 +858,17 @@ class _SessionDropdownPanel extends StatelessWidget {
               InkWell(
                 onTap: onNewSession,
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
-                      const Icon(Icons.add_circle_outline,
-                          color: Colors.purpleAccent, size: 18),
+                      const Icon(
+                        Icons.add_circle_outline,
+                        color: Colors.purpleAccent,
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         T.of(context).chatSessionMenuNew,
@@ -812,9 +891,13 @@ class _SessionDropdownPanel extends StatelessWidget {
                 child: sessions.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Text(T.of(context).chatSessionMenuEmpty,
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 12)),
+                        child: Text(
+                          T.of(context).chatSessionMenuEmpty,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
                       )
                     : ListView.builder(
                         shrinkWrap: true,
@@ -885,8 +968,9 @@ class _SessionMenuRow extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.92),
                         fontSize: 13,
-                        fontWeight:
-                            isActive ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -907,8 +991,7 @@ class _SessionMenuRow extends StatelessWidget {
                 onTap: onMoreTap,
                 child: const Padding(
                   padding: EdgeInsets.all(6),
-                  child: Icon(Icons.more_vert,
-                      size: 18, color: Colors.white54),
+                  child: Icon(Icons.more_vert, size: 18, color: Colors.white54),
                 ),
               ),
             ],
@@ -922,6 +1005,8 @@ class _SessionMenuRow extends StatelessWidget {
     Color c;
     if (isActive) {
       c = Colors.purpleAccent;
+    } else if (session.lastKnownStatus == 'queued') {
+      c = const Color(0xFFFFC107);
     } else if (session.lastKnownStatus == 'running' && session.processAlive) {
       c = const Color(0xFFFFC107);
     } else if (session.lastKnownStatus == 'running' && !session.processAlive) {
@@ -955,15 +1040,11 @@ class _SessionMenuRow extends StatelessWidget {
   }
 }
 
-
 class _DownloadRunButton extends StatefulWidget {
   final String url;
   final Future<void> Function(String url)? onDownloadAndRun;
 
-  const _DownloadRunButton({
-    required this.url,
-    this.onDownloadAndRun,
-  });
+  const _DownloadRunButton({required this.url, this.onDownloadAndRun});
 
   @override
   State<_DownloadRunButton> createState() => _DownloadRunButtonState();
@@ -1000,9 +1081,7 @@ class _DownloadRunButtonState extends State<_DownloadRunButton> {
     final t = T.of(context);
     final buttonLabel = _isLoading
         ? t.chatDownloadStateDownloading
-        : (_error == null
-            ? t.chatDownloadStateRun
-            : t.chatDownloadStateRetry);
+        : (_error == null ? t.chatDownloadStateRun : t.chatDownloadStateRetry);
 
     return GestureDetector(
       onTap: _handleTap,

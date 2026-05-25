@@ -5,7 +5,7 @@
     "version": "1.0.4",
     "type": "library",
     "description": "Drift 数据库组件库 — 基于 SQLite 的持久化存储，每个 APP 自动隔离数据库空间",
-    "author": "AI Designer",
+    "author": "fish",
     "exports": [
       "createTable",
       "insert",

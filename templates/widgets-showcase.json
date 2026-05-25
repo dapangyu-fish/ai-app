@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "新增 Widget 展示 — icon / card / checkbox / expanded / loading 五件套",
-    "author": "Claude"
+    "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.1.0"

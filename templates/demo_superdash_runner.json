@@ -1,0 +1,2201 @@
+{
+  "dsl": "3.3",
+  "appid": "d7c1b019-266e-4302-8bb2-2e0af3a4b96d",
+  "meta": {
+    "name": "demo-superdash-runner",
+    "version": "0.2.19",
+    "type": "app",
+    "description": "JSON SuperDash: official Flutter SuperDash art, three sections, enemies, acorns, eggs, golden feather, double jump and gates.",
+    "author": "fish"
+  },
+  "assets": {
+    "bundles": {
+      "superdash_assets": {
+        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/",
+        "manifest": "manifest.json",
+        "license": "LICENSE",
+        "startupDownload": true,
+        "maps": [
+          "map/flutter_runnergame_map_A.tmx",
+          "map/flutter_runnergame_map_B.tmx",
+          "map/flutter_runnergame_map_C.tmx"
+        ],
+        "entry": "map/flutter_runnergame_map_A.tmx"
+      }
+    }
+  },
+  "global": {
+    "variables": {
+      "currentScore": 0,
+      "bestScore": 0,
+      "section": 1,
+      "status": "点击开始",
+      "licenseAccepted": false
+    },
+    "i18n": {
+      "zh": {
+        "score": "得分 {{ global.currentScore }}",
+        "section_status": "第 {{ global.section }} 段 · {{ global.status }}",
+        "best": "最佳 {{ global.bestScore }}",
+        "license": {
+          "title": "开源许可说明",
+          "intro": "本 JSON 游戏演示使用 Flutter SuperDash 项目的开源素材与设计参考。",
+          "repo_label": "原始仓库",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "许可协议",
+          "license": "BSD-3-Clause License",
+          "notice": "请在继续前确认：本演示保留原项目许可声明，相关素材与代码来源遵循 BSD-3-Clause License。点击确认后开始游戏。",
+          "confirm": "我已了解，开始游戏"
+        }
+      },
+      "en": {
+        "score": "Score {{ global.currentScore }}",
+        "section_status": "Section {{ global.section }} · {{ global.status }}",
+        "best": "Best {{ global.bestScore }}",
+        "license": {
+          "title": "Open source license notice",
+          "intro": "This JSON game demo uses open-source assets and design references from Flutter SuperDash.",
+          "repo_label": "Original repository",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "License",
+          "license": "BSD-3-Clause License",
+          "notice": "Before continuing, please acknowledge that this demo keeps the original license notice and that related assets/code references are governed by the BSD-3-Clause License.",
+          "confirm": "I understand, start game"
+        }
+      },
+      "de": {
+        "score": "Punkte {{ global.currentScore }}",
+        "section_status": "Abschnitt {{ global.section }} · {{ global.status }}",
+        "best": "Bestwert {{ global.bestScore }}",
+        "license": {
+          "title": "Open-Source-Lizenzhinweis",
+          "intro": "Diese JSON-Spiel-Demo verwendet Open-Source-Assets und Designreferenzen aus Flutter SuperDash.",
+          "repo_label": "Original-Repository",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "Lizenz",
+          "license": "BSD-3-Clause License",
+          "notice": "Bitte bestaetige vor dem Fortfahren, dass diese Demo den urspruenglichen Lizenzhinweis beibehaelt und zugehoerige Assets/Code-Referenzen der BSD-3-Clause License unterliegen.",
+          "confirm": "Verstanden, Spiel starten"
+        }
+      },
+      "es": {
+        "score": "Puntuacion {{ global.currentScore }}",
+        "section_status": "Seccion {{ global.section }} · {{ global.status }}",
+        "best": "Mejor {{ global.bestScore }}",
+        "license": {
+          "title": "Aviso de licencia open source",
+          "intro": "Esta demo de juego JSON usa assets open source y referencias de diseno de Flutter SuperDash.",
+          "repo_label": "Repositorio original",
+          "repo": "https://github.com/flutter/super_dash",
+          "license_label": "Licencia",
+          "license": "BSD-3-Clause License",
+          "notice": "Antes de continuar, confirma que esta demo conserva el aviso de licencia original y que los assets/referencias de codigo relacionados se rigen por la BSD-3-Clause License.",
+          "confirm": "Entendido, iniciar juego"
+        }
+      }
+    },
+    "functions": {
+      "handleScoreChanged": {
+        "params": [
+          "score"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentScore",
+              "value": "{{ params.score }}"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                ">": [
+                  {
+                    "var": "params.score"
+                  },
+                  {
+                    "var": "global.bestScore"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.bestScore",
+                    "value": "{{ params.score }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "handleReset": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentScore",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.section",
+              "value": 1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "点击开始"
+            }
+          }
+        ]
+      },
+      "handleGameStatus": {
+        "params": [
+          "section",
+          "status"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.section",
+              "value": "{{ params.section }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "{{ params.status }}"
+            }
+          }
+        ]
+      },
+      "handleGameOver": {
+        "params": [
+          "score"
+        ],
+        "logic": [
+          {
+            "call": "@global.handleScoreChanged",
+            "args": {
+              "score": "{{ params.score }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "本局结束"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "SuperDash",
+        "appBar": {
+          "title": "SuperDash",
+          "centerTitle": true,
+          "backgroundColor": "#26335F",
+          "color": "#FFFFFF",
+          "actions": [
+            {
+              "icon": "replay",
+              "action": {
+                "type": "call",
+                "call": "@flame_game_reset",
+                "args": {}
+              }
+            }
+          ]
+        },
+        "layout": "column",
+        "padding": 0,
+        "children": [
+          {
+            "type": "expanded",
+            "visible": {
+              "!": {
+                "var": "global.licenseAccepted"
+              }
+            },
+            "child": {
+              "type": "container",
+              "padding": 24,
+              "color": "#DADEF6",
+              "layout": "column",
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "stretch",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ t('license.title') }}",
+                  "style": {
+                    "fontSize": 26,
+                    "fontWeight": "bold",
+                    "color": "#26335F"
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "{{ t('license.intro') }}",
+                  "style": {
+                    "fontSize": 15,
+                    "lineHeight": 1.45,
+                    "color": "#334155"
+                  }
+                },
+                {
+                  "type": "container",
+                  "padding": 14,
+                  "color": "#EEF3FF",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.repo_label') }}",
+                      "style": {
+                        "fontSize": 12,
+                        "fontWeight": "bold",
+                        "color": "#64748B"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.repo') }}",
+                      "style": {
+                        "fontSize": 13,
+                        "color": "#1D4ED8"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.license_label') }}",
+                      "style": {
+                        "fontSize": 12,
+                        "fontWeight": "bold",
+                        "color": "#64748B"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ t('license.license') }}",
+                      "style": {
+                        "fontSize": 14,
+                        "fontWeight": "bold",
+                        "color": "#0F172A"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "value": "{{ t('license.notice') }}",
+                  "style": {
+                    "fontSize": 13,
+                    "lineHeight": 1.45,
+                    "color": "#475569"
+                  }
+                },
+                {
+                  "type": "button",
+                  "label": "{{ t('license.confirm') }}",
+                  "icon": "play",
+                  "action": {
+                    "type": "call",
+                    "call": "@set",
+                    "args": {
+                      "var": "global.licenseAccepted",
+                      "value": true
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "container",
+            "visible": {
+              "var": "global.licenseAccepted"
+            },
+            "padding": 12,
+            "color": "#26335F",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ t('score') }}",
+                "style": {
+                  "fontSize": 15,
+                  "color": "#FFFFFF",
+                  "fontWeight": "bold"
+                },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "text",
+                "value": "{{ t('section_status') }}",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#DDE7FF"
+                },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "text",
+                "value": "{{ t('best') }}",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#FFE9A6"
+                }
+              }
+            ]
+          },
+          {
+            "type": "expanded",
+            "visible": {
+              "var": "global.licenseAccepted"
+            },
+            "child": {
+              "type": "flame_game",
+              "world": {
+                "kind": "pixel",
+                "bg": "#DADEF6"
+              },
+              "viewport": {
+                "width": 592,
+                "height": 1024,
+                "fit": "contain"
+              },
+              "physics": {
+                "engine": "leap_platformer",
+                "fallback": "aabb_platformer"
+              },
+              "camera": {
+                "follow": "player",
+                "map": "tmx_map",
+                "offset_x": 88,
+                "offset_y": -120,
+                "deadzone_y": 64,
+                "smooth_y": 0.18
+              },
+              "overlay": {
+                "game_over": true,
+                "asset_loading": true,
+                "asset_loading_text": "正在加载游戏资源...",
+                "game_over_title": "SuperDash",
+                "game_over_hint": "点击重新开始"
+              },
+              "vars": {
+                "state": "loading",
+                "section": 1,
+                "progress": 0,
+                "section_len": 999999,
+                "gravity": 2048,
+                "jump_vy": -860,
+                "speed": 320,
+                "floor_y": 0,
+                "ground_y": 0,
+                "player_size": 32,
+                "on_ground": true,
+                "has_feather": false,
+                "double_jump_used": false,
+                "gate_spawned": false,
+                "spawn_timer": 0.5,
+                "item_timer": 1.2,
+                "enemy_interval": 999999,
+                "item_interval": 999999,
+                "_id": 0,
+                "_kind": 0,
+                "_spawn": null,
+                "_was_on_ground": true,
+                "_item_y": 160,
+                "hit_enemy": null,
+                "hit_acorn": null,
+                "hit_egg": null,
+                "hit_feather": null,
+                "hit_gate": null,
+                "spawn_proximity": 900,
+                "despawn_distance": 1200
+              },
+              "entities": {
+                "tmx_map": {
+                  "kind": "tiled_map",
+                  "priority": 0,
+                  "source": "map/flutter_runnergame_map_A.tmx",
+                  "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/",
+                  "scale": 1,
+                  "exclude_layers": [
+                    "treehouse_front"
+                  ],
+                  "solid_layers": [
+                    "Ground"
+                  ],
+                  "hazard_layers": [
+                    "water/spikes"
+                  ],
+                  "render": {
+                    "shape": "text",
+                    "value": "Loading map...",
+                    "color": "#FFFFFF"
+                  }
+                },
+                "tmx_front": {
+                  "kind": "tiled_map",
+                  "priority": 90,
+                  "source": "map/flutter_runnergame_map_A.tmx",
+                  "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/",
+                  "scale": 1,
+                  "include_layers": [
+                    "treehouse_front"
+                  ],
+                  "collidable": false,
+                  "render": {
+                    "shape": "text",
+                    "value": "",
+                    "color": "#FFFFFF00"
+                  }
+                },
+                "player": {
+                  "kind": "animated_sprite",
+                  "priority": 40,
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_dash_idle.png",
+                  "animation": "idle",
+                  "position": [
+                    82,
+                    260
+                  ],
+                  "size": [
+                    32,
+                    32
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "auto_update": false,
+                  "state": {
+                    "spriteW": 64,
+                    "spriteH": 64,
+                    "spriteOffsetX": -16,
+                    "spriteOffsetY": -32
+                  },
+                  "frame_size": [
+                    64,
+                    64
+                  ],
+                  "frames": 18,
+                  "step_time": 0.042,
+                  "animations": {
+                    "idle": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_dash_idle.png",
+                      "frame_size": [
+                        64,
+                        64
+                      ],
+                      "frames": 18,
+                      "frames_per_row": 24,
+                      "step_time": 0.042
+                    },
+                    "run": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_dash_run.png",
+                      "frame_size": [
+                        64,
+                        64
+                      ],
+                      "frames": 16,
+                      "frames_per_row": 16,
+                      "step_time": 0.042
+                    },
+                    "jump": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_dash_jump.png",
+                      "frame_size": [
+                        64,
+                        64
+                      ],
+                      "frames": 16,
+                      "frames_per_row": 16,
+                      "step_time": 0.042,
+                      "loop": false
+                    },
+                    "phoenixRun": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_phoenixDash_run.png",
+                      "frame_size": [
+                        64,
+                        64
+                      ],
+                      "frames": 16,
+                      "frames_per_row": 16,
+                      "step_time": 0.042
+                    },
+                    "phoenixJump": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_phoenixDash_jump.png",
+                      "frame_size": [
+                        64,
+                        128
+                      ],
+                      "frames": 16,
+                      "frames_per_row": 8,
+                      "step_time": 0.042,
+                      "loop": false
+                    },
+                    "phoenixDoubleJump": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_phoenixDash_doublejump.png",
+                      "frame_size": [
+                        64,
+                        64
+                      ],
+                      "frames": 16,
+                      "frames_per_row": 16,
+                      "step_time": 0.042,
+                      "loop": false
+                    },
+                    "death": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_dash_deathFaint.png",
+                      "frame_size": [
+                        64,
+                        64
+                      ],
+                      "frames": 24,
+                      "frames_per_row": 8,
+                      "step_time": 0.042,
+                      "loop": false
+                    }
+                  },
+                  "render": {
+                    "shape": "rect",
+                    "color": "#FFFFFF33",
+                    "radius": 8
+                  }
+                }
+              },
+              "init": {
+                "logic": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.floor_y",
+                      "value": {
+                        "-": [
+                          {
+                            "var": "world.height"
+                          },
+                          76
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.ground_y",
+                      "value": {
+                        "-": [
+                          {
+                            "var": "vars.floor_y"
+                          },
+                          {
+                            "var": "vars.player_size"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "call": "@noop",
+                    "args": {}
+                  },
+                  {
+                    "call": "@entity.set",
+                    "args": {
+                      "id": "player",
+                      "field": "x",
+                      "value": 82
+                    }
+                  },
+                  {
+                    "call": "@entity.set",
+                    "args": {
+                      "id": "player",
+                      "field": "y",
+                      "value": {
+                        "var": "vars.ground_y"
+                      }
+                    }
+                  },
+                  {
+                    "call": "@entity.set",
+                    "args": {
+                      "id": "player",
+                      "field": "vy",
+                      "value": 0
+                    }
+                  },
+                  {
+                    "call": "@animated_sprite.set_animation",
+                    "args": {
+                      "id": "player",
+                      "animation": "idle"
+                    }
+                  }
+                ]
+              },
+              "input": {
+                "tap": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "ready"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.state",
+                            "value": "running"
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "player",
+                            "field": "vx",
+                            "value": {
+                              "var": "vars.speed"
+                            }
+                          }
+                        },
+                        {
+                          "call": "@animated_sprite.set_animation",
+                          "args": {
+                            "id": "player",
+                            "animation": "run"
+                          }
+                        },
+                        {
+                          "call": "@emit",
+                          "args": {
+                            "event": "status",
+                            "data": {
+                              "section": "{{ vars.section }}",
+                              "status": "奔跑中"
+                            }
+                          }
+                        }
+                      ],
+                      "else": [
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "==": [
+                                    {
+                                      "var": "vars.state"
+                                    },
+                                    "running"
+                                  ]
+                                },
+                                {
+                                  "var": "vars.on_ground"
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vx",
+                                  "value": {
+                                    "var": "vars.speed"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vy",
+                                  "value": {
+                                    "var": "vars.jump_vy"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.on_ground",
+                                  "value": false
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.double_jump_used",
+                                  "value": false
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "var": "vars.has_feather"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "phoenixJump"
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "jump"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "and": [
+                                      {
+                                        "==": [
+                                          {
+                                            "var": "vars.state"
+                                          },
+                                          "running"
+                                        ]
+                                      },
+                                      {
+                                        "!": {
+                                          "var": "vars.on_ground"
+                                        }
+                                      },
+                                      {
+                                        "var": "vars.has_feather"
+                                      },
+                                      {
+                                        "!": {
+                                          "var": "vars.double_jump_used"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "vx",
+                                        "value": {
+                                          "var": "vars.speed"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "vy",
+                                        "value": {
+                                          "*": [
+                                            {
+                                              "var": "vars.jump_vy"
+                                            },
+                                            0.86
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.double_jump_used",
+                                        "value": true
+                                      }
+                                    },
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "phoenixDoubleJump"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "logic": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "loading"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "call": "@tiled.loaded",
+                              "args": {
+                                "map": "tmx_map"
+                              }
+                            },
+                            "then": [
+                              {
+                                "call": "@tiled.first_object",
+                                "args": {
+                                  "map": "tmx_map",
+                                  "layer": "spawn"
+                                },
+                                "assign": "vars._spawn"
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "player",
+                                  "field": "x",
+                                  "value": {
+                                    "var": "vars._spawn.x"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "player",
+                                  "field": "y",
+                                  "value": {
+                                    "var": "vars._spawn.y"
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vy",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.on_ground",
+                                  "value": false
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.state",
+                                  "value": "ready"
+                                }
+                              },
+                              {
+                                "call": "@emit",
+                                "args": {
+                                  "event": "status",
+                                  "data": {
+                                    "section": "{{ vars.section }}",
+                                    "status": "点击开始"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "!=": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
+                      },
+                      "then": [],
+                      "else": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.progress",
+                            "value": {
+                              "+": [
+                                {
+                                  "var": "vars.progress"
+                                },
+                                {
+                                  "*": [
+                                    {
+                                      "-": [
+                                        0,
+                                        {
+                                          "var": "vars.speed"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "var": "event.dt"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@tiled.spawn_objects_near",
+                          "args": {
+                            "map": "tmx_map",
+                            "layer": "items",
+                            "reference": "player",
+                            "proximity": {
+                              "var": "vars.spawn_proximity"
+                            },
+                            "despawn_distance": {
+                              "var": "vars.despawn_distance"
+                            },
+                            "templates": {
+                              "default": {
+                                "id_prefix": "acorn_",
+                                "kind": "sprite",
+                                "priority": 25,
+                                "asset": "{{ object.sprite.asset }}",
+                                "src": "{{ object.sprite.src }}",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  "{{ object.size }}",
+                                  "{{ object.size }}"
+                                ],
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "itemType": "acorn",
+                                  "points": 10,
+                                  "bobAmplitude": 32,
+                                  "bobPeriod": 1.6
+                                },
+                                "render": {
+                                  "shape": "circle",
+                                  "color": "#FFD16655"
+                                }
+                              },
+                              "Egg": {
+                                "id_prefix": "egg_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_item_egg.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  "{{ object.size }}",
+                                  "{{ object.size }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 48,
+                                "frames_per_row": 8,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "itemType": "egg",
+                                  "points": 1000
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              },
+                              "Feather": {
+                                "id_prefix": "feather_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_item_feather.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  "{{ object.size }}",
+                                  "{{ object.size }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 30,
+                                "frames_per_row": 6,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "itemType": "feather",
+                                  "points": 10
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "call": "@tiled.spawn_objects_near",
+                          "args": {
+                            "map": "tmx_map",
+                            "layer": "enemies",
+                            "reference": "player",
+                            "proximity": {
+                              "var": "vars.spawn_proximity"
+                            },
+                            "despawn_distance": {
+                              "var": "vars.despawn_distance"
+                            },
+                            "templates": {
+                              "default": {
+                                "id_prefix": "enemy_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_enemy_beetle.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.yPlusHitbox }}"
+                                ],
+                                "size": [
+                                  "{{ hitbox }}",
+                                  "{{ hitbox }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 16,
+                                "frames_per_row": 8,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "enemyType": "Beetle",
+                                  "path": "{{ object.properties.Path }}",
+                                  "pathTile": "{{ tile }}",
+                                  "pathSpeed": 21.333333333333332,
+                                  "fly": "{{ object.fly }}",
+                                  "spriteW": "{{ tile }}",
+                                  "spriteH": "{{ tile }}",
+                                  "spriteOffsetX": -16,
+                                  "spriteOffsetY": -32
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              },
+                              "Bee": {
+                                "id_prefix": "enemy_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_enemy_bee.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  "{{ hitbox }}",
+                                  "{{ hitbox }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 14,
+                                "frames_per_row": 7,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "enemyType": "Bee",
+                                  "path": "{{ object.properties.Path }}",
+                                  "pathTile": "{{ tile }}",
+                                  "pathSpeed": 21.333333333333332,
+                                  "fly": "{{ object.fly }}",
+                                  "spriteW": "{{ tile }}",
+                                  "spriteH": "{{ tile }}",
+                                  "spriteOffsetX": -16,
+                                  "spriteOffsetY": -32
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              },
+                              "Butterfly": {
+                                "id_prefix": "enemy_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_enemy_butterfly.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  "{{ hitbox }}",
+                                  "{{ hitbox }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 16,
+                                "frames_per_row": 8,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "enemyType": "Butterfly",
+                                  "path": "{{ object.properties.Path }}",
+                                  "pathTile": "{{ tile }}",
+                                  "pathSpeed": 21.333333333333332,
+                                  "fly": "{{ object.fly }}",
+                                  "spriteW": "{{ tile }}",
+                                  "spriteH": "{{ tile }}",
+                                  "spriteOffsetX": -16,
+                                  "spriteOffsetY": -32
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              },
+                              "Grasshopper": {
+                                "id_prefix": "enemy_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_enemy_grasshopper.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.yPlusHitbox }}"
+                                ],
+                                "size": [
+                                  "{{ hitbox }}",
+                                  "{{ hitbox }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 22,
+                                "frames_per_row": 11,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "enemyType": "Grasshopper",
+                                  "path": "{{ object.properties.Path }}",
+                                  "pathTile": "{{ tile }}",
+                                  "pathSpeed": 21.333333333333332,
+                                  "fly": "{{ object.fly }}",
+                                  "spriteW": "{{ tile }}",
+                                  "spriteH": "{{ tile }}",
+                                  "spriteOffsetX": -16,
+                                  "spriteOffsetY": -32
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              },
+                              "Firefly": {
+                                "id_prefix": "enemy_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_enemy_dragonfly.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  "{{ hitbox }}",
+                                  "{{ hitbox }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 32,
+                                "frames_per_row": 8,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "enemyType": "Firefly",
+                                  "path": "{{ object.properties.Path }}",
+                                  "pathTile": "{{ tile }}",
+                                  "pathSpeed": 21.333333333333332,
+                                  "fly": "{{ object.fly }}",
+                                  "spriteW": "{{ tile }}",
+                                  "spriteH": "{{ tile }}",
+                                  "spriteOffsetX": -16,
+                                  "spriteOffsetY": -32
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              },
+                              "Ant": {
+                                "id_prefix": "enemy_",
+                                "kind": "animated_sprite",
+                                "priority": 25,
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_enemy_ant.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.yPlusHitbox }}"
+                                ],
+                                "size": [
+                                  "{{ hitbox }}",
+                                  "{{ hitbox }}"
+                                ],
+                                "frame_size": [
+                                  64,
+                                  64
+                                ],
+                                "frames": 12,
+                                "frames_per_row": 6,
+                                "step_time": 0.04,
+                                "state": {
+                                  "objectId": "{{ object.id }}",
+                                  "objectType": "{{ object.type }}",
+                                  "enemyType": "Ant",
+                                  "path": "{{ object.properties.Path }}",
+                                  "pathTile": "{{ tile }}",
+                                  "pathSpeed": 21.333333333333332,
+                                  "fly": "{{ object.fly }}",
+                                  "spriteW": "{{ tile }}",
+                                  "spriteH": "{{ tile }}",
+                                  "spriteOffsetX": -16,
+                                  "spriteOffsetY": -32
+                                },
+                                "render": {
+                                  "shape": "rect",
+                                  "color": "#B24A4A33",
+                                  "radius": 4
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._was_on_ground",
+                            "value": {
+                              "var": "vars.on_ground"
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "player",
+                            "field": "vx",
+                            "value": {
+                              "var": "vars.speed"
+                            }
+                          }
+                        },
+                        {
+                          "call": "@platformer.step",
+                          "args": {
+                            "id": "player",
+                            "map": "tmx_map",
+                            "dt": {
+                              "var": "event.dt"
+                            },
+                            "gravity": {
+                              "var": "vars.gravity"
+                            },
+                            "jump_velocity": {
+                              "var": "vars.jump_vy"
+                            },
+                            "max_fall": 1280
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.on_ground",
+                            "value": {
+                              "var": "entities.player.onGround"
+                            }
+                          }
+                        },
+                        {
+                          "call": "@tiled.has_collision_type",
+                          "args": {
+                            "map": "tmx_map",
+                            "type": "Hazard",
+                            "rect": [
+                              {
+                                "var": "entities.player.x"
+                              },
+                              {
+                                "+": [
+                                  {
+                                    "var": "entities.player.y"
+                                  },
+                                  {
+                                    "var": "entities.player.h"
+                                  },
+                                  -2
+                                ]
+                              },
+                              {
+                                "var": "entities.player.w"
+                              },
+                              4
+                            ]
+                          },
+                          "assign": "vars._hazard"
+                        },
+                        {
+                          "call": "@platformer.stuck_check",
+                          "args": {
+                            "id": "player",
+                            "dt": {
+                              "var": "event.dt"
+                            },
+                            "enabled": {
+                              "==": [
+                                {
+                                  "var": "vars.state"
+                                },
+                                "running"
+                              ]
+                            },
+                            "threshold": 0.5,
+                            "timeout": 1.0
+                          },
+                          "assign": "vars._stuck"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "var": "vars._stuck"
+                            },
+                            "then": [
+                              {
+                                "call": "@animated_sprite.set_animation",
+                                "args": {
+                                  "id": "player",
+                                  "animation": "death"
+                                }
+                              },
+                              {
+                                "call": "@game_over"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "var": "vars._hazard"
+                            },
+                            "then": [
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "var": "vars.has_feather"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.has_feather",
+                                        "value": false
+                                      }
+                                    },
+                                    {
+                                      "call": "@tiled.nearest_object",
+                                      "args": {
+                                        "map": "tmx_map",
+                                        "layer": "respawn",
+                                        "before_x": {
+                                          "var": "entities.player.x"
+                                        }
+                                      },
+                                      "assign": "vars._respawn"
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "!": {
+                                            "var": "vars._respawn"
+                                          }
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@tiled.first_object",
+                                            "args": {
+                                              "map": "tmx_map",
+                                              "layer": "spawn"
+                                            },
+                                            "assign": "vars._respawn"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "x",
+                                        "value": {
+                                          "var": "vars._respawn.x"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "y",
+                                        "value": {
+                                          "var": "vars._respawn.y"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "vx",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "vy",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.on_ground",
+                                        "value": false
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.double_jump_used",
+                                        "value": false
+                                      }
+                                    },
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "run"
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "death"
+                                      }
+                                    },
+                                    {
+                                      "call": "@game_over"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@platformer.section_exit",
+                          "args": {
+                            "id": "player",
+                            "map": "tmx_map",
+                            "margin": 480
+                          },
+                          "assign": "vars._section_exit"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "var": "vars._section_exit"
+                            },
+                            "then": [
+                              {
+                                "call": "@tiled.clear_spawned",
+                                "args": {
+                                  "prefix": "enemy_"
+                                }
+                              },
+                              {
+                                "call": "@tiled.clear_spawned",
+                                "args": {
+                                  "prefix": "acorn_"
+                                }
+                              },
+                              {
+                                "call": "@tiled.clear_spawned",
+                                "args": {
+                                  "prefix": "egg_"
+                                }
+                              },
+                              {
+                                "call": "@tiled.clear_spawned",
+                                "args": {
+                                  "prefix": "feather_"
+                                }
+                              },
+                              {
+                                "call": "@score.add",
+                                "args": {
+                                  "n": {
+                                    "*": [
+                                      {
+                                        "var": "vars.section"
+                                      },
+                                      1000
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    ">=": [
+                                      {
+                                        "var": "vars.section"
+                                      },
+                                      3
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.state",
+                                        "value": "finished"
+                                      }
+                                    },
+                                    {
+                                      "call": "@emit",
+                                      "args": {
+                                        "event": "status",
+                                        "data": {
+                                          "section": "{{ vars.section }}",
+                                          "status": "通关"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@game_over"
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.section",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars.section"
+                                            },
+                                            1
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.state",
+                                        "value": "loading"
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.has_feather",
+                                        "value": false
+                                      }
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "==": [
+                                            {
+                                              "var": "vars.section"
+                                            },
+                                            2
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@tiled.load",
+                                            "args": {
+                                              "map": "tmx_map",
+                                              "source": "map/flutter_runnergame_map_B.tmx"
+                                            }
+                                          },
+                                          {
+                                            "call": "@tiled.load",
+                                            "args": {
+                                              "map": "tmx_front",
+                                              "source": "map/flutter_runnergame_map_B.tmx"
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@tiled.load",
+                                            "args": {
+                                              "map": "tmx_map",
+                                              "source": "map/flutter_runnergame_map_C.tmx"
+                                            }
+                                          },
+                                          {
+                                            "call": "@tiled.load",
+                                            "args": {
+                                              "map": "tmx_front",
+                                              "source": "map/flutter_runnergame_map_C.tmx"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "call": "@emit",
+                                      "args": {
+                                        "event": "status",
+                                        "data": {
+                                          "section": "{{ vars.section }}",
+                                          "status": "下一段"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "var": "vars.on_ground"
+                                },
+                                {
+                                  "!": {
+                                    "var": "vars._was_on_ground"
+                                  }
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.double_jump_used",
+                                  "value": false
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "var": "vars.has_feather"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "phoenixRun"
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "run"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "enemy_"
+                          },
+                          "assign": "vars.hit_enemy"
+                        },
+                        {
+                          "call": "@for_each_entity",
+                          "args": {
+                            "where_prefix": "enemy_",
+                            "do": [
+                              {
+                                "call": "@entity.flip_by_velocity",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "axis": "x",
+                                  "invert": true
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!=": [
+                                {
+                                  "var": "vars.hit_enemy"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "var": "vars.has_feather"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.has_feather",
+                                        "value": false
+                                      }
+                                    },
+                                    {
+                                      "call": "@tiled.nearest_object",
+                                      "args": {
+                                        "map": "tmx_map",
+                                        "layer": "respawn",
+                                        "before_x": {
+                                          "var": "entities.player.x"
+                                        }
+                                      },
+                                      "assign": "vars._respawn"
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "!": {
+                                            "var": "vars._respawn"
+                                          }
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@tiled.first_object",
+                                            "args": {
+                                              "map": "tmx_map",
+                                              "layer": "spawn"
+                                            },
+                                            "assign": "vars._respawn"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "x",
+                                        "value": {
+                                          "var": "vars._respawn.x"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "y",
+                                        "value": {
+                                          "var": "vars._respawn.y"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "vx",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "vy",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.on_ground",
+                                        "value": false
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.double_jump_used",
+                                        "value": false
+                                      }
+                                    },
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "run"
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "death"
+                                      }
+                                    },
+                                    {
+                                      "call": "@game_over"
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.hit_enemy",
+                                  "value": null
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "acorn_"
+                          },
+                          "assign": "vars.hit_acorn"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!=": [
+                                {
+                                  "var": "vars.hit_acorn"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@animated_sprite.effect",
+                                "args": {
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_fx_small.png",
+                                  "at": "player",
+                                  "size": 64,
+                                  "frame_w": 64,
+                                  "frame_h": 64,
+                                  "frames": 9,
+                                  "frames_per_row": 3
+                                }
+                              },
+                              {
+                                "call": "@despawn",
+                                "args": {
+                                  "id": "{{ vars.hit_acorn }}"
+                                }
+                              },
+                              {
+                                "call": "@score.add",
+                                "args": {
+                                  "n": 10
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.hit_acorn",
+                                  "value": null
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "egg_"
+                          },
+                          "assign": "vars.hit_egg"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!=": [
+                                {
+                                  "var": "vars.hit_egg"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@animated_sprite.effect",
+                                "args": {
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_fx_large.png",
+                                  "at": "player",
+                                  "size": 192,
+                                  "frame_w": 192,
+                                  "frame_h": 192,
+                                  "frames": 14,
+                                  "frames_per_row": 7
+                                }
+                              },
+                              {
+                                "call": "@despawn",
+                                "args": {
+                                  "id": "{{ vars.hit_egg }}"
+                                }
+                              },
+                              {
+                                "call": "@score.add",
+                                "args": {
+                                  "n": 1000
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.hit_egg",
+                                  "value": null
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "feather_"
+                          },
+                          "assign": "vars.hit_feather"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!=": [
+                                {
+                                  "var": "vars.hit_feather"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@animated_sprite.effect",
+                                "args": {
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-superdash-runner/0.2.0/map/anim/spritesheet_poof_orange.png",
+                                  "at": "player",
+                                  "size": 192,
+                                  "frame_w": 192,
+                                  "frame_h": 192,
+                                  "frames": 20,
+                                  "frames_per_row": 5
+                                }
+                              },
+                              {
+                                "call": "@despawn",
+                                "args": {
+                                  "id": "{{ vars.hit_feather }}"
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.has_feather",
+                                  "value": true
+                                }
+                              },
+                              {
+                                "call": "@animated_sprite.set_animation",
+                                "args": {
+                                  "id": "player",
+                                  "animation": "phoenixRun"
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.hit_feather",
+                                  "value": null
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "on_score_changed": {
+                "type": "call",
+                "call": "@global.handleScoreChanged",
+                "args": {
+                  "score": "{{ event.score }}"
+                }
+              },
+              "on_status": {
+                "type": "call",
+                "call": "@global.handleGameStatus",
+                "args": {
+                  "section": "{{ event.section }}",
+                  "status": "{{ event.status }}"
+                }
+              },
+              "on_game_over": {
+                "type": "call",
+                "call": "@global.handleGameOver",
+                "args": {
+                  "score": "{{ event.score }}"
+                }
+              },
+              "on_reset": {
+                "type": "call",
+                "call": "@global.handleReset",
+                "args": {}
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

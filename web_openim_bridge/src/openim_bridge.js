@@ -4,6 +4,7 @@ let sdk;
 let currentUserID = '';
 let initialized = false;
 const listeners = new Map();
+let gzipWasmFallbackInstalled = false;
 
 function operationID(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -49,6 +50,41 @@ function ensureSDK() {
     throw new Error('OpenIM bridge is not initialized');
   }
   return sdk;
+}
+
+function installGzipWasmFallback() {
+  if (gzipWasmFallbackInstalled) return;
+  gzipWasmFallbackInstalled = true;
+  if (typeof WebAssembly === 'undefined' || typeof WebAssembly.instantiateStreaming !== 'function') {
+    return;
+  }
+
+  const originalInstantiateStreaming = WebAssembly.instantiateStreaming.bind(WebAssembly);
+  WebAssembly.instantiateStreaming = async (source, importObject) => {
+    const response = await Promise.resolve(source);
+    if (!(response instanceof Response)) {
+      return originalInstantiateStreaming(source, importObject);
+    }
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+    const wasmBytes = isGzip
+      ? await new Response(
+          new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')),
+        ).arrayBuffer()
+      : bytes.buffer;
+    return WebAssembly.instantiate(wasmBytes, importObject);
+  };
+}
+
+async function waitForWindowFunction(name, timeoutMs = 8000) {
+  const startedAt = Date.now();
+  while (typeof window[name] !== 'function') {
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error(`OpenIM WASM did not expose window.${name}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 function bindSDKEvents() {
@@ -97,6 +133,7 @@ function receiverFromConversation(params) {
 window.MyAppOpenIM = {
   init(config = {}) {
     if (initialized) return true;
+    installGzipWasmFallback();
     sdk = getSDK({
       coreWasmPath: config.coreWasmPath || '/openIM.wasm',
       sqlWasmPath: config.sqlWasmPath || '/sql-wasm.wasm',
@@ -121,6 +158,8 @@ window.MyAppOpenIM = {
   async login(params) {
     const im = ensureSDK();
     currentUserID = params.userID || '';
+    await im.wasmInitializedPromise;
+    await waitForWindowFunction('commonEventFunc');
     const result = await im.login({
       userID: params.userID,
       token: params.token,

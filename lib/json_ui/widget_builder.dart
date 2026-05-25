@@ -53,6 +53,7 @@ import 'widgets/camera_widget.dart';
 import 'widgets/skeleton_widget.dart';
 import 'widgets/reorderable_list_widget.dart';
 import 'widgets/flame_game_widget.dart';
+import 'widgets/virtual_gamepad_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -107,6 +108,7 @@ class JsonWidgetBuilder {
     'skeleton': JsonSkeletonWidget(),
     'reorderable_list': JsonReorderableListWidget(),
     'flame_game': JsonFlameGameWidget(),
+    'virtual_gamepad': JsonVirtualGamepadWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
@@ -131,7 +133,9 @@ class JsonWidgetBuilder {
       padding: const EdgeInsets.all(8),
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.errorContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(

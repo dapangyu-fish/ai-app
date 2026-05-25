@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Test-env one-click deploy / 测试环境一键部署 —— interactive.
-# First prompt picks UI language (1=English default, 2=中文). All messages are i18n'd.
+# First prompt picks UI language (1=English default, 2=中文, 3=Deutsch, 4=Español).
 #
 # Usage:
 #   ./bootstrap.sh                       # interactive
 #   ./bootstrap.sh --yes                 # all defaults (DeepSeek key still required, from $DEEPSEEK_API_KEY)
-#   ./bootstrap.sh --lang en|zh          # preset language, skip the picker
+#   ./bootstrap.sh --lang en|zh|de|es    # preset language, skip the picker
 #
 # Re-run safe: running again brings services up from existing .env. To start fresh run ./teardown.sh first.
 set -euo pipefail
@@ -17,18 +17,19 @@ cd "$SCRIPT_DIR"
 B="\033[1m"; G="\033[32m"; Y="\033[33m"; R="\033[31m"; C="\033[36m"; N="\033[0m"
 
 # ───────── i18n catalog ─────────
-declare -A T_en T_zh
+declare -A T_en T_zh T_de T_es
 UI_LANG="en"
 
 # t <key> [printf args...] —— emit localized string (falls back en → key)
 t() {
   local key="$1"; shift || true
   local fmt
-  if [[ "$UI_LANG" == "zh" ]]; then
-    fmt="${T_zh[$key]:-${T_en[$key]:-$key}}"
-  else
-    fmt="${T_en[$key]:-$key}"
-  fi
+  case "$UI_LANG" in
+    zh) fmt="${T_zh[$key]:-${T_en[$key]:-$key}}" ;;
+    de) fmt="${T_de[$key]:-${T_en[$key]:-$key}}" ;;
+    es) fmt="${T_es[$key]:-${T_en[$key]:-$key}}" ;;
+    *)  fmt="${T_en[$key]:-$key}" ;;
+  esac
   # shellcheck disable=SC2059
   printf "$fmt" "$@"
 }
@@ -39,6 +40,22 @@ T_en[dep_missing]="Missing %s — please install it first"
 T_zh[dep_missing]="缺少 %s，请先安装"
 T_en[compose_missing]="docker compose plugin missing (need v2, not the old docker-compose)"
 T_zh[compose_missing]="docker compose 插件缺失（要 v2，不是老的 docker-compose）"
+T_en[install_deps]="Installing missing system packages: %s"
+T_zh[install_deps]="安装缺失系统包: %s"
+T_en[install_docker]="Docker is missing; installing Docker Engine via get.docker.com..."
+T_zh[install_docker]="缺少 Docker；通过 get.docker.com 安装 Docker Engine..."
+T_en[install_docker_pkg]="Docker is missing; installing Docker packages..."
+T_zh[install_docker_pkg]="缺少 Docker；通过系统包管理器安装 Docker..."
+T_en[install_docker_hint]="Docker is required. Install Docker Desktop / OrbStack / Colima on macOS, or Docker Engine + compose plugin on Linux."
+T_zh[install_docker_hint]="需要 Docker。macOS 请安装 Docker Desktop / OrbStack / Colima；Linux 请安装 Docker Engine 和 compose plugin。"
+T_en[install_hint]="Missing dependencies: %s. No supported package manager found (apt, dnf, yum, brew, apk, pacman, zypper)."
+T_zh[install_hint]="缺少依赖: %s。未找到支持的包管理器（apt, dnf, yum, brew, apk, pacman, zypper）。"
+T_en[pkg_manager]="Using package manager: %s"
+T_zh[pkg_manager]="使用包管理器: %s"
+T_en[docker_unusable]="Docker is installed but not usable. Start the Docker daemon/Desktop, or rerun as root / add this user to the docker group and re-login."
+T_zh[docker_unusable]="Docker 已安装但当前不可用。请启动 Docker daemon/Desktop，或用 root 运行 / 把当前用户加入 docker 组后重新登录。"
+T_en[root_needed]="Need root privileges. Re-run as root, or configure passwordless sudo for --yes mode."
+T_zh[root_needed]="需要 root 权限。请用 root 运行，或为 --yes 模式配置免密 sudo。"
 T_en[deps_ok]="Dependencies OK"
 T_zh[deps_ok]="依赖齐"
 T_en[unknown_arg]="Unknown argument: %s"
@@ -79,8 +96,8 @@ T_en[sec_mirror]="[4/5] Registry mirror (optional)"
 T_zh[sec_mirror]="[4/5] Registry mirror（可选）"
 T_en[mirror_desc1]="  This instance can mirror another Registry's public package index, syncing every N seconds."
 T_zh[mirror_desc1]="  本实例可以镜像另一个 Registry 的公开包索引，每 N 秒同步一次。"
-T_en[mirror_desc2]="  Leave upstream URL empty = no mirror, run standalone."
-T_zh[mirror_desc2]="  上游 URL 留空 = 不开 mirror，本实例独立运行。"
+T_en[mirror_desc2]="  Press Enter to mirror the production Registry; enter 'none' to run standalone."
+T_zh[mirror_desc2]="  按 Enter 默认镜像生产 Registry；输入 none 则不开 mirror，本实例独立运行。"
 T_en[ask_upstream]="  Upstream Registry URL (e.g. https://myapp-registry.dapangyu.work)"
 T_zh[ask_upstream]="  上游 Registry URL（如 https://myapp-registry.dapangyu.work）"
 T_en[ask_interval]="  Sync interval (seconds, <=0 = sync once at startup only)"
@@ -127,8 +144,8 @@ T_en[openim_ready]="OpenIM API ready (%ss, HTTP %s)"
 T_zh[openim_ready]="OpenIM API ready (%ss, HTTP %s)"
 T_en[openim_timeout]="OpenIM not ready after 120s, continuing; logs: docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
 T_zh[openim_timeout]="OpenIM 等 120s 没就绪，继续；docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
-T_en[start_app]="Building + starting app services (backend / registry / config-center / user-center / jsonapp-postgres / app-minio)..."
-T_zh[start_app]="构建 + 启动 app 自有服务（backend / registry / config-center / user-center / jsonapp-postgres / app-minio）..."
+T_en[start_app]="Building + starting app services (backend / ai-worker / registry / config-center / user-center / jsonapp-postgres / app-minio)..."
+T_zh[start_app]="构建 + 启动 app 自有服务（backend / ai-worker / registry / config-center / user-center / jsonapp-postgres / app-minio）..."
 T_en[wait_backend]="Waiting for backend health check..."
 T_zh[wait_backend]="等 backend 健康检查..."
 T_en[backend_ready]="backend ready (%ss)"
@@ -137,12 +154,163 @@ T_en[backend_timeout]="backend health check failed after 80s, continuing; docker
 T_zh[backend_timeout]="backend 健康检查 80s 没过，继续；docker compose logs -f backend 看看"
 T_en[init_minio]="Initializing app-minio buckets..."
 T_zh[init_minio]="初始化 app-minio buckets..."
+T_en[sync_registry]="Syncing Registry mirror..."
+T_zh[sync_registry]="同步 Registry mirror..."
+T_en[registry_synced]="Registry mirror synced: %s"
+T_zh[registry_synced]="Registry mirror 已同步: %s"
+T_en[registry_sync_warn]="Registry mirror sync did not complete during bootstrap; it will retry in the background. Logs: docker logs testenv-registry"
+T_zh[registry_sync_warn]="Registry mirror 未在 bootstrap 期间完成；后台会继续重试。日志：docker logs testenv-registry"
 T_en[seed_user]="Creating test account on Supabase..."
 T_zh[seed_user]="在 Supabase 上创建测试账号..."
 T_en[deploy_done]="Deploy complete!"
 T_zh[deploy_done]="部署完成！"
 T_en[info_saved]="All info also saved to ./test-env-info.txt (mode 600)"
 T_zh[info_saved]="全部信息也保存到 ./test-env-info.txt（mode 600）"
+T_en[env_qr_saved]="Client environment QR saved to ./test-env-environment.png and ./test-env-environment.json"
+T_zh[env_qr_saved]="客户端环境二维码已保存到 ./test-env-environment.png 和 ./test-env-environment.json"
+T_en[env_qr_title]="Scan this QR in the client Service Environment page"
+T_zh[env_qr_title]="在客户端“服务环境”页扫码导入"
+T_en[env_json_title]="Or copy this JSON into the client Service Environment page"
+T_zh[env_json_title]="也可以复制这段 JSON 到客户端“服务环境”页导入"
+
+T_de[deps_check]="Abhängigkeiten werden geprüft..."
+T_es[deps_check]="Comprobando dependencias..."
+T_de[dep_missing]="%s fehlt — bitte zuerst installieren"
+T_es[dep_missing]="Falta %s — instálalo primero"
+T_de[compose_missing]="docker compose Plugin fehlt (v2 erforderlich, nicht das alte docker-compose)"
+T_es[compose_missing]="Falta el plugin docker compose (se necesita v2, no el docker-compose antiguo)"
+T_de[install_deps]="Fehlende Systempakete werden installiert: %s"
+T_es[install_deps]="Instalando paquetes del sistema faltantes: %s"
+T_de[install_docker]="Docker fehlt; Docker Engine wird über get.docker.com installiert..."
+T_es[install_docker]="Falta Docker; instalando Docker Engine desde get.docker.com..."
+T_de[install_docker_pkg]="Docker fehlt; Docker-Pakete werden installiert..."
+T_es[install_docker_pkg]="Falta Docker; instalando paquetes de Docker..."
+T_de[install_docker_hint]="Docker ist erforderlich. Installiere Docker Desktop / OrbStack / Colima auf macOS oder Docker Engine + compose plugin auf Linux."
+T_es[install_docker_hint]="Docker es obligatorio. Instala Docker Desktop / OrbStack / Colima en macOS, o Docker Engine + compose plugin en Linux."
+T_de[install_hint]="Fehlende Abhängigkeiten: %s. Kein unterstützter Paketmanager gefunden (apt, dnf, yum, brew, apk, pacman, zypper)."
+T_es[install_hint]="Dependencias faltantes: %s. No se encontró un gestor de paquetes compatible (apt, dnf, yum, brew, apk, pacman, zypper)."
+T_de[pkg_manager]="Paketmanager: %s"
+T_es[pkg_manager]="Gestor de paquetes: %s"
+T_de[docker_unusable]="Docker ist installiert, aber nicht nutzbar. Starte Docker daemon/Desktop oder führe das Skript als root aus / füge den Benutzer zur docker-Gruppe hinzu und melde dich neu an."
+T_es[docker_unusable]="Docker está instalado pero no se puede usar. Inicia Docker daemon/Desktop, o ejecuta como root / añade este usuario al grupo docker y vuelve a iniciar sesión."
+T_de[root_needed]="Root-Rechte erforderlich. Als root erneut ausführen oder passwortloses sudo für --yes konfigurieren."
+T_es[root_needed]="Se necesitan privilegios root. Ejecuta como root o configura sudo sin contraseña para modo --yes."
+T_de[deps_ok]="Abhängigkeiten OK"
+T_es[deps_ok]="Dependencias OK"
+T_de[unknown_arg]="Unbekanntes Argument: %s"
+T_es[unknown_arg]="Argumento desconocido: %s"
+T_de[required_yes]="%s ist erforderlich (im --yes Modus per Umgebungsvariable setzen)"
+T_es[required_yes]="%s es obligatorio (en modo --yes debe pasarse por variable de entorno)"
+T_de[required]="erforderlich"
+T_es[required]="obligatorio"
+T_de[banner_title]="AI App Testumgebung Ein-Klick-Deploy (test-env v1)"
+T_es[banner_title]="Despliegue de entorno de prueba AI App (test-env v1)"
+T_de[banner_sub]="Enter übernimmt Defaults; nur DeepSeek key + Testkonto sind erforderlich"
+T_es[banner_sub]="Enter usa valores por defecto; solo DeepSeek key + cuenta de prueba son obligatorios"
+T_de[sec_ip]="[1/5] Client-Zugriffs-IP"
+T_es[sec_ip]="[1/5] IP de acceso del cliente"
+T_de[ask_ip]="  IP für den Client (LAN-Test: interne IP dieses Rechners)"
+T_es[ask_ip]="  IP usada por el cliente (LAN: IP interna de esta máquina)"
+T_de[sec_ai]="[2/5] KI-Anbieter (backend/config.py kennt diese)"
+T_es[sec_ai]="[2/5] Proveedores de IA (backend/config.py reconoce estos)"
+T_de[ask_deepseek]="  DeepSeek API Key (erforderlich)"
+T_es[ask_deepseek]="  DeepSeek API Key (obligatorio)"
+T_de[ask_glm_token]="  GLM (Anthropic-kompatibel) Auth Token (optional)"
+T_es[ask_glm_token]="  GLM (compatible con Anthropic) Auth Token (opcional)"
+T_de[ask_glm_url]="  GLM Base URL (optional)"
+T_es[ask_glm_url]="  GLM Base URL (opcional)"
+T_de[ask_cc_token]="  Claude Code Anthropic Token (optional)"
+T_es[ask_cc_token]="  Claude Code Anthropic Token (opcional)"
+T_de[ask_cc_url]="  Claude Code Base URL (optional)"
+T_es[ask_cc_url]="  Claude Code Base URL (opcional)"
+T_de[sec_account]="[3/5] Testkonto (für Login im Client nach dem Deploy)"
+T_es[sec_account]="[3/5] Cuenta de prueba (para iniciar sesión en el cliente)"
+T_de[ask_email]="  E-Mail"
+T_es[ask_email]="  Email"
+T_de[ask_username]="  Benutzername"
+T_es[ask_username]="  Usuario"
+T_de[ask_password]="  Passwort"
+T_es[ask_password]="  Contraseña"
+T_de[sec_mirror]="[4/5] Registry-Mirror (optional)"
+T_es[sec_mirror]="[4/5] Mirror del Registry (opcional)"
+T_de[mirror_desc1]="  Diese Instanz kann den öffentlichen Paketindex einer anderen Registry spiegeln."
+T_es[mirror_desc1]="  Esta instancia puede replicar el índice público de paquetes de otro Registry."
+T_de[mirror_desc2]="  Enter spiegelt die Produktions-Registry; 'none' startet eigenständig."
+T_es[mirror_desc2]="  Enter replica el Registry de producción; 'none' ejecuta modo independiente."
+T_de[ask_upstream]="  Upstream Registry URL (z.B. https://myapp-registry.dapangyu.work)"
+T_es[ask_upstream]="  Upstream Registry URL (ej. https://myapp-registry.dapangyu.work)"
+T_de[ask_interval]="  Sync-Intervall (Sekunden, <=0 = nur einmal beim Start)"
+T_es[ask_interval]="  Intervalo de sincronización (segundos, <=0 = solo una vez al iniciar)"
+T_de[sec_port]="[5/5] Port-Offset (mehrere Umgebungen auf einem Host, default 0)"
+T_es[sec_port]="[5/5] Offset de puertos (varios entornos en un host, por defecto 0)"
+T_de[ask_offset]="  Port-Offset"
+T_es[ask_offset]="  Offset de puertos"
+T_de[offset_num]="Port-Offset muss eine Zahl sein"
+T_es[offset_num]="El offset de puertos debe ser numérico"
+T_de[gen_secrets]="Secrets werden erzeugt..."
+T_es[gen_secrets]="Generando secretos..."
+T_de[secrets_done]="Secrets erzeugt"
+T_es[secrets_done]="Secretos generados"
+T_de[mint_keys]="Supabase ANON_KEY / SERVICE_ROLE_KEY werden signiert..."
+T_es[mint_keys]="Generando Supabase ANON_KEY / SERVICE_ROLE_KEY..."
+T_de[keys_done]="Supabase Keys erzeugt"
+T_es[keys_done]="Claves de Supabase generadas"
+T_de[render_env]=".env Dateien werden gerendert..."
+T_es[render_env]="Renderizando archivos .env..."
+T_de[env_done]=".env gerendert (3 Dateien)"
+T_es[env_done]=".env renderizado (3 archivos)"
+T_de[pull_images]="Images werden geladen (beim ersten Mal langsam)..."
+T_es[pull_images]="Descargando imágenes (la primera vez tarda)..."
+T_de[images_ready]="Images bereit"
+T_es[images_ready]="Imágenes listas"
+T_de[start_supabase]="Supabase wird gestartet (13 Services, erstmals ~1-2 Min)..."
+T_es[start_supabase]="Iniciando Supabase (13 servicios, ~1-2 min la primera vez)..."
+T_de[wait_supabase]="Warte auf Supabase auth..."
+T_es[wait_supabase]="Esperando Supabase auth..."
+T_de[supabase_ready]="Supabase auth bereit (%ss)"
+T_es[supabase_ready]="Supabase auth listo (%ss)"
+T_de[supabase_timeout]="Supabase auth nach 120s nicht bereit (letztes HTTP %s), docker logs supabase-auth"
+T_es[supabase_timeout]="Supabase auth no está listo tras 120s (último HTTP %s), docker logs supabase-auth"
+T_de[openim_cfg]="OpenIM Default-Konfig wird extrahiert + gepatcht..."
+T_es[openim_cfg]="Extrayendo y parcheando configuración por defecto de OpenIM..."
+T_de[openim_cfg_done]="OpenIM-Konfig gerendert (mongodb/redis/kafka/etcd/minio/share)"
+T_es[openim_cfg_done]="Configuración de OpenIM renderizada (mongodb/redis/kafka/etcd/minio/share)"
+T_de[start_openim]="OpenIM wird gestartet (8 Services, erstmals ~1-2 Min)..."
+T_es[start_openim]="Iniciando OpenIM (8 servicios, ~1-2 min la primera vez)..."
+T_de[wait_openim]="Warte auf OpenIM server..."
+T_es[wait_openim]="Esperando OpenIM server..."
+T_de[openim_ready]="OpenIM API bereit (%ss, HTTP %s)"
+T_es[openim_ready]="OpenIM API lista (%ss, HTTP %s)"
+T_de[openim_timeout]="OpenIM nach 120s nicht bereit, fahre fort; Logs: docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
+T_es[openim_timeout]="OpenIM no está listo tras 120s, continúo; logs: docker compose --env-file openim/.env -f openim/docker-compose.yml logs openim-server"
+T_de[start_app]="App-Services werden gebaut + gestartet (backend / ai-worker / registry / config-center / user-center / jsonapp-postgres / app-minio)..."
+T_es[start_app]="Compilando e iniciando servicios de app (backend / ai-worker / registry / config-center / user-center / jsonapp-postgres / app-minio)..."
+T_de[wait_backend]="Warte auf Backend health check..."
+T_es[wait_backend]="Esperando health check del backend..."
+T_de[backend_ready]="backend bereit (%ss)"
+T_es[backend_ready]="backend listo (%ss)"
+T_de[backend_timeout]="backend health check nach 80s fehlgeschlagen, fahre fort; docker compose logs -f backend"
+T_es[backend_timeout]="health check del backend falló tras 80s, continúo; docker compose logs -f backend"
+T_de[init_minio]="App-MinIO Buckets werden initialisiert..."
+T_es[init_minio]="Inicializando buckets de app-minio..."
+T_de[sync_registry]="Registry-Mirror wird synchronisiert..."
+T_es[sync_registry]="Sincronizando mirror del Registry..."
+T_de[registry_synced]="Registry-Mirror synchronisiert: %s"
+T_es[registry_synced]="Mirror del Registry sincronizado: %s"
+T_de[registry_sync_warn]="Registry-Mirror wurde während bootstrap nicht fertig; der Hintergrundprozess versucht es weiter. Logs: docker logs testenv-registry"
+T_es[registry_sync_warn]="El mirror del Registry no terminó durante bootstrap; reintentará en segundo plano. Logs: docker logs testenv-registry"
+T_de[seed_user]="Testkonto wird in Supabase angelegt..."
+T_es[seed_user]="Creando cuenta de prueba en Supabase..."
+T_de[deploy_done]="Deploy abgeschlossen!"
+T_es[deploy_done]="¡Despliegue completado!"
+T_de[info_saved]="Alle Infos auch in ./test-env-info.txt gespeichert (mode 600)"
+T_es[info_saved]="Toda la información también se guardó en ./test-env-info.txt (modo 600)"
+T_de[env_qr_saved]="Client-Umgebungs-QR gespeichert in ./test-env-environment.png und ./test-env-environment.json"
+T_es[env_qr_saved]="QR de entorno del cliente guardado en ./test-env-environment.png y ./test-env-environment.json"
+T_de[env_qr_title]="Diesen QR auf der Service-Umgebungsseite im Client scannen"
+T_es[env_qr_title]="Escanea este QR en la página de entorno de servicio del cliente"
+T_de[env_json_title]="Oder diese JSON in die Service-Umgebungsseite im Client kopieren"
+T_es[env_json_title]="O copia este JSON en la página de entorno de servicio del cliente"
 
 say()  { printf "${C}» %s${N}\n" "$*"; }
 ok()   { printf "${G}✔ %s${N}\n" "$*"; }
@@ -157,8 +325,8 @@ for arg in "$@"; do
     -y|--yes) NON_INTERACTIVE=1 ;;
     --lang) LANG_PRESET="__next__" ;;
     --lang=*) LANG_PRESET="${arg#*=}" ;;
-    en|zh) [[ "$LANG_PRESET" == "__next__" ]] && LANG_PRESET="$arg" || _args+=("$arg") ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    en|zh|de|es) [[ "$LANG_PRESET" == "__next__" ]] && LANG_PRESET="$arg" || _args+=("$arg") ;;
+    -h|--help) sed -n '2,12p' "$SCRIPT_DIR/bootstrap.sh"; exit 0 ;;
     *) die "$(t unknown_arg "$arg")" ;;
   esac
 done
@@ -172,9 +340,13 @@ else
   printf "${B}Select language / 选择语言:${N}\n"
   printf "  1) English (default)\n"
   printf "  2) 中文\n"
+  printf "  3) Deutsch\n"
+  printf "  4) Español\n"
   read -r -p "$(printf "${B}> ${N}")" _lang </dev/tty
   case "${_lang:-1}" in
     2) UI_LANG="zh" ;;
+    3) UI_LANG="de" ;;
+    4) UI_LANG="es" ;;
     *) UI_LANG="en" ;;
   esac
 fi
@@ -198,8 +370,10 @@ ask_required() {
     [[ -n "$default_from_env" ]] && { echo "$default_from_env"; return; }
     die "$(t required_yes "$prompt")"
   fi
+  local hint=""
+  [[ -n "$default_from_env" ]] && hint=" [${default_from_env}]"
   while :; do
-    read -r -p "$(printf "${B}%s${N}: " "$prompt")" ans </dev/tty
+    read -r -p "$(printf "${B}%s${N}${hint}: " "$prompt")" ans </dev/tty
     ans="${ans:-$default_from_env}"
     if [[ -n "$ans" ]]; then echo "$ans"; return; fi
     warn "$(t required)"
@@ -210,7 +384,7 @@ ask_secret() {
   local prompt="$1"; local default="${2:-}"
   if [[ $NON_INTERACTIVE -eq 1 ]]; then echo "$default"; return; fi
   local hint=""
-  [[ -n "$default" ]] && hint=" [auto: ${default:0:8}…]"
+  [[ -n "$default" ]] && hint=" [${default}]"
   local ans
   read -r -p "$(printf "${B}%s${N}${hint}: " "$prompt")" ans </dev/tty
   echo "${ans:-$default}"
@@ -222,11 +396,207 @@ printf "${B}║  %-56s║${N}\n" "$(t banner_title)"
 printf "${B}║  %-56s║${N}\n" "$(t banner_sub)"
 printf "${B}╚══════════════════════════════════════════════════════════╝${N}\n\n"
 
+have_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+os_name() { uname -s 2>/dev/null || true; }
+is_macos() { [[ "$(os_name)" == "Darwin" ]]; }
+is_linux() { [[ "$(os_name)" == "Linux" ]]; }
+
+detect_pkg_manager() {
+  if have_cmd apt-get; then echo apt; return; fi
+  if have_cmd dnf; then echo dnf; return; fi
+  if have_cmd yum; then echo yum; return; fi
+  if have_cmd brew; then echo brew; return; fi
+  if have_cmd apk; then echo apk; return; fi
+  if have_cmd pacman; then echo pacman; return; fi
+  if have_cmd zypper; then echo zypper; return; fi
+  echo none
+}
+
+run_as_root() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    "$@"
+  elif have_cmd sudo; then
+    if [[ $NON_INTERACTIVE -eq 1 ]]; then
+      sudo -n "$@" || die "$(t root_needed)"
+    else
+      sudo "$@"
+    fi
+  else
+    die "$(t root_needed)"
+  fi
+}
+
+install_packages() {
+  local manager="$1"; shift
+  local packages=("$@")
+  [[ ${#packages[@]} -eq 0 ]] && return
+  say "$(t pkg_manager "$manager")"
+  say "$(t install_deps "${packages[*]}")"
+  case "$manager" in
+    apt)
+      run_as_root apt-get update
+      run_as_root apt-get install -y "${packages[@]}"
+      ;;
+    dnf)
+      run_as_root dnf install -y "${packages[@]}"
+      ;;
+    yum)
+      run_as_root yum install -y "${packages[@]}"
+      ;;
+    brew)
+      brew install "${packages[@]}"
+      ;;
+    apk)
+      run_as_root apk add --no-cache "${packages[@]}"
+      ;;
+    pacman)
+      run_as_root pacman -Sy --needed --noconfirm "${packages[@]}"
+      ;;
+    zypper)
+      run_as_root zypper --non-interactive install "${packages[@]}"
+      ;;
+    *)
+      die "$(t install_hint "${packages[*]}")"
+      ;;
+  esac
+}
+
+package_for_cmd() {
+  local manager="$1"
+  local cmd="$2"
+  case "$cmd" in
+    curl) echo curl ;;
+    wget) echo wget ;;
+    openssl)
+      case "$manager" in
+        brew) echo openssl@3 ;;
+        *) echo openssl ;;
+      esac
+      ;;
+    python3)
+      case "$manager" in
+        brew) echo python ;;
+        *) echo python3 ;;
+      esac
+      ;;
+    envsubst)
+      case "$manager" in
+        apt) echo gettext-base ;;
+        apk|pacman|zypper|brew) echo gettext ;;
+        dnf|yum) echo gettext ;;
+        *) echo gettext ;;
+      esac
+      ;;
+    qrencode) echo qrencode ;;
+  esac
+}
+
+compose_package() {
+  local manager="$1"
+  case "$manager" in
+    apt|dnf|yum) echo docker-compose-plugin ;;
+    apk) echo docker-cli-compose ;;
+    pacman|zypper|brew) echo docker-compose ;;
+    *) echo "" ;;
+  esac
+}
+
+docker_packages() {
+  local manager="$1"
+  case "$manager" in
+    apk) echo docker docker-cli-compose ;;
+    pacman) echo docker docker-compose ;;
+    zypper) echo docker docker-compose ;;
+    brew) echo "" ;;
+    *) echo "" ;;
+  esac
+}
+
+ensure_docker() {
+  if have_cmd docker; then
+    return
+  fi
+
+  local manager="$1"
+  if is_macos; then
+    if [[ "$manager" == "brew" ]]; then
+      say "$(t install_docker)"
+      brew install --cask docker
+      return
+    fi
+    die "$(t install_docker_hint)"
+  fi
+
+  if ! is_linux; then
+    die "$(t install_docker_hint)"
+  fi
+
+  local docker_pkgs
+  docker_pkgs="$(docker_packages "$manager")"
+  if [[ -n "$docker_pkgs" ]]; then
+    say "$(t install_docker_pkg)"
+    # shellcheck disable=SC2086
+    install_packages "$manager" $docker_pkgs
+    return
+  fi
+
+  case "$manager" in
+    apt|dnf|yum)
+      if ! have_cmd curl; then
+        local curl_pkg
+        curl_pkg="$(package_for_cmd "$manager" curl)"
+        install_packages "$manager" "$curl_pkg"
+      fi
+      if [[ "$manager" == "apt" ]]; then
+        install_packages "$manager" ca-certificates
+      fi
+      say "$(t install_docker)"
+      curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+      run_as_root sh /tmp/get-docker.sh
+      rm -f /tmp/get-docker.sh
+      ;;
+    *)
+      die "$(t install_docker_hint)"
+      ;;
+  esac
+}
+
+ensure_dependencies() {
+  local manager
+  manager="$(detect_pkg_manager)"
+  local missing_pkgs=()
+  local missing_names=()
+
+  for cmd in curl wget openssl python3 envsubst qrencode; do
+    if ! have_cmd "$cmd"; then
+      missing_pkgs+=("$(package_for_cmd "$manager" "$cmd")")
+      missing_names+=("$cmd")
+    fi
+  done
+
+  if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
+    if [[ "$manager" == "none" ]]; then
+      die "$(t install_hint "${missing_names[*]}")"
+    fi
+    install_packages "$manager" "${missing_pkgs[@]}"
+  fi
+
+  ensure_docker "$manager"
+
+  if ! docker compose version >/dev/null 2>&1; then
+    local compose_pkg
+    compose_pkg="$(compose_package "$manager")"
+    if [[ -n "$compose_pkg" ]]; then
+      install_packages "$manager" "$compose_pkg"
+    fi
+  fi
+  docker compose version >/dev/null 2>&1 || die "$(t compose_missing)"
+  docker info >/dev/null 2>&1 || die "$(t docker_unusable)"
+}
+
 say "$(t deps_check)"
-for cmd in docker openssl python3 envsubst curl; do
-  command -v "$cmd" >/dev/null 2>&1 || die "$(t dep_missing "$cmd")"
-done
-docker compose version >/dev/null 2>&1 || die "$(t compose_missing)"
+ensure_dependencies
 ok "$(t deps_ok)"
 
 # ───────── detect IP ─────────
@@ -255,16 +625,20 @@ CC_ANTHROPIC_BASE_URL=$(ask       "$(t ask_cc_url)" "")
 
 echo
 say "$(t sec_account)"
-TEST_USER_EMAIL=$(ask_required    "$(t ask_email)" "test@example.local")
+TEST_USER_EMAIL=$(ask_required    "$(t ask_email)" "test@example.com")
 TEST_USER_USERNAME=$(ask          "$(t ask_username)" "${TEST_USER_EMAIL%%@*}")
-DEFAULT_PASSWORD="Test$(openssl rand -hex 4)"
+DEFAULT_PASSWORD="qwe123"
 TEST_USER_PASSWORD=$(ask_secret   "$(t ask_password)" "$DEFAULT_PASSWORD")
 
 echo
 say "$(t sec_mirror)"
 echo "$(t mirror_desc1)"
 echo "$(t mirror_desc2)"
-REGISTRY_UPSTREAM=$(ask "$(t ask_upstream)" "")
+DEFAULT_REGISTRY_UPSTREAM="${REGISTRY_UPSTREAM:-https://myapp-registry.dapangyu.work}"
+REGISTRY_UPSTREAM=$(ask "$(t ask_upstream)" "$DEFAULT_REGISTRY_UPSTREAM")
+if [[ "$REGISTRY_UPSTREAM" == "none" || "$REGISTRY_UPSTREAM" == "NONE" ]]; then
+  REGISTRY_UPSTREAM=""
+fi
 if [[ -n "$REGISTRY_UPSTREAM" ]]; then
   REGISTRY_MIRROR_SYNC_INTERVAL_SEC=$(ask "$(t ask_interval)" "600")
 else
@@ -331,6 +705,9 @@ OPENIM_WEBHOOK_SECRET=$(rand_hex 32)
 
 FLASK_SECRET_KEY=$(rand_hex 32)
 REGISTRY_ADMIN_TOKEN=$(rand_hex 32)
+REGISTRY_ADMIN_AUTHOR_EMAIL="2501808198@qq.com"
+REGISTRY_ADMIN_AUTHOR_NAME="fish"
+REGISTRY_ADMIN_AUTHOR_ID="2501808198@qq.com"
 BACKEND_REDIS_PASSWORD=$(rand_b64 30 24)
 CONFIG_CENTER_ADMIN_PASSWORD=$(rand_b64 30 16)
 CONFIG_CENTER_SESSION_SECRET=$(rand_hex 32)
@@ -362,7 +739,7 @@ export SUPABASE_DB_PASSWORD SUPABASE_DB_PORT SUPABASE_DASHBOARD_PASSWORD SUPABAS
 export OPENIM_SECRET OPENIM_WEBHOOK_SECRET OPENIM_WS_PORT OPENIM_API_PORT OPENIM_ADMIN_PORT
 export OPENIM_MYSQL_ROOT_PASSWORD OPENIM_MYSQL_PASSWORD OPENIM_MONGO_PASSWORD OPENIM_REDIS_PASSWORD OPENIM_MINIO_ACCESS_KEY OPENIM_MINIO_SECRET_KEY
 export OPENIM_MYSQL_PORT OPENIM_MONGO_PORT OPENIM_REDIS_PORT OPENIM_MINIO_PORT OPENIM_MINIO_CONSOLE_PORT
-export FLASK_SECRET_KEY REGISTRY_ADMIN_TOKEN BACKEND_PORT REGISTRY_PORT CONFIG_CENTER_PORT
+export FLASK_SECRET_KEY REGISTRY_ADMIN_TOKEN REGISTRY_ADMIN_AUTHOR_EMAIL REGISTRY_ADMIN_AUTHOR_NAME REGISTRY_ADMIN_AUTHOR_ID BACKEND_PORT REGISTRY_PORT CONFIG_CENTER_PORT
 export CONFIG_CENTER_ADMIN_PASSWORD CONFIG_CENTER_SESSION_SECRET
 export USER_CENTER_PORT USER_CENTER_ADMIN_PASSWORD USER_CENTER_SESSION_SECRET
 export REGISTRY_UPSTREAM REGISTRY_MIRROR_SYNC_INTERVAL_SEC
@@ -441,6 +818,24 @@ done
 say "$(t init_minio)"
 bash "$SCRIPT_DIR/lib/init-buckets.sh"
 
+# ───────── force first registry mirror sync after buckets exist ─────────
+if [[ -n "$REGISTRY_UPSTREAM" ]]; then
+  say "$(t sync_registry)"
+  registry_sync_ok=0
+  for i in {1..6}; do
+    sync_resp=$(curl -fsS -m 60 -X POST \
+      -H "Authorization: Bearer ${REGISTRY_ADMIN_TOKEN}" \
+      "http://${HOST_IP}:${REGISTRY_PORT}/mirror/sync" 2>/dev/null || true)
+    if [[ -n "$sync_resp" ]]; then
+      ok "$(t registry_synced "$sync_resp")"
+      registry_sync_ok=1
+      break
+    fi
+    sleep 5
+  done
+  [[ "$registry_sync_ok" -eq 1 ]] || warn "$(t registry_sync_warn)"
+fi
+
 # ───────── seed test account ─────────
 say "$(t seed_user)"
 SUPABASE_URL="http://${HOST_IP}:${KONG_HTTP_PORT}" \
@@ -449,6 +844,43 @@ TEST_USER_EMAIL="$TEST_USER_EMAIL" \
 TEST_USER_PASSWORD="$TEST_USER_PASSWORD" \
 TEST_USER_USERNAME="$TEST_USER_USERNAME" \
 python3 "$SCRIPT_DIR/lib/seed-test-user.py"
+
+# ───────── client environment import QR ─────────
+ENV_IMPORT_JSON="test-env-environment.json"
+ENV_IMPORT_QR="test-env-environment.png"
+ENV_NAME="Test Env ${HOST_IP}"
+if [[ "$PORT_OFFSET" != "0" ]]; then
+  ENV_NAME="Test Env ${HOST_IP} +${PORT_OFFSET}"
+fi
+
+ENV_NAME="$ENV_NAME" \
+BACKEND_URL="http://${HOST_IP}:${BACKEND_PORT}" \
+SUPABASE_URL="http://${HOST_IP}:${KONG_HTTP_PORT}" \
+MINIO_URL="http://${HOST_IP}:${APP_MINIO_PORT}" \
+REGISTRY_URL="http://${HOST_IP}:${REGISTRY_PORT}" \
+IM_API_URL="http://${HOST_IP}:${OPENIM_API_PORT}" \
+IM_WS_URL="ws://${HOST_IP}:${OPENIM_WS_PORT}" \
+CONFIG_CENTER_URL="http://${HOST_IP}:${CONFIG_CENTER_PORT}" \
+python3 - <<'PY' > "$ENV_IMPORT_JSON"
+import json
+import os
+
+payload = {
+    "type": "myapp.environment",
+    "version": 1,
+    "name": os.environ["ENV_NAME"],
+    "backendUrl": os.environ["BACKEND_URL"],
+    "supabaseUrl": os.environ["SUPABASE_URL"],
+    "minioUrl": os.environ["MINIO_URL"],
+    "registryUrl": os.environ["REGISTRY_URL"],
+    "imApiUrl": os.environ["IM_API_URL"],
+    "imWsUrl": os.environ["IM_WS_URL"],
+    "configCenterUrl": os.environ["CONFIG_CENTER_URL"],
+}
+print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+PY
+chmod 644 "$ENV_IMPORT_JSON"
+qrencode -o "$ENV_IMPORT_QR" < "$ENV_IMPORT_JSON"
 
 # ───────── write info file + summary ─────────
 if [[ "$UI_LANG" == "zh" ]]; then
@@ -468,6 +900,10 @@ cat > test-env-info.txt <<EOF
   OpenIM HTTP   http://${HOST_IP}:${OPENIM_API_PORT}
   OpenIM WS     ws://${HOST_IP}:${OPENIM_WS_PORT}
   Config Center http://${HOST_IP}:${CONFIG_CENTER_PORT}
+
+【客户端扫码导入】
+  二维码 PNG:  ./test-env-environment.png
+  二维码 JSON: ./test-env-environment.json
 
 【测试账号】
   邮箱:    ${TEST_USER_EMAIL}
@@ -509,6 +945,10 @@ Client access IP: ${HOST_IP}
   OpenIM WS     ws://${HOST_IP}:${OPENIM_WS_PORT}
   Config Center http://${HOST_IP}:${CONFIG_CENTER_PORT}
 
+[Client QR import]
+  QR PNG:  ./test-env-environment.png
+  QR JSON: ./test-env-environment.json
+
 [Test account]
   Email:    ${TEST_USER_EMAIL}
   Username: ${TEST_USER_USERNAME}
@@ -541,3 +981,11 @@ printf "${G}╚═════════════════════�
 cat test-env-info.txt
 echo
 ok "$(t info_saved)"
+ok "$(t env_qr_saved)"
+echo
+printf "${B}%s:${N}\n" "$(t env_qr_title)"
+qrencode -t ANSIUTF8 < "$ENV_IMPORT_JSON"
+echo
+printf "${B}%s:${N}\n" "$(t env_json_title)"
+cat "$ENV_IMPORT_JSON"
+echo

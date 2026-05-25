@@ -6,6 +6,7 @@
     "version": "1.0.0",
     "type": "app",
     "description": "TikTok 短视频 — 全屏沉浸式短视频，发现精彩，记录美好生活",
+    "author": "fish",
     "icon_url": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop"
   },
   "dependencies": {
