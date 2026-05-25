@@ -213,7 +213,7 @@ class PixelEntity extends GameEntity {
     this.vy = 0,
     this.autoMove = true,
     Map<String, dynamic>? state,
-  }) : state = state ?? {};
+  }) : state = state == null ? <String, dynamic>{} : Map.from(state);
 
   @override
   void update(double dt, GameWorld world) {
