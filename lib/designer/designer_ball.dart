@@ -12,7 +12,7 @@ import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
 import '../auth/auth_service.dart';
 import '../i18n/framework_strings.dart';
-import '../main.dart' show JsonDslApp;
+import '../main.dart' show JsonDslApp, appLifecycleEvent;
 import '../onboarding/onboarding_keys.dart';
 
 /// 语音识别方式枚举
@@ -162,6 +162,7 @@ class _DesignerBallState extends State<DesignerBall>
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
   bool _resumeInFlight = false;
+  bool _appResumeProbeInFlight = false;
   // 老的 5s 独立 heartbeat 已被删掉。新逻辑：
   // - SSE 内部 20s idle timeout → _checkAliveCarefully 三态探活
   // - 后端 worker 自身在 CLI 异常退出 / 外部 kill 时主动写 needs_retry 事件
@@ -227,6 +228,7 @@ class _DesignerBallState extends State<DesignerBall>
     // 切换 (FilePickerPage <-> AuthPage) 而重建。所以"用户掉登录后重新登录"这个
     // 场景下，initState 不会再跑——必须显式监听登录态切换，重新触发 resume。
     AuthService.authNotifier.addListener(_onAuthChanged);
+    appLifecycleEvent.addListener(_onAppLifecycleChanged);
 
     // 提前初始化原生语音识别（参照测试应用的成功实践）
     _initNativeSpeech();
@@ -416,6 +418,7 @@ class _DesignerBallState extends State<DesignerBall>
     _scrollController.dispose();
     AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
     AuthService.authNotifier.removeListener(_onAuthChanged);
+    appLifecycleEvent.removeListener(_onAppLifecycleChanged);
     super.dispose();
   }
 
@@ -541,6 +544,63 @@ class _DesignerBallState extends State<DesignerBall>
           _maybeResumeUnfinishedSession();
         }
       });
+    }
+  }
+
+  void _onAppLifecycleChanged() {
+    if (!mounted) return;
+    final event = appLifecycleEvent.value;
+    if (event == 'pause' || event == 'hidden') {
+      _detachAiStreamForAppBackground();
+      return;
+    }
+    if (event == 'resume') {
+      unawaited(_probeAiSessionAfterAppResume());
+    }
+  }
+
+  void _detachAiStreamForAppBackground() {
+    final sub = _streamSub;
+    if (sub == null) return;
+    debugPrint('[DesignerBall] app background: detach local AI stream');
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      _chatService.commitPartial(_messages.last.content);
+    }
+    _streamSub = null;
+    unawaited(sub.cancel());
+    _chatService.abortLocal();
+    if (mounted) {
+      setState(() {
+        _isThinking = false;
+        _isGeneratingJson = false;
+        _generatingStatusMessage = T.current.chatStatusGenerating;
+      });
+    }
+    unawaited(_flushActiveMessages());
+  }
+
+  Future<void> _probeAiSessionAfterAppResume() async {
+    if (_appResumeProbeInFlight) return;
+    _appResumeProbeInFlight = true;
+    try {
+      // 让 Auth / 网络栈先完成前台恢复，避免刚 resume 就探测被系统瞬断误伤。
+      await Future.delayed(const Duration(milliseconds: 350));
+      if (!mounted || !AuthService.authNotifier.value) return;
+
+      await _chatService.loadSession();
+      await _loadMessagesForSession(_chatService.sessionId);
+      if (!mounted) return;
+      setState(() {});
+
+      debugPrint('[DesignerBall] app resumed: probe AI session');
+      await _maybeResumeUnfinishedSession();
+      if (mounted) {
+        unawaited(_flushActiveMessages());
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] app resume probe failed (ignored): $e');
+    } finally {
+      _appResumeProbeInFlight = false;
     }
   }
 
@@ -1381,6 +1441,11 @@ class _DesignerBallState extends State<DesignerBall>
       if (!mounted) return;
       switch (result) {
         case ResumeNothing():
+          setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = T.current.chatStatusGenerating;
+          });
           break;
         case ResumeCompleted(
           :final userMessage,
@@ -1389,6 +1454,9 @@ class _DesignerBallState extends State<DesignerBall>
           :final requestAction,
         ):
           setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             _ensureUserMessage(userMessage);
             _upsertAssistantMessage(assistantText);
             _appendFinalActionMessages(
@@ -1409,6 +1477,9 @@ class _DesignerBallState extends State<DesignerBall>
           _attachAiStream(stream);
         case ResumeNeedsRetry(:final userMessage):
           setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             _ensureUserMessage(userMessage);
             if (!_hasSystemMessage(action: 'RETRY_LAST_TURN')) {
               _messages.add(
