@@ -56,6 +56,7 @@ dependencies:
   shared_preferences: ^2.5.5
   speech_to_text: ^7.0.0
   http: ^1.2.0
+  web: ^1.1.1
   crypto: ^3.0.6
   xml: ^6.5.0
   mime: ^1.0.5  # IM 富媒体上传时检测 content_type

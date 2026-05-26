@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
+import 'package:web/web.dart' as web;
 
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
@@ -407,6 +409,41 @@ class _WebChatPageState extends State<_WebChatPage> {
     }
   }
 
+  void _showAttachmentOptions() {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _AttachmentAction(
+                icon: Icons.photo,
+                label: '图片',
+                color: cs.primary,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndSendImage();
+                },
+              ),
+              _AttachmentAction(
+                icon: Icons.videocam,
+                label: '视频',
+                color: cs.primary,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndSendVideo();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Map<String, dynamic> _localMessage(String text, {required int contentType}) {
     final now = DateTime.now().millisecondsSinceEpoch;
     return {
@@ -511,14 +548,9 @@ class _WebChatPageState extends State<_WebChatPage> {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: '图片',
-                    onPressed: _sending ? null : _pickAndSendImage,
-                    icon: const Icon(Icons.photo_outlined),
-                  ),
-                  IconButton(
-                    tooltip: '视频',
-                    onPressed: _sending ? null : _pickAndSendVideo,
-                    icon: const Icon(Icons.videocam_outlined),
+                    tooltip: '添加',
+                    onPressed: _sending ? null : _showAttachmentOptions,
+                    icon: const Icon(Icons.add_circle_outline),
                   ),
                   Expanded(
                     child: TextField(
@@ -606,6 +638,43 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
+class _AttachmentAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AttachmentAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
 class _MessageContent extends StatelessWidget {
   final Map<String, dynamic> message;
   final bool isMe;
@@ -625,7 +694,7 @@ class _MessageContent extends StatelessWidget {
         ]);
         if (url.isEmpty) return Text('图片', style: TextStyle(color: textColor));
         return GestureDetector(
-          onTap: () => _openUrl(url),
+          onTap: () => _openImagePreview(context, url),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
@@ -658,7 +727,9 @@ class _MessageContent extends StatelessWidget {
         final videoUrl = message['video_url']?.toString() ?? '';
         final snapshot = message['video_snapshot_url']?.toString() ?? '';
         return GestureDetector(
-          onTap: videoUrl.isNotEmpty ? () => _openUrl(videoUrl) : null,
+          onTap: videoUrl.isNotEmpty
+              ? () => _openVideoPreview(context, videoUrl)
+              : null,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Stack(
@@ -734,6 +805,218 @@ class _MessageContent extends StatelessWidget {
           style: TextStyle(color: textColor, fontSize: 15),
         );
     }
+  }
+}
+
+void _openImagePreview(BuildContext context, String url) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _WebImagePreviewPage(url: url),
+    ),
+  );
+}
+
+void _openVideoPreview(BuildContext context, String url) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _WebVideoPreviewPage(url: url),
+    ),
+  );
+}
+
+void _downloadUrl(String url) {
+  final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
+  final fileName = segments.isEmpty ? 'media' : segments.last;
+  web.HTMLAnchorElement()
+    ..href = url
+    ..download = fileName.isEmpty ? 'media' : fileName
+    ..target = '_blank'
+    ..click();
+}
+
+class _WebImagePreviewPage extends StatelessWidget {
+  final String url;
+
+  const _WebImagePreviewPage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 5,
+              child: Center(
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.white70,
+                    size: 48,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _PreviewCloseButton(onPressed: () => Navigator.pop(context)),
+          _PreviewDownloadButton(onPressed: () => _downloadUrl(url)),
+        ],
+      ),
+    );
+  }
+}
+
+class _WebVideoPreviewPage extends StatefulWidget {
+  final String url;
+
+  const _WebVideoPreviewPage({required this.url});
+
+  @override
+  State<_WebVideoPreviewPage> createState() => _WebVideoPreviewPageState();
+}
+
+class _WebVideoPreviewPageState extends State<_WebVideoPreviewPage> {
+  VideoPlayerController? _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _setup();
+  }
+
+  Future<void> _setup() async {
+    try {
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
+      );
+      await controller.initialize();
+      await controller.play();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() => _controller = controller);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    Widget body;
+    if (_error != null) {
+      body = Center(
+        child: Text(_error!, style: const TextStyle(color: Colors.white70)),
+      );
+    } else if (controller == null) {
+      body = const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    } else {
+      body = Center(
+        child: AspectRatio(
+          aspectRatio: controller.value.aspectRatio,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              VideoPlayer(controller),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: VideoProgressIndicator(
+                  controller,
+                  allowScrubbing: true,
+                  colors: const VideoProgressColors(
+                    playedColor: Colors.white,
+                    bufferedColor: Colors.white38,
+                    backgroundColor: Colors.white24,
+                  ),
+                ),
+              ),
+              IconButton(
+                iconSize: 56,
+                color: Colors.white70,
+                icon: Icon(
+                  controller.value.isPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                ),
+                onPressed: () {
+                  setState(() {
+                    controller.value.isPlaying
+                        ? controller.pause()
+                        : controller.play();
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(child: body),
+          _PreviewCloseButton(onPressed: () => Navigator.pop(context)),
+          _PreviewDownloadButton(onPressed: () => _downloadUrl(widget.url)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewCloseButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _PreviewCloseButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      left: 8,
+      child: IconButton(
+        icon: const Icon(Icons.close, color: Colors.white),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _PreviewDownloadButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _PreviewDownloadButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      right: 8,
+      child: IconButton(
+        icon: const Icon(Icons.download_rounded, color: Colors.white),
+        onPressed: onPressed,
+      ),
+    );
   }
 }
 
