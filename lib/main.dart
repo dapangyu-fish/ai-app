@@ -65,6 +65,62 @@ final ValueNotifier<String> appLifecycleEvent = ValueNotifier<String>('init');
 /// （达到 RemoteConfigService.splashDuration 才放行）。
 final DateTime appStartTime = DateTime.now();
 
+String? _lastUiCrashKey;
+DateTime? _lastUiCrashAt;
+
+void _routeJsonUiCrash(FlutterErrorDetails details) {
+  final page = CurrentPageState.instance;
+  if (!page.isInJsonApp) return;
+  if (page.frameworkPage == 'crash') return;
+
+  final error = details.exception.toString();
+  final stack = details.stack?.toString() ?? '';
+  final appName = page.jsonAppName ?? 'JSON App';
+  final key = '$appName|$error|${stack.split('\n').take(3).join('|')}';
+  final now = DateTime.now();
+  if (_lastUiCrashKey == key &&
+      _lastUiCrashAt != null &&
+      now.difference(_lastUiCrashAt!) < const Duration(seconds: 2)) {
+    return;
+  }
+  _lastUiCrashKey = key;
+  _lastUiCrashAt = now;
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final navState = JsonDslApp.navigatorKey.currentState;
+    if (navState == null || !navState.mounted) {
+      debugPrint('[JSON-APP] UI crash before nav ready: $error\n$stack');
+      return;
+    }
+    if (CurrentPageState.instance.frameworkPage == 'crash') return;
+    debugPrint('========================================');
+    debugPrint('[JSON-APP] UI 渲染/布局崩溃');
+    debugPrint('应用: $appName');
+    debugPrint('错误: $error');
+    debugPrint('========================================');
+    debugPrint(stack);
+    debugPrint('========================================');
+    navState.push(
+      MaterialPageRoute(
+        builder: (_) =>
+            _CrashPage(error: error, stackTrace: stack, fileName: appName),
+      ),
+    );
+  });
+}
+
+void _sendUiCrashToAi(FlutterErrorDetails details) {
+  final page = CurrentPageState.instance;
+  final appName = page.jsonAppName ?? 'JSON App';
+  final stack = details.stack?.toString() ?? '';
+  final crashMsg =
+      'JSON-APP UI 渲染/布局崩溃，请分析原因并输出修复后的完整 JSON：\n\n'
+      '## 应用\n$appName\n\n'
+      '## 错误\n${details.exception}\n\n'
+      '## 堆栈\n$stack';
+  DesignerBall.sendCrashReport?.call(crashMsg);
+}
+
 class _AppLifecycleObserver extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -131,6 +187,7 @@ void main() async {
 
   // 捕捉全局渲染和布局异常（防止布局越界等导致直接白屏）
   ErrorWidget.builder = (FlutterErrorDetails details) {
+    _routeJsonUiCrash(details);
     // 没有 context；按 appLocale.value（用户偏好）选 i18n
     final t = T.lookup(appLocale.value ?? const Locale('zh', 'CN'));
     return Material(
@@ -166,6 +223,17 @@ void main() async {
               Text(
                 details.exception.toString(),
                 style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: CurrentPageState.instance.isInJsonApp
+                      ? () => _sendUiCrashToAi(details)
+                      : null,
+                  icon: const Icon(Icons.auto_fix_high, size: 16),
+                  label: Text(t.crashAiFix),
+                ),
               ),
             ],
           ),
