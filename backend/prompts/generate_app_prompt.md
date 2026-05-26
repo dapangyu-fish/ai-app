@@ -135,7 +135,8 @@ g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2
 3. 阅读 `lib/json_ui/interpreter.dart` 确认所有可用的 @内置函数。
 4. 查看 `templates/` 目录下有哪些模板 APP。
 5. 阅读至少一个与用户需求最相似的模板文件，学习正确写法。
-6. 如有不确定的组件属性或行为，阅读 `lib/json_ui/widgets/` 下的 Dart 源码确认。
+6. 如果需求涉及游戏、角色、地图、图标、背景、图片素材等视觉内容，必须按下文"官方 CC0 素材库"流程选择素材。
+7. 如有不确定的组件属性或行为，阅读 `lib/json_ui/widgets/` 下的 Dart 源码确认。
 
 **只有完成上述步骤后，你才可以开始生成 JSON。**
 **如果你跳过了这些步骤，很可能会生成错误的 JSON，导致用户白屏或崩溃！**
@@ -145,6 +146,53 @@ g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2
 涉及**连续动画 / 60fps / 拖拽过渡 / 物理 / 棋盘类游戏**，先看 `templates/demo_2048.json` / `demo_tap_white_tile.json` / `demo_jump.json` / `demo_flappy_bird.json`——这类应用必须用 `flame_game`。标准 grid/list widget 是"值变就 rebuild"，做不出丝滑动画。
 
 静态 UI / 列表 / 表单才用标准 widget。
+
+## 官方 CC0 素材库（游戏 / 视觉 APP 优先使用）
+
+当用户要求生成游戏、可视化玩具、角色动画、地图、场景、图标化界面时，优先使用我们已经托管到 OSS 的 Kenney CC0 素材库，不要直接热链 Kenney 官网，也不要凭空编造图片 URL。
+
+总索引：
+
+```bash
+curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/manifest.json | jq '.packs[] | {slug, version, tags, manifestUrl}'
+```
+
+可用素材包：
+
+| slug | version | 适合用途 |
+|------|---------|----------|
+| `kenney-new-platformer-pack` | `1.1` | 平台跳跃、横版关卡、角色、敌人、物品、地块 |
+| `kenney-pixel-platformer` | `1.0` | 像素风平台跳跃、复古地块、金币、敌人 |
+| `kenney-pico-8-platformer` | `1.0` | PICO-8 / 极简像素平台跳跃 |
+| `kenney-pixel-platformer-industrial-expansion` | `1.0` | 工业风平台关卡、机械地块、道具 |
+| `kenney-desert-shooter-pack` | `1.0` | 沙漠射击、横版动作、子弹/投射物 |
+| `kenney-shape-characters` | `1.0` | 简单角色、头像、抽象人物 |
+| `kenney-tiny-town` | `1.0` | 城镇、建筑、经营/放置类场景 |
+| `kenney-fish-pack` | `2.0` | 水下、鱼类、海洋主题 |
+
+选材流程：
+
+1. 先读总索引，根据 `tags` 选择 1 个主素材包；除非用户明确要求混搭，否则不要混用多个美术风格。
+2. 再读取该包的 `manifestUrl`，用 `files[].tags` / `files[].type` 查找图片。示例：
+   ```bash
+   curl -fsSL "<manifestUrl>" | jq -r '.files[] | select((.type|startswith("image/")) and (.tags|index("player"))) | [.path,.url] | @tsv' | head
+   ```
+3. JSON 中引用图片时，必须使用 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
+4. 在顶层声明 `assets.bundles`，让客户端启动时缓存资源。示例：
+   ```json
+   "assets": {
+     "bundles": {
+       "kenney_new_platformer": {
+         "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/kenney-new-platformer-pack/1.1/",
+         "manifest": "manifest.json",
+         "license": "LICENSE",
+         "startupDownload": true
+       }
+     }
+   }
+   ```
+5. 暂时不要加音效，除非用户明确要求。
+6. Kenney 是 CC0，可用于个人/商业项目；署名不是强制要求，但可以在 `meta.description` 或关于页简短写明素材来源为 Kenney CC0。
 
 ## JSON-APP 骨架
 
