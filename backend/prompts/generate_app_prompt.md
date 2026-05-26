@@ -70,6 +70,10 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 a. **JSON 语法**：`python3 -m json.tool <TMPFILE> > /dev/null && echo OK`
    - 报错 → 改到 OK 再走 b。
 
+a2. **框架静态校验**：`python3 backend/validate_json_app.py <TMPFILE>`
+   - 输出 `ERROR` → 必须按路径修复，重新从 a 开始。
+   - 输出 `WARN` → 新生成 APP 尽量修复；确认为兼容旧 APP 的修复场景才可保留。
+
 b. **必填字段**：用 `python3 -c "..."` 或 `jq` 确认 `dsl`、`meta.name`、`meta.version`、`meta.type`、`ui.screens` 都齐全且非空（library 例外，可以没有 `ui.screens`）。
 
 c. **不存在的 `@action` / 控件类型**：grep 一遍 JSON 里所有 `"call": "@xxx"` 和 `"type": "xxx"`，对照
@@ -84,6 +88,11 @@ e. **不写自创框架字段**：禁忌字段名（基本都是 web 来的）�
 f. **空 list 不要硬塞 jsonlogic**：list 的 `source` 必须是模板字符串 `"{{ global.xxx }}"`，**不能**是 `{"sort": [...]}` 等 jsonlogic Map（在 logic 层先 sort 完写到变量再绑）。
 
 g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2": ...}` 这种**多 key 数据 Map** 是安全的，框架会按数据处理。但**单 key + key 看着像 op 的 Map**（比如 `{"sort": [...]}`、`{"if": [...]}`、`{"merge": [...]}`）会被当 jsonlogic 求值。如果你想原样存一个 `{"sort": "..."}` 数据键名，把它包进多 key Map（比如多加个 `"_data": true` 同伴 key）或者改 key 名避开 op 集合。jsonlogic 标准 op 集合：`var/if/and/or/!/!!/==/!=/===/!==/</>/<=/>=/+/-/*///%/min/max/in/cat/substr/log/missing/missing_some/merge/reduce/map/filter/all/some/none/method`，本框架另注册了：`str_*`、`length/at/slice/sort/reverse/to_string/to_int/to_double/abs`。
+
+h. **flame_game 实体动作参数**：如果 JSON 里出现 `"type": "flame_game"`，必须额外扫描所有 `@entity.*`：
+   - `@entity.set` 标准写法是 `{"id": "...", "field": "x|y|w|h|vx|vy|auto_update|state.xxx", "value": ...}`。新生成 JSON 优先写标量字段，**不要**把 `size` / `position` / `velocity` 写成数组；如确实需要改宽高或坐标，拆成两条 `w/h` 或 `x/y`。
+   - `@entity.add` 标准写法是 `{"id": "...", "field": "x|y|vx|vy|state.xxx", "by": ...}`，**不要**使用旧写法 `path/value`。
+   - `virtual_gamepad` / 摇杆 / 方向键只负责发输入；必须在 `flame_game.frame.logic` 中把输入变量转成实体移动、攻击、动画或 `@platformer.step`，否则会出现"手柄有反馈但角色不动"。
 
 **注意事项**：
 - URL 包含签名参数（如 `?X-Amz-Algorithm=...&X-Amz-Signature=...`），必须完整复制，不能截断！
@@ -235,6 +244,14 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 4. **媒体/相机推荐**：选图 / 拍照 / 头像，优先依赖 `common-ui` + `lib_user`，调 `@common-ui.pickImage` / `@common-ui.takePhoto` / `@lib_user.updateAvatar`，**不要直接写底层 `@pick_image` / `@take_photo` / `@file_to_base64`**。
 5. **控制流参数**：普通 JSON-APP 的 `@if` 判断条件参数必须写 `"condition"`，千万不要写成 `"cond"`；但 `flame_game.input/frame/tick` 内部使用轻量 GameLogicEngine，那里 `@if` 必须写 `"cond"`，不要写 `"condition"`。
 
+## 游戏与 flame_game 规则（极其重要！）
+
+1. **游戏输入必须闭环**：摇杆、方向键、按钮只是输入源；生成平台、动作、射击、跑酷类游戏时，必须在 `flame_game.frame.logic` 中把输入状态更新到实体速度/坐标/动画/发射物，并调用对应的物理或移动步骤。
+2. **实体字段优先写标量**：`@entity.set` 用 `field/value`，优先 `x/y/w/h/vx/vy/auto_update/state.xxx`；`@entity.add` 用 `field/by`。不要新生成 `path/value`，也不要把 `size` / `position` / `velocity` 数组当首选写法。
+3. **动态实体 id 必须唯一**：子弹、特效、掉落物、召唤物、临时敌人等不能共用固定 id；使用递增序号或有限对象池，否则第二次触发会静默失败。
+4. **sprite sheet 不能当单帧图**：角色/敌人图片如果是多帧网格，必须设置正确 `frame_size`、`frames`、`frames_per_row` 或裁剪单帧；否则会把一整张九宫格/多姿态图渲染成角色。
+5. **TMX / tiled-json 地图优先内联**：用户自己生成游戏时，优先把地图数据放入 JSON（如 `global._tiledMaps`）并用 `map_data` 引用；只有用户明确有外部存储桶或资源包时，才使用远程 `url`。无论哪种方式，tileset 图片 URL 必须来自已选 asset manifest 的 `files[].url`，不要手拼。
+
 ## 布局与样式规则（极其重要！）
 
 1. **Container 默认是横向排列 (layout: "row")！** 如果你需要上下排列，必须显式加上 `"layout": "column"`！否则内部放入 list 会直接导致 Flutter 布局崩溃（白屏）！
@@ -243,7 +260,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 4. **Container 绝对没有 `style` 字段！** 其样式（`color`, `padding`, `margin`, `borderRadius` 等）直接平铺写在 Container 节点上！
 5. **禁止臆造 Web CSS 属性！** 框架不支持 `transform`、`transition`、`marginBottom`、`shadow` 等属性！如需间距，请使用 `margin` 或者直接插入 `{"type": "spacer", "height": 20}`。
 6. **List 的高度是无限的！** 如果要在一个竖直排列的地方放入 `list`，其父节点或者它所在的直接 Container 必须是 `layout: "column"`。
-7. **Button 的 action 是对象不是 type！** 写法必须是 `"action": { "call": "@global.xxx", "args": {} }`，绝对不要在 action 里再套一个 `"type": "call"`！
+7. **Button 的 action 推荐写成简洁对象**：推荐 `"action": { "call": "@global.xxx", "args": {} }`。框架兼容旧写法 `"action": { "type": "call", "call": "@global.xxx", "args": {} }`，但新生成 JSON 不需要写这个冗余 `type`。
 
 ## 输出要求
 

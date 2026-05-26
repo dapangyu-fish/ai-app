@@ -46,16 +46,6 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
-                ">": [
-                  {
-                    "var": "params.score"
-                  },
-                  {
-                    "var": "global.bestScore"
-                  }
-                ]
-              },
               "then": [
                 {
                   "call": "@set",
@@ -64,7 +54,17 @@
                     "value": "{{ params.score }}"
                   }
                 }
-              ]
+              ],
+              "condition": {
+                ">": [
+                  {
+                    "var": "params.score"
+                  },
+                  {
+                    "var": "global.bestScore"
+                  }
+                ]
+              }
             }
           }
         ]
@@ -141,20 +141,20 @@
           {
             "call": "@if",
             "args": {
-              "cond": {
+              "then": [
+                {
+                  "call": "@flame_game_reset",
+                  "args": {}
+                }
+              ],
+              "condition": {
                 "==": [
                   {
                     "var": "global._choice"
                   },
                   "restart"
                 ]
-              },
-              "then": [
-                {
-                  "call": "@flame_game_reset",
-                  "args": {}
-                }
-              ]
+              }
             }
           }
         ]
