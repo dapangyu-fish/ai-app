@@ -106,6 +106,64 @@ ENTITY_ADD_FIELDS = {
 
 COMPOUND_ENTITY_FIELDS = {"position", "size", "velocity"}
 
+KNOWN_SPRITE_SHEETS = {
+    # asset-url suffix -> expected single frame size.
+    # These are generic metadata for hosted asset packs, not app-specific rules.
+    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Player/SpriteSheet_player_sliced.png": (45, 45),
+    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/ARMob.png": (48, 38),
+    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png": (48, 38),
+    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png": (48, 38),
+    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/Explosion_Particle.png": (32, 32),
+}
+
+DEFAULT_BUILTIN_CALLS = {
+    # Dotted built-ins are needed by backend-only registry validation. In the
+    # Docker image the Dart sources may not be present, so load_builtin_calls()
+    # cannot always discover them dynamically.
+    "@animated_sprite.effect",
+    "@animated_sprite.set_animation",
+    "@cell.set",
+    "@cell_path.advance",
+    "@cell_path.contains",
+    "@cell_path.grow",
+    "@cell_path.head",
+    "@cell_path.head_collides_self",
+    "@collide.rect",
+    "@collision.first",
+    "@entity.add",
+    "@entity.exists",
+    "@entity.flip_by_velocity",
+    "@entity.get",
+    "@entity.set",
+    "@grid.random_empty",
+    "@pixel.add_velocity",
+    "@pixel.set_position",
+    "@pixel.set_velocity",
+    "@platformer.backend",
+    "@platformer.respawn",
+    "@platformer.section_exit",
+    "@platformer.step",
+    "@platformer.stuck_check",
+    "@score.add",
+    "@score.set",
+    "@scroll_list.add_speed",
+    "@scroll_list.first_unhit_below",
+    "@scroll_list.set_speed",
+    "@scroll_list.tap",
+    "@tiled.clear_spawned",
+    "@tiled.collisions",
+    "@tiled.first_object",
+    "@tiled.has_collision_type",
+    "@tiled.load",
+    "@tiled.loaded",
+    "@tiled.nearest_object",
+    "@tiled.spawn_objects",
+    "@tiled.spawn_objects_near",
+    "@value_grid.can_move",
+    "@value_grid.slide_merge",
+    "@value_grid.spawn",
+}
+
 
 @dataclass
 class Finding:
@@ -120,6 +178,8 @@ class Validator:
         self.builtin_calls = builtin_calls
         self.findings: list[Finding] = []
         self.dependencies: set[str] = set()
+        self.self_package_names: set[str] = set()
+        self.flame_games: list[tuple[str, dict[str, Any]]] = []
 
     def error(self, path: str, message: str) -> None:
         self.findings.append(Finding("ERROR", path, message))
@@ -130,6 +190,8 @@ class Validator:
     def validate(self) -> int:
         self._validate_root()
         self._walk(self.root, "$", in_game_logic=False)
+        self._validate_sprite_sheet_usage()
+        self._validate_game_profiles()
         for finding in self.findings:
             print(f"{finding.level} {finding.path}: {finding.message}")
         return 1 if any(f.level == "ERROR" for f in self.findings) else 0
@@ -147,6 +209,10 @@ class Validator:
         app_type = None
         if isinstance(meta, dict):
             app_type = meta.get("type")
+            name = str(meta.get("name") or "").strip()
+            if name:
+                self.self_package_names.add(name)
+                self.self_package_names.add(name.rsplit("/", 1)[-1])
             for key in ("name", "version", "type"):
                 if not meta.get(key):
                     self.error(f"$.meta.{key}", "required meta field is missing")
@@ -173,6 +239,7 @@ class Validator:
 
             node_type = node.get("type")
             if node_type == "flame_game":
+                self.flame_games.append((path, node))
                 for key, value in node.items():
                     child_path = self._path(path, key)
                     self._walk(value, child_path, in_game_logic=key in {"frame", "init", "input", "tick"})
@@ -231,7 +298,11 @@ class Validator:
     ) -> None:
         if "." in call[1:] and call not in self.builtin_calls:
             dependency = call[1:].split(".", 1)[0]
-            if dependency != "global" and dependency not in self.dependencies:
+            if (
+                dependency != "global"
+                and dependency not in self.dependencies
+                and dependency not in self.self_package_names
+            ):
                 self.error(path, f"dependency call {call} requires top-level dependencies.{dependency}")
 
         if call == "@if":
@@ -299,10 +370,331 @@ class Validator:
             return f"{base}.{key}"
         return f"{base}[{key!r}]"
 
+    def _validate_sprite_sheet_usage(self) -> None:
+        for path, node in self._iter_dicts(self.root):
+            kind = node.get("kind")
+            if kind not in {"sprite", "animated_sprite"}:
+                continue
+            render = node.get("render")
+            asset = node.get("asset")
+            if not asset and isinstance(render, dict):
+                asset = render.get("asset")
+            asset_text = str(asset or "")
+            if not self._looks_like_sprite_sheet(asset_text):
+                continue
+            known_frame = self._known_frame_size(asset_text)
+            has_src = isinstance(node.get("src"), list) and len(node.get("src") or []) >= 4
+            if kind == "sprite" and not has_src:
+                self.error(
+                    self._path(path, "asset"),
+                    "sprite sheet/strip asset cannot be rendered as plain sprite without src crop; use animated_sprite or crop one frame",
+                )
+                continue
+            if kind == "sprite" and known_frame is not None:
+                src = node.get("src")
+                src_w = self._num_at(src, 2)
+                src_h = self._num_at(src, 3)
+                frame_w, frame_h = known_frame
+                if (
+                    src_w is None
+                    or src_h is None
+                    or abs(src_w - frame_w) > 1
+                    or abs(src_h - frame_h) > 1
+                ):
+                    self.error(
+                        self._path(path, "src"),
+                        f"sprite sheet crop must match one frame ({frame_w}x{frame_h}); current src crops multiple frames",
+                    )
+            if kind == "animated_sprite":
+                frames = node.get("frames")
+                animations = node.get("animations")
+                frame_size = node.get("frame_size")
+                frame_w = self._num_at(frame_size, 0) or self._num_from_map(node, "frame_w")
+                frame_h = self._num_at(frame_size, 1) or self._num_from_map(node, "frame_h")
+                if not isinstance(animations, dict) and (
+                    (frames is None)
+                    or (isinstance(frames, (int, float)) and frames <= 1)
+                ):
+                    self.error(
+                        self._path(path, "asset"),
+                        "animated sprite sheet requires frames/frame_size/frames_per_row or animations",
+                    )
+                if known_frame is not None and frame_w is not None and frame_h is not None:
+                    expected_w, expected_h = known_frame
+                    if abs(frame_w - expected_w) > 1 or abs(frame_h - expected_h) > 1:
+                        self.error(
+                            self._path(path, "frame_size"),
+                            f"animated sprite sheet frame_size must match one frame ({expected_w}x{expected_h})",
+                        )
+
+    def _validate_game_profiles(self) -> None:
+        if not self._needs_run_and_gun_profile():
+            return
+        if not self.flame_games:
+            self.error("$", "run-and-gun / side-scrolling action games must use flame_game")
+            return
+        for path, game in self.flame_games:
+            self._validate_run_and_gun_game(path, game)
+
+    def _validate_run_and_gun_game(self, path: str, game: dict[str, Any]) -> None:
+        viewport = game.get("viewport")
+        viewport_w = self._num_from_map(viewport, "width")
+        viewport_h = self._num_from_map(viewport, "height")
+        if viewport_w is None or viewport_h is None:
+            self.error(
+                self._path(path, "viewport"),
+                "run-and-gun game requires explicit viewport.width and viewport.height",
+            )
+
+        camera = game.get("camera")
+        if not isinstance(camera, dict) or not str(camera.get("follow") or "").strip():
+            self.error(
+                self._path(path, "camera"),
+                "run-and-gun game requires camera.follow for horizontal progression",
+            )
+
+        entities = self._entities_map(game)
+        max_right = self._max_entity_right(entities)
+        map_width = self._max_tiled_map_width(entities)
+        if viewport_w and map_width is None and max_right <= viewport_w * 2:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun game needs a horizontal stage at least 3 viewport widths wide, or a tiled_map with known map_data",
+            )
+        if viewport_w and map_width is not None and map_width < viewport_w * 3:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun tiled map is too short; map width should be at least 3 viewport widths",
+            )
+        if map_width is None and self._stage_feature_count(entities) < 4:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun game needs route design, not only flat ground; add tiled_map or at least 4 platforms/covers/obstacles/hazards along the stage",
+            )
+
+        direct_y = self._find_direct_vertical_input_write(path, game)
+        if direct_y:
+            self.error(
+                direct_y,
+                "run-and-gun player must not fly by writing joystick/event y directly to entity.y; use jump/gravity/platform physics",
+            )
+
+        if (
+            not self._contains_call(game, "@platformer.step")
+            and not self._has_gravity_or_platform_words(game)
+        ):
+            self.error(
+                self._path(path, "frame"),
+                "run-and-gun game needs gravity/platform physics each frame, preferably @platformer.step",
+            )
+
+    def _needs_run_and_gun_profile(self) -> bool:
+        text = self._flatten_text(self.root).lower()
+        keywords = (
+            "run-and-gun",
+            "run and gun",
+            "run-n-gun",
+            "rungun",
+            "side-scrolling shooter",
+            "side scrolling shooter",
+            "sidescroller shooter",
+            "side-scroller shooter",
+            "platform shooter",
+            "metal slug",
+            "metal-action",
+            "vaca-roxa-generic-run-n-gun",
+            "合金弹头",
+            "横版射击",
+            "横版动作",
+            "平台射击",
+        )
+        return any(k in text for k in keywords)
+
+    def _find_direct_vertical_input_write(
+        self,
+        base_path: str,
+        game: dict[str, Any],
+    ) -> str | None:
+        for path, node in self._iter_dicts(game, base_path):
+            call = node.get("call")
+            if call not in {"@entity.add", "@entity.set"}:
+                continue
+            args = node.get("args")
+            if not isinstance(args, dict):
+                continue
+            field = str(args.get("field") or args.get("path") or "")
+            entity_id = str(args.get("id") or "")
+            if field != "y" or (entity_id and entity_id not in {"player", "hero"}):
+                continue
+            value = args.get("by") if "by" in args else args.get("value")
+            value_text = self._flatten_text(value).lower()
+            if any(
+                token in value_text
+                for token in ("move_y", "joystick_y", "event.y", "axis_y", "input_y")
+            ):
+                return self._path(path, "args")
+        return None
+
+    def _contains_call(self, node: Any, call_name: str) -> bool:
+        return any(d.get("call") == call_name for _, d in self._iter_dicts(node))
+
+    def _has_gravity_or_platform_words(self, node: Any) -> bool:
+        text = self._flatten_text(node).lower()
+        return any(
+            token in text
+            for token in ("gravity", "platform", "ground_y", "on_ground", "onground")
+        )
+
+    def _max_entity_right(self, entities: dict[str, Any]) -> float:
+        max_right = 0.0
+        for spec in entities.values():
+            if not isinstance(spec, dict):
+                continue
+            pos = spec.get("position")
+            size = spec.get("size")
+            x = self._num_at(pos, 0) or self._num_from_map(spec, "x") or 0.0
+            w = (
+                self._num_at(size, 0)
+                or self._num_from_map(spec, "w")
+                or self._num_from_map(spec, "width")
+                or 0.0
+            )
+            max_right = max(max_right, x + w)
+        return max_right
+
+    def _max_tiled_map_width(self, entities: dict[str, Any]) -> float | None:
+        widths: list[float] = []
+        for spec in entities.values():
+            if not isinstance(spec, dict) or spec.get("kind") != "tiled_map":
+                continue
+            map_data = spec.get("map_data")
+            if not isinstance(map_data, dict):
+                continue
+            width = self._num_from_map(map_data, "width")
+            tile_w = self._num_from_map(map_data, "tilewidth")
+            scale = self._num_from_map(spec, "scale") or 1.0
+            if width and tile_w:
+                widths.append(width * tile_w * scale)
+        return max(widths) if widths else None
+
+    def _stage_feature_count(self, entities: dict[str, Any]) -> int:
+        count = 0
+        feature_words = (
+            "platform",
+            "cover",
+            "crate",
+            "box",
+            "barrel",
+            "wall",
+            "block",
+            "obstacle",
+            "hazard",
+            "pit",
+            "water",
+            "spike",
+            "bridge",
+            "ladder",
+            "ramp",
+        )
+        for entity_id, spec in entities.items():
+            if not isinstance(spec, dict):
+                continue
+            if str(spec.get("kind") or "") in {"parallax", "tiled_map"}:
+                continue
+            text = f"{entity_id} {spec.get('type', '')} {spec.get('role', '')} {spec.get('state', '')}".lower()
+            if any(word in text for word in feature_words):
+                count += 1
+        return count
+
+    @staticmethod
+    def _entities_map(game: dict[str, Any]) -> dict[str, Any]:
+        raw = game.get("entities")
+        return raw if isinstance(raw, dict) else {}
+
+    @staticmethod
+    def _looks_like_sprite_sheet(asset: str) -> bool:
+        lowered = asset.lower()
+        return any(
+            token in lowered
+            for token in (
+                "spritesheet",
+                "sprite_sheet",
+                "sprite-sheet",
+                "sheet",
+                "strip",
+                "sliced",
+                "tileset",
+            )
+        )
+
+    @staticmethod
+    def _known_frame_size(asset: str) -> tuple[int, int] | None:
+        normalized = asset.split("?", 1)[0]
+        for suffix, frame in KNOWN_SPRITE_SHEETS.items():
+            if normalized.endswith(suffix):
+                return frame
+        return None
+
+    @classmethod
+    def _flatten_text(cls, node: Any) -> str:
+        chunks: list[str] = []
+
+        def visit(value: Any) -> None:
+            if isinstance(value, str):
+                chunks.append(value)
+            elif isinstance(value, dict):
+                for key, child in value.items():
+                    chunks.append(str(key))
+                    visit(child)
+            elif isinstance(value, list):
+                for child in value:
+                    visit(child)
+
+        visit(node)
+        return " ".join(chunks)
+
+    @classmethod
+    def _iter_dicts(cls, node: Any, path: str = "$"):
+        if isinstance(node, dict):
+            yield path, node
+            for key, value in node.items():
+                yield from cls._iter_dicts(value, cls._path(path, key))
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                yield from cls._iter_dicts(value, f"{path}[{index}]")
+
+    @staticmethod
+    def _num_at(value: Any, index: int) -> float | None:
+        if (
+            isinstance(value, list)
+            and len(value) > index
+            and isinstance(value[index], (int, float))
+        ):
+            return float(value[index])
+        return None
+
+    @staticmethod
+    def _num_from_map(value: Any, key: str) -> float | None:
+        if isinstance(value, dict) and isinstance(value.get(key), (int, float)):
+            return float(value[key])
+        return None
+
+
+def validate_json_content(
+    data: Any,
+    builtin_calls: set[str] | None = None,
+) -> list[Finding]:
+    validator = Validator(data, builtin_calls or load_builtin_calls())
+    validator._validate_root()
+    validator._walk(validator.root, "$", in_game_logic=False)
+    validator._validate_sprite_sheet_usage()
+    validator._validate_game_profiles()
+    return validator.findings
+
 
 def load_builtin_calls() -> set[str]:
     repo = Path(__file__).resolve().parents[1]
-    calls: set[str] = set()
+    calls: set[str] = set(DEFAULT_BUILTIN_CALLS)
     pattern = re.compile(r"case '(@[^']+)'")
     for relative in ("lib/json_ui/interpreter.dart", "lib/games/game_actions.dart"):
         path = repo / relative

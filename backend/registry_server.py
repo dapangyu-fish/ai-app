@@ -41,6 +41,7 @@ from registry_mirror import (
     start_background_sync,
 )
 import registry_catalog
+from validate_json_app import validate_json_content
 from flask import redirect, Response
 
 BUCKET_APP = "json-app"
@@ -752,6 +753,8 @@ def publish():
             print(f"[Registry] Error checking namespace permission: {e}")
             return jsonify({"error": "权限检查失败"}), 500
 
+    validation_warnings = []
+
     # ── 索引读+改+写 必须在同一把 index_lock 内，否则会和 mirror sync 抢写 ──
     with index_lock:
         index = _load_index()
@@ -809,6 +812,26 @@ def publish():
         json_content['meta']['author'] = author_name or json_content['meta'].get('author', '')
         json_content['appid'] = appid
         display_name = json_content['meta'].get('displayName')
+
+        # ── JSON-DSL 静态发布门禁 ──
+        # Agent 生成提示词会要求上传前本地跑 validate_json_app.py，但客户端/脚本/旧
+        # Agent 都可能绕过。Registry 是最后一道门：ERROR 级问题直接拒绝发布，
+        # WARN 随响应返回但不阻塞。
+        findings = validate_json_content(json_content)
+        validation_errors = [f for f in findings if f.level == "ERROR"]
+        validation_warnings = [f for f in findings if f.level == "WARN"]
+        if validation_errors:
+            return jsonify({
+                "error": "JSON-APP 静态校验失败，请修复后再发布",
+                "validation_errors": [
+                    {"path": f.path, "message": f.message}
+                    for f in validation_errors[:50]
+                ],
+                "validation_warnings": [
+                    {"path": f.path, "message": f.message}
+                    for f in validation_warnings[:50]
+                ],
+            }), 400
 
         # ── 上传到 MinIO ──
         path = full_name
@@ -883,7 +906,11 @@ def publish():
         "name": full_name,
         "version": version,
         "appid": appid,
-        "download_url": download_url
+        "download_url": download_url,
+        "validation_warnings": [
+            {"path": f.path, "message": f.message}
+            for f in validation_warnings[:50]
+        ],
     })
 
 

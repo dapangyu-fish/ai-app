@@ -94,6 +94,8 @@ h. **flame_game 实体动作参数**：如果 JSON 里出现 `"type": "flame_gam
    - `@entity.add` 标准写法是 `{"id": "...", "field": "x|y|vx|vy|state.xxx", "by": ...}`，**不要**使用旧写法 `path/value`。
    - `virtual_gamepad` / 摇杆 / 方向键只负责发输入；必须在 `flame_game.frame.logic` 中把输入变量转成实体移动、攻击、动画或 `@platformer.step`，否则会出现"手柄有反馈但角色不动"。
 
+i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型（如平台跳跃、横版动作、横版射击、run-and-gun、跑酷、弹幕、塔防、解谜等），必须先在下方"游戏类型设计 Profile"中选择匹配项；暂无匹配 profile 时，也要先写出该类型最小玩法闭环再生成。上传前逐条检查，不能只做到"能启动"，必须符合该类型的基本玩法结构。
+
 **注意事项**：
 - URL 包含签名参数（如 `?X-Amz-Algorithm=...&X-Amz-Signature=...`），必须完整复制，不能截断！
 - 这是用户唯一能接收到应用配置的方式，绝对不能漏掉这个标签！
@@ -185,6 +187,16 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 | `vaca-roxa-generic-run-n-gun` | `1.0` | 横版射击、run-and-gun、玩家/敌人/爆炸 |
 | `opengameart-platformer-pack-16x16` | `1.0` | 16x16 像素平台跳跃、物品、敌人、地块 |
 
+常用 sprite sheet 尺寸提示（仍以实际 manifest URL 为准，但这些已托管资源不要再猜）：
+
+| asset path | 单帧尺寸 / 用法 |
+|------------|----------------|
+| `vaca-roxa-generic-run-n-gun/1.0/Player/SpriteSheet_player_sliced.png` | 360x360，8x8 网格，单帧 45x45；不要裁 72x72 或整张渲染 |
+| `vaca-roxa-generic-run-n-gun/1.0/Enemies/ARMob.png` | 768x38，16 帧横条，单帧 48x38 |
+| `vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png` | 768x38，16 帧横条，单帧 48x38 |
+| `vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png` | 768x38，16 帧横条，单帧 48x38 |
+| `vaca-roxa-generic-run-n-gun/1.0/Enemies/Explosion_Particle.png` | 288x32，9 帧横条，单帧 32x32 |
+
 选材流程：
 
 1. 先读总索引，根据 `tags` 选择 1 个主素材包；除非用户明确要求混搭，否则不要混用多个美术风格。
@@ -192,8 +204,12 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
    ```bash
    curl -fsSL "<manifestUrl>" | jq -r '.files[] | select((.type|startswith("image/")) and (.tags|index("player"))) | [.path,.url] | @tsv' | head
    ```
-3. JSON 中引用图片时，必须使用所选 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
-4. 在顶层声明 `assets.bundles`，让客户端启动时缓存资源。示例：
+3. 使用角色、敌人、爆炸、子弹等图片前，必须判断它是**单帧图片**还是 **sprite sheet / strip / tileset**：
+   - 文件名包含 `SpriteSheet` / `spritesheet` / `sheet` / `strip` / `sliced` / `tileset`，或同一张图展示多个姿态时，默认按多帧资源处理，**不能直接作为普通 `sprite` 渲染**。
+   - 对多帧资源，必须先确认图片尺寸和帧网格，再用 `animated_sprite`、`frame_size`、`frames`、`frames_per_row`，或显式 `src` 裁剪单帧。无法确认帧网格时，换用 manifest 中更明确的单帧/切片素材。
+   - 如果 manifest 暂时没有尺寸信息，可以临时下载候选 PNG/JPG 到 `/tmp`，用脚本读取宽高后再决定帧尺寸；不要凭文件名猜 32/48/64。
+4. JSON 中引用图片时，必须使用所选 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
+5. 在顶层声明 `assets.bundles`，让客户端启动时缓存资源。示例：
    ```json
    "assets": {
      "bundles": {
@@ -206,9 +222,9 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
      }
    }
    ```
-5. 暂时不要加音效，除非用户明确要求。
-6. 最终输出前必须校验：JSON 里所有 `asset` / `image` / `icon_url` 等资源 URL，都必须来自本次选中的 manifest 的 `files[].url`；不得手拼、不得热链、不得引用未在 manifest 中出现的 URL。
-7. 已托管素材包均按 CC0 收录，可用于个人/商业项目；署名不是强制要求，但可以在 `meta.description` 或关于页简短写明素材来源。
+6. 暂时不要加音效，除非用户明确要求。
+7. 最终输出前必须校验：JSON 里所有 `asset` / `image` / `icon_url` 等资源 URL，都必须来自本次选中的 manifest 的 `files[].url`；不得手拼、不得热链、不得引用未在 manifest 中出现的 URL。
+8. 已托管素材包均按 CC0 收录，可用于个人/商业项目；署名不是强制要求，但可以在 `meta.description` 或关于页简短写明素材来源。
 
 ## JSON-APP 骨架
 
@@ -251,6 +267,24 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 3. **动态实体 id 必须唯一**：子弹、特效、掉落物、召唤物、临时敌人等不能共用固定 id；使用递增序号或有限对象池，否则第二次触发会静默失败。
 4. **sprite sheet 不能当单帧图**：角色/敌人图片如果是多帧网格，必须设置正确 `frame_size`、`frames`、`frames_per_row` 或裁剪单帧；否则会把一整张九宫格/多姿态图渲染成角色。
 5. **TMX / tiled-json 地图优先内联**：用户自己生成游戏时，优先把地图数据放入 JSON（如 `global._tiledMaps`）并用 `map_data` 引用；只有用户明确有外部存储桶或资源包时，才使用远程 `url`。无论哪种方式，tileset 图片 URL 必须来自已选 asset manifest 的 `files[].url`，不要手拼。
+
+## 游戏类型设计 Profile（先选类型，再写 JSON）
+
+用户说"像某某知名游戏"时，**不要使用该游戏的受版权保护素材、名称或关卡**；只能理解为玩法类型和节奏参考，并用 CC0 素材重新设计。
+
+### 横版动作 / 横版射击 / run-and-gun（例如"合金弹头风格"）
+
+这类需求不能写成一屏自由飞行小游戏。必须满足以下结构：
+
+1. **横向长关卡**：必须有明确的虚拟视口和长地图。`viewport.width` / `viewport.height` 先定下来，地图宽度至少是视口宽度的 3 倍；如果只做一屏 arena，除非用户明确要求，否则不合格。
+2. **Camera 跟随**：必须配置横向 camera follow，让玩家从左向右推进。玩家初始位置在视口左侧三分之一附近，关卡右侧要有目标、终点、Boss、撤离点或分段推进条件。
+3. **平台/地面物理**：玩家是地面角色，不是飞行物。摇杆/方向键的横轴控制 `vx` 或水平移动；跳跃按钮控制 `vy`；重力和地面/平台碰撞必须每帧执行（优先 `@platformer.step` + 有效 map）。**禁止把摇杆 `move_y` 直接加到 `player.y`**，除非用户明确要求飞行射击。
+4. **纵轴输入语义**：摇杆上/下可用于瞄准、蹲下、爬梯、进门或选择，不可让角色自由上下飞。需要上跳时使用单独跳跃按钮；需要下蹲时改变状态/碰撞盒，而不是持续改 y。
+5. **角色和敌人必须用正确帧**：玩家、敌人、爆炸、枪口火焰如果来自 sprite sheet，必须用 `animated_sprite` 或 `src` 裁剪，不得把整张 sheet 当普通 `sprite`。看见 `SpriteSheet_player_sliced.png` 这类文件名时尤其要先确认帧网格。
+6. **不能只有长平地**：做了很宽的 `ground` 仍然不等于横版关卡。必须有 tiled map，或至少布置多段平台、掩体、箱子、墙、坑洞、油桶、障碍、坡道等路线元素；否则只是"长背景 + 刷怪"，不合格。
+7. **敌人与道具布局**：敌人、道具、掩体、障碍应沿关卡路径分布，生成在玩家前方或地图对象点位上；不能随机塞在全屏任意 y，也不能悬空无物理。敌人应有巡逻/射击/受击/死亡生命周期，子弹 id 必须唯一或使用对象池。
+8. **背景比例**：背景层、前景层、地面、玩家、敌人的尺寸必须按同一虚拟视口标尺设计。不要把一张背景图简单拉满整个屏幕后再放 48px 角色；如果背景是小图，使用重复、分层或 parallax，而不是硬拉伸。
+9. **输出前人工验收**：最终 JSON 里必须能回答这 5 个问题：玩家从哪里开始？往哪推进？地面/平台如何碰撞？敌人/子弹如何生成并销毁？地图为什么不只是一屏平地？
 
 ## 布局与样式规则（极其重要！）
 
