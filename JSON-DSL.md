@@ -323,6 +323,10 @@
 }
 ```
 
+> 注意：上表是普通 JSON-APP 主解释器的写法。`flame_game.input` /
+> `flame_game.frame` / `flame_game.tick` 内部使用轻量 GameLogicEngine，
+> 其 `@if` 条件字段是 `cond`（见 flame_game 章节），不要混用。
+
 **@parallel 示例**：
 ```json
 {

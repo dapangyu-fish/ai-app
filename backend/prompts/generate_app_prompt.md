@@ -145,13 +145,17 @@ g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2
 
 涉及**连续动画 / 60fps / 拖拽过渡 / 物理 / 棋盘类游戏**，先看 `templates/demo_2048.json` / `demo_tap_white_tile.json` / `demo_jump.json` / `demo_flappy_bird.json`——这类应用必须用 `flame_game`。标准 grid/list widget 是"值变就 rebuild"，做不出丝滑动画。
 
+模板只用于学习 API 写法、字段结构和动作调用方式；不建议复用 demo 的关卡设计、资源路径、素材结构、实体坐标或数值配置。新 APP 必须根据用户需求重新设计内容，并重新从 asset manifest 选择素材。
+
 静态 UI / 列表 / 表单才用标准 widget。
 
-## 官方 CC0 素材库（游戏 / 视觉 APP 优先使用）
+## 托管 CC0 素材库（游戏 / 视觉 APP 优先使用）
 
-当用户要求生成游戏、可视化玩具、角色动画、地图、场景、图标化界面时，优先使用我们已经托管到 OSS 的 Kenney CC0 素材库，不要直接热链 Kenney 官网，也不要凭空编造图片 URL。
+当用户要求生成游戏、可视化玩具、角色动画、地图、场景、图标化界面时，优先使用我们已经托管到 OSS 的 CC0 asset packs，不要直接热链第三方官网，也不要凭空编造图片 URL。
 
-总索引：
+**始终以线上总 manifest 为准**。下面的表只是常见包示例，不能替代实时总索引；如果表和总索引不一致，以总索引返回的 `packs[].manifestUrl` / `files[].url` 为准。
+
+总索引必须先读：
 
 ```bash
 curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/manifest.json | jq '.packs[] | {slug, version, tags, manifestUrl}'
@@ -169,6 +173,8 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 | `kenney-shape-characters` | `1.0` | 简单角色、头像、抽象人物 |
 | `kenney-tiny-town` | `1.0` | 城镇、建筑、经营/放置类场景 |
 | `kenney-fish-pack` | `2.0` | 水下、鱼类、海洋主题 |
+| `vaca-roxa-generic-run-n-gun` | `1.0` | 横版射击、run-and-gun、玩家/敌人/爆炸 |
+| `opengameart-platformer-pack-16x16` | `1.0` | 16x16 像素平台跳跃、物品、敌人、地块 |
 
 选材流程：
 
@@ -177,7 +183,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
    ```bash
    curl -fsSL "<manifestUrl>" | jq -r '.files[] | select((.type|startswith("image/")) and (.tags|index("player"))) | [.path,.url] | @tsv' | head
    ```
-3. JSON 中引用图片时，必须使用 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
+3. JSON 中引用图片时，必须使用所选 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
 4. 在顶层声明 `assets.bundles`，让客户端启动时缓存资源。示例：
    ```json
    "assets": {
@@ -192,7 +198,8 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
    }
    ```
 5. 暂时不要加音效，除非用户明确要求。
-6. Kenney 是 CC0，可用于个人/商业项目；署名不是强制要求，但可以在 `meta.description` 或关于页简短写明素材来源为 Kenney CC0。
+6. 最终输出前必须校验：JSON 里所有 `asset` / `image` / `icon_url` 等资源 URL，都必须来自本次选中的 manifest 的 `files[].url`；不得手拼、不得热链、不得引用未在 manifest 中出现的 URL。
+7. 已托管素材包均按 CC0 收录，可用于个人/商业项目；署名不是强制要求，但可以在 `meta.description` 或关于页简短写明素材来源。
 
 ## JSON-APP 骨架
 
@@ -226,7 +233,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 2. **优先使用组件库**：尽量复用通用组件库（如 `lib_database`, `common-ui`）中的功能，避免重复造轮子。
 3. **数据存储推荐**：当 App 需要持久化存储结构化数据时，优先依赖 `lib_database` 并调用 `@lib_database.xxx` 函数，不要直接手写底层的 `@db_xxx` API。
 4. **媒体/相机推荐**：选图 / 拍照 / 头像，优先依赖 `common-ui` + `lib_user`，调 `@common-ui.pickImage` / `@common-ui.takePhoto` / `@lib_user.updateAvatar`，**不要直接写底层 `@pick_image` / `@take_photo` / `@file_to_base64`**。
-5. **控制流参数**：`@if` 判断时，条件参数必须写 `"condition"`，千万不要写成 `"cond"`。
+5. **控制流参数**：普通 JSON-APP 的 `@if` 判断条件参数必须写 `"condition"`，千万不要写成 `"cond"`；但 `flame_game.input/frame/tick` 内部使用轻量 GameLogicEngine，那里 `@if` 必须写 `"cond"`，不要写 `"condition"`。
 
 ## 布局与样式规则（极其重要！）
 

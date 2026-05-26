@@ -24,6 +24,7 @@
 | atom 用 id 反查不命中 / jsonlogic var 直读 OK | §9 |
 | 平台跳跃类游戏：关卡高差靠感觉摆，导致“差一点跳不上” | §13 |
 | 关卡设计类问题：看起来能玩，实测路线/敌人/收集物/复活点不合理 | §14 |
+| flame_game 只有角色/背景，地图和实体不出来，摇杆也没效果 | §15 |
 
 如果症状对不上任何一条，往下顺读看类别能否匹配——按类别大致是：布局崩（§1）、
 静态字段类型（§2/§5）、顶层结构（§3）、函数 args 命名（§4）、jsonlogic 求值
@@ -123,13 +124,13 @@ Another exception was thrown: type 'List<dynamic>' is not a subtype of type 'Map
 
 ---
 
-## 4. 控制流参数命名错误：`@if` 错用 `cond`
+## 4. 普通 JSON-APP 控制流参数命名错误：`@if` 错用 `cond`
 
 ### 🚨 运行时异常表现
 数据查询或逻辑判断似乎“永远走 false / else 分支”，且无任何明显报错（逻辑静默失败返回 null 或空数据）。
 
 ### 💔 反面教材分析
-在编写业务逻辑配置时，容易“想当然”地使用 `"cond"` 作为 `@if` 判断的参数键值：
+在编写普通 JSON-APP 业务逻辑配置时，容易“想当然”地使用 `"cond"` 作为 `@if` 判断的参数键值：
 ```json
 {
   "call": "@if",
@@ -141,7 +142,7 @@ Another exception was thrown: type 'List<dynamic>' is not a subtype of type 'Map
 }
 ```
 **框架盲区**：
-在底层的 `interpreter.dart` 解析 `@if` 内置函数时，它严格取值 `args['condition']`，如果取不到，则判定为 null。而 Dart 中的 `_evaluateBool(null)` 会返回 `false`。因此，错用 `"cond"` 会导致判断条件完全丢失，永远静默执行 `else` 分支的逻辑，极难排查。
+普通 JSON-APP 主解释器 `interpreter.dart` 解析 `@if` 内置函数时，它严格取值 `args['condition']`，如果取不到，则判定为 null。而 Dart 中的 `_evaluateBool(null)` 会返回 `false`。因此，错用 `"cond"` 会导致判断条件完全丢失，永远静默执行 `else` 分支的逻辑，极难排查。
 
 ### ✅ 正确姿势 / 避坑指南
 * **严格遵守关键字**：在使用 `@if` 时，条件字段必须且只能写成 `"condition"`。
@@ -155,6 +156,10 @@ Another exception was thrown: type 'List<dynamic>' is not a subtype of type 'Map
   }
 }
 ```
+
+**注意运行时边界**：这一条只适用于普通 JSON-APP 主解释器。`flame_game` 内部的
+`input` / `frame` / `tick` 使用的是轻量 `GameLogicEngine`，那里 `@if` 的条件字段是
+`"cond"`，不是 `"condition"`。不要把两套运行时的写法混用，详见 §15。
 
 ---
 
@@ -841,5 +846,79 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 - 所有敌人不会自然掉出地图
 - 所有复活点安全
 - 视觉层、碰撞层、危险层一致
+
+---
+
+## 15. flame_game 跨运行时写法混用：地图/实体/手柄全静默失效
+
+### 🚨 表现
+
+`flame_game` 游戏启动后看起来没有明显崩溃，但核心内容不工作：
+
+- 只有角色或纯背景，地图瓦片、敌人、道具、终点不显示
+- 虚拟摇杆/按钮本身有触摸反馈，但角色不移动、不跳、不攻击
+- 没有 Flutter 白屏异常，最多只能在日志里看到 tiled tileset 404 或逻辑一直卡在 loading
+
+### 💔 反面教材分析
+
+这类问题通常是把普通 JSON-APP 主解释器的写法直接搬进 `flame_game` 内部运行时。
+
+本项目目前有两套逻辑解释环境：
+
+| 位置 | 解释器 | `@if` 条件字段 |
+|------|--------|----------------|
+| `global.functions` / 普通 widget action | 主 `JsonInterpreter` | `condition` |
+| `flame_game.input` / `flame_game.frame` / `flame_game.tick` | `GameLogicEngine` | `cond` |
+
+如果在 `flame_game.frame.logic` 里写成：
+
+```jsonc
+{
+  "call": "@if",
+  "args": {
+    "condition": { "==": [{ "var": "vars.state" }, "loading"] },
+    "then": [
+      { "call": "@tiled.spawn_objects", "args": { "...": "..." } }
+    ]
+  }
+}
+```
+
+`GameLogicEngine` 会取不到 `cond`，条件被当成 null/false，`then` 永远不会跑。
+后果是 loading 初始化、地图 object spawn、`@platformer.step`、敌人 AI、碰撞检测全被静默跳过。
+外部 `virtual_gamepad` 仍然能把输入发进游戏，但每帧更新逻辑没执行，所以表现就是“摇杆无效”。
+
+同一类事故还包括 `tiled_map.map_data` 的资源路径写错。内联地图里如果保留：
+
+```jsonc
+"source": "map/level_1.tmx",
+"tilesets": [
+  {
+    "source": "tiles/dirt.tsx",
+    "image": "Sprites/Tiles/Default/terrain_dirt_block.png"
+  }
+]
+```
+
+框架会按 Tiled 的相对路径规则解析：先用 `map/level_1.tmx` 定位 tileset，再以
+`map/tiles/dirt.tsx` 为基准解析 `image`。上面的图片实际会被解析成
+`map/tiles/Sprites/Tiles/...`，而不是 asset pack 根目录下的 `Sprites/Tiles/...`，
+最终 tileset 加载失败，地图层有数据但没有任何可绘制 tile。
+
+### ✅ 正确姿势 / 避坑指南
+
+- 普通 JSON-APP 逻辑用 `condition`；`flame_game` 内部逻辑用 `cond`。
+- 在生成游戏时，先确认 `frame.logic` 里至少有一条 loading -> ready/running 的状态推进，并且这条路径真实会执行。
+- `virtual_gamepad` 只负责发输入；移动必须在 `flame_game.frame.logic` 里把 `vars.move_dir` 转成 `@entity.set(vx)` + `@platformer.step`。
+- 内联 `tiled-json-v1` 地图优先使用绝对图片 URL，或者保证 `image` 相对路径与 `map_data.source` / `tileset.source` 的组合后仍能访问。
+- 如果使用 asset pack 根路径，最稳的是把 tileset `image` 写成完整 URL；不要假设它相对 `base_url` 根目录解析。
+- 地图不显示时，先验证三件事：`@tiled.loaded` 是否为 true、tilesets 数量是否大于 0、首个 tileset 图片 URL 是否 200。
+
+### 🔍 自检 / 排查
+
+- 扫描 `flame_game` 内部所有 `@if`：`args` 里必须有 `cond`，不能只有 `condition`。
+- 扫描 `map_data.tilesets[].image`：把它按 `source` 规则拼成最终 URL，实际 `curl -I` 应该是 200。
+- 如果摇杆有 UI 反馈但角色不动，看 `frame.logic` 中 `@platformer.step` 是否被某个永远 false 的 `@if` 包住。
+- 如果地图 object layer 里有对象但敌人/金币不生成，看 `@tiled.spawn_objects` 是否在 loading 分支里被跳过。
 
 ---
