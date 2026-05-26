@@ -293,10 +293,12 @@ function initialPhoneSize(compact: boolean): PhoneSize {
   return { width: Math.round((height * 9) / 18.8), height };
 }
 
+type ResizeHandle = 'n' | 'e' | 's' | 'w' | 'nw' | 'ne' | 'sw' | 'se';
+
 function PhonePreview({ compact = false }: { compact?: boolean }) {
   const [size, setSize] = useState<PhoneSize>(() => initialPhoneSize(compact));
 
-  function startResize(corner: 'nw' | 'ne' | 'sw' | 'se', event: ReactPointerEvent<HTMLButtonElement>) {
+  function startResize(handle: ResizeHandle, event: ReactPointerEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
 
@@ -307,10 +309,20 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
     const onMove = (moveEvent: PointerEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
-      const xSign = corner.includes('e') ? 1 : -1;
-      const ySign = corner.includes('s') ? 1 : -1;
-      const width = Math.max(260, Math.min(520, start.width + dx * xSign));
-      const height = Math.max(540, Math.min(920, start.height + dy * ySign));
+      let width = start.width;
+      let height = start.height;
+      if (handle.includes('e')) {
+        width = start.width + dx;
+      } else if (handle.includes('w')) {
+        width = start.width - dx;
+      }
+      if (handle.includes('s')) {
+        height = start.height + dy;
+      } else if (handle.includes('n')) {
+        height = start.height - dy;
+      }
+      width = Math.max(260, Math.min(520, width));
+      height = Math.max(540, Math.min(920, height));
       setSize({ width, height });
     };
     const onUp = () => {
@@ -339,13 +351,13 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
             scrolling="no"
           />
         </div>
-        {(['nw', 'ne', 'sw', 'se'] as const).map((corner) => (
+        {(['n', 'e', 's', 'w', 'nw', 'ne', 'sw', 'se'] as const).map((handle) => (
           <button
-            aria-label={`Resize phone ${corner}`}
-            className={`resizeHandle resizeHandle-${corner}`}
-            key={corner}
+            aria-label={`Resize phone ${handle}`}
+            className={`resizeHandle resizeHandle-${handle}`}
+            key={handle}
             type="button"
-            onPointerDown={(event) => startResize(corner, event)}
+            onPointerDown={(event) => startResize(handle, event)}
           />
         ))}
       </div>

@@ -372,13 +372,16 @@ select {
   width: 360px;
   height: 752px;
   max-width: 100%;
-  border: 1px solid color-mix(in srgb, var(--line) 86%, #ffffff 8%);
+  border: 1px solid rgba(190, 199, 214, 0.74);
   border-radius: 48px;
   padding: 14px;
-  background: #06070a;
+  background:
+    linear-gradient(135deg, rgba(216, 223, 235, 0.38), rgba(84, 93, 111, 0.2) 24%, rgba(7, 8, 10, 0.96) 58%),
+    #11151b;
   box-shadow:
     0 30px 90px rgba(0, 0, 0, 0.46),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.045),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.16),
+    inset 0 0 0 6px rgba(0, 0, 0, 0.62),
     0 0 0 8px rgba(255, 255, 255, 0.025);
   touch-action: none;
 }
@@ -392,7 +395,7 @@ select {
   height: 24px;
   transform: translateX(-50%);
   border-radius: 0 0 16px 16px;
-  background: #06070a;
+  background: #080a0e;
 }
 
 .sideButton {
@@ -450,12 +453,9 @@ select {
 .resizeHandle {
   position: absolute;
   z-index: 4;
-  width: 42px;
-  height: 42px;
   border: 0;
   background: transparent;
-  cursor: nwse-resize;
-  opacity: 0.58;
+  opacity: 0.72;
   transition:
     opacity 0.16s ease,
     transform 0.16s ease;
@@ -464,68 +464,149 @@ select {
 .resizeHandle::after {
   content: "";
   position: absolute;
-  inset: 5px;
-  border: 2px solid color-mix(in srgb, var(--primary2) 62%, transparent);
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--primary2) 22%, transparent));
+  background: rgba(203, 213, 225, 0.22);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
   transition:
-    border-color 0.16s ease,
-    filter 0.16s ease;
+    background 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .resizeHandle:hover {
   opacity: 1;
-  transform: scale(1.18);
 }
 
 .resizeHandle:hover::after {
-  border-color: var(--primary2);
-  filter: drop-shadow(0 0 15px color-mix(in srgb, var(--primary2) 58%, transparent));
+  background: color-mix(in srgb, var(--primary2) 55%, rgba(203, 213, 225, 0.24));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary2) 62%, transparent),
+    0 0 16px color-mix(in srgb, var(--primary2) 42%, transparent);
+}
+
+.resizeHandle-n,
+.resizeHandle-s {
+  left: 58px;
+  right: 58px;
+  height: 20px;
+  cursor: ns-resize;
+}
+
+.resizeHandle-n {
+  top: 1px;
+}
+
+.resizeHandle-s {
+  bottom: 1px;
+}
+
+.resizeHandle-n::after,
+.resizeHandle-s::after {
+  left: 50%;
+  width: min(112px, 54%);
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+}
+
+.resizeHandle-n::after {
+  top: 6px;
+}
+
+.resizeHandle-s::after {
+  bottom: 6px;
+}
+
+.resizeHandle-e,
+.resizeHandle-w {
+  top: 96px;
+  bottom: 96px;
+  width: 20px;
+  cursor: ew-resize;
+}
+
+.resizeHandle-e {
+  right: 1px;
+}
+
+.resizeHandle-w {
+  left: 1px;
+}
+
+.resizeHandle-e::after,
+.resizeHandle-w::after {
+  top: 50%;
+  width: 3px;
+  height: min(120px, 42%);
+  transform: translateY(-50%);
+  border-radius: 999px;
+}
+
+.resizeHandle-e::after {
+  right: 6px;
+}
+
+.resizeHandle-w::after {
+  left: 6px;
 }
 
 .resizeHandle-nw {
-  top: 4px;
-  left: 4px;
+  top: 0;
+  left: 0;
+  width: 46px;
+  height: 46px;
+  cursor: nwse-resize;
 }
 
 .resizeHandle-ne {
-  top: 4px;
-  right: 4px;
+  top: 0;
+  right: 0;
+  width: 46px;
+  height: 46px;
   cursor: nesw-resize;
 }
 
 .resizeHandle-sw {
-  bottom: 4px;
-  left: 4px;
+  bottom: 0;
+  left: 0;
+  width: 46px;
+  height: 46px;
   cursor: nesw-resize;
 }
 
 .resizeHandle-se {
-  right: 4px;
-  bottom: 4px;
+  right: 0;
+  bottom: 0;
+  width: 46px;
+  height: 46px;
+  cursor: nwse-resize;
 }
 
 .resizeHandle-nw::after {
-  border-right-color: transparent;
-  border-bottom-color: transparent;
-  border-radius: 24px 0 0 0;
+  top: 13px;
+  left: 13px;
 }
 
 .resizeHandle-ne::after {
-  border-left-color: transparent;
-  border-bottom-color: transparent;
-  border-radius: 0 24px 0 0;
+  top: 13px;
+  right: 13px;
 }
 
 .resizeHandle-sw::after {
-  border-top-color: transparent;
-  border-right-color: transparent;
-  border-radius: 0 0 0 24px;
+  bottom: 13px;
+  left: 13px;
 }
 
 .resizeHandle-se::after {
-  border-top-color: transparent;
-  border-left-color: transparent;
-  border-radius: 0 0 24px 0;
+  right: 13px;
+  bottom: 13px;
+}
+
+.resizeHandle-nw::after,
+.resizeHandle-ne::after,
+.resizeHandle-sw::after,
+.resizeHandle-se::after {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
 }
 
 .phoneCaption {
