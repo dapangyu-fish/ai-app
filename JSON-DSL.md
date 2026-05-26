@@ -1837,8 +1837,8 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `templates/demo_2048.json` | `pixel_world` + `value_grid` + `init.logic` + `swipe` | **flame_game 与普通 widget 混排**：顶部分数 bar、中间游戏区、底部结果 bar 在同一份 JSON 里 |
 | `templates/demo_flappy_bird.json` | `pixel` entity + `@pixel.add_velocity` + `@spawn`/`@despawn` + `@collide.rect` + `@for_each_entity` | **物理 + 动态生成 + 碰撞**：重力 / 跳跃冲量 / 管道无限生成 / 出屏销毁 / 计分 全在 JSON 里编排，框架零业务逻辑。bird 用 🐦 emoji 渲染 |
 | `templates/demo_jump.json` | `input.press_end` + `pixel` entity + 抛物线物理 + 状态机 | **蓄力跳跃 + 平台滚动**：按住-松手按 `held_ms` 决定 vx，抛物线由重力自然形成；落到目标平台→镜头滚动（platform / player 同时 `set_velocity`)，到位后 despawn / spawn 切换。整套状态机（ready/jumping/rolling）由 JSON `vars.state` 驱动 |
-| `templates/demo_superdash_runner.ALL_IN_ONE.json` | `tiled_map.map_data` + `animated_sprite` + platformer atoms | 官方 SuperDash 风格跑酷，地图结构内联在 JSON 中；图片仍走 asset URL |
-| `templates/demo_platformer_adventure.ALL_IN_ONE.json` | `tiled_map.map_data` + `virtual_gamepad` + platformer atoms | 多关卡平台跳跃，地图结构内联在 JSON 中，演示无 bucket 的 all-in-one 游戏发布方式 |
+| `templates/demo_superdash_runner.ALL_IN_ONE.json` | `demo-superdash-runner-all-in-one` | 官方 SuperDash 风格跑酷，地图结构内联在 JSON 中；图片仍走 asset URL |
+| `templates/demo_platformer_adventure.ALL_IN_ONE.json` | `demo-platformer-adventure-all-in-one` | 多关卡平台跳跃，地图结构内联在 JSON 中，演示无 bucket 的 all-in-one 游戏发布方式 |
 
 ---
 

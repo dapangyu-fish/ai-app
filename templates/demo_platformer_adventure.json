@@ -3,7 +3,7 @@
   "appid": "d52cb6ab-b4f0-4e99-8e71-b8e3c68bd5b4",
   "meta": {
     "name": "demo-platformer-adventure",
-    "version": "0.2.7",
+    "version": "0.2.9",
     "type": "app",
     "description": "A CC0 Kenney asset platform adventure demo built with generic JSON game atoms: tiled map, platform physics, coins, enemies, hazards and a finish flag.",
     "author": "fish"
