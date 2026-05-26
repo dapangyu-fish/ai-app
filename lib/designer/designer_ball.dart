@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' show sqrt, pi;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -88,6 +89,10 @@ class DesignerBall extends StatefulWidget {
 
 class _DesignerBallState extends State<DesignerBall>
     with TickerProviderStateMixin {
+  static const String _messageBucketKeyPrefix = 'ai_messages_v1_';
+  static const int _maxPersistedMessagesPerSession = 120;
+  static const int _maxPersistedMessageBytes = 900 * 1024;
+
   // ── 尺寸常量 ──
   static const double _ballSize = 64.0;
   static const double _peekSize = 22.0;
@@ -146,7 +151,6 @@ class _DesignerBallState extends State<DesignerBall>
   // ── 语音识别 & AI ──
   stt.SpeechToText? _speech;
   bool _speechInited = false;
-  bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
   // 平台（Android SpeechRecognizer / iOS SFSpeechRecognizer）单次会话有 10-60s
   // 上限，用户按着球时长按下去到 done/error 时要无感重启。这个 flag 在主动 stop
   // 之前置 true，防止主动停止被识别为"该重启"。
@@ -168,6 +172,8 @@ class _DesignerBallState extends State<DesignerBall>
   // 多会话：消息按 sid 分桶；getter `_messages` 永远返回当前 active 那一桶。
   // 切 active session 时 setState 会重 build，自动展示新桶。
   final Map<String, List<ChatMessage>> _messageBuckets = {};
+  final Set<String> _loadedMessageBucketIds = {};
+  Timer? _messagePersistTimer;
   List<ChatMessage> get _messages {
     final sid = _chatService.sessionId;
     final key = sid.isEmpty ? '__pending__' : sid;
@@ -210,7 +216,12 @@ class _DesignerBallState extends State<DesignerBall>
     AsrModePrefs.notifier.addListener(_onAsrModeChanged);
     // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
     // 不 await，不阻塞 UI 启动
-    _chatService.loadSession().then((_) => _maybeResumeUnfinishedSession());
+    _chatService.loadSession().then((_) async {
+      await _loadMessagesForSession(_chatService.sessionId);
+      if (!mounted) return;
+      setState(() {});
+      await _maybeResumeUnfinishedSession();
+    });
 
     // DesignerBall 挂在 MaterialApp.builder 里凌驾所有路由，**不会**因为 AuthGate
     // 切换 (FilePickerPage <-> AuthPage) 而重建。所以"用户掉登录后重新登录"这个
@@ -392,6 +403,8 @@ class _DesignerBallState extends State<DesignerBall>
   void dispose() {
     _longPressTimer?.cancel();
     _streamSub?.cancel();
+    _messagePersistTimer?.cancel();
+    unawaited(_flushActiveMessages());
     // Plan A 关键：app 关掉 worker 继续在 backend 跑，下次启动 _maybeResumeUnfinishedSession 接回来
     // 所以 dispose 只关本地 SSE，绝不通知 backend abort
     _chatService.abortLocal();
@@ -406,6 +419,99 @@ class _DesignerBallState extends State<DesignerBall>
     super.dispose();
   }
 
+  String _messageBucketKey(String sid) => '$_messageBucketKeyPrefix$sid';
+
+  bool _isCommittedSession(String sid) {
+    return _chatService.listSessions().any((s) => s.id == sid && s.committed);
+  }
+
+  Future<void> _loadMessagesForSession(String sid) async {
+    if (sid.isEmpty || _loadedMessageBucketIds.contains(sid)) return;
+    _loadedMessageBucketIds.add(sid);
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_messageBucketKey(sid));
+    if (raw == null || raw.isEmpty) {
+      _messageBuckets.putIfAbsent(sid, () => []);
+      return;
+    }
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      _messageBuckets[sid] = decoded
+          .whereType<Map>()
+          .map(
+            (m) => ChatMessage.fromJson(
+              m.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .toList();
+      debugPrint(
+        '[DesignerBall] loaded ${_messageBuckets[sid]!.length} persisted AI messages for sid=$sid',
+      );
+    } catch (e) {
+      debugPrint('[DesignerBall] load AI messages failed sid=$sid: $e');
+      _messageBuckets.putIfAbsent(sid, () => []);
+    }
+  }
+
+  void _schedulePersistActiveMessages() {
+    final sid = _chatService.sessionId;
+    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    final snapshot = List<ChatMessage>.from(_messages);
+    _messagePersistTimer?.cancel();
+    _messagePersistTimer = Timer(const Duration(milliseconds: 350), () {
+      unawaited(_persistMessagesForSession(sid, snapshot));
+    });
+  }
+
+  Future<void> _flushActiveMessages() async {
+    _messagePersistTimer?.cancel();
+    _messagePersistTimer = null;
+    final sid = _chatService.sessionId;
+    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    await _persistMessagesForSession(sid, List<ChatMessage>.from(_messages));
+  }
+
+  Future<void> _persistMessagesForSession(
+    String sid,
+    List<ChatMessage> messages,
+  ) async {
+    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (messages.isEmpty) {
+      await prefs.remove(_messageBucketKey(sid));
+      return;
+    }
+    var start = messages.length > _maxPersistedMessagesPerSession
+        ? messages.length - _maxPersistedMessagesPerSession
+        : 0;
+    var includeJsonApp = true;
+    String encode() => jsonEncode(
+      messages
+          .skip(start)
+          .map((m) => m.toJson(includeJsonApp: includeJsonApp))
+          .toList(),
+    );
+
+    var encoded = encode();
+    if (encoded.length > _maxPersistedMessageBytes) {
+      includeJsonApp = false;
+      encoded = encode();
+    }
+    while (encoded.length > _maxPersistedMessageBytes &&
+        start < messages.length - 1) {
+      start++;
+      encoded = encode();
+    }
+    await prefs.setString(_messageBucketKey(sid), encoded);
+  }
+
+  Future<void> _deletePersistedMessagesForSession(String sid) async {
+    if (sid.isEmpty) return;
+    _loadedMessageBucketIds.remove(sid);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_messageBucketKey(sid));
+  }
+
   /// 登录态变化：从未登录 → 已登录时，重新检查是否有未完成会话需要恢复。
   /// 这弥补了 DesignerBall 不会随 AuthGate 切换而重建的问题（它在 MaterialApp.builder 里）。
   void _onAuthChanged() {
@@ -413,8 +519,12 @@ class _DesignerBallState extends State<DesignerBall>
     if (AuthService.authNotifier.value) {
       // 重新登录后重新加载本地 session 信息（_lastUserMessage 等可能在断网期间陈旧）
       // 然后异步触发恢复
-      _chatService.loadSession().then((_) {
-        if (mounted) _maybeResumeUnfinishedSession();
+      _chatService.loadSession().then((_) async {
+        await _loadMessagesForSession(_chatService.sessionId);
+        if (mounted) {
+          setState(() {});
+          _maybeResumeUnfinishedSession();
+        }
       });
     }
   }
@@ -888,7 +998,6 @@ class _DesignerBallState extends State<DesignerBall>
   void _startListening() {
     _recordStartPos = Offset(_left, _top);
     _dragCancelling = false;
-    _nativeSpeechReceivedCallback = false; // 重置回调标记
     _accumulatedTranscript = ''; // 清空累积文本
     setState(() {
       _isListening = true;
@@ -1359,7 +1468,17 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _ensureUserMessage(String content) {
     if (content.isEmpty) return;
-    if (_messages.any((m) => m.role == 'user' && m.content == content)) return;
+    if (_messages.isNotEmpty &&
+        _messages.last.role == 'user' &&
+        _messages.last.content == content) {
+      return;
+    }
+    if (_messages.length >= 2 &&
+        _messages[_messages.length - 2].role == 'user' &&
+        _messages[_messages.length - 2].content == content &&
+        _messages.last.role == 'assistant') {
+      return;
+    }
     _messages.add(ChatMessage(role: 'user', content: content));
   }
 
@@ -1503,7 +1622,6 @@ class _DesignerBallState extends State<DesignerBall>
         onResult: (result) {
           // 编辑模式下，stop() 后迟到的 final 结果一律丢弃
           if (!_isListening || _editMode) return;
-          _nativeSpeechReceivedCallback = true;
           final segment = result.recognizedWords;
           // 中文段间直接拼，不加空格（之前 '类似于 鸟' 的 bug）。
           // 英文场景这里也凑合，最终落到聊天框时不会有大问题。
@@ -1673,6 +1791,7 @@ class _DesignerBallState extends State<DesignerBall>
       _isGeneratingJson = false;
       _generatingStatusMessage = T.current.chatStatusGenerating;
     });
+    unawaited(_flushActiveMessages());
   }
 
   /// 只隐藏字幕时使用：断开本地 SSE 节省资源，但保留当前 session 和消息占位。
@@ -1691,6 +1810,7 @@ class _DesignerBallState extends State<DesignerBall>
       _isGeneratingJson = false;
       _generatingStatusMessage = T.current.chatStatusGenerating;
     });
+    unawaited(_flushActiveMessages());
   }
 
   /// 处理崩溃报告 — 自动进入对话模式并发送崩溃信息给 AI
@@ -1783,6 +1903,7 @@ class _DesignerBallState extends State<DesignerBall>
     _closeChatMode();
     if (sid.isNotEmpty) {
       _messageBuckets.remove(sid);
+      unawaited(_deletePersistedMessagesForSession(sid));
       _chatService.deleteSession(sid); // fire-and-forget；内部会处理 active 切换
     }
   }
@@ -1792,6 +1913,8 @@ class _DesignerBallState extends State<DesignerBall>
     _cancelCurrentStream(); // 防止老 session 迟到事件流进新桶
     await _chatService.createNewSession();
     if (!mounted) return;
+    _messageBuckets.putIfAbsent(_chatService.sessionId, () => []);
+    _loadedMessageBucketIds.add(_chatService.sessionId);
     setState(() {}); // 触发 ChatOverlay 渲染新桶（空列表）
     _scrollToBottom();
   }
@@ -1804,6 +1927,7 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _handleSwitchSession(String sid) async {
     _cancelCurrentStream(); // 同上
     await _chatService.switchToSession(sid);
+    await _loadMessagesForSession(sid);
     if (!mounted) return;
     setState(() {});
     await _maybeResumeUnfinishedSession();
@@ -1817,6 +1941,7 @@ class _DesignerBallState extends State<DesignerBall>
       _cancelCurrentStream();
     }
     _messageBuckets.remove(sid);
+    await _deletePersistedMessagesForSession(sid);
     await _chatService.deleteSession(sid);
     if (!mounted) return;
     setState(() {});
@@ -1838,6 +1963,7 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _scrollToBottom() {
+    _schedulePersistActiveMessages();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(

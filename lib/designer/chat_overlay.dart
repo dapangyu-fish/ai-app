@@ -18,6 +18,29 @@ class ChatMessage {
     this.failedJsonUrl,
     this.jsonUrl,
   });
+
+  Map<String, dynamic> toJson({bool includeJsonApp = true}) => {
+    'role': role,
+    'content': content,
+    if (includeJsonApp && jsonApp != null) 'jsonApp': jsonApp,
+    if (action != null) 'action': action,
+    if (failedJsonUrl != null) 'failedJsonUrl': failedJsonUrl,
+    if (jsonUrl != null) 'jsonUrl': jsonUrl,
+  };
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    final rawJsonApp = json['jsonApp'];
+    return ChatMessage(
+      role: json['role']?.toString() ?? 'assistant',
+      content: json['content']?.toString() ?? '',
+      jsonApp: rawJsonApp is Map
+          ? rawJsonApp.map((key, value) => MapEntry(key.toString(), value))
+          : null,
+      action: json['action']?.toString(),
+      failedJsonUrl: json['failedJsonUrl']?.toString(),
+      jsonUrl: json['jsonUrl']?.toString(),
+    );
+  }
 }
 
 /// 纯字幕式覆层 — 半透明浮在屏幕底部，带窗口框和标题栏。
