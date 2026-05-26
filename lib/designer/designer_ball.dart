@@ -436,14 +436,29 @@ class _DesignerBallState extends State<DesignerBall>
     }
     try {
       final decoded = jsonDecode(raw) as List<dynamic>;
-      _messageBuckets[sid] = decoded
-          .whereType<Map>()
-          .map(
-            (m) => ChatMessage.fromJson(
-              m.map((key, value) => MapEntry(key.toString(), value)),
-            ),
-          )
-          .toList();
+      var migrated = false;
+      _messageBuckets[sid] = decoded.whereType<Map>().map((m) {
+        final message = ChatMessage.fromJson(
+          m.map((key, value) => MapEntry(key.toString(), value)),
+        );
+        if (message.role != 'assistant') return message;
+        final cleaned = AiChatService.cleanAssistantDisplayText(
+          message.content,
+        );
+        if (cleaned == message.content) return message;
+        migrated = true;
+        return ChatMessage(
+          role: message.role,
+          content: cleaned,
+          jsonApp: message.jsonApp,
+          action: message.action,
+          failedJsonUrl: message.failedJsonUrl,
+          jsonUrl: message.jsonUrl,
+        );
+      }).toList();
+      if (migrated) {
+        unawaited(_persistMessagesForSession(sid, _messageBuckets[sid]!));
+      }
       debugPrint(
         '[DesignerBall] loaded ${_messageBuckets[sid]!.length} persisted AI messages for sid=$sid',
       );
