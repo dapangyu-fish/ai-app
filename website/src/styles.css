@@ -373,22 +373,22 @@ select {
   height: 752px;
   max-width: 100%;
   border: 1px solid rgba(190, 199, 214, 0.74);
-  border-radius: 48px;
-  padding: 14px;
+  border-radius: 42px;
+  padding: 7px;
   background:
     linear-gradient(135deg, rgba(216, 223, 235, 0.38), rgba(84, 93, 111, 0.2) 24%, rgba(7, 8, 10, 0.96) 58%),
     #11151b;
   box-shadow:
     0 30px 90px rgba(0, 0, 0, 0.46),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.16),
-    inset 0 0 0 6px rgba(0, 0, 0, 0.62),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.62),
     0 0 0 8px rgba(255, 255, 255, 0.025);
   touch-action: none;
 }
 
 .phoneSpeaker {
   position: absolute;
-  top: 13px;
+  top: 7px;
   left: 50%;
   z-index: 2;
   width: 96px;
@@ -431,7 +431,7 @@ select {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border-radius: 34px;
+  border-radius: 35px;
   background: #07080b;
 }
 
@@ -455,158 +455,70 @@ select {
   z-index: 4;
   border: 0;
   background: transparent;
-  opacity: 0.72;
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
-}
-
-.resizeHandle::after {
-  content: "";
-  position: absolute;
-  background: rgba(203, 213, 225, 0.22);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
-  transition:
-    background 0.16s ease,
-    box-shadow 0.16s ease;
-}
-
-.resizeHandle:hover {
-  opacity: 1;
-}
-
-.resizeHandle:hover::after {
-  background: color-mix(in srgb, var(--primary2) 55%, rgba(203, 213, 225, 0.24));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--primary2) 62%, transparent),
-    0 0 16px color-mix(in srgb, var(--primary2) 42%, transparent);
 }
 
 .resizeHandle-n,
 .resizeHandle-s {
   left: 58px;
   right: 58px;
-  height: 20px;
+  height: 22px;
   cursor: ns-resize;
 }
 
 .resizeHandle-n {
-  top: 1px;
+  top: 0;
 }
 
 .resizeHandle-s {
-  bottom: 1px;
-}
-
-.resizeHandle-n::after,
-.resizeHandle-s::after {
-  left: 50%;
-  width: min(112px, 54%);
-  height: 3px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-}
-
-.resizeHandle-n::after {
-  top: 6px;
-}
-
-.resizeHandle-s::after {
-  bottom: 6px;
+  bottom: 0;
 }
 
 .resizeHandle-e,
 .resizeHandle-w {
   top: 96px;
   bottom: 96px;
-  width: 20px;
+  width: 22px;
   cursor: ew-resize;
 }
 
 .resizeHandle-e {
-  right: 1px;
+  right: 0;
 }
 
 .resizeHandle-w {
-  left: 1px;
-}
-
-.resizeHandle-e::after,
-.resizeHandle-w::after {
-  top: 50%;
-  width: 3px;
-  height: min(120px, 42%);
-  transform: translateY(-50%);
-  border-radius: 999px;
-}
-
-.resizeHandle-e::after {
-  right: 6px;
-}
-
-.resizeHandle-w::after {
-  left: 6px;
+  left: 0;
 }
 
 .resizeHandle-nw {
   top: 0;
   left: 0;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   cursor: nwse-resize;
 }
 
 .resizeHandle-ne {
   top: 0;
   right: 0;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   cursor: nesw-resize;
 }
 
 .resizeHandle-sw {
   bottom: 0;
   left: 0;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   cursor: nesw-resize;
 }
 
 .resizeHandle-se {
   right: 0;
   bottom: 0;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   cursor: nwse-resize;
-}
-
-.resizeHandle-nw::after {
-  top: 13px;
-  left: 13px;
-}
-
-.resizeHandle-ne::after {
-  top: 13px;
-  right: 13px;
-}
-
-.resizeHandle-sw::after {
-  bottom: 13px;
-  left: 13px;
-}
-
-.resizeHandle-se::after {
-  right: 13px;
-  bottom: 13px;
-}
-
-.resizeHandle-nw::after,
-.resizeHandle-ne::after,
-.resizeHandle-sw::after,
-.resizeHandle-se::after {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
 }
 
 .phoneCaption {
