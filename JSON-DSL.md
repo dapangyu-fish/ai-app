@@ -1794,9 +1794,9 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@animated_sprite.set_animation({id, animation})` | 切换 animated_sprite 当前动画 |
 | `@animated_sprite.effect({...})` | 生成一次性动画特效，播完自动移除 |
 | `@entity.exists({id})` | 判断 entity 是否存在 |
-| `@entity.get({id})` | 读取 entity 快照 |
-| `@entity.set({id, path, value})` | 写 entity 字段 / state 路径 |
-| `@entity.add({id, path, value})` | 对 entity 数值字段 / state 路径做累加 |
+| `@entity.get({id, field})` | 读取 entity 字段；常用字段：`x/y/w/h/vx/vy/auto_update/state.xxx` |
+| `@entity.set({id, field, value})` | 写 entity 字段；常用字段：`x/y/w/h/vx/vy/auto_update/state.xxx`。不支持一次性写 `position` / `size`，要分别写 `x/y` 或 `w/h` |
+| `@entity.add({id, field, by, min?, max?})` | 对 entity 数值字段做累加；常用字段：`x/y/w/h/vx/vy/state.xxx`。不要写 `path/value` |
 | `@entity.flip_by_velocity({id})` | 按 vx 自动翻转 sprite 朝向 |
 | `@collide.rect({a, b})` | 两个 entity 的 AABB 矩形重叠检测，返回 bool。两边都得是 pixel 类（暴露 x/y/w/h） |
 | `@collision.first({entity, map})` | 查询 entity 与 tiled_map 的第一条碰撞 |
