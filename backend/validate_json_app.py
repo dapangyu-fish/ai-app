@@ -471,6 +471,22 @@ class Validator:
                 self._path(path, "entities"),
                 "run-and-gun game needs route design, not only flat ground; add tiled_map or at least 4 platforms/covers/obstacles/hazards along the stage",
             )
+        bg_layers = self._background_layer_count(entities)
+        if bg_layers < 3:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun game needs at least 3 visual scene layers (far/mid/near background, foreground/decor, terrain)",
+            )
+        if bg_layers > 0 and self._non_cloud_background_count(entities) == 0:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun background cannot be only clouds/sky; add city/industrial/nature structures or other semantic scenery",
+            )
+        if map_width is None and self._scene_decor_count(entities) < 6:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun game needs rich scene dressing; add at least 6 visible props/landmarks such as buildings, crates, pipes, signs, ruins, rocks or foreground objects",
+            )
 
         direct_y = self._find_direct_vertical_input_write(path, game)
         if direct_y:
@@ -605,6 +621,119 @@ class Validator:
             if any(word in text for word in feature_words):
                 count += 1
         return count
+
+    def _background_layer_count(self, entities: dict[str, Any]) -> int:
+        count = 0
+        for entity_id, spec in entities.items():
+            if not isinstance(spec, dict):
+                continue
+            kind = str(spec.get("kind") or "")
+            text = self._entity_text(entity_id, spec)
+            if kind == "parallax" or any(
+                word in text
+                for word in (
+                    "background",
+                    "backdrop",
+                    "sky",
+                    "cloud",
+                    "nuvens",
+                    "far",
+                    "mid",
+                    "near",
+                    "foreground",
+                    "front",
+                )
+            ):
+                count += 1
+        return count
+
+    def _non_cloud_background_count(self, entities: dict[str, Any]) -> int:
+        count = 0
+        for entity_id, spec in entities.items():
+            if not isinstance(spec, dict):
+                continue
+            kind = str(spec.get("kind") or "")
+            text = self._entity_text(entity_id, spec)
+            if kind != "parallax" and not any(
+                word in text
+                for word in ("background", "backdrop", "far", "mid", "near", "foreground", "front")
+            ):
+                continue
+            if any(word in text for word in ("cloud", "nuvens", "sky")) and not any(
+                word in text
+                for word in (
+                    "city",
+                    "building",
+                    "industrial",
+                    "factory",
+                    "subway",
+                    "forest",
+                    "tree",
+                    "mountain",
+                    "ruin",
+                    "desert",
+                    "rock",
+                    "pipe",
+                    "wall",
+                )
+            ):
+                continue
+            count += 1
+        return count
+
+    def _scene_decor_count(self, entities: dict[str, Any]) -> int:
+        count = 0
+        decor_words = (
+            "decor",
+            "prop",
+            "landmark",
+            "building",
+            "city",
+            "industrial",
+            "factory",
+            "subway",
+            "ruin",
+            "debris",
+            "crate",
+            "box",
+            "barrel",
+            "pipe",
+            "sign",
+            "lamp",
+            "light",
+            "fence",
+            "rail",
+            "tree",
+            "bush",
+            "rock",
+            "mountain",
+            "wall",
+            "foreground",
+            "front",
+        )
+        excluded_words = ("player", "enemy", "bullet", "projectile", "ground")
+        for entity_id, spec in entities.items():
+            if not isinstance(spec, dict):
+                continue
+            text = self._entity_text(entity_id, spec)
+            if any(word in text for word in excluded_words):
+                continue
+            if any(word in text for word in decor_words):
+                count += 1
+        return count
+
+    def _entity_text(self, entity_id: str, spec: dict[str, Any]) -> str:
+        parts = [
+            entity_id,
+            str(spec.get("kind") or ""),
+            str(spec.get("type") or ""),
+            str(spec.get("role") or ""),
+            str(spec.get("asset") or ""),
+        ]
+        state = spec.get("state")
+        if isinstance(state, dict):
+            parts.extend(str(v) for v in state.values())
+        return " ".join(parts).lower()
 
     @staticmethod
     def _entities_map(game: dict[str, Any]) -> dict[str, Any]:
