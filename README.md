@@ -94,38 +94,89 @@ See [`deploy/test-env/README.md`](deploy/test-env/) for detailed steps and the [
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                    Flutter client (lib/)                      │
-│  ┌───────────────┐  ┌─────────────────┐  ┌────────────────┐ │
-│  │ JSON-DSL      │  │ Designer ball   │  │ IM / push /    │ │
-│  │ interpreter   │  │ (AI chat entry) │  │ media          │ │
-│  └───────────────┘  └─────────────────┘  └────────────────┘ │
-└─────────────────────────┬────────────────────────────────────┘
-                          │ HTTPS / WSS
-            ┌─────────────┼──────────────┬─────────────┐
-            ▼             ▼              ▼             ▼
-      ┌──────────┐ ┌─────────────┐ ┌──────────┐ ┌──────────┐
-      │ Backend  │ │ Registry    │ │ OpenIM   │ │ Supabase │
-      │ (Flask)  │ │ (Flask +    │ │ (server) │ │ (DB/Auth)│
-      │ + AI CLI │ │  MinIO)     │ │          │ │          │
-      └──────────┘ └─────────────┘ └──────────┘ └──────────┘
-            │
-            ▼
-      ┌──────────────────────┐
-      │ Claude CLI subprocess │ ← DeepSeek / GLM / Claude API
-      └──────────────────────┘
+The project is now closer to a small app platform than a single Flutter demo.
+The Flutter client is a compiled runtime; JSON-APPs, components, assets, IM,
+and AI generation are all served by the backend stack.
+
+```text
+                         +-----------------------------+
+                         |  Cloudflare Pages (optional) |
+                         |  hosted Flutter Web build    |
+                         +--------------+--------------+
+                                        |
++---------------------------------------v--------------------------------------+
+|                         Flutter client runtime (lib/)                       |
+| iOS / Android / Web / Desktop                                                |
+|                                                                              |
+|  JSON-DSL interpreter  | asset/cache manager | environment switcher          |
+|  Native widgets        | Flame game atoms    | media picker / preview        |
+|  AI designer ball      | IM UI               | OpenIM native + Web WASM SDK  |
++------------------------+---------------------+-------------------------------+
+                         | HTTPS / SSE / WSS
+                         v
++------------------------------------------------------------------------------+
+|                              Backend API (Flask)                              |
+| Auth/session checks | AI chat start/status/stream/result | media upload | push |
+| Provider config     | Remote config proxy                 | app generation flow |
++------------+--------------------+----------------------+----------------------+
+             |                    |                      |
+             v                    v                      v
+   +------------------+   +-------------------+   +--------------------------+
+   | AI session Redis |   | AI worker pool    |   | Supabase                 |
+   | queue + SSE log  |   | Claude CLI today  |   | auth + DB + storage      |
+   | resumable tasks  |   | Codex/etc future  |   +--------------------------+
+   +------------------+   +---------+---------+
+                                    |
+                                    v
+                          +-------------------+
+                          | LLM providers     |
+                          | DeepSeek / GLM /  |
+                          | Claude-compatible |
+                          +-------------------+
+
++--------------------------+     +-------------------------+     +-------------+
+| Registry service         | --> | MinIO / OSS             | --> | JSON assets |
+| packages, search, mirror |     | json-app/json-component |     | asset packs |
+| catalog enrichment       |     | json-app-assets         |     | media files |
++--------------------------+     +-------------------------+     +-------------+
+
++-------------------+   +------------------+   +------------------------------+
+| OpenIM server     |   | Config Center    |   | User Center                  |
+| IM + WebSocket    |   | env flags        |   | admin for users/roles        |
++-------------------+   +------------------+   +------------------------------+
+
+Planned:
++------------------------------------------------------------------------------+
+| FaaS runtime                                                                   |
+| AI-created backend functions for complex JSON-APPs, with isolation, quotas,    |
+| resource limits, deploy logs, and self-hosting controls.                       |
++------------------------------------------------------------------------------+
 ```
 
 | Component | Where | What |
 |---|---|---|
-| Client | `lib/` | Flutter app, JSON-DSL interpreter, 30+ widgets, IM/AI/media |
-| Backend | `backend/` | Flask app — Supabase auth proxy, AI chat (Claude CLI subprocess), push dispatcher (APNs + FCM), media uploads |
-| Registry | `backend/registry_server.py` | Standalone Flask — package management, namespaces, dependency resolution, cross-instance mirror |
-| User Center | `user_center/` | Admin UI for Supabase users (role / ban / reset password) |
-| Config Center | `config_center/` | Remote config flags + ramps |
-| Templates | `templates/` | Example JSON-APPs (IM demo, calculator, games, user profile…) |
-| Deploy | `deploy/test-env/` | One-command self-host via Docker Compose |
+| Flutter Runtime | `lib/` | Cross-platform compiled client: JSON-DSL interpreter, widgets, Flame game atoms, asset cache, environment switching, AI entry, IM/media UI |
+| Web Runtime Assets | `web/`, `web_openim_bridge/` | OpenIM Web WASM bridge and build assets used by Flutter Web |
+| Backend API | `backend/app.py`, `backend/claude_chat.py` | Flask API for auth-gated AI chat, SSE streaming, media upload, push, provider config, and client-facing backend endpoints |
+| AI Queue / Sessions | `backend/ai_session.py` + Redis | Durable-ish AI task metadata, bounded worker queue, resumable SSE event stream, abort/retry status |
+| AI Worker Pool | `backend/ai_worker_daemon.py` | Runs external AI coding agents/CLI processes. Claude Code CLI is the current runtime; Codex-style agents are planned |
+| Registry | `backend/registry_server.py` | Package registry for JSON-APPs/components: semver, namespaces, search, pagination, publish API, mirror, catalog enrichment |
+| Object Storage | MinIO / OSS | Public JSON packages, component files, asset packs, app media, and temporary AI-generated JSON URLs |
+| OpenIM | `backend/openim/`, `deploy/test-env/openim/` | IM backend. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
+| Supabase | `deploy/test-env/supabase/` | Auth, database, storage-compatible services, and local Studio for test environments |
+| Config Center | `config_center/` | Remote config flags and environment-specific client configuration |
+| User Center | `user_center/` | Admin UI for user roles, bans, reset flows, and account operations |
+| Templates / Libraries | `templates/` | Published example apps and reusable JSON libraries: IM, launcher, OpenAI chat, games, controls, profile, utilities |
+| Website | `website/` | TS/Vite marketing and demo site, including the embedded web client preview |
+| Test Environment | `deploy/test-env/` | One-command self-host stack: Supabase, OpenIM, backend, registry, config/user center, MinIO, QR environment export |
+| Future FaaS | planned | AI-created backend functions for JSON-APPs that need server-side compute, secrets, scheduled jobs, or integrations beyond client-only DSL |
+
+Core flows:
+
+1. **AI app generation**: client sends a chat task -> Backend writes queue/meta to Redis -> worker runs the configured AI coding agent -> generated JSON is uploaded to OSS -> client receives `[json_app_url]` through the resumable SSE stream.
+2. **Package install**: client queries Registry with pagination/search -> Registry returns package metadata and download URLs -> client downloads JSON from OSS -> dependency loader resolves libraries and caches them locally.
+3. **IM**: mobile uses the native OpenIM SDK path; Web uses `openim/wasm-client-sdk` through `web_openim_bridge`, with framework-level compatibility so JSON IM apps call one API shape.
+4. **Self-host test env**: `deploy/test-env/bootstrap.sh` generates secrets, starts all containers, creates buckets/users, exports a QR/JSON environment config, and can mirror the production Registry.
 
 ---
 
@@ -248,6 +299,10 @@ You may not:
 - [ ] App share-link with QR (open AI-generated app via deep link)
 - [ ] Add CI (GitHub Actions: pub get, analyze, build APK)
 - [ ] More example JSON-APPs (todo, notes, fitness tracker)
+- [ ] Prompt system v2: split the long app-generation prompt into core rules + task cards, and move JSON validation into tooling
+- [ ] Agent runtime support: allow different AI coding agents/runtimes such as Codex to generate, repair, and publish JSON-APPs
+- [ ] Audio support for JSON-APPs (recording, playback, upload, and reusable audio UI/actions)
+- [ ] FaaS support: let AI conversations create small backend functions for complex apps, with resource limits, deployment isolation, and self-hosting controls
 - [ ] DSL v4 (stabilize breaking-change window)
 - [ ] More tests around the interpreter
 - [ ] Performance: defer interpret of off-screen subtrees
