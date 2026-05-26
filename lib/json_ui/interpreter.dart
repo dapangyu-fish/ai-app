@@ -1521,7 +1521,7 @@ class JsonInterpreter extends ChangeNotifier {
       case '@show_bottom_sheet':
         // 底部弹窗
         // args: { content: { ...widget... }, isDismissible?, enableDrag?, backgroundColor? }
-        // 返回值：弹窗里 close action 透传的值（关闭返回 null）
+        // 返回值：系统关闭返回 null；未来如增加带 result 的关闭 action 可透传结果。
         return await _showBottomSheet(resolvedArgs);
 
       // ── 本地存储 ──

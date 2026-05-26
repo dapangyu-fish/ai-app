@@ -6,6 +6,8 @@
 **适用范围**：Flutter 跨平台 GUI 客户端（iOS / Android / Web / Desktop）
 **目标**：一套**纯 JSON 配置驱动**的低代码 Flutter 应用，支持动态下发 UI 与业务逻辑。
 
+> 说明：文档版本是 v3.4；当前 JSON 包里的 `"dsl"` 字段仍使用 `"3.3"`，表示运行时兼容线，不需要改成文档版本号。
+
 ---
 
 ## 1. 设计原则
@@ -13,8 +15,8 @@
 - **Server-Driven UI**：云端下发 JSON，App 内置解释器实时渲染界面并执行逻辑。
 - **图灵完备**：支持 `@while`、递归、`@set` 可变状态、`@if` 条件分支、`@parallel` 并发。
 - **安全合规**：解释器纯 Dart 静态编译进 APK/IPA，JSON 仅为数据配置。
-- **零性能限制**：不对页面层级、Widget 数量、循环次数设上限。
-- **位置描述**：每个控件可通过 `position` 精确描述自己在页面中的位置。
+- **性能边界清晰**：框架不对页面层级 / Widget 数量做人为配额限制，但运行时仍受设备性能约束；`@while` 有 `max_iterations` 保护，游戏逐帧 logic 应控制实体规模。
+- **位置描述**：每个控件可加 `position`；`absolute` 只在 `Stack` 父级下生效，`flex` 只应放在 `Row` / `Column` 等 Flex 父级下。
 
 - **模块化**：支持 JSON 模块引用，通过 `dependencies` + 版本约束实现复用。
 
@@ -55,10 +57,7 @@
     "exports": []
   },
   "dependencies": {
-    "common-ui": {
-      "url": "https://cdn.example.com/common-ui.json",
-      "version": "^1.2.0"
-    }
+    "common-ui": "^1.3.0"
   },
   "global": { ... },
   "steps": [ ... ],
@@ -70,12 +69,12 @@
 |------|------|------|
 | `dsl` | 是 | DSL 规范版本（如 `"3.3"`），兼容旧 `version` 字段 |
 | `appid` | 否 | 应用唯一标识（UUID，发布时必须，新创建可留空） |
-| `meta.name` | 是 | 模块唯一标识（包名）。**仅作为标识使用**（路由 / 依赖引用 / 安装路径），不会显示给用户 |
+| `meta.name` | 是 | 模块唯一标识（包名），用于路由 / 依赖引用 / 安装路径；正常展示应使用 `meta.displayName`，仅在 displayName 缺省时作为兜底 |
 | `meta.displayName` | 否 | 用户可见的应用名称。支持纯字符串或多语言 Map（见下）。缺省时框架回退到 `meta.name` |
 | `meta.version` | 是 | 模块版本号（semver: `MAJOR.MINOR.PATCH`） |
 | `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
 | `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
-| `dependencies` | 否 | 依赖声明，key 为依赖别名，value 含 `url` 和 `version` 约束 |
+| `dependencies` | 否 | 依赖声明，key 必须是 Registry 包名，同时也是调用命名空间（如 `@common-ui.showInfo` 的 `common-ui`）；value 推荐写版本约束字符串（如 `"^1.3.0"`）。也兼容旧对象格式 `{ "url": "...", "version": "^1.2.0" }`，但当前加载器实际按 Registry/CacheManager 解析，`url` 仅保留旧格式兼容 |
 
 #### `meta.displayName` 两种写法
 
@@ -121,7 +120,7 @@
 
 ```jsonc
 // 调用依赖的函数: @depName.funcName
-{ "call": "@common-ui.showToast", "args": { "message": "操作成功" } }
+{ "call": "@common-ui.showInfo", "args": { "message": "操作成功" } }
 
 // 导航到依赖的页面: depName:screenId
 { "type": "navigate", "screen": "auth:loginPage" }
@@ -215,7 +214,7 @@
 - **函数调用**：`{ "call": "...", "args": {...}, "assign": "global.xxx" }`
 - **表达式**：`{ "expression": {JsonLogic}, "assign": "global.xxx" }`
 
-`assign` 将函数返回值 / 表达式结果存入指定变量。
+`assign` 将表达式结果存入指定变量；函数调用的 `assign` 只在返回值非 `null` 时写入，避免取消弹窗、空网络结果等把已有状态误清空。
 
 ### 3.5 i18n（JSON 层国际化）
 
@@ -291,7 +290,8 @@
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@print` | `{ "value": "..." }` | 调试打印 |
-| `@set` | `{ "var": "$.global.xxx", "value": ... }` | 设置变量（value 支持 JsonLogic 表达式） |
+| `@set` | `{ "var": "global.xxx", "value": ... }` | 设置变量（value 支持 JsonLogic 表达式）。`$.global.xxx` 旧路径仍兼容，但新 JSON 统一写 `global.xxx` |
+| `@var_get` | `{ "var": "global.xxx", "default": null }` | 命令式读取变量；变量不存在时返回 `default` |
 | `@navigate` | `{ "screen": "screenId" }` | 页面跳转 |
 | `@delay` | `{ "ms": 1000 }` | 延迟指定毫秒 |
 
@@ -301,9 +301,9 @@
 |------|------|------|
 | `@if` | `{ "condition": {expr}, "then": [...], "else": [...] }` | 条件分支 |
 | `@while` | `{ "condition": {expr}, "body": [...], "max_iterations": 10000 }` | 循环 |
-| `@for_each` | `{ "source": {expr}, "body": [...] }` | 遍历数组（$.loop.item / $.loop.index） |
+| `@for_each` | `{ "source": {expr}, "body": [...] }` | 遍历数组（`loop.item` / `loop.index`） |
 | `@loop_by_num` | `{ "count": 10, "body": [...] }` | 按次数循环 |
-| `@try_catch` | `{ "try": [...], "catch": [...], "error_var": "$.global.err" }` | 异常捕获 |
+| `@try_catch` | `{ "try": [...], "catch": [...], "error_var": "global.err" }` | 异常捕获 |
 | `@parallel` | `{ "steps": [...] }` | **并发执行**多个 step，全部完成后继续 |
 | `@throw` | `{ "message": "..." }` | 主动抛出异常（用于测试 @try_catch / 业务侧失败时进入 catch 分支） |
 
@@ -312,7 +312,7 @@
 {
   "call": "@if",
   "args": {
-    "condition": { ">": [{ "var": "$.global.count" }, 0] },
+    "condition": { ">": [{ "var": "global.count" }, 0] },
     "then": [
       { "call": "@print", "args": { "value": "有数据" } }
     ],
@@ -333,8 +333,8 @@
   "call": "@parallel",
   "args": {
     "steps": [
-      { "call": "@http_get", "args": { "url": "https://api1.com" }, "assign": "$.global.r1" },
-      { "call": "@http_get", "args": { "url": "https://api2.com" }, "assign": "$.global.r2" }
+      { "call": "@http_get", "args": { "url": "https://api1.com" }, "assign": "global.r1" },
+      { "call": "@http_get", "args": { "url": "https://api2.com" }, "assign": "global.r2" }
     ]
   }
 }
@@ -342,7 +342,7 @@
 
 ### 4.3 HTTP 请求
 
-所有 HTTP 函数返回 `{ "status": int, "data": dynamic, "headers": {}, "error": String? }`
+`@http_get` / `@http_post` / `@http_put` / `@http_delete` 返回 `{ "status": int, "data": dynamic, "headers": {}, "error": String? }`。`@http_sse` 返回 `{ "status": int, "events": [], "done": bool, "error": String? }`，并可在流式过程中触发回调。
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
@@ -359,12 +359,12 @@
   "args": {
     "url": "https://api.example.com/users",
     "body": {
-      "name": "{{ $.global.username }}",
-      "email": "{{ $.global.email }}"
+      "name": "{{ global.username }}",
+      "email": "{{ global.email }}"
     },
-    "headers": { "Authorization": "Bearer {{ $.global.token }}" }
+    "headers": { "Authorization": "Bearer {{ global.token }}" }
   },
-  "assign": "$.global.postResult"
+  "assign": "global.postResult"
 }
 ```
 
@@ -395,11 +395,11 @@
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@list_length` | `{ "value": {expr} }` | 返回数组长度 |
-| `@list_add` | `{ "var": "$.global.list", "item": "xxx" }` | 向数组末尾添加元素 |
-| `@list_remove_at` | `{ "var": "$.global.list", "index": 0 }` | 按索引删除 |
-| `@list_remove` | `{ "var": "$.global.list", "value": "xxx" }` | 按值删除（删除所有等于 value 的元素） |
-| `@list_insert` | `{ "var": "$.global.list", "index": 0, "item": "xxx" }` | 在指定位置插入 |
-| `@list_clear` | `{ "var": "$.global.list" }` | 清空数组 |
+| `@list_add` | `{ "var": "global.list", "item": "xxx" }` | 向数组末尾添加元素 |
+| `@list_remove_at` | `{ "var": "global.list", "index": 0 }` | 按索引删除 |
+| `@list_remove` | `{ "var": "global.list", "value": "xxx" }` | 按值删除（删除所有等于 value 的元素） |
+| `@list_insert` | `{ "var": "global.list", "index": 0, "item": "xxx" }` | 在指定位置插入 |
+| `@list_clear` | `{ "var": "global.list" }` | 清空数组 |
 
 ### 4.7 类型转换
 
@@ -416,14 +416,14 @@
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
-| `@show_toast` | `{ "message": "保存成功" }` | 底部 SnackBar 提示 |
+| `@show_toast` | `{ "message": "保存成功" }` | 轻量底部 toast（Overlay 浮层，非 SnackBar） |
 | `@show_snackbar` | `{ "message": "邮件已发送", "actionLabel": "撤销", "action": {...}, "durationMs": 4000, "backgroundColor": "#333333" }` | 增强 SnackBar，支持操作按钮回调 |
 | `@show_dialog` | `{ "title": "确认", "message": "确定删除？" }` | 弹窗，返回 `true`/`false` |
 | `@show_input_dialog` | `{ "title": "重命名", "hint": "请输入", "defaultValue": "", "bind": "global.name" }` | 文本输入弹窗，返回输入值（取消返回 `null`） |
 | `@show_choice_dialog` | `{ "title": "保存修改？", "message": "...", "buttons": [{"label":"保存","value":"save","style":"primary"},{"label":"丢弃","value":"discard","style":"danger"},{"label":"取消","value":"cancel"}], "dismissible": true }` | 自定义按钮弹窗，返回被点按钮的 `value`（关闭返回 `null`）。`style`：`primary` / `danger` / `text`（默认） |
 | `@show_date_picker` | `{ "initial": "2026-04-28", "firstDate": "2020-01-01", "lastDate": "2030-12-31", "bind": "global.date" }` | 命令式日期选择器，返回 yyyy-MM-dd 字符串（取消返回 `null`） |
 | `@show_time_picker` | `{ "initial": "14:30", "bind": "global.time" }` | 命令式时间选择器，返回 HH:mm 字符串（取消返回 `null`） |
-| `@show_bottom_sheet` | `{ "content": { ...widget... }, "isDismissible": true, "enableDrag": true, "backgroundColor": "#FFFFFF" }` | 底部弹窗，content 是任意 widget 配置，弹窗内可通过自定义函数关闭并返回值 |
+| `@show_bottom_sheet` | `{ "content": { ...widget... }, "isDismissible": true, "enableDrag": true, "backgroundColor": "#FFFFFF" }` | 底部弹窗，content 是任意 widget 配置。当前 JSON action 可用 `{ "type": "back" }` 关闭；关闭返回 `null` |
 
 ### 4.9 系统 / 平台原生
 
@@ -612,14 +612,16 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 ## 5. JsonLogic 表达式引擎
 
-所有 `{ "operator": [...args] }` 形式的 JSON 节点都通过表达式引擎求值。
+单 key 且 key 属于已知 operator 的 Map 会通过表达式引擎求值，例如 `{ "operator": [...args] }`；多 key Map 或 key 不是 operator 的单 key Map 会按普通数据对象递归解析。
 
 ### 5.1 数据访问
 
 | 操作 | 示例 | 说明 |
 |------|------|------|
-| `var` | `{ "var": "$.global.name" }` | 读取变量 |
+| `var` | `{ "var": "global.name" }` | 读取变量 |
 | `var` (空) | `{ "var": "" }` | 读取当前迭代元素 (filter/map 中) |
+
+> JsonLogic 的 `var` 走 `jsonlogic` 包的点路径查找，必须写 `global.xxx` / `loop.xxx` / `params.xxx` / `event.xxx`。`$.global.xxx` 只在模板 `{{ $.global.xxx }}` 和 action 的路径字符串里做旧格式兼容，不要写进 `{ "var": ... }`。
 
 ### 5.2 算术运算
 
@@ -636,7 +638,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 `==`, `!=`, `>`, `<`, `>=`, `<=`
 
 ```json
-{ ">": [{ "var": "$.global.age" }, 18] }
+{ ">": [{ "var": "global.age" }, 18] }
 ```
 
 ### 5.4 逻辑运算
@@ -722,13 +724,15 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 ### 6.2 position 字段
 
-每个控件都支持 `position` 字段：
+每个控件都支持 `position` 字段，但它只是外层包装：
 
 | type | 说明 | 附加字段 |
 |------|------|----------|
 | `relative` | 顺序排列（默认） | — |
 | `absolute` | 绝对定位（需 `layout=stack`） | `top`, `left`, `bottom`, `right` |
-| `flex` | 弹性布局 | `flex` (数字) |
+| `flex` | 弹性布局（需 Row / Column / Flex 父级） | `flex` (数字) |
+
+`position.type=absolute` 会包装成 Flutter `Positioned`，父级必须是 `screen.layout="stack"`、`container.layout="stack"` 或 `stack` 控件；`position.type=flex` 会包装成 `Expanded`，父级必须是 Flex 布局。放错父级会触发布局错误。
 
 #### visible 字段（条件渲染）
 
@@ -774,11 +778,11 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `skeleton` | 自实现 shimmer | — | `width`, `height`, `borderRadius`, `loading`(布尔, 与 `child` 联用), `child`(loading=true 时用 child 撑形状再覆盖 shimmer，false 时透传) |
 | `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
 | `divider` | `Divider` | — | `height`, `thickness`, `color`, `indent` |
-| `image` | `Image.network` | `url` | `fit`, `width`, `height`, `borderRadius` |
+| `image` | `Image.network` / `Image.memory` / 本地文件 | `url` / `src` | `fit`, `width`, `height`, `borderRadius` |
 | `spacer` | `SizedBox` / `Spacer` | — | `height`, `width`, `flex`（不写任何字段时默认 `Spacer()`，仅在 Flex 父级生效） |
 | `switch` | `Switch` | `bind` | `label`, `action` |
 | `image_picker` | `ImagePicker` | `bind` | `source`(gallery/camera), `placeholder`, `width`, `height`, `borderRadius` |
-| `video` | `Chewie` + `VideoPlayer` | `url` | `autoplay`, `looping`, `aspectRatio`, `borderRadius` |
+| `video` | `Chewie` + `VideoPlayer` | `url` / `src` | `autoplay`, `looping`, `aspectRatio`, `width`, `height`, `borderRadius` |
 | `icon` | `Icon` | `name` | `size`, `color` |
 | `card` | `Card` | `children` | `layout`, `padding`, `margin`, `elevation`, `borderRadius`, `color`, `onTap`, `crossAxisAlignment`, `mainAxisAlignment` |
 | `checkbox` | `Checkbox` | `bind` | `label`, `action`, `disabled`, `color` |
@@ -878,7 +882,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
   "type": "input",
   "placeholder": "请输入邮箱",
   "label": "邮箱地址",
-  "bind": "$.global.email",
+  "bind": "global.email",
   "keyboardType": "email",
   "maxLines": 1,
   "obscureText": false,
@@ -1408,7 +1412,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 }
 ```
 
-单 widget 同时管 TabBar 和 TabBarView，避免上下两层 widget 各自管理 controller 的麻烦。`height` 用于 TabBarView 高度（必须明确）。
+单 widget 同时管 TabBar 和 TabBarView，避免上下两层 widget 各自管理 controller 的麻烦。`height` 用于 TabBarView 高度，建议显式写；不写时默认 400。
 
 > 提示：如果你想要的是底部 tab + 多页面切换，screen 级别的 `tabs` 配置更合适（已支持，见下文）。
 
@@ -1658,8 +1662,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `cell_path` | `init: [[x,y], ...]` | 网格上的格子序列（snake 身体）；`render.gradient: true` 启头亮尾暗 |
 | `scroll_list` | `direction: "down"` | 垂直滚动行序列（tap_white_tile）；`speed`, `row_height`(默认 width/cells), `safe_zone_bottom`(默认 2), `row_spec` |
 | `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
-| `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：每帧自动 `position += velocity * dt`。通用，可做角色 / 子弹 / 障碍物 / 任意运动元素；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
-| `static` | `position`, `size` | 像素静态可视（保留接口，第一版未启用） |
+| `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：默认每帧自动 `position += velocity * dt`，如需静态像素块用 `velocity: [0,0]` 或 `auto_update: false`；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
 | `sprite` | `asset`, `position`, `size` | 单张图片 / spritesheet 子区域渲染；可配 `src` 裁切 |
 | `animated_sprite` | `asset`, `position`, `size`, `frame_size` | spritesheet 动画；支持 `animations`、`currentAnimation`、`loop`、`step_time` |
 | `parallax` | `asset` | 横向循环背景层；支持 `speed_x`, `y`, `height` |
@@ -1770,6 +1773,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@score.set({value})` | 分数设为 v |
 | `@game_over` | 触发结束，emit `gameOver` |
 | `@game_reset` | 重置（仅清状态，不重新构建结构）。**只能在 flame_game 内部 logic 里用**，外层 JSON-APP 用下面的 `@flame_game_reset` |
+| `@emit({event, data})` | 从游戏内部发自定义事件给外层 JSON-APP；外层用 `on_<event>` 接收 |
 | `@cell_path.advance({path, direction})` | 头按方向走一格（带 wrap）|
 | `@cell_path.grow({path})` | 长一节 |
 | `@cell_path.contains({path, cell, skip_head})` | 是否包含某格（碰撞检测） |
@@ -1794,12 +1798,12 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@animated_sprite.set_animation({id, animation})` | 切换 animated_sprite 当前动画 |
 | `@animated_sprite.effect({...})` | 生成一次性动画特效，播完自动移除 |
 | `@entity.exists({id})` | 判断 entity 是否存在 |
-| `@entity.get({id, field})` | 读取 entity 字段；常用字段：`x/y/w/h/vx/vy/auto_update/state.xxx` |
-| `@entity.set({id, field, value})` | 写 entity 字段；常用字段：`x/y/w/h/vx/vy/auto_update/state.xxx`。不支持一次性写 `position` / `size`，要分别写 `x/y` 或 `w/h` |
-| `@entity.add({id, field, by, min?, max?})` | 对 entity 数值字段做累加；常用字段：`x/y/w/h/vx/vy/state.xxx`。不要写 `path/value` |
+| `@entity.get({id, field})` | 读取 entity 字段；常用字段：`x/y/w/h/vx/vy/position/size/velocity/auto_update/state.xxx` |
+| `@entity.set({id, field, value})` | 写 entity 字段；推荐写标量字段 `x/y/w/h/vx/vy/auto_update/state.xxx`。框架兼容 `position:[x,y]` / `size:[w,h]` / `velocity:[vx,vy]`，但新 JSON 生成时优先分别写 `x/y`、`w/h`、`vx/vy`，错误更容易定位 |
+| `@entity.add({id, field, by, min?, max?})` | 对 entity 数值字段做累加；常用字段：`x/y/w/h/vx/vy/state.xxx`。兼容旧别名 `path/value`，但新 JSON 必须写 `field/by` |
 | `@entity.flip_by_velocity({id})` | 按 vx 自动翻转 sprite 朝向 |
 | `@collide.rect({a, b})` | 两个 entity 的 AABB 矩形重叠检测，返回 bool。两边都得是 pixel 类（暴露 x/y/w/h） |
-| `@collision.first({entity, map})` | 查询 entity 与 tiled_map 的第一条碰撞 |
+| `@collision.first({a, where_prefix})` | 查询实体 `a` 与指定 id 前缀实体的第一条 AABB 碰撞，返回命中的 entity id 或 `null` |
 | `@tiled.loaded({map})` | 地图是否已加载完成 |
 | `@tiled.first_object({map, layer})` | 读取 object layer 第一项 |
 | `@tiled.load({map, source})` | 切换 tiled_map 到另一张外链 TMX/JSON |
@@ -1807,9 +1811,9 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@tiled.clear_spawned({prefix})` | 删除指定前缀的动态生成实体 |
 | `@tiled.spawn_objects({map, layer, templates})` | 按 object layer 批量生成实体 |
 | `@tiled.spawn_objects_near({map, layer, reference, proximity, templates})` | 只生成 reference 附近的 object，适合长地图懒加载 |
-| `@tiled.collisions({map, rect})` | 返回指定矩形范围内的瓦片碰撞列表 |
-| `@tiled.has_collision_type({map, rect, type})` | 判断范围内是否命中特定碰撞类型 |
-| `@tiled.nearest_object({map, layer, reference})` | 查某层离 reference 最近的 object |
+| `@tiled.collisions({map, rect})` / `@tiled.collisions({map, entity})` | 返回指定矩形或 entity AABB 范围内的瓦片碰撞列表 |
+| `@tiled.has_collision_type({map, rect, type})` / `@tiled.has_collision_type({map, entity, type})` | 判断范围内是否命中特定碰撞类型；`type: "hazard"` 时掉出地图底部也视为命中 |
+| `@tiled.nearest_object({map, layer, before_x})` | 查某层中 `x < before_x` 且离 `before_x` 最近的 object，常用于找最近重生点 |
 | `@platformer.step({...})` | 通用平台跳跃物理步进：重力、地面、墙、危险区域等 |
 | `@platformer.backend({...})` | 平台物理后端辅助，供复杂 platformer 使用 |
 | `@platformer.respawn({...})` | 按 respawn 点重生 |
@@ -1821,7 +1825,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 #### 双向桥
 
-- 游戏 emit 的事件（`score_changed` / `game_over` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调任意 130 个全局 @action（@set 写 global、@http_*、@navigate 等）
+- 游戏 emit 的事件（`score_changed` / `game_over` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调外层 JSON-APP 的全局 @action（例如 @set 写 global、@http_*、@navigate 等）
 - 游戏内部 logic 用上面 atom @action 集，不能调 @http、@navigate 这种（避免污染游戏循环）
 
 #### 已知限制 / 设计边界

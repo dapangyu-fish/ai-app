@@ -347,8 +347,11 @@ class GameActions {
           if (id == null || p is! List || p.length < 2) return null;
           final ent = game.entities[id];
           if (ent is! PixelEntity) return null;
-          ent.x = (p[0] as num).toDouble();
-          ent.y = (p[1] as num).toDouble();
+          final x = _asDouble(p[0]);
+          final y = _asDouble(p[1]);
+          if (x == null || y == null) return null;
+          ent.x = x;
+          ent.y = y;
           return null;
         }
       case '@pixel.set_velocity':
@@ -358,8 +361,11 @@ class GameActions {
           if (id == null || v is! List || v.length < 2) return null;
           final ent = game.entities[id];
           if (ent is! PixelEntity) return null;
-          ent.vx = (v[0] as num).toDouble();
-          ent.vy = (v[1] as num).toDouble();
+          final vx = _asDouble(v[0]);
+          final vy = _asDouble(v[1]);
+          if (vx == null || vy == null) return null;
+          ent.vx = vx;
+          ent.vy = vy;
           return null;
         }
       case '@pixel.add_velocity':
@@ -369,8 +375,11 @@ class GameActions {
           if (id == null || dv is! List || dv.length < 2) return null;
           final ent = game.entities[id];
           if (ent is! PixelEntity) return null;
-          ent.vx += (dv[0] as num).toDouble();
-          ent.vy += (dv[1] as num).toDouble();
+          final dvx = _asDouble(dv[0]);
+          final dvy = _asDouble(dv[1]);
+          if (dvx == null || dvy == null) return null;
+          ent.vx += dvx;
+          ent.vy += dvy;
           return null;
         }
 
@@ -409,28 +418,29 @@ class GameActions {
       case '@entity.get':
         {
           final id = args['id']?.toString();
-          final field = args['field']?.toString();
+          final field = args['field']?.toString() ?? args['path']?.toString();
           if (id == null || field == null) return null;
           return _readEntityField(game.entities[id], field);
         }
       case '@entity.set':
         {
           final id = args['id']?.toString();
-          final field = args['field']?.toString();
+          final field = args['field']?.toString() ?? args['path']?.toString();
           if (id == null || field == null) return false;
           return _writeEntityField(game.entities[id], field, args['value']);
         }
       case '@entity.add':
         {
           final id = args['id']?.toString();
-          final field = args['field']?.toString();
-          final by = (args['by'] as num?)?.toDouble() ?? 0;
+          final field = args['field']?.toString() ?? args['path']?.toString();
+          final rawBy = args.containsKey('by') ? args['by'] : args['value'];
+          final by = _asDouble(rawBy) ?? 0;
           if (id == null || field == null) return false;
           final current = _readEntityField(game.entities[id], field);
           if (current is! num) return false;
           var next = current.toDouble() + by;
-          final minV = (args['min'] as num?)?.toDouble();
-          final maxV = (args['max'] as num?)?.toDouble();
+          final minV = _asDouble(args['min']);
+          final maxV = _asDouble(args['max']);
           if (minV != null && next < minV) next = minV;
           if (maxV != null && next > maxV) next = maxV;
           return _writeEntityField(game.entities[id], field, next);
@@ -705,13 +715,21 @@ class GameActions {
         return entity.state[field.substring('state.'.length)];
       }
       switch (field) {
+        case 'position':
+          return [entity.x, entity.y];
+        case 'size':
+          return [entity.w, entity.h];
+        case 'velocity':
+          return [entity.vx, entity.vy];
         case 'x':
           return entity.x;
         case 'y':
           return entity.y;
         case 'w':
+        case 'width':
           return entity.w;
         case 'h':
+        case 'height':
           return entity.h;
         case 'vx':
           return entity.vx;
@@ -745,12 +763,44 @@ class GameActions {
         return true;
       }
       switch (field) {
+        case 'position':
+          return _writePixelPair(
+            value,
+            (a, b) {
+              entity.x = a;
+              entity.y = b;
+            },
+            firstKeys: const ['x'],
+            secondKeys: const ['y'],
+          );
+        case 'size':
+          return _writePixelPair(
+            value,
+            (a, b) {
+              entity.w = a;
+              entity.h = b;
+            },
+            firstKeys: const ['w', 'width'],
+            secondKeys: const ['h', 'height'],
+          );
+        case 'velocity':
+          return _writePixelPair(
+            value,
+            (a, b) {
+              entity.vx = a;
+              entity.vy = b;
+            },
+            firstKeys: const ['vx', 'x'],
+            secondKeys: const ['vy', 'y'],
+          );
+      }
+      switch (field) {
         case 'autoMove':
         case 'auto_update':
           entity.autoMove = value == true;
           return true;
       }
-      final n = (value as num?)?.toDouble();
+      final n = _asDouble(value);
       if (n == null) return false;
       switch (field) {
         case 'x':
@@ -760,9 +810,11 @@ class GameActions {
           entity.y = n;
           return true;
         case 'w':
+        case 'width':
           entity.w = n;
           return true;
         case 'h':
+        case 'height':
           entity.h = n;
           return true;
         case 'vx':
@@ -774,7 +826,7 @@ class GameActions {
       }
     }
     if (entity is ParallaxEntity) {
-      final n = (value as num?)?.toDouble();
+      final n = _asDouble(value);
       if (n == null) return false;
       switch (field) {
         case 'speedX':
@@ -792,21 +844,19 @@ class GameActions {
   static Rect? _rectFromArgs(Map<String, dynamic> args, GameEntity? entity) {
     final raw = args['rect'];
     if (raw is List && raw.length >= 4) {
-      final x = (raw[0] as num?)?.toDouble();
-      final y = (raw[1] as num?)?.toDouble();
-      final w = (raw[2] as num?)?.toDouble();
-      final h = (raw[3] as num?)?.toDouble();
+      final x = _asDouble(raw[0]);
+      final y = _asDouble(raw[1]);
+      final w = _asDouble(raw[2]);
+      final h = _asDouble(raw[3]);
       if (x != null && y != null && w != null && h != null) {
         return Rect.fromLTWH(x, y, w, h);
       }
     }
     if (raw is Map) {
-      final x = (raw['x'] as num?)?.toDouble();
-      final y = (raw['y'] as num?)?.toDouble();
-      final w =
-          (raw['w'] as num?)?.toDouble() ?? (raw['width'] as num?)?.toDouble();
-      final h =
-          (raw['h'] as num?)?.toDouble() ?? (raw['height'] as num?)?.toDouble();
+      final x = _asDouble(raw['x']);
+      final y = _asDouble(raw['y']);
+      final w = _asDouble(raw['w']) ?? _asDouble(raw['width']);
+      final h = _asDouble(raw['h']) ?? _asDouble(raw['height']);
       if (x != null && y != null && w != null && h != null) {
         return Rect.fromLTWH(x, y, w, h);
       }
@@ -815,6 +865,36 @@ class GameActions {
       return Rect.fromLTWH(entity.x, entity.y, entity.w, entity.h);
     }
     return null;
+  }
+
+  static double? _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim());
+    return null;
+  }
+
+  static bool _writePixelPair(
+    dynamic value,
+    void Function(double first, double second) apply, {
+    required List<String> firstKeys,
+    required List<String> secondKeys,
+  }) {
+    double? first;
+    double? second;
+    if (value is List && value.length >= 2) {
+      first = _asDouble(value[0]);
+      second = _asDouble(value[1]);
+    } else if (value is Map) {
+      for (final key in firstKeys) {
+        first ??= _asDouble(value[key]);
+      }
+      for (final key in secondKeys) {
+        second ??= _asDouble(value[key]);
+      }
+    }
+    if (first == null || second == null) return false;
+    apply(first, second);
+    return true;
   }
 
   static bool _platformerStep(JsonFlameGame game, Map<String, dynamic> args) {

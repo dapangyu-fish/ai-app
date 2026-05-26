@@ -913,16 +913,16 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 - `virtual_gamepad` 只负责发输入；移动必须在 `flame_game.frame.logic` 里把 `vars.move_dir` 转成 `@entity.set(vx)` + `@platformer.step`。
 - 内联 `tiled-json-v1` 地图优先使用绝对图片 URL，或者保证 `image` 相对路径与 `map_data.source` / `tileset.source` 的组合后仍能访问。
 - 如果使用 asset pack 根路径，最稳的是把 tileset `image` 写成完整 URL；不要假设它相对 `base_url` 根目录解析。
-- `@entity.set` 只能写 `field`，支持 `x/y/w/h/vx/vy/auto_update/state.xxx`；不要写 `field: "size"` 或 `field: "position"` 并传数组，要分别写 `w/h` 或 `x/y`。
-- `@entity.add` 的参数是 `{id, field, by}`，不是 `{id, path, value}`；写错不会移动实体，表现为输入有反馈但角色不动。
+- `@entity.set` 生成时优先写标量字段 `x/y/w/h/vx/vy/auto_update/state.xxx`；不要依赖一次性 `size` / `position` 数组，复杂逻辑里分别写 `w/h` 或 `x/y` 更容易排查。
+- `@entity.add` 的标准参数是 `{id, field, by}`，不是 `{id, path, value}`；旧别名只作为兼容兜底，生成新 APP 时不要使用，否则旧客户端会表现为输入有反馈但角色不动。
 - 地图不显示时，先验证三件事：`@tiled.loaded` 是否为 true、tilesets 数量是否大于 0、首个 tileset 图片 URL 是否 200。
 
 ### 🔍 自检 / 排查
 
 - 扫描 `flame_game` 内部所有 `@if`：`args` 里必须有 `cond`，不能只有 `condition`。
 - 扫描 `map_data.tilesets[].image`：把它按 `source` 规则拼成最终 URL，实际 `curl -I` 应该是 200。
-- 扫描 `@entity.set`：`field` 只能是 `x/y/w/h/vx/vy/auto_update/state.xxx`，不能是 `size` / `position`。
-- 扫描 `@entity.add`：必须使用 `field` + `by`，不能使用旧式或想当然的 `path` + `value`。
+- 扫描 `@entity.set`：优先使用 `x/y/w/h/vx/vy/auto_update/state.xxx`；如出现 `size` / `position`，确认目标客户端版本支持兼容写法，最好拆成标量字段。
+- 扫描 `@entity.add`：必须使用 `field` + `by`；如出现 `path` + `value`，应改成标准参数以兼容旧客户端。
 - 如果摇杆有 UI 反馈但角色不动，看 `frame.logic` 中 `@platformer.step` 是否被某个永远 false 的 `@if` 包住。
 - 如果地图 object layer 里有对象但敌人/金币不生成，看 `@tiled.spawn_objects` 是否在 loading 分支里被跳过。
 
@@ -967,7 +967,7 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 - 使用 sprite sheet 前，必须确认图片尺寸和网格：`frame_size = image_size / rows_or_columns`，不要凭经验猜 32/64/128。
 - 如果不确定帧网格，优先使用 manifest 中明确的单帧、切片图或预览图；否则先用 `src` 裁一帧验证。
 - 输入必须形成闭环：`input event -> vars.input_state -> entity velocity/action -> frame update/physics step -> camera/score/status`。
-- 自由移动类游戏如果直接改实体坐标，用 `@entity.add({id, field: "x", by: dx})` / `@entity.add({id, field: "y", by: dy})`；不要写 `path/value`，也不要一次性 set `size` / `position` 数组。
+- 自由移动类游戏如果直接改实体坐标，用 `@entity.add({id, field: "x", by: dx})` / `@entity.add({id, field: "y", by: dy})`；不要写 `path/value`，尺寸和位置初始化也优先拆成 `x/y/w/h` 标量字段。
 - `@platformer.step` 对平台类角色必须带 `map`；没有地图碰撞时，改用 `auto_update: true` 的自由像素移动，并自己处理边界/重力。
 - 子弹、特效、掉落物、召唤物这类动态实体必须使用递增 id 或有限对象池，例如 `effect_{{ vars.spawn_seq }}`，生成后递增计数。
 - 背景先按目标视口验算：如果下方有虚拟手柄，游戏画布本身仍要保持适合该玩法的比例，不要把游戏区域强行拉伸。
