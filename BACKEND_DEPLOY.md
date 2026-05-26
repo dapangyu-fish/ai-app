@@ -307,6 +307,23 @@ server {
 }
 ```
 
+Registry 的 AI 摘要 / 标签体系升级后，不需要改包 JSON，也不需要重新发布所有
+APP。部署新版 backend/registry 后，用管理员 token 触发一次 catalog backfill 即可：
+
+```bash
+curl -X POST "https://<registry.example.com>/catalog/backfill" \
+  -H "Authorization: Bearer $REGISTRY_ADMIN_TOKEN"
+```
+
+这个接口会重新解析现有包的 `dependencies` / `widgets_used` / `builtins_used` /
+`tech_stack`，并把包标记为 `pending`。后台 enrich worker 会异步用新版 prompt
+重算 `summary_zh` / `summary_en` / `category` / `domains` / `capabilities`。
+进度可用：
+
+```bash
+curl "https://<registry.example.com>/catalog" | jq '.packages | group_by(.status) | map({status: .[0].status, count: length})'
+```
+
 ### OSS / MinIO
 
 OSS endpoint 主要用于上传、下载头像和 JSON App 资源。nginx 侧重点是大文件、原始 header 和禁用 request buffering：

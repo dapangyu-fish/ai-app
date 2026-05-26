@@ -29,11 +29,19 @@ from config import (
     SUMMARY_MAX_CONCURRENCY, SUMMARY_CLI_TIMEOUT,
 )
 
-# 受控词表 —— 让 CLI 只能从这里选，检索才对得齐
-CATEGORY_VOCAB = ["app", "library", "game", "demo", "tool"]
+# 受控词表 —— 让 CLI 只能从这里选，检索才对得齐。
+#
+# category 只描述“包的形态”，不要塞业务领域；业务领域放 domains，
+# 框架能力由 registry_catalog.py 的 tech_stack 确定性推导。
+CATEGORY_VOCAB = [
+    "app", "library", "game", "tool", "demo",
+    "launcher", "component", "template",
+]
 DOMAIN_VOCAB = [
-    "social", "productivity", "game", "media", "data",
-    "finance", "ui", "utility", "lifestyle", "education",
+    "ai", "chat", "social", "productivity", "game", "media",
+    "data", "finance", "ui", "utility", "lifestyle", "education",
+    "health", "developer", "business", "ecommerce", "maps",
+    "creative", "system",
 ]
 
 # summary 专用小池 —— 跟生成的大池隔离，限制同时跑的 CLI 数
@@ -62,6 +70,8 @@ def _build_summary_prompt(input_path: str, output_path: str) -> str:
 
 要求：
 - category / domains 只能用上面给的受控词表里的值，不要自创
+- category 是包形态：例如游戏选 game，组件库选 library/component，启动器选 launcher
+- domains 是业务领域：例如大模型聊天选 ai/chat，IM 选 social/chat，平台游戏选 game
 - summary 要具体（说清楚它能干啥），别写"这是一个应用"这种废话
 - 只输出 JSON 到文件，不要输出多余内容
 - 用 Write 工具把上面的 JSON 写到 `{output_path}`

@@ -24,7 +24,7 @@ from config import (
 )
 
 # summary prompt 版本 —— 改了 enrich 的 prompt / schema 就 +1，全量自动重排
-SUMMARY_PROMPT_VERSION = 1
+SUMMARY_PROMPT_VERSION = 2
 
 # 连续失败软上限，达到标 failed（下一轮全量 sweep 会重置回 pending 再试）
 MAX_REINDEX_ATTEMPTS = 5
@@ -45,12 +45,22 @@ def _conn():
 # tech_stack 映射 —— 从结构化信号确定性推导（不走 LLM）
 # ═══════════════════════════════════════════════════════════
 
-# (判定函数 → tech_stack 标签)。判定基于 widgets_used / builtins_used / dependencies
-def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
+# (判定函数 → tech_stack 标签)。判定基于 widgets_used / builtins_used /
+# dependencies / game entity kinds / JSON 结构特征，全部确定性推导，不走 LLM。
+def _derive_tech_stack(
+    widgets: set,
+    builtins: set,
+    deps: set,
+    entity_kinds: set,
+    structural_flags: set,
+) -> list:
     tech = set()
 
     def any_builtin(*prefixes):
         return any(b.startswith(p) for b in builtins for p in prefixes)
+
+    def any_dep(*prefixes):
+        return any(d.startswith(p) for d in deps for p in prefixes)
 
     # 本地数据库
     if any_builtin("@db_") or "lib_database" in deps:
@@ -58,9 +68,28 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
     # 实时通讯
     if any_builtin("@im_") or "lib_im" in deps:
         tech.add("realtime-messaging")
+    # OpenAI-compatible / SSE AI 工具
+    if any_builtin("@http_sse"):
+        tech.add("sse-streaming")
+    if "lib_openai" in deps:
+        tech.add("ai-chat")
+        tech.add("openai-compatible")
+        tech.add("sse-streaming")
     # 游戏引擎
     if "flame_game" in widgets:
         tech.add("game-engine")
+    if "virtual_gamepad" in widgets or any_builtin("@flame_game_input") or "game-controls" in deps:
+        tech.add("virtual-gamepad")
+    if any_builtin("@platformer."):
+        tech.add("platformer-physics")
+    if any_builtin("@animated_sprite.") or "animated_sprite" in entity_kinds:
+        tech.add("animated-sprite")
+    if any_builtin("@tiled.") or "tiled_map" in entity_kinds:
+        tech.add("tiled-map")
+    if "inline-map-data" in structural_flags:
+        tech.add("inline-tiled-map")
+    if "asset-bundle" in structural_flags:
+        tech.add("asset-bundle")
     # 图表
     if "chart" in widgets:
         tech.add("charts")
@@ -82,6 +111,13 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
     # 二维码
     if "qr_code" in widgets:
         tech.add("qr")
+    # 启动器 / 应用市场
+    if any_dep("launcher-") or any_builtin(
+        "@my_apps_", "@launch_app", "@startup_default_", "@cache_clear",
+    ):
+        tech.add("launcher")
+    if any_builtin("@market_list"):
+        tech.add("app-market")
     # 文件 / 本地存储
     if any_builtin("@file_", "@storage_"):
         tech.add("file-storage")
@@ -94,8 +130,20 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
     # 生物识别
     if any_builtin("@biometric_auth"):
         tech.add("biometric")
+    # 系统桥
+    if any_builtin("@clipboard_"):
+        tech.add("clipboard")
+    if any_builtin("@share"):
+        tech.add("share")
+    if any_builtin("@request_permission", "@permission_status", "@open_app_settings"):
+        tech.add("permissions")
+    if any_builtin("@haptic"):
+        tech.add("haptics")
     # i18n / 主题
-    if any_builtin("@set_locale", "@get_locale", "@set_theme", "@get_theme"):
+    if any_builtin(
+        "@set_locale", "@get_locale", "@set_theme", "@get_theme",
+        "@set_framework_locale", "@get_framework_locale",
+    ):
         tech.add("i18n-theming")
     # 通用 UI 库
     if "common-ui" in deps:
@@ -108,20 +156,31 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
 # capture —— 解析包 JSON 提结构化信号
 # ═══════════════════════════════════════════════════════════
 
-def _walk_collect(node, widget_types: set, builtins: set):
+def _walk_collect(
+    node,
+    widget_types: set,
+    builtins: set,
+    entity_kinds: set,
+    structural_flags: set,
+):
     """递归遍历 JSON 树，收集 widget type（"type" 字段）+ 内置函数（"call":"@xxx"）"""
     if isinstance(node, dict):
         t = node.get("type")
         if isinstance(t, str):
             widget_types.add(t)
+        kind = node.get("kind")
+        if isinstance(kind, str):
+            entity_kinds.add(kind)
         call = node.get("call")
         if isinstance(call, str) and call.startswith("@"):
             builtins.add(call)
+        if "map_data" in node:
+            structural_flags.add("inline-map-data")
         for v in node.values():
-            _walk_collect(v, widget_types, builtins)
+            _walk_collect(v, widget_types, builtins, entity_kinds, structural_flags)
     elif isinstance(node, list):
         for item in node:
-            _walk_collect(item, widget_types, builtins)
+            _walk_collect(item, widget_types, builtins, entity_kinds, structural_flags)
 
 
 def parse_capture(json_content: dict) -> dict:
@@ -144,15 +203,31 @@ def parse_capture(json_content: dict) -> dict:
 
     widget_types: set = set()
     builtins: set = set()
+    entity_kinds: set = set()
+    structural_flags: set = set()
+    if isinstance(json_content.get("assets"), dict) and json_content.get("assets"):
+        structural_flags.add("asset-bundle")
     # 只遍历 ui + steps + global.functions（业务逻辑所在），不遍历 meta
-    _walk_collect(json_content.get("ui"), widget_types, builtins)
-    _walk_collect(json_content.get("steps"), widget_types, builtins)
-    _walk_collect((json_content.get("global") or {}).get("functions"), widget_types, builtins)
+    _walk_collect(json_content.get("ui"), widget_types, builtins, entity_kinds, structural_flags)
+    _walk_collect(json_content.get("steps"), widget_types, builtins, entity_kinds, structural_flags)
+    _walk_collect(
+        (json_content.get("global") or {}).get("functions"),
+        widget_types,
+        builtins,
+        entity_kinds,
+        structural_flags,
+    )
 
     # 去掉明显不是 widget 的 type 值（meta.type 的 app/library/component/widget）
     widget_types -= {"app", "library", "component", "widget"}
 
-    tech_stack = _derive_tech_stack(widget_types, builtins, set(dependencies))
+    tech_stack = _derive_tech_stack(
+        widget_types,
+        builtins,
+        set(dependencies),
+        entity_kinds,
+        structural_flags,
+    )
 
     return {
         "exports": sorted(exports) if all(isinstance(e, str) for e in exports) else exports,
