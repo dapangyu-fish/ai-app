@@ -3057,19 +3057,39 @@ class _PublishDialogState extends State<_PublishDialog> {
     final t = T.of(context);
 
     return AlertDialog(
-      title: Row(
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(t.publishDialogTitle)),
-          TextButton.icon(
-            onPressed: _inviteMember,
-            icon: const Icon(Icons.person_add, size: 18),
-            label: Text(t.publishInviteMember),
+          Text(
+            t.publishDialogTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: _createNamespace,
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(t.publishCreateNamespace),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton.icon(
+                onPressed: _inviteMember,
+                icon: const Icon(Icons.person_add, size: 18),
+                label: Text(
+                  t.publishInviteMember,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _createNamespace,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(
+                  t.publishCreateNamespace,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ],
       ),
