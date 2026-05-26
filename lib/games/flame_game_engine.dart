@@ -708,6 +708,7 @@ class JsonFlameGame extends FlameGame {
             renderConfig: render,
             priority: priority,
             source: spec['source']?.toString() ?? spec['map']?.toString() ?? '',
+            mapData: (spec['map_data'] as Map?)?.cast<String, dynamic>(),
             baseUrl: spec['base_url']?.toString(),
             scale: (spec['scale'] as num?)?.toDouble() ?? 1,
             includeLayers: _readStringSet(spec['include_layers']),

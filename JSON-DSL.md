@@ -1,7 +1,7 @@
-# Flutter JSON Low-Code DSL 完整开发文档 v3.3
+# Flutter JSON Low-Code DSL 完整开发文档 v3.4
 
-**文档版本**：v3.3
-**制定日期**：2026年4月
+**文档版本**：v3.4
+**制定日期**：2026年5月
 **状态**：正式发布
 **适用范围**：Flutter 跨平台 GUI 客户端（iOS / Android / Web / Desktop）
 **目标**：一套**纯 JSON 配置驱动**的低代码 Flutter 应用，支持动态下发 UI 与业务逻辑。
@@ -346,6 +346,7 @@
 | `@http_post` | `{ "url": "...", "body": {...}, "headers": {...}, "content_type": "application/json" }` | POST 请求 |
 | `@http_put` | `{ "url": "...", "body": {...}, "headers": {...} }` | PUT 请求 |
 | `@http_delete` | `{ "url": "...", "headers": {...} }` | DELETE 请求 |
+| `@http_sse` | `{ "url": "...", "method": "POST", "body": {...}, "headers": {...}, "bind": "global.stream", "onEvent": [...] }` | Server-Sent Events。每个事件形如 `{raw,event,id,data,json,done,delta}`；`delta` 自动兼容 OpenAI Chat Completions / Responses 常见文本增量。Web 端走浏览器兼容桥，若目标服务未配 CORS 仍会被浏览器拦截 |
 
 **示例**：
 ```json
@@ -434,6 +435,7 @@
 | `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
 | `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
 | `@flame_game_reset` | `{}` | 重置当前屏幕挂着的所有 flame_game。给 JSON-APP 层（结算 dialog 的"再来一局"按钮）从外面重置游戏用，避免依赖 canvas 的 tap-to-reset |
+| `@flame_game_input` | `{ "type": "button", "id": "jump", "pressed": true }` 或 `{ "type": "joystick", "x": 0.5, "y": -0.2, "strength": 0.54 }` | 从普通 JSON widget 向当前屏幕的 flame_game 注入外部输入。`virtual_gamepad` 组件库就是基于这个桥接实现 |
 
 ### 4.9.1 媒体 / 相机（底层 API，**建议走 lib**）
 
@@ -480,7 +482,7 @@
 - 之后 `global._im.tick` 每收到一条新消息会 +1，`global._im.last_message` 更新到最新一条
 - 想做"自动刷新会话列表"，绑 `tick` 触发 rebuild + 在适当时机重新调 `listConversations` 即可
 - 想做未读 badge，调一次 `@lib_im.totalUnread { bind: "global.totalUnread" }`，UI 绑 `{{ global.totalUnread }}`，业务路径里发完 / 读完消息再调一次刷新
-- 平台限制：iOS / Android 才有真实数据；macOS / Web / Windows / Linux 上 IM SDK 无效，所有 `@im_*` 安全降级返回空数据，不会崩
+- 平台限制：iOS / Android 使用原生 OpenIM SDK；Web 使用 `openim/wasm-client-sdk` 兼容层。macOS / Windows / Linux 暂无真实 IM SDK，所有 `@im_*` 安全降级返回空数据，不会崩。
 
 ### 4.11 主题 / 多语言 / 生命周期
 
@@ -530,7 +532,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `@my_apps_list` | — | `List<{fileName, name, displayName, description, savedAt, version, author, type}>` | 列出本地保存的 JSON-APP（按时间倒序）。配合 `assign: "global.xxx"` 写到变量 |
 | `@my_apps_delete` | `{fileName}` | `bool` | 删一个本地 APP |
 | `@my_apps_share` | `{fileName}` | `bool` | 通过系统分享发出 JSON 文件 |
-| `@market_list` | `{type?: "app"\|"library", search?}` | `List<{name, displayName, description, version, author, type}>` | 从 Registry 拉市场列表，可选客户端搜索过滤（名称/描述/作者任一字段包含子串即命中） |
+| `@market_list` | `{type?: "app"\|"library", search?, page?, perPage?}` | `List<{name, displayName, description, version, author, type}>` | 从 Registry 分页拉市场列表，`search` 由服务端模糊匹配。默认 `page=1`, `perPage=50` |
 | `@launch_app` | `{kind: "local"\|"market", fileName?, name?, version?, isStartupRoot?}` | `bool` | 在当前 JSON-APP 内嵌套启动另一个 JSON-APP。kind=local 必须传 fileName；kind=market 必须传 name（version 缺省任意）。`isStartupRoot=true` 时新 APP 没有返回按钮（启动器场景）。框架会自动 push/pop 状态栈，子 APP pop 时父态恢复 |
 | `@startup_default_get` | — | `{kind, hasTarget, marketName, marketVersion, marketDisplayName, localFileName, localDisplayName, displayName}` | 读默认启动 APP 配置 |
 | `@startup_default_set` | `{kind: "market"\|"local", name?, version?, fileName?, displayName?}` | `bool` | 设默认启动 APP（market 必填 name+version；local 必填 fileName） |
@@ -544,6 +546,20 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 `getUserAvatar` / `getUserName` / `getUserEmail`——launcher 这里不重复
 包一份。原始字段名见 `AuthService.currentUser`：`id` / `username` / `email`
 / `avatar_url` / `role`。
+
+### 4.13 其它内置函数索引（补充）
+
+本节记录近期框架层已经存在、但容易漏写到文档里的通用函数。详细参数以源码实现为准，JSON-APP 里应优先通过组件库封装复用。
+
+| 类别 | 函数 |
+|------|------|
+| 本地 KV | `@storage_set`, `@storage_get`, `@storage_remove`, `@storage_clear` |
+| 本地 JSON 文件 | `@file_write_json`, `@file_read_json`, `@file_exists`, `@file_delete`, `@file_list`, `@file_append_json`, `@file_remove_json_item`, `@file_update_json_item` |
+| 本地表/数据库 | `@db_create_table`, `@db_insert`, `@db_query`, `@db_update`, `@db_delete`, `@db_count`, `@db_kv_set`, `@db_kv_get`, `@db_kv_delete` |
+| 随机/时间 | `@random`, `@random_float`, `@random_bool`, `@random_chars`, `@uuid`, `@random_pick`, `@timestamp`, `@date_format` |
+| 扩展字符串 | `@str_repeat`, `@str_reverse`, `@str_pad`, `@str_join`, `@str_capitalize`, `@str_count`, `@str_index_of`, `@str_last_index_of`, `@str_between`, `@str_mask` |
+| 扩展数组 | `@list_shuffle`, `@list_sample`, `@list_unique`, `@list_flatten`, `@list_sort`, `@list_reverse`, `@list_slice` |
+| 账号/应用配置 | `@get_user_info`, `@get_auth_token`, `@is_logged_in`, `@logout`, `@refresh_user`, `@update_profile`, `@upload_avatar`, `@get_app_config`, `@apply_app_config`, `@save_app_config` |
 
 
 **使用示例 — 嵌套启动**
@@ -796,6 +812,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `camera` | `CameraPreview` (camera 包) | — | `lensDirection`(back/front), `resolution`(low/medium/high/veryHigh), `height` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 | `flame_game` | Flame `GameWidget` 嵌入 ECS 游戏 | `world` | `vars`, `entities`, `input`, `frame`, `tick`, `on_*`, `overlay`, `height`（详见 6.42） |
+| `virtual_gamepad` | 通用虚拟手柄 | — | `mode`(`dpad`/`joystick`), `directions`, `actions`, `actionLayout`(`wrap`/`ps`), `joystick`, `height`。适合平台跳跃 / 动作游戏；可通过组件库 `game-controls` 复用 |
 
 ### 6.4 button 详细属性
 
@@ -1639,6 +1656,10 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
 | `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：每帧自动 `position += velocity * dt`。通用，可做角色 / 子弹 / 障碍物 / 任意运动元素；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
 | `static` | `position`, `size` | 像素静态可视（保留接口，第一版未启用） |
+| `sprite` | `asset`, `position`, `size` | 单张图片 / spritesheet 子区域渲染；可配 `src` 裁切 |
+| `animated_sprite` | `asset`, `position`, `size`, `frame_size` | spritesheet 动画；支持 `animations`、`currentAnimation`、`loop`、`step_time` |
+| `parallax` | `asset` | 横向循环背景层；支持 `speed_x`, `y`, `height` |
+| `tiled_map` | `source` 或 `map_data` | Tiled 地图渲染 + 瓦片碰撞 + object layer 读取；支持外链 TMX/JSON，也支持内联 `tiled-json-v1`（见下） |
 
 每个 entity 的 `render` 字段：
 
@@ -1646,6 +1667,86 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 { "shape": "rect", "color": "#00C800", "padding": 2, "radius": 4 }
 { "shape": "circle", "color": "#FF4444", "padding": 4 }
 ```
+
+#### `tiled_map` 地图输入：外链资源 / 内联 JSON
+
+`tiled_map` 是通用地图 atom，不绑定任何具体游戏。它把 Tiled 地图读成框架内部统一结构，供渲染、碰撞、object spawn 使用。
+
+**Agent 选型规则**：做 JSON 游戏时，如果需要 TMX / Tiled 地图，默认优先生成
+`map_data` 并保存在同一份 JSON APP 里。这样用户拿到的就是一个完整 APP，
+不需要额外准备 bucket、CDN、上传 TMX，也不容易因为资源路径漏传导致地图空白。
+只有在地图很大、已有稳定资源托管、需要用 Tiled 工具链反复维护、或多款 APP
+共享同一套地图资源时，才优先使用外链 `source`。
+
+**模式 A：外链 TMX / JSON**
+
+```json
+{
+  "kind": "tiled_map",
+  "source": "map/level_1.tmx",
+  "base_url": "https://cdn.example.com/my-game/",
+  "solid_layers": ["Ground"],
+  "hazard_layers": ["Hazard"]
+}
+```
+
+`source` 可以是绝对 URL，也可以配 `base_url` 使用相对路径。`.tmx` 会按 Tiled XML 解析；`.json` 或内容以 `{` 开头时按 `tiled-json-v1` 解析。外链模式适合已经有资源托管和地图制作流程的项目，便于 Tiled 工具链、图片资源和缓存协同；不应作为 AI 生成小游戏的默认选择。
+
+**模式 B：内联地图数据**
+
+```json
+{
+  "kind": "tiled_map",
+  "base_url": "https://cdn.example.com/my-game/",
+  "map_data": {
+    "format": "tiled-json-v1",
+    "source": "map/level_1.tmx",
+    "width": 96,
+    "height": 15,
+    "tilewidth": 64,
+    "tileheight": 64,
+    "tilesets": [
+      {
+        "firstgid": 1,
+        "source": "tiles/ground.tsx",
+        "name": "ground",
+        "tilewidth": 64,
+        "tileheight": 64,
+        "tilecount": 8,
+        "columns": 4,
+        "image": "ground.png",
+        "tiles": [
+          {
+            "id": 0,
+            "type": "Platform",
+            "collision": [{ "x": 0, "y": 0, "width": 64, "height": 64 }]
+          }
+        ]
+      }
+    ],
+    "layers": [
+      {
+        "type": "tilelayer",
+        "name": "Ground",
+        "width": 96,
+        "height": 15,
+        "data": [0, 0, 1, 1, 0]
+      },
+      {
+        "type": "objectgroup",
+        "name": "spawn",
+        "objects": [
+          { "id": 1, "name": "start", "x": 128, "y": 704, "width": 48, "height": 48 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+内联模式是 AI 生成游戏的推荐默认方案，也适合小/中地图、用户没有 bucket/CDN 的场景。地图结构可以直接放在 `global.variables._tiledMaps`，实体和 `@tiled.load` 用 `{{ global._tiledMaps.level1 }}` 引用，避免重复塞多份。`map_data.source` 可选，但建议保留原 TMX 相对路径（如 `map/level_1.tmx`），框架会用它作为 tileset 图片相对路径的解析基准。
+
+注意：`map_data` 解决的是地图结构内联；tileset 图片仍建议用 URL / `base_url` 资源。小图未来可以用 data URL，但大型 spritesheet 不建议塞进主 JSON。
 
 #### atom @action 集合（仅 flame_game 内可用）
 
@@ -1686,7 +1787,30 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@pixel.add_velocity({id, dv: [dvx, dvy]})` | 累加速度。每帧加 `[0, gravity*dt]` = 重力；加 `[wind, 0]` = 风力；通用语义 |
 | `@spawn({kind, id, position?, size?, velocity?, render?, ...})` | 运行时创建一个新 entity（任何 kind）。typical 用于子弹 / 敌人 / 障碍物等"无限生成"的场景 |
 | `@despawn({id})` | 运行时销毁一个 entity |
+| `@animated_sprite.set_animation({id, animation})` | 切换 animated_sprite 当前动画 |
+| `@animated_sprite.effect({...})` | 生成一次性动画特效，播完自动移除 |
+| `@entity.exists({id})` | 判断 entity 是否存在 |
+| `@entity.get({id})` | 读取 entity 快照 |
+| `@entity.set({id, path, value})` | 写 entity 字段 / state 路径 |
+| `@entity.add({id, path, value})` | 对 entity 数值字段 / state 路径做累加 |
+| `@entity.flip_by_velocity({id})` | 按 vx 自动翻转 sprite 朝向 |
 | `@collide.rect({a, b})` | 两个 entity 的 AABB 矩形重叠检测，返回 bool。两边都得是 pixel 类（暴露 x/y/w/h） |
+| `@collision.first({entity, map})` | 查询 entity 与 tiled_map 的第一条碰撞 |
+| `@tiled.loaded({map})` | 地图是否已加载完成 |
+| `@tiled.first_object({map, layer})` | 读取 object layer 第一项 |
+| `@tiled.load({map, source})` | 切换 tiled_map 到另一张外链 TMX/JSON |
+| `@tiled.load({map, map_data})` | 切换 tiled_map 到另一份内联 `tiled-json-v1` 数据 |
+| `@tiled.clear_spawned({prefix})` | 删除指定前缀的动态生成实体 |
+| `@tiled.spawn_objects({map, layer, templates})` | 按 object layer 批量生成实体 |
+| `@tiled.spawn_objects_near({map, layer, reference, proximity, templates})` | 只生成 reference 附近的 object，适合长地图懒加载 |
+| `@tiled.collisions({map, rect})` | 返回指定矩形范围内的瓦片碰撞列表 |
+| `@tiled.has_collision_type({map, rect, type})` | 判断范围内是否命中特定碰撞类型 |
+| `@tiled.nearest_object({map, layer, reference})` | 查某层离 reference 最近的 object |
+| `@platformer.step({...})` | 通用平台跳跃物理步进：重力、地面、墙、危险区域等 |
+| `@platformer.backend({...})` | 平台物理后端辅助，供复杂 platformer 使用 |
+| `@platformer.respawn({...})` | 按 respawn 点重生 |
+| `@platformer.stuck_check({...})` | 卡住检测 |
+| `@platformer.section_exit({...})` | 横版跑图段落出口检测 |
 | `@for_each_entity({where_prefix, do})` | 遍历 id 前缀匹配的所有 entity。子 logic 里 `{{ loop.id }}` / `{{ loop.entity }}` / `{{ loop.index }}` 可用。子 logic 内 spawn/despawn 不影响本轮迭代（用快照） |
 | `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
 | `@random_double({min, max})` | 返回 [min, max) 的随机 double |
@@ -1696,13 +1820,13 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 - 游戏 emit 的事件（`score_changed` / `game_over` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调任意 130 个全局 @action（@set 写 global、@http_*、@navigate 等）
 - 游戏内部 logic 用上面 atom @action 集，不能调 @http、@navigate 这种（避免污染游戏循环）
 
-#### 已知限制 / 不在第一版
+#### 已知限制 / 设计边界
 
-- 没有 sprite / image entity（纯 Canvas 图形）
-- 没有音效
-- 没有动画曲线 / 缓动
-- 没有持久化（高分让 JSON-APP 自己用 `on_game_over` 存）
-- 频繁 jsonlogic 求值无 cache，性能不是瓶颈但 60fps frame.logic 不要塞太多规则
+- 没有音效 atom。
+- 没有动画曲线 / 缓动系统；简单 spritesheet 动画用 `animated_sprite`。
+- 没有游戏专用持久化；高分/进度让 JSON-APP 自己在 `on_game_over` / `on_score_changed` 中用 storage/file/db 保存。
+- `frame.logic` 是逐帧解释执行，适合轻量规则；大批量实体建议用 `@tiled.spawn_objects_near`、前缀遍历和距离 despawn 控制规模。
+- `tiled_map.map_data` 可以承载小/中地图；大型正式地图仍建议外链 asset，避免主 JSON 难以 review。
 
 #### 完整示例
 
@@ -1713,6 +1837,8 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `templates/demo_2048.json` | `pixel_world` + `value_grid` + `init.logic` + `swipe` | **flame_game 与普通 widget 混排**：顶部分数 bar、中间游戏区、底部结果 bar 在同一份 JSON 里 |
 | `templates/demo_flappy_bird.json` | `pixel` entity + `@pixel.add_velocity` + `@spawn`/`@despawn` + `@collide.rect` + `@for_each_entity` | **物理 + 动态生成 + 碰撞**：重力 / 跳跃冲量 / 管道无限生成 / 出屏销毁 / 计分 全在 JSON 里编排，框架零业务逻辑。bird 用 🐦 emoji 渲染 |
 | `templates/demo_jump.json` | `input.press_end` + `pixel` entity + 抛物线物理 + 状态机 | **蓄力跳跃 + 平台滚动**：按住-松手按 `held_ms` 决定 vx，抛物线由重力自然形成；落到目标平台→镜头滚动（platform / player 同时 `set_velocity`)，到位后 despawn / spawn 切换。整套状态机（ready/jumping/rolling）由 JSON `vars.state` 驱动 |
+| `templates/demo_superdash_runner.ALL_IN_ONE.json` | `tiled_map.map_data` + `animated_sprite` + platformer atoms | 官方 SuperDash 风格跑酷，地图结构内联在 JSON 中；图片仍走 asset URL |
+| `templates/demo_platformer_adventure.ALL_IN_ONE.json` | `tiled_map.map_data` + `virtual_gamepad` + platformer atoms | 多关卡平台跳跃，地图结构内联在 JSON 中，演示无 bucket 的 all-in-one 游戏发布方式 |
 
 ---
 

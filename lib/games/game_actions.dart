@@ -495,9 +495,15 @@ class GameActions {
         {
           final mapId = args['map']?.toString() ?? args['id']?.toString();
           final source = args['source']?.toString();
-          if (mapId == null || source == null || source.isEmpty) return false;
+          final mapData = (args['map_data'] as Map?)?.cast<String, dynamic>();
+          if (mapId == null) return false;
           final ent = game.entities[mapId];
           if (ent is! TiledMapEntity) return false;
+          if (mapData != null) {
+            ent.loadMapData(mapData);
+            return true;
+          }
+          if (source == null || source.isEmpty) return false;
           ent.loadSource(source);
           return true;
         }

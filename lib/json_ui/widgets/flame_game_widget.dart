@@ -66,24 +66,34 @@ class JsonFlameGameWidget extends JsonBaseWidget {
     return walk(json) as Map<String, dynamic>;
   }
 
-  String _resolveOuterOnly(String s, JsonInterpreter interpreter) {
+  dynamic _resolveOuterOnly(String s, JsonInterpreter interpreter) {
     final regex = RegExp(r'\{\{\s*([^}]+?)\s*\}\}');
+    final fullMatch = RegExp(r'^\s*\{\{\s*([^}]+?)\s*\}\}\s*$').firstMatch(s);
+    if (fullMatch != null) {
+      final expr = fullMatch.group(1)!.trim();
+      if (_isGameInternalExpression(expr)) return s;
+      return interpreter.getVariable(expr);
+    }
     return s.replaceAllMapped(regex, (m) {
       final expr = m.group(1)!.trim();
       // 内部命名空间 —— 留给游戏 logic 自己解析
-      if (expr.startsWith('vars.') ||
-          expr.startsWith('event.') ||
-          expr.startsWith('entities.') ||
-          expr.startsWith('world.') ||
-          expr == 'score' ||
-          expr == 'best' ||
-          expr == 'game_over') {
+      if (_isGameInternalExpression(expr)) {
         return m.group(0)!; // 原样返回
       }
       // 外层 —— 用主 interpreter 求值
       final v = interpreter.getVariable(expr);
       return v?.toString() ?? '';
     });
+  }
+
+  bool _isGameInternalExpression(String expr) {
+    return expr.startsWith('vars.') ||
+        expr.startsWith('event.') ||
+        expr.startsWith('entities.') ||
+        expr.startsWith('world.') ||
+        expr == 'score' ||
+        expr == 'best' ||
+        expr == 'game_over';
   }
 }
 
