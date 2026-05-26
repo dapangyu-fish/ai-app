@@ -450,43 +450,101 @@ select {
 .resizeHandle {
   position: absolute;
   z-index: 4;
-  width: 24px;
-  height: 24px;
-  border: 1px solid color-mix(in srgb, var(--primary2) 70%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg) 74%, transparent);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 28%, transparent);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
   cursor: nwse-resize;
+  opacity: 0.68;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
+.resizeHandle::before,
 .resizeHandle::after {
   content: "";
   position: absolute;
-  inset: 7px;
-  border-radius: 999px;
-  background: var(--primary2);
+  border-color: color-mix(in srgb, var(--primary2) 72%, transparent);
+  border-style: solid;
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--primary2) 28%, transparent));
+  transition:
+    border-color 0.16s ease,
+    filter 0.16s ease;
+}
+
+.resizeHandle::before {
+  width: 16px;
+  height: 0;
+  border-width: 1px 0 0;
+}
+
+.resizeHandle::after {
+  width: 0;
+  height: 16px;
+  border-width: 0 0 0 1px;
+}
+
+.resizeHandle:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.resizeHandle:hover::before,
+.resizeHandle:hover::after {
+  border-color: var(--primary2);
+  filter: drop-shadow(0 0 13px color-mix(in srgb, var(--primary2) 54%, transparent));
 }
 
 .resizeHandle-nw {
-  top: -4px;
-  left: -4px;
+  top: 2px;
+  left: 2px;
 }
 
 .resizeHandle-ne {
-  top: -4px;
-  right: -4px;
+  top: 2px;
+  right: 2px;
   cursor: nesw-resize;
 }
 
 .resizeHandle-sw {
-  bottom: -4px;
-  left: -4px;
+  bottom: 2px;
+  left: 2px;
   cursor: nesw-resize;
 }
 
 .resizeHandle-se {
-  right: -4px;
-  bottom: -4px;
+  right: 2px;
+  bottom: 2px;
+}
+
+.resizeHandle-nw::before,
+.resizeHandle-nw::after {
+  top: 7px;
+  left: 7px;
+}
+
+.resizeHandle-ne::before,
+.resizeHandle-ne::after {
+  top: 7px;
+  right: 7px;
+}
+
+.resizeHandle-ne::after,
+.resizeHandle-se::after {
+  border-width: 0 1px 0 0;
+}
+
+.resizeHandle-sw::before,
+.resizeHandle-sw::after {
+  bottom: 7px;
+  left: 7px;
+}
+
+.resizeHandle-se::before,
+.resizeHandle-se::after {
+  right: 7px;
+  bottom: 7px;
 }
 
 .phoneCaption {
