@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../auth/auth_service.dart';
+import '../config/app_config.dart';
 import 'im_service.dart';
 
 class IMConversationPage extends StatefulWidget {
@@ -213,6 +219,15 @@ class _WebChatPageState extends State<_WebChatPage> {
   String get _conversationID =>
       widget.conversation['conversation_id']?.toString() ?? '';
 
+  String get _peerUserID => widget.conversation['user_id']?.toString() ?? '';
+  String get _groupID => widget.conversation['group_id']?.toString() ?? '';
+  int get _conversationType => widget.conversation['conversation_type'] is int
+      ? widget.conversation['conversation_type'] as int
+      : int.tryParse(
+              widget.conversation['conversation_type']?.toString() ?? '',
+            ) ??
+            1;
+
   @override
   void initState() {
     super.initState();
@@ -293,14 +308,9 @@ class _WebChatPageState extends State<_WebChatPage> {
       final sent = await IMService.instance.sendTextMessageAsMap(
         conversationID: _conversationID,
         text: text,
-        userID: widget.conversation['user_id']?.toString() ?? '',
-        groupID: widget.conversation['group_id']?.toString() ?? '',
-        conversationType: widget.conversation['conversation_type'] is int
-            ? widget.conversation['conversation_type'] as int
-            : int.tryParse(
-                    widget.conversation['conversation_type']?.toString() ?? '',
-                  ) ??
-                  1,
+        userID: _peerUserID,
+        groupID: _groupID,
+        conversationType: _conversationType,
       );
       if (!mounted) return;
       if (sent != null) {
@@ -315,6 +325,137 @@ class _WebChatPageState extends State<_WebChatPage> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  Future<void> _pickAndSendImage() async {
+    if (_sending) return;
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null || !mounted) return;
+    setState(() => _sending = true);
+    final placeholder = _localMessage('[图片上传中...]', contentType: 101);
+    setState(() => _messages = [..._messages, placeholder]);
+    _jumpToBottom();
+    try {
+      final bytes = await picked.readAsBytes();
+      final dim = await _readImageDim(bytes);
+      final upload = await _WebImMediaUploader.uploadBytes(
+        bytes,
+        fileName: picked.name,
+        purpose: 'image',
+        contentType: picked.mimeType,
+      );
+      if (upload == null) throw Exception('图片上传失败');
+      final sent = await IMService.instance.sendImageByUrlAsMap(
+        conversationID: _conversationID,
+        url: upload.publicUrl,
+        sourcePath: picked.name.isNotEmpty ? picked.name : upload.key,
+        uuid: upload.key,
+        width: dim?.$1 ?? 0,
+        height: dim?.$2 ?? 0,
+        size: bytes.length,
+        userID: _peerUserID,
+        groupID: _groupID,
+        conversationType: _conversationType,
+      );
+      _replacePlaceholder(placeholder, sent, '[图片发送失败]');
+    } catch (e) {
+      _replacePlaceholder(placeholder, null, '[图片发送失败]');
+      _toast(e);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _pickAndSendVideo() async {
+    if (_sending) return;
+    final picked = await ImagePicker().pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 3),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _sending = true);
+    final placeholder = _localMessage('[视频上传中...]', contentType: 101);
+    setState(() => _messages = [..._messages, placeholder]);
+    _jumpToBottom();
+    try {
+      final bytes = await picked.readAsBytes();
+      final upload = await _WebImMediaUploader.uploadBytes(
+        bytes,
+        fileName: picked.name,
+        purpose: 'video',
+        contentType: picked.mimeType ?? 'video/mp4',
+      );
+      if (upload == null) throw Exception('视频上传失败');
+      final sent = await IMService.instance.sendVideoByUrlAsMap(
+        conversationID: _conversationID,
+        videoUrl: upload.publicUrl,
+        videoSourcePath: picked.name.isNotEmpty ? picked.name : upload.key,
+        videoUuid: upload.key,
+        videoType: picked.mimeType ?? 'video/mp4',
+        videoSize: bytes.length,
+        duration: 0,
+        userID: _peerUserID,
+        groupID: _groupID,
+        conversationType: _conversationType,
+      );
+      _replacePlaceholder(placeholder, sent, '[视频发送失败]');
+    } catch (e) {
+      _replacePlaceholder(placeholder, null, '[视频发送失败]');
+      _toast(e);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Map<String, dynamic> _localMessage(String text, {required int contentType}) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return {
+      'client_msg_id': 'web_local_$now',
+      'send_id': IMService.instance.currentUserId ?? '',
+      'recv_id': _peerUserID,
+      'send_time': now,
+      'content_type': contentType,
+      'text': text,
+      'is_me': true,
+      'is_other': false,
+      'display_time': '',
+    };
+  }
+
+  void _replacePlaceholder(
+    Map<String, dynamic> placeholder,
+    Map<String, dynamic>? sent,
+    String failedText,
+  ) {
+    if (!mounted) return;
+    setState(() {
+      final id = placeholder['client_msg_id'];
+      final idx = _messages.indexWhere((m) => m['client_msg_id'] == id);
+      if (idx < 0) return;
+      final next = [..._messages];
+      next[idx] = sent ?? {...placeholder, 'text': failedText};
+      _messages = next;
+    });
+    _jumpToBottom();
+  }
+
+  Future<(int, int)?> _readImageDim(Uint8List bytes) async {
+    try {
+      final completer = Completer<(int, int)?>();
+      ui.decodeImageFromList(bytes, (image) {
+        completer.complete((image.width, image.height));
+      });
+      return completer.future.timeout(const Duration(seconds: 5));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _toast(Object e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+    );
   }
 
   void _jumpToBottom() {
@@ -369,6 +510,16 @@ class _WebChatPageState extends State<_WebChatPage> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: Row(
                 children: [
+                  IconButton(
+                    tooltip: '图片',
+                    onPressed: _sending ? null : _pickAndSendImage,
+                    icon: const Icon(Icons.photo_outlined),
+                  ),
+                  IconButton(
+                    tooltip: '视频',
+                    onPressed: _sending ? null : _pickAndSendVideo,
+                    icon: const Icon(Icons.videocam_outlined),
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -1035,6 +1186,91 @@ String _fmtDuration(int seconds) {
   final m = seconds ~/ 60;
   final s = seconds % 60;
   return '$m:${s.toString().padLeft(2, '0')}';
+}
+
+class _WebImUploadResult {
+  final String publicUrl;
+  final String key;
+
+  const _WebImUploadResult({required this.publicUrl, required this.key});
+}
+
+class _WebImMediaUploader {
+  static Future<_WebImUploadResult?> uploadBytes(
+    Uint8List bytes, {
+    required String fileName,
+    required String purpose,
+    String? contentType,
+  }) async {
+    final token = AuthService.token;
+    if (token == null) throw Exception('Please sign in first');
+    final ext = _extension(fileName, contentType);
+    final type = contentType ?? _fallbackContentType(purpose, ext);
+    final signResp = await http
+        .post(
+          Uri.parse('${AppConfig.backendUrl}/api/im/media/upload-url'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: json.encode({
+            'purpose': purpose,
+            'ext': ext,
+            'content_type': type,
+            'size': bytes.length,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+    if (signResp.statusCode != 200) {
+      throw Exception('上传授权失败 ${signResp.statusCode}');
+    }
+    final data = json.decode(signResp.body) as Map<String, dynamic>;
+    final putUrl = data['put_url']?.toString() ?? '';
+    final publicUrl = data['public_url']?.toString() ?? '';
+    final key = data['key']?.toString() ?? '';
+    if (putUrl.isEmpty || publicUrl.isEmpty || key.isEmpty) {
+      throw Exception('上传授权响应缺字段');
+    }
+    final putResp = await http
+        .put(Uri.parse(putUrl), headers: {'Content-Type': type}, body: bytes)
+        .timeout(const Duration(minutes: 2));
+    if (putResp.statusCode < 200 || putResp.statusCode >= 300) {
+      throw Exception('上传失败 ${putResp.statusCode}');
+    }
+    return _WebImUploadResult(publicUrl: publicUrl, key: key);
+  }
+
+  static String _extension(String fileName, String? contentType) {
+    final clean = fileName.split('?').first;
+    final dot = clean.lastIndexOf('.');
+    if (dot >= 0 && dot < clean.length - 1) {
+      return clean.substring(dot + 1).toLowerCase();
+    }
+    final type = contentType ?? '';
+    if (type.contains('png')) return 'png';
+    if (type.contains('webp')) return 'webp';
+    if (type.contains('gif')) return 'gif';
+    if (type.contains('quicktime')) return 'mov';
+    if (type.contains('webm')) return 'webm';
+    if (type.startsWith('video/')) return 'mp4';
+    return 'jpg';
+  }
+
+  static String _fallbackContentType(String purpose, String ext) {
+    if (purpose == 'video') {
+      return switch (ext) {
+        'mov' => 'video/quicktime',
+        'webm' => 'video/webm',
+        _ => 'video/mp4',
+      };
+    }
+    return switch (ext) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      _ => 'image/jpeg',
+    };
+  }
 }
 
 Future<void> _openUrl(String url) async {

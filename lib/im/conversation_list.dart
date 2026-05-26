@@ -21,6 +21,8 @@ class _IMConversationPageState extends State<IMConversationPage> {
   List<ConversationInfo> _conversations = [];
   bool _loading = true;
   String? _error;
+  final Map<String, String> _avatarCache = {};
+  final Set<String> _avatarLoading = {};
 
   StreamSubscription<List<ConversationInfo>>? _convChangedSub;
   StreamSubscription<Message>? _msgSub;
@@ -56,6 +58,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
           _loading = false;
           _error = null;
         });
+        unawaited(_ensureConversationAvatars(list));
       }
     } catch (e) {
       if (mounted) {
@@ -75,8 +78,9 @@ class _IMConversationPageState extends State<IMConversationPage> {
     final s = T.current;
 
     if (diff.inMinutes < 1) return s.imTimeJustNow;
-    if (diff.inHours < 1)
+    if (diff.inHours < 1) {
       return T.fmt(s.imTimeMinutesAgo, {'n': diff.inMinutes});
+    }
     if (diff.inDays < 1) {
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
@@ -87,6 +91,45 @@ class _IMConversationPageState extends State<IMConversationPage> {
 
   String _getLastMessageContent(ConversationInfo conv) =>
       previewMessage(conv.latestMsg);
+
+  Future<void> _ensureConversationAvatars(List<ConversationInfo> list) async {
+    final ids = list
+        .where((c) => (c.conversationType ?? 1) == 1)
+        .map((c) => c.userID ?? '')
+        .where(
+          (id) =>
+              id.isNotEmpty &&
+              !_avatarCache.containsKey(id) &&
+              !_avatarLoading.contains(id),
+        )
+        .toSet()
+        .toList();
+    if (ids.isEmpty) return;
+    _avatarLoading.addAll(ids);
+    try {
+      final profiles = await IMService.instance.lookupUsersFromSupabase(ids);
+      if (!mounted) return;
+      setState(() {
+        for (final id in ids) {
+          final p = profiles[id];
+          _avatarCache[id] =
+              p?['face_url']?.toString() ?? p?['avatar_url']?.toString() ?? '';
+        }
+      });
+    } catch (e) {
+      debugPrint('[IM] 会话头像补全失败: $e');
+    } finally {
+      _avatarLoading.removeAll(ids);
+    }
+  }
+
+  String? _conversationAvatar(ConversationInfo conv) {
+    final userID = conv.userID ?? '';
+    final profileAvatar = userID.isEmpty ? '' : (_avatarCache[userID] ?? '');
+    if (profileAvatar.isNotEmpty) return profileAvatar;
+    final faceUrl = conv.faceURL;
+    return faceUrl != null && faceUrl.isNotEmpty ? faceUrl : null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +224,7 @@ class _IMConversationPageState extends State<IMConversationPage> {
     final lastMsg = _getLastMessageContent(conv);
     final time = _formatTime(conv.latestMsgSendTime);
     final unread = conv.unreadCount;
-    final faceUrl = conv.faceURL;
+    final faceUrl = _conversationAvatar(conv);
     final isPinned = conv.isPinned ?? false;
 
     return Dismissible(

@@ -415,6 +415,78 @@ class IMService {
     return _messageToMap(_asMap(sent));
   }
 
+  Future<Map<String, dynamic>?> sendImageByUrlAsMap({
+    required String conversationID,
+    required String url,
+    required String sourcePath,
+    required String uuid,
+    required int width,
+    required int height,
+    required int size,
+    String? thumbUrl,
+    required String userID,
+    String? groupID,
+    int conversationType = 1,
+  }) async {
+    await login();
+    final sent = await _callAsync('sendImageByUrl', {
+      'conversationID': conversationID,
+      'conversationType': conversationType,
+      'userID': userID,
+      'groupID': groupID ?? '',
+      'url': url,
+      'thumbUrl': thumbUrl ?? url,
+      'sourcePath': sourcePath,
+      'uuid': uuid,
+      'width': width,
+      'height': height,
+      'size': size,
+      'title': T.current.imPushNewMessage,
+    });
+    return _messageToMap(_asMap(sent));
+  }
+
+  Future<Map<String, dynamic>?> sendVideoByUrlAsMap({
+    required String conversationID,
+    required String videoUrl,
+    required String videoSourcePath,
+    required String videoUuid,
+    required String videoType,
+    required int videoSize,
+    required int duration,
+    String snapshotUrl = '',
+    String snapshotSourcePath = '',
+    String snapshotUuid = '',
+    int snapshotSize = 0,
+    int snapshotWidth = 0,
+    int snapshotHeight = 0,
+    required String userID,
+    String? groupID,
+    int conversationType = 1,
+  }) async {
+    await login();
+    final sent = await _callAsync('sendVideoByUrl', {
+      'conversationID': conversationID,
+      'conversationType': conversationType,
+      'userID': userID,
+      'groupID': groupID ?? '',
+      'videoUrl': videoUrl,
+      'videoSourcePath': videoSourcePath,
+      'videoUuid': videoUuid,
+      'videoType': videoType,
+      'videoSize': videoSize,
+      'duration': duration,
+      'snapshotUrl': snapshotUrl,
+      'snapshotSourcePath': snapshotSourcePath,
+      'snapshotUuid': snapshotUuid,
+      'snapshotSize': snapshotSize,
+      'snapshotWidth': snapshotWidth,
+      'snapshotHeight': snapshotHeight,
+      'title': T.current.imPushNewMessage,
+    });
+    return _messageToMap(_asMap(sent));
+  }
+
   Future<Object?> _callAsync(String method, [Object? arg]) async {
     return _bridge.callAsync(method, arg);
   }

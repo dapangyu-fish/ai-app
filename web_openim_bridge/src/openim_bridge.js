@@ -232,6 +232,78 @@ window.MyAppOpenIM = {
     return sent;
   },
 
+  async sendImageByUrl(params) {
+    const im = ensureSDK();
+    const pic = {
+      uuid: params.uuid || '',
+      url: params.url || '',
+      width: Number(params.width || 0),
+      height: Number(params.height || 0),
+      size: Number(params.size || 0),
+      type: params.type || 'image/jpeg',
+    };
+    const thumb = {
+      ...pic,
+      uuid: params.thumbUuid || `${pic.uuid}_thumb`,
+      url: params.thumbUrl || pic.url,
+    };
+    const message = dataOf(await im.createImageMessageByURL({
+      sourcePath: params.sourcePath || params.uuid || params.url || '',
+      sourcePicture: pic,
+      bigPicture: pic,
+      snapshotPicture: thumb,
+    }, operationID('createImageUrl')));
+    const receiver = receiverFromConversation(params);
+    const sent = dataOf(await im.sendMessage({
+      message,
+      recvID: receiver.recvID,
+      groupID: receiver.groupID,
+      offlinePushInfo: params.offlinePushInfo || {
+        title: params.title || '',
+        desc: '[图片]',
+        ex: '',
+        iOSPushSound: '+1',
+        iOSBadgeCount: true,
+      },
+    }, operationID('sendImageUrl')));
+    await refreshUnread();
+    return sent;
+  },
+
+  async sendVideoByUrl(params) {
+    const im = ensureSDK();
+    const videoUuid = params.videoUuid || params.uuid || '';
+    const message = dataOf(await im.createVideoMessageByURL({
+      videoPath: params.videoSourcePath || videoUuid || params.videoUrl || '',
+      videoUUID: videoUuid,
+      videoUrl: params.videoUrl || '',
+      videoType: params.videoType || 'video/mp4',
+      videoSize: Number(params.videoSize || 0),
+      duration: Number(params.duration || 0),
+      snapshotPath: params.snapshotSourcePath || params.snapshotUuid || '',
+      snapshotUUID: params.snapshotUuid || `${videoUuid}_snapshot`,
+      snapshotSize: Number(params.snapshotSize || 0),
+      snapshotUrl: params.snapshotUrl || '',
+      snapshotWidth: Number(params.snapshotWidth || 0),
+      snapshotHeight: Number(params.snapshotHeight || 0),
+    }, operationID('createVideoUrl')));
+    const receiver = receiverFromConversation(params);
+    const sent = dataOf(await im.sendMessage({
+      message,
+      recvID: receiver.recvID,
+      groupID: receiver.groupID,
+      offlinePushInfo: params.offlinePushInfo || {
+        title: params.title || '',
+        desc: '[视频]',
+        ex: '',
+        iOSPushSound: '+1',
+        iOSBadgeCount: true,
+      },
+    }, operationID('sendVideoUrl')));
+    await refreshUnread();
+    return sent;
+  },
+
   async getFriendList() {
     return dataOf(await ensureSDK().getFriendList(false, operationID('friends'))) || [];
   },
