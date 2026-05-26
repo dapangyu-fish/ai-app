@@ -126,6 +126,25 @@ class AiChatService {
   static String get selectedProvider => _selectedProvider;
   static List<AiProvider> get providers => _providers;
 
+  /// AI 输出里允许夹带少量控制标签供客户端解析，但这些标签不应该直接展示给用户。
+  ///
+  /// 注意：这里只清理展示文本，不改变内部 accumulated 原文；原文仍用于
+  /// _emitTrailingTags 解析下载 URL / 请求动作。
+  static String cleanAssistantDisplayText(String text) {
+    var out = text;
+    out = out.replaceAll(
+      RegExp(r'\[json_app_url\][\s\S]*?(?:\[/json_app_url\]|$)'),
+      '',
+    );
+    out = out.replaceAll(
+      RegExp(r'\[request_action\][\s\S]*?(?:\[/request_action\]|$)'),
+      '',
+    );
+    out = out.replaceAll(RegExp(r'[ \t]+\n'), '\n');
+    out = out.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return out.trim();
+  }
+
   static Future<void> loadProvider() async {
     final prefs = await SharedPreferences.getInstance();
     _selectedProvider = prefs.getString(_providerKey) ?? 'deepseek';
@@ -774,7 +793,9 @@ class AiChatService {
       yield ChatEvent(thinking: completed.thinking);
     }
     if (completed.assistantText.isNotEmpty) {
-      yield ChatEvent(content: completed.assistantText);
+      yield ChatEvent(
+        content: cleanAssistantDisplayText(completed.assistantText),
+      );
     }
     final state = _StreamState()
       ..accumulated = completed.assistantText
@@ -1229,7 +1250,9 @@ class AiChatService {
         debugPrint('[AI_CHAT] 收到最终完整内容，长度: ${finalText.length}');
         if (finalText.length >= state.accumulated.length) {
           state.accumulated = finalText;
-          yield ChatEvent(content: state.accumulated);
+          yield ChatEvent(
+            content: cleanAssistantDisplayText(state.accumulated),
+          );
         } else {
           debugPrint('[AI_CHAT] final_content 比累积还短，忽略避免回退');
         }
@@ -1240,7 +1263,7 @@ class AiChatService {
       final chunk = data['assistant_content'] as String? ?? '';
       if (chunk.isNotEmpty) {
         if (!state.accumulated.contains(chunk)) state.accumulated += chunk;
-        yield ChatEvent(content: state.accumulated);
+        yield ChatEvent(content: cleanAssistantDisplayText(state.accumulated));
       }
       return;
     }
@@ -1322,7 +1345,7 @@ class AiChatService {
     final content = data['content'] as String? ?? '';
     if (content.isNotEmpty) {
       state.accumulated += content;
-      yield ChatEvent(content: state.accumulated);
+      yield ChatEvent(content: cleanAssistantDisplayText(state.accumulated));
     }
   }
 

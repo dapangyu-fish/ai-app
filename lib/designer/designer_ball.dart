@@ -1312,49 +1312,13 @@ class _DesignerBallState extends State<DesignerBall>
           _isGeneratingJson = false;
           _generatingStatusMessage = T.current.chatStatusGenerating;
 
-          // ⚠️ 这里**必须**用独立 if 而不是 if/else if 链：
-          // AI 一次回复里完全可能同时包含 [request_action]upload_current_app[/request_action]
-          // 和 [json_app_url]…[/json_app_url]（"我需要先看代码 ... 不过链接给你"）。
-          // 老的 else-if 链让 UPLOAD 抢占，下载按钮就消失了——这是 P0 bug。
-          // 各按钮语义独立，应该共存：UPLOAD 让用户提供代码、下载让用户拿 app、
-          // 试运行让用户直接跑、失败重试让用户重下。
-          if (pendingRequestAction == 'upload_current_app') {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content: 'AI 需要获取当前应用的代码配置以进行修改：',
-                action: 'UPLOAD_CURRENT_APP',
-              ),
-            );
-          }
-          if (pendingJsonUrl != null) {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content: 'JSON-APP 已生成，点击下载并运行：',
-                jsonUrl: pendingJsonUrl,
-              ),
-            );
-          }
-          if (pendingFailedJsonUrl != null) {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content:
-                    pendingFailedJsonError ?? T.current.chatJsonDownloadFailed,
-                failedJsonUrl: pendingFailedJsonUrl,
-              ),
-            );
-          }
-          if (pendingJsonApp != null) {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content: '🚀 点击试运行',
-                jsonApp: pendingJsonApp,
-              ),
-            );
-          }
+          _appendFinalActionMessages(
+            requestAction: pendingRequestAction,
+            jsonUrl: pendingJsonUrl,
+            failedJsonUrl: pendingFailedJsonUrl,
+            failedJsonError: pendingFailedJsonError,
+            jsonApp: pendingJsonApp,
+          );
         });
         _scrollToBottom();
       },
@@ -1412,26 +1376,10 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             _ensureUserMessage(userMessage);
             _upsertAssistantMessage(assistantText);
-            // 各按钮独立共存（同一回复可能既要 upload 又给 url，参考 6645d35）
-            if (requestAction == 'upload_current_app' &&
-                !_hasSystemMessage(action: 'UPLOAD_CURRENT_APP')) {
-              _messages.add(
-                ChatMessage(
-                  role: 'system',
-                  content: 'AI 需要获取当前应用的代码配置以进行修改：',
-                  action: 'UPLOAD_CURRENT_APP',
-                ),
-              );
-            }
-            if (jsonUrl != null && !_hasSystemMessage(jsonUrl: jsonUrl)) {
-              _messages.add(
-                ChatMessage(
-                  role: 'system',
-                  content: 'JSON-APP 已生成，点击下载并运行：',
-                  jsonUrl: jsonUrl,
-                ),
-              );
-            }
+            _appendFinalActionMessages(
+              requestAction: requestAction,
+              jsonUrl: jsonUrl,
+            );
           });
           _scrollToBottom();
         case ResumeStreaming(:final userMessage, :final stream):
@@ -1488,18 +1436,19 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _upsertAssistantMessage(String content) {
+    final displayContent = AiChatService.cleanAssistantDisplayText(content);
     if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-      _messages.last = ChatMessage(role: 'assistant', content: content);
+      _messages.last = ChatMessage(role: 'assistant', content: displayContent);
       return;
     }
     for (var i = _messages.length - 1; i >= 0; i--) {
       if (_messages[i].role == 'user') break;
       if (_messages[i].role == 'assistant') {
-        _messages[i] = ChatMessage(role: 'assistant', content: content);
+        _messages[i] = ChatMessage(role: 'assistant', content: displayContent);
         return;
       }
     }
-    _messages.add(ChatMessage(role: 'assistant', content: content));
+    _messages.add(ChatMessage(role: 'assistant', content: displayContent));
   }
 
   bool _hasSystemMessage({String? action, String? jsonUrl}) {
@@ -1509,6 +1458,82 @@ class _DesignerBallState extends State<DesignerBall>
       if (jsonUrl != null && m.jsonUrl == jsonUrl) return true;
       return false;
     });
+  }
+
+  int _lastUserMessageIndex() {
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i].role == 'user') return i;
+    }
+    return -1;
+  }
+
+  void _removeCurrentTurnSystemMessage({
+    String? action,
+    String? jsonUrl,
+    String? failedJsonUrl,
+  }) {
+    final start = _lastUserMessageIndex() + 1;
+    for (var i = _messages.length - 1; i >= start; i--) {
+      final m = _messages[i];
+      if (m.role != 'system') continue;
+      if (action != null && m.action == action) {
+        _messages.removeAt(i);
+        continue;
+      }
+      if (jsonUrl != null && m.jsonUrl == jsonUrl) {
+        _messages.removeAt(i);
+        continue;
+      }
+      if (failedJsonUrl != null && m.failedJsonUrl == failedJsonUrl) {
+        _messages.removeAt(i);
+      }
+    }
+  }
+
+  void _appendFinalActionMessages({
+    String? requestAction,
+    String? jsonUrl,
+    String? failedJsonUrl,
+    String? failedJsonError,
+    Map<String, dynamic>? jsonApp,
+  }) {
+    // 各按钮独立共存；重新恢复/重连同一轮时，先移除本轮旧位置的动作消息，
+    // 再按固定顺序追加到最后，避免下载提示夹在 assistant 文本中间。
+    if (requestAction == 'upload_current_app') {
+      _removeCurrentTurnSystemMessage(action: 'UPLOAD_CURRENT_APP');
+      _messages.add(
+        ChatMessage(
+          role: 'system',
+          content: 'AI 需要获取当前应用的代码配置以进行修改：',
+          action: 'UPLOAD_CURRENT_APP',
+        ),
+      );
+    }
+    if (jsonUrl != null) {
+      _removeCurrentTurnSystemMessage(jsonUrl: jsonUrl);
+      _messages.add(
+        ChatMessage(
+          role: 'system',
+          content: 'JSON-APP 已生成，点击下载并运行：',
+          jsonUrl: jsonUrl,
+        ),
+      );
+    }
+    if (failedJsonUrl != null) {
+      _removeCurrentTurnSystemMessage(failedJsonUrl: failedJsonUrl);
+      _messages.add(
+        ChatMessage(
+          role: 'system',
+          content: failedJsonError ?? T.current.chatJsonDownloadFailed,
+          failedJsonUrl: failedJsonUrl,
+        ),
+      );
+    }
+    if (jsonApp != null) {
+      _messages.add(
+        ChatMessage(role: 'system', content: '🚀 点击试运行', jsonApp: jsonApp),
+      );
+    }
   }
 
   Future<void> _handleUploadCurrentApp() async {
