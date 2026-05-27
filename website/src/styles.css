@@ -57,8 +57,8 @@ select {
   color: var(--text);
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 78% 10%, color-mix(in srgb, var(--primary) 20%, transparent), transparent 30rem),
-    radial-gradient(circle at 16% 24%, color-mix(in srgb, var(--primary2) 13%, transparent), transparent 28rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 28%),
+    linear-gradient(225deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 34%),
     linear-gradient(180deg, var(--bg), #07080c 52%, var(--bg));
 }
 
@@ -139,7 +139,7 @@ select {
 .navLinks {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 22px;
   color: var(--muted);
   font-size: 14px;
 }
@@ -190,7 +190,7 @@ select {
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 76px 0 64px;
+  padding: 68px 0 58px;
 }
 
 .gridFx {
@@ -208,8 +208,8 @@ select {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(390px, 44vw);
-  align-items: center;
-  gap: 58px;
+  align-items: start;
+  gap: 52px;
 }
 
 .heroGrid > *,
@@ -277,6 +277,73 @@ select {
   margin-top: 30px;
 }
 
+.heroConsole {
+  width: min(100%, 620px);
+  margin-top: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent),
+    color-mix(in srgb, var(--panel) 76%, transparent);
+  overflow: hidden;
+}
+
+.heroConsoleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 14px;
+}
+
+.heroConsoleHeader span {
+  font-weight: 780;
+}
+
+.heroConsoleHeader small {
+  color: var(--primary2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.heroConsole .terminalBox {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.heroConsole .terminalTop {
+  display: none;
+}
+
+.proofRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.proofRow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg2) 68%, transparent);
+  color: var(--muted);
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.proofRow svg {
+  color: var(--accent);
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -321,7 +388,7 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   max-width: 620px;
-  margin-top: 34px;
+  margin-top: 16px;
 }
 
 .metricRow div {
@@ -352,6 +419,11 @@ select {
   width: min(100%, 520px);
   justify-self: center;
   padding: 18px;
+}
+
+.heroAside {
+  width: 100%;
+  min-width: 0;
 }
 
 .phoneStage.compact {
@@ -567,6 +639,7 @@ section {
 }
 
 .playground,
+.stackSection,
 .videosSection,
 .featuresSection,
 .downloadSection {
@@ -596,6 +669,101 @@ section {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+}
+
+.stackGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stackCard {
+  position: relative;
+  min-height: 230px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent 48%),
+    var(--panel);
+  padding: 20px;
+}
+
+.stackIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary2);
+}
+
+.stackCard h3 {
+  margin: 18px 0 0;
+  font-size: 20px;
+}
+
+.stackCard p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.stackTrace {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: 1fr 0.66fr 0.38fr;
+  gap: 8px;
+}
+
+.stackTrace span {
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary2) 44%, transparent);
+}
+
+.stackTrace span:nth-child(2) {
+  background: color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.stackTrace span:nth-child(3) {
+  background: color-mix(in srgb, var(--primary) 44%, transparent);
+}
+
+.architectureBand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel2) 84%, transparent);
+  padding: 14px;
+}
+
+.architectureBand div {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg2) 82%, transparent);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.architectureBand svg {
+  color: var(--primary2);
 }
 
 .themeCard {
@@ -806,6 +974,41 @@ section {
   gap: 14px;
 }
 
+.compliancePanel {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 58%),
+    var(--panel2);
+  padding: 20px;
+}
+
+.compliancePanel > div {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.compliancePanel svg {
+  color: var(--accent);
+}
+
+.compliancePanel h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.compliancePanel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
 .stepCard,
 .featureCard {
   min-height: 170px;
@@ -885,9 +1088,22 @@ section {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .stackGrid {
+    grid-template-columns: 1fr;
+  }
+
   .videoGrid,
   .deployCards {
     grid-template-columns: 1fr;
+  }
+
+  .architectureBand {
+    justify-content: flex-start;
+  }
+
+  .compliancePanel {
+    grid-template-columns: 1fr;
+    align-items: start;
   }
 
   .sectionHeader.split,
@@ -921,6 +1137,7 @@ section {
   }
 
   .metricRow,
+  .stackGrid,
   .stepsGrid,
   .featureGrid,
   .themeGrid,
@@ -944,6 +1161,14 @@ section {
 
   .actions {
     width: 100%;
+  }
+
+  .proofRow {
+    justify-content: center;
+  }
+
+  .heroConsole {
+    text-align: left;
   }
 
   .button {

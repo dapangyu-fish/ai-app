@@ -2,17 +2,27 @@ import {
   Bot,
   Boxes,
   ChevronRight,
+  CheckCircle2,
   Cloud,
   Code2,
+  Database,
   Download,
   Film,
+  GitBranch,
   Globe2,
+  Layers3,
+  LockKeyhole,
   MessageCircle,
+  PackageSearch,
   Play,
+  Rocket,
   Server,
+  ShieldCheck,
   Smartphone,
   Sparkles,
   Terminal,
+  Workflow,
+  Zap,
 } from 'lucide-react';
 import { type PointerEvent as ReactPointerEvent, useMemo, useState } from 'react';
 
@@ -63,6 +73,7 @@ const themes: Array<{
 const copy = {
   zh: {
     navHow: '部署',
+    navStack: '架构',
     navTry: '视频',
     navFeatures: '能力',
     navDownload: '下载',
@@ -74,6 +85,14 @@ const copy = {
     primaryCta: '打开在线 Demo',
     secondaryCta: '查看部署命令',
     phoneCaption: '线上 Web 客户端，嵌在手机外框里做快速演示。',
+    heroConsoleTitle: '从提示词到可运行应用',
+    heroConsoleLines: [
+      '$ tell ai "生成一个库存管理 App"',
+      '→ validate JSON DSL',
+      '→ publish package + assets',
+      '→ run on Web / iOS / Android',
+    ],
+    proofPoints: ['Apache-2.0 开源', 'JSON 不是动态代码', '可自部署完整后端'],
     playgroundTitle: '选择官网科技风格',
     playgroundSubtitle: '同一套内容，切换不同视觉方向，后续可以按你选中的风格继续打磨。',
     videosTitle: '演示视频',
@@ -100,6 +119,15 @@ const copy = {
     ],
     featuresTitle: '平台能力',
     featuresSubtitle: '围绕 AI 生成、运行时渲染、应用市场和自部署构建。',
+    stackTitle: '一套运行时，三条关键链路',
+    stackSubtitle: '客户端只负责解释已允许的 JSON 能力；后端负责 AI 生成、包分发、IM、配置和可恢复任务。',
+    stackItems: [
+      ['Flutter Runtime', '预编译控件、JsonLogic、游戏 atoms、IM 兼容层和媒体能力。'],
+      ['AI Worker Queue', 'Redis 队列、SSE 恢复、并发控制和生成结果持久化。'],
+      ['Registry + Assets', '分页搜索、版本约束、组件依赖、OSS/MinIO 资源分发。'],
+    ],
+    complianceTitle: '审核友好的边界',
+    complianceBody: 'AI 生成的是声明式 JSON 配置。它只能组合客户端已经编译好的控件和动作，不能下发 Dart、Swift、Kotlin、插件或二进制。',
     features: [
       ['AI 原生 DSL', '结构适合大模型生成，不是只给人手写的配置格式。'],
       ['Web 兼容', '同一套 JSON App 能在 Web 版快速验证和展示。'],
@@ -117,6 +145,7 @@ const copy = {
   },
   en: {
     navHow: 'Deploy',
+    navStack: 'Stack',
     navTry: 'Videos',
     navFeatures: 'Capabilities',
     navDownload: 'Download',
@@ -128,6 +157,14 @@ const copy = {
     primaryCta: 'Open live demo',
     secondaryCta: 'View deploy command',
     phoneCaption: 'Live Web client embedded in a phone frame for quick demos.',
+    heroConsoleTitle: 'Prompt to runnable app',
+    heroConsoleLines: [
+      '$ tell ai "build an inventory app"',
+      '→ validate JSON DSL',
+      '→ publish package + assets',
+      '→ run on Web / iOS / Android',
+    ],
+    proofPoints: ['Apache-2.0 open source', 'JSON is not dynamic code', 'Self-host the full backend'],
     playgroundTitle: 'Choose a tech visual direction',
     playgroundSubtitle: 'Same product content, multiple visual directions. Pick one and we can refine from there.',
     videosTitle: 'Demo videos',
@@ -154,6 +191,15 @@ const copy = {
     ],
     featuresTitle: 'Platform capabilities',
     featuresSubtitle: 'Built around AI generation, runtime rendering, marketplace distribution and self-hosting.',
+    stackTitle: 'One runtime, three critical paths',
+    stackSubtitle: 'The client interprets only approved JSON capabilities. The backend handles AI generation, package distribution, IM, config and resumable tasks.',
+    stackItems: [
+      ['Flutter Runtime', 'Precompiled widgets, JsonLogic, game atoms, IM compatibility and media capabilities.'],
+      ['AI Worker Queue', 'Redis queue, resumable SSE, concurrency limits and durable generation results.'],
+      ['Registry + Assets', 'Paginated search, semver, component dependencies and OSS/MinIO asset delivery.'],
+    ],
+    complianceTitle: 'Review-friendly boundary',
+    complianceBody: 'AI produces declarative JSON configuration. It can only compose compiled client widgets and actions, not Dart, Swift, Kotlin, plugins or binaries.',
     features: [
       ['AI-native DSL', 'Structured for LLM generation, not only hand-written config.'],
       ['Web compatible', 'Validate and demo the same JSON App on the Web client.'],
@@ -171,6 +217,7 @@ const copy = {
   },
   de: {
     navHow: 'Deployment',
+    navStack: 'Stack',
     navTry: 'Videos',
     navFeatures: 'Funktionen',
     navDownload: 'Download',
@@ -182,6 +229,14 @@ const copy = {
     primaryCta: 'Live-Demo öffnen',
     secondaryCta: 'Deployment ansehen',
     phoneCaption: 'Live-Web-Client im Smartphone-Rahmen für schnelle Demos.',
+    heroConsoleTitle: 'Vom Prompt zur laufenden App',
+    heroConsoleLines: [
+      '$ tell ai "build an inventory app"',
+      '→ validate JSON DSL',
+      '→ publish package + assets',
+      '→ run on Web / iOS / Android',
+    ],
+    proofPoints: ['Apache-2.0 Open Source', 'JSON ist kein dynamischer Code', 'Backend voll selbst hosten'],
     playgroundTitle: 'Technischen Look wählen',
     playgroundSubtitle: 'Gleicher Inhalt, mehrere visuelle Richtungen. Wähle eine aus und wir feilen daran weiter.',
     videosTitle: 'Demo-Videos',
@@ -208,6 +263,15 @@ const copy = {
     ],
     featuresTitle: 'Plattformfunktionen',
     featuresSubtitle: 'Gebaut für KI-Generierung, Runtime-Rendering, Marktplatz und Self-Hosting.',
+    stackTitle: 'Eine Runtime, drei Kernpfade',
+    stackSubtitle: 'Der Client interpretiert nur erlaubte JSON-Fähigkeiten. Das Backend steuert KI-Generierung, Pakete, IM, Config und wiederaufnehmbare Tasks.',
+    stackItems: [
+      ['Flutter Runtime', 'Vorkompilierte Widgets, JsonLogic, Game Atoms, IM-Kompatibilität und Medienfunktionen.'],
+      ['AI Worker Queue', 'Redis-Queue, wiederaufnehmbare SSE, Limits und persistente Ergebnisse.'],
+      ['Registry + Assets', 'Suche mit Pagination, Semver, Komponentenabhängigkeiten und OSS/MinIO Assets.'],
+    ],
+    complianceTitle: 'Review-freundliche Grenze',
+    complianceBody: 'KI erzeugt deklarative JSON-Konfiguration. Sie kombiniert nur kompilierte Client-Widgets und Actions, aber keinen Dart-, Swift-, Kotlin-, Plugin- oder Binärcode.',
     features: [
       ['AI-native DSL', 'Struktur für LLM-Generierung statt nur manuelle Konfiguration.'],
       ['Web-kompatibel', 'Dieselbe JSON App im Web-Client validieren und demonstrieren.'],
@@ -225,6 +289,7 @@ const copy = {
   },
   es: {
     navHow: 'Despliegue',
+    navStack: 'Stack',
     navTry: 'Videos',
     navFeatures: 'Capacidades',
     navDownload: 'Descargar',
@@ -236,6 +301,14 @@ const copy = {
     primaryCta: 'Abrir demo',
     secondaryCta: 'Ver despliegue',
     phoneCaption: 'Cliente Web en vivo dentro de un marco de teléfono para demos rápidas.',
+    heroConsoleTitle: 'De prompt a app ejecutable',
+    heroConsoleLines: [
+      '$ tell ai "build an inventory app"',
+      '→ validate JSON DSL',
+      '→ publish package + assets',
+      '→ run on Web / iOS / Android',
+    ],
+    proofPoints: ['Apache-2.0 open source', 'JSON no es código dinámico', 'Backend completo autoalojable'],
     playgroundTitle: 'Elige un estilo tecnológico',
     playgroundSubtitle: 'Mismo contenido, varias direcciones visuales. Elige una y seguimos puliéndola.',
     videosTitle: 'Videos demo',
@@ -262,6 +335,15 @@ const copy = {
     ],
     featuresTitle: 'Capacidades de la plataforma',
     featuresSubtitle: 'Diseñada para generación con IA, runtime, marketplace y self-hosting.',
+    stackTitle: 'Un runtime, tres rutas críticas',
+    stackSubtitle: 'El cliente interpreta solo capacidades JSON aprobadas. El backend maneja IA, paquetes, IM, configuración y tareas recuperables.',
+    stackItems: [
+      ['Flutter Runtime', 'Widgets precompilados, JsonLogic, game atoms, compatibilidad IM y capacidades multimedia.'],
+      ['AI Worker Queue', 'Cola Redis, SSE recuperable, límites de concurrencia y resultados persistentes.'],
+      ['Registry + Assets', 'Búsqueda paginada, semver, dependencias de componentes y assets OSS/MinIO.'],
+    ],
+    complianceTitle: 'Límite claro para revisión',
+    complianceBody: 'La IA produce configuración JSON declarativa. Solo compone widgets y acciones ya compilados, no Dart, Swift, Kotlin, plugins ni binarios.',
     features: [
       ['DSL nativa para IA', 'Estructura pensada para LLMs, no solo configuración manual.'],
       ['Compatible con Web', 'Valida y muestra la misma JSON App en el cliente Web.'],
@@ -396,6 +478,7 @@ function App() {
           </a>
           <div className="navLinks">
             <a href="#deploy">{t.navHow}</a>
+            <a href="#stack">{t.navStack}</a>
             <a href="#videos">{t.navTry}</a>
             <a href="#features">{t.navFeatures}</a>
             <a href="#download">{t.navDownload}</a>
@@ -437,22 +520,37 @@ function App() {
                 {t.secondaryCta}
               </a>
             </div>
+            <div className="heroConsole">
+              <div className="heroConsoleHeader">
+                <span>{t.heroConsoleTitle}</span>
+                <small>live path</small>
+              </div>
+              <TerminalBox lines={t.heroConsoleLines} />
+            </div>
+            <div className="proofRow">
+              {t.proofPoints.map((item) => (
+                <span key={item}>
+                  <CheckCircle2 size={15} />
+                  {item}
+                </span>
+              ))}
+            </div>
             <div className="metricRow">
               <div>
-                <strong>Web</strong>
-                <span>Cloudflare Pages</span>
+                <strong>6+</strong>
+                <span>client targets</span>
               </div>
               <div>
-                <strong>JSON</strong>
-                <span>Runtime apps</span>
+                <strong>30+</strong>
+                <span>runtime atoms</span>
               </div>
               <div>
-                <strong>OpenIM</strong>
-                <span>Chat compatible</span>
+                <strong>26</strong>
+                <span>test-env services</span>
               </div>
             </div>
           </div>
-          <div>
+          <div className="heroAside">
             <PhonePreview />
             <p className="phoneCaption">{t.phoneCaption}</p>
           </div>
@@ -486,6 +584,68 @@ function App() {
                 <p>{item.description}</p>
               </button>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="stackSection" id="stack">
+        <div className="shell">
+          <div className="sectionHeader split">
+            <div>
+              <p className="eyebrow">Architecture</p>
+              <h2>{t.stackTitle}</h2>
+              <p>{t.stackSubtitle}</p>
+            </div>
+            <a
+              className="button secondary"
+              href="https://github.com/dapangyu-fish/ai-app/blob/alpha/v1000/docs/APP_STORE_COMPLIANCE.md"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ShieldCheck size={17} />
+              Runtime boundary
+            </a>
+          </div>
+          <div className="stackGrid">
+            {t.stackItems.map(([title, body], index) => {
+              const icons = [Layers3, Workflow, PackageSearch];
+              const Icon = icons[index] ?? Server;
+              return (
+                <article className="stackCard" key={title}>
+                  <div className="stackIcon">
+                    <Icon size={22} />
+                  </div>
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                  <div className="stackTrace">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <div className="architectureBand">
+            <div>
+              <Smartphone size={19} />
+              <span>Client runtime</span>
+            </div>
+            <ChevronRight size={18} />
+            <div>
+              <Rocket size={19} />
+              <span>AI generation</span>
+            </div>
+            <ChevronRight size={18} />
+            <div>
+              <Database size={19} />
+              <span>Registry + Redis + OSS</span>
+            </div>
+            <ChevronRight size={18} />
+            <div>
+              <GitBranch size={19} />
+              <span>JSON Apps</span>
+            </div>
           </div>
         </div>
       </section>
@@ -590,9 +750,16 @@ function App() {
             <h2>{t.featuresTitle}</h2>
             <p>{t.featuresSubtitle}</p>
           </div>
+          <div className="compliancePanel">
+            <div>
+              <LockKeyhole size={22} />
+              <h3>{t.complianceTitle}</h3>
+            </div>
+            <p>{t.complianceBody}</p>
+          </div>
           <div className="featureGrid">
             {t.features.map(([title, body], index) => {
-              const icons = [Bot, Smartphone, MessageCircle, Boxes, Cloud, Server];
+              const icons = [Bot, Smartphone, MessageCircle, Boxes, Cloud, Zap];
               const Icon = icons[index] ?? Code2;
               return (
                 <article className="featureCard" key={title}>
