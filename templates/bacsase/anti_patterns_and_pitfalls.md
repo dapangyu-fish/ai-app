@@ -26,6 +26,7 @@
 | 关卡设计类问题：看起来能玩，实测路线/敌人/收集物/复活点不合理 | §14 |
 | flame_game 只有角色/背景，地图和实体不出来，摇杆也没效果 | §15 |
 | 动作类游戏：角色变成多姿态拼图、输入有反馈但实体不动、动态物只出现一次、场景比例怪 | §16 |
+| 动作类游戏：角色/敌人左右半身拼接、动画帧边界切到身体 | §16 |
 | 横版动作/射击类游戏：角色上下飞、地图只有一屏、背景寒酸、精灵图被整张压成角色 | §17 |
 | 横版射击类游戏：打几发后不能开火、敌人不出现/只在最后出现、主角冲出屏幕不死 | §17 |
 | 使用素材包做游戏：不知道 sprite sheet 该切几行几列、单帧只显示一角 | §16 |
@@ -955,6 +956,8 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
    必须先读 asset manifest 的 `files[].sprite` / `files[].atlas` / `files[].image`，确认图片尺寸、行列数和单帧尺寸；`frame_size` 写错时会把多帧区域当成一帧画出来，或者把单帧图裁掉大半。
    例子：128x128 的单帧角色不能写 `frame_size: [72,72]`；360x360 的 8x8 sheet 才能写 `[45,45]`。
 
+   如果 sprite sheet 没有 manifest/atlas 元数据，不要把“图片宽度能整除某个帧数”当作充分证据。错误的帧宽也可能整除图片宽度，但会让帧边界切过不透明像素，实机表现就是角色/敌人变成左右半身拼接、姿态错位或动画抖动。生成前必须让 `backend/validate_json_app.py` 通过透明边界校验；报出 `declared sprite grid cuts through opaque pixels` 时，说明这张图的切法没有被证明正确。
+
 2. **输入反馈不等于实体行为**
 
    虚拟摇杆、方向键和按钮只负责发输入事件。角色真正移动/跳跃/攻击，必须在 `flame_game.frame.logic` 中把输入状态转成实体速度、动画和物理步骤。
@@ -976,6 +979,7 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 ### 正确姿势 / 避坑指南
 
 - 使用 sprite sheet 前，必须先读 manifest：优先 `files[].sprite.frameWidth/frameHeight/columns/rows`，其次 `files[].atlas.entries[]`，最后才是人工读取图片尺寸后推断。不要凭经验猜 32/64/128。
+- 只靠图片总宽/总高做除法不够。推断帧网格时还要检查内部帧边界是否穿过不透明像素；如果切线两侧都有角色像素，通常说明把相邻帧拼到一起了。
 - 单帧 PNG 的 `frame_size` 必须等于 `files[].image.width/height`；如果要裁局部，必须明确使用 `src`，不能把裁剪误写成动画帧尺寸。
 - 如果不确定帧网格，优先使用 manifest 中明确的单帧、切片图或预览图；否则先用 `src` 裁一帧验证。
 - 输入必须形成闭环：`input event -> vars.input_state -> entity velocity/action -> frame update/physics step -> camera/score/status`。

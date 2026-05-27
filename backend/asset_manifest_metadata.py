@@ -15,82 +15,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+import zlib
 from functools import lru_cache
 from typing import Any, Callable
 
 
 ASSET_PACK_MARKER = "/json-app-assets/asset-packs/"
-
-
-# Curated grid metadata for packs that do not ship an atlas sidecar. These are
-# asset-pack facts, not app-specific exceptions.
-CURATED_SPRITES: dict[tuple[str, str, str], dict[str, Any]] = {
-    (
-        "vaca-roxa-generic-run-n-gun",
-        "1.0",
-        "Player/SpriteSheet_player_sliced.png",
-    ): {
-        "kind": "grid",
-        "frameWidth": 45,
-        "frameHeight": 45,
-        "columns": 8,
-        "rows": 8,
-        "frames": 64,
-        "source": "curated",
-    },
-    (
-        "vaca-roxa-generic-run-n-gun",
-        "1.0",
-        "Enemies/ARMob.png",
-    ): {
-        "kind": "strip",
-        "frameWidth": 48,
-        "frameHeight": 38,
-        "columns": 16,
-        "rows": 1,
-        "frames": 16,
-        "source": "curated",
-    },
-    (
-        "vaca-roxa-generic-run-n-gun",
-        "1.0",
-        "Enemies/RPGmob.png",
-    ): {
-        "kind": "strip",
-        "frameWidth": 44,
-        "frameHeight": 44,
-        "columns": 10,
-        "rows": 1,
-        "frames": 10,
-        "source": "curated",
-    },
-    (
-        "vaca-roxa-generic-run-n-gun",
-        "1.0",
-        "Enemies/SniperMob.png",
-    ): {
-        "kind": "strip",
-        "frameWidth": 44,
-        "frameHeight": 44,
-        "columns": 14,
-        "rows": 1,
-        "frames": 14,
-        "source": "curated",
-    },
-    (
-        "vaca-roxa-generic-run-n-gun",
-        "1.0",
-        "Enemies/Explosion_Particle.png",
-    ): {
-        "kind": "strip",
-        "frameWidth": 32,
-        "frameHeight": 32,
-        "columns": 9,
-        "rows": 1,
-        "frames": 9,
-        "source": "curated",
-    },
-}
 
 
 def read_png_size(data: bytes) -> tuple[int, int] | None:
@@ -127,20 +57,18 @@ def enrich_manifest(
     manifest: dict[str, Any],
     fetch_bytes: Callable[[str], bytes],
 ) -> dict[str, Any]:
-    """Add image dimensions, XML atlas entries and curated sprite grids."""
+    """Add image dimensions and XML atlas entries.
+
+    Per-asset sprite frame sizes must come from manifest sidecars or generated
+    metadata, not from backend code. Unknown sheets stay unknown until a
+    manifest enrichment pass can prove their grid.
+    """
     enriched = copy.deepcopy(manifest)
     files = enriched.get("files")
     if not isinstance(files, list):
         return enriched
 
-    slug = str(enriched.get("slug") or "")
-    version = str(enriched.get("version") or "")
     base_url = str(enriched.get("baseUrl") or "")
-    by_path = {
-        str(item.get("path") or ""): item
-        for item in files
-        if isinstance(item, dict)
-    }
 
     atlas_by_image: dict[str, dict[str, Any]] = {}
     for item in files:
@@ -184,10 +112,7 @@ def enrich_manifest(
                     size = None
                 if size:
                     item["image"] = {"width": size[0], "height": size[1]}
-            curated = CURATED_SPRITES.get((slug, version, path))
-            if curated:
-                item["sprite"] = copy.deepcopy(curated)
-            elif path in atlas_by_image:
+            if path in atlas_by_image:
                 item["atlas"] = atlas_by_image[path]
                 item["sprite"] = {
                     "kind": "atlas",
@@ -232,10 +157,6 @@ def metadata_for_asset_url(asset_url: str) -> dict[str, Any] | None:
             break
     if file_item is None:
         return None
-
-    curated = CURATED_SPRITES.get((slug, version, asset_path))
-    if curated:
-        file_item["sprite"] = copy.deepcopy(curated)
 
     if str(asset_path).lower().endswith(".png") and "image" not in file_item:
         size = read_png_size_from_url(asset_url)
@@ -319,6 +240,71 @@ def read_png_size_from_url(url: str) -> tuple[int, int] | None:
         return None
 
 
+def animation_frame_boundary_diagnostics(
+    asset_url: str,
+    *,
+    frame_width: int,
+    frame_height: int,
+    frames_per_row: int,
+    frames: int,
+    start_frame: int = 0,
+) -> dict[str, Any] | None:
+    """Return generic diagnostics for an animation grid declared by JSON.
+
+    This does not know any asset-pack-specific dimensions. It compares declared
+    frame boundaries against transparent pixels in the PNG. When many internal
+    boundaries cut through opaque pixels, the frame width is probably guessed
+    wrong and adjacent animation frames may be stitched together visually.
+    """
+    if (
+        frame_width <= 0
+        or frame_height <= 0
+        or frames_per_row <= 1
+        or frames <= 1
+        or start_frame < 0
+        or not asset_url.lower().split("?", 1)[0].endswith(".png")
+    ):
+        return None
+    try:
+        alpha = _png_alpha_grid(_fetch_full_url(asset_url))
+    except Exception:
+        return None
+    if alpha is None:
+        return None
+    width, height, rows = alpha
+    if frame_width > width or frame_height > height:
+        return None
+
+    current = _boundary_stats(
+        rows,
+        image_width=width,
+        image_height=height,
+        frame_width=frame_width,
+        frame_height=frame_height,
+        frames_per_row=frames_per_row,
+        frames=frames,
+        start_frame=start_frame,
+    )
+    if not current or current["checked"] < 3:
+        return None
+
+    return {
+        "imageWidth": width,
+        "imageHeight": height,
+        "current": current,
+    }
+
+
+@lru_cache(maxsize=64)
+def _fetch_full_url(url: str) -> bytes:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "ai-app-asset-metadata/1"},
+    )
+    with urllib.request.urlopen(request, timeout=12) as response:
+        return response.read()
+
+
 def _fetch_url(url: str) -> bytes:
     headers = {"User-Agent": "ai-app-asset-metadata/1"}
     if url.split("?", 1)[0].lower().endswith(".png"):
@@ -326,6 +312,201 @@ def _fetch_url(url: str) -> bytes:
     request = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(request, timeout=8) as response:
         return response.read()
+
+
+def _png_alpha_grid(data: bytes) -> tuple[int, int, list[bytearray]] | None:
+    if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+
+    width = height = bit_depth = color_type = interlace = None
+    transparency: bytes = b""
+    idat = bytearray()
+
+    pos = 8
+    while pos + 8 <= len(data):
+        length = struct.unpack(">I", data[pos : pos + 4])[0]
+        chunk_type = data[pos + 4 : pos + 8]
+        chunk_data = data[pos + 8 : pos + 8 + length]
+        pos += 12 + length
+        if chunk_type == b"IHDR" and len(chunk_data) >= 13:
+            width, height = struct.unpack(">II", chunk_data[:8])
+            bit_depth = chunk_data[8]
+            color_type = chunk_data[9]
+            interlace = chunk_data[12]
+        elif chunk_type == b"tRNS":
+            transparency = chunk_data
+        elif chunk_type == b"IDAT":
+            idat.extend(chunk_data)
+        elif chunk_type == b"IEND":
+            break
+
+    if (
+        width is None
+        or height is None
+        or bit_depth != 8
+        or interlace != 0
+        or width <= 0
+        or height <= 0
+        or width * height > 2_000_000
+    ):
+        return None
+
+    channels_by_type = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}
+    channels = channels_by_type.get(color_type)
+    if channels is None:
+        return None
+    has_alpha = color_type in {4, 6} or bool(transparency)
+    if not has_alpha:
+        return None
+
+    try:
+        raw = zlib.decompress(bytes(idat))
+    except Exception:
+        return None
+
+    stride = width * channels
+    if len(raw) < (stride + 1) * height:
+        return None
+
+    decoded_rows: list[bytearray] = []
+    prev = bytearray(stride)
+    offset = 0
+    for _ in range(height):
+        filter_type = raw[offset]
+        offset += 1
+        row = bytearray(raw[offset : offset + stride])
+        offset += stride
+        if filter_type == 1:
+            for i in range(stride):
+                row[i] = (row[i] + (row[i - channels] if i >= channels else 0)) & 0xFF
+        elif filter_type == 2:
+            for i in range(stride):
+                row[i] = (row[i] + prev[i]) & 0xFF
+        elif filter_type == 3:
+            for i in range(stride):
+                left = row[i - channels] if i >= channels else 0
+                row[i] = (row[i] + ((left + prev[i]) // 2)) & 0xFF
+        elif filter_type == 4:
+            for i in range(stride):
+                left = row[i - channels] if i >= channels else 0
+                up = prev[i]
+                up_left = prev[i - channels] if i >= channels else 0
+                row[i] = (row[i] + _paeth(left, up, up_left)) & 0xFF
+        elif filter_type != 0:
+            return None
+        decoded_rows.append(row)
+        prev = row
+
+    alpha_rows: list[bytearray] = []
+    transparent_rgb: tuple[int, int, int] | None = None
+    transparent_gray: int | None = None
+    if color_type == 2 and len(transparency) >= 6:
+        transparent_rgb = (
+            struct.unpack(">H", transparency[0:2])[0] & 0xFF,
+            struct.unpack(">H", transparency[2:4])[0] & 0xFF,
+            struct.unpack(">H", transparency[4:6])[0] & 0xFF,
+        )
+    elif color_type == 0 and len(transparency) >= 2:
+        transparent_gray = struct.unpack(">H", transparency[:2])[0] & 0xFF
+
+    for row in decoded_rows:
+        mask = bytearray(width)
+        if color_type == 6:
+            for x in range(width):
+                mask[x] = 1 if row[x * 4 + 3] > 0 else 0
+        elif color_type == 4:
+            for x in range(width):
+                mask[x] = 1 if row[x * 2 + 1] > 0 else 0
+        elif color_type == 3:
+            for x in range(width):
+                index = row[x]
+                alpha = transparency[index] if index < len(transparency) else 255
+                mask[x] = 1 if alpha > 0 else 0
+        elif color_type == 2 and transparent_rgb is not None:
+            for x in range(width):
+                i = x * 3
+                rgb = (row[i], row[i + 1], row[i + 2])
+                mask[x] = 0 if rgb == transparent_rgb else 1
+        elif color_type == 0 and transparent_gray is not None:
+            for x in range(width):
+                mask[x] = 0 if row[x] == transparent_gray else 1
+        else:
+            return None
+        alpha_rows.append(mask)
+    return width, height, alpha_rows
+
+
+def _boundary_stats(
+    rows: list[bytearray],
+    *,
+    image_width: int,
+    image_height: int,
+    frame_width: int,
+    frame_height: int,
+    frames_per_row: int,
+    frames: int,
+    start_frame: int = 0,
+) -> dict[str, Any] | None:
+    checked = cut = touched = 0
+    samples: list[int] = []
+    last_frame = start_frame + frames - 1
+    for frame in range(start_frame, last_frame):
+        col = frame % frames_per_row
+        if col >= frames_per_row - 1:
+            continue
+        row_index = frame // frames_per_row
+        x = int(round((col + 1) * frame_width))
+        y0 = int(round(row_index * frame_height))
+        y1 = int(round((row_index + 1) * frame_height))
+        if x <= 0 or x >= image_width or y0 >= image_height:
+            continue
+        y0 = max(0, y0)
+        y1 = min(image_height, max(y0 + 1, y1))
+        checked += 1
+        left_count = _column_alpha_count(rows, x - 1, y0, y1)
+        right_count = _column_alpha_count(rows, x, y0, y1)
+        overlap = _column_overlap_count(rows, x - 1, x, y0, y1)
+        left = left_count > 0
+        right = right_count > 0
+        if left or right:
+            touched += 1
+        if left and right and overlap >= 4 and overlap / max(1, y1 - y0) >= 0.15:
+            cut += 1
+            if len(samples) < 6:
+                samples.append(x)
+    if checked == 0:
+        return None
+    return {
+        "checked": checked,
+        "cut": cut,
+        "touched": touched,
+        "cutRatio": cut / checked,
+        "touchRatio": touched / checked,
+        "frameWidth": frame_width,
+        "frameHeight": frame_height,
+        "framesPerRow": frames_per_row,
+        "samples": samples,
+    }
+
+
+def _column_alpha_count(rows: list[bytearray], x: int, y0: int, y1: int) -> int:
+    return sum(1 for y in range(y0, y1) if rows[y][x])
+
+
+def _column_overlap_count(rows: list[bytearray], x1: int, x2: int, y0: int, y1: int) -> int:
+    return sum(1 for y in range(y0, y1) if rows[y][x1] and rows[y][x2])
+
+
+def _paeth(left: int, up: int, up_left: int) -> int:
+    p = left + up - up_left
+    pa = abs(p - left)
+    pb = abs(p - up)
+    pc = abs(p - up_left)
+    if pa <= pb and pa <= pc:
+        return left
+    if pb <= pc:
+        return up
+    return up_left
 
 
 def _find_related_atlas(

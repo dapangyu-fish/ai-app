@@ -263,15 +263,13 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 
 生成游戏时必须优先使用这些字段。没有 `sprite` / `atlas` 元数据时，不能凭文件名猜切片；应改用单帧素材，或先读取图片尺寸并明确说明推断依据。
 
-常用 sprite sheet 尺寸提示（仍以实际 manifest URL 的 `sprite` / `atlas` 字段为准，但这些已托管资源不要再猜）：
+不要使用提示词、demo 或记忆中的固定尺寸表来切 sprite sheet。帧尺寸只能来自三类证据：
 
-| asset path | 单帧尺寸 / 用法 |
-|------------|----------------|
-| `vaca-roxa-generic-run-n-gun/1.0/Player/SpriteSheet_player_sliced.png` | 360x360，8x8 网格，单帧 45x45；不要裁 72x72 或整张渲染 |
-| `vaca-roxa-generic-run-n-gun/1.0/Enemies/ARMob.png` | 768x38，16 帧横条，单帧 48x38 |
-| `vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png` | 440x44，10 帧横条，单帧 44x44 |
-| `vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png` | 616x44，14 帧横条，单帧 44x44 |
-| `vaca-roxa-generic-run-n-gun/1.0/Enemies/Explosion_Particle.png` | 288x32，9 帧横条，单帧 32x32 |
+- manifest 里的 `files[].sprite` / `files[].atlas` 结构化元数据。
+- 同目录 XML / JSON atlas sidecar。
+- 当前生成器临时下载图片后做出的可复核推断，并且必须通过 `backend/validate_json_app.py` 的透明边界校验。
+
+如果上述证据不存在或校验提示边界切穿了不透明像素，不要继续猜；换用 manifest 中更明确的单帧素材，或先补 asset manifest 元数据。
 
 选材流程：
 
@@ -283,6 +281,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 3. 使用角色、敌人、爆炸、子弹等图片前，必须判断它是**单帧图片**还是 **sprite sheet / strip / tileset**：
    - 文件名包含 `SpriteSheet` / `spritesheet` / `sheet` / `strip` / `sliced` / `tileset`，或同一张图展示多个姿态时，默认按多帧资源处理，**不能直接作为普通 `sprite` 渲染**。
    - 对多帧资源，必须先读 `files[].sprite` 或 `files[].atlas`，再用 `animated_sprite`、`frame_size`、`frames`、`frames_per_row`，或显式 `src` 裁剪单帧。无法确认帧网格时，换用 manifest 中更明确的单帧/切片素材。
+   - 如果只能临时推断帧网格，必须执行 `python3 backend/validate_json_app.py <TMPFILE>`。校验器报告 `declared sprite grid cuts through opaque pixels` 时，说明切片边界穿过角色/敌人身体，不能上传。
    - 单帧 PNG 的 `frame_size` 必须等于 `files[].image.width/height`。不要给 128x128 单帧角色硬写 72x72，否则会只显示局部。
    - 如果 manifest 暂时没有尺寸信息，可以临时下载候选 PNG/JPG 到 `/tmp`，用脚本读取宽高后再决定帧尺寸；不要凭文件名猜 32/48/64。
 4. JSON 中引用图片时，必须使用所选 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
@@ -343,15 +342,16 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 2. **实体字段优先写标量**：`@entity.set` 用 `field/value`，优先 `x/y/w/h/vx/vy/auto_update/state.xxx`；`@entity.add` 用 `field/by`。不要新生成 `path/value`，也不要把 `size` / `position` / `velocity` 数组当首选写法。
 3. **动态实体 id 必须唯一**：子弹、特效、掉落物、召唤物、临时敌人等不能共用固定 id；使用递增序号或有限对象池，否则第二次触发会静默失败。
 4. **sprite sheet 不能当单帧图**：角色/敌人图片如果是多帧网格，必须设置正确 `frame_size`、`frames`、`frames_per_row` 或裁剪单帧；否则会把一整张九宫格/多姿态图渲染成角色。
-5. **TMX / tiled-json 地图优先内联**：用户自己生成游戏时，优先把地图数据放入 JSON（如 `global._tiledMaps`）并用 `map_data` 引用；只有用户明确有外部存储桶或资源包时，才使用远程 `url`。无论哪种方式，tileset 图片 URL 必须来自已选 asset manifest 的 `files[].url`，不要手拼。
-6. **默认做完整游戏，不做 demo**：除非用户明确说"demo / prototype / 极简 / 快速示例"，否则游戏类 APP 的默认目标是可试玩的完整小关卡。不能只给一个角色、一张背景、一条地面和几次刷怪。生成前必须先确定：美术主题、视口、关卡长度、场景层次、路线节奏、敌人/道具/障碍分布、胜负条件。
-7. **视觉质量必须有层次**：实时游戏至少要有背景层、关卡地形层、可交互对象层、前景/装饰层中的 3 类。纯色背景、单张拉伸背景、几片云加一条地都只能算 prototype，不满足完整游戏要求。
+5. **展示文本不要写裸 jsonlogic**：弹窗 `message/title`、按钮 `label`、文本 `value` 等展示字段必须是字符串或 `{{ ... }}` 插值。不要写 `{"cat": [...]}` 这类对象，否则可能直接把表达式显示到 UI 上。
+6. **TMX / tiled-json 地图优先内联**：用户自己生成游戏时，优先把地图数据放入 JSON（如 `global._tiledMaps`）并用 `map_data` 引用；只有用户明确有外部存储桶或资源包时，才使用远程 `url`。无论哪种方式，tileset 图片 URL 必须来自已选 asset manifest 的 `files[].url`，不要手拼。
+7. **默认做完整游戏，不做 demo**：除非用户明确说"demo / prototype / 极简 / 快速示例"，否则游戏类 APP 的默认目标是可试玩的完整小关卡。不能只给一个角色、一张背景、一条地面和几次刷怪。生成前必须先确定：美术主题、视口、关卡长度、场景层次、路线节奏、敌人/道具/障碍分布、胜负条件。
+8. **视觉质量必须有层次**：实时游戏至少要有背景层、关卡地形层、可交互对象层、前景/装饰层中的 3 类。纯色背景、单张拉伸背景、几片云加一条地都只能算 prototype，不满足完整游戏要求。
 
 ## 游戏类型设计 Profile（先选类型，再写 JSON）
 
 用户说"像某某知名游戏"时，**不要使用该游戏的受版权保护素材、名称或关卡**；只能理解为玩法类型和节奏参考，并用 CC0 素材重新设计。
 
-### 平台跳跃 / platformer（例如"超级玛丽风格"、"冒险岛风格"）
+### 平台跳跃 / platformer（例如《超级马里奥》《冒险岛》这类平台跳跃游戏）
 
 这类需求不能只把角色、金币和一条地面摆到长画布里。必须满足：
 
@@ -362,7 +362,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 5. **收集物和敌人要可达/可互动**：金币不能和箱子/墙体重叠到永远吃不到；敌人巡逻范围脚下要有连续地面；敌人不能无故悬空或掉出地图。
 6. **实体规模要克制**：大量金币/装饰不要全部常驻为独立实体。优先用 tiled map / object layer / 近距离生成；否则会变成能跑但低端机卡顿的长列表。
 
-### 横版动作 / 横版射击 / run-and-gun（例如"合金弹头风格"）
+### 横版动作 / 横版射击 / run-and-gun（例如《合金弹头》这类横版射击游戏）
 
 这类需求不能写成一屏自由飞行小游戏。必须满足以下结构：
 
@@ -370,7 +370,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 2. **Camera 跟随**：必须配置横向 camera follow，让玩家从左向右推进。玩家初始位置在视口左侧三分之一附近，关卡右侧要有目标、终点、Boss、撤离点或分段推进条件。
 3. **平台/地面物理**：玩家是地面角色，不是飞行物。摇杆/方向键的横轴控制 `vx` 或水平移动；跳跃按钮控制 `vy`；重力和地面/平台碰撞必须每帧执行（优先 `@platformer.step` + 有效 map）。**禁止把摇杆 `move_y` 直接加到 `player.y`**，除非用户明确要求飞行射击。
 4. **纵轴输入语义**：摇杆上/下可用于瞄准、蹲下、爬梯、进门或选择，不可让角色自由上下飞。需要上跳时使用单独跳跃按钮；需要下蹲时改变状态/碰撞盒，而不是持续改 y。
-5. **角色和敌人必须用正确帧**：玩家、敌人、爆炸、枪口火焰如果来自 sprite sheet，必须用 `animated_sprite` 或 `src` 裁剪，不得把整张 sheet 当普通 `sprite`。看见 `SpriteSheet_player_sliced.png` 这类文件名时尤其要先确认帧网格。
+5. **角色和敌人必须用正确帧**：玩家、敌人、爆炸、枪口火焰如果来自 sprite sheet，必须用 `animated_sprite` 或 `src` 裁剪，不得把整张 sheet 当普通 `sprite`。文件名或预览图显示多个姿态/多帧时，必须先从 manifest / atlas / 校验过的图片分析结果确认帧网格。
 6. **不能只有长平地**：做了很宽的 `ground` 仍然不等于横版关卡。必须有 tiled map，或至少布置多段平台、掩体、箱子、墙、坑洞、油桶、障碍、坡道等路线元素；否则只是"长背景 + 刷怪"，不合格。
 7. **背景不能寒酸**：至少 3 个有语义的场景层，不要只有 clouds。建议结构：远景天空/城市/山体，中景建筑/废墟/工业设施，近景管道/箱子/路灯/招牌/残骸/植被/栏杆，必要时加前景遮挡或氛围层。每个屏幕宽度内都要有若干视觉变化，不能整关一张图重复到底。
 8. **关卡节奏要分段**：至少设计 4 个节奏段：安全开场、基础敌人、障碍/掩体交火、强化敌人或小 Boss、终点/撤离。每段要有不同的地形或视觉 landmark。

@@ -356,6 +356,10 @@ class AssetPack:
     ) -> dict[str, Any]:
         sprite = self.sprite(path)
         frame_w, frame_h = self.frame_size(path)
+        if sprite.get("kind") == "single" and frames > 1:
+            raise BuilderError(
+                f"asset metadata says single-frame image, not animation sheet: {path}"
+            )
         if frames <= 0:
             raise BuilderError(f"animation frames must be positive: {path}")
         available_frames = int(sprite.get("frames") or frames)

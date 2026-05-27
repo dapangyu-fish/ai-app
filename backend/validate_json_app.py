@@ -15,7 +15,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from asset_manifest_metadata import metadata_for_asset_url, sprite_frame_size
+from asset_manifest_metadata import (
+    animation_frame_boundary_diagnostics,
+    metadata_for_asset_url,
+    read_png_size_from_url,
+    sprite_frame_size,
+)
 
 
 FORBIDDEN_UI_KEYS = {
@@ -108,14 +113,21 @@ ENTITY_ADD_FIELDS = {
 
 COMPOUND_ENTITY_FIELDS = {"position", "size", "velocity"}
 
-KNOWN_SPRITE_SHEETS = {
-    # asset-url suffix -> expected single frame size.
-    # These are generic metadata for hosted asset packs, not app-specific rules.
-    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Player/SpriteSheet_player_sliced.png": (45, 45),
-    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/ARMob.png": (48, 38),
-    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png": (44, 44),
-    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png": (44, 44),
-    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/Explosion_Particle.png": (32, 32),
+PRESENTATION_TEXT_KEYS = {
+    "caption",
+    "description",
+    "emptyText",
+    "errorText",
+    "helperText",
+    "hint",
+    "label",
+    "message",
+    "placeholder",
+    "subtitle",
+    "successText",
+    "text",
+    "title",
+    "tooltip",
 }
 
 DEFAULT_BUILTIN_CALLS = {
@@ -182,6 +194,7 @@ class Validator:
         self.dependencies: set[str] = set()
         self.self_package_names: set[str] = set()
         self.flame_games: list[tuple[str, dict[str, Any]]] = []
+        self.sprite_boundary_error_keys: set[tuple[str, int, int, int]] = set()
 
     def error(self, path: str, message: str) -> None:
         self.findings.append(Finding("ERROR", path, message))
@@ -192,6 +205,7 @@ class Validator:
     def validate(self) -> int:
         self._validate_root()
         self._walk(self.root, "$", in_game_logic=False)
+        self._validate_presentation_text_slots()
         self._validate_sprite_sheet_usage()
         self._validate_game_profiles()
         for finding in self.findings:
@@ -466,6 +480,10 @@ class Validator:
         frame_h = self._num_at(frame_size, 1)
         expected_frame = self._known_frame_size(asset_text, asset_meta)
         image_w, image_h = self._image_size(asset_meta)
+        if (image_w is None or image_h is None) and asset_text:
+            remote_size = read_png_size_from_url(asset_text)
+            if remote_size:
+                image_w, image_h = remote_size
         sprite = asset_meta.get("sprite") if isinstance(asset_meta, dict) else None
         sprite_kind = str(sprite.get("kind") or "") if isinstance(sprite, dict) else ""
 
@@ -528,6 +546,69 @@ class Validator:
                     self._path(path, "frames"),
                     f"animation reads outside image: start_frame={start_frame}, frames={frames}, frames_per_row={frames_per_row}, frame_height={frame_h:g}, image_height={image_h}",
                 )
+                return
+            if (
+                asset_text
+                and frames > 1
+                and frame_w.is_integer()
+                and frame_h.is_integer()
+                and frames_per_row
+            ):
+                diagnostics = animation_frame_boundary_diagnostics(
+                    asset_text,
+                    frame_width=int(frame_w),
+                    frame_height=int(frame_h),
+                    frames_per_row=frames_per_row,
+                    frames=frames,
+                    start_frame=start_frame,
+                )
+                self._validate_frame_boundary_diagnostics(
+                    path,
+                    asset_text,
+                    int(frame_w),
+                    int(frame_h),
+                    frames_per_row,
+                    diagnostics,
+                )
+
+    def _validate_frame_boundary_diagnostics(
+        self,
+        path: str,
+        asset_text: str,
+        frame_w: int,
+        frame_h: int,
+        frames_per_row: int,
+        diagnostics: dict[str, Any] | None,
+    ) -> None:
+        if not diagnostics:
+            return
+        current = diagnostics.get("current")
+        if not isinstance(current, dict):
+            return
+        cut_ratio = self._num_from_map(current, "cutRatio") or 0.0
+        cut = int(current.get("cut") or 0)
+        checked = int(current.get("checked") or 0)
+        if cut < 2 or checked < 3 or cut_ratio < 0.25:
+            return
+        key = (asset_text.split("?", 1)[0], frame_w, frame_h, frames_per_row)
+        if key in self.sprite_boundary_error_keys:
+            return
+        self.sprite_boundary_error_keys.add(key)
+        self.error(
+            self._path(path, "frame_size"),
+            f"declared sprite grid cuts through opaque pixels at {cut}/{checked} internal frame boundaries; do not guess sprite sheet slicing",
+        )
+
+    def _validate_presentation_text_slots(self) -> None:
+        for path, node in self._iter_dicts(self.root):
+            for key, value in node.items():
+                if not self._is_presentation_slot(node, key):
+                    continue
+                if self._is_raw_jsonlogic(value):
+                    self.error(
+                        self._path(path, key),
+                        "presentation text must be a string or string interpolation, not raw jsonlogic; use e.g. \"Score: {{ params.score }}\"",
+                    )
 
     @staticmethod
     def _asset_metadata(asset: str) -> dict[str, Any] | None:
@@ -738,9 +819,6 @@ class Validator:
             "sidescroller shooter",
             "side-scroller shooter",
             "platform shooter",
-            "metal slug",
-            "metal-action",
-            "合金弹头",
             "横版射击",
             "横版动作",
             "平台射击",
@@ -1240,14 +1318,23 @@ class Validator:
         asset: str,
         asset_meta: dict[str, Any] | None = None,
     ) -> tuple[int, int] | None:
-        metadata_frame = sprite_frame_size(asset_meta)
-        if metadata_frame:
-            return metadata_frame
-        normalized = asset.split("?", 1)[0]
-        for suffix, frame in KNOWN_SPRITE_SHEETS.items():
-            if normalized.endswith(suffix):
-                return frame
-        return None
+        return sprite_frame_size(asset_meta)
+
+    @staticmethod
+    def _is_presentation_slot(node: dict[str, Any], key: str) -> bool:
+        if key in PRESENTATION_TEXT_KEYS:
+            return True
+        if key == "value" and node.get("type") in {"text", "markdown", "badge", "chip"}:
+            return True
+        return False
+
+    @staticmethod
+    def _is_raw_jsonlogic(value: Any) -> bool:
+        return (
+            isinstance(value, dict)
+            and len(value) == 1
+            and next(iter(value.keys())) in JSONLOGIC_SINGLE_KEYS
+        )
 
     @classmethod
     def _flatten_text(cls, node: Any) -> str:
@@ -1301,6 +1388,7 @@ def validate_json_content(
     validator = Validator(data, builtin_calls or load_builtin_calls())
     validator._validate_root()
     validator._walk(validator.root, "$", in_game_logic=False)
+    validator._validate_presentation_text_slots()
     validator._validate_sprite_sheet_usage()
     validator._validate_game_profiles()
     return validator.findings

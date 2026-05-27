@@ -161,7 +161,7 @@
 | `files[].sprite.columns/rows/frames` | 网格/横条 sprite sheet 的行列和帧数 |
 | `files[].atlas.entries[]` | XML atlas 解析出的 `SubTexture` 裁剪框 |
 
-如果 manifest 没有 `sprite` / `atlas` 字段，不能凭文件名猜 3x3、8x8 或 64x64。应选择单帧素材，或先读取 PNG 尺寸并明确推断依据。单帧 PNG 的 `frame_size` 默认应等于 `files[].image.width/height`；只有确认透明边界时，才用 `src` 显式裁剪。
+如果 manifest 没有 `sprite` / `atlas` 字段，不能凭文件名猜 3x3、8x8 或 64x64。应选择单帧素材，或先读取 PNG 尺寸并明确推断依据，最终必须通过 `backend/validate_json_app.py` 的 sprite 边界校验。单帧 PNG 的 `frame_size` 默认应等于 `files[].image.width/height`；只有确认透明边界时，才用 `src` 显式裁剪。
 
 #### Agent 生成辅助库
 
