@@ -24,15 +24,23 @@ class JsonRefWidget extends JsonBaseWidget {
     // 从依赖加载器查找模板
     final template = interpreter.depLoader.findTemplate(from, widgetName);
     if (template == null) {
-      return _errorWidget(context,
-          T.fmt(T.of(context).widgetRefNotFoundWith, {'ref': '$from.$widgetName'}));
+      return _errorWidget(
+        context,
+        T.fmt(T.of(context).widgetRefNotFoundWith, {
+          'ref': '$from.$widgetName',
+        }),
+      );
     }
 
     // 获取模板的 root 节点
     final root = template['root'] as Map<String, dynamic>?;
     if (root == null) {
-      return _errorWidget(context,
-          T.fmt(T.of(context).widgetRefMissingRootWith, {'ref': '$from.$widgetName'}));
+      return _errorWidget(
+        context,
+        T.fmt(T.of(context).widgetRefMissingRootWith, {
+          'ref': '$from.$widgetName',
+        }),
+      );
     }
 
     // 解析 props 中的模板表达式
@@ -45,8 +53,15 @@ class JsonRefWidget extends JsonBaseWidget {
       }
     }
 
-    // 将 props 注入到模板中（递归替换 {{ props.xxx }}）
-    final resolved = _injectProps(root, resolvedProps);
+    final mergedProps = _applyPropDefaults(
+      template,
+      resolvedProps,
+      interpreter,
+    );
+
+    // 将 props 注入到模板中（递归替换 {{ props.xxx }}，并支持只引用
+    // props 的 jsonlogic 默认值表达式）。
+    final resolved = _injectProps(root, mergedProps, interpreter);
 
     // 用解释器构建最终 widget
     if (resolved is Map<String, dynamic>) {
@@ -56,11 +71,60 @@ class JsonRefWidget extends JsonBaseWidget {
     return const SizedBox.shrink();
   }
 
-  /// 递归将 {{ props.xxx }} 替换为实际 props 值
-  dynamic _injectProps(dynamic node, Map<String, dynamic> props) {
+  Map<String, dynamic> _applyPropDefaults(
+    Map<String, dynamic> template,
+    Map<String, dynamic> props,
+    JsonInterpreter interpreter,
+  ) {
+    final defaults = _extractPropDefaults(template);
+    if (defaults.isEmpty) return props;
+
+    final merged = Map<String, dynamic>.from(props);
+    for (final entry in defaults.entries) {
+      if (merged.containsKey(entry.key) && merged[entry.key] != null) {
+        continue;
+      }
+      merged[entry.key] = _injectProps(entry.value, merged, interpreter);
+    }
+    return merged;
+  }
+
+  Map<String, dynamic> _extractPropDefaults(Map<String, dynamic> template) {
+    final defaults = <String, dynamic>{};
+
+    final propSpec = template['props'];
+    if (propSpec is Map<String, dynamic>) {
+      for (final entry in propSpec.entries) {
+        final spec = entry.value;
+        if (spec is Map<String, dynamic> && spec.containsKey('default')) {
+          defaults[entry.key] = spec['default'];
+        }
+      }
+    }
+
+    for (final key in const ['defaults', 'defaultProps', 'propsDefaults']) {
+      final value = template[key];
+      if (value is Map<String, dynamic>) {
+        defaults.addAll(value);
+      }
+    }
+    return defaults;
+  }
+
+  /// 递归将 {{ props.xxx }} 替换为实际 props 值。
+  ///
+  /// Map 形式的 jsonlogic 只在完全由 props 驱动时求值；event/loop/global
+  /// 仍留给运行时解释器，避免在 build 阶段提前解析。
+  dynamic _injectProps(
+    dynamic node,
+    Map<String, dynamic> props,
+    JsonInterpreter interpreter,
+  ) {
     if (node is String) {
       // 完整匹配 {{ props.xxx }}
-      final exactMatch = RegExp(r'^\{\{\s*props\.(.+?)\s*\}\}$').firstMatch(node);
+      final exactMatch = RegExp(
+        r'^\{\{\s*props\.(.+?)\s*\}\}$',
+      ).firstMatch(node);
       if (exactMatch != null) {
         final key = exactMatch.group(1)!;
         return props[key] ?? node;
@@ -73,14 +137,50 @@ class JsonRefWidget extends JsonBaseWidget {
     }
 
     if (node is Map<String, dynamic>) {
-      return node.map((k, v) => MapEntry(k, _injectProps(v, props)));
+      if (interpreter.looksLikeJsonLogic(node) && _onlyReferencesProps(node)) {
+        return interpreter.evaluateJsonLogicWithLocals(node, {'props': props});
+      }
+      return node.map(
+        (k, v) => MapEntry(k, _injectProps(v, props, interpreter)),
+      );
     }
 
     if (node is List) {
-      return node.map((e) => _injectProps(e, props)).toList();
+      return node.map((e) => _injectProps(e, props, interpreter)).toList();
     }
 
     return node;
+  }
+
+  bool _onlyReferencesProps(dynamic node) {
+    bool walk(dynamic value) {
+      if (value is Map<String, dynamic>) {
+        if (value.length == 1 && value.containsKey('var')) {
+          final ref = value['var'];
+          if (ref is String) return ref.startsWith('props.');
+          if (ref is List && ref.isNotEmpty && ref.first is String) {
+            if (!(ref.first as String).startsWith('props.')) return false;
+            for (var i = 1; i < ref.length; i += 1) {
+              if (!walk(ref[i])) return false;
+            }
+            return true;
+          }
+          return false;
+        }
+        for (final entry in value.entries) {
+          if (!walk(entry.value)) return false;
+        }
+        return true;
+      }
+      if (value is List) {
+        for (final item in value) {
+          if (!walk(item)) return false;
+        }
+      }
+      return true;
+    }
+
+    return walk(node);
   }
 
   Widget _errorWidget(BuildContext context, String message) {
@@ -88,7 +188,9 @@ class JsonRefWidget extends JsonBaseWidget {
       padding: const EdgeInsets.all(8),
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.errorContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(

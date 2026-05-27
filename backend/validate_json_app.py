@@ -1540,6 +1540,7 @@ def validate_json_content(
     validator._validate_presentation_text_slots()
     validator._validate_sprite_sheet_usage()
     validator._validate_game_profiles()
+    validator._validate_game_input()
     return validator.findings
 
 

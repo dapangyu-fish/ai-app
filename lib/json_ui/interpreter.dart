@@ -391,6 +391,19 @@ class JsonInterpreter extends ChangeNotifier {
     return _knownJsonLogicOps.contains(m.keys.first);
   }
 
+  bool looksLikeJsonLogic(Map<String, dynamic> value) =>
+      _looksLikeJsonLogic(value);
+
+  dynamic evaluateJsonLogicWithLocals(
+    Map<String, dynamic> rule,
+    Map<String, dynamic> locals,
+  ) {
+    final data = _buildDataContext();
+    data.addAll(locals);
+    final preprocessed = _resolveTemplatesInRule(rule);
+    return _jl.apply(preprocessed, data);
+  }
+
   /// jsonlogic 标准 operator + 本文件 _createJsonLogic 里 jl.add 注册的自定义 op。
   /// 维护提示：在 _createJsonLogic 里加新的 jl.add('xxx', ...) 时，**记得把
   /// 'xxx' 加到这里**，否则该 op 写法会被当作数据 Map 不再触发 jsonlogic 求值。

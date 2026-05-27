@@ -1634,6 +1634,25 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 `{{ props.xxx }}` 在渲染时被替换为调用方传入的 `props` 值。
 
+模板可以声明 props 默认值，调用方未传或传 `null` 时生效。默认值支持只引用
+`props.*` 的 JsonLogic，适合表达“某个 prop 默认等于另一个 prop”：
+
+```json
+"userCard": {
+  "props": ["name", "avatar", "fallbackAvatar"],
+  "defaults": {
+    "fallbackAvatar": { "var": ["props.avatar", "https://example.com/avatar.png"] }
+  },
+  "root": {
+    "type": "image",
+    "url": { "or": [{ "var": "props.avatar" }, { "var": "props.fallbackAvatar" }] }
+  }
+}
+```
+
+出于生命周期安全，`ref` 的构建阶段只会提前计算完全由 `props.*` 组成的
+JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻辑里计算。
+
 ### 6.42 flame_game 控件 — 嵌入小游戏（atom + 编排）
 
 `flame_game` 是一个**通用游戏宿主**：JSON 描述游戏的世界、实体、输入、循环规则，框架（Flame 引擎 + 游戏 atom）负责执行。**新加一个游戏不需要改客户端代码**——只要 JSON 用现有 atom 拼出即可。
