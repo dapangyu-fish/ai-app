@@ -2,7 +2,7 @@
 
 > **AI describe → server-driven mobile app → instantly running on user's phone.**
 >
-> A Flutter runtime that interprets JSON-DSL into native UI + business logic. Users tell AI what they want, AI emits JSON, the app renders it. No recompile, no App Store review.
+> A Flutter runtime that interprets JSON-DSL into native UI + business logic. Users tell AI what they want, AI emits JSON, and the app renders it inside a precompiled capability set.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
@@ -18,13 +18,15 @@ Three things in one repo:
 2. **A Python backend stack** (`backend/`, `user_center/`, `config_center/`) — auth (Supabase), IM (OpenIM), push (APNs + FCM), AI chat proxy, package registry, user admin
 3. **A package ecosystem** (`templates/`) — example JSON-APPs (IM, games, user profile, calculator…) you can install on top of the runtime
 
-The flagship use case: **a user opens the app → chats with AI → AI returns a JSON-DSL → the app loads and runs it instantly, no recompile, no submit-to-store cycle**.
+The name **MyApp** is intentional: each user can create, install, and operate "my app" on top of the shared runtime.
+
+The flagship use case: **a user opens the app → chats with AI → AI returns a JSON-DSL → the app loads and runs it instantly inside the capabilities already compiled into the client**.
 
 ---
 
 ## Why is this interesting?
 
-- **Server-driven** — push UI changes without going through Apple/Google review. Same advantage iOS Mini Programs / WeChat have, but cross-platform and open-source.
+- **Server-driven** — ship UI and behavior data through a fixed, precompiled runtime boundary. See [App Store compliance notes](docs/APP_STORE_COMPLIANCE.md).
 - **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat (Claude / DeepSeek / GLM) generates apps that actually render.
 - **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, user center, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
 - **Self-hostable** — one-command `bootstrap.sh` spins up the full stack in Docker (Supabase + OpenIM + backend + registry + 4 admin services = 26 containers, all healthchecked).
@@ -247,7 +249,7 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 |---|---|
 | Engine (Dart) | Production. 34k LOC. Powering a real app. |
 | Backend (Python) | Production. 7k LOC. Running real users. |
-| Tests | Minimal (1 widget test). PRs adding tests very welcome. |
+| Tests | Widget smoke test plus JSON regression suite (`templates/regression-test.json`). PRs adding coverage very welcome. |
 | Docs | Mid (CLAUDE.md, JSON-DSL.md, REGISTRY_README.md, BACKEND_DEPLOY.md). Improving. |
 | API stability | DSL v3.3 — minor breaking changes possible until v4. Backend HTTP API stable. |
 | Public hosted? | Yes (subject to fair use, see Terms) |
@@ -269,7 +271,7 @@ Issues, PRs, discussions all welcome.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 You may:
 - Use this in commercial products
@@ -279,6 +281,9 @@ You may:
 You may not:
 - Use the **"MyApp" name or logo** without permission (apply for a [trademark license](#))
 - Misrepresent the origin of the code
+
+Marketplace packages, uploaded assets, and user-created JSON apps are owned and
+licensed by their authors unless they explicitly say otherwise.
 
 ---
 
