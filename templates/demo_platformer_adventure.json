@@ -398,11 +398,6 @@
                       "frames_per_row": 1,
                       "step_time": 0.12
                     }
-                  },
-                  "render": {
-                    "shape": "rect",
-                    "color": "#FFFFFF33",
-                    "radius": 6
                   }
                 },
                 "finish_flag": {
@@ -422,10 +417,6 @@
                     "spriteH": 96,
                     "spriteOffsetX": -12,
                     "spriteOffsetY": -24
-                  },
-                  "render": {
-                    "shape": "rect",
-                    "color": "#79D65B33"
                   }
                 },
                 "deco_01": {
@@ -510,10 +501,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_02": {
@@ -533,10 +520,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_03": {
@@ -556,10 +539,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_04": {
@@ -579,10 +558,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_05": {
@@ -602,10 +577,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_06": {
@@ -625,10 +596,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_07": {
@@ -648,10 +615,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_08": {
@@ -671,10 +634,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_09": {
@@ -694,10 +653,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_10": {
@@ -717,10 +672,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_11": {
@@ -740,10 +691,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_12": {
@@ -763,10 +710,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_13": {
@@ -786,10 +729,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_14": {
@@ -809,10 +748,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_15": {
@@ -832,10 +767,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_16": {
@@ -855,10 +786,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_17": {
@@ -878,10 +805,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_18": {
@@ -901,10 +824,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_19": {
@@ -924,10 +843,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_20": {
@@ -947,10 +862,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_21": {
@@ -970,10 +881,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_22": {
@@ -993,10 +900,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "coin_23": {
@@ -1016,10 +919,6 @@
                     "spriteH": 48,
                     "spriteOffsetX": -7,
                     "spriteOffsetY": -7
-                  },
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FFD16655"
                   }
                 },
                 "enemy_01": {
@@ -1066,11 +965,6 @@
                       "frames_per_row": 1,
                       "step_time": 0.12
                     }
-                  },
-                  "render": {
-                    "shape": "rect",
-                    "color": "#B24A4A33",
-                    "radius": 4
                   }
                 },
                 "enemy_02": {
@@ -1117,11 +1011,6 @@
                       "frames_per_row": 1,
                       "step_time": 0.12
                     }
-                  },
-                  "render": {
-                    "shape": "rect",
-                    "color": "#B24A4A33",
-                    "radius": 4
                   }
                 },
                 "enemy_03": {
@@ -1168,11 +1057,6 @@
                       "frames_per_row": 1,
                       "step_time": 0.12
                     }
-                  },
-                  "render": {
-                    "shape": "rect",
-                    "color": "#B24A4A33",
-                    "radius": 4
                   }
                 },
                 "enemy_04": {
@@ -1219,11 +1103,6 @@
                       "frames_per_row": 1,
                       "step_time": 0.12
                     }
-                  },
-                  "render": {
-                    "shape": "rect",
-                    "color": "#B24A4A33",
-                    "radius": 4
                   }
                 }
               },
@@ -1319,113 +1198,6 @@
                 ]
               },
               "input": {
-                "move_down": [
-                  {
-                    "call": "@set",
-                    "args": {
-                      "var": "vars.state",
-                      "value": "running"
-                    }
-                  },
-                  {
-                    "call": "@set",
-                    "args": {
-                      "var": "vars.move_dir",
-                      "value": {
-                        "if": [
-                          {
-                            "==": [
-                              {
-                                "var": "event.direction"
-                              },
-                              "left"
-                            ]
-                          },
-                          -1,
-                          1
-                        ]
-                      }
-                    }
-                  },
-                  {
-                    "call": "@set",
-                    "args": {
-                      "var": "vars.facing",
-                      "value": {
-                        "var": "vars.move_dir"
-                      }
-                    }
-                  },
-                  {
-                    "call": "@emit",
-                    "args": {
-                      "event": "status",
-                      "data": {
-                        "text": "探索中"
-                      }
-                    }
-                  }
-                ],
-                "move_up": [
-                  {
-                    "call": "@if",
-                    "args": {
-                      "cond": {
-                        "or": [
-                          {
-                            "and": [
-                              {
-                                "==": [
-                                  {
-                                    "var": "event.direction"
-                                  },
-                                  "left"
-                                ]
-                              },
-                              {
-                                "==": [
-                                  {
-                                    "var": "vars.move_dir"
-                                  },
-                                  -1
-                                ]
-                              }
-                            ]
-                          },
-                          {
-                            "and": [
-                              {
-                                "==": [
-                                  {
-                                    "var": "event.direction"
-                                  },
-                                  "right"
-                                ]
-                              },
-                              {
-                                "==": [
-                                  {
-                                    "var": "vars.move_dir"
-                                  },
-                                  1
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
-                      "then": [
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.move_dir",
-                            "value": 0
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
                 "move_axis": [
                   {
                     "call": "@set",

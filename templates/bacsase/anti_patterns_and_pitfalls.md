@@ -32,6 +32,9 @@
 | 使用素材包做游戏：不知道 sprite sheet 该切几行几列、单帧只显示一角 | §16 |
 | 实时游戏一开始流畅，跑一段后明显掉帧/卡顿 | §16/§17 |
 | 横版射击角色太小、敌人姿势怪、背景像色块拼贴 | §17 |
+| 摇杆/手柄松手后角色不停，一直往一个方向走 | §18 |
+| 横版游戏角色"自己上台阶"、走到落差处自动抬腿爬上去 | §18 |
+| 玩家（或敌人/道具）显示成一个半透明色块/框，不是贴图 | §18 |
 
 如果症状对不上任何一条，往下顺读看类别能否匹配——按类别大致是：布局崩（§1）、
 静态字段类型（§2/§5）、顶层结构（§3）、函数 args 命名（§4）、jsonlogic 求值
@@ -1069,3 +1072,49 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 - 这个游戏是否能用一句话说清“从哪里开始、往哪里推进、如何过关”？
 
 ---
+
+## 18. 横版游戏三连坑：松手不停 / 自动上台阶 / 玩家变色块
+
+一次"魂斗罗式"生成里同时踩中三个坑。三个都不是随机错，而是**控件接线、物理引擎、精灵兜底**三处的固定反模式，校验器（`backend/validate_json_app.py`）已对它们硬拦。
+
+### 🚨 表现
+
+- 推摇杆能走，**松开摇杆后角色不停**，一直朝最后方向移动。
+- 走到台阶/落差处，**角色自己抬腿爬上去**（期望硬碰撞的射击游戏不该这样）。
+- 主角（有时连敌人/道具）**显示成一个半透明矩形/圆**，看不到贴图。
+
+### 💔 反面教材分析
+
+**(1) 松手不停 —— `moveEndInput` 接错 handler。**
+`game-controls` 的 `psJoystickGamepad` 用 `props.moveInput` / `moveEndInput` 把"拖动 / 松手"分别路由到 `flame_game.input` 里的命名 handler：
+
+```jsonc
+// move handler：把模拟量写进 move_dir
+"move_axis": [{ "call": "@set", "args": { "var": "vars.move_dir", "value": { "var": "event.x" } } }]
+// 松手时控件会用 event.x = 0 再触发 moveEndInput 指向的 handler
+```
+
+坏例子把 `moveEndInput` 指向了 `move_up`，而 `move_up` 只在 `move_dir == ±1` 时才归零：
+
+```jsonc
+"props": { "moveInput": "move_axis", "moveEndInput": "move_up" }   // ❌
+"move_up": [{ "call": "@if", "args": {
+  "cond": { "or": [ { "and": [ {"==":[{"var":"event.direction"},"left"]}, {"==":[{"var":"vars.move_dir"},-1]} ] }, … ] },
+  "then": [{ "call": "@set", "args": { "var": "vars.move_dir", "value": 0 } }] } }]
+```
+
+摇杆是**模拟量**（0.6 / -0.83…），`move_dir` 几乎永远不等于 ±1 → 归零分支永不触发 → `move_dir` 卡住 → 每帧 `vx = speed * move_dir` → 松手后一直走。`move_up` 那段 ±1 逻辑其实是 D-pad 时代的化石，跟"停"无关。
+
+**(2) 自动上台阶 —— 物理引擎用了 `leap_platformer`。**
+`leap_platformer` 自带斜坡/台阶自动攀爬，对横版**射击**（硬碰撞、踩不上去就是踩不上去）是错的体感。
+
+**(3) 玩家变色块 —— `sprite`/`animated_sprite` 挂了 `render` 兜底框。**
+引擎只在**贴图加载失败**时画 `render: {shape:rect,…}`（`game_entity.dart` `SpriteEntity.render`：`if (img == null) drawShape(renderConfig)`）。坏例子给玩家留了 `render: {"shape":"rect","color":"#FFFFFF22"}`，一旦贴图没加载出来，看到的就是这个半透明幽灵方块。
+
+### ✅ 正确姿势 / 避坑指南
+
+1. **摇杆松手必停**：只设 `moveInput`，**`moveEndInput` 留空**（默认回退到 `moveInput`，松手 `event.x=0` 自动归零）。要显式写就写成 `moveEndInput == moveInput`，**绝不要指向方向 handler**。校验器报 `joystick moveEndInput ... will not stop the player` 时，就是这个坑。
+2. **物理引擎按品类选**：横版射击 / 硬碰撞动作类用 `"physics": {"engine": "aabb_platformer"}`；`leap_platformer` 只留给明确要走斜坡的游戏。校验器对 run-and-gun 用 leap 报 ERROR。
+3. **图元不挂 render 色块**：`sprite` / `animated_sprite` 只写 `asset` / `frame_size` / `frames`，不要带 `render: {shape:…}`。需要纯色方块用 `kind:"pixel"`。校验器对玩家挂色块报 ERROR、其余报 WARN。
+
+参考：清理后的 `templates/demo_platformer_adventure.json` 已删掉死的 `move_up`/`move_down` 与所有 `render` 色块，`moveEndInput=move_axis`，可作为正向范本。

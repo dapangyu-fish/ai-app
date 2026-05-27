@@ -346,6 +346,9 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 6. **TMX / tiled-json 地图优先内联**：用户自己生成游戏时，优先把地图数据放入 JSON（如 `global._tiledMaps`）并用 `map_data` 引用；只有用户明确有外部存储桶或资源包时，才使用远程 `url`。无论哪种方式，tileset 图片 URL 必须来自已选 asset manifest 的 `files[].url`，不要手拼。
 7. **默认做完整游戏，不做 demo**：除非用户明确说"demo / prototype / 极简 / 快速示例"，否则游戏类 APP 的默认目标是可试玩的完整小关卡。不能只给一个角色、一张背景、一条地面和几次刷怪。生成前必须先确定：美术主题、视口、关卡长度、场景层次、路线节奏、敌人/道具/障碍分布、胜负条件。
 8. **视觉质量必须有层次**：实时游戏至少要有背景层、关卡地形层、可交互对象层、前景/装饰层中的 3 类。纯色背景、单张拉伸背景、几片云加一条地都只能算 prototype，不满足完整游戏要求。
+9. **摇杆松手必须停**：用 `game-controls` 的 `psJoystickGamepad` 时，只设 `moveInput`（指向把 `move_dir = event.x` 的 move handler，如 `move_axis`）。**`moveEndInput` 留空即可**——它默认回退到 `moveInput`，松手时控件发 `event.x=0` 自动把 `move_dir` 归零。**绝不要把 `moveEndInput` 指向 `move_up` 或别的方向 handler**：那种 handler 多半只在 `move_dir==±1` 时归零，而摇杆是模拟量永远不等于 ±1 → 松手后角色一直走。校验器会拦 `moveEndInput ... will not stop the player`。
+10. **物理引擎按品类选**：横版射击 / run-and-gun / 硬碰撞动作类用 `physics.engine: "aabb_platformer"`（踩不上去就是踩不上去）。`leap_platformer` 会让角色**自动爬上台阶/斜坡**，只用于明确需要走斜坡的游戏，否则魂斗罗类会出现"角色自己上台阶"。校验器会拦 run-and-gun 用 leap。
+11. **图元不要挂 render 色块**：`sprite` / `animated_sprite` 不要带 `render: {"shape": "rect"/"circle", ...}`。引擎只在**贴图加载失败时**画这个框，一旦显形角色就变成"幽灵方块"（玩家变色块的头号原因）。正式实体只写 `asset` / `frame_size` / `frames`，别留 debug 色块；需要纯色方块才用 `kind:"pixel"`。校验器对玩家报 ERROR、其余报 WARN。
 
 ## 游戏类型设计 Profile（先选类型，再写 JSON）
 
