@@ -59,6 +59,7 @@
   "dependencies": {
     "common-ui": "^1.3.0"
   },
+  "assets": { ... },
   "global": { ... },
   "steps": [ ... ],
   "ui": { ... }
@@ -75,6 +76,7 @@
 | `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
 | `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
 | `dependencies` | 否 | 依赖声明，key 必须是 Registry 包名，同时也是调用命名空间（如 `@common-ui.showInfo` 的 `common-ui`）；value 推荐写版本约束字符串（如 `"^1.3.0"`）。也兼容旧对象格式 `{ "url": "...", "version": "^1.2.0" }`，但当前加载器实际按 Registry/CacheManager 解析，`url` 仅保留旧格式兼容 |
+| `assets` | 否 | 资源声明区。游戏/媒体类 APP 推荐声明 `assets.bundles`，让客户端启动时缓存远程资源 |
 
 #### `meta.displayName` 两种写法
 
@@ -131,6 +133,52 @@
 // 读取依赖的变量（只读）: depName.varPath
 "{{ common-ui.theme.primaryColor }}"
 ```
+
+#### assets.bundles 与素材 manifest
+
+游戏、动画和媒体类 APP 推荐声明所使用的托管素材包：
+
+```json
+"assets": {
+  "bundles": {
+    "kenney_new_platformer": {
+      "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/kenney-new-platformer-pack/1.1/",
+      "manifest": "manifest.json",
+      "license": "LICENSE",
+      "startupDownload": true
+    }
+  }
+}
+```
+
+素材包 manifest 是选材和裁剪的事实依据。Agent / 人工编写游戏时应优先读取：
+
+| 字段 | 说明 |
+|------|------|
+| `files[].image.width/height` | 图片真实像素尺寸 |
+| `files[].sprite.kind` | `single` / `grid` / `strip` / `atlas` / `unknown_sheet` |
+| `files[].sprite.frameWidth/frameHeight` | 一帧的真实尺寸 |
+| `files[].sprite.columns/rows/frames` | 网格/横条 sprite sheet 的行列和帧数 |
+| `files[].atlas.entries[]` | XML atlas 解析出的 `SubTexture` 裁剪框 |
+
+如果 manifest 没有 `sprite` / `atlas` 字段，不能凭文件名猜 3x3、8x8 或 64x64。应选择单帧素材，或先读取 PNG 尺寸并明确推断依据。单帧 PNG 的 `frame_size` 默认应等于 `files[].image.width/height`；只有确认透明边界时，才用 `src` 显式裁剪。
+
+#### Agent 生成辅助库
+
+后端 Agent 生成复杂 APP 时可以使用 `backend/json_app_builder.py` 作为临时 Python 生成器的辅助库。它不是客户端运行时能力，只用于降低生成 JSON 的出错率。
+
+推荐使用场景：`flame_game`、Tiled 地图、长关卡、大量实体、重复 UI、素材 manifest 选材和 sprite sheet 切帧。生成器应输出最终 JSON 后继续运行 `python3 backend/validate_json_app.py <TMPFILE>`。
+
+常用 helper：
+
+| helper | 用途 |
+|--------|------|
+| `new_app/screen/text/container/expanded/flame_game` | 生成标准 DSL 结构和基础控件 |
+| `pixel_entity/sprite_entity/animated_sprite_entity/parallax_entity/tiled_map_entity` | 生成 `flame_game.entities` 的标准实体结构 |
+| `AssetPack.from_url/url/frame_size/animation` | 从 manifest 取资源 URL、单帧尺寸、动画配置 |
+| `asset_bundle` | 生成 `assets.bundles` |
+| `tile_layer/fill_rect/set_tile/object_layer/tiled_object/tileset/tiled_map` | 生成内联 `tiled-json-v1` 地图 |
+| `save_json(app, out, packs=[pack])` | 写出 JSON，并校验资源 URL 来自所选 manifest |
 
 ### 3.2 global（全局定义区）
 

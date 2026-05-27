@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from asset_manifest_metadata import metadata_for_asset_url, sprite_frame_size
+
 
 FORBIDDEN_UI_KEYS = {
     "marginBottom",
@@ -111,8 +113,8 @@ KNOWN_SPRITE_SHEETS = {
     # These are generic metadata for hosted asset packs, not app-specific rules.
     "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Player/SpriteSheet_player_sliced.png": (45, 45),
     "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/ARMob.png": (48, 38),
-    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png": (48, 38),
-    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png": (48, 38),
+    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png": (44, 44),
+    "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png": (44, 44),
     "asset-packs/vaca-roxa-generic-run-n-gun/1.0/Enemies/Explosion_Particle.png": (32, 32),
 }
 
@@ -380,11 +382,13 @@ class Validator:
             if not asset and isinstance(render, dict):
                 asset = render.get("asset")
             asset_text = str(asset or "")
-            if not self._looks_like_sprite_sheet(asset_text):
+            asset_meta = self._asset_metadata(asset_text)
+            is_sheet = self._looks_like_sprite_sheet(asset_text) or self._is_sheet_metadata(asset_meta)
+            if not asset_text or (not is_sheet and kind != "animated_sprite"):
                 continue
-            known_frame = self._known_frame_size(asset_text)
+            known_frame = self._known_frame_size(asset_text, asset_meta)
             has_src = isinstance(node.get("src"), list) and len(node.get("src") or []) >= 4
-            if kind == "sprite" and not has_src:
+            if kind == "sprite" and is_sheet and not has_src:
                 self.error(
                     self._path(path, "asset"),
                     "sprite sheet/strip asset cannot be rendered as plain sprite without src crop; use animated_sprite or crop one frame",
@@ -409,9 +413,7 @@ class Validator:
                 frames = node.get("frames")
                 animations = node.get("animations")
                 frame_size = node.get("frame_size")
-                frame_w = self._num_at(frame_size, 0) or self._num_from_map(node, "frame_w")
-                frame_h = self._num_at(frame_size, 1) or self._num_from_map(node, "frame_h")
-                if not isinstance(animations, dict) and (
+                if is_sheet and not isinstance(animations, dict) and (
                     (frames is None)
                     or (isinstance(frames, (int, float)) and frames <= 1)
                 ):
@@ -419,13 +421,158 @@ class Validator:
                         self._path(path, "asset"),
                         "animated sprite sheet requires frames/frame_size/frames_per_row or animations",
                     )
-                if known_frame is not None and frame_w is not None and frame_h is not None:
-                    expected_w, expected_h = known_frame
-                    if abs(frame_w - expected_w) > 1 or abs(frame_h - expected_h) > 1:
-                        self.error(
-                            self._path(path, "frame_size"),
-                            f"animated sprite sheet frame_size must match one frame ({expected_w}x{expected_h})",
+                self._validate_animation_frame_spec(
+                    path,
+                    asset_text,
+                    frame_size,
+                    frames,
+                    node.get("frames_per_row"),
+                    node.get("start_frame"),
+                    asset_meta=asset_meta,
+                    is_sheet=is_sheet,
+                )
+                if isinstance(animations, dict):
+                    animations_path = self._path(path, "animations")
+                    for name, spec in animations.items():
+                        if not isinstance(spec, dict):
+                            continue
+                        anim_asset = str(spec.get("asset") or asset_text)
+                        anim_meta = self._asset_metadata(anim_asset)
+                        anim_is_sheet = self._looks_like_sprite_sheet(anim_asset) or self._is_sheet_metadata(anim_meta)
+                        self._validate_animation_frame_spec(
+                            self._path(animations_path, name),
+                            anim_asset,
+                            spec.get("frame_size"),
+                            spec.get("frames"),
+                            spec.get("frames_per_row"),
+                            spec.get("start_frame"),
+                            asset_meta=anim_meta,
+                            is_sheet=anim_is_sheet,
                         )
+
+    def _validate_animation_frame_spec(
+        self,
+        path: str,
+        asset_text: str,
+        frame_size: Any,
+        frames_value: Any,
+        frames_per_row_value: Any,
+        start_frame_value: Any,
+        *,
+        asset_meta: dict[str, Any] | None,
+        is_sheet: bool,
+    ) -> None:
+        frame_w = self._num_at(frame_size, 0)
+        frame_h = self._num_at(frame_size, 1)
+        expected_frame = self._known_frame_size(asset_text, asset_meta)
+        image_w, image_h = self._image_size(asset_meta)
+        sprite = asset_meta.get("sprite") if isinstance(asset_meta, dict) else None
+        sprite_kind = str(sprite.get("kind") or "") if isinstance(sprite, dict) else ""
+
+        if expected_frame is not None and sprite_kind != "single":
+            expected_w, expected_h = expected_frame
+            if frame_w is None or frame_h is None:
+                if is_sheet:
+                    self.error(
+                        self._path(path, "frame_size"),
+                        f"sprite sheet animation must declare frame_size [{expected_w}, {expected_h}] from asset manifest metadata",
+                    )
+            elif abs(frame_w - expected_w) > 1 or abs(frame_h - expected_h) > 1:
+                self.error(
+                    self._path(path, "frame_size"),
+                    f"animated sprite frame_size must match manifest frame ({expected_w}x{expected_h}); do not guess sprite sheet slicing",
+                )
+
+        if frame_w is None or frame_h is None:
+            return
+        if frame_w <= 0 or frame_h <= 0:
+            self.error(self._path(path, "frame_size"), "frame_size values must be positive")
+            return
+
+        frames = self._positive_int(frames_value) or 1
+        start_frame = self._non_negative_int(start_frame_value) or 0
+        frames_per_row = self._positive_int(frames_per_row_value)
+
+        if image_w and image_h:
+            if frame_w > image_w + 1 or frame_h > image_h + 1:
+                self.error(
+                    self._path(path, "frame_size"),
+                    f"frame_size {frame_w:g}x{frame_h:g} exceeds image size {image_w}x{image_h}",
+                )
+                return
+
+            if not is_sheet and sprite_kind == "single" and frames <= 1:
+                if abs(frame_w - image_w) > 1 or abs(frame_h - image_h) > 1:
+                    mismatch = max(abs(frame_w - image_w) / image_w, abs(frame_h - image_h) / image_h)
+                    target = self.error if mismatch >= 0.25 else self.warn
+                    target(
+                        self._path(path, "frame_size"),
+                        f"single-frame image is {image_w}x{image_h}; frame_size should normally match the image unless the app intentionally crops transparent padding",
+                    )
+                return
+
+            if frames_per_row is None and frame_w:
+                frames_per_row = int(image_w // frame_w)
+            if not frames_per_row:
+                return
+            if frames_per_row * frame_w > image_w + 1:
+                self.error(
+                    self._path(path, "frames_per_row"),
+                    f"frames_per_row * frame_width exceeds image width ({frames_per_row} * {frame_w:g} > {image_w})",
+                )
+                return
+            last_frame = start_frame + frames - 1
+            required_rows = (last_frame // frames_per_row) + 1
+            if required_rows * frame_h > image_h + 1:
+                self.error(
+                    self._path(path, "frames"),
+                    f"animation reads outside image: start_frame={start_frame}, frames={frames}, frames_per_row={frames_per_row}, frame_height={frame_h:g}, image_height={image_h}",
+                )
+
+    @staticmethod
+    def _asset_metadata(asset: str) -> dict[str, Any] | None:
+        if not asset:
+            return None
+        return metadata_for_asset_url(asset)
+
+    @staticmethod
+    def _is_sheet_metadata(asset_meta: dict[str, Any] | None) -> bool:
+        sprite = asset_meta.get("sprite") if isinstance(asset_meta, dict) else None
+        if not isinstance(sprite, dict):
+            return False
+        return str(sprite.get("kind") or "") in {"grid", "strip", "atlas", "unknown_sheet"}
+
+    @staticmethod
+    def _image_size(asset_meta: dict[str, Any] | None) -> tuple[int | None, int | None]:
+        image = asset_meta.get("image") if isinstance(asset_meta, dict) else None
+        if not isinstance(image, dict):
+            return None, None
+        width = image.get("width")
+        height = image.get("height")
+        return (
+            int(width) if isinstance(width, int) and width > 0 else None,
+            int(height) if isinstance(height, int) and height > 0 else None,
+        )
+
+    @staticmethod
+    def _positive_int(value: Any) -> int | None:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int) and value > 0:
+            return value
+        if isinstance(value, float) and value.is_integer() and value > 0:
+            return int(value)
+        return None
+
+    @staticmethod
+    def _non_negative_int(value: Any) -> int | None:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int) and value >= 0:
+            return value
+        if isinstance(value, float) and value.is_integer() and value >= 0:
+            return int(value)
+        return None
 
     def _validate_game_profiles(self) -> None:
         if not self._needs_run_and_gun_profile():
@@ -454,6 +601,14 @@ class Validator:
             )
 
         entities = self._entities_map(game)
+        player = self._player_entity(entities)
+        player_h = self._entity_height(player)
+        if viewport_h and player_h and player_h < viewport_h * 0.12:
+            self.error(
+                self._path(path, "entities.player.size"),
+                "run-and-gun player is visually too small for the viewport; target player height should be at least 12% of viewport height",
+            )
+
         max_right = self._max_entity_right(entities)
         map_width = self._max_tiled_map_width(entities)
         if viewport_w and map_width is None and max_right <= viewport_w * 2:
@@ -482,6 +637,11 @@ class Validator:
                 self._path(path, "entities"),
                 "run-and-gun background cannot be only clouds/sky; add city/industrial/nature structures or other semantic scenery",
             )
+        if self._asset_scene_decor_count(entities) < 3:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun scene dressing must use real asset/tile visuals, not only pixel rectangles; add at least 3 visible props/landmarks from the selected asset manifest",
+            )
         if map_width is None and self._scene_decor_count(entities) < 6:
             self.error(
                 self._path(path, "entities"),
@@ -503,9 +663,18 @@ class Validator:
                 self._path(path, "frame"),
                 "run-and-gun game needs gravity/platform physics each frame, preferably @platformer.step",
             )
+        for_each_count = self._call_count(game, "@for_each_entity")
+        if for_each_count > 6:
+            self.error(
+                self._path(path, "frame"),
+                f"run-and-gun frame logic has too many entity scans ({for_each_count}); use fewer loops, proximity spawning, or object pools to avoid late-game stutter",
+            )
 
     def _needs_run_and_gun_profile(self) -> bool:
-        text = self._flatten_text(self.root).lower()
+        # Profile detection should be driven by semantic app text, not by hosted
+        # asset URLs. Otherwise merely using a run-n-gun asset pack preview in a
+        # non-game app would force game-specific validation.
+        text = re.sub(r"https?://\S+", " ", self._flatten_text(self.root)).lower()
         keywords = (
             "run-and-gun",
             "run and gun",
@@ -518,7 +687,6 @@ class Validator:
             "platform shooter",
             "metal slug",
             "metal-action",
-            "vaca-roxa-generic-run-n-gun",
             "合金弹头",
             "横版射击",
             "横版动作",
@@ -722,6 +890,75 @@ class Validator:
                 count += 1
         return count
 
+    def _asset_scene_decor_count(self, entities: dict[str, Any]) -> int:
+        count = 0
+        decor_words = (
+            "decor",
+            "prop",
+            "landmark",
+            "building",
+            "city",
+            "industrial",
+            "factory",
+            "subway",
+            "ruin",
+            "debris",
+            "crate",
+            "box",
+            "barrel",
+            "pipe",
+            "sign",
+            "lamp",
+            "light",
+            "fence",
+            "rail",
+            "tree",
+            "bush",
+            "rock",
+            "mountain",
+            "wall",
+            "foreground",
+            "front",
+        )
+        excluded_words = ("player", "enemy", "bullet", "projectile", "ground", "background")
+        for entity_id, spec in entities.items():
+            if not isinstance(spec, dict):
+                continue
+            asset = str(spec.get("asset") or "")
+            if not asset:
+                render = spec.get("render")
+                if isinstance(render, dict):
+                    asset = str(render.get("asset") or "")
+            if not asset:
+                continue
+            text = self._entity_text(entity_id, spec)
+            if any(word in text for word in excluded_words):
+                continue
+            if any(word in text for word in decor_words):
+                count += 1
+        return count
+
+    @staticmethod
+    def _player_entity(entities: dict[str, Any]) -> dict[str, Any] | None:
+        for key in ("player", "hero"):
+            spec = entities.get(key)
+            if isinstance(spec, dict):
+                return spec
+        return None
+
+    def _entity_height(self, spec: dict[str, Any] | None) -> float | None:
+        if not isinstance(spec, dict):
+            return None
+        size = spec.get("size")
+        return (
+            self._num_at(size, 1)
+            or self._num_from_map(spec, "h")
+            or self._num_from_map(spec, "height")
+        )
+
+    def _call_count(self, node: Any, call_name: str) -> int:
+        return sum(1 for _, d in self._iter_dicts(node) if d.get("call") == call_name)
+
     def _entity_text(self, entity_id: str, spec: dict[str, Any]) -> str:
         parts = [
             entity_id,
@@ -757,7 +994,13 @@ class Validator:
         )
 
     @staticmethod
-    def _known_frame_size(asset: str) -> tuple[int, int] | None:
+    def _known_frame_size(
+        asset: str,
+        asset_meta: dict[str, Any] | None = None,
+    ) -> tuple[int, int] | None:
+        metadata_frame = sprite_frame_size(asset_meta)
+        if metadata_frame:
+            return metadata_frame
         normalized = asset.split("?", 1)[0]
         for suffix, frame in KNOWN_SPRITE_SHEETS.items():
             if normalized.endswith(suffix):

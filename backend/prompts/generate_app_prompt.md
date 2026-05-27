@@ -65,6 +65,49 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 4. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
 5. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
 
+### 复杂 JSON 的 Python 生成器工作流（强制）
+
+满足任一条件时，**不要手写整份 JSON**，必须先写一个临时 Python 生成器，再由脚本输出 `<TMPFILE>`：
+
+- `flame_game` / tiled map / 关卡 / 大量实体 / 大量重复 UI。
+- 需要根据 asset manifest 选择素材、计算图片尺寸、切 sprite sheet。
+- 结构超过约 30 个 widget/entity/action，或存在可由循环生成的列表、地图、关卡数据。
+
+标准流程：
+
+```bash
+GEN=$(mktemp /tmp/generate_app.XXXXXX.py)
+# 用 Write 工具写入 $GEN；不要用固定路径
+python3 "$GEN" <TMPFILE>
+python3 -m json.tool <TMPFILE> > /dev/null
+python3 backend/validate_json_app.py <TMPFILE>
+```
+
+生成器里优先复用项目提供的 helper，减少临场手拼 JSON：
+
+```python
+import sys
+sys.path.insert(0, "backend")
+from json_app_builder import AssetPack, new_app, screen, text, asset_bundle, save_json
+
+out = sys.argv[1]
+pack = AssetPack.from_url("https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/kenney-tiny-town/1.0/manifest.json")
+app = new_app(
+    name="my-app",
+    version="1.0.0",
+    display_name={"en": "My App", "zh": "我的应用"},
+    description="...",
+    assets={"bundles": {"tiny_town": asset_bundle(base_url=pack.base_url, license="LICENSE")}},
+)
+app["ui"]["screens"].append(screen("home", title={"en": "Home", "zh": "首页"}, children=[
+    text("Hello"),
+    {"type": "image", "url": pack.url("Preview.png"), "height": 160, "fit": "cover"},
+]))
+save_json(app, out, packs=[pack])
+```
+
+游戏生成器可继续使用 `json_app_builder` 里的 `pixel_entity`、`sprite_entity`、`animated_sprite_entity`、`parallax_entity`、`tiled_map_entity`、`tile_layer`、`fill_rect`、`tiled_object`、`tileset`、`tiled_map`、`AssetPack.frame_size()`、`AssetPack.animation()` 等工具。`save_json(..., packs=[pack])` 会提前拦截手拼 asset URL、重复静态 spawn id 等低级错误。非常小的一屏表单 / 静态页面可以直接写 JSON，但仍必须执行上传前自检。
+
 ### 上传前自检 checklist（必跑）
 
 a. **JSON 语法**：`python3 -m json.tool <TMPFILE> > /dev/null && echo OK`
@@ -187,14 +230,22 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 | `vaca-roxa-generic-run-n-gun` | `1.0` | 横版射击、run-and-gun、玩家/敌人/爆炸 |
 | `opengameart-platformer-pack-16x16` | `1.0` | 16x16 像素平台跳跃、物品、敌人、地块 |
 
-常用 sprite sheet 尺寸提示（仍以实际 manifest URL 为准，但这些已托管资源不要再猜）：
+素材 manifest 现在可能包含结构化元数据：
+
+- `files[].image.width/height`：图片真实像素尺寸。
+- `files[].sprite.kind/frameWidth/frameHeight/columns/rows/frames`：sprite sheet / strip 的切片信息。
+- `files[].atlas.entries[]`：XML atlas 中每个 `SubTexture` 的精确裁剪框。
+
+生成游戏时必须优先使用这些字段。没有 `sprite` / `atlas` 元数据时，不能凭文件名猜切片；应改用单帧素材，或先读取图片尺寸并明确说明推断依据。
+
+常用 sprite sheet 尺寸提示（仍以实际 manifest URL 的 `sprite` / `atlas` 字段为准，但这些已托管资源不要再猜）：
 
 | asset path | 单帧尺寸 / 用法 |
 |------------|----------------|
 | `vaca-roxa-generic-run-n-gun/1.0/Player/SpriteSheet_player_sliced.png` | 360x360，8x8 网格，单帧 45x45；不要裁 72x72 或整张渲染 |
 | `vaca-roxa-generic-run-n-gun/1.0/Enemies/ARMob.png` | 768x38，16 帧横条，单帧 48x38 |
-| `vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png` | 768x38，16 帧横条，单帧 48x38 |
-| `vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png` | 768x38，16 帧横条，单帧 48x38 |
+| `vaca-roxa-generic-run-n-gun/1.0/Enemies/RPGmob.png` | 440x44，10 帧横条，单帧 44x44 |
+| `vaca-roxa-generic-run-n-gun/1.0/Enemies/SniperMob.png` | 616x44，14 帧横条，单帧 44x44 |
 | `vaca-roxa-generic-run-n-gun/1.0/Enemies/Explosion_Particle.png` | 288x32，9 帧横条，单帧 32x32 |
 
 选材流程：
@@ -206,7 +257,8 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
    ```
 3. 使用角色、敌人、爆炸、子弹等图片前，必须判断它是**单帧图片**还是 **sprite sheet / strip / tileset**：
    - 文件名包含 `SpriteSheet` / `spritesheet` / `sheet` / `strip` / `sliced` / `tileset`，或同一张图展示多个姿态时，默认按多帧资源处理，**不能直接作为普通 `sprite` 渲染**。
-   - 对多帧资源，必须先确认图片尺寸和帧网格，再用 `animated_sprite`、`frame_size`、`frames`、`frames_per_row`，或显式 `src` 裁剪单帧。无法确认帧网格时，换用 manifest 中更明确的单帧/切片素材。
+   - 对多帧资源，必须先读 `files[].sprite` 或 `files[].atlas`，再用 `animated_sprite`、`frame_size`、`frames`、`frames_per_row`，或显式 `src` 裁剪单帧。无法确认帧网格时，换用 manifest 中更明确的单帧/切片素材。
+   - 单帧 PNG 的 `frame_size` 必须等于 `files[].image.width/height`。不要给 128x128 单帧角色硬写 72x72，否则会只显示局部。
    - 如果 manifest 暂时没有尺寸信息，可以临时下载候选 PNG/JPG 到 `/tmp`，用脚本读取宽高后再决定帧尺寸；不要凭文件名猜 32/48/64。
 4. JSON 中引用图片时，必须使用所选 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
 5. 在顶层声明 `assets.bundles`，让客户端启动时缓存资源。示例：
@@ -274,6 +326,17 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 
 用户说"像某某知名游戏"时，**不要使用该游戏的受版权保护素材、名称或关卡**；只能理解为玩法类型和节奏参考，并用 CC0 素材重新设计。
 
+### 平台跳跃 / platformer（例如"超级玛丽风格"、"冒险岛风格"）
+
+这类需求不能只把角色、金币和一条地面摆到长画布里。必须满足：
+
+1. **主路径可走通**：出生点、教学跳跃、奖励路线、风险点、终点要串成一条完整路线。每个关键跳跃都要按当前 `jump_speed/gravity/player size` 验算，不要设计“差一点才能跳上”的极限高度。
+2. **地形要像关卡，不像砖块填充**：至少使用地面顶面、边缘/角、平台块、危险块、装饰块等不同视觉语义。不要只用同一个 `brick` 铺满底部；地板看起来怪通常就是 tile 语义没区分。
+3. **视觉层和碰撞层一致**：能站的地块必须在 solid layer；装饰不要放 solid；尖刺/水坑等危险层要独立于普通地面。
+4. **角色/敌人素材必须按 manifest 切帧**：Kenney 单帧角色常见是 128x128，不能写 72x72 这类猜测 `frame_size`。需要缩放角色时改 `entity.size`，不要改 `frame_size`。
+5. **收集物和敌人要可达/可互动**：金币不能和箱子/墙体重叠到永远吃不到；敌人巡逻范围脚下要有连续地面；敌人不能无故悬空或掉出地图。
+6. **实体规模要克制**：大量金币/装饰不要全部常驻为独立实体。优先用 tiled map / object layer / 近距离生成；否则会变成能跑但低端机卡顿的长列表。
+
 ### 横版动作 / 横版射击 / run-and-gun（例如"合金弹头风格"）
 
 这类需求不能写成一屏自由飞行小游戏。必须满足以下结构：
@@ -288,7 +351,8 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 8. **关卡节奏要分段**：至少设计 4 个节奏段：安全开场、基础敌人、障碍/掩体交火、强化敌人或小 Boss、终点/撤离。每段要有不同的地形或视觉 landmark。
 9. **敌人与道具布局**：敌人、道具、掩体、障碍应沿关卡路径分布，生成在玩家前方或地图对象点位上；不能随机塞在全屏任意 y，也不能悬空无物理。敌人应有巡逻/射击/受击/死亡生命周期，子弹 id 必须唯一或使用对象池。
 10. **背景比例**：背景层、前景层、地面、玩家、敌人的尺寸必须按同一虚拟视口标尺设计。不要把一张背景图简单拉满整个屏幕后再放 48px 角色；如果背景是小图，使用重复、分层或 parallax，而不是硬拉伸。
-11. **输出前人工验收**：最终 JSON 里必须能回答这 6 个问题：玩家从哪里开始？往哪推进？地面/平台如何碰撞？敌人/子弹如何生成并销毁？地图为什么不只是一屏平地？这个关卡的视觉主题和 4 个 landmark 分别是什么？
+11. **性能要提前验算**：不要在每帧写大量 `@for_each_entity` 全量扫描。横版射击类游戏应优先用地图对象点位、近距离生成、有限对象池和离屏销毁；否则一开始流畅，走一段后会因为实体/循环累积明显掉帧。
+12. **输出前人工验收**：最终 JSON 里必须能回答这 7 个问题：玩家从哪里开始？往哪推进？玩家在视口里是否足够大？地面/平台如何碰撞？敌人/子弹如何生成并销毁？地图为什么不只是一屏平地？这个关卡的视觉主题和 4 个 landmark 分别是什么？
 
 ## 布局与样式规则（极其重要！）
 
