@@ -611,15 +611,16 @@ class Validator:
 
         max_right = self._max_entity_right(entities)
         map_width = self._max_tiled_map_width(entities)
-        if viewport_w and map_width is None and max_right <= viewport_w * 2:
+        min_stage_viewports = 5
+        if viewport_w and map_width is None and max_right <= viewport_w * min_stage_viewports:
             self.error(
                 self._path(path, "entities"),
-                "run-and-gun game needs a horizontal stage at least 3 viewport widths wide, or a tiled_map with known map_data",
+                f"run-and-gun game needs a horizontal stage at least {min_stage_viewports} viewport widths wide, or a tiled_map with known map_data",
             )
-        if viewport_w and map_width is not None and map_width < viewport_w * 3:
+        if viewport_w and map_width is not None and map_width < viewport_w * min_stage_viewports:
             self.error(
                 self._path(path, "entities"),
-                "run-and-gun tiled map is too short; map width should be at least 3 viewport widths",
+                f"run-and-gun tiled map is too short; map width should be at least {min_stage_viewports} viewport widths",
             )
         if map_width is None and self._stage_feature_count(entities) < 4:
             self.error(
@@ -670,6 +671,58 @@ class Validator:
                 f"run-and-gun frame logic has too many entity scans ({for_each_count}); use fewer loops, proximity spawning, or object pools to avoid late-game stutter",
             )
 
+        static_enemy_count = self._static_enemy_entity_count(entities)
+        enemy_object_count = self._tiled_enemy_object_count(entities)
+        if static_enemy_count + enemy_object_count < 8:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun game needs a real encounter plan: add at least 8 enemy spawn points/entities across the stage",
+            )
+        if viewport_w:
+            early_enemy_count = self._static_enemy_entity_count(
+                entities,
+                max_x=viewport_w * 2,
+            ) + self._tiled_enemy_object_count(entities, max_x=viewport_w * 2)
+        else:
+            early_enemy_count = 0
+        if viewport_w and early_enemy_count < 2:
+            self.error(
+                self._path(path, "entities"),
+                "run-and-gun game needs at least 2 enemy spawn points in the first two viewports; do not hide all action near the end",
+            )
+
+        if self._uses_tiled_enemy_spawning(game) and not self._tiled_enemy_spawning_has_templates(game):
+            self.error(
+                self._path(path, "frame"),
+                "run-and-gun tiled enemy spawning must provide templates with kind/asset/frame_size/state; object points alone do not define visible enemies",
+            )
+        if not self._has_enemy_lifecycle(game):
+            self.error(
+                self._path(path, "frame"),
+                "run-and-gun enemies need movement and hit/death lifecycle: update enemy behavior, collide projectiles with enemy_, despawn or score on hit",
+            )
+
+        if self._uses_projectiles(game) and not self._has_projectile_lifecycle(game):
+            self.error(
+                self._path(path, "frame"),
+                "run-and-gun projectiles need a complete lifecycle: spawn, move, collide with enemies, despawn on hit, and despawn offscreen",
+            )
+        if self._uses_projectile_counter(game) and self._projectile_counter_release_paths(game) < 2:
+            self.error(
+                self._path(path, "frame"),
+                "projectile counters must be released on both hit and offscreen/timeout paths; otherwise shooting eventually locks up",
+            )
+        if self._uses_projectiles(game) and not self._has_vertical_aim(game):
+            self.error(
+                self._path(path, "input"),
+                "run-and-gun shooting must support aim_y/upward fire (or an aim vector), not only facing-left/right bullets",
+            )
+        if self._contains_call(game, "@platformer.step") and not self._handles_platformer_hazard(game):
+            self.error(
+                self._path(path, "frame"),
+                "run-and-gun platformer.step sets hazard/outOfBounds; frame logic must consume it and trigger death, respawn or game_over",
+            )
+
     def _needs_run_and_gun_profile(self) -> bool:
         # Profile detection should be driven by semantic app text, not by hosted
         # asset URLs. Otherwise merely using a run-n-gun asset pack preview in a
@@ -693,6 +746,195 @@ class Validator:
             "平台射击",
         )
         return any(k in text for k in keywords)
+
+    def _static_enemy_entity_count(
+        self,
+        entities: dict[str, Any],
+        *,
+        max_x: float | None = None,
+    ) -> int:
+        count = 0
+        for entity_id, spec in entities.items():
+            if not isinstance(spec, dict):
+                continue
+            text = self._entity_text(entity_id, spec)
+            if "enemy" not in text or str(spec.get("kind") or "") in {"tiled_map"}:
+                continue
+            if max_x is not None:
+                x = self._num_at(spec.get("position"), 0)
+                if x is None:
+                    x = self._num_from_map(spec, "x")
+                if x is None or x > max_x:
+                    continue
+            count += 1
+        return count
+
+    def _tiled_enemy_object_count(
+        self,
+        entities: dict[str, Any],
+        *,
+        max_x: float | None = None,
+    ) -> int:
+        count = 0
+        for spec in entities.values():
+            if not isinstance(spec, dict) or spec.get("kind") != "tiled_map":
+                continue
+            map_data = spec.get("map_data")
+            if not isinstance(map_data, dict):
+                continue
+            scale = self._num_from_map(spec, "scale") or 1.0
+            for layer in map_data.get("layers") or []:
+                if not isinstance(layer, dict) or layer.get("type") != "objectgroup":
+                    continue
+                layer_name = str(layer.get("name") or "").lower()
+                for obj in layer.get("objects") or []:
+                    if not isinstance(obj, dict):
+                        continue
+                    obj_text = f"{layer_name} {obj.get('name', '')} {obj.get('type', '')}".lower()
+                    if "enemy" not in obj_text:
+                        continue
+                    x = self._num_from_map(obj, "x")
+                    if max_x is not None and x is not None and x * scale > max_x:
+                        continue
+                    count += 1
+        return count
+
+    def _uses_tiled_enemy_spawning(self, game: dict[str, Any]) -> bool:
+        for _, node in self._iter_dicts(game):
+            if node.get("call") not in {"@tiled.spawn_objects", "@tiled.spawn_objects_near"}:
+                continue
+            args = node.get("args")
+            if not isinstance(args, dict):
+                continue
+            text = self._flatten_text(args).lower()
+            if "enemy" in text:
+                return True
+        return False
+
+    def _tiled_enemy_spawning_has_templates(self, game: dict[str, Any]) -> bool:
+        checked = False
+        for _, node in self._iter_dicts(game):
+            if node.get("call") not in {"@tiled.spawn_objects", "@tiled.spawn_objects_near"}:
+                continue
+            args = node.get("args")
+            if not isinstance(args, dict):
+                continue
+            text = self._flatten_text(args).lower()
+            if "enemy" not in text:
+                continue
+            checked = True
+            templates = args.get("templates")
+            if not isinstance(templates, dict) or not templates:
+                return False
+            if not self._spawn_templates_have_render_specs(templates):
+                return False
+        return checked
+
+    def _spawn_templates_have_render_specs(self, templates: dict[str, Any]) -> bool:
+        for raw in templates.values():
+            if not isinstance(raw, dict):
+                continue
+            kind = str(raw.get("kind") or "")
+            asset = raw.get("asset")
+            if kind in {"sprite", "animated_sprite"} and isinstance(asset, str) and asset:
+                if kind == "animated_sprite":
+                    frame_size = raw.get("frame_size")
+                    if not (isinstance(frame_size, list) and len(frame_size) >= 2):
+                        continue
+                return True
+        return False
+
+    def _has_enemy_lifecycle(self, game: dict[str, Any]) -> bool:
+        text = self._flatten_text(game).lower()
+        has_enemy_loop = "where_prefix enemy_" in text or "where_prefix enemy" in text
+        has_enemy_collision = "enemy_" in text and "@collision.first" in text
+        has_enemy_death = "enemy_" in text and "@despawn" in text
+        has_enemy_motion = "enemy_" in text and any(
+            token in text
+            for token in (
+                "state.dir",
+                "patrol_min",
+                "patrol_max",
+                "enemy_speed",
+                "_edir",
+                '"field" "x"',
+                "field x",
+            )
+        )
+        return has_enemy_collision and has_enemy_death and (has_enemy_loop or has_enemy_motion)
+
+    def _uses_projectiles(self, game: dict[str, Any]) -> bool:
+        text = self._flatten_text(game).lower()
+        return any(token in text for token in ("bullet", "projectile", "shot_", "laser"))
+
+    def _has_projectile_lifecycle(self, game: dict[str, Any]) -> bool:
+        text = self._flatten_text(game).lower()
+        if not self._uses_projectiles(game):
+            return True
+        has_spawn = "@spawn" in text and any(token in text for token in ("bullet", "projectile", "shot_"))
+        has_move = "@entity.add" in text and any(token in text for token in ("loop.entity.state.vx", "bullet_speed", "projectile_speed", "shot_speed"))
+        has_hit = "@collision.first" in text and "enemy_" in text
+        has_despawn = "@despawn" in text and any(token in text for token in ("bullet", "_bid", "projectile", "shot_"))
+        has_offscreen = any(token in text for token in ("offscreen", "despawn_distance", "player.x", "world.width", "camerax", "camera_x"))
+        return has_spawn and has_move and has_hit and has_despawn and has_offscreen
+
+    def _uses_projectile_counter(self, game: dict[str, Any]) -> bool:
+        text = self._flatten_text(game).lower()
+        return any(
+            token in text
+            for token in ("bullet_count", "projectile_count", "shot_count", "active_bullets", "active_projectiles")
+        )
+
+    def _projectile_counter_release_paths(self, game: dict[str, Any]) -> int:
+        count = 0
+        counter_names = (
+            "bullet_count",
+            "projectile_count",
+            "shot_count",
+            "active_bullets",
+            "active_projectiles",
+        )
+        for _, node in self._iter_dicts(game):
+            if node.get("call") != "@set":
+                continue
+            args = node.get("args")
+            if not isinstance(args, dict):
+                continue
+            var_name = str(args.get("var") or "").lower()
+            if not any(name in var_name for name in counter_names):
+                continue
+            value_text = self._flatten_text(args.get("value")).lower()
+            if "-" in value_text and any(name in value_text for name in counter_names):
+                count += 1
+        return count
+
+    def _has_vertical_aim(self, game: dict[str, Any]) -> bool:
+        text = self._flatten_text(game).lower()
+        return any(
+            token in text
+            for token in (
+                "aim_y",
+                "aimy",
+                "aim_vector",
+                "aimvector",
+                "shoot_y",
+                "shot_y",
+                "bullet_vy",
+                "projectile_vy",
+                "vertical_aim",
+                "up_fire",
+                "fire_up",
+                "8way",
+                "eight_way",
+                "event.y",
+            )
+        )
+
+    def _handles_platformer_hazard(self, game: dict[str, Any]) -> bool:
+        text = self._flatten_text(game).lower()
+        has_signal = "hazard" in text or "outofbounds" in text or "out_of_bounds" in text
+        has_response = any(token in text for token in ("@game_over", "@platformer.respawn", "respawn", "lives"))
+        return has_signal and has_response
 
     def _find_direct_vertical_input_write(
         self,

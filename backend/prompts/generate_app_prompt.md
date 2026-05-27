@@ -106,7 +106,32 @@ app["ui"]["screens"].append(screen("home", title={"en": "Home", "zh": "首页"},
 save_json(app, out, packs=[pack])
 ```
 
-游戏生成器可继续使用 `json_app_builder` 里的 `pixel_entity`、`sprite_entity`、`animated_sprite_entity`、`parallax_entity`、`tiled_map_entity`、`tile_layer`、`fill_rect`、`tiled_object`、`tileset`、`tiled_map`、`AssetPack.frame_size()`、`AssetPack.animation()` 等工具。`save_json(..., packs=[pack])` 会提前拦截手拼 asset URL、重复静态 spawn id 等低级错误。非常小的一屏表单 / 静态页面可以直接写 JSON，但仍必须执行上传前自检。
+游戏生成器可继续使用 `json_app_builder` 里的 `pixel_entity`、`sprite_entity`、`animated_sprite_entity`、`parallax_entity`、`tiled_map_entity`、`tile_layer`、`fill_rect`、`tiled_object`、`tiled_objects_from_run_and_gun_plan`、`tileset`、`tiled_map`、`AssetPack.frame_size()`、`AssetPack.animation()`、`run_and_gun_stage_plan()` 等工具。`save_json(..., packs=[pack])` 会提前拦截手拼 asset URL、重复静态 spawn id 等低级错误。非常小的一屏表单 / 静态页面可以直接写 JSON，但仍必须执行上传前自检。
+
+### 关卡布局参考库（强制优先）
+
+做平台跳跃、横版动作、横版射击、run-and-gun 等关卡游戏时，**不要从 demo APP 复制关卡、坐标、素材路径或实体结构**。demo 只能参考 API 写法。关卡设计优先使用后端提供的中立布局 profile：
+
+```python
+from json_app_builder import (
+    run_and_gun_profile_summary,
+    run_and_gun_stage_plan,
+    tiled_objects_from_run_and_gun_plan,
+)
+
+plan = run_and_gun_stage_plan(viewport_width=420, viewport_height=500, tile=16)
+print(run_and_gun_profile_summary())
+objects_layer = tiled_objects_from_run_and_gun_plan(plan)
+```
+
+这些 profile 不是第三方地图，也不是某个知名游戏的关卡；它们只描述“安全开场、首次接敌、掩体交火、坑洞/平台、纵向压力、终点冲刺”等通用节奏。你必须根据 `plan["segments"]` 布置地形、敌人、掩体、landmark 和背景变化，并用当前选择的 asset manifest 填充素材。最终 JSON 要能回答：
+
+- 每个 segment 的玩法目的是什么？
+- 前两屏玩家能否看到敌人和可互动内容？
+- 敌人对象点是否有 `templates` 绑定到真实 sprite / animated_sprite？
+- 子弹是否在命中和离屏两条路径都回收？
+- 玩家掉坑、离开地图或被击中后是否 death / respawn / game_over？
+- 摇杆上方向是否用于 `aim_y` / upward fire，而不是让角色飞起来？
 
 ### 上传前自检 checklist（必跑）
 
@@ -341,7 +366,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 
 这类需求不能写成一屏自由飞行小游戏。必须满足以下结构：
 
-1. **横向长关卡**：必须有明确的虚拟视口和长地图。`viewport.width` / `viewport.height` 先定下来，地图宽度至少是视口宽度的 3 倍；如果只做一屏 arena，除非用户明确要求，否则不合格。
+1. **横向长关卡**：必须有明确的虚拟视口和长地图。`viewport.width` / `viewport.height` 先定下来，地图宽度至少是视口宽度的 5 倍，默认按 `run_and_gun_stage_plan()` 生成约 6 屏宽；如果只做一屏 arena，除非用户明确要求，否则不合格。
 2. **Camera 跟随**：必须配置横向 camera follow，让玩家从左向右推进。玩家初始位置在视口左侧三分之一附近，关卡右侧要有目标、终点、Boss、撤离点或分段推进条件。
 3. **平台/地面物理**：玩家是地面角色，不是飞行物。摇杆/方向键的横轴控制 `vx` 或水平移动；跳跃按钮控制 `vy`；重力和地面/平台碰撞必须每帧执行（优先 `@platformer.step` + 有效 map）。**禁止把摇杆 `move_y` 直接加到 `player.y`**，除非用户明确要求飞行射击。
 4. **纵轴输入语义**：摇杆上/下可用于瞄准、蹲下、爬梯、进门或选择，不可让角色自由上下飞。需要上跳时使用单独跳跃按钮；需要下蹲时改变状态/碰撞盒，而不是持续改 y。
@@ -349,10 +374,13 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 6. **不能只有长平地**：做了很宽的 `ground` 仍然不等于横版关卡。必须有 tiled map，或至少布置多段平台、掩体、箱子、墙、坑洞、油桶、障碍、坡道等路线元素；否则只是"长背景 + 刷怪"，不合格。
 7. **背景不能寒酸**：至少 3 个有语义的场景层，不要只有 clouds。建议结构：远景天空/城市/山体，中景建筑/废墟/工业设施，近景管道/箱子/路灯/招牌/残骸/植被/栏杆，必要时加前景遮挡或氛围层。每个屏幕宽度内都要有若干视觉变化，不能整关一张图重复到底。
 8. **关卡节奏要分段**：至少设计 4 个节奏段：安全开场、基础敌人、障碍/掩体交火、强化敌人或小 Boss、终点/撤离。每段要有不同的地形或视觉 landmark。
-9. **敌人与道具布局**：敌人、道具、掩体、障碍应沿关卡路径分布，生成在玩家前方或地图对象点位上；不能随机塞在全屏任意 y，也不能悬空无物理。敌人应有巡逻/射击/受击/死亡生命周期，子弹 id 必须唯一或使用对象池。
+9. **敌人与道具布局**：敌人、道具、掩体、障碍应沿关卡路径分布，生成在玩家前方或地图对象点位上；不能随机塞在全屏任意 y，也不能悬空无物理。敌人应有巡逻/射击/受击/死亡生命周期，子弹 id 必须唯一或使用对象池。使用 `@tiled.spawn_objects` / `@tiled.spawn_objects_near` 生成敌人时，**必须提供 `templates`**，模板里写清 `kind`、真实 `asset`、`frame_size` / `frames`、`position`、`size`、`state`，不能只在 object layer 里声明 `enemy_*` 点位。
 10. **背景比例**：背景层、前景层、地面、玩家、敌人的尺寸必须按同一虚拟视口标尺设计。不要把一张背景图简单拉满整个屏幕后再放 48px 角色；如果背景是小图，使用重复、分层或 parallax，而不是硬拉伸。
 11. **性能要提前验算**：不要在每帧写大量 `@for_each_entity` 全量扫描。横版射击类游戏应优先用地图对象点位、近距离生成、有限对象池和离屏销毁；否则一开始流畅，走一段后会因为实体/循环累积明显掉帧。
-12. **输出前人工验收**：最终 JSON 里必须能回答这 7 个问题：玩家从哪里开始？往哪推进？玩家在视口里是否足够大？地面/平台如何碰撞？敌人/子弹如何生成并销毁？地图为什么不只是一屏平地？这个关卡的视觉主题和 4 个 landmark 分别是什么？
+12. **子弹不能锁死**：如果使用 `bullet_count` / `projectile_count` / `active_bullets` 上限，必须在命中敌人、飞出屏幕、超时销毁这几条路径中释放计数。只在命中时减计数是不合格的，因为玩家打空几发后会永远不能开火。
+13. **必须支持向上/斜向射击**：横版射击默认至少支持水平 + 向上射击。摇杆 `event.y` / `aim_y` 应只影响子弹 `vy` 或射击姿态，不能直接改 `player.y`。如果按钮没有按射击，摇杆上方向也不能让角色飞起来。
+14. **玩家不能消失不死**：`@platformer.step` 会写入 `entities.player.hazard` / `outOfBounds`，frame logic 必须读取并触发扣命、respawn 或 `@game_over`。玩家掉坑、冲出地图、离屏都不能继续隐形运行。
+15. **输出前人工验收**：最终 JSON 里必须能回答这 9 个问题：玩家从哪里开始？往哪推进？玩家在视口里是否足够大？地面/平台如何碰撞？前两屏有哪些敌人/掩体？敌人是否用模板绑定到真实动画？子弹如何生成、命中、离屏并回收？地图为什么不只是一屏平地？这个关卡的视觉主题和每段 landmark 分别是什么？
 
 ## 布局与样式规则（极其重要！）
 

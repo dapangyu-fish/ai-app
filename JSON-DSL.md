@@ -178,7 +178,13 @@
 | `AssetPack.from_url/url/frame_size/animation` | 从 manifest 取资源 URL、单帧尺寸、动画配置 |
 | `asset_bundle` | 生成 `assets.bundles` |
 | `tile_layer/fill_rect/set_tile/object_layer/tiled_object/tileset/tiled_map` | 生成内联 `tiled-json-v1` 地图 |
+| `run_and_gun_stage_plan/tiled_objects_from_run_and_gun_plan` | 生成中立 run-and-gun 关卡骨架和 object layer，避免复制第三方地图 |
 | `save_json(app, out, packs=[pack])` | 写出 JSON，并校验资源 URL 来自所选 manifest |
+
+`run_and_gun_stage_plan()` 不是客户端 atom，也不是某个游戏的地图数据。它只给后端
+Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交火、坑洞/平台、纵向压力和终点冲刺。
+生成器仍必须用所选 asset manifest 填充 tileset、角色、敌人、背景和装饰；不能把 demo 的坐标、
+素材路径或第三方地图文件直接复制进新 APP。
 
 ### 3.2 global（全局定义区）
 
@@ -1868,6 +1874,16 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@platformer.stuck_check({...})` | 卡住检测 |
 | `@platformer.section_exit({...})` | 横版跑图段落出口检测 |
 | `@for_each_entity({where_prefix, do})` | 遍历 id 前缀匹配的所有 entity。子 logic 里 `{{ loop.id }}` / `{{ loop.entity }}` / `{{ loop.index }}` 可用。子 logic 内 spawn/despawn 不影响本轮迭代（用快照） |
+
+`@tiled.spawn_objects*` 的 object layer 只提供点位和属性，不等于可见实体。生成敌人、
+道具、掩体时必须传 `templates`，模板里写清 `kind`、真实 `asset`、`position`、`size`、
+动画的 `frame_size/frames/frames_per_row` 和必要 `state`。否则 object 能被读取，但生成出来的
+实体可能没有素材、没有行为，表现为“地图里有点位但游戏里没有敌人”。
+
+横版射击类游戏如果使用 `bullet_count` / `projectile_count` 这类上限变量，必须在命中敌人、
+飞出屏幕或超时销毁时都释放计数；只在命中时释放会导致玩家打空几发后永远不能开火。
+`@platformer.step` 会写入 `entities.<id>.hazard` / `outOfBounds` 语义，关卡游戏需要在
+`frame.logic` 里读取并触发扣命、重生或 `@game_over`，避免角色掉出地图后继续隐形运行。
 | `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
 | `@random_double({min, max})` | 返回 [min, max) 的随机 double |
 

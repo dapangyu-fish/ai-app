@@ -14,6 +14,11 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from asset_manifest_metadata import metadata_for_asset_url, sprite_frame_size
+from game_layout_profiles import (
+    RUN_AND_GUN_LAYOUT_PROFILE,
+    run_and_gun_profile_summary,
+    run_and_gun_stage_plan,
+)
 
 
 ASSET_URL_RE = re.compile(r"https?://[^\s\"']+/json-app-assets/asset-packs/[^\s\"']+")
@@ -454,6 +459,73 @@ def tiled_object(
             for key, value in properties.items()
         ]
     return out
+
+
+def tiled_objects_from_run_and_gun_plan(
+    plan: dict[str, Any],
+    *,
+    layer: str = "objects",
+    enemy_type: str = "enemy_patrol",
+    cover_type: str = "cover",
+    landmark_type: str = "landmark",
+) -> dict[str, Any]:
+    """Convert a neutral run-and-gun stage plan to a Tiled object layer."""
+    objects: list[dict[str, Any]] = []
+    for point in plan.get("enemyPoints") or []:
+        if not isinstance(point, dict):
+            continue
+        objects.append(
+            tiled_object(
+                object_id=int(point["id"]),
+                name=str(point["name"]),
+                x=float(point["x"]),
+                y=float(point["y"]),
+                width=float(point["width"]),
+                height=float(point["height"]),
+                object_type=str(point.get("type") or enemy_type),
+                properties={
+                    "segment": str(point.get("segment") or ""),
+                    "requiresAimY": bool(point.get("requiresAimY")),
+                    "patrol_min": max(0, int(float(point["x"]) - 120)),
+                    "patrol_max": int(float(point["x"]) + 120),
+                    "speed": 60,
+                },
+            )
+        )
+    for point in plan.get("coverPoints") or []:
+        if not isinstance(point, dict):
+            continue
+        objects.append(
+            tiled_object(
+                object_id=int(point["id"]),
+                name=str(point["name"]),
+                x=float(point["x"]),
+                y=float(point["y"]),
+                width=float(point["width"]),
+                height=float(point["height"]),
+                object_type=str(point.get("type") or cover_type),
+                properties={"segment": str(point.get("segment") or "")},
+            )
+        )
+    for point in plan.get("landmarkPoints") or []:
+        if not isinstance(point, dict):
+            continue
+        objects.append(
+            tiled_object(
+                object_id=int(point["id"]),
+                name=str(point["name"]),
+                x=float(point["x"]),
+                y=float(point["y"]),
+                width=float(point["width"]),
+                height=float(point["height"]),
+                object_type=str(point.get("type") or landmark_type),
+                properties={
+                    "segment": str(point.get("segment") or ""),
+                    "note": str(point.get("note") or ""),
+                },
+            )
+        )
+    return object_layer(layer, objects)
 
 
 def tileset(
