@@ -208,6 +208,7 @@ class Validator:
         self._validate_presentation_text_slots()
         self._validate_sprite_sheet_usage()
         self._validate_game_profiles()
+        self._validate_game_input()
         for finding in self.findings:
             print(f"{finding.level} {finding.path}: {finding.message}")
         return 1 if any(f.level == "ERROR" for f in self.findings) else 0
@@ -387,11 +388,30 @@ class Validator:
         return f"{base}[{key!r}]"
 
     def _validate_sprite_sheet_usage(self) -> None:
+        render_box_offenders: list[dict[str, str]] = []
         for path, node in self._iter_dicts(self.root):
             kind = node.get("kind")
             if kind not in {"sprite", "animated_sprite"}:
                 continue
             render = node.get("render")
+            # 图元(sprite/animated_sprite)上挂带可见 shape 的 render 块 = 兜底色块。
+            # 引擎只在贴图未加载成功时画它(game_entity.dart SpriteEntity.render:
+            # `if (img == null) drawShape(renderConfig)`)。一旦显示出来就是"幽灵方块"
+            # ——多半是 debug/占位残留,正式角色不该带它。render 仅含 asset/flip_x 不算。
+            # 收集起来在循环结束后汇总:玩家单独报 ERROR,其余合并成一条 WARN(避免刷屏)。
+            if isinstance(render, dict) and isinstance(render.get("shape"), str) and render.get(
+                "shape"
+            ) in {"rect", "circle", "rounded_rect", "round_rect", "oval", "square"}:
+                entity_id = path.rsplit(".", 1)[-1]
+                render_box_offenders.append(
+                    {
+                        "path": self._path(path, "render"),
+                        "kind": str(kind),
+                        "shape": str(render.get("shape")),
+                        "id": entity_id,
+                        "is_player": "1" if entity_id == "player" else "",
+                    }
+                )
             asset = node.get("asset")
             if not asset and isinstance(render, dict):
                 asset = render.get("asset")
@@ -463,6 +483,25 @@ class Validator:
                             asset_meta=anim_meta,
                             is_sheet=anim_is_sheet,
                         )
+
+        # ── 汇总 render 兜底框(check C):玩家单独 ERROR,其余合并成一条 WARN ──
+        players = [o for o in render_box_offenders if o["is_player"]]
+        others = [o for o in render_box_offenders if not o["is_player"]]
+        for o in players:
+            self.error(
+                o["path"],
+                f"player {o['kind']} carries a render fallback box (shape:{o['shape']}). When the art "
+                "fails to load the hero renders as a ghost rectangle (the #1 'player is just a box' "
+                "bug). Remove 'render' from the player entity.",
+            )
+        if others:
+            ids = ", ".join(o["id"] for o in others)
+            self.warn(
+                others[0]["path"],
+                f"{len(others)} image-backed entities carry a render fallback box (only drawn when the "
+                f"art fails to load, then look like ghost rectangles): {ids}. Remove 'render' from "
+                "sprite/animated_sprite entities; use kind:'pixel' only for intentional solid boxes.",
+            )
 
     def _validate_animation_frame_spec(
         self,
@@ -655,6 +694,105 @@ class Validator:
             return int(value)
         return None
 
+    # ── 摇杆松手停不下来(moveEndInput 接错 handler) ─────────────────────
+    # game-controls 的 psJoystickGamepad 用 props.moveInput / moveEndInput 把
+    # 拖动 / 松手分别路由到 flame_game.input 里的命名 handler。
+    #   moveInput   handler 通常写 move_dir = event.x(模拟量)
+    #   松手时控件用 event.x=0 再触发 moveEndInput
+    # 只有当 moveEndInput 指向的 handler 会把 move 变量归零,角色才会停:
+    #   ✅ moveEndInput == moveInput      → 松手 event.x=0 → move_dir=0(demo 的做法)
+    #   ✅ moveEndInput handler 顶层无条件 move_dir=0
+    #   ❌ moveEndInput 指向别的 handler(如 move_up,只在 ==±1 时归零)→ 松手不停
+    # 注:此前误把 move_up 的 ±1 内容当 bug——它在 demo 里是摆设,真凶是 moveEndInput 接错。
+    def _validate_game_input(self) -> None:
+        if not self.flame_games:
+            return
+        handlers: dict[str, Any] = {}
+        for _, game in self.flame_games:
+            inp = game.get("input")
+            if isinstance(inp, dict):
+                for key, value in inp.items():
+                    if isinstance(value, list):
+                        handlers.setdefault(key, value)
+        if not handlers:
+            return
+        for path, node in self._iter_dicts(self.root):
+            move_input = node.get("moveInput")
+            move_end = node.get("moveEndInput")
+            if not isinstance(move_input, str) or not isinstance(move_end, str):
+                continue
+            if move_end == move_input:
+                continue  # 松手复用 move handler,event.x=0 会归零,正确
+            move_steps = handlers.get(move_input)
+            if not isinstance(move_steps, list):
+                continue
+            analog_vars = self._vars_assigned_from_event_x(move_steps)
+            if not analog_vars:
+                continue
+            end_steps = handlers.get(move_end)
+            for var in sorted(analog_vars):
+                if isinstance(end_steps, list) and self._has_top_level_zero_set(end_steps, var):
+                    continue
+                self.error(
+                    self._path(path, "moveEndInput"),
+                    f"joystick moveEndInput='{move_end}' will not stop the player: moveInput "
+                    f"('{move_input}') drives '{var}' from analog event.x, but release routes to "
+                    f"'{move_end}', which never sets '{var}'=0 unconditionally. The character keeps "
+                    f"moving after the stick is released. Set moveEndInput='{move_input}' (release "
+                    f"then sends event.x=0 → '{var}'=0), or make '{move_end}' set '{var}'=0 unconditionally.",
+                )
+
+    @classmethod
+    def _iter_call_nodes(cls, steps: Any):
+        """遍历 steps 树里所有 {call, args, ...} 节点。"""
+        stack = [steps]
+        while stack:
+            cur = stack.pop()
+            if isinstance(cur, dict):
+                if "call" in cur:
+                    yield cur
+                stack.extend(cur.values())
+            elif isinstance(cur, list):
+                stack.extend(cur)
+
+    @classmethod
+    def _refs_event_x(cls, value: Any) -> bool:
+        if isinstance(value, dict):
+            if value.get("var") == "event.x":
+                return True
+            return any(cls._refs_event_x(v) for v in value.values())
+        if isinstance(value, list):
+            return any(cls._refs_event_x(v) for v in value)
+        return False
+
+    @classmethod
+    def _vars_assigned_from_event_x(cls, steps: Any) -> set[str]:
+        out: set[str] = set()
+        for node in cls._iter_call_nodes(steps):
+            if node.get("call") != "@set":
+                continue
+            args = node.get("args")
+            if isinstance(args, dict) and isinstance(args.get("var"), str) and cls._refs_event_x(args.get("value")):
+                out.add(args["var"])
+        return out
+
+    @staticmethod
+    def _is_zero_value(value: Any) -> bool:
+        return value in (0, 0.0, "0")
+
+    @classmethod
+    def _has_top_level_zero_set(cls, steps: Any, var: str) -> bool:
+        """steps 顶层(不在 @if 的 then/else 里)是否无条件把 var 设为 0。"""
+        if not isinstance(steps, list):
+            return False
+        for node in steps:
+            if not isinstance(node, dict) or node.get("call") != "@set":
+                continue
+            args = node.get("args")
+            if isinstance(args, dict) and args.get("var") == var and cls._is_zero_value(args.get("value")):
+                return True
+        return False
+
     def _validate_game_profiles(self) -> None:
         if not self._needs_run_and_gun_profile():
             return
@@ -665,6 +803,17 @@ class Validator:
             self._validate_run_and_gun_game(path, game)
 
     def _validate_run_and_gun_game(self, path: str, game: dict[str, Any]) -> None:
+        # leap_platformer 会让角色自动爬上台阶/斜坡(走到落差处自动抬腿上去)。
+        # 这对横版**射击**(魂斗罗类,期望硬碰撞:踩不上去就是踩不上去)是错的体感。
+        # run-and-gun 应使用 aabb_platformer。
+        physics = game.get("physics")
+        if isinstance(physics, dict) and str(physics.get("engine") or "").strip() == "leap_platformer":
+            self.error(
+                self._path(path, "physics.engine"),
+                "run-and-gun game should not use leap_platformer (it auto-climbs steps/slopes, "
+                "which feels wrong for hard-collision shooters); use engine:'aabb_platformer'.",
+            )
+
         viewport = game.get("viewport")
         viewport_w = self._num_from_map(viewport, "width")
         viewport_h = self._num_from_map(viewport, "height")
