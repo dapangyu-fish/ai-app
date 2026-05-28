@@ -336,6 +336,7 @@ class Validator:
             "moveInput",
             "moveEndInput",
             "jumpInput",
+            "jumpEndInput",
             "attackInput",
             "height",
             "backgroundColor",
