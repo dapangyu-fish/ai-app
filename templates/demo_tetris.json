@@ -3,7 +3,7 @@
   "appid": "a5dc6f77-0d59-47ce-a3b3-2bc86e31f4e4",
   "meta": {
     "name": "demo-tetris",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "app",
     "description": "Portrait falling-block puzzle built from generic JSON matrix/polyomino atoms. Assets are hosted in json-app-assets.",
     "author": "fish"
