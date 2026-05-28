@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.13",
+    "version": "1.0.14",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -316,6 +316,52 @@
                     448
                   ],
                   "auto_update": false
+                },
+                "preload_item_objects": {
+                  "kind": "sprite",
+                  "priority": -100,
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                  "position": [
+                    -64,
+                    -64
+                  ],
+                  "size": [
+                    1,
+                    1
+                  ],
+                  "src": [
+                    0,
+                    0,
+                    1,
+                    1
+                  ],
+                  "auto_update": false,
+                  "state": {
+                    "opacity": 0
+                  }
+                },
+                "preload_enemy_sheet": {
+                  "kind": "sprite",
+                  "priority": -100,
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                  "position": [
+                    -64,
+                    -64
+                  ],
+                  "size": [
+                    1,
+                    1
+                  ],
+                  "src": [
+                    0,
+                    0,
+                    1,
+                    1
+                  ],
+                  "auto_update": false,
+                  "state": {
+                    "opacity": 0
+                  }
                 },
                 "map": {
                   "kind": "tiled_map",
