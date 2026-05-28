@@ -136,6 +136,11 @@ DEFAULT_BUILTIN_CALLS = {
     # cannot always discover them dynamically.
     "@animated_sprite.effect",
     "@animated_sprite.set_animation",
+    "@audio.pause",
+    "@audio.play",
+    "@audio.resume",
+    "@audio.set_volume",
+    "@audio.stop",
     "@cell.set",
     "@cell_path.advance",
     "@cell_path.contains",
