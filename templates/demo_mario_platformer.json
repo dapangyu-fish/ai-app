@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -2450,11 +2450,15 @@
                 "facing": 1,
                 "jump_pressed": false,
                 "gravity": 1700,
-                "jump_vy": -620,
+                "jump_vy": -560,
                 "speed": 260,
                 "hit_enemy": null,
                 "hit_fireball_enemy": null,
-                "won": false
+                "won": false,
+                "max_speed": 260,
+                "accel": 900,
+                "friction": 900,
+                "enemy_speed": 100
               },
               "entities": {
                 "background": {
@@ -2500,7 +2504,7 @@
                     368
                   ],
                   "size": [
-                    28,
+                    24,
                     32
                   ],
                   "velocity": [
@@ -2511,15 +2515,15 @@
                   "state": {
                     "spriteW": 32,
                     "spriteH": 32,
-                    "spriteOffsetX": -2,
+                    "spriteOffsetX": -4,
                     "spriteOffsetY": 0
                   },
                   "frame_size": [
-                    16,
+                    12,
                     16
                   ],
                   "src_origin": [
-                    176,
+                    178,
                     32
                   ],
                   "frames": 1,
@@ -2527,11 +2531,11 @@
                     "idle": {
                       "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
-                        176,
+                        178,
                         32
                       ],
                       "frame_size": [
-                        16,
+                        12,
                         16
                       ],
                       "frames": 1,
@@ -2748,6 +2752,525 @@
                             },
                             "then": [
                               {
+                                "call": "@tiled.spawn_objects",
+                                "args": {
+                                  "map": "map",
+                                  "layer": "question blocks",
+                                  "templates": {
+                                    "coin": {
+                                      "id_prefix": "qblock_",
+                                      "kind": "animated_sprite",
+                                      "priority": 25,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src_origin": [
+                                        384,
+                                        0
+                                      ],
+                                      "frame_size": [
+                                        16,
+                                        16
+                                      ],
+                                      "frames": 3,
+                                      "frames_per_row": 3,
+                                      "frame_step": [
+                                        16,
+                                        0
+                                      ],
+                                      "step_time": 0.22,
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "animations": {
+                                        "twinkle": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            384,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 3,
+                                          "frames_per_row": 3,
+                                          "frame_step": [
+                                            16,
+                                            0
+                                          ],
+                                          "step_time": 0.22
+                                        },
+                                        "used": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            432,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 1,
+                                          "frames_per_row": 1,
+                                          "step_time": 0.1
+                                        }
+                                      },
+                                      "state": {
+                                        "used": false,
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "red mushroom": {
+                                      "id_prefix": "qblock_",
+                                      "kind": "animated_sprite",
+                                      "priority": 25,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src_origin": [
+                                        384,
+                                        0
+                                      ],
+                                      "frame_size": [
+                                        16,
+                                        16
+                                      ],
+                                      "frames": 3,
+                                      "frames_per_row": 3,
+                                      "frame_step": [
+                                        16,
+                                        0
+                                      ],
+                                      "step_time": 0.22,
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "animations": {
+                                        "twinkle": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            384,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 3,
+                                          "frames_per_row": 3,
+                                          "frame_step": [
+                                            16,
+                                            0
+                                          ],
+                                          "step_time": 0.22
+                                        },
+                                        "used": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            432,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 1,
+                                          "frames_per_row": 1,
+                                          "step_time": 0.1
+                                        }
+                                      },
+                                      "state": {
+                                        "used": false,
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "flower": {
+                                      "id_prefix": "qblock_",
+                                      "kind": "animated_sprite",
+                                      "priority": 25,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src_origin": [
+                                        384,
+                                        0
+                                      ],
+                                      "frame_size": [
+                                        16,
+                                        16
+                                      ],
+                                      "frames": 3,
+                                      "frames_per_row": 3,
+                                      "frame_step": [
+                                        16,
+                                        0
+                                      ],
+                                      "step_time": 0.22,
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "animations": {
+                                        "twinkle": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            384,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 3,
+                                          "frames_per_row": 3,
+                                          "frame_step": [
+                                            16,
+                                            0
+                                          ],
+                                          "step_time": 0.22
+                                        },
+                                        "used": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            432,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 1,
+                                          "frames_per_row": 1,
+                                          "step_time": 0.1
+                                        }
+                                      },
+                                      "state": {
+                                        "used": false,
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "mushroom flower": {
+                                      "id_prefix": "qblock_",
+                                      "kind": "animated_sprite",
+                                      "priority": 25,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src_origin": [
+                                        384,
+                                        0
+                                      ],
+                                      "frame_size": [
+                                        16,
+                                        16
+                                      ],
+                                      "frames": 3,
+                                      "frames_per_row": 3,
+                                      "frame_step": [
+                                        16,
+                                        0
+                                      ],
+                                      "step_time": 0.22,
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "animations": {
+                                        "twinkle": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            384,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 3,
+                                          "frames_per_row": 3,
+                                          "frame_step": [
+                                            16,
+                                            0
+                                          ],
+                                          "step_time": 0.22
+                                        },
+                                        "used": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            432,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 1,
+                                          "frames_per_row": 1,
+                                          "step_time": 0.1
+                                        }
+                                      },
+                                      "state": {
+                                        "used": false,
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "star": {
+                                      "id_prefix": "qblock_",
+                                      "kind": "animated_sprite",
+                                      "priority": 25,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src_origin": [
+                                        384,
+                                        0
+                                      ],
+                                      "frame_size": [
+                                        16,
+                                        16
+                                      ],
+                                      "frames": 3,
+                                      "frames_per_row": 3,
+                                      "frame_step": [
+                                        16,
+                                        0
+                                      ],
+                                      "step_time": 0.22,
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "animations": {
+                                        "twinkle": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            384,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 3,
+                                          "frames_per_row": 3,
+                                          "frame_step": [
+                                            16,
+                                            0
+                                          ],
+                                          "step_time": 0.22
+                                        },
+                                        "used": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            432,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 1,
+                                          "frames_per_row": 1,
+                                          "step_time": 0.1
+                                        }
+                                      },
+                                      "state": {
+                                        "used": false,
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "default": {
+                                      "id_prefix": "qblock_",
+                                      "kind": "animated_sprite",
+                                      "priority": 25,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src_origin": [
+                                        384,
+                                        0
+                                      ],
+                                      "frame_size": [
+                                        16,
+                                        16
+                                      ],
+                                      "frames": 3,
+                                      "frames_per_row": 3,
+                                      "frame_step": [
+                                        16,
+                                        0
+                                      ],
+                                      "step_time": 0.22,
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "animations": {
+                                        "twinkle": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            384,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 3,
+                                          "frames_per_row": 3,
+                                          "frame_step": [
+                                            16,
+                                            0
+                                          ],
+                                          "step_time": 0.22
+                                        },
+                                        "used": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            432,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 1,
+                                          "frames_per_row": 1,
+                                          "step_time": 0.1
+                                        }
+                                      },
+                                      "state": {
+                                        "used": false,
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "green mushroom": {
+                                      "id_prefix": "qblock_",
+                                      "kind": "animated_sprite",
+                                      "priority": 25,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src_origin": [
+                                        384,
+                                        0
+                                      ],
+                                      "frame_size": [
+                                        16,
+                                        16
+                                      ],
+                                      "frames": 3,
+                                      "frames_per_row": 3,
+                                      "frame_step": [
+                                        16,
+                                        0
+                                      ],
+                                      "step_time": 0.22,
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "animations": {
+                                        "twinkle": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            384,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 3,
+                                          "frames_per_row": 3,
+                                          "frame_step": [
+                                            16,
+                                            0
+                                          ],
+                                          "step_time": 0.22
+                                        },
+                                        "used": {
+                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "src_origin": [
+                                            432,
+                                            0
+                                          ],
+                                          "frame_size": [
+                                            16,
+                                            16
+                                          ],
+                                          "frames": 1,
+                                          "frames_per_row": 1,
+                                          "step_time": 0.1
+                                        }
+                                      },
+                                      "state": {
+                                        "used": false,
+                                        "opacity": 0,
+                                        "assetLoadingOverlay": false
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@tiled.spawn_objects",
+                                "args": {
+                                  "map": "map",
+                                  "layer": "brick blocks",
+                                  "templates": {
+                                    "default": {
+                                      "id_prefix": "brick_",
+                                      "kind": "sprite",
+                                      "priority": 24,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src": [
+                                        16,
+                                        0,
+                                        16,
+                                        16
+                                      ],
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "auto_update": false,
+                                      "state": {
+                                        "assetLoadingOverlay": false
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
                                 "call": "@set",
                                 "args": {
                                   "var": "vars.state",
@@ -2789,20 +3312,29 @@
                             "map": "map",
                             "layer": "enemies",
                             "reference": "player",
-                            "proximity": 1200,
+                            "proximity": 1100,
                             "despawn_distance": 1500,
                             "templates": {
                               "goomba": {
                                 "id_prefix": "enemy_",
-                                "kind": "sprite",
+                                "kind": "animated_sprite",
                                 "priority": 30,
                                 "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
-                                "src": [
+                                "src_origin": [
                                   0,
-                                  4,
+                                  4
+                                ],
+                                "frame_size": [
                                   16,
                                   16
                                 ],
+                                "frames": 2,
+                                "frames_per_row": 2,
+                                "frame_step": [
+                                  30,
+                                  0
+                                ],
+                                "step_time": 0.1,
                                 "position": [
                                   "{{ object.x }}",
                                   "{{ object.y }}"
@@ -2812,26 +3344,71 @@
                                   32
                                 ],
                                 "velocity": [
-                                  -70,
+                                  0,
                                   0
                                 ],
                                 "auto_update": false,
                                 "state": {
                                   "kind": "goomba",
+                                  "dir": -1,
+                                  "activated": true,
                                   "assetLoadingOverlay": false
+                                },
+                                "animations": {
+                                  "walk": {
+                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "src_origin": [
+                                      0,
+                                      4
+                                    ],
+                                    "frame_size": [
+                                      16,
+                                      16
+                                    ],
+                                    "frames": 2,
+                                    "frames_per_row": 2,
+                                    "frame_step": [
+                                      30,
+                                      0
+                                    ],
+                                    "step_time": 0.1
+                                  },
+                                  "squish": {
+                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "src_origin": [
+                                      60,
+                                      8
+                                    ],
+                                    "frame_size": [
+                                      16,
+                                      7
+                                    ],
+                                    "frames": 1,
+                                    "frames_per_row": 1,
+                                    "step_time": 0.1
+                                  }
                                 }
                               },
                               "koopa": {
                                 "id_prefix": "enemy_",
-                                "kind": "sprite",
+                                "kind": "animated_sprite",
                                 "priority": 30,
                                 "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
-                                "src": [
+                                "src_origin": [
                                   150,
-                                  0,
+                                  0
+                                ],
+                                "frame_size": [
                                   16,
                                   24
                                 ],
+                                "frames": 2,
+                                "frames_per_row": 2,
+                                "frame_step": [
+                                  30,
+                                  0
+                                ],
+                                "step_time": 0.2,
                                 "position": [
                                   "{{ object.x }}",
                                   352
@@ -2841,13 +3418,49 @@
                                   48
                                 ],
                                 "velocity": [
-                                  -60,
+                                  0,
                                   0
                                 ],
                                 "auto_update": false,
                                 "state": {
                                   "kind": "koopa",
+                                  "dir": -1,
+                                  "activated": true,
                                   "assetLoadingOverlay": false
+                                },
+                                "animations": {
+                                  "walk": {
+                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "src_origin": [
+                                      150,
+                                      0
+                                    ],
+                                    "frame_size": [
+                                      16,
+                                      24
+                                    ],
+                                    "frames": 2,
+                                    "frames_per_row": 2,
+                                    "frame_step": [
+                                      30,
+                                      0
+                                    ],
+                                    "step_time": 0.2
+                                  },
+                                  "shell": {
+                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "src_origin": [
+                                      360,
+                                      5
+                                    ],
+                                    "frame_size": [
+                                      16,
+                                      15
+                                    ],
+                                    "frames": 1,
+                                    "frames_per_row": 1,
+                                    "step_time": 0.1
+                                  }
                                 }
                               }
                             }
@@ -2863,7 +3476,16 @@
                                 "args": {
                                   "id": "{{ loop.id }}",
                                   "field": "vx",
-                                  "value": -70
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "loop.entity.dir"
+                                      },
+                                      {
+                                        "var": "vars.enemy_speed"
+                                      }
+                                    ]
+                                  }
                                 }
                               },
                               {
@@ -2872,8 +3494,40 @@
                                   "id": "{{ loop.id }}",
                                   "map": "map",
                                   "dt": "{{ event.dt }}",
-                                  "gravity": 1500,
+                                  "gravity": 1400,
                                   "max_fall": 900
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "or": [
+                                      {
+                                        "var": "entities.{{ loop.id }}.blockedLeft"
+                                      },
+                                      {
+                                        "var": "entities.{{ loop.id }}.blockedRight"
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "state.dir",
+                                        "value": {
+                                          "*": [
+                                            {
+                                              "var": "loop.entity.dir"
+                                            },
+                                            -1
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
                               },
                               {
@@ -2888,6 +3542,187 @@
                           }
                         },
                         {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              ">": [
+                                {
+                                  "var": "vars.move_axis"
+                                },
+                                0.08
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.add",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vx",
+                                  "by": {
+                                    "*": [
+                                      {
+                                        "var": "vars.accel"
+                                      },
+                                      {
+                                        "var": "event.dt"
+                                      }
+                                    ]
+                                  },
+                                  "max": "{{ vars.max_speed }}"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "<": [
+                                {
+                                  "var": "vars.move_axis"
+                                },
+                                -0.08
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.add",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vx",
+                                  "by": {
+                                    "*": [
+                                      -1,
+                                      {
+                                        "var": "vars.accel"
+                                      },
+                                      {
+                                        "var": "event.dt"
+                                      }
+                                    ]
+                                  },
+                                  "min": {
+                                    "*": [
+                                      -1,
+                                      {
+                                        "var": "vars.max_speed"
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "<=": [
+                                    {
+                                      "var": "vars.move_axis"
+                                    },
+                                    0.08
+                                  ]
+                                },
+                                {
+                                  ">=": [
+                                    {
+                                      "var": "vars.move_axis"
+                                    },
+                                    -0.08
+                                  ]
+                                },
+                                {
+                                  ">": [
+                                    {
+                                      "var": "entities.player.vx"
+                                    },
+                                    0
+                                  ]
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.add",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vx",
+                                  "by": {
+                                    "*": [
+                                      -1,
+                                      {
+                                        "var": "vars.friction"
+                                      },
+                                      {
+                                        "var": "event.dt"
+                                      }
+                                    ]
+                                  },
+                                  "min": 0
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "<=": [
+                                    {
+                                      "var": "vars.move_axis"
+                                    },
+                                    0.08
+                                  ]
+                                },
+                                {
+                                  ">=": [
+                                    {
+                                      "var": "vars.move_axis"
+                                    },
+                                    -0.08
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "entities.player.vx"
+                                    },
+                                    0
+                                  ]
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.add",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vx",
+                                  "by": {
+                                    "*": [
+                                      {
+                                        "var": "vars.friction"
+                                      },
+                                      {
+                                        "var": "event.dt"
+                                      }
+                                    ]
+                                  },
+                                  "max": 0
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
                           "call": "@platformer.step",
                           "args": {
                             "id": "player",
@@ -2896,8 +3731,6 @@
                             "gravity": "{{ vars.gravity }}",
                             "jump_velocity": "{{ vars.jump_vy }}",
                             "jump": "{{ vars.jump_pressed }}",
-                            "move": "{{ vars.move_axis }}",
-                            "speed": "{{ vars.speed }}",
                             "max_fall": 1100
                           }
                         },
@@ -2906,6 +3739,95 @@
                           "args": {
                             "var": "vars.jump_pressed",
                             "value": false
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "var": "entities.player.blockedUp"
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "player",
+                                  "field": "vy",
+                                  "value": 220
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "var": "entities.player.blockedUp"
+                                },
+                                {
+                                  "==": [
+                                    {
+                                      "var": "entities.player.yCollision.tileset"
+                                    },
+                                    "question blocks"
+                                  ]
+                                },
+                                {
+                                  "!": {
+                                    "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.used"
+                                  }
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "qblock_{{ entities.player.yCollision.objectId }}",
+                                  "field": "state.used",
+                                  "value": true
+                                }
+                              },
+                              {
+                                "call": "@animated_sprite.set_animation",
+                                "args": {
+                                  "id": "qblock_{{ entities.player.yCollision.objectId }}",
+                                  "animation": "used"
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "qblock_{{ entities.player.yCollision.objectId }}",
+                                  "field": "state.opacity",
+                                  "value": 1
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "==": [
+                                      {
+                                        "var": "entities.player.yCollision.type"
+                                      },
+                                      "coin"
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@score.add",
+                                      "args": {
+                                        "n": 200
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
                           }
                         },
                         {

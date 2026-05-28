@@ -1922,6 +1922,9 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 飞出屏幕或超时销毁时都释放计数；只在命中时释放会导致玩家打空几发后永远不能开火。
 `@platformer.step` 会写入 `entities.<id>.hazard` / `outOfBounds` 语义，关卡游戏需要在
 `frame.logic` 里读取并触发扣命、重生或 `@game_over`，避免角色掉出地图后继续隐形运行。
+它也会写入通用碰撞边信息：`blockedLeft` / `blockedRight` / `blockedUp` /
+`blockedDown`、`xCollision` / `yCollision` / `onGroundCollision`。平台游戏可以据此
+实现撞墙反向、顶砖块、踩地触发等状态机，不要靠猜坐标。
 | `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
 | `@random_double({min, max})` | 返回 [min, max) 的随机 double |
 

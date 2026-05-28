@@ -1102,6 +1102,14 @@ class GameActions {
     final oneWayTypes = _readStringSet(args['one_way_types']);
     final oneWayTilesets = _readStringSet(args['one_way_tilesets']);
 
+    player.state['blockedLeft'] = false;
+    player.state['blockedRight'] = false;
+    player.state['blockedUp'] = false;
+    player.state['blockedDown'] = false;
+    player.state['xCollision'] = null;
+    player.state['yCollision'] = null;
+    player.state['onGroundCollision'] = null;
+
     final onGround = player.state['onGround'] == true;
     if (autoRun != null) {
       player.vx = autoRun;
@@ -1654,9 +1662,12 @@ class GameActions {
       }
       if (dx > 0) {
         player.x = solid.left - player.w;
+        player.state['blockedRight'] = true;
       } else {
         player.x = solid.right;
+        player.state['blockedLeft'] = true;
       }
+      player.state['xCollision'] = collision.toMap();
       player.vx = 0;
     }
   }
@@ -1701,10 +1712,14 @@ class GameActions {
         }
         player.y = slopeTop - player.h;
         player.state['onGround'] = true;
+        player.state['blockedDown'] = true;
+        player.state['onGroundCollision'] = collision.toMap();
         player.state['doubleJumpUsed'] = false;
       } else {
         player.y = solid.bottom;
+        player.state['blockedUp'] = true;
       }
+      player.state['yCollision'] = collision.toMap();
       player.vy = 0;
     }
   }
