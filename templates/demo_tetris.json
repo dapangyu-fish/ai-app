@@ -3,7 +3,7 @@
   "appid": "a5dc6f77-0d59-47ce-a3b3-2bc86e31f4e4",
   "meta": {
     "name": "demo-tetris",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "app",
     "description": "Portrait falling-block puzzle built from generic JSON matrix/polyomino atoms. Assets are hosted in json-app-assets.",
     "author": "fish"
@@ -150,6 +150,51 @@
             }
           }
         ]
+      },
+      "start": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentScore",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.lines",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "Playing"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "game"
+            }
+          }
+        ]
+      },
+      "status": {
+        "params": [
+          "text"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "{{ params.text }}"
+            }
+          }
+        ]
       }
     }
   },
@@ -158,12 +203,178 @@
       {
         "id": "home",
         "title": "Tetris",
+        "backgroundColor": "#0B1020",
         "appBar": {
-          "title": "Tetris",
+          "title": "TETRIS",
+          "centerTitle": true,
+          "backgroundColor": "#0B1020",
+          "color": "#B7F7D8"
+        },
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 18,
+            "color": "#A8C3A0",
+            "borderRadius": 8,
+            "border": {
+              "color": "#27332B",
+              "width": 3
+            },
+            "children": [
+              {
+                "type": "text",
+                "value": "TETRIS",
+                "style": {
+                  "fontSize": 42,
+                  "color": "#111827",
+                  "textAlign": "center",
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "A-TYPE",
+                "style": {
+                  "fontSize": 18,
+                  "color": "#111827",
+                  "textAlign": "center",
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "text",
+                "value": "TOP {{ global.bestScore }}",
+                "style": {
+                  "fontSize": 16,
+                  "color": "#111827",
+                  "textAlign": "center",
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "LEVEL 00   LINES 000",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#111827",
+                  "textAlign": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "button",
+                "label": "START",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#F8E75A",
+                  "textColor": "#111111",
+                  "fontSize": 18,
+                  "borderRadius": 8,
+                  "paddingH": 26,
+                  "paddingV": 14
+                },
+                "action": {
+                  "call": "@global.start",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 14,
+            "color": "#172033",
+            "borderRadius": 8,
+            "border": {
+              "color": "#334155",
+              "width": 1
+            },
+            "children": [
+              {
+                "type": "text",
+                "value": "Controls",
+                "style": {
+                  "fontSize": 18,
+                  "color": "#E5E7EB",
+                  "textAlign": "center",
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "text",
+                "value": "Left / Right: move   Up / Triangle: rotate",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#C7D2FE",
+                  "textAlign": "center"
+                }
+              },
+              {
+                "type": "text",
+                "value": "Down: soft drop   Circle: hard drop   Square: pause",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#C7D2FE",
+                  "textAlign": "center"
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 8
+          },
+          {
+            "type": "text",
+            "value": "Source assets: github.com/DaQinShgy/flutter_game",
+            "style": {
+              "fontSize": 11,
+              "color": "#94A3B8",
+              "textAlign": "center"
+            }
+          }
+        ]
+      },
+      {
+        "id": "game",
+        "title": "Tetris",
+        "appBar": {
+          "title": "TETRIS",
           "centerTitle": true,
           "backgroundColor": "#111827",
           "color": "#FFFFFF",
+          "leading": {
+            "icon": "home",
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          },
           "actions": [
+            {
+              "icon": "pause",
+              "action": {
+                "call": "@flame_game_input",
+                "args": {
+                  "input": "pause"
+                }
+              }
+            },
             {
               "icon": "replay",
               "action": {
@@ -398,7 +609,8 @@
                 "piece_x": 3,
                 "piece_y": 0,
                 "drop_interval": 0.55,
-                "lines": 0
+                "lines": 0,
+                "state": "running"
               },
               "entities": {
                 "board": {
@@ -545,6 +757,15 @@
                         }
                       ]
                     }
+                  },
+                  {
+                    "call": "@emit",
+                    "args": {
+                      "event": "status",
+                      "data": {
+                        "text": "Playing"
+                      }
+                    }
                   }
                 ]
               },
@@ -552,189 +773,26 @@
                 "interval": "{{ vars.drop_interval }}",
                 "logic": [
                   {
-                    "call": "@matrix.place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}",
-                      "value": 0,
-                      "only_in_bounds": true
-                    }
-                  },
-                  {
-                    "call": "@matrix.can_place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": {
-                        "+": [
-                          {
-                            "var": "vars.piece_y"
-                          },
-                          1
-                        ]
-                      }
-                    },
-                    "assign": "vars._can_move"
-                  },
-                  {
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "var": "vars._can_move"
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
                       },
                       "then": [
                         {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.piece_y",
-                            "value": {
-                              "+": [
-                                {
-                                  "var": "vars.piece_y"
-                                },
-                                1
-                              ]
-                            }
-                          }
-                        },
-                        {
                           "call": "@matrix.place",
                           "args": {
                             "grid": "board",
                             "cells": "{{ vars.piece_cells }}",
                             "x": "{{ vars.piece_x }}",
                             "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
+                            "value": 0,
                             "only_in_bounds": true
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "call": "@matrix.place",
-                          "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
-                          }
-                        },
-                        {
-                          "call": "@matrix.clear_full_rows",
-                          "args": {
-                            "grid": "board"
-                          },
-                          "assign": "vars._clear"
-                        },
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              ">": [
-                                {
-                                  "var": "vars._clear.cleared"
-                                },
-                                0
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@score.add",
-                                "args": {
-                                  "n": {
-                                    "*": [
-                                      {
-                                        "var": "vars._clear.cleared"
-                                      },
-                                      {
-                                        "var": "vars._clear.cleared"
-                                      },
-                                      100
-                                    ]
-                                  }
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars.lines",
-                                  "value": {
-                                    "+": [
-                                      {
-                                        "var": "vars.lines"
-                                      },
-                                      {
-                                        "var": "vars._clear.cleared"
-                                      }
-                                    ]
-                                  }
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars.drop_interval",
-                                  "value": {
-                                    "max": [
-                                      0.12,
-                                      {
-                                        "-": [
-                                          0.55,
-                                          {
-                                            "*": [
-                                              {
-                                                "var": "vars.lines"
-                                              },
-                                              0.015
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        {
-                          "call": "@matrix.random_item",
-                          "args": {
-                            "items": "{{ vars.pieces }}"
-                          },
-                          "assign": "vars.current_piece"
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.piece_cells",
-                            "value": "{{ vars.current_piece.cells }}"
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.piece_value",
-                            "value": "{{ vars.current_piece.value }}"
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.piece_x",
-                            "value": 3
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.piece_y",
-                            "value": 0
                           }
                         },
                         {
@@ -743,17 +801,38 @@
                             "grid": "board",
                             "cells": "{{ vars.piece_cells }}",
                             "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}"
+                            "y": {
+                              "+": [
+                                {
+                                  "var": "vars.piece_y"
+                                },
+                                1
+                              ]
+                            }
                           },
-                          "assign": "vars._can_spawn"
+                          "assign": "vars._can_move"
                         },
                         {
                           "call": "@if",
                           "args": {
                             "cond": {
-                              "var": "vars._can_spawn"
+                              "var": "vars._can_move"
                             },
                             "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_y",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars.piece_y"
+                                      },
+                                      1
+                                    ]
+                                  }
+                                }
+                              },
                               {
                                 "call": "@matrix.place",
                                 "args": {
@@ -768,13 +847,171 @@
                             ],
                             "else": [
                               {
-                                "call": "@game_over",
-                                "args": {}
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              },
+                              {
+                                "call": "@matrix.clear_full_rows",
+                                "args": {
+                                  "grid": "board"
+                                },
+                                "assign": "vars._clear"
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    ">": [
+                                      {
+                                        "var": "vars._clear.cleared"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@score.add",
+                                      "args": {
+                                        "n": {
+                                          "*": [
+                                            {
+                                              "var": "vars._clear.cleared"
+                                            },
+                                            {
+                                              "var": "vars._clear.cleared"
+                                            },
+                                            100
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.lines",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars.lines"
+                                            },
+                                            {
+                                              "var": "vars._clear.cleared"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.drop_interval",
+                                        "value": {
+                                          "max": [
+                                            0.12,
+                                            {
+                                              "-": [
+                                                0.55,
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "var": "vars.lines"
+                                                    },
+                                                    0.015
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@matrix.random_item",
+                                "args": {
+                                  "items": "{{ vars.pieces }}"
+                                },
+                                "assign": "vars.current_piece"
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_cells",
+                                  "value": "{{ vars.current_piece.cells }}"
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_value",
+                                  "value": "{{ vars.current_piece.value }}"
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_x",
+                                  "value": 3
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_y",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@matrix.can_place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}"
+                                },
+                                "assign": "vars._can_spawn"
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "var": "vars._can_spawn"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@matrix.place",
+                                      "args": {
+                                        "grid": "board",
+                                        "cells": "{{ vars.piece_cells }}",
+                                        "x": "{{ vars.piece_x }}",
+                                        "y": "{{ vars.piece_y }}",
+                                        "value": "{{ vars.piece_value }}",
+                                        "only_in_bounds": true
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@game_over",
+                                      "args": {}
+                                    }
+                                  ]
+                                }
                               }
                             ]
                           }
                         }
-                      ]
+                      ],
+                      "else": []
                     }
                   }
                 ]
@@ -782,201 +1019,223 @@
               "input": {
                 "left": [
                   {
-                    "call": "@matrix.place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}",
-                      "value": 0,
-                      "only_in_bounds": true
-                    }
-                  },
-                  {
-                    "call": "@matrix.can_place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": {
-                        "+": [
-                          {
-                            "var": "vars.piece_x"
-                          },
-                          -1
-                        ]
-                      },
-                      "y": "{{ vars.piece_y }}"
-                    },
-                    "assign": "vars._can_move"
-                  },
-                  {
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "var": "vars._can_move"
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
                       },
                       "then": [
                         {
-                          "call": "@set",
+                          "call": "@matrix.place",
                           "args": {
-                            "var": "vars.piece_x",
-                            "value": {
+                            "grid": "board",
+                            "cells": "{{ vars.piece_cells }}",
+                            "x": "{{ vars.piece_x }}",
+                            "y": "{{ vars.piece_y }}",
+                            "value": 0,
+                            "only_in_bounds": true
+                          }
+                        },
+                        {
+                          "call": "@matrix.can_place",
+                          "args": {
+                            "grid": "board",
+                            "cells": "{{ vars.piece_cells }}",
+                            "x": {
                               "+": [
                                 {
                                   "var": "vars.piece_x"
                                 },
                                 -1
                               ]
-                            }
-                          }
+                            },
+                            "y": "{{ vars.piece_y }}"
+                          },
+                          "assign": "vars._can_move"
                         },
                         {
-                          "call": "@matrix.place",
+                          "call": "@if",
                           "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
+                            "cond": {
+                              "var": "vars._can_move"
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_x",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars.piece_x"
+                                      },
+                                      -1
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              }
+                            ]
                           }
                         }
                       ],
-                      "else": [
-                        {
-                          "call": "@matrix.place",
-                          "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
-                          }
-                        }
-                      ]
+                      "else": []
                     }
                   }
                 ],
                 "right": [
                   {
-                    "call": "@matrix.place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}",
-                      "value": 0,
-                      "only_in_bounds": true
-                    }
-                  },
-                  {
-                    "call": "@matrix.can_place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": {
-                        "+": [
-                          {
-                            "var": "vars.piece_x"
-                          },
-                          1
-                        ]
-                      },
-                      "y": "{{ vars.piece_y }}"
-                    },
-                    "assign": "vars._can_move"
-                  },
-                  {
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "var": "vars._can_move"
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
                       },
                       "then": [
                         {
-                          "call": "@set",
+                          "call": "@matrix.place",
                           "args": {
-                            "var": "vars.piece_x",
-                            "value": {
+                            "grid": "board",
+                            "cells": "{{ vars.piece_cells }}",
+                            "x": "{{ vars.piece_x }}",
+                            "y": "{{ vars.piece_y }}",
+                            "value": 0,
+                            "only_in_bounds": true
+                          }
+                        },
+                        {
+                          "call": "@matrix.can_place",
+                          "args": {
+                            "grid": "board",
+                            "cells": "{{ vars.piece_cells }}",
+                            "x": {
                               "+": [
                                 {
                                   "var": "vars.piece_x"
                                 },
                                 1
                               ]
-                            }
-                          }
+                            },
+                            "y": "{{ vars.piece_y }}"
+                          },
+                          "assign": "vars._can_move"
                         },
                         {
-                          "call": "@matrix.place",
+                          "call": "@if",
                           "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
+                            "cond": {
+                              "var": "vars._can_move"
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_x",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars.piece_x"
+                                      },
+                                      1
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              }
+                            ]
                           }
                         }
                       ],
-                      "else": [
-                        {
-                          "call": "@matrix.place",
-                          "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
-                          }
-                        }
-                      ]
+                      "else": []
                     }
                   }
                 ],
                 "soft_down": [
                   {
-                    "call": "@matrix.place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}",
-                      "value": 0,
-                      "only_in_bounds": true
-                    }
-                  },
-                  {
-                    "call": "@matrix.can_place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": {
-                        "+": [
-                          {
-                            "var": "vars.piece_y"
-                          },
-                          1
-                        ]
-                      }
-                    },
-                    "assign": "vars._can_move"
-                  },
-                  {
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "var": "vars._can_move"
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
                       },
                       "then": [
                         {
-                          "call": "@set",
+                          "call": "@matrix.place",
                           "args": {
-                            "var": "vars.piece_y",
-                            "value": {
+                            "grid": "board",
+                            "cells": "{{ vars.piece_cells }}",
+                            "x": "{{ vars.piece_x }}",
+                            "y": "{{ vars.piece_y }}",
+                            "value": 0,
+                            "only_in_bounds": true
+                          }
+                        },
+                        {
+                          "call": "@matrix.can_place",
+                          "args": {
+                            "grid": "board",
+                            "cells": "{{ vars.piece_cells }}",
+                            "x": "{{ vars.piece_x }}",
+                            "y": {
                               "+": [
                                 {
                                   "var": "vars.piece_y"
@@ -984,8 +1243,225 @@
                                 1
                               ]
                             }
-                          }
+                          },
+                          "assign": "vars._can_move"
                         },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "var": "vars._can_move"
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_y",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars.piece_y"
+                                      },
+                                      1
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              },
+                              {
+                                "call": "@matrix.clear_full_rows",
+                                "args": {
+                                  "grid": "board"
+                                },
+                                "assign": "vars._clear"
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    ">": [
+                                      {
+                                        "var": "vars._clear.cleared"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@score.add",
+                                      "args": {
+                                        "n": {
+                                          "*": [
+                                            {
+                                              "var": "vars._clear.cleared"
+                                            },
+                                            {
+                                              "var": "vars._clear.cleared"
+                                            },
+                                            100
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.lines",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars.lines"
+                                            },
+                                            {
+                                              "var": "vars._clear.cleared"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.drop_interval",
+                                        "value": {
+                                          "max": [
+                                            0.12,
+                                            {
+                                              "-": [
+                                                0.55,
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "var": "vars.lines"
+                                                    },
+                                                    0.015
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@matrix.random_item",
+                                "args": {
+                                  "items": "{{ vars.pieces }}"
+                                },
+                                "assign": "vars.current_piece"
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_cells",
+                                  "value": "{{ vars.current_piece.cells }}"
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_value",
+                                  "value": "{{ vars.current_piece.value }}"
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_x",
+                                  "value": 3
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_y",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@matrix.can_place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}"
+                                },
+                                "assign": "vars._can_spawn"
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "var": "vars._can_spawn"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@matrix.place",
+                                      "args": {
+                                        "grid": "board",
+                                        "cells": "{{ vars.piece_cells }}",
+                                        "x": "{{ vars.piece_x }}",
+                                        "y": "{{ vars.piece_y }}",
+                                        "value": "{{ vars.piece_value }}",
+                                        "only_in_bounds": true
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@game_over",
+                                      "args": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ],
+                      "else": []
+                    }
+                  }
+                ],
+                "rotate": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
+                      },
+                      "then": [
                         {
                           "call": "@matrix.place",
                           "args": {
@@ -993,12 +1469,137 @@
                             "cells": "{{ vars.piece_cells }}",
                             "x": "{{ vars.piece_x }}",
                             "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
+                            "value": 0,
                             "only_in_bounds": true
+                          }
+                        },
+                        {
+                          "call": "@polyomino.rotate",
+                          "args": {
+                            "cells": "{{ vars.piece_cells }}",
+                            "direction": "cw",
+                            "normalize": true
+                          },
+                          "assign": "vars._rotated"
+                        },
+                        {
+                          "call": "@matrix.can_place",
+                          "args": {
+                            "grid": "board",
+                            "cells": "{{ vars._rotated }}",
+                            "x": "{{ vars.piece_x }}",
+                            "y": "{{ vars.piece_y }}"
+                          },
+                          "assign": "vars._can_rotate"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "var": "vars._can_rotate"
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_cells",
+                                  "value": "{{ vars._rotated }}"
+                                }
+                              },
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@matrix.place",
+                                "args": {
+                                  "grid": "board",
+                                  "cells": "{{ vars.piece_cells }}",
+                                  "x": "{{ vars.piece_x }}",
+                                  "y": "{{ vars.piece_y }}",
+                                  "value": "{{ vars.piece_value }}",
+                                  "only_in_bounds": true
+                                }
+                              }
+                            ]
                           }
                         }
                       ],
-                      "else": [
+                      "else": []
+                    }
+                  }
+                ],
+                "drop": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@matrix.place",
+                          "args": {
+                            "grid": "board",
+                            "cells": "{{ vars.piece_cells }}",
+                            "x": "{{ vars.piece_x }}",
+                            "y": "{{ vars.piece_y }}",
+                            "value": 0,
+                            "only_in_bounds": true
+                          }
+                        },
+                        {
+                          "call": "@while",
+                          "args": {
+                            "cond": {
+                              "call": "@matrix.can_place",
+                              "args": {
+                                "grid": "board",
+                                "cells": "{{ vars.piece_cells }}",
+                                "x": "{{ vars.piece_x }}",
+                                "y": {
+                                  "+": [
+                                    {
+                                      "var": "vars.piece_y"
+                                    },
+                                    1
+                                  ]
+                                }
+                              }
+                            },
+                            "body": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.piece_y",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars.piece_y"
+                                      },
+                                      1
+                                    ]
+                                  }
+                                }
+                              }
+                            ],
+                            "max_iterations": 24
+                          }
+                        },
                         {
                           "call": "@matrix.place",
                           "args": {
@@ -1160,290 +1761,57 @@
                             ]
                           }
                         }
-                      ]
+                      ],
+                      "else": []
                     }
                   }
                 ],
-                "rotate": [
-                  {
-                    "call": "@matrix.place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}",
-                      "value": 0,
-                      "only_in_bounds": true
-                    }
-                  },
-                  {
-                    "call": "@polyomino.rotate",
-                    "args": {
-                      "cells": "{{ vars.piece_cells }}",
-                      "direction": "cw",
-                      "normalize": true
-                    },
-                    "assign": "vars._rotated"
-                  },
-                  {
-                    "call": "@matrix.can_place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars._rotated }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}"
-                    },
-                    "assign": "vars._can_rotate"
-                  },
+                "pause": [
                   {
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "var": "vars._can_rotate"
-                      },
-                      "then": [
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.piece_cells",
-                            "value": "{{ vars._rotated }}"
-                          }
-                        },
-                        {
-                          "call": "@matrix.place",
-                          "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
-                          }
-                        }
-                      ],
-                      "else": [
-                        {
-                          "call": "@matrix.place",
-                          "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "drop": [
-                  {
-                    "call": "@matrix.place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}",
-                      "value": 0,
-                      "only_in_bounds": true
-                    }
-                  },
-                  {
-                    "call": "@while",
-                    "args": {
-                      "cond": {
-                        "call": "@matrix.can_place",
-                        "args": {
-                          "grid": "board",
-                          "cells": "{{ vars.piece_cells }}",
-                          "x": "{{ vars.piece_x }}",
-                          "y": {
-                            "+": [
-                              {
-                                "var": "vars.piece_y"
-                              },
-                              1
-                            ]
-                          }
-                        }
-                      },
-                      "body": [
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.piece_y",
-                            "value": {
-                              "+": [
-                                {
-                                  "var": "vars.piece_y"
-                                },
-                                1
-                              ]
-                            }
-                          }
-                        }
-                      ],
-                      "max_iterations": 24
-                    }
-                  },
-                  {
-                    "call": "@matrix.place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}",
-                      "value": "{{ vars.piece_value }}",
-                      "only_in_bounds": true
-                    }
-                  },
-                  {
-                    "call": "@matrix.clear_full_rows",
-                    "args": {
-                      "grid": "board"
-                    },
-                    "assign": "vars._clear"
-                  },
-                  {
-                    "call": "@if",
-                    "args": {
-                      "cond": {
-                        ">": [
+                        "==": [
                           {
-                            "var": "vars._clear.cleared"
+                            "var": "vars.state"
                           },
-                          0
+                          "running"
                         ]
                       },
                       "then": [
                         {
-                          "call": "@score.add",
+                          "call": "@set",
                           "args": {
-                            "n": {
-                              "*": [
-                                {
-                                  "var": "vars._clear.cleared"
-                                },
-                                {
-                                  "var": "vars._clear.cleared"
-                                },
-                                100
-                              ]
-                            }
+                            "var": "vars.state",
+                            "value": "paused"
                           }
                         },
                         {
-                          "call": "@set",
+                          "call": "@emit",
                           "args": {
-                            "var": "vars.lines",
-                            "value": {
-                              "+": [
-                                {
-                                  "var": "vars.lines"
-                                },
-                                {
-                                  "var": "vars._clear.cleared"
-                                }
-                              ]
+                            "event": "status",
+                            "data": {
+                              "text": "Paused"
                             }
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.drop_interval",
-                            "value": {
-                              "max": [
-                                0.12,
-                                {
-                                  "-": [
-                                    0.55,
-                                    {
-                                      "*": [
-                                        {
-                                          "var": "vars.lines"
-                                        },
-                                        0.015
-                                      ]
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "call": "@matrix.random_item",
-                    "args": {
-                      "items": "{{ vars.pieces }}"
-                    },
-                    "assign": "vars.current_piece"
-                  },
-                  {
-                    "call": "@set",
-                    "args": {
-                      "var": "vars.piece_cells",
-                      "value": "{{ vars.current_piece.cells }}"
-                    }
-                  },
-                  {
-                    "call": "@set",
-                    "args": {
-                      "var": "vars.piece_value",
-                      "value": "{{ vars.current_piece.value }}"
-                    }
-                  },
-                  {
-                    "call": "@set",
-                    "args": {
-                      "var": "vars.piece_x",
-                      "value": 3
-                    }
-                  },
-                  {
-                    "call": "@set",
-                    "args": {
-                      "var": "vars.piece_y",
-                      "value": 0
-                    }
-                  },
-                  {
-                    "call": "@matrix.can_place",
-                    "args": {
-                      "grid": "board",
-                      "cells": "{{ vars.piece_cells }}",
-                      "x": "{{ vars.piece_x }}",
-                      "y": "{{ vars.piece_y }}"
-                    },
-                    "assign": "vars._can_spawn"
-                  },
-                  {
-                    "call": "@if",
-                    "args": {
-                      "cond": {
-                        "var": "vars._can_spawn"
-                      },
-                      "then": [
-                        {
-                          "call": "@matrix.place",
-                          "args": {
-                            "grid": "board",
-                            "cells": "{{ vars.piece_cells }}",
-                            "x": "{{ vars.piece_x }}",
-                            "y": "{{ vars.piece_y }}",
-                            "value": "{{ vars.piece_value }}",
-                            "only_in_bounds": true
                           }
                         }
                       ],
                       "else": [
                         {
-                          "call": "@game_over",
-                          "args": {}
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.state",
+                            "value": "running"
+                          }
+                        },
+                        {
+                          "call": "@emit",
+                          "args": {
+                            "event": "status",
+                            "data": {
+                              "text": "Playing"
+                            }
+                          }
                         }
                       ]
                     }
@@ -1468,6 +1836,13 @@
                 "type": "call",
                 "call": "@global.reset",
                 "args": {}
+              },
+              "on_status": {
+                "type": "call",
+                "call": "@global.status",
+                "args": {
+                  "text": "{{ event.text }}"
+                }
               }
             }
           },
@@ -1558,7 +1933,14 @@
               {
                 "id": "square",
                 "symbol": "square",
-                "label": ""
+                "label": "",
+                "onDown": {
+                  "type": "call",
+                  "call": "@flame_game_input",
+                  "args": {
+                    "input": "pause"
+                  }
+                }
               }
             ]
           }
