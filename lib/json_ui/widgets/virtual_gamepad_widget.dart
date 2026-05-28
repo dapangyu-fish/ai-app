@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../interpreter.dart';
 import 'base_widget.dart';
@@ -12,21 +13,73 @@ class JsonVirtualGamepadWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
+    return _VirtualGamepad(json: json, interpreter: interpreter);
+  }
+}
+
+class _VirtualGamepad extends StatefulWidget {
+  final Map<String, dynamic> json;
+  final JsonInterpreter interpreter;
+
+  const _VirtualGamepad({required this.json, required this.interpreter});
+
+  @override
+  State<_VirtualGamepad> createState() => _VirtualGamepadState();
+}
+
+class _VirtualGamepadState extends State<_VirtualGamepad> {
+  static const _styleDefault = 'default';
+  static const _styleDpad = 'dpad';
+  static const _styleFloating = 'floating';
+
+  String _style = _styleDefault;
+  Offset _floatingLeft = const Offset(0.22, 0.78);
+  Offset _floatingRight = const Offset(0.78, 0.78);
+  bool _editingFloating = false;
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    _style = _styleFromJson();
+    _loadPrefs();
+  }
+
+  @override
+  void didUpdateWidget(covariant _VirtualGamepad oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_storageKey(oldWidget.json) != _storageKey(widget.json)) {
+      _style = _styleFromJson();
+      _floatingLeft = const Offset(0.22, 0.78);
+      _floatingRight = const Offset(0.78, 0.78);
+      _loadPrefs();
+    }
+    _overlayEntry?.markNeedsBuild();
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_style == _styleFloating) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _ensureOverlay());
+      return const SizedBox.shrink();
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _removeOverlay());
+    return _buildDocked(context, _style == _styleDpad);
+  }
+
+  Widget _buildDocked(BuildContext context, bool useDpad) {
+    final json = widget.json;
     final height = _num(json['height'], 168);
     final background =
         _color(json['backgroundColor']) ??
         Theme.of(context).colorScheme.surface.withValues(alpha: 0.92);
-    final directions = _items(json['directions']);
-    final actions = _items(json['actions']);
-    final mode = (json['mode'] ?? json['leftMode'] ?? 'dpad')
-        .toString()
-        .toLowerCase();
-    final actionLayout = (json['actionLayout'] ?? 'wrap')
-        .toString()
-        .toLowerCase();
-    final joystick = json['joystick'] is Map
-        ? (json['joystick'] as Map).map((k, v) => MapEntry(k.toString(), v))
-        : <String, dynamic>{};
 
     return SizedBox(
       height: height,
@@ -46,7 +99,7 @@ class JsonVirtualGamepadWidget extends JsonBaseWidget {
                 final gap = _num(json['gap'], 20);
                 final available = math.max(120.0, constraints.maxWidth - gap);
                 final leftWanted = _num(
-                  mode == 'joystick' ? json['joystickSize'] : json['dpadSize'],
+                  useDpad ? json['dpadSize'] : json['joystickSize'],
                   128,
                 );
                 final clusterWanted = _num(json['actionClusterSize'], 142);
@@ -55,34 +108,53 @@ class JsonVirtualGamepadWidget extends JsonBaseWidget {
                 final clusterSize = math.min(clusterWanted, maxSide);
                 final left = SizedBox.square(
                   dimension: leftSize,
-                  child: mode == 'joystick'
-                      ? _Joystick(spec: joystick, interpreter: interpreter)
-                      : _DPad(items: directions, interpreter: interpreter),
+                  child: useDpad
+                      ? _DPad(
+                          items: _directions(),
+                          interpreter: widget.interpreter,
+                        )
+                      : _Joystick(
+                          spec: _joystick(),
+                          interpreter: widget.interpreter,
+                        ),
                 );
+                final actionLayout = (json['actionLayout'] ?? 'wrap')
+                    .toString()
+                    .toLowerCase();
                 final right =
                     actionLayout == 'ps' ||
                         actionLayout == 'playstation' ||
                         actionLayout == 'diamond'
                     ? _ActionCluster(
-                        items: actions,
+                        items: _actions(),
                         size: clusterSize,
-                        interpreter: interpreter,
+                        interpreter: widget.interpreter,
                       )
                     : _ActionWrap(
-                        items: actions,
-                        interpreter: interpreter,
+                        items: _actions(),
+                        interpreter: widget.interpreter,
                         spacing: _num(json['actionSpacing'], 12),
                       );
-                return Row(
+                return Stack(
                   children: [
-                    left,
-                    SizedBox(width: gap),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: right,
-                      ),
+                    Row(
+                      children: [
+                        left,
+                        SizedBox(width: gap),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: right,
+                          ),
+                        ),
+                      ],
                     ),
+                    if (_styleMenuEnabled)
+                      Positioned(
+                        top: 0,
+                        left: math.max(0, (constraints.maxWidth - 40) / 2),
+                        child: _menuButton(context),
+                      ),
                   ],
                 );
               },
@@ -91,6 +163,369 @@ class JsonVirtualGamepadWidget extends JsonBaseWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildFloatingOverlay(BuildContext context) {
+    final joystickSize = _num(widget.json['floatingJoystickSize'], 118);
+    final clusterSize = _num(widget.json['floatingActionClusterSize'], 138);
+    final opacity = _num(widget.json['floatingOpacity'], 0.72).clamp(0.25, 1.0);
+
+    return Positioned.fill(
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final area = Size(constraints.maxWidth, constraints.maxHeight);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _floatingControl(
+                  area: area,
+                  center: _floatingLeft,
+                  size: joystickSize,
+                  onChanged: (v) => _updateFloatingPosition(left: v),
+                  child: Opacity(
+                    opacity: opacity,
+                    child: _Joystick(
+                      spec: _joystick(),
+                      interpreter: widget.interpreter,
+                    ),
+                  ),
+                ),
+                _floatingControl(
+                  area: area,
+                  center: _floatingRight,
+                  size: clusterSize,
+                  onChanged: (v) => _updateFloatingPosition(right: v),
+                  child: Opacity(
+                    opacity: opacity,
+                    child: _ActionCluster(
+                      items: _actions(),
+                      size: clusterSize,
+                      interpreter: widget.interpreter,
+                    ),
+                  ),
+                ),
+                if (_styleMenuEnabled)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: _menuButton(context, floating: true),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _floatingControl({
+    required Size area,
+    required Offset center,
+    required double size,
+    required ValueChanged<Offset> onChanged,
+    required Widget child,
+  }) {
+    final clamped = _clampNormalized(center, area, size);
+    final left = area.width * clamped.dx - size / 2;
+    final top = area.height * clamped.dy - size / 2;
+    return Positioned(
+      left: left,
+      top: top,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onPanUpdate: _editingFloating
+            ? (details) {
+                final next = Offset(
+                  (area.width * clamped.dx + details.delta.dx) / area.width,
+                  (area.height * clamped.dy + details.delta.dy) / area.height,
+                );
+                onChanged(_clampNormalized(next, area, size));
+              }
+            : null,
+        child: DecoratedBox(
+          decoration: _editingFloating
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(size / 2),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    width: 2,
+                  ),
+                )
+              : const BoxDecoration(),
+          child: IgnorePointer(
+            ignoring: _editingFloating,
+            child: SizedBox.square(dimension: size, child: child),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _menuButton(BuildContext context, {bool floating = false}) {
+    if (floating && _editingFloating) {
+      return _RoundToolButton(
+        icon: Icons.check,
+        tooltip: _t(context, 'lock'),
+        onPressed: () {
+          setState(() => _editingFloating = false);
+          _savePrefs();
+          _overlayEntry?.markNeedsBuild();
+        },
+      );
+    }
+    return Material(
+      color: Colors.transparent,
+      child: PopupMenuButton<String>(
+        tooltip: _t(context, 'style'),
+        icon: Icon(
+          Icons.sports_esports,
+          color: Colors.white.withValues(alpha: floating ? 0.88 : 0.78),
+          size: 22,
+        ),
+        color: Theme.of(context).colorScheme.surface,
+        onSelected: (value) {
+          switch (value) {
+            case _styleDefault:
+            case _styleDpad:
+            case _styleFloating:
+              _setStyle(value);
+              break;
+            case 'edit':
+              _setStyle(_styleFloating, edit: true);
+              break;
+            case 'reset':
+              setState(() {
+                _floatingLeft = const Offset(0.22, 0.78);
+                _floatingRight = const Offset(0.78, 0.78);
+              });
+              _savePrefs();
+              _overlayEntry?.markNeedsBuild();
+              break;
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(value: _styleDefault, child: Text(_t(context, 'ps'))),
+          PopupMenuItem(value: _styleDpad, child: Text(_t(context, 'dpad'))),
+          PopupMenuItem(
+            value: _styleFloating,
+            child: Text(_t(context, 'floating')),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(value: 'edit', child: Text(_t(context, 'edit'))),
+          PopupMenuItem(value: 'reset', child: Text(_t(context, 'reset'))),
+        ],
+      ),
+    );
+  }
+
+  void _setStyle(String style, {bool edit = false}) {
+    setState(() {
+      _style = style;
+      _editingFloating = style == _styleFloating && edit;
+    });
+    _savePrefs();
+    _overlayEntry?.markNeedsBuild();
+  }
+
+  void _updateFloatingPosition({Offset? left, Offset? right}) {
+    setState(() {
+      if (left != null) _floatingLeft = left;
+      if (right != null) _floatingRight = right;
+    });
+    _overlayEntry?.markNeedsBuild();
+  }
+
+  void _ensureOverlay() {
+    if (!mounted || _style != _styleFloating) return;
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return;
+    if (_overlayEntry == null) {
+      _overlayEntry = OverlayEntry(builder: _buildFloatingOverlay);
+      overlay.insert(_overlayEntry!);
+    } else {
+      _overlayEntry!.markNeedsBuild();
+    }
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  Future<void> _loadPrefs() async {
+    if (!_styleMenuEnabled) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final prefix = _prefsPrefix;
+      final savedStyle = prefs.getString('$prefix.style');
+      final lx = prefs.getDouble('$prefix.leftX');
+      final ly = prefs.getDouble('$prefix.leftY');
+      final rx = prefs.getDouble('$prefix.rightX');
+      final ry = prefs.getDouble('$prefix.rightY');
+      if (!mounted) return;
+      setState(() {
+        if (_isStyle(savedStyle)) _style = savedStyle!;
+        if (lx != null && ly != null) _floatingLeft = Offset(lx, ly);
+        if (rx != null && ry != null) _floatingRight = Offset(rx, ry);
+      });
+      _overlayEntry?.markNeedsBuild();
+    } catch (_) {
+      // Non-critical local preference; keep JSON defaults if unavailable.
+    }
+  }
+
+  Future<void> _savePrefs() async {
+    if (!_styleMenuEnabled) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final prefix = _prefsPrefix;
+      await prefs.setString('$prefix.style', _style);
+      await prefs.setDouble('$prefix.leftX', _floatingLeft.dx);
+      await prefs.setDouble('$prefix.leftY', _floatingLeft.dy);
+      await prefs.setDouble('$prefix.rightX', _floatingRight.dx);
+      await prefs.setDouble('$prefix.rightY', _floatingRight.dy);
+    } catch (_) {
+      // Controls must keep working even if preference storage fails.
+    }
+  }
+
+  List<Map<String, dynamic>> _directions() {
+    final explicit = _items(widget.json['directions']);
+    if (explicit.isNotEmpty) return explicit;
+    final joystick = _joystick();
+    return [
+      _directionItem('up', '↑', 0, -1, -math.pi / 2, joystick),
+      _directionItem('left', '←', -1, 0, math.pi, joystick),
+      _directionItem('right', '→', 1, 0, 0, joystick),
+      _directionItem('down', '↓', 0, 1, math.pi / 2, joystick),
+    ];
+  }
+
+  Map<String, dynamic> _directionItem(
+    String id,
+    String label,
+    double x,
+    double y,
+    double angle,
+    Map<String, dynamic> joystick,
+  ) {
+    return {
+      'id': id,
+      'label': label,
+      'onDown': joystick['onChange'],
+      'onUp': joystick['onEnd'] ?? joystick['onChange'],
+      '_downEvent': {
+        'x': x,
+        'y': y,
+        'strength': 1.0,
+        'angle': angle,
+        'direction': id,
+      },
+      '_upEvent': const {
+        'x': 0.0,
+        'y': 0.0,
+        'strength': 0.0,
+        'angle': 0.0,
+        'direction': 'center',
+      },
+    };
+  }
+
+  List<Map<String, dynamic>> _actions() => _items(widget.json['actions']);
+
+  Map<String, dynamic> _joystick() => widget.json['joystick'] is Map
+      ? (widget.json['joystick'] as Map).map(
+          (k, v) => MapEntry(k.toString(), v),
+        )
+      : <String, dynamic>{};
+
+  Offset _clampNormalized(Offset value, Size area, double controlSize) {
+    final minX = area.width <= 0 ? 0.0 : (controlSize / 2) / area.width;
+    final minY = area.height <= 0 ? 0.0 : (controlSize / 2) / area.height;
+    return Offset(
+      value.dx.clamp(minX, 1 - minX).toDouble(),
+      value.dy.clamp(minY, 1 - minY).toDouble(),
+    );
+  }
+
+  String _styleFromJson() {
+    final raw = (widget.json['style'] ?? widget.json['controlStyle'])
+        ?.toString()
+        .toLowerCase();
+    if (_isStyle(raw)) return raw!;
+    final mode = (widget.json['mode'] ?? widget.json['leftMode'] ?? 'dpad')
+        .toString()
+        .toLowerCase();
+    return mode == 'joystick' ? _styleDefault : _styleDpad;
+  }
+
+  bool _isStyle(String? value) {
+    return value == _styleDefault ||
+        value == _styleDpad ||
+        value == _styleFloating;
+  }
+
+  bool get _styleMenuEnabled {
+    return widget.json['styleMenu'] == true ||
+        widget.json['showStyleMenu'] == true;
+  }
+
+  String get _prefsPrefix {
+    return 'virtual_gamepad.${_storageKey(widget.json)}';
+  }
+
+  static String _storageKey(Map<String, dynamic> json) {
+    final raw = json['storageKey'] ?? json['id'] ?? 'default';
+    final text = raw.toString().trim();
+    if (text.isEmpty || text.contains('{{')) return 'default';
+    return text;
+  }
+
+  String _t(BuildContext context, String key) {
+    final code = Localizations.localeOf(context).languageCode;
+    const zh = {
+      'style': '手柄样式',
+      'ps': '默认 PS 样式',
+      'dpad': '方向键',
+      'floating': '悬浮模式',
+      'edit': '调整悬浮位置',
+      'reset': '重置悬浮位置',
+      'lock': '锁定位置',
+    };
+    const de = {
+      'style': 'Gamepad-Stil',
+      'ps': 'Standard PS',
+      'dpad': 'Richtungstasten',
+      'floating': 'Schwebend',
+      'edit': 'Position anpassen',
+      'reset': 'Position zurücksetzen',
+      'lock': 'Position sperren',
+    };
+    const es = {
+      'style': 'Estilo de mando',
+      'ps': 'PS predeterminado',
+      'dpad': 'Cruceta',
+      'floating': 'Flotante',
+      'edit': 'Ajustar posición',
+      'reset': 'Restablecer posición',
+      'lock': 'Bloquear posición',
+    };
+    const en = {
+      'style': 'Gamepad style',
+      'ps': 'Default PS',
+      'dpad': 'D-pad',
+      'floating': 'Floating',
+      'edit': 'Adjust floating layout',
+      'reset': 'Reset floating layout',
+      'lock': 'Lock layout',
+    };
+    return switch (code) {
+      'zh' => zh[key] ?? en[key]!,
+      'de' => de[key] ?? en[key]!,
+      'es' => es[key] ?? en[key]!,
+      _ => en[key]!,
+    };
   }
 }
 
@@ -151,12 +586,15 @@ class _ActionCluster extends StatelessWidget {
       return bySymbol[symbol] ?? byId[fallbackId];
     }
 
-    final buttonSize = size * 0.43;
-    Widget positioned(String symbol, String fallbackId, Alignment alignment) {
+    final buttonSize = size * 0.34;
+    final center = size / 2;
+    final offset = size * 0.27;
+    Widget positioned(String symbol, String fallbackId, Offset buttonCenter) {
       final item = pick(symbol, fallbackId);
       if (item == null) return const SizedBox.shrink();
-      return Align(
-        alignment: alignment,
+      return Positioned(
+        left: buttonCenter.dx - buttonSize / 2,
+        top: buttonCenter.dy - buttonSize / 2,
         child: _buildActionButton(context, item, interpreter, buttonSize),
       );
     }
@@ -165,10 +603,10 @@ class _ActionCluster extends StatelessWidget {
       dimension: size,
       child: Stack(
         children: [
-          positioned('triangle', 'triangle', Alignment.topCenter),
-          positioned('circle', 'circle', Alignment.centerRight),
-          positioned('cross', 'cross', Alignment.bottomCenter),
-          positioned('square', 'square', Alignment.centerLeft),
+          positioned('triangle', 'triangle', Offset(center, center - offset)),
+          positioned('circle', 'circle', Offset(center + offset, center)),
+          positioned('cross', 'cross', Offset(center, center + offset)),
+          positioned('square', 'square', Offset(center - offset, center)),
         ],
       ),
     );
@@ -203,12 +641,14 @@ class _DPad extends StatelessWidget {
           context,
           item['onDown'] ?? item['onPressed'],
           id,
+          _eventMap(item['_downEvent']),
         ),
         onUp: () => _runAction(
           interpreter,
           context,
           item['onUp'] ?? item['onReleased'],
           id,
+          _eventMap(item['_upEvent']),
         ),
       );
     }
@@ -272,6 +712,31 @@ Widget _buildActionButton(
       item['id']?.toString(),
     ),
   );
+}
+
+class _RoundToolButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const _RoundToolButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.42),
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: tooltip,
+        icon: Icon(icon, color: Colors.white, size: 22),
+        onPressed: onPressed,
+      ),
+    );
+  }
 }
 
 class _Joystick extends StatefulWidget {
@@ -584,6 +1049,11 @@ List<Map<String, dynamic>> _items(dynamic value) {
       .whereType<Map>()
       .map((item) => item.map((k, v) => MapEntry(k.toString(), v)))
       .toList();
+}
+
+Map<String, dynamic> _eventMap(dynamic value) {
+  if (value is! Map) return const {};
+  return value.map((k, v) => MapEntry(k.toString(), v));
 }
 
 double _num(dynamic value, double fallback) {
