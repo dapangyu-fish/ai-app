@@ -57,6 +57,7 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
   late Map<String, Offset> _centers;
   late Map<String, double> _sizes;
   final Map<String, _FloatingEditGesture> _editGestures = {};
+  final Map<int, String> _pointerItemIds = {};
   PageRoute<dynamic>? _route;
   bool _routeVisible = true;
   bool _ensureOverlayScheduled = false;
@@ -100,16 +101,24 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
       _centers = _defaultCenters();
       _sizes = _defaultSizes();
       _editGestures.clear();
+      _pointerItemIds.clear();
       _loadPrefs();
     }
     if (oldWidget.resetRevision != widget.resetRevision) {
       _centers = _defaultCenters();
       _sizes = _defaultSizes();
       _editGestures.clear();
+      _pointerItemIds.clear();
+      _savePrefs();
+    }
+    if (oldWidget.editing && !widget.editing) {
+      _editGestures.clear();
+      _pointerItemIds.clear();
       _savePrefs();
     }
     if (!widget.enabled || !_canShowOverlay) {
       _editGestures.clear();
+      _pointerItemIds.clear();
       _removeOverlay();
       return;
     }
@@ -165,7 +174,7 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final area = Size(constraints.maxWidth, constraints.maxHeight);
-              return Stack(
+              final stack = Stack(
                 clipBehavior: Clip.none,
                 children: [
                   for (final item in widget.items)
@@ -173,6 +182,24 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
                   if (widget.topRight != null)
                     Positioned(top: 10, right: 10, child: widget.topRight!),
                 ],
+              );
+              if (!widget.editing) return stack;
+              return Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (event) => _handlePointerDown(
+                  item: _itemForPointerDown(area, context, event),
+                  area: area,
+                  overlayContext: context,
+                  event: event,
+                ),
+                onPointerMove: (event) => _handlePointerMove(
+                  area: area,
+                  overlayContext: context,
+                  event: event,
+                ),
+                onPointerUp: (event) => _handlePointerUp(event.pointer),
+                onPointerCancel: (event) => _handlePointerUp(event.pointer),
+                child: stack,
               );
             },
           ),
@@ -198,30 +225,10 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
       top: top,
       child: Listener(
         behavior: HitTestBehavior.translucent,
-        onPointerDown: widget.editing
-            ? (event) => _handlePointerDown(
-                item: item,
-                area: area,
-                left: left,
-                top: top,
-                event: event,
-              )
-            : null,
-        onPointerMove: widget.editing
-            ? (event) => _handlePointerMove(
-                item: item,
-                area: area,
-                left: left,
-                top: top,
-                event: event,
-              )
-            : null,
-        onPointerUp: widget.editing
-            ? (event) => _handlePointerUp(item.id, event.pointer)
-            : null,
-        onPointerCancel: widget.editing
-            ? (event) => _handlePointerUp(item.id, event.pointer)
-            : null,
+        onPointerDown: null,
+        onPointerMove: null,
+        onPointerUp: null,
+        onPointerCancel: null,
         child: DecoratedBox(
           decoration: widget.editing
               ? BoxDecoration(
@@ -304,6 +311,7 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
 
   void _removeOverlay() {
     _editGestures.clear();
+    _pointerItemIds.clear();
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
@@ -364,27 +372,27 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
 
   double _clampSize(double value, FloatingLayerItemSpec item, Size area) {
     final minSize = item.minSize ?? math.max(32.0, item.size * 0.5);
-    var maxSize = item.maxSize ?? item.size * 2.0;
-    if (area.width > 0 && area.height > 0) {
-      maxSize = math.min(maxSize, math.min(area.width, area.height) * 0.72);
-    }
+    final maxSize = item.maxSize ?? 10000.0;
     if (maxSize < minSize) return minSize;
     return value.clamp(minSize, maxSize).toDouble();
   }
 
   void _handlePointerDown({
-    required FloatingLayerItemSpec item,
+    required FloatingLayerItemSpec? item,
     required Size area,
-    required double left,
-    required double top,
+    required BuildContext overlayContext,
     required PointerDownEvent event,
   }) {
+    if (item == null) return;
+    final point = _pointInOverlay(overlayContext, event.position);
+    if (point == null) return;
+
     final gesture = _editGestures.putIfAbsent(
       item.id,
       _FloatingEditGesture.new,
     );
-    final point = Offset(left, top) + event.localPosition;
     gesture.pointers[event.pointer] = point;
+    _pointerItemIds[event.pointer] = item.id;
 
     if (gesture.anchorPointer == null) {
       gesture.anchorPointer = event.pointer;
@@ -399,16 +407,19 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
   }
 
   void _handlePointerMove({
-    required FloatingLayerItemSpec item,
     required Size area,
-    required double left,
-    required double top,
+    required BuildContext overlayContext,
     required PointerMoveEvent event,
   }) {
+    final itemId = _pointerItemIds[event.pointer];
+    if (itemId == null) return;
+    final item = _itemById(itemId);
+    if (item == null) return;
     final gesture = _editGestures[item.id];
     if (gesture == null) return;
 
-    final point = Offset(left, top) + event.localPosition;
+    final point = _pointInOverlay(overlayContext, event.position);
+    if (point == null) return;
     gesture.pointers[event.pointer] = point;
 
     final anchorPointer = gesture.anchorPointer;
@@ -445,7 +456,9 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
     _markOverlayNeedsBuild();
   }
 
-  void _handlePointerUp(String itemId, int pointer) {
+  void _handlePointerUp(int pointer) {
+    final itemId = _pointerItemIds.remove(pointer);
+    if (itemId == null) return;
     final gesture = _editGestures[itemId];
     if (gesture == null) return;
     final wasAnchor = pointer == gesture.anchorPointer;
@@ -522,10 +535,7 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
     final scalePoint = gesture.pointers[scalePointer];
     if (scalePoint == null) return;
 
-    final ratio = ((scalePoint - anchor).distance / initialDistance).clamp(
-      0.35,
-      3.0,
-    );
+    final ratio = (scalePoint - anchor).distance / initialDistance;
     final nextSize = _clampSize(initialSize * ratio, item, area);
     final centerRatio = initialSize <= 0 ? 1.0 : nextSize / initialSize;
     final nextCenterPx = anchor + (initialCenter - anchor) * centerRatio;
@@ -544,10 +554,66 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
   Offset _clampNormalized(Offset value, Size area, double controlSize) {
     final minX = area.width <= 0 ? 0.0 : (controlSize / 2) / area.width;
     final minY = area.height <= 0 ? 0.0 : (controlSize / 2) / area.height;
-    return Offset(
-      value.dx.clamp(minX, 1 - minX).toDouble(),
-      value.dy.clamp(minY, 1 - minY).toDouble(),
-    );
+    return Offset(_clampAxis(value.dx, minX), _clampAxis(value.dy, minY));
+  }
+
+  double _clampAxis(double value, double min) {
+    if (min >= 0.5) return 0.5;
+    return value.clamp(min, 1 - min).toDouble();
+  }
+
+  Offset? _pointInOverlay(BuildContext overlayContext, Offset globalPosition) {
+    final box = overlayContext.findRenderObject();
+    if (box is! RenderBox) return null;
+    return box.globalToLocal(globalPosition);
+  }
+
+  FloatingLayerItemSpec? _itemForPointerDown(
+    Size area,
+    BuildContext overlayContext,
+    PointerDownEvent event,
+  ) {
+    final activeItem = _activeItemForScale();
+    if (activeItem != null) return activeItem;
+
+    final point = _pointInOverlay(overlayContext, event.position);
+    if (point == null) return null;
+    return _hitTestItem(area, point);
+  }
+
+  FloatingLayerItemSpec? _activeItemForScale() {
+    for (final entry in _editGestures.entries) {
+      final gesture = entry.value;
+      if (gesture.anchorPointer != null && gesture.scalePointer == null) {
+        return _itemById(entry.key);
+      }
+    }
+    return null;
+  }
+
+  FloatingLayerItemSpec? _hitTestItem(Size area, Offset point) {
+    for (final item in widget.items.reversed) {
+      final size = _currentSize(item, area);
+      final center = _clampNormalized(
+        _centers[item.id] ?? item.center,
+        area,
+        size,
+      );
+      final rect = Rect.fromCenter(
+        center: Offset(area.width * center.dx, area.height * center.dy),
+        width: size,
+        height: size,
+      ).inflate(12);
+      if (rect.contains(point)) return item;
+    }
+    return null;
+  }
+
+  FloatingLayerItemSpec? _itemById(String id) {
+    for (final item in widget.items) {
+      if (item.id == id) return item;
+    }
+    return null;
   }
 
   String get _prefsPrefix => 'floating_layer.${widget.storageKey}';
