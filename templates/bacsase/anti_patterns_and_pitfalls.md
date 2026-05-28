@@ -898,7 +898,7 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 
 `GameLogicEngine` 会取不到 `cond`，条件被当成 null/false，`then` 永远不会跑。
 后果是 loading 初始化、地图 object spawn、`@platformer.step`、敌人 AI、碰撞检测全被静默跳过。
-外部 `virtual_gamepad` 仍然能把输入发进游戏，但每帧更新逻辑没执行，所以表现就是“摇杆无效”。
+外部手柄仍然能把输入发进游戏，但每帧更新逻辑没执行，所以表现就是“摇杆无效”。
 
 另一个常见白屏来源是把 `flame_game` 当作数据塞进组件 props：
 
@@ -938,10 +938,10 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 
 - 普通 JSON-APP 逻辑用 `condition`；`flame_game` 内部逻辑用 `cond`。
 - `flame_game` 必须直接作为 `ui.screens` 下的可渲染 widget 节点出现；不要放进任何组件的 `props.game`。
-- `game-controls.psJoystickGamepad` 只接受输入映射和外观尺寸类 props，例如 `moveInput`、`moveEndInput`、`jumpInput`、`jumpEndInput`、`attackInput`、`height`、`backgroundColor`；它不是游戏容器。手柄样式切换、D-pad、悬浮位置调整由组件内部菜单处理，不要通过 `props.game` 或 `props.actionButtons` 扩展它。
+- `game-controls.psJoystickGamepad` / `game-controls.dpadGamepad` 只接受输入映射和外观尺寸类 props，例如 `moveInput`、`moveEndInput`、`jumpInput`、`attackInput`、`upInput`、`leftInput`、`height`、`backgroundColor`；它不是游戏容器。手柄样式切换、D-pad、悬浮位置调整由 JSON 组件库内部组合完成，不要通过 `props.game` 或 `props.actionButtons` 扩展它。
 - 正确组合方式是：真实 `flame_game` 节点负责画面和逻辑，独立的 gamepad 节点作为 sibling 或 overlay 负责输入。
 - 在生成游戏时，先确认 `frame.logic` 里至少有一条 loading -> ready/running 的状态推进，并且这条路径真实会执行。
-- `virtual_gamepad` 只负责发输入；移动必须在 `flame_game.frame.logic` 里把 `vars.move_dir` 转成 `@entity.set(vx)` + `@platformer.step`。
+- `game-controls.psJoystickGamepad` 是 JSON 组件库，内部由 `analog_stick`、`gesture_detector`、`floating_layer` 等通用原子组合；它只负责发输入。移动必须在 `flame_game.frame.logic` 里把 `vars.move_dir` 转成 `@entity.set(vx)` + `@platformer.step`。
 - 内联 `tiled-json-v1` 地图优先使用绝对图片 URL，或者保证 `image` 相对路径与 `map_data.source` / `tileset.source` 的组合后仍能访问。
 - 如果使用 asset pack 根路径，最稳的是把 tileset `image` 写成完整 URL；不要假设它相对 `base_url` 根目录解析。
 - `@entity.set` 生成时优先写标量字段 `x/y/w/h/vx/vy/auto_update/state.xxx`；不要依赖一次性 `size` / `position` 数组，复杂逻辑里分别写 `w/h` 或 `x/y` 更容易排查。

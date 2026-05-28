@@ -9,7 +9,8 @@
     "author": "fish"
   },
   "dependencies": {
-    "common-ui": "^1.3.0"
+    "common-ui": "^1.3.0",
+    "game-controls": "^1.0.4"
   },
   "assets": {
     "bundles": {
@@ -1847,102 +1848,20 @@
             }
           },
           {
-            "type": "virtual_gamepad",
-            "mode": "dpad",
-            "actionLayout": "ps",
-            "height": 176,
-            "backgroundColor": "#0B1020",
-            "dpadSize": 124,
-            "actionClusterSize": 132,
-            "directions": [
-              {
-                "id": "up",
-                "label": "↑",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "rotate"
-                  }
-                }
-              },
-              {
-                "id": "left",
-                "label": "←",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "left"
-                  }
-                }
-              },
-              {
-                "id": "right",
-                "label": "→",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "right"
-                  }
-                }
-              },
-              {
-                "id": "down",
-                "label": "↓",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "soft_down"
-                  }
-                }
-              }
-            ],
-            "actions": [
-              {
-                "id": "rotate",
-                "symbol": "triangle",
-                "label": "",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "rotate"
-                  }
-                }
-              },
-              {
-                "id": "drop",
-                "symbol": "circle",
-                "label": "",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "drop"
-                  }
-                }
-              },
-              {
-                "id": "cross",
-                "symbol": "cross",
-                "label": ""
-              },
-              {
-                "id": "square",
-                "symbol": "square",
-                "label": "",
-                "onDown": {
-                  "type": "call",
-                  "call": "@flame_game_input",
-                  "args": {
-                    "input": "pause"
-                  }
-                }
-              }
-            ]
+            "type": "ref",
+            "from": "game-controls",
+            "widget": "dpadGamepad",
+            "props": {
+              "upInput": "rotate",
+              "leftInput": "left",
+              "rightInput": "right",
+              "downInput": "soft_down",
+              "triangleInput": "rotate",
+              "circleInput": "drop",
+              "squareInput": "pause",
+              "height": 176,
+              "backgroundColor": "#0B1020"
+            }
           }
         ]
       }

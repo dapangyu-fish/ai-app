@@ -78,7 +78,7 @@ def _derive_tech_stack(
     # 游戏引擎
     if "flame_game" in widgets:
         tech.add("game-engine")
-    if "virtual_gamepad" in widgets or any_builtin("@flame_game_input") or "game-controls" in deps:
+    if any_builtin("@flame_game_input") or "game-controls" in deps:
         tech.add("virtual-gamepad")
     if any_builtin("@platformer."):
         tech.add("platformer-physics")

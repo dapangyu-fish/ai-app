@@ -1,7 +1,7 @@
 // GestureDetector 控件 — 通用手势检测（无水波纹）
 // 比 inkwell 更灵活但少了 Material 视觉反馈
-// 支持: child, onTap, onDoubleTap, onLongPress, onSwipeLeft, onSwipeRight,
-//       onSwipeUp, onSwipeDown
+// 支持: child, onTap, onTapDown, onTapUp, onTapCancel, onDoubleTap,
+//       onLongPress, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'action_helper.dart';
@@ -22,24 +22,56 @@ class JsonGestureDetectorWidget extends JsonBaseWidget {
       child = const SizedBox.shrink();
     }
 
-    final onTap = resolveActionAtBuildTime(json['onTap'], interpreter)
-        as Map<String, dynamic>?;
-    final onDouble = resolveActionAtBuildTime(json['onDoubleTap'], interpreter)
-        as Map<String, dynamic>?;
-    final onLong = resolveActionAtBuildTime(json['onLongPress'], interpreter)
-        as Map<String, dynamic>?;
-    final onSwipeLeft = resolveActionAtBuildTime(json['onSwipeLeft'], interpreter)
-        as Map<String, dynamic>?;
-    final onSwipeRight = resolveActionAtBuildTime(json['onSwipeRight'], interpreter)
-        as Map<String, dynamic>?;
-    final onSwipeUp = resolveActionAtBuildTime(json['onSwipeUp'], interpreter)
-        as Map<String, dynamic>?;
-    final onSwipeDown = resolveActionAtBuildTime(json['onSwipeDown'], interpreter)
-        as Map<String, dynamic>?;
+    final onTap =
+        resolveActionAtBuildTime(json['onTap'], interpreter)
+            as Map<String, dynamic>?;
+    final onTapDown = json['onTapDown'] as Map<String, dynamic>?;
+    final onTapUp = json['onTapUp'] as Map<String, dynamic>?;
+    final onTapCancel = json['onTapCancel'] as Map<String, dynamic>?;
+    final onDouble =
+        resolveActionAtBuildTime(json['onDoubleTap'], interpreter)
+            as Map<String, dynamic>?;
+    final onLong =
+        resolveActionAtBuildTime(json['onLongPress'], interpreter)
+            as Map<String, dynamic>?;
+    final onSwipeLeft =
+        resolveActionAtBuildTime(json['onSwipeLeft'], interpreter)
+            as Map<String, dynamic>?;
+    final onSwipeRight =
+        resolveActionAtBuildTime(json['onSwipeRight'], interpreter)
+            as Map<String, dynamic>?;
+    final onSwipeUp =
+        resolveActionAtBuildTime(json['onSwipeUp'], interpreter)
+            as Map<String, dynamic>?;
+    final onSwipeDown =
+        resolveActionAtBuildTime(json['onSwipeDown'], interpreter)
+            as Map<String, dynamic>?;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap != null
           ? () => interpreter.executeAction(onTap, context)
+          : null,
+      onTapDown: onTapDown != null
+          ? (details) => _runPointerAction(
+              interpreter,
+              context,
+              onTapDown,
+              details.localPosition,
+              details.globalPosition,
+            )
+          : null,
+      onTapUp: onTapUp != null
+          ? (details) => _runPointerAction(
+              interpreter,
+              context,
+              onTapUp,
+              details.localPosition,
+              details.globalPosition,
+            )
+          : null,
+      onTapCancel: onTapCancel != null
+          ? () => interpreter.executeAction(onTapCancel, context)
           : null,
       onDoubleTap: onDouble != null
           ? () => interpreter.executeAction(onDouble, context)
@@ -72,4 +104,23 @@ class JsonGestureDetectorWidget extends JsonBaseWidget {
       child: child,
     );
   }
+}
+
+void _runPointerAction(
+  JsonInterpreter interpreter,
+  BuildContext context,
+  Map<String, dynamic> action,
+  Offset local,
+  Offset global,
+) {
+  interpreter
+      .executeActionWithEvent(action, context, {
+        'localX': local.dx,
+        'localY': local.dy,
+        'globalX': global.dx,
+        'globalY': global.dy,
+      })
+      .catchError((e, st) {
+        debugPrint('[gesture_detector] pointer action error: $e');
+      });
 }
