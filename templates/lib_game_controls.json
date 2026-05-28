@@ -3,7 +3,7 @@
   "appid": "435a779c-0f12-4993-b19c-0991b681cc7a",
   "meta": {
     "name": "game-controls",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "type": "library",
     "description": "Reusable JSON game controls composed from generic atoms: analog_stick, gesture_detector, floating_layer, stack, and button.",
     "author": "fish",
@@ -51,44 +51,28 @@
               "resetRevision": "{{ global._gamepadReset }}",
               "topRight": {
                 "type": "container",
-                "width": 176,
-                "padding": 8,
-                "borderRadius": 16,
-                "color": "#111827CC",
+                "width": 78,
+                "padding": 4,
+                "borderRadius": 14,
+                "color": "#11182799",
                 "layout": "column",
                 "children": [
                   {
-                    "type": "dropdown",
-                    "bind": "global._gamepadStyle",
-                    "placeholder": "Gamepad",
-                    "options": [
-                      {
-                        "label": "PS",
-                        "value": "default"
-                      },
-                      {
-                        "label": "D-pad",
-                        "value": "dpad"
-                      },
-                      {
-                        "label": "Floating",
-                        "value": "floating"
-                      }
-                    ]
-                  },
-                  {
                     "type": "button",
                     "label": "Edit",
+                    "icon": "edit",
                     "visible": {
                       "!": {
                         "var": "global._gamepadEditing"
                       }
                     },
                     "style": {
-                      "fontSize": 12,
-                      "paddingH": 10,
-                      "paddingV": 6,
-                      "borderRadius": 14
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
                     },
                     "action": {
                       "call": "@set",
@@ -101,14 +85,17 @@
                   {
                     "type": "button",
                     "label": "Lock",
+                    "icon": "lock",
                     "visible": {
                       "var": "global._gamepadEditing"
                     },
                     "style": {
-                      "fontSize": 12,
-                      "paddingH": 10,
-                      "paddingV": 6,
-                      "borderRadius": 14
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
                     },
                     "action": {
                       "call": "@set",
@@ -121,11 +108,17 @@
                   {
                     "type": "button",
                     "label": "Reset",
+                    "icon": "restart",
+                    "visible": {
+                      "var": "global._gamepadEditing"
+                    },
                     "style": {
-                      "fontSize": 12,
-                      "paddingH": 10,
-                      "paddingV": 6,
-                      "borderRadius": 14
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
                     },
                     "action": {
                       "call": "@set",
@@ -139,6 +132,40 @@
                             1
                           ]
                         }
+                      }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Dock",
+                    "icon": "collapse",
+                    "style": {
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
+                    },
+                    "action": {
+                      "call": "@parallel",
+                      "args": {
+                        "steps": [
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global._gamepadStyle",
+                              "value": "default"
+                            }
+                          },
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global._gamepadEditing",
+                              "value": false
+                            }
+                          }
+                        ]
                       }
                     }
                   }
@@ -734,7 +761,14 @@
                           "label": "Float",
                           "value": "floating"
                         }
-                      ]
+                      ],
+                      "action": {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._gamepadEditing",
+                          "value": false
+                        }
+                      }
                     }
                   ]
                 },
