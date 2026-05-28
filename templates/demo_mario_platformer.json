@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -277,8 +277,11 @@
                 "move_axis": 0,
                 "facing": 1,
                 "jump_pressed": false,
+                "jump_held": false,
                 "gravity": 1700,
                 "jump_vy": -560,
+                "jump_higher_factor": 0.4,
+                "jump_higher_max_vy": -340,
                 "speed": 260,
                 "hit_enemy": null,
                 "hit_fireball_enemy": null,
@@ -2753,8 +2756,24 @@
                             "var": "vars.jump_pressed",
                             "value": true
                           }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.jump_held",
+                            "value": true
+                          }
                         }
                       ]
+                    }
+                  }
+                ],
+                "jump_end": [
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.jump_held",
+                      "value": false
                     }
                   }
                 ],
@@ -4847,7 +4866,19 @@
                             "id": "player",
                             "map": "map",
                             "dt": "{{ event.dt }}",
-                            "gravity": "{{ vars.gravity }}",
+                            "gravity": {
+                              "if": [
+                                {
+                                  "and": [
+                                    { "var": "vars.jump_held" },
+                                    { ">": [{ "var": "entities.player.vy" }, { "var": "vars.jump_higher_max_vy" }] },
+                                    { "<": [{ "var": "entities.player.vy" }, 0] }
+                                  ]
+                                },
+                                { "*": [{ "var": "vars.gravity" }, { "var": "vars.jump_higher_factor" }] },
+                                { "var": "vars.gravity" }
+                              ]
+                            },
                             "jump_velocity": "{{ vars.jump_vy }}",
                             "jump": "{{ vars.jump_pressed }}",
                             "max_fall": 1100
@@ -6816,6 +6847,7 @@
               "moveInput": "move_axis",
               "moveEndInput": "move_axis",
               "jumpInput": "jump",
+              "jumpEndInput": "jump_end",
               "attackInput": "attack",
               "height": 176,
               "backgroundColor": "#193C78"
