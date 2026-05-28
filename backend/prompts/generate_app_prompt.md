@@ -132,7 +132,7 @@ app["ui"]["screens"].append(screen("home", title={"en": "Home", "zh": "首页"},
 save_json(app, out, packs=[pack])
 ```
 
-游戏生成器可继续使用 `json_app_builder` 里的 `pixel_entity`、`sprite_entity`、`animated_sprite_entity`、`parallax_entity`、`tiled_map_entity`、`tile_layer`、`fill_rect`、`tiled_object`、`tiled_objects_from_run_and_gun_plan`、`tileset`、`tiled_map`、`AssetPack.frame_size()`、`AssetPack.animation()`、`run_and_gun_stage_plan()` 等工具。`save_json(..., packs=[pack])` 会提前拦截手拼 asset URL、重复静态 spawn id 等低级错误。非常小的一屏表单 / 静态页面可以直接写 JSON，但仍必须执行上传前自检。
+游戏生成器可继续使用 `json_app_builder` 里的 `pixel_entity`、`sprite_entity`、`animated_sprite_entity`、`parallax_entity`、`tiled_map_entity`、`tile_layer`、`fill_rect`、`tiled_object`、`tiled_objects_from_run_and_gun_plan`、`tileset`、`tiled_map`、`AssetPack.frame_size()`、`AssetPack.animation()`、`run_and_gun_stage_plan()` 等工具。多格棋盘/下落方块用 `value_grid` + `@matrix.*` + `@polyomino.rotate`，不要手写一堆静态格子实体。`save_json(..., packs=[pack])` 会提前拦截手拼 asset URL、重复静态 spawn id 等低级错误。非常小的一屏表单 / 静态页面可以直接写 JSON，但仍必须执行上传前自检。
 
 ### 关卡布局参考库（强制优先）
 
@@ -370,6 +370,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 2. **实体字段优先写标量**：`@entity.set` 用 `field/value`，优先 `x/y/w/h/vx/vy/auto_update/state.xxx`；`@entity.add` 用 `field/by`。不要新生成 `path/value`，也不要把 `size` / `position` / `velocity` 数组当首选写法。
 3. **动态实体 id 必须唯一**：子弹、特效、掉落物、召唤物、临时敌人等不能共用固定 id；使用递增序号或有限对象池，否则第二次触发会静默失败。
 4. **sprite sheet 不能当单帧图**：角色/敌人图片如果是多帧网格，必须设置正确 `frame_size`、`frames`、`frames_per_row` 或裁剪单帧；否则会把一整张九宫格/多姿态图渲染成角色。
+   - 图集首帧不在 `(0,0)` 或帧之间有间距时，用 `src_origin: [x,y]` / `frame_step: [dx,dy]`，不要为了避开边距改错 `frame_size`。
 5. **展示文本不要写裸 jsonlogic**：弹窗 `message/title`、按钮 `label`、文本 `value` 等展示字段必须是字符串或 `{{ ... }}` 插值。不要写 `{"cat": [...]}` 这类对象，否则可能直接把表达式显示到 UI 上。
 6. **TMX / tiled-json 地图优先内联**：用户自己生成游戏时，优先把地图数据放入 JSON（如 `global._tiledMaps`）并用 `map_data` 引用；只有用户明确有外部存储桶或资源包时，才使用远程 `url`。无论哪种方式，tileset 图片 URL 必须来自已选 asset manifest 的 `files[].url`，不要手拼。
 7. **默认做完整游戏，不做 demo**：除非用户明确说"demo / prototype / 极简 / 快速示例"，否则游戏类 APP 的默认目标是可试玩的完整小关卡。不能只给一个角色、一张背景、一条地面和几次刷怪。生成前必须先确定：美术主题、视口、关卡长度、场景层次、路线节奏、敌人/道具/障碍分布、胜负条件。
@@ -378,6 +379,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 10. **物理引擎按品类选**：横版射击 / run-and-gun / 硬碰撞动作类用 `physics.engine: "aabb_platformer"`（踩不上去就是踩不上去）。`leap_platformer` 会让角色**自动爬上台阶/斜坡**，只用于明确需要走斜坡的游戏，否则魂斗罗类会出现"角色自己上台阶"。校验器会拦 run-and-gun 用 leap。
 11. **图元不要挂 render 色块**：`sprite` / `animated_sprite` 不要带 `render: {"shape": "rect"/"circle", ...}`。引擎只在**贴图加载失败时**画这个框，一旦显形角色就变成"幽灵方块"（玩家变色块的头号原因）。正式实体只写 `asset` / `frame_size` / `frames`，别留 debug 色块；需要纯色方块才用 `kind:"pixel"`。校验器对玩家报 ERROR、其余报 WARN。
 12. **game-controls 不是容器**：`game-controls.psJoystickGamepad` 只负责发 `@flame_game_input`。不要把游戏、弹窗、按钮数组或任意 widget 放进它的 `props`；这些内容会被组件库忽略，最终表现为白屏或只有手柄没有游戏。
+13. **棋盘类游戏用矩阵 atom**：俄罗斯方块、拼图、消除、井字棋、棋盘策略等用 `value_grid` 表达棋盘；下落/旋转/放置/清行使用 `@matrix.can_place`、`@matrix.place`、`@matrix.clear_full_rows`、`@polyomino.rotate`。不要把每个格子都做成独立 `pixel` 并每帧全量扫描。
 
 ## 游戏类型设计 Profile（先选类型，再写 JSON）
 

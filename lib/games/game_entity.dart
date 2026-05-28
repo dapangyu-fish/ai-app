@@ -421,6 +421,10 @@ class SpriteEntity extends PixelEntity implements ImageBackedEntity {
 class AnimatedSpriteEntity extends SpriteEntity {
   double frameW;
   double frameH;
+  double baseSrcX;
+  double baseSrcY;
+  double frameStepX;
+  double frameStepY;
   int frames;
   int framesPerRow;
   double stepTime;
@@ -445,6 +449,10 @@ class AnimatedSpriteEntity extends SpriteEntity {
     required super.asset,
     required this.frameW,
     required this.frameH,
+    this.baseSrcX = 0,
+    this.baseSrcY = 0,
+    double? frameStepX,
+    double? frameStepY,
     required this.frames,
     this.framesPerRow = 0,
     this.stepTime = 0.12,
@@ -453,7 +461,9 @@ class AnimatedSpriteEntity extends SpriteEntity {
     this.animations = const {},
     this.currentAnimation,
     super.flipX,
-  }) : super(srcW: frameW, srcH: frameH);
+  }) : frameStepX = frameStepX ?? frameW,
+       frameStepY = frameStepY ?? frameH,
+       super(srcX: baseSrcX, srcY: baseSrcY, srcW: frameW, srcH: frameH);
 
   SpriteAnimationSpec? setAnimation(String name) {
     final spec = animations[name];
@@ -463,14 +473,18 @@ class AnimatedSpriteEntity extends SpriteEntity {
     asset = spec.asset;
     frameW = spec.frameW;
     frameH = spec.frameH;
+    baseSrcX = spec.srcX;
+    baseSrcY = spec.srcY;
+    frameStepX = spec.frameStepX;
+    frameStepY = spec.frameStepY;
     frames = spec.frames;
     framesPerRow = spec.framesPerRow;
     stepTime = spec.stepTime;
     loop = spec.loop;
     frameIndex = 0;
     _accumulator = 0;
-    srcX = 0;
-    srcY = 0;
+    srcX = baseSrcX;
+    srcY = baseSrcY;
     srcW = frameW;
     srcH = frameH;
     return spec;
@@ -495,8 +509,8 @@ class AnimatedSpriteEntity extends SpriteEntity {
       }
     }
     final rowSize = framesPerRow > 0 ? framesPerRow : frames;
-    srcX = (frameIndex % rowSize) * frameW;
-    srcY = (frameIndex ~/ rowSize) * frameH;
+    srcX = baseSrcX + (frameIndex % rowSize) * frameStepX;
+    srcY = baseSrcY + (frameIndex ~/ rowSize) * frameStepY;
   }
 
   @override
@@ -519,6 +533,10 @@ class SpriteAnimationSpec {
   final String asset;
   final double frameW;
   final double frameH;
+  final double srcX;
+  final double srcY;
+  final double frameStepX;
+  final double frameStepY;
   final int frames;
   final int framesPerRow;
   final double stepTime;
@@ -528,11 +546,16 @@ class SpriteAnimationSpec {
     required this.asset,
     required this.frameW,
     required this.frameH,
+    this.srcX = 0,
+    this.srcY = 0,
+    double? frameStepX,
+    double? frameStepY,
     required this.frames,
     required this.framesPerRow,
     required this.stepTime,
     required this.loop,
-  });
+  }) : frameStepX = frameStepX ?? frameW,
+       frameStepY = frameStepY ?? frameH;
 }
 
 // ---------- parallax ----------

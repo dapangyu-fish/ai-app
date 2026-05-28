@@ -1737,9 +1737,9 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
 | `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：默认每帧自动 `position += velocity * dt`，如需静态像素块用 `velocity: [0,0]` 或 `auto_update: false`；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
 | `sprite` | `asset`, `position`, `size` | 单张图片 / spritesheet 子区域渲染；可配 `src` 裁切 |
-| `animated_sprite` | `asset`, `position`, `size`, `frame_size` | spritesheet 动画；支持 `animations`、`currentAnimation`、`loop`、`step_time` |
+| `animated_sprite` | `asset`, `position`, `size`, `frame_size` | spritesheet 动画；支持 `animations`、`currentAnimation`、`loop`、`step_time`；非零起点/非紧密排布的图集可用 `src_origin: [x,y]` / `src_x` / `src_y` 和 `frame_step: [dx,dy]` / `frame_step_x` / `frame_step_y` |
 | `parallax` | `asset` | 横向循环背景层；支持 `speed_x`, `y`, `height` |
-| `tiled_map` | `source` 或 `map_data` | Tiled 地图渲染 + 瓦片碰撞 + object layer 读取；支持外链 TMX/JSON，也支持内联 `tiled-json-v1`（见下） |
+| `tiled_map` | `source` 或 `map_data` | Tiled 地图渲染 + 碰撞 + object layer 读取；支持外链 TMX/JSON，也支持内联 `tiled-json-v1`（见下）。`solid_layers` / `hazard_layers` 可指向 tile layer，也可指向 objectgroup 的矩形碰撞层 |
 
 每个 entity 的 `render` 字段：
 
@@ -1828,6 +1828,8 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 
 注意：`map_data` 解决的是地图结构内联；tileset 图片仍建议用 URL / `base_url` 资源。小图未来可以用 data URL，但大型 spritesheet 不建议塞进主 JSON。
 
+碰撞层规则：`solid_layers` 和 `hazard_layers` 中的 layer name 如果是 tile layer，会按 tileset 的 tile collision / type 生成碰撞；如果是 objectgroup，会把该层每个矩形 object 当作 AABB 碰撞区域。object 自己有 `type` 时优先使用 object type，否则 solid 默认 `Platform`、hazard 默认 `Hazard`。
+
 #### atom @action 集合（仅 flame_game 内可用）
 
 **通用流程控制**（少量复制 JSON-DSL 主 action）：
@@ -1862,6 +1864,12 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `@value_grid.slide_merge({grid, direction})` | 按方向 slide+merge，返回 `{moved: bool, score: int}`，2048 类用 |
 | `@value_grid.spawn({grid, four_chance: 0.1})` | 随机空格 spawn 一个 2 / 4，返回是否成功 |
 | `@value_grid.can_move({grid})` | 是否还能动（有空格或邻接同值） |
+| `@matrix.clear({grid, value?})` | 清空 `value_grid` 为指定整数，默认 0；适合棋盘/消除/下落方块类游戏 |
+| `@matrix.can_place({grid, cells, x, y, empty_values?, allow_above?})` | 判断多格形状能否放入网格；`cells` 支持 `[[x,y], ...]` 或 `{x,y}` 列表，默认空值为 0，默认允许形状部分在顶部以上 |
+| `@matrix.place({grid, cells, x, y, value, only_in_bounds?})` | 把多格形状写入网格，返回写入格数；默认越界格跳过 |
+| `@matrix.clear_full_rows({grid, empty_values?, fill?})` | 清除所有满行并顶部补空行，返回 `{cleared, rows}` |
+| `@matrix.random_item({items})` | 从列表中随机深拷贝一项，适合抽取下一块/下一张牌/下一个图案 |
+| `@polyomino.rotate({cells, direction?, normalize?})` | 旋转多格形状；`direction` 支持 `cw`/`ccw`/`flip`，默认旋转后归一到最小 x/y 为 0 |
 | `@not({value})` | 通用否定。jsonlogic `!` 不递归 inline action 调用，需要 `@not` 把 inline call 结果取反 |
 | `@pixel.set_position({id, p: [x, y]})` | 写 pixel entity 的位置 |
 | `@pixel.set_velocity({id, v: [vx, vy]})` | 写 pixel entity 的速度（写完每帧自动按 v*dt 更新位置） |
@@ -1930,6 +1938,8 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `templates/demo_jump.json` | `input.press_end` + `pixel` entity + 抛物线物理 + 状态机 | **蓄力跳跃 + 平台滚动**：按住-松手按 `held_ms` 决定 vx，抛物线由重力自然形成；落到目标平台→镜头滚动（platform / player 同时 `set_velocity`)，到位后 despawn / spawn 切换。整套状态机（ready/jumping/rolling）由 JSON `vars.state` 驱动 |
 | `templates/demo_superdash_runner.ALL_IN_ONE.json` | `demo-superdash-runner-all-in-one` | 官方 SuperDash 风格跑酷，地图结构内联在 JSON 中；图片仍走 asset URL |
 | `templates/demo_platformer_adventure.ALL_IN_ONE.json` | `demo-platformer-adventure-all-in-one` | 多关卡平台跳跃，地图结构内联在 JSON 中，演示无 bucket 的 all-in-one 游戏发布方式 |
+| `templates/demo_tetris.json` | `value_grid` + `@matrix.*` + `@polyomino.rotate` | 竖屏下落方块游戏；棋盘清行、旋转和放置都通过通用矩阵 atom 编排 |
+| `templates/demo_mario_platformer.json` | `tiled_map` objectgroup 碰撞 + `animated_sprite.src_origin` + `@platformer.step` | 横屏平台跳跃游戏；外链 TMX/素材，玩法逻辑留在 JSON 层 |
 
 ---
 

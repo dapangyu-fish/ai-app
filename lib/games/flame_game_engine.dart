@@ -653,6 +653,32 @@ class JsonFlameGame extends FlameGame {
             frameW = animationSpec.frameW;
             frameH = animationSpec.frameH;
           }
+          final srcOrigin = spec['src_origin'] ?? spec['src'];
+          double srcX = (spec['src_x'] as num?)?.toDouble() ?? 0;
+          double srcY = (spec['src_y'] as num?)?.toDouble() ?? 0;
+          if (srcOrigin is List && srcOrigin.length >= 2) {
+            srcX = _readDouble(srcOrigin[0]);
+            srcY = _readDouble(srcOrigin[1]);
+          }
+          double frameStepX =
+              (spec['frame_step_x'] as num?)?.toDouble() ??
+              (spec['frame_spacing_x'] as num?)?.toDouble() ??
+              frameW;
+          double frameStepY =
+              (spec['frame_step_y'] as num?)?.toDouble() ??
+              (spec['frame_spacing_y'] as num?)?.toDouble() ??
+              frameH;
+          final frameStep = spec['frame_step'];
+          if (frameStep is List && frameStep.length >= 2) {
+            frameStepX = _readDouble(frameStep[0], frameStepX);
+            frameStepY = _readDouble(frameStep[1], frameStepY);
+          }
+          if (animationSpec != null) {
+            srcX = animationSpec.srcX;
+            srcY = animationSpec.srcY;
+            frameStepX = animationSpec.frameStepX;
+            frameStepY = animationSpec.frameStepY;
+          }
           return AnimatedSpriteEntity(
             id: id,
             renderConfig: render,
@@ -672,6 +698,10 @@ class JsonFlameGame extends FlameGame {
                 '',
             frameW: frameW,
             frameH: frameH,
+            baseSrcX: srcX,
+            baseSrcY: srcY,
+            frameStepX: frameStepX,
+            frameStepY: frameStepY,
             frames:
                 animationSpec?.frames ?? (spec['frames'] as num?)?.toInt() ?? 1,
             framesPerRow:
@@ -825,10 +855,34 @@ class JsonFlameGame extends FlameGame {
         frameW = (frameSize[0] as num).toDouble();
         frameH = (frameSize[1] as num).toDouble();
       }
+      final srcOrigin = spec['src_origin'] ?? spec['src'];
+      double srcX = (spec['src_x'] as num?)?.toDouble() ?? 0;
+      double srcY = (spec['src_y'] as num?)?.toDouble() ?? 0;
+      if (srcOrigin is List && srcOrigin.length >= 2) {
+        srcX = _readDouble(srcOrigin[0]);
+        srcY = _readDouble(srcOrigin[1]);
+      }
+      double frameStepX =
+          (spec['frame_step_x'] as num?)?.toDouble() ??
+          (spec['frame_spacing_x'] as num?)?.toDouble() ??
+          frameW;
+      double frameStepY =
+          (spec['frame_step_y'] as num?)?.toDouble() ??
+          (spec['frame_spacing_y'] as num?)?.toDouble() ??
+          frameH;
+      final frameStep = spec['frame_step'];
+      if (frameStep is List && frameStep.length >= 2) {
+        frameStepX = _readDouble(frameStep[0], frameStepX);
+        frameStepY = _readDouble(frameStep[1], frameStepY);
+      }
       out[key.toString()] = SpriteAnimationSpec(
         asset: spec['asset']?.toString() ?? '',
         frameW: frameW,
         frameH: frameH,
+        srcX: srcX,
+        srcY: srcY,
+        frameStepX: frameStepX,
+        frameStepY: frameStepY,
         frames: (spec['frames'] as num?)?.toInt() ?? 1,
         framesPerRow: (spec['frames_per_row'] as num?)?.toInt() ?? 0,
         stepTime: (spec['step_time'] as num?)?.toDouble() ?? 0.12,

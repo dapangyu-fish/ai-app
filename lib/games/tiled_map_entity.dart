@@ -301,6 +301,34 @@ class TiledMapEntity extends GameEntity {
         }
       }
     }
+    for (final entry in objectsByLayer.entries) {
+      final layerName = entry.key;
+      final layerSolid = solidLayers.contains(layerName);
+      final layerHazard = hazardLayers.contains(layerName);
+      if (!layerSolid && !layerHazard) continue;
+      for (final object in entry.value) {
+        if (object.width <= 0 || object.height <= 0) continue;
+        final rect = Rect.fromLTWH(
+          object.x,
+          object.y,
+          object.width,
+          object.height,
+        );
+        if (!rect.overlaps(area)) continue;
+        out.add(
+          TiledTileCollision(
+            rect: rect,
+            type: object.type.isNotEmpty
+                ? object.type
+                : layerHazard
+                ? 'Hazard'
+                : 'Platform',
+            tileset: layerName,
+            properties: object.properties,
+          ),
+        );
+      }
+    }
     return out;
   }
 

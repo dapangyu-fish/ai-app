@@ -175,6 +175,8 @@ def animated_sprite_entity(
     frame_size: list[int] | tuple[int, int],
     frames: int,
     frames_per_row: int | None = None,
+    src_origin: list[Any] | tuple[Any, Any] | None = None,
+    frame_step: list[Any] | tuple[Any, Any] | None = None,
     step_time: float = 0.12,
     animation: str | None = None,
     animations: dict[str, Any] | None = None,
@@ -207,6 +209,10 @@ def animated_sprite_entity(
     )
     if frames_per_row is not None:
         out["frames_per_row"] = frames_per_row
+    if src_origin is not None:
+        out["src_origin"] = list(src_origin)
+    if frame_step is not None:
+        out["frame_step"] = list(frame_step)
     if animation is not None:
         out["animation"] = animation
     if animations is not None:
