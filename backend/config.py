@@ -221,3 +221,12 @@ APNS_USE_SANDBOX = os.environ.get("APNS_USE_SANDBOX", "true").lower() in ("1", "
 FCM_SERVICE_ACCOUNT_PATH = os.environ.get("FCM_SERVICE_ACCOUNT_PATH", "/etc/fcm/service-account.json")
 # Firebase 项目 ID（如 myapp-4b49d）。空字符串时 fcm provider 推送会返回错误
 FCM_PROJECT_ID = os.environ.get("FCM_PROJECT_ID", "")
+
+# GeTui 配置（国内 Android / 可选 iOS 推送）
+# 真实 AppID/AppKey/AppSecret/MasterSecret 只放 /etc/ai-app/backend.env，不进 git。
+GETUI_BASE_URL = os.environ.get("GETUI_BASE_URL", "https://restapi.getui.com/v2")
+GETUI_APP_ID = os.environ.get("GETUI_APP_ID", "")
+GETUI_APP_KEY = os.environ.get("GETUI_APP_KEY", "")
+GETUI_APP_SECRET = os.environ.get("GETUI_APP_SECRET", "")
+GETUI_MASTER_SECRET = os.environ.get("GETUI_MASTER_SECRET", "")
+GETUI_TTL_MS = int(os.environ.get("GETUI_TTL_MS", str(2 * 60 * 60 * 1000)))

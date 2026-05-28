@@ -13,6 +13,7 @@ import '../auth/auth_service.dart';
 import '../config/app_config.dart';
 import 'apns_service.dart';
 import 'fcm_service.dart';
+import 'getui_service.dart';
 
 /// IMService.friendshipStream 推的事件类型
 enum FriendshipEventKind {
@@ -282,13 +283,7 @@ class IMService {
           connectionNotifier.value = true;
           await _updateUnreadCount();
 
-          // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
-          // Android：启动 FCM（同样流程，走 Firebase Messaging）
-          // 两个都是 noop-safe on unsupported platforms（kIsWeb / 桌面 / 不匹配的 OS）
-          // ignore: unawaited_futures
-          ApnsService.instance.start();
-          // ignore: unawaited_futures
-          FcmService.instance.start();
+          _startPushServices();
 
           debugPrint('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
           return true;
@@ -349,10 +344,7 @@ class IMService {
         _loggedIn = true;
         connectionNotifier.value = true;
         await _updateUnreadCount();
-        // ignore: unawaited_futures
-        ApnsService.instance.start();
-        // ignore: unawaited_futures
-        FcmService.instance.start();
+        _startPushServices();
         return true;
       } catch (e) {
         debugPrint('[IM] 恢复会话失败, 尝试重新获取 token: $e');
@@ -360,6 +352,26 @@ class IMService {
       }
     }
     return false;
+  }
+
+  void _startPushServices() {
+    if (GetuiService.isConfigured) {
+      // GeTui 与 APNs/FCM 同时注册会导致同一设备重复推送；配置后优先使用 GeTui。
+      // ignore: unawaited_futures
+      GetuiService.instance.start();
+      // ignore: unawaited_futures
+      ApnsService.instance.unregister();
+      // ignore: unawaited_futures
+      FcmService.instance.unregister();
+      return;
+    }
+    // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
+    // Android：启动 FCM（同样流程，走 Firebase Messaging）
+    // 两个都是 noop-safe on unsupported platforms（kIsWeb / 桌面 / 不匹配的 OS）
+    // ignore: unawaited_futures
+    ApnsService.instance.start();
+    // ignore: unawaited_futures
+    FcmService.instance.start();
   }
 
   // ---------- 消息操作 ----------

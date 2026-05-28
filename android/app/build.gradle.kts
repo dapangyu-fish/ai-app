@@ -23,6 +23,17 @@ if (keystorePropertiesFile.exists()) {
 val hasReleaseKey = keystorePropertiesFile.exists() &&
     keystoreProperties.getProperty("storeFile") != null
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
+fun envOrLocal(envName: String, localName: String): String =
+    System.getenv(envName)?.takeIf { it.isNotBlank() }
+        ?: localProperties.getProperty(localName)?.takeIf { it.isNotBlank() }
+        ?: ""
+
 fun androidVersionCodeFromName(versionName: String): Int {
     val parts = versionName.substringBefore("-").substringBefore("+").split(".")
     require(parts.size == 3) {
@@ -62,6 +73,21 @@ android {
         // 1.2.0 -> 010200 -> 10200, 1.12.3 -> 011203 -> 11203.
         versionCode = androidVersionCodeFromName(flutter.versionName)
         versionName = flutter.versionName
+        manifestPlaceholders.putAll(
+            mapOf(
+                "GETUI_APPID" to envOrLocal("GETUI_APP_ID", "getui.appId"),
+                "GETUI_APP_ID" to envOrLocal("GETUI_APP_ID", "getui.appId"),
+                "XIAOMI_APP_ID" to envOrLocal("XIAOMI_APP_ID", "xiaomi.appId"),
+                "XIAOMI_APP_KEY" to envOrLocal("XIAOMI_APP_KEY", "xiaomi.appKey"),
+                "MEIZU_APP_ID" to envOrLocal("MEIZU_APP_ID", "meizu.appId"),
+                "MEIZU_APP_KEY" to envOrLocal("MEIZU_APP_KEY", "meizu.appKey"),
+                "HUAWEI_APP_ID" to envOrLocal("HUAWEI_APP_ID", "huawei.appId"),
+                "OPPO_APP_KEY" to envOrLocal("OPPO_APP_KEY", "oppo.appKey"),
+                "OPPO_APP_SECRET" to envOrLocal("OPPO_APP_SECRET", "oppo.appSecret"),
+                "VIVO_APP_ID" to envOrLocal("VIVO_APP_ID", "vivo.appId"),
+                "VIVO_APP_KEY" to envOrLocal("VIVO_APP_KEY", "vivo.appKey"),
+            )
+        )
     }
 
     signingConfigs {
@@ -95,4 +121,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("com.getui:gtsdk:3.3.12.0")
+    implementation("com.getui:gtc:3.2.18.0")
 }
