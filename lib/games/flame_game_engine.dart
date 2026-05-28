@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 
 import 'game_entity.dart';
 import 'game_logic.dart';
+import 'game_audio.dart';
 import 'tiled_map_entity.dart';
 import 'platformer_physics_backend.dart';
 import 'game_world.dart';
@@ -51,6 +52,7 @@ class JsonFlameGame extends FlameGame {
   /// 我们的世界定义（命名 gameWorld 避免跟 FlameGame.world 冲突 —— 后者
   /// 是 camera scene root 的 World 组件，不是我们要的坐标系抽象）
   late final GameWorld gameWorld;
+  late final GameAudioController audio;
   final Map<String, GameEntity> entities = {};
   final Map<String, dynamic> vars = {};
 
@@ -117,6 +119,7 @@ class JsonFlameGame extends FlameGame {
     _gameOverTitle = T.current.gameOver;
     _gameOverHint = T.current.gameRestartHint;
     gameWorld = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
+    audio = GameAudioController(assetManager: assetManager);
     logic = GameLogicEngine(this);
     _setupFromSpec();
   }
@@ -129,6 +132,16 @@ class JsonFlameGame extends FlameGame {
 
   @override
   Future<void> onLoad() async {}
+
+  @override
+  void onRemove() {
+    audio.dispose();
+    super.onRemove();
+  }
+
+  void disposeGame() {
+    audio.dispose();
+  }
 
   @override
   void onGameResize(Vector2 size) {
@@ -385,6 +398,7 @@ class JsonFlameGame extends FlameGame {
 
   void _setupFromSpec() {
     // gameWorld 已在构造函数里 init 了，这里只解析剩下的部分
+    audio.configure(spec['audio']);
 
     // input
     final input = spec['input'] as Map<String, dynamic>?;

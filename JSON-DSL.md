@@ -1687,6 +1687,11 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
   "world": { ... },
   "vars": { ... },
   "entities": { "<id>": { ... } },
+  "audio": {
+    "base_url": "https://example.com/game-audio/",
+    "tracks": { "bgm": { "src": "main.ogg", "loop": true, "volume": 0.3 } },
+    "sounds": { "jump": { "src": "jump.ogg", "volume": 0.8 } }
+  },
   "input": { "tap": [...], "swipe": [...], "pan": [...], "swipe_threshold": 16 },
   "frame": { "logic": [...] },
   "tick": { "interval": 0.16, "logic": [...] },
@@ -1703,6 +1708,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `world` | ✅ | 坐标系 |
 | `vars` | ❌ | 游戏内变量初始值（每次 reset 重置） |
 | `entities` | ❌ | 实体声明（id → spec） |
+| `audio` | ❌ | 游戏音频目录。`tracks` 适合 BGM/循环音，`sounds` 适合跳跃、拾取、命中等短音效；资源由 JSON 以 URL/相对路径声明 |
 | `input.tap` | ❌ | 点击事件 logic（event 含 `x`, `y`） |
 | `input.swipe` | ❌ | **离散** swipe：一次手势结束才触发一次（按累积位移决定方向）。event 含 `direction`（up/down/left/right）+ 累积 `dx`/`dy`。适合 2048、贪吃蛇、卡牌这类"一次手势 = 一次事件"的游戏 |
 | `input.pan` | ❌ | **连续** pan：onPanUpdate 每帧（~16ms）触发一次，event 只含本帧增量 `dx`/`dy`（不含 direction）。适合划线、轨迹、拖动、连续蓄力这类需要逐帧位移的游戏 |
@@ -1894,6 +1900,10 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `@entity.set({id, field, value})` | 写 entity 字段；推荐写标量字段 `x/y/w/h/vx/vy/auto_update/state.xxx`。框架兼容 `position:[x,y]` / `size:[w,h]` / `velocity:[vx,vy]`，但新 JSON 生成时优先分别写 `x/y`、`w/h`、`vx/vy`，错误更容易定位 |
 | `@entity.add({id, field, by, min?, max?})` | 对 entity 数值字段做累加；常用字段：`x/y/w/h/vx/vy/state.xxx`。兼容旧别名 `path/value`，但新 JSON 必须写 `field/by` |
 | `@entity.flip_by_velocity({id})` | 按 vx 自动翻转 sprite 朝向 |
+| `@audio.play({id, source?, loop?, volume?, restart?})` | 播放 `audio.tracks/sounds` 中的 id，或直接播放 `source` URL/asset。BGM 通常 `loop:true`；短音效用默认一次性播放 |
+| `@audio.stop({id?})` | 停止指定循环音；不传 id 时停止当前游戏内所有音频 |
+| `@audio.pause({id?})` / `@audio.resume({id?})` | 暂停/恢复指定或全部循环音 |
+| `@audio.set_volume({id, volume})` | 调整循环音音量，`volume` 范围 0..1 |
 | `@collide.rect({a, b})` | 两个 entity 的 AABB 矩形重叠检测，返回 bool。两边都得是 pixel 类（暴露 x/y/w/h） |
 | `@collision.first({a, where_prefix})` | 查询实体 `a` 与指定 id 前缀实体的第一条 AABB 碰撞，返回命中的 entity id 或 `null` |
 | `@tiled.loaded({map})` | 地图是否已加载完成 |

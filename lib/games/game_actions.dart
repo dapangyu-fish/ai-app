@@ -582,6 +582,38 @@ class GameActions {
           return true;
         }
 
+      // ---------- 通用音频 ----------
+      case '@audio.play':
+        {
+          final id = args['id']?.toString() ?? args['source']?.toString();
+          if (id == null || id.isEmpty) return false;
+          return game.audio.play(
+            id,
+            loop: args['loop'] is bool ? args['loop'] == true : null,
+            volume: _asDouble(args['volume']),
+            restart: args['restart'] != false,
+          );
+        }
+      case '@audio.stop':
+        {
+          return game.audio.stop(args['id']?.toString());
+        }
+      case '@audio.pause':
+        {
+          return game.audio.pause(args['id']?.toString());
+        }
+      case '@audio.resume':
+        {
+          return game.audio.resume(args['id']?.toString());
+        }
+      case '@audio.set_volume':
+        {
+          final id = args['id']?.toString();
+          final volume = _asDouble(args['volume']);
+          if (id == null || volume == null) return false;
+          return game.audio.setVolume(id, volume);
+        }
+
       // ---------- 碰撞检测 ----------
       case '@collide.rect':
         {

@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -290,7 +290,8 @@
                 "title_choice": 0,
                 "powerup_hit": null,
                 "powerup_speed": 140,
-                "star_speed": 260
+                "star_speed": 260,
+                "player_power": null
               },
               "entities": {
                 "background": {
@@ -411,6 +412,48 @@
                       "frame_size": [
                         16,
                         16
+                      ],
+                      "frames": 1,
+                      "frames_per_row": 1,
+                      "step_time": 0.12
+                    },
+                    "big_idle": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "src_origin": [
+                        176,
+                        0
+                      ],
+                      "frame_size": [
+                        16,
+                        32
+                      ],
+                      "frames": 1,
+                      "frames_per_row": 1,
+                      "step_time": 0.12
+                    },
+                    "big_run": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "src_origin": [
+                        81,
+                        0
+                      ],
+                      "frame_size": [
+                        16,
+                        32
+                      ],
+                      "frames": 3,
+                      "frames_per_row": 3,
+                      "step_time": 0.08
+                    },
+                    "big_jump": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "src_origin": [
+                        144,
+                        0
+                      ],
+                      "frame_size": [
+                        16,
+                        32
                       ],
                       "frames": 1,
                       "frames_per_row": 1,
@@ -2685,6 +2728,14 @@
                           }
                         },
                         {
+                          "call": "@audio.play",
+                          "args": {
+                            "id": "main_theme",
+                            "loop": true,
+                            "restart": true
+                          }
+                        },
+                        {
                           "call": "@emit",
                           "args": {
                             "event": "status",
@@ -3173,6 +3224,14 @@
                           }
                         },
                         {
+                          "call": "@audio.play",
+                          "args": {
+                            "id": "main_theme",
+                            "loop": true,
+                            "restart": true
+                          }
+                        },
+                        {
                           "call": "@emit",
                           "args": {
                             "event": "status",
@@ -3253,6 +3312,12 @@
                                     "shape": "circle",
                                     "color": "#FFB000"
                                   }
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "fireball"
                                 }
                               }
                             ]
@@ -3713,6 +3778,14 @@
                     "args": {
                       "var": "vars.state",
                       "value": "loading"
+                    }
+                  },
+                  {
+                    "call": "@audio.play",
+                    "args": {
+                      "id": "main_theme",
+                      "loop": true,
+                      "restart": true
                     }
                   },
                   {
@@ -4723,6 +4796,52 @@
                           }
                         },
                         {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "var": "vars.jump_pressed"
+                                },
+                                {
+                                  "var": "entities.player.onGround"
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "==": [
+                                      {
+                                        "var": "vars.player_power"
+                                      },
+                                      null
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "small_jump"
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "big_jump"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
                           "call": "@platformer.step",
                           "args": {
                             "id": "player",
@@ -4754,6 +4873,12 @@
                                   "id": "player",
                                   "field": "vy",
                                   "value": 220
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "bump"
                                 }
                               }
                             ]
@@ -4878,6 +5003,12 @@
                                       "args": {
                                         "n": 200
                                       }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "coin"
+                                      }
                                     }
                                   ]
                                 }
@@ -4898,12 +5029,6 @@
                                       "call": "@spawn",
                                       "args": {
                                         "kind": "sprite",
-                                        "src": [
-                                          0,
-                                          0,
-                                          16,
-                                          16
-                                        ],
                                         "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "priority": 58,
@@ -4924,6 +5049,12 @@
                                           0
                                         ],
                                         "auto_update": false,
+                                        "src": [
+                                          0,
+                                          0,
+                                          16,
+                                          16
+                                        ],
                                         "state": {
                                           "kind": "red_mushroom",
                                           "dir": 1,
@@ -4939,6 +5070,12 @@
                                           },
                                           "assetLoadingOverlay": false
                                         }
+                                      }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "powerup_appears"
                                       }
                                     }
                                   ]
@@ -4957,50 +5094,126 @@
                                   },
                                   "then": [
                                     {
-                                      "call": "@spawn",
+                                      "call": "@if",
                                       "args": {
-                                        "kind": "sprite",
-                                        "src": [
-                                          16,
-                                          0,
-                                          16,
-                                          16
-                                        ],
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
-                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                        "priority": 58,
-                                        "position": [
+                                        "cond": {
+                                          "==": [
+                                            {
+                                              "var": "vars.player_power"
+                                            },
+                                            null
+                                          ]
+                                        },
+                                        "then": [
                                           {
-                                            "var": "entities.player.yCollision.x"
+                                            "call": "@spawn",
+                                            "args": {
+                                              "kind": "sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "priority": 58,
+                                              "position": [
+                                                {
+                                                  "var": "entities.player.yCollision.x"
+                                                },
+                                                {
+                                                  "var": "entities.player.yCollision.y"
+                                                }
+                                              ],
+                                              "size": [
+                                                32,
+                                                32
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "auto_update": false,
+                                              "src": [
+                                                0,
+                                                0,
+                                                16,
+                                                16
+                                              ],
+                                              "state": {
+                                                "kind": "red_mushroom",
+                                                "dir": 1,
+                                                "revealing": true,
+                                                "reveal_time": 0,
+                                                "targetY": {
+                                                  "-": [
+                                                    {
+                                                      "var": "entities.player.yCollision.y"
+                                                    },
+                                                    32
+                                                  ]
+                                                },
+                                                "assetLoadingOverlay": false
+                                              }
+                                            }
                                           },
                                           {
-                                            "var": "entities.player.yCollision.y"
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "powerup_appears"
+                                            }
                                           }
                                         ],
-                                        "size": [
-                                          32,
-                                          32
-                                        ],
-                                        "velocity": [
-                                          0,
-                                          0
-                                        ],
-                                        "auto_update": false,
-                                        "state": {
-                                          "kind": "green_mushroom",
-                                          "dir": 1,
-                                          "revealing": true,
-                                          "reveal_time": 0,
-                                          "targetY": {
-                                            "-": [
-                                              {
-                                                "var": "entities.player.yCollision.y"
-                                              },
-                                              32
-                                            ]
+                                        "else": [
+                                          {
+                                            "call": "@spawn",
+                                            "args": {
+                                              "kind": "sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "priority": 58,
+                                              "position": [
+                                                {
+                                                  "var": "entities.player.yCollision.x"
+                                                },
+                                                {
+                                                  "var": "entities.player.yCollision.y"
+                                                }
+                                              ],
+                                              "size": [
+                                                32,
+                                                32
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "auto_update": false,
+                                              "src": [
+                                                16,
+                                                0,
+                                                16,
+                                                16
+                                              ],
+                                              "state": {
+                                                "kind": "green_mushroom",
+                                                "dir": 1,
+                                                "revealing": true,
+                                                "reveal_time": 0,
+                                                "targetY": {
+                                                  "-": [
+                                                    {
+                                                      "var": "entities.player.yCollision.y"
+                                                    },
+                                                    32
+                                                  ]
+                                                },
+                                                "assetLoadingOverlay": false
+                                              }
+                                            }
                                           },
-                                          "assetLoadingOverlay": false
-                                        }
+                                          {
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "powerup_appears"
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ]
@@ -5019,49 +5232,125 @@
                                   },
                                   "then": [
                                     {
-                                      "call": "@spawn",
+                                      "call": "@if",
                                       "args": {
-                                        "kind": "sprite",
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
-                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                        "priority": 58,
-                                        "position": [
+                                        "cond": {
+                                          "==": [
+                                            {
+                                              "var": "vars.player_power"
+                                            },
+                                            null
+                                          ]
+                                        },
+                                        "then": [
                                           {
-                                            "var": "entities.player.yCollision.x"
+                                            "call": "@spawn",
+                                            "args": {
+                                              "kind": "sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "priority": 58,
+                                              "position": [
+                                                {
+                                                  "var": "entities.player.yCollision.x"
+                                                },
+                                                {
+                                                  "var": "entities.player.yCollision.y"
+                                                }
+                                              ],
+                                              "size": [
+                                                32,
+                                                32
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "auto_update": false,
+                                              "src": [
+                                                0,
+                                                0,
+                                                16,
+                                                16
+                                              ],
+                                              "state": {
+                                                "kind": "red_mushroom",
+                                                "dir": 1,
+                                                "revealing": true,
+                                                "reveal_time": 0,
+                                                "targetY": {
+                                                  "-": [
+                                                    {
+                                                      "var": "entities.player.yCollision.y"
+                                                    },
+                                                    32
+                                                  ]
+                                                },
+                                                "assetLoadingOverlay": false
+                                              }
+                                            }
                                           },
                                           {
-                                            "var": "entities.player.yCollision.y"
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "powerup_appears"
+                                            }
                                           }
                                         ],
-                                        "size": [
-                                          32,
-                                          32
-                                        ],
-                                        "velocity": [
-                                          0,
-                                          0
-                                        ],
-                                        "auto_update": false,
-                                        "state": {
-                                          "kind": "flower",
-                                          "dir": 1,
-                                          "revealing": true,
-                                          "reveal_time": 0,
-                                          "targetY": {
-                                            "-": [
-                                              {
-                                                "var": "entities.player.yCollision.y"
-                                              },
-                                              32
-                                            ]
+                                        "else": [
+                                          {
+                                            "call": "@spawn",
+                                            "args": {
+                                              "kind": "sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "priority": 58,
+                                              "position": [
+                                                {
+                                                  "var": "entities.player.yCollision.x"
+                                                },
+                                                {
+                                                  "var": "entities.player.yCollision.y"
+                                                }
+                                              ],
+                                              "size": [
+                                                32,
+                                                32
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "auto_update": false,
+                                              "src": [
+                                                0,
+                                                32,
+                                                16,
+                                                16
+                                              ],
+                                              "state": {
+                                                "kind": "flower",
+                                                "dir": 1,
+                                                "revealing": true,
+                                                "reveal_time": 0,
+                                                "targetY": {
+                                                  "-": [
+                                                    {
+                                                      "var": "entities.player.yCollision.y"
+                                                    },
+                                                    32
+                                                  ]
+                                                },
+                                                "assetLoadingOverlay": false
+                                              }
+                                            }
                                           },
-                                          "assetLoadingOverlay": false
-                                        },
-                                        "src": [
-                                          0,
-                                          32,
-                                          16,
-                                          16
+                                          {
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "powerup_appears"
+                                            }
+                                          }
                                         ]
                                       }
                                     }
@@ -5081,50 +5370,126 @@
                                   },
                                   "then": [
                                     {
-                                      "call": "@spawn",
+                                      "call": "@if",
                                       "args": {
-                                        "kind": "sprite",
-                                        "src": [
-                                          0,
-                                          0,
-                                          16,
-                                          16
-                                        ],
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
-                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                        "priority": 58,
-                                        "position": [
+                                        "cond": {
+                                          "==": [
+                                            {
+                                              "var": "vars.player_power"
+                                            },
+                                            null
+                                          ]
+                                        },
+                                        "then": [
                                           {
-                                            "var": "entities.player.yCollision.x"
+                                            "call": "@spawn",
+                                            "args": {
+                                              "kind": "sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "priority": 58,
+                                              "position": [
+                                                {
+                                                  "var": "entities.player.yCollision.x"
+                                                },
+                                                {
+                                                  "var": "entities.player.yCollision.y"
+                                                }
+                                              ],
+                                              "size": [
+                                                32,
+                                                32
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "auto_update": false,
+                                              "src": [
+                                                0,
+                                                0,
+                                                16,
+                                                16
+                                              ],
+                                              "state": {
+                                                "kind": "red_mushroom",
+                                                "dir": 1,
+                                                "revealing": true,
+                                                "reveal_time": 0,
+                                                "targetY": {
+                                                  "-": [
+                                                    {
+                                                      "var": "entities.player.yCollision.y"
+                                                    },
+                                                    32
+                                                  ]
+                                                },
+                                                "assetLoadingOverlay": false
+                                              }
+                                            }
                                           },
                                           {
-                                            "var": "entities.player.yCollision.y"
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "powerup_appears"
+                                            }
                                           }
                                         ],
-                                        "size": [
-                                          32,
-                                          32
-                                        ],
-                                        "velocity": [
-                                          0,
-                                          0
-                                        ],
-                                        "auto_update": false,
-                                        "state": {
-                                          "kind": "red_mushroom",
-                                          "dir": 1,
-                                          "revealing": true,
-                                          "reveal_time": 0,
-                                          "targetY": {
-                                            "-": [
-                                              {
-                                                "var": "entities.player.yCollision.y"
-                                              },
-                                              32
-                                            ]
+                                        "else": [
+                                          {
+                                            "call": "@spawn",
+                                            "args": {
+                                              "kind": "sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "priority": 58,
+                                              "position": [
+                                                {
+                                                  "var": "entities.player.yCollision.x"
+                                                },
+                                                {
+                                                  "var": "entities.player.yCollision.y"
+                                                }
+                                              ],
+                                              "size": [
+                                                32,
+                                                32
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "auto_update": false,
+                                              "src": [
+                                                0,
+                                                32,
+                                                16,
+                                                16
+                                              ],
+                                              "state": {
+                                                "kind": "flower",
+                                                "dir": 1,
+                                                "revealing": true,
+                                                "reveal_time": 0,
+                                                "targetY": {
+                                                  "-": [
+                                                    {
+                                                      "var": "entities.player.yCollision.y"
+                                                    },
+                                                    32
+                                                  ]
+                                                },
+                                                "assetLoadingOverlay": false
+                                              }
+                                            }
                                           },
-                                          "assetLoadingOverlay": false
-                                        }
+                                          {
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "powerup_appears"
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ]
@@ -5166,6 +5531,12 @@
                                           0
                                         ],
                                         "auto_update": false,
+                                        "src": [
+                                          1,
+                                          48,
+                                          15,
+                                          16
+                                        ],
                                         "state": {
                                           "kind": "star",
                                           "dir": 1,
@@ -5180,13 +5551,13 @@
                                             ]
                                           },
                                           "assetLoadingOverlay": false
-                                        },
-                                        "src": [
-                                          1,
-                                          48,
-                                          15,
-                                          16
-                                        ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "powerup_appears"
                                       }
                                     }
                                   ]
@@ -5220,10 +5591,34 @@
                             },
                             "then": [
                               {
-                                "call": "@animated_sprite.set_animation",
+                                "call": "@if",
                                 "args": {
-                                  "id": "player",
-                                  "animation": "jump"
+                                  "cond": {
+                                    "==": [
+                                      {
+                                        "var": "vars.player_power"
+                                      },
+                                      null
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "jump"
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@animated_sprite.set_animation",
+                                      "args": {
+                                        "id": "player",
+                                        "animation": "big_jump"
+                                      }
+                                    }
+                                  ]
                                 }
                               }
                             ],
@@ -5253,19 +5648,67 @@
                                   },
                                   "then": [
                                     {
-                                      "call": "@animated_sprite.set_animation",
+                                      "call": "@if",
                                       "args": {
-                                        "id": "player",
-                                        "animation": "run"
+                                        "cond": {
+                                          "==": [
+                                            {
+                                              "var": "vars.player_power"
+                                            },
+                                            null
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@animated_sprite.set_animation",
+                                            "args": {
+                                              "id": "player",
+                                              "animation": "run"
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@animated_sprite.set_animation",
+                                            "args": {
+                                              "id": "player",
+                                              "animation": "big_run"
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ],
                                   "else": [
                                     {
-                                      "call": "@animated_sprite.set_animation",
+                                      "call": "@if",
                                       "args": {
-                                        "id": "player",
-                                        "animation": "idle"
+                                        "cond": {
+                                          "==": [
+                                            {
+                                              "var": "vars.player_power"
+                                            },
+                                            null
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@animated_sprite.set_animation",
+                                            "args": {
+                                              "id": "player",
+                                              "animation": "idle"
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@animated_sprite.set_animation",
+                                            "args": {
+                                              "id": "player",
+                                              "animation": "big_idle"
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ]
@@ -5280,6 +5723,13 @@
                             "where_prefix": "powerup_",
                             "do": [
                               {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._powerup_id",
+                                  "value": "{{ loop.id }}"
+                                }
+                              },
+                              {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
@@ -5289,11 +5739,11 @@
                                     {
                                       "call": "@entity.add",
                                       "args": {
-                                        "id": "{{ loop.id }}",
+                                        "id": "{{ vars._powerup_id }}",
                                         "field": "y",
                                         "by": {
                                           "*": [
-                                            -54,
+                                            -64,
                                             {
                                               "var": "event.dt"
                                             }
@@ -5307,7 +5757,7 @@
                                     {
                                       "call": "@entity.add",
                                       "args": {
-                                        "id": "{{ loop.id }}",
+                                        "id": "{{ vars._powerup_id }}",
                                         "field": "state.reveal_time",
                                         "by": {
                                           "var": "event.dt"
@@ -5318,18 +5768,25 @@
                                       "call": "@if",
                                       "args": {
                                         "cond": {
-                                          ">=": [
+                                          "<=": [
                                             {
-                                              "var": "entities.{{ loop.id }}.reveal_time"
+                                              "var": "loop.entity.y"
                                             },
-                                            0.6
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "loop.entity.targetY"
+                                                },
+                                                1
+                                              ]
+                                            }
                                           ]
                                         },
                                         "then": [
                                           {
                                             "call": "@entity.set",
                                             "args": {
-                                              "id": "{{ loop.id }}",
+                                              "id": "{{ vars._powerup_id }}",
                                               "field": "y",
                                               "value": {
                                                 "var": "loop.entity.targetY"
@@ -5339,7 +5796,7 @@
                                           {
                                             "call": "@entity.set",
                                             "args": {
-                                              "id": "{{ loop.id }}",
+                                              "id": "{{ vars._powerup_id }}",
                                               "field": "state.revealing",
                                               "value": false
                                             }
@@ -5359,7 +5816,7 @@
                                                 {
                                                   "call": "@entity.set",
                                                   "args": {
-                                                    "id": "{{ loop.id }}",
+                                                    "id": "{{ vars._powerup_id }}",
                                                     "field": "vx",
                                                     "value": {
                                                       "*": [
@@ -5367,7 +5824,22 @@
                                                           "var": "loop.entity.dir"
                                                         },
                                                         {
-                                                          "var": "vars.powerup_speed"
+                                                          "if": [
+                                                            {
+                                                              "==": [
+                                                                {
+                                                                  "var": "loop.entity.kind"
+                                                                },
+                                                                "star"
+                                                              ]
+                                                            },
+                                                            {
+                                                              "var": "vars.star_speed"
+                                                            },
+                                                            {
+                                                              "var": "vars.powerup_speed"
+                                                            }
+                                                          ]
                                                         }
                                                       ]
                                                     }
@@ -5394,63 +5866,44 @@
                                         },
                                         "then": [
                                           {
-                                            "call": "@if",
+                                            "call": "@entity.set",
                                             "args": {
-                                              "cond": {
-                                                "==": [
+                                              "id": "{{ vars._powerup_id }}",
+                                              "field": "vx",
+                                              "value": {
+                                                "*": [
                                                   {
-                                                    "var": "loop.entity.kind"
+                                                    "var": "loop.entity.dir"
                                                   },
-                                                  "star"
+                                                  {
+                                                    "if": [
+                                                      {
+                                                        "==": [
+                                                          {
+                                                            "var": "loop.entity.kind"
+                                                          },
+                                                          "star"
+                                                        ]
+                                                      },
+                                                      {
+                                                        "var": "vars.star_speed"
+                                                      },
+                                                      {
+                                                        "var": "vars.powerup_speed"
+                                                      }
+                                                    ]
+                                                  }
                                                 ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "call": "@entity.set",
-                                                  "args": {
-                                                    "id": "{{ loop.id }}",
-                                                    "field": "vx",
-                                                    "value": {
-                                                      "*": [
-                                                        {
-                                                          "var": "loop.entity.dir"
-                                                        },
-                                                        {
-                                                          "var": "vars.star_speed"
-                                                        }
-                                                      ]
-                                                    }
-                                                  }
-                                                }
-                                              ],
-                                              "else": [
-                                                {
-                                                  "call": "@entity.set",
-                                                  "args": {
-                                                    "id": "{{ loop.id }}",
-                                                    "field": "vx",
-                                                    "value": {
-                                                      "*": [
-                                                        {
-                                                          "var": "loop.entity.dir"
-                                                        },
-                                                        {
-                                                          "var": "vars.powerup_speed"
-                                                        }
-                                                      ]
-                                                    }
-                                                  }
-                                                }
-                                              ]
+                                              }
                                             }
                                           },
                                           {
                                             "call": "@platformer.step",
                                             "args": {
-                                              "id": "{{ loop.id }}",
+                                              "id": "{{ vars._powerup_id }}",
                                               "map": "map",
                                               "dt": "{{ event.dt }}",
-                                              "gravity": 1400,
+                                              "gravity": 700,
                                               "max_fall": 900
                                             }
                                           },
@@ -5460,25 +5913,72 @@
                                               "cond": {
                                                 "or": [
                                                   {
-                                                    "var": "entities.{{ loop.id }}.blockedLeft"
+                                                    "call": "@entity.get",
+                                                    "args": {
+                                                      "id": "{{ vars._powerup_id }}",
+                                                      "field": "state.blockedLeft"
+                                                    }
                                                   },
                                                   {
-                                                    "var": "entities.{{ loop.id }}.blockedRight"
+                                                    "call": "@entity.get",
+                                                    "args": {
+                                                      "id": "{{ vars._powerup_id }}",
+                                                      "field": "state.blockedRight"
+                                                    }
                                                   }
                                                 ]
                                               },
                                               "then": [
                                                 {
-                                                  "call": "@entity.set",
+                                                  "call": "@set",
                                                   "args": {
-                                                    "id": "{{ loop.id }}",
-                                                    "field": "state.dir",
+                                                    "var": "vars._powerup_next_dir",
                                                     "value": {
                                                       "*": [
                                                         {
                                                           "var": "loop.entity.dir"
                                                         },
                                                         -1
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "{{ vars._powerup_id }}",
+                                                    "field": "state.dir",
+                                                    "value": "{{ vars._powerup_next_dir }}"
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "{{ vars._powerup_id }}",
+                                                    "field": "vx",
+                                                    "value": {
+                                                      "*": [
+                                                        {
+                                                          "var": "vars._powerup_next_dir"
+                                                        },
+                                                        {
+                                                          "if": [
+                                                            {
+                                                              "==": [
+                                                                {
+                                                                  "var": "loop.entity.kind"
+                                                                },
+                                                                "star"
+                                                              ]
+                                                            },
+                                                            {
+                                                              "var": "vars.star_speed"
+                                                            },
+                                                            {
+                                                              "var": "vars.powerup_speed"
+                                                            }
+                                                          ]
+                                                        }
                                                       ]
                                                     }
                                                   }
@@ -5500,7 +6000,11 @@
                                                     ]
                                                   },
                                                   {
-                                                    "var": "entities.{{ loop.id }}.blockedDown"
+                                                    "call": "@entity.get",
+                                                    "args": {
+                                                      "id": "{{ vars._powerup_id }}",
+                                                      "field": "state.blockedDown"
+                                                    }
                                                   }
                                                 ]
                                               },
@@ -5508,9 +6012,29 @@
                                                 {
                                                   "call": "@entity.set",
                                                   "args": {
-                                                    "id": "{{ loop.id }}",
+                                                    "id": "{{ vars._powerup_id }}",
                                                     "field": "vy",
                                                     "value": -420
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "call": "@entity.get",
+                                                "args": {
+                                                  "id": "{{ vars._powerup_id }}",
+                                                  "field": "state.outOfBounds"
+                                                }
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@despawn",
+                                                  "args": {
+                                                    "id": "{{ vars._powerup_id }}"
                                                   }
                                                 }
                                               ]
@@ -5537,21 +6061,47 @@
                           "call": "@if",
                           "args": {
                             "cond": {
-                              "!=": [
+                              "and": [
                                 {
-                                  "var": "vars.powerup_hit"
+                                  "!=": [
+                                    {
+                                      "var": "vars.powerup_hit"
+                                    },
+                                    null
+                                  ]
                                 },
-                                null
+                                {
+                                  "!": {
+                                    "call": "@entity.get",
+                                    "args": {
+                                      "id": "{{ vars.powerup_hit }}",
+                                      "field": "state.revealing"
+                                    }
+                                  }
+                                }
                               ]
                             },
                             "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.powerup_kind",
+                                  "value": {
+                                    "call": "@entity.get",
+                                    "args": {
+                                      "id": "{{ vars.powerup_hit }}",
+                                      "field": "state.kind"
+                                    }
+                                  }
+                                }
+                              },
                               {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
                                     "==": [
                                       {
-                                        "var": "entities.{{ vars.powerup_hit }}.kind"
+                                        "var": "vars.powerup_kind"
                                       },
                                       "green_mushroom"
                                     ]
@@ -5580,6 +6130,12 @@
                                           "lives": "{{ vars.lives }}"
                                         }
                                       }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "one_up"
+                                      }
                                     }
                                   ],
                                   "else": [
@@ -5587,6 +6143,122 @@
                                       "call": "@score.add",
                                       "args": {
                                         "n": 1000
+                                      }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "powerup"
+                                      }
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "or": [
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.powerup_kind"
+                                                },
+                                                "red_mushroom"
+                                              ]
+                                            },
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.powerup_kind"
+                                                },
+                                                "flower"
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "==": [
+                                                  {
+                                                    "var": "vars.player_power"
+                                                  },
+                                                  null
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@entity.add",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "y",
+                                                    "by": -32
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "h",
+                                                    "value": 64
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "w",
+                                                    "value": 28
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.spriteH",
+                                                    "value": 64
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.spriteW",
+                                                    "value": 32
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.spriteOffsetY",
+                                                    "value": 0
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.player_power",
+                                              "value": {
+                                                "if": [
+                                                  {
+                                                    "==": [
+                                                      {
+                                                        "var": "vars.powerup_kind"
+                                                      },
+                                                      "flower"
+                                                    ]
+                                                  },
+                                                  "fire",
+                                                  "big"
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ]
@@ -5685,6 +6357,12 @@
                                       "args": {
                                         "n": 100
                                       }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "stomp"
+                                      }
                                     }
                                   ],
                                   "else": [
@@ -5719,6 +6397,18 @@
                                             "args": {
                                               "id": "player",
                                               "animation": "dead"
+                                            }
+                                          },
+                                          {
+                                            "call": "@audio.stop",
+                                            "args": {
+                                              "id": "main_theme"
+                                            }
+                                          },
+                                          {
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "death"
                                             }
                                           },
                                           {
@@ -5807,6 +6497,12 @@
                                       "call": "@score.add",
                                       "args": {
                                         "n": 100
+                                      }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "kick"
                                       }
                                     }
                                   ]
@@ -5912,6 +6608,18 @@
                                       }
                                     },
                                     {
+                                      "call": "@audio.stop",
+                                      "args": {
+                                        "id": "main_theme"
+                                      }
+                                    },
+                                    {
+                                      "call": "@audio.play",
+                                      "args": {
+                                        "id": "death"
+                                      }
+                                    },
+                                    {
                                       "call": "@game_over",
                                       "args": {}
                                     }
@@ -5970,6 +6678,18 @@
                                 }
                               },
                               {
+                                "call": "@audio.stop",
+                                "args": {
+                                  "id": "main_theme"
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "stage_clear"
+                                }
+                              },
+                              {
                                 "call": "@game_over",
                                 "args": {}
                               }
@@ -6007,6 +6727,84 @@
                 "type": "call",
                 "call": "@global.reset",
                 "args": {}
+              },
+              "audio": {
+                "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/audio/mario/",
+                "tracks": {
+                  "main_theme": {
+                    "src": "main_theme.ogg",
+                    "loop": true,
+                    "volume": 0.3
+                  },
+                  "main_theme_fast": {
+                    "src": "main_theme_sped_up.ogg",
+                    "loop": true,
+                    "volume": 0.3
+                  },
+                  "invincible": {
+                    "src": "invincible.ogg",
+                    "loop": true,
+                    "volume": 0.34
+                  }
+                },
+                "sounds": {
+                  "small_jump": {
+                    "src": "small_jump.ogg",
+                    "volume": 0.85
+                  },
+                  "big_jump": {
+                    "src": "big_jump.ogg",
+                    "volume": 0.85
+                  },
+                  "bump": {
+                    "src": "bump.ogg",
+                    "volume": 0.8
+                  },
+                  "brick_smash": {
+                    "src": "brick_smash.ogg",
+                    "volume": 0.8
+                  },
+                  "coin": {
+                    "src": "coin.ogg",
+                    "volume": 0.85
+                  },
+                  "fireball": {
+                    "src": "fireball.ogg",
+                    "volume": 0.75
+                  },
+                  "game_over": {
+                    "src": "game_over.ogg",
+                    "volume": 0.9
+                  },
+                  "death": {
+                    "src": "death.wav",
+                    "volume": 0.9
+                  },
+                  "kick": {
+                    "src": "kick.ogg",
+                    "volume": 0.85
+                  },
+                  "one_up": {
+                    "src": "one_up.ogg",
+                    "volume": 0.9
+                  },
+                  "powerup": {
+                    "src": "powerup.ogg",
+                    "volume": 0.9
+                  },
+                  "powerup_appears": {
+                    "src": "powerup_appears.ogg",
+                    "volume": 0.9
+                  },
+                  "stage_clear": {
+                    "src": "stage_clear.wav",
+                    "volume": 0.9
+                  },
+                  "stomp": {
+                    "src": "stomp.ogg",
+                    "volume": 0.85
+                  }
+                }
               }
             }
           },
