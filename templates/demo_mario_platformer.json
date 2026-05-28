@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -29,7 +29,8 @@
       "bestScore": 0,
       "lives": 3,
       "status": "Loading",
-      "_choice": null
+      "_choice": null,
+      "mode": "title"
     },
     "functions": {
       "scoreChanged": {
@@ -94,6 +95,13 @@
       },
       "reset": {
         "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.mode",
+              "value": "running"
+            }
+          },
           {
             "call": "@set",
             "args": {
@@ -199,9 +207,10 @@
             }
           },
           {
-            "call": "@navigate",
+            "call": "@set",
             "args": {
-              "screen": "preview"
+              "var": "global.mode",
+              "value": "preview"
             }
           },
           {
@@ -211,9 +220,10 @@
             }
           },
           {
-            "call": "@navigate",
+            "call": "@set",
             "args": {
-              "screen": "game"
+              "var": "global.mode",
+              "value": "running"
             }
           }
         ]
@@ -231,1659 +241,1682 @@
         "padding": 0,
         "children": [
           {
-            "type": "flame_game",
-            "height": 360,
-            "viewport": {
-              "width": 512,
-              "height": 448,
-              "fit": "contain"
-            },
-            "world": {
-              "kind": "pixel",
-              "bg": "#000000"
-            },
-            "entities": {
-              "title_logo": {
-                "kind": "sprite",
-                "priority": 20,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
-                "src": [
-                  1,
-                  60,
-                  176,
-                  88
-                ],
-                "position": [
-                  80,
-                  70
-                ],
-                "size": [
-                  352,
-                  176
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "selector_mushroom": {
-                "kind": "sprite",
-                "priority": 25,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
-                "src": [
-                  3,
-                  155,
-                  8,
-                  8
-                ],
-                "position": [
-                  128,
-                  280
-                ],
-                "size": [
-                  16,
-                  16
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_mario_00": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  51,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  0,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_mario_01": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  83,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  16,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_mario_02": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  91,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  32,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_mario_03": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  20,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  48,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_mario_04": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  64,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_00": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  246,
-                  7,
-                  7
-                ],
-                "position": [
-                  288,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_01": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  304,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_02": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  91,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  320,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_03": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  43.5,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  336,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_04": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  107,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  352,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_time_00": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  107.7,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  448,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_time_01": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  20,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  464,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_time_02": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  51,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  480,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_time_03": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  115,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  496,
-                  22
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_no_00": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  11.5,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  300,
-                  44
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_no_01": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67.5,
-                  246.5,
-                  7,
-                  7
-                ],
-                "position": [
-                  316,
-                  44
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "hud_world_no_02": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  11.5,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  332,
-                  44
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_00": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  11.5,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  176,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_01": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  192,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_02": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  75,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  208,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_03": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  43.5,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  224,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_04": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  83,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  240,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_05": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  20,
-                  246,
-                  7,
-                  7
-                ],
-                "position": [
-                  256,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_06": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  115,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  272,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_07": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  91,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  288,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_08": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  304,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_09": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  320,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_10": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  83,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  336,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_11": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  51,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  352,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_one_12": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  115,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  368,
-                  281
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_00": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  19,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  176,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_01": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  192,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_02": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  75,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  208,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_03": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  43.5,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  224,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_04": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  83,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  240,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_05": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  20,
-                  246,
-                  7,
-                  7
-                ],
-                "position": [
-                  256,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_06": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  115,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  272,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_07": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  91,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  288,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_08": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  304,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_09": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  320,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_10": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  83,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  336,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_11": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  51,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  352,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_12": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  115,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  368,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_13": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  384,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_14": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67.5,
-                  246.5,
-                  7,
-                  7
-                ],
-                "position": [
-                  400,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_15": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  416,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_16": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  99,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  432,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_17": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  448,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_18": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  51,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  464,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_19": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  20,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  480,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_20": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  59,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  496,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_21": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  512,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_22": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  528,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_23": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  99,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  544,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_24": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  560,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_25": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  576,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_two_26": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  59,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  592,
-                  321
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_00": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  107.7,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  192,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_01": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  208,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_02": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  75,
-                  238,
-                  7,
-                  7
-                ],
-                "position": [
-                  224,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_03": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  240,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_04": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  67.5,
-                  246.5,
-                  7,
-                  7
-                ],
-                "position": [
-                  256,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_05": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  48,
-                  248,
-                  7,
-                  7
-                ],
-                "position": [
-                  272,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_06": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  288,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_07": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  304,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_08": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  320,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_09": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  336,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_10": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  352,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              },
-              "menu_top_11": {
-                "kind": "sprite",
-                "priority": 10,
-                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
-                "src": [
-                  3,
-                  230,
-                  7,
-                  7
-                ],
-                "position": [
-                  368,
-                  360
-                ],
-                "size": [
-                  14,
-                  14
-                ],
-                "auto_update": false,
-                "state": {
-                  "assetLoadingOverlay": false
-                }
-              }
-            }
-          },
-          {
             "type": "container",
             "layout": "column",
-            "padding": 16,
+            "padding": 0,
             "color": "#000000",
+            "visible": {
+              "==": [
+                {
+                  "var": "global.mode"
+                },
+                "title"
+              ]
+            },
             "children": [
+              {
+                "type": "flame_game",
+                "height": 360,
+                "viewport": {
+                  "width": 512,
+                  "height": 448,
+                  "fit": "contain"
+                },
+                "world": {
+                  "kind": "pixel",
+                  "bg": "#000000"
+                },
+                "entities": {
+                  "title_logo": {
+                    "kind": "sprite",
+                    "priority": 20,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
+                    "src": [
+                      1,
+                      60,
+                      176,
+                      88
+                    ],
+                    "position": [
+                      80,
+                      70
+                    ],
+                    "size": [
+                      352,
+                      176
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "selector_mushroom": {
+                    "kind": "sprite",
+                    "priority": 25,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
+                    "src": [
+                      3,
+                      155,
+                      8,
+                      8
+                    ],
+                    "position": [
+                      128,
+                      280
+                    ],
+                    "size": [
+                      16,
+                      16
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_mario_00": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      51,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      0,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_mario_01": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      83,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      16,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_mario_02": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      91,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      32,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_mario_03": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      20,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      48,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_mario_04": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      64,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_00": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      246,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      288,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_01": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      304,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_02": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      91,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      320,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_03": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      43.5,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      336,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_04": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      107,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      352,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_time_00": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      107.7,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      448,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_time_01": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      20,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      464,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_time_02": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      51,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      480,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_time_03": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      115,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      496,
+                      22
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_no_00": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      11.5,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      300,
+                      44
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_no_01": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67.5,
+                      246.5,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      316,
+                      44
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "hud_world_no_02": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      11.5,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      332,
+                      44
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_00": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      11.5,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      176,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_01": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      192,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_02": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      75,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      208,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_03": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      43.5,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      224,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_04": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      83,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      240,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_05": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      20,
+                      246,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      256,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_06": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      115,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      272,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_07": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      91,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      288,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_08": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      304,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_09": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      320,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_10": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      83,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      336,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_11": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      51,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      352,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_one_12": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      115,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      368,
+                      281
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_00": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      19,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      176,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_01": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      192,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_02": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      75,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      208,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_03": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      43.5,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      224,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_04": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      83,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      240,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_05": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      20,
+                      246,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      256,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_06": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      115,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      272,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_07": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      91,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      288,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_08": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      304,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_09": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      320,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_10": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      83,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      336,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_11": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      51,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      352,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_12": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      115,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      368,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_13": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      384,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_14": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67.5,
+                      246.5,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      400,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_15": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      416,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_16": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      99,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      432,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_17": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      448,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_18": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      51,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      464,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_19": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      20,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      480,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_20": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      59,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      496,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_21": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      512,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_22": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      528,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_23": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      99,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      544,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_24": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      560,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_25": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      576,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_two_26": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      59,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      592,
+                      321
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_00": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      107.7,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      192,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_01": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      208,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_02": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      75,
+                      238,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      224,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_03": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      240,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_04": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      67.5,
+                      246.5,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      256,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_05": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      48,
+                      248,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      272,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_06": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      288,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_07": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      304,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_08": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      320,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_09": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      336,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_10": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      352,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  },
+                  "menu_top_11": {
+                    "kind": "sprite",
+                    "priority": 10,
+                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                    "src": [
+                      3,
+                      230,
+                      7,
+                      7
+                    ],
+                    "position": [
+                      368,
+                      360
+                    ],
+                    "size": [
+                      14,
+                      14
+                    ],
+                    "auto_update": false,
+                    "state": {
+                      "assetLoadingOverlay": false
+                    }
+                  }
+                },
+                "input": {
+                  "tap": [
+                    {
+                      "call": "@emit",
+                      "args": {
+                        "event": "start"
+                      }
+                    }
+                  ]
+                },
+                "on_start": {
+                  "type": "call",
+                  "call": "@global.start",
+                  "args": {}
+                }
+              },
               {
                 "type": "button",
                 "label": "START",
@@ -1915,17 +1948,7 @@
                 }
               }
             ]
-          }
-        ]
-      },
-      {
-        "id": "preview",
-        "title": "World 1-1",
-        "backgroundColor": "#000000",
-        "appBar": false,
-        "layout": "column",
-        "padding": 0,
-        "children": [
+          },
           {
             "type": "flame_game",
             "height": 320,
@@ -2330,38 +2353,16 @@
                   "assetLoadingOverlay": false
                 }
               }
-            }
-          }
-        ]
-      },
-      {
-        "id": "game",
-        "title": "World 1-1",
-        "appBar": {
-          "title": "WORLD 1-1",
-          "centerTitle": true,
-          "backgroundColor": "#5C94FC",
-          "color": "#FFFFFF",
-          "leading": {
-            "icon": "home",
-            "action": {
-              "type": "navigate",
-              "screen": "home"
+            },
+            "visible": {
+              "==": [
+                {
+                  "var": "global.mode"
+                },
+                "preview"
+              ]
             }
           },
-          "actions": [
-            {
-              "icon": "replay",
-              "action": {
-                "call": "@flame_game_reset",
-                "args": {}
-              }
-            }
-          ]
-        },
-        "layout": "column",
-        "padding": 0,
-        "children": [
           {
             "type": "container",
             "padding": 10,
@@ -2401,7 +2402,15 @@
                   "color": "#FFF3B0"
                 }
               }
-            ]
+            ],
+            "visible": {
+              "==": [
+                {
+                  "var": "global.mode"
+                },
+                "running"
+              ]
+            }
           },
           {
             "type": "expanded",
@@ -3378,6 +3387,14 @@
                 "call": "@global.reset",
                 "args": {}
               }
+            },
+            "visible": {
+              "==": [
+                {
+                  "var": "global.mode"
+                },
+                "running"
+              ]
             }
           },
           {
@@ -3391,6 +3408,14 @@
               "attackInput": "attack",
               "height": 176,
               "backgroundColor": "#193C78"
+            },
+            "visible": {
+              "==": [
+                {
+                  "var": "global.mode"
+                },
+                "running"
+              ]
             }
           }
         ]
