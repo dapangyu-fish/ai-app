@@ -121,6 +121,123 @@ void _sendUiCrashToAi(FlutterErrorDetails details) {
   DesignerBall.sendCrashReport?.call(crashMsg);
 }
 
+class _InlineRenderCrashWidget extends StatelessWidget {
+  final FlutterErrorDetails details;
+  final bool compact;
+
+  const _InlineRenderCrashWidget({
+    required this.details,
+    required this.compact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = T.lookup(
+      appLocale.value ??
+          Localizations.maybeLocaleOf(context) ??
+          const Locale('zh', 'CN'),
+    );
+    final maxWidth = compact ? 220.0 : 360.0;
+    final maxHeight = compact ? 64.0 : 220.0;
+
+    return Align(
+      alignment: Alignment.topLeft,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.all(4),
+            padding: EdgeInsets.all(compact ? 8 : 12),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: compact
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          t.uiRenderCrash,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                t.uiRenderCrash,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          details.exception.toString(),
+                          maxLines: 4,
+                          overflow: TextOverflow.fade,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: CurrentPageState.instance.isInJsonApp
+                                ? () => _sendUiCrashToAi(details)
+                                : null,
+                            icon: const Icon(Icons.auto_fix_high, size: 16),
+                            label: Text(t.crashAiFix),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AppLifecycleObserver extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -188,57 +305,9 @@ void main() async {
   // 捕捉全局渲染和布局异常（防止布局越界等导致直接白屏）
   ErrorWidget.builder = (FlutterErrorDetails details) {
     _routeJsonUiCrash(details);
-    // 没有 context；按 appLocale.value（用户偏好）选 i18n
-    final t = T.lookup(appLocale.value ?? const Locale('zh', 'CN'));
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        margin: const EdgeInsets.all(8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    t.uiRenderCrash,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                details.exception.toString(),
-                style: const TextStyle(color: Colors.red, fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: CurrentPageState.instance.isInJsonApp
-                      ? () => _sendUiCrashToAi(details)
-                      : null,
-                  icon: const Icon(Icons.auto_fix_high, size: 16),
-                  label: Text(t.crashAiFix),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return _InlineRenderCrashWidget(
+      details: details,
+      compact: CurrentPageState.instance.isInJsonApp,
     );
   };
 
@@ -2323,12 +2392,16 @@ class _CrashPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SingleChildScrollView(
-                  child: Text(
-                    stackTrace,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                      color: cs.onSurface,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text(
+                      stackTrace,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: cs.onSurface,
+                      ),
                     ),
                   ),
                 ),
