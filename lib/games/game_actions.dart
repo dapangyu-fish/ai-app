@@ -5,6 +5,8 @@
 //
 // 类别：
 // - @cell_path.*  : snake 用（advance / grow / contains / head）
+// - @matrix.*     : 通用二维数值网格辅助（放置/清行/多格碰撞）
+// - @polyomino.*  : 通用多格形状辅助（旋转等）
 // - @grid.*       : 网格辅助（random_empty）
 // - @scroll_list.*: tap_white_tile 用
 // - @score.*      : 分数操作（顺便 emit scoreChanged 事件）
@@ -222,6 +224,128 @@ class GameActions {
             }
           }
           return false;
+        }
+
+      // ---------- matrix / polyomino（通用多格棋盘，不绑定具体游戏） ----------
+      case '@matrix.clear':
+        {
+          final id = args['grid']?.toString();
+          final value = (args['value'] as num?)?.toInt() ?? 0;
+          if (id == null) return false;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return false;
+          for (var r = 0; r < ent.rows; r++) {
+            for (var c = 0; c < ent.cols; c++) {
+              ent.cells[r][c] = value;
+            }
+          }
+          return true;
+        }
+      case '@matrix.can_place':
+        {
+          final id = args['grid']?.toString();
+          if (id == null) return false;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return false;
+          final cells = _readCells(args['cells']);
+          if (cells.isEmpty) return false;
+          final x = _asInt(args['x']) ?? 0;
+          final y = _asInt(args['y']) ?? 0;
+          final allowAbove = args['allow_above'] != false;
+          final emptyValues = _readIntSet(args['empty_values']) ?? {0};
+          for (final cell in cells) {
+            final c = x + cell.x;
+            final r = y + cell.y;
+            if (c < 0 || c >= ent.cols || r >= ent.rows) return false;
+            if (r < 0) {
+              if (allowAbove) continue;
+              return false;
+            }
+            if (!emptyValues.contains(ent.cells[r][c])) return false;
+          }
+          return true;
+        }
+      case '@matrix.place':
+        {
+          final id = args['grid']?.toString();
+          if (id == null) return 0;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return 0;
+          final cells = _readCells(args['cells']);
+          final x = _asInt(args['x']) ?? 0;
+          final y = _asInt(args['y']) ?? 0;
+          final value = _asInt(args['value']) ?? 0;
+          final onlyInBounds = args['only_in_bounds'] != false;
+          var count = 0;
+          for (final cell in cells) {
+            final c = x + cell.x;
+            final r = y + cell.y;
+            if (c < 0 || c >= ent.cols || r < 0 || r >= ent.rows) {
+              if (onlyInBounds) continue;
+              return count;
+            }
+            ent.cells[r][c] = value;
+            count++;
+          }
+          return count;
+        }
+      case '@matrix.clear_full_rows':
+        {
+          final id = args['grid']?.toString();
+          if (id == null) return {'cleared': 0, 'rows': const []};
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return {'cleared': 0, 'rows': const []};
+          final emptyValues = _readIntSet(args['empty_values']) ?? {0};
+          final fill = _asInt(args['fill']) ?? _asInt(args['value']) ?? 0;
+          final clearedRows = <int>[];
+          for (var r = 0; r < ent.rows; r++) {
+            if (ent.cells[r].every((v) => !emptyValues.contains(v))) {
+              clearedRows.add(r);
+            }
+          }
+          if (clearedRows.isEmpty) return {'cleared': 0, 'rows': const []};
+          final remaining = <List<int>>[];
+          for (var r = 0; r < ent.rows; r++) {
+            if (!clearedRows.contains(r)) {
+              remaining.add(List<int>.from(ent.cells[r]));
+            }
+          }
+          while (remaining.length < ent.rows) {
+            remaining.insert(0, List<int>.filled(ent.cols, fill));
+          }
+          for (var r = 0; r < ent.rows; r++) {
+            ent.cells[r] = remaining[r];
+          }
+          return {'cleared': clearedRows.length, 'rows': clearedRows};
+        }
+      case '@matrix.random_item':
+        {
+          final items = args['items'];
+          if (items is! List || items.isEmpty) return null;
+          final picked = items[_random.nextInt(items.length)];
+          return _deepCopyJson(picked);
+        }
+      case '@polyomino.rotate':
+        {
+          final cells = _readCells(args['cells']);
+          if (cells.isEmpty) return const [];
+          final direction = args['direction']?.toString() ?? 'cw';
+          final normalize = args['normalize'] != false;
+          final rotated = <_MatrixCell>[];
+          for (final cell in cells) {
+            if (direction == 'ccw' ||
+                direction == 'counter' ||
+                direction == 'counterclockwise' ||
+                direction == 'left') {
+              rotated.add(_MatrixCell(cell.y, -cell.x));
+            } else if (direction == 'flip') {
+              rotated.add(_MatrixCell(-cell.x, cell.y));
+            } else {
+              rotated.add(_MatrixCell(-cell.y, cell.x));
+            }
+          }
+          if (normalize) _normalizeCells(rotated);
+          return rotated.map((cell) => [cell.x, cell.y]).toList();
         }
 
       // ---------- grid ----------
@@ -456,6 +580,38 @@ class GameActions {
           if (velocity == 0) return false;
           entity.flipX = invert ? velocity > 0 : velocity < 0;
           return true;
+        }
+
+      // ---------- 通用音频 ----------
+      case '@audio.play':
+        {
+          final id = args['id']?.toString() ?? args['source']?.toString();
+          if (id == null || id.isEmpty) return false;
+          return game.audio.play(
+            id,
+            loop: args['loop'] is bool ? args['loop'] == true : null,
+            volume: _asDouble(args['volume']),
+            restart: args['restart'] != false,
+          );
+        }
+      case '@audio.stop':
+        {
+          return game.audio.stop(args['id']?.toString());
+        }
+      case '@audio.pause':
+        {
+          return game.audio.pause(args['id']?.toString());
+        }
+      case '@audio.resume':
+        {
+          return game.audio.resume(args['id']?.toString());
+        }
+      case '@audio.set_volume':
+        {
+          final id = args['id']?.toString();
+          final volume = _asDouble(args['volume']);
+          if (id == null || volume == null) return false;
+          return game.audio.setVolume(id, volume);
         }
 
       // ---------- 碰撞检测 ----------
@@ -873,6 +1029,56 @@ class GameActions {
     return null;
   }
 
+  static int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
+    return null;
+  }
+
+  static Set<int>? _readIntSet(dynamic raw) {
+    if (raw is num) return {raw.toInt()};
+    if (raw is! List) return null;
+    final out = raw.map(_asInt).whereType<int>().toSet();
+    return out.isEmpty ? null : out;
+  }
+
+  static List<_MatrixCell> _readCells(dynamic raw) {
+    if (raw is! List) return const [];
+    final cells = <_MatrixCell>[];
+    for (final item in raw) {
+      if (item is List && item.length >= 2) {
+        final x = _asInt(item[0]);
+        final y = _asInt(item[1]);
+        if (x != null && y != null) cells.add(_MatrixCell(x, y));
+      } else if (item is Map) {
+        final x = _asInt(item['x'] ?? item['col'] ?? item['c']);
+        final y = _asInt(item['y'] ?? item['row'] ?? item['r']);
+        if (x != null && y != null) cells.add(_MatrixCell(x, y));
+      }
+    }
+    return cells;
+  }
+
+  static void _normalizeCells(List<_MatrixCell> cells) {
+    if (cells.isEmpty) return;
+    final minX = cells.map((c) => c.x).reduce(min);
+    final minY = cells.map((c) => c.y).reduce(min);
+    for (var i = 0; i < cells.length; i++) {
+      cells[i] = _MatrixCell(cells[i].x - minX, cells[i].y - minY);
+    }
+  }
+
+  static dynamic _deepCopyJson(dynamic value) {
+    if (value is List) return value.map(_deepCopyJson).toList();
+    if (value is Map) {
+      return value.map(
+        (key, item) => MapEntry(key.toString(), _deepCopyJson(item)),
+      );
+    }
+    return value;
+  }
+
   static bool _writePixelPair(
     dynamic value,
     void Function(double first, double second) apply, {
@@ -927,6 +1133,14 @@ class GameActions {
     final speed = (args['speed'] as num?)?.toDouble() ?? 320;
     final oneWayTypes = _readStringSet(args['one_way_types']);
     final oneWayTilesets = _readStringSet(args['one_way_tilesets']);
+
+    player.state['blockedLeft'] = false;
+    player.state['blockedRight'] = false;
+    player.state['blockedUp'] = false;
+    player.state['blockedDown'] = false;
+    player.state['xCollision'] = null;
+    player.state['yCollision'] = null;
+    player.state['onGroundCollision'] = null;
 
     final onGround = player.state['onGround'] == true;
     if (autoRun != null) {
@@ -1480,9 +1694,12 @@ class GameActions {
       }
       if (dx > 0) {
         player.x = solid.left - player.w;
+        player.state['blockedRight'] = true;
       } else {
         player.x = solid.right;
+        player.state['blockedLeft'] = true;
       }
+      player.state['xCollision'] = collision.toMap();
       player.vx = 0;
     }
   }
@@ -1496,6 +1713,8 @@ class GameActions {
   }) {
     player.state['onGround'] = false;
     if (dy == 0) return;
+    final previousY = player.y;
+    final previousBottom = previousY + player.h;
     player.y += dy;
     var rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
     for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
@@ -1512,12 +1731,27 @@ class GameActions {
       if (!solid.overlaps(rect)) continue;
       if (dy > 0) {
         final slopeTop = _slopeTopAt(collision, rect, map.scale);
+        // Only land on a top surface when the actor approached it from above.
+        // Without this guard, side contact with tall solids (pipes, walls,
+        // crates) can be resolved as a vertical landing and the actor appears
+        // to climb the obstacle while holding horizontal movement.
+        final landingSlop = max(
+          2.0,
+          min(8.0, map.tileHeight * map.scale * 0.25),
+        );
+        if (previousBottom > slopeTop + landingSlop) {
+          continue;
+        }
         player.y = slopeTop - player.h;
         player.state['onGround'] = true;
+        player.state['blockedDown'] = true;
+        player.state['onGroundCollision'] = collision.toMap();
         player.state['doubleJumpUsed'] = false;
       } else {
         player.y = solid.bottom;
+        player.state['blockedUp'] = true;
       }
+      player.state['yCollision'] = collision.toMap();
       player.vy = 0;
     }
   }
@@ -1589,4 +1823,11 @@ class _SlideResult {
   final int score;
   final bool moved;
   _SlideResult(this.line, this.score, this.moved);
+}
+
+class _MatrixCell {
+  final int x;
+  final int y;
+
+  const _MatrixCell(this.x, this.y);
 }

@@ -2160,8 +2160,10 @@ class JsonScreenView extends ConsumerWidget {
 
     // 自定义 appBar（screen.appBar Map 配置时启用）
     final customAppBarConfig = screenConfig['appBar'];
-    PreferredSizeWidget appBar;
-    if (customAppBarConfig is Map<String, dynamic>) {
+    PreferredSizeWidget? appBar;
+    if (customAppBarConfig == false) {
+      appBar = null;
+    } else if (customAppBarConfig is Map<String, dynamic>) {
       appBar = appbar_helper.buildAppBar(
         context,
         customAppBarConfig,

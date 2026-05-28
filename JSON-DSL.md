@@ -1500,6 +1500,17 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 字段：`title` / `centerTitle` / `backgroundColor` / `color`(前景) / `elevation` / `leading: {icon, action}` / `actions: [{icon, action}]`。
 
+全屏体验（游戏标题页、沉浸式工具页等）可以显式关闭默认顶部栏：
+
+```json
+{
+  "id": "title",
+  "appBar": false,
+  "backgroundColor": "#000000",
+  "children": [...]
+}
+```
+
 ### 6.38 screen.drawer — 侧边栏（Scaffold 级别）
 
 ```json
@@ -1676,6 +1687,11 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
   "world": { ... },
   "vars": { ... },
   "entities": { "<id>": { ... } },
+  "audio": {
+    "base_url": "https://example.com/game-audio/",
+    "tracks": { "bgm": { "src": "main.ogg", "loop": true, "volume": 0.3 } },
+    "sounds": { "jump": { "src": "jump.ogg", "volume": 0.8 } }
+  },
   "input": { "tap": [...], "swipe": [...], "pan": [...], "swipe_threshold": 16 },
   "frame": { "logic": [...] },
   "tick": { "interval": 0.16, "logic": [...] },
@@ -1692,6 +1708,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `world` | ✅ | 坐标系 |
 | `vars` | ❌ | 游戏内变量初始值（每次 reset 重置） |
 | `entities` | ❌ | 实体声明（id → spec） |
+| `audio` | ❌ | 游戏音频目录。`tracks` 适合 BGM/循环音，`sounds` 适合跳跃、拾取、命中等短音效；资源由 JSON 以 URL/相对路径声明 |
 | `input.tap` | ❌ | 点击事件 logic（event 含 `x`, `y`） |
 | `input.swipe` | ❌ | **离散** swipe：一次手势结束才触发一次（按累积位移决定方向）。event 含 `direction`（up/down/left/right）+ 累积 `dx`/`dy`。适合 2048、贪吃蛇、卡牌这类"一次手势 = 一次事件"的游戏 |
 | `input.pan` | ❌ | **连续** pan：onPanUpdate 每帧（~16ms）触发一次，event 只含本帧增量 `dx`/`dy`（不含 direction）。适合划线、轨迹、拖动、连续蓄力这类需要逐帧位移的游戏 |
@@ -1737,9 +1754,9 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
 | `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：默认每帧自动 `position += velocity * dt`，如需静态像素块用 `velocity: [0,0]` 或 `auto_update: false`；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
 | `sprite` | `asset`, `position`, `size` | 单张图片 / spritesheet 子区域渲染；可配 `src` 裁切 |
-| `animated_sprite` | `asset`, `position`, `size`, `frame_size` | spritesheet 动画；支持 `animations`、`currentAnimation`、`loop`、`step_time` |
+| `animated_sprite` | `asset`, `position`, `size`, `frame_size` | spritesheet 动画；支持 `animations`、`currentAnimation`、`loop`、`step_time`；非零起点/非紧密排布的图集可用 `src_origin: [x,y]` / `src_x` / `src_y` 和 `frame_step: [dx,dy]` / `frame_step_x` / `frame_step_y` |
 | `parallax` | `asset` | 横向循环背景层；支持 `speed_x`, `y`, `height` |
-| `tiled_map` | `source` 或 `map_data` | Tiled 地图渲染 + 瓦片碰撞 + object layer 读取；支持外链 TMX/JSON，也支持内联 `tiled-json-v1`（见下） |
+| `tiled_map` | `source` 或 `map_data` | Tiled 地图渲染 + 碰撞 + object layer 读取；支持外链 TMX/JSON，也支持内联 `tiled-json-v1`（见下）。`solid_layers` / `hazard_layers` 可指向 tile layer，也可指向 objectgroup 的矩形碰撞层 |
 
 每个 entity 的 `render` 字段：
 
@@ -1828,6 +1845,8 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 
 注意：`map_data` 解决的是地图结构内联；tileset 图片仍建议用 URL / `base_url` 资源。小图未来可以用 data URL，但大型 spritesheet 不建议塞进主 JSON。
 
+碰撞层规则：`solid_layers` 和 `hazard_layers` 中的 layer name 如果是 tile layer，会按 tileset 的 tile collision / type 生成碰撞；如果是 objectgroup，会把该层每个矩形 object 当作 AABB 碰撞区域。object 自己有 `type` 时优先使用 object type，否则 solid 默认 `Platform`、hazard 默认 `Hazard`。
+
 #### atom @action 集合（仅 flame_game 内可用）
 
 **通用流程控制**（少量复制 JSON-DSL 主 action）：
@@ -1862,6 +1881,12 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `@value_grid.slide_merge({grid, direction})` | 按方向 slide+merge，返回 `{moved: bool, score: int}`，2048 类用 |
 | `@value_grid.spawn({grid, four_chance: 0.1})` | 随机空格 spawn 一个 2 / 4，返回是否成功 |
 | `@value_grid.can_move({grid})` | 是否还能动（有空格或邻接同值） |
+| `@matrix.clear({grid, value?})` | 清空 `value_grid` 为指定整数，默认 0；适合棋盘/消除/下落方块类游戏 |
+| `@matrix.can_place({grid, cells, x, y, empty_values?, allow_above?})` | 判断多格形状能否放入网格；`cells` 支持 `[[x,y], ...]` 或 `{x,y}` 列表，默认空值为 0，默认允许形状部分在顶部以上 |
+| `@matrix.place({grid, cells, x, y, value, only_in_bounds?})` | 把多格形状写入网格，返回写入格数；默认越界格跳过 |
+| `@matrix.clear_full_rows({grid, empty_values?, fill?})` | 清除所有满行并顶部补空行，返回 `{cleared, rows}` |
+| `@matrix.random_item({items})` | 从列表中随机深拷贝一项，适合抽取下一块/下一张牌/下一个图案 |
+| `@polyomino.rotate({cells, direction?, normalize?})` | 旋转多格形状；`direction` 支持 `cw`/`ccw`/`flip`，默认旋转后归一到最小 x/y 为 0 |
 | `@not({value})` | 通用否定。jsonlogic `!` 不递归 inline action 调用，需要 `@not` 把 inline call 结果取反 |
 | `@pixel.set_position({id, p: [x, y]})` | 写 pixel entity 的位置 |
 | `@pixel.set_velocity({id, v: [vx, vy]})` | 写 pixel entity 的速度（写完每帧自动按 v*dt 更新位置） |
@@ -1875,6 +1900,10 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `@entity.set({id, field, value})` | 写 entity 字段；推荐写标量字段 `x/y/w/h/vx/vy/auto_update/state.xxx`。框架兼容 `position:[x,y]` / `size:[w,h]` / `velocity:[vx,vy]`，但新 JSON 生成时优先分别写 `x/y`、`w/h`、`vx/vy`，错误更容易定位 |
 | `@entity.add({id, field, by, min?, max?})` | 对 entity 数值字段做累加；常用字段：`x/y/w/h/vx/vy/state.xxx`。兼容旧别名 `path/value`，但新 JSON 必须写 `field/by` |
 | `@entity.flip_by_velocity({id})` | 按 vx 自动翻转 sprite 朝向 |
+| `@audio.play({id, source?, loop?, volume?, restart?})` | 播放 `audio.tracks/sounds` 中的 id，或直接播放 `source` URL/asset。BGM 通常 `loop:true`；短音效用默认一次性播放 |
+| `@audio.stop({id?})` | 停止指定循环音；不传 id 时停止当前游戏内所有音频 |
+| `@audio.pause({id?})` / `@audio.resume({id?})` | 暂停/恢复指定或全部循环音 |
+| `@audio.set_volume({id, volume})` | 调整循环音音量，`volume` 范围 0..1 |
 | `@collide.rect({a, b})` | 两个 entity 的 AABB 矩形重叠检测，返回 bool。两边都得是 pixel 类（暴露 x/y/w/h） |
 | `@collision.first({a, where_prefix})` | 查询实体 `a` 与指定 id 前缀实体的第一条 AABB 碰撞，返回命中的 entity id 或 `null` |
 | `@tiled.loaded({map})` | 地图是否已加载完成 |
@@ -1903,6 +1932,13 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 飞出屏幕或超时销毁时都释放计数；只在命中时释放会导致玩家打空几发后永远不能开火。
 `@platformer.step` 会写入 `entities.<id>.hazard` / `outOfBounds` 语义，关卡游戏需要在
 `frame.logic` 里读取并触发扣命、重生或 `@game_over`，避免角色掉出地图后继续隐形运行。
+它也会写入通用碰撞边信息：`blockedLeft` / `blockedRight` / `blockedUp` /
+`blockedDown`、`xCollision` / `yCollision` / `onGroundCollision`。平台游戏可以据此
+实现撞墙反向、顶砖块、踩地触发等状态机，不要靠猜坐标。
+
+平台游戏发布前至少过这组验收：地面能站住；墙/管道/箱子从侧面会阻挡；砖块从下方能顶到；
+单向平台只在显式 `one_way_types` / `one_way_tilesets` 指定时生效；掉坑、碰危险物、冲出地图会扣命、
+重生或结束；敌人、道具、子弹不会因为离屏/命中路径遗漏而永久卡住状态。
 | `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
 | `@random_double({min, max})` | 返回 [min, max) 的随机 double |
 
@@ -1913,7 +1949,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 
 #### 已知限制 / 设计边界
 
-- 没有音效 atom。
+- 音频能力只负责播放 JSON 引入的 BGM / 短音效；复杂混音、音频精确同步和动态合成暂不支持。
 - 没有动画曲线 / 缓动系统；简单 spritesheet 动画用 `animated_sprite`。
 - 没有游戏专用持久化；高分/进度让 JSON-APP 自己在 `on_game_over` / `on_score_changed` 中用 storage/file/db 保存。
 - `frame.logic` 是逐帧解释执行，适合轻量规则；大批量实体建议用 `@tiled.spawn_objects_near`、前缀遍历和距离 despawn 控制规模。
@@ -1930,6 +1966,8 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `templates/demo_jump.json` | `input.press_end` + `pixel` entity + 抛物线物理 + 状态机 | **蓄力跳跃 + 平台滚动**：按住-松手按 `held_ms` 决定 vx，抛物线由重力自然形成；落到目标平台→镜头滚动（platform / player 同时 `set_velocity`)，到位后 despawn / spawn 切换。整套状态机（ready/jumping/rolling）由 JSON `vars.state` 驱动 |
 | `templates/demo_superdash_runner.ALL_IN_ONE.json` | `demo-superdash-runner-all-in-one` | 官方 SuperDash 风格跑酷，地图结构内联在 JSON 中；图片仍走 asset URL |
 | `templates/demo_platformer_adventure.ALL_IN_ONE.json` | `demo-platformer-adventure-all-in-one` | 多关卡平台跳跃，地图结构内联在 JSON 中，演示无 bucket 的 all-in-one 游戏发布方式 |
+| `templates/demo_tetris.json` | `value_grid` + `@matrix.*` + `@polyomino.rotate` | 竖屏下落方块游戏；棋盘清行、旋转和放置都通过通用矩阵 atom 编排 |
+| `templates/demo_mario_platformer.json` | `tiled_map` objectgroup 碰撞 + `animated_sprite.src_origin` + `@platformer.step` | 横屏平台跳跃游戏；外链 TMX/素材，玩法逻辑留在 JSON 层 |
 
 ---
 

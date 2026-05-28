@@ -146,6 +146,7 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   void dispose() {
     widget.interpreter.unregisterFlameGameResetter(_resetter);
     widget.interpreter.unregisterFlameGameInputHandler(_inputHandler);
+    _game.disposeGame();
     super.dispose();
   }
 

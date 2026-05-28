@@ -301,6 +301,37 @@ class TiledMapEntity extends GameEntity {
         }
       }
     }
+    for (final entry in objectsByLayer.entries) {
+      final layerName = entry.key;
+      final layerSolid = solidLayers.contains(layerName);
+      final layerHazard = hazardLayers.contains(layerName);
+      if (!layerSolid && !layerHazard) continue;
+      for (final object in entry.value) {
+        if (object.width <= 0 || object.height <= 0) continue;
+        final rect = Rect.fromLTWH(
+          object.x,
+          object.y,
+          object.width,
+          object.height,
+        );
+        if (!rect.overlaps(area)) continue;
+        out.add(
+          TiledTileCollision(
+            rect: rect,
+            type: object.type.isNotEmpty
+                ? object.type
+                : layerHazard
+                ? 'Hazard'
+                : 'Solid',
+            tileset: layerName,
+            objectId: object.id,
+            objectName: object.name,
+            layer: layerName,
+            properties: object.properties,
+          ),
+        );
+      }
+    }
     return out;
   }
 
@@ -992,12 +1023,18 @@ class TiledTileCollision {
   final Rect rect;
   final String type;
   final String tileset;
+  final int? objectId;
+  final String? objectName;
+  final String? layer;
   final Map<String, dynamic> properties;
 
   const TiledTileCollision({
     required this.rect,
     required this.type,
     this.tileset = '',
+    this.objectId,
+    this.objectName,
+    this.layer,
     this.properties = const {},
   });
 
@@ -1012,6 +1049,9 @@ class TiledTileCollision {
     'h': rect.height,
     'type': type,
     'tileset': tileset,
+    if (objectId != null) 'objectId': objectId,
+    if (objectName != null && objectName!.isNotEmpty) 'objectName': objectName,
+    if (layer != null && layer!.isNotEmpty) 'layer': layer,
     'properties': properties,
     ...properties,
   };
