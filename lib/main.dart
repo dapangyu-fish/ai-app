@@ -38,6 +38,7 @@ import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 import 'im/im_conversation_entry.dart';
 import 'im/im_service.dart';
+import 'navigation/app_route_observer.dart';
 import 'onboarding/onboarding_keys.dart';
 import 'onboarding/onboarding_service.dart';
 
@@ -385,6 +386,7 @@ class JsonDslApp extends ConsumerWidget {
     return MaterialApp(
       title: 'MyApp',
       navigatorKey: navigatorKey,
+      navigatorObservers: [appRouteObserver],
       debugShowCheckedModeBanner: false,
       locale: locale, // null = 跟随系统
       supportedLocales: T.supportedLocales,

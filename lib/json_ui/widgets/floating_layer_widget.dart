@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../navigation/app_route_observer.dart';
 import '../interpreter.dart';
 import 'base_widget.dart';
 
@@ -44,15 +46,38 @@ class FloatingLayerHost extends StatefulWidget {
   State<FloatingLayerHost> createState() => _FloatingLayerHostState();
 }
 
-class _FloatingLayerHostState extends State<FloatingLayerHost> {
+class _FloatingLayerHostState extends State<FloatingLayerHost> with RouteAware {
   OverlayEntry? _overlayEntry;
   late Map<String, Offset> _centers;
+  PageRoute<dynamic>? _route;
+  bool _routeVisible = true;
+  bool _ensureOverlayScheduled = false;
+  bool _markOverlayScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _centers = _defaultCenters();
     _loadPrefs();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextRoute = ModalRoute.of(context);
+    if (_route == nextRoute) return;
+    if (_route != null) {
+      appRouteObserver.unsubscribe(this);
+    }
+    _route = nextRoute is PageRoute<dynamic> ? nextRoute : null;
+    final route = _route;
+    if (route != null) {
+      appRouteObserver.subscribe(this, route);
+      _routeVisible = route.isCurrent;
+    } else {
+      _routeVisible = true;
+    }
+    _scheduleEnsureOverlay();
   }
 
   @override
@@ -70,25 +95,51 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> {
       _centers = _defaultCenters();
       _savePrefs();
     }
-    if (!widget.enabled) {
+    if (!widget.enabled || !_canShowOverlay) {
       _removeOverlay();
+      return;
     }
-    _overlayEntry?.markNeedsBuild();
+    _scheduleEnsureOverlay();
   }
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _removeOverlay();
     super.dispose();
   }
 
   @override
+  void didPush() {
+    _routeVisible = true;
+    _scheduleEnsureOverlay();
+  }
+
+  @override
+  void didPopNext() {
+    _routeVisible = true;
+    _scheduleEnsureOverlay();
+  }
+
+  @override
+  void didPushNext() {
+    _routeVisible = false;
+    _removeOverlay();
+  }
+
+  @override
+  void didPop() {
+    _routeVisible = false;
+    _removeOverlay();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (!widget.enabled) {
+    if (!widget.enabled || !_canShowOverlay) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _removeOverlay());
       return const SizedBox.shrink();
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureOverlay());
+    _scheduleEnsureOverlay();
     return const SizedBox.shrink();
   }
 
@@ -141,7 +192,7 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> {
                 setState(() {
                   _centers[item.id] = _clampNormalized(next, area, item.size);
                 });
-                _overlayEntry?.markNeedsBuild();
+                _markOverlayNeedsBuild();
               }
             : null,
         onPanEnd: widget.editing ? (_) => _savePrefs() : null,
@@ -169,15 +220,52 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> {
   }
 
   void _ensureOverlay() {
-    if (!mounted || !widget.enabled) return;
+    if (!mounted || !widget.enabled || !_canShowOverlay) {
+      _removeOverlay();
+      return;
+    }
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
     if (_overlayEntry == null) {
       _overlayEntry = OverlayEntry(builder: _buildOverlay);
       overlay.insert(_overlayEntry!);
     } else {
-      _overlayEntry!.markNeedsBuild();
+      _markOverlayNeedsBuild();
     }
+  }
+
+  void _scheduleEnsureOverlay() {
+    if (_ensureOverlayScheduled) return;
+    _ensureOverlayScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureOverlayScheduled = false;
+      if (!mounted) return;
+      _ensureOverlay();
+    });
+  }
+
+  void _markOverlayNeedsBuild() {
+    final entry = _overlayEntry;
+    if (entry == null) return;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final isBuilding =
+        phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks;
+    if (!isBuilding) {
+      entry.markNeedsBuild();
+      return;
+    }
+    if (_markOverlayScheduled) return;
+    _markOverlayScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markOverlayScheduled = false;
+      if (!mounted || _overlayEntry == null) return;
+      if (!widget.enabled || !_canShowOverlay) {
+        _removeOverlay();
+        return;
+      }
+      _overlayEntry?.markNeedsBuild();
+    });
   }
 
   void _removeOverlay() {
@@ -198,7 +286,7 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> {
       }
       if (!mounted) return;
       setState(() => _centers = next);
-      _overlayEntry?.markNeedsBuild();
+      _markOverlayNeedsBuild();
     } catch (_) {
       // Floating position is a local preference; defaults are sufficient.
     }
@@ -230,6 +318,8 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> {
   }
 
   String get _prefsPrefix => 'floating_layer.${widget.storageKey}';
+
+  bool get _canShowOverlay => _routeVisible && (_route?.isCurrent ?? true);
 }
 
 class JsonFloatingLayerWidget extends JsonBaseWidget {
