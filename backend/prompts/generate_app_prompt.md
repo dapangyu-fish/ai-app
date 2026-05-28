@@ -12,18 +12,21 @@
 **严格按下面三步走，禁止偏离**（用 `Bash` 工具一条命令跑完整段）：
 
 ```bash
-mkdir -p /tmp/ai-uploads
-TARGET=$(mktemp /tmp/ai-uploads/app.XXXXXX.json) && echo "DOWNLOAD_TO=$TARGET"
+WORKDIR="${AI_APP_WORKSPACE:-$(mktemp -d /tmp/ai-workspaces/current.XXXXXX)}"
+mkdir -p "$WORKDIR"
+TASKS="${AI_APP_TASKLIST:-$WORKDIR/TASKS.md}"
+touch "$TASKS"
+TARGET="$WORKDIR/current_app.json" && echo "WORKDIR=$WORKDIR" && echo "DOWNLOAD_TO=$TARGET"
 curl -sS --max-time 30 -o "$TARGET" "<完整URL，从 [json_app_url]…[/json_app_url] 标签里取出>"
 ```
 
-`mktemp` 输出的具体路径（例如 `/tmp/ai-uploads/app.aB3xY7.json`）就是本轮的本地配置路径。
-**记下它**，后面所有读 / 改 / 校验"当前应用配置"都用这个路径，下载完后用 `Read` 工具读它即可。
+`WORKDIR` 是本轮独立工作目录，后面所有下载、生成器、JSON、校验报告都必须放在这个目录下。
+`DOWNLOAD_TO` 的具体路径就是本轮的本地配置路径。**记下它**，后面所有读 / 改 / 校验"当前应用配置"都用这个路径，下载完后用 `Read` 工具读它即可。
 
 **严格禁止**：
 - ❌ **不要使用 `WebFetch` 工具**：这个域名走域名白名单必失败（"Unable to verify domain..."），白白浪费一轮
 - ❌ **不要使用 `wget`**：所有历史 session 实证 curl 工作得好，没必要试 wget
-- ❌ **不要写死 `/tmp/current_app.json` 这类固定路径**：多 session 并发会互相覆盖，读到别人的旧数据
+- ❌ **不要写死 `/tmp/current_app.json`、`/tmp/app.json` 这类固定路径**：多 session 并发会互相覆盖，读到别人的旧数据
 - ❌ **不要省略 mktemp 自己编随机字符**：你不擅长生成真随机，会重复或可预测
 - ❌ **不要把整段 URL 拆开**：`?` `&` 必须保留并且整个 URL 用双引号包裹
 
@@ -57,17 +60,40 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 
 当你生成了新的或修改好的 JSON-APP 代码后，你**必须**按顺序执行以下步骤，**任何一步失败都不能跳过/上传**：
 
-**步骤 0（每次生成前必跑，禁止跳过）**：用 `Bash` 执行 `mktemp /tmp/app.XXXXXX.json`，得到本轮唯一的临时文件路径（例如 `/tmp/app.aB3xY7.json`）。**记下这个路径**，下面所有"临时文件"的地方一律用它，**禁止使用 `/tmp/app.json` 之类的固定路径**（多用户并发或同一会话连续生成会互相覆盖，造成上传到错误的内容）。下文用 `<TMPFILE>` 占位代指本轮 mktemp 给出的路径。
+**步骤 0（每次生成前必跑，禁止跳过）**：先创建本轮独立工作目录和任务清单。用 `Bash` 执行：
 
-1. 使用工具把生成的 JSON 代码写入到 `<TMPFILE>`。
+```bash
+WORKDIR="${AI_APP_WORKSPACE:-$(mktemp -d /tmp/ai-workspaces/session.XXXXXX)}"
+mkdir -p "$WORKDIR"
+TASKS="${AI_APP_TASKLIST:-$WORKDIR/TASKS.md}"
+if [ ! -s "$TASKS" ]; then
+cat > "$TASKS" <<'EOF'
+# Task List
+- [ ] Clarify target app/game type and success criteria
+- [ ] Read DSL / anti-patterns / closest template for API shape only
+- [ ] Select assets from manifest, never hand-build asset URLs
+- [ ] Generate JSON inside this workspace
+- [ ] Run json.tool and validate_json_app.py
+- [ ] Upload only after all ERRORs are fixed
+EOF
+fi
+TMPFILE="$WORKDIR/app.json"
+echo "WORKDIR=$WORKDIR"
+echo "TASKS=$TASKS"
+echo "TMPFILE=$TMPFILE"
+```
+
+后续所有"临时文件"、生成器、下载的 manifest、校验输出都必须放在 `$WORKDIR` 下面；每完成一步更新 `$TASKS`。**禁止使用 `/tmp/app.json`、`/tmp/generate_app.py` 之类固定路径**（多用户并发或同一会话连续生成会互相覆盖，造成上传到错误的内容）。下文用 `$TMPFILE` 代指 `$WORKDIR/app.json`。
+
+1. 使用工具把生成的 JSON 代码写入到 `$TMPFILE`。
 2. **强制：上传前过一遍合法性校验**（见下"上传前自检 checklist"），任何一条不通过，回去改 JSON，**重新过一遍**，再继续。
-3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh <TMPFILE>`。该命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
+3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh "$TMPFILE"`。该脚本会再次运行 `validate_json_app.py`；如果校验失败，必须按错误路径修复后重跑，不能绕过上传。成功时命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
 4. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
 5. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
 
 ### 复杂 JSON 的 Python 生成器工作流（强制）
 
-满足任一条件时，**不要手写整份 JSON**，必须先写一个临时 Python 生成器，再由脚本输出 `<TMPFILE>`：
+满足任一条件时，**不要手写整份 JSON**，必须先写一个临时 Python 生成器，再由脚本输出 `$TMPFILE`：
 
 - `flame_game` / tiled map / 关卡 / 大量实体 / 大量重复 UI。
 - 需要根据 asset manifest 选择素材、计算图片尺寸、切 sprite sheet。
@@ -76,11 +102,11 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 标准流程：
 
 ```bash
-GEN=$(mktemp /tmp/generate_app.XXXXXX.py)
+GEN="$WORKDIR/generate_app.py"
 # 用 Write 工具写入 $GEN；不要用固定路径
-python3 "$GEN" <TMPFILE>
-python3 -m json.tool <TMPFILE> > /dev/null
-python3 backend/validate_json_app.py <TMPFILE>
+python3 "$GEN" "$TMPFILE"
+python3 -m json.tool "$TMPFILE" > /dev/null
+python3 backend/validate_json_app.py "$TMPFILE"
 ```
 
 生成器里优先复用项目提供的 helper，减少临场手拼 JSON：
@@ -135,10 +161,10 @@ objects_layer = tiled_objects_from_run_and_gun_plan(plan)
 
 ### 上传前自检 checklist（必跑）
 
-a. **JSON 语法**：`python3 -m json.tool <TMPFILE> > /dev/null && echo OK`
+a. **JSON 语法**：`python3 -m json.tool "$TMPFILE" > /dev/null && echo OK`
    - 报错 → 改到 OK 再走 b。
 
-a2. **框架静态校验**：`python3 backend/validate_json_app.py <TMPFILE>`
+a2. **框架静态校验**：`python3 backend/validate_json_app.py "$TMPFILE"`
    - 输出 `ERROR` → 必须按路径修复，重新从 a 开始。
    - 输出 `WARN` → 新生成 APP 尽量修复；确认为兼容旧 APP 的修复场景才可保留。
 
@@ -161,6 +187,8 @@ h. **flame_game 实体动作参数**：如果 JSON 里出现 `"type": "flame_gam
    - `@entity.set` 标准写法是 `{"id": "...", "field": "x|y|w|h|vx|vy|auto_update|state.xxx", "value": ...}`。新生成 JSON 优先写标量字段，**不要**把 `size` / `position` / `velocity` 写成数组；如确实需要改宽高或坐标，拆成两条 `w/h` 或 `x/y`。
    - `@entity.add` 标准写法是 `{"id": "...", "field": "x|y|vx|vy|state.xxx", "by": ...}`，**不要**使用旧写法 `path/value`。
    - `virtual_gamepad` / 摇杆 / 方向键只负责发输入；必须在 `flame_game.frame.logic` 中把输入变量转成实体移动、攻击、动画或 `@platformer.step`，否则会出现"手柄有反馈但角色不动"。
+
+h2. **flame_game 必须真实挂载**：`flame_game` 必须作为 `ui.screens` 下可渲染的 widget 节点出现，不能藏在 `props` 数据里。尤其 `game-controls.psJoystickGamepad` 只是输入控件，不是容器；禁止写 `"props": {"game": {"type":"flame_game"}}` 或 `actionButtons` 这类它不支持的字段。正确结构是一个真实 `flame_game` 节点 + 一个独立的 `game-controls.psJoystickGamepad` 节点作为 sibling/overlay。
 
 i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型（如平台跳跃、横版动作、横版射击、run-and-gun、跑酷、弹幕、塔防、解谜等），必须先在下方"游戏类型设计 Profile"中选择匹配项；暂无匹配 profile 时，也要先写出该类型最小玩法闭环再生成。上传前逐条检查，不能只做到"能启动"，必须符合该类型的基本玩法结构。
 
@@ -281,7 +309,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 3. 使用角色、敌人、爆炸、子弹等图片前，必须判断它是**单帧图片**还是 **sprite sheet / strip / tileset**：
    - 文件名包含 `SpriteSheet` / `spritesheet` / `sheet` / `strip` / `sliced` / `tileset`，或同一张图展示多个姿态时，默认按多帧资源处理，**不能直接作为普通 `sprite` 渲染**。
    - 对多帧资源，必须先读 `files[].sprite` 或 `files[].atlas`，再用 `animated_sprite`、`frame_size`、`frames`、`frames_per_row`，或显式 `src` 裁剪单帧。无法确认帧网格时，换用 manifest 中更明确的单帧/切片素材。
-   - 如果只能临时推断帧网格，必须执行 `python3 backend/validate_json_app.py <TMPFILE>`。校验器报告 `declared sprite grid cuts through opaque pixels` 时，说明切片边界穿过角色/敌人身体，不能上传。
+   - 如果只能临时推断帧网格，必须执行 `python3 backend/validate_json_app.py "$TMPFILE"`。校验器报告 `declared sprite grid cuts through opaque pixels` 时，说明切片边界穿过角色/敌人身体，不能上传。
    - 单帧 PNG 的 `frame_size` 必须等于 `files[].image.width/height`。不要给 128x128 单帧角色硬写 72x72，否则会只显示局部。
    - 如果 manifest 暂时没有尺寸信息，可以临时下载候选 PNG/JPG 到 `/tmp`，用脚本读取宽高后再决定帧尺寸；不要凭文件名猜 32/48/64。
 4. JSON 中引用图片时，必须使用所选 manifest 里的 `files[].url` 原样值。不要自己拼 URL；文件名可能有空格、括号，manifest 已经做过 URL 编码。
@@ -349,6 +377,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 9. **摇杆松手必须停**：用 `game-controls` 的 `psJoystickGamepad` 时，只设 `moveInput`（指向把 `move_dir = event.x` 的 move handler，如 `move_axis`）。**`moveEndInput` 留空即可**——它默认回退到 `moveInput`，松手时控件发 `event.x=0` 自动把 `move_dir` 归零。**绝不要把 `moveEndInput` 指向 `move_up` 或别的方向 handler**：那种 handler 多半只在 `move_dir==±1` 时归零，而摇杆是模拟量永远不等于 ±1 → 松手后角色一直走。校验器会拦 `moveEndInput ... will not stop the player`。
 10. **物理引擎按品类选**：横版射击 / run-and-gun / 硬碰撞动作类用 `physics.engine: "aabb_platformer"`（踩不上去就是踩不上去）。`leap_platformer` 会让角色**自动爬上台阶/斜坡**，只用于明确需要走斜坡的游戏，否则魂斗罗类会出现"角色自己上台阶"。校验器会拦 run-and-gun 用 leap。
 11. **图元不要挂 render 色块**：`sprite` / `animated_sprite` 不要带 `render: {"shape": "rect"/"circle", ...}`。引擎只在**贴图加载失败时**画这个框，一旦显形角色就变成"幽灵方块"（玩家变色块的头号原因）。正式实体只写 `asset` / `frame_size` / `frames`，别留 debug 色块；需要纯色方块才用 `kind:"pixel"`。校验器对玩家报 ERROR、其余报 WARN。
+12. **game-controls 不是容器**：`game-controls.psJoystickGamepad` 只负责发 `@flame_game_input`。不要把游戏、弹窗、按钮数组或任意 widget 放进它的 `props`；这些内容会被组件库忽略，最终表现为白屏或只有手柄没有游戏。
 
 ## 游戏类型设计 Profile（先选类型，再写 JSON）
 

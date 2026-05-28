@@ -868,6 +868,7 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 
 - 只有角色或纯背景，地图瓦片、敌人、道具、终点不显示
 - 虚拟摇杆/按钮本身有触摸反馈，但角色不移动、不跳、不攻击
+- 页面直接白屏，或者只剩标题/手柄，游戏画面没有挂载出来
 - 没有 Flutter 白屏异常，最多只能在日志里看到 tiled tileset 404 或逻辑一直卡在 loading
 
 ### 💔 反面教材分析
@@ -899,6 +900,23 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 后果是 loading 初始化、地图 object spawn、`@platformer.step`、敌人 AI、碰撞检测全被静默跳过。
 外部 `virtual_gamepad` 仍然能把输入发进游戏，但每帧更新逻辑没执行，所以表现就是“摇杆无效”。
 
+另一个常见白屏来源是把 `flame_game` 当作数据塞进组件 props：
+
+```jsonc
+{
+  "type": "ref",
+  "from": "game-controls",
+  "widget": "psJoystickGamepad",
+  "props": {
+    "moveInput": "move_axis",
+    "game": { "type": "flame_game", "...": "..." }
+  }
+}
+```
+
+`game-controls.psJoystickGamepad` 不是容器，它只渲染手柄并发送 `@flame_game_input`。
+`props.game`、`props.actionButtons` 这类字段不会被模板渲染，藏在里面的 `flame_game` 不会挂载到 Flutter widget tree，最终就会出现空白页。
+
 同一类事故还包括 `tiled_map.map_data` 的资源路径写错。内联地图里如果保留：
 
 ```jsonc
@@ -919,6 +937,9 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 ### ✅ 正确姿势 / 避坑指南
 
 - 普通 JSON-APP 逻辑用 `condition`；`flame_game` 内部逻辑用 `cond`。
+- `flame_game` 必须直接作为 `ui.screens` 下的可渲染 widget 节点出现；不要放进任何组件的 `props.game`。
+- `game-controls.psJoystickGamepad` 只接受 `moveInput`、`moveEndInput`、`jumpInput`、`attackInput`、`height`、`backgroundColor`，它不是游戏容器。
+- 正确组合方式是：真实 `flame_game` 节点负责画面和逻辑，独立的 gamepad 节点作为 sibling 或 overlay 负责输入。
 - 在生成游戏时，先确认 `frame.logic` 里至少有一条 loading -> ready/running 的状态推进，并且这条路径真实会执行。
 - `virtual_gamepad` 只负责发输入；移动必须在 `flame_game.frame.logic` 里把 `vars.move_dir` 转成 `@entity.set(vx)` + `@platformer.step`。
 - 内联 `tiled-json-v1` 地图优先使用绝对图片 URL，或者保证 `image` 相对路径与 `map_data.source` / `tileset.source` 的组合后仍能访问。
@@ -930,6 +951,8 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 ### 🔍 自检 / 排查
 
 - 扫描 `flame_game` 内部所有 `@if`：`args` 里必须有 `cond`，不能只有 `condition`。
+- 扫描所有 `flame_game` 路径：如果路径包含 `.props.`，说明它不是可渲染节点，必须移到 `ui.screens` 的真实 widget 树里。
+- 扫描 `game-controls.psJoystickGamepad.props`：出现 `game`、`actionButtons` 或其它自创字段都要删掉，改成独立 UI 节点。
 - 扫描 `map_data.tilesets[].image`：把它按 `source` 规则拼成最终 URL，实际 `curl -I` 应该是 200。
 - 扫描 `@entity.set`：优先使用 `x/y/w/h/vx/vy/auto_update/state.xxx`；如出现 `size` / `position`，确认目标客户端版本支持兼容写法，最好拆成标量字段。
 - 扫描 `@entity.add`：必须使用 `field` + `by`；如出现 `path` + `value`，应改成标准参数以兼容旧客户端。

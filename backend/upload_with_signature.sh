@@ -18,14 +18,20 @@ if [ ! -f "$FILE_PATH" ]; then
     exit 1
 fi
 
-# 加载环境变量
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 强制校验 JSON-APP。提示词会要求 AI 先本地跑一遍，但上传脚本是最后一道闸：
+# 只要 validate_json_app.py 报 ERROR，就不能把坏配置发给客户端。
+python3 "$SCRIPT_DIR/validate_json_app.py" "$FILE_PATH" >&2
+
+# 加载环境变量
 if [ -f "$SCRIPT_DIR/.env" ]; then
     export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
 fi
 
 # MinIO 配置
-MINIO_ENDPOINT="${MINIO_PUBLIC_URL#https://}"
+MINIO_URL="${MINIO_PUBLIC_URL:-https://myapp-oss-endpoint.dapangyu.work}"
+MINIO_ENDPOINT="${MINIO_URL#https://}"
 MINIO_ENDPOINT="${MINIO_ENDPOINT#http://}"
 BUCKET="ai-chat-temp"
 OBJECT_NAME="$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-').json"
@@ -34,7 +40,7 @@ OBJECT_NAME="$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-').json"
 # 如果没有 mc，使用 Python 脚本
 if command -v mc &> /dev/null; then
     # 配置 mc alias（如果还没配置）
-    mc alias set myminio "https://${MINIO_ENDPOINT}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}" &> /dev/null || true
+    mc alias set myminio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}" &> /dev/null || true
 
     # 上传文件
     mc cp "$FILE_PATH" "myminio/${BUCKET}/${OBJECT_NAME}" &> /dev/null
@@ -60,7 +66,9 @@ with open(file_path, 'rb') as f:
     data = f.read()
 
 # MinIO 配置
-endpoint = os.environ.get('MINIO_PUBLIC_URL', 'https://myapp-oss-endpoint.dapangyu.work').split('://')[-1]
+public_url = os.environ.get('MINIO_PUBLIC_URL', 'https://myapp-oss-endpoint.dapangyu.work')
+endpoint = public_url.split('://')[-1]
+secure = public_url.startswith('https://')
 access_key = os.environ.get('MINIO_ACCESS_KEY', '')
 secret_key = os.environ.get('MINIO_SECRET_KEY', '')
 
@@ -69,7 +77,7 @@ client = Minio(
     endpoint,
     access_key=access_key,
     secret_key=secret_key,
-    secure=True,
+    secure=secure,
 )
 
 # 确保 bucket 存在

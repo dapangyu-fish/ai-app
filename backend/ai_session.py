@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -58,6 +59,9 @@ _CLI_LOG_DIR = os.environ.get("CLAUDE_CLI_LOG_DIR", "/mnt/storage00/log")
 _cli_log_lock = threading.Lock()
 _cli_log_warned = False
 
+_WORKSPACE_ROOT = os.environ.get("AI_AGENT_WORKSPACE_ROOT", "/tmp/ai-workspaces")
+_WORKSPACE_RETENTION_SECONDS = int(os.environ.get("AI_AGENT_WORKSPACE_RETENTION_SECONDS", "604800"))
+
 
 def _append_cli_log(session_id: str, kind: str, line) -> None:
     """把 Claude CLI 的原始输出按 session 追加到 JSONL 文件，便于事后排查。
@@ -88,6 +92,70 @@ def _append_cli_log(session_id: str, kind: str, line) -> None:
         if not _cli_log_warned:
             _cli_log_warned = True
             logger.warning(f"[CLI_LOG] 写入 CLI 日志失败（仅提示一次）: {e}")
+
+
+def _safe_path_part(value: Optional[str], fallback: str) -> str:
+    text = str(value or "").strip()
+    cleaned = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in text)
+    cleaned = cleaned.strip("._")
+    return cleaned[:96] or fallback
+
+
+def _cleanup_old_workspaces() -> None:
+    if not os.path.isdir(_WORKSPACE_ROOT):
+        return
+    cutoff = time.time() - _WORKSPACE_RETENTION_SECONDS
+    try:
+        session_names = os.listdir(_WORKSPACE_ROOT)
+    except OSError:
+        return
+    deleted = 0
+    for session_name in session_names:
+        session_path = os.path.join(_WORKSPACE_ROOT, session_name)
+        if not os.path.isdir(session_path):
+            continue
+        try:
+            job_names = os.listdir(session_path)
+        except OSError:
+            continue
+        for job_name in job_names:
+            path = os.path.join(session_path, job_name)
+            if not os.path.isdir(path):
+                continue
+            try:
+                if os.path.getmtime(path) < cutoff:
+                    shutil.rmtree(path, ignore_errors=True)
+                    deleted += 1
+            except OSError:
+                pass
+        try:
+            if not os.listdir(session_path):
+                os.rmdir(session_path)
+        except OSError:
+            pass
+    if deleted:
+        logger.info("[WORKSPACE] 清理旧工作目录 %s 个 (> %ss)", deleted, _WORKSPACE_RETENTION_SECONDS)
+
+
+def _prepare_worker_workspace(session_id: str, job_id: Optional[str]) -> tuple[str, str]:
+    _cleanup_old_workspaces()
+    safe_session = _safe_path_part(session_id, "session")
+    safe_job = _safe_path_part(job_id, "job")
+    workspace = os.path.join(_WORKSPACE_ROOT, safe_session, safe_job)
+    os.makedirs(workspace, exist_ok=True)
+    tasklist = os.path.join(workspace, "TASKS.md")
+    if not os.path.exists(tasklist):
+        with open(tasklist, "w", encoding="utf-8") as f:
+            f.write(
+                "# Task List\n"
+                "- [ ] Clarify target app/game type and success criteria\n"
+                "- [ ] Read DSL / anti-patterns / closest template for API shape only\n"
+                "- [ ] Select assets from manifest; do not hand-build asset URLs\n"
+                "- [ ] Generate JSON inside this workspace\n"
+                "- [ ] Run json.tool and validate_json_app.py\n"
+                "- [ ] Upload only after all ERRORs are fixed\n"
+            )
+    return workspace, tasklist
 
 
 # ────────────────────────────── Redis 单例 ──────────────────────────────
@@ -740,15 +808,34 @@ def _run_redis_job(job: _WorkerJob) -> None:
         _complete_running(job.session_id)
 
 
-def _build_cli_cmd(session_id: str, last_msg: str, sys_prompt: str,
-                   is_resume: bool) -> list:
+def _build_cli_cmd(
+    session_id: str,
+    last_msg: str,
+    sys_prompt: str,
+    is_resume: bool,
+    *,
+    workspace: Optional[str] = None,
+    tasklist: Optional[str] = None,
+) -> list:
+    workspace_note = ""
+    if workspace and tasklist:
+        workspace_note = (
+            "\n\n本轮后端已为你分配独立工作目录，必须使用它隔离所有临时文件："
+            f"\nAI_APP_WORKSPACE={workspace}"
+            f"\nAI_APP_TASKLIST={tasklist}"
+            "\n生成器、下载的 manifest、app.json、校验输出都放在 AI_APP_WORKSPACE 下；"
+            "每完成一步更新 AI_APP_TASKLIST。不要写 /tmp/app.json 或 /tmp/generate_app.py。"
+        )
     cmd = [
         CLAUDE_BIN,
         "--dangerously-skip-permissions",
         "--output-format", "stream-json",
         "--include-partial-messages",
         "--verbose",
-        "-p", f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户",
+        "-p", (
+            f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>"
+            f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户"
+        ),
     ]
     if is_resume:
         cmd.extend(["-r", session_id])
@@ -817,16 +904,29 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             logger.warning(f"[WORKER] 系统提示词文件未找到: {GENERATE_PROMPT_PATH}")
 
         provider, env = _provider_env(provider_id)
+        workspace, tasklist = _prepare_worker_workspace(session_id, job_id)
+        env["AI_APP_WORKSPACE"] = workspace
+        env["AI_APP_TASKLIST"] = tasklist
+        env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
 
         _append_cli_log(session_id, "meta", json.dumps({
             "event": "worker_start",
             "provider": provider.get("id"),
             "user_msg_len": len(last_msg),
+            "workspace": workspace,
+            "tasklist": tasklist,
             "ts": int(time.time() * 1000),
         }, ensure_ascii=False))
 
         # 先尝试 resume
-        cmd = _build_cli_cmd(session_id, last_msg, sys_prompt, is_resume=True)
+        cmd = _build_cli_cmd(
+            session_id,
+            last_msg,
+            sys_prompt,
+            is_resume=True,
+            workspace=workspace,
+            tasklist=tasklist,
+        )
         logger.info(f"[WORKER] sid={session_id} 起 CLI (resume): {cmd[0]}...")
 
         proc = subprocess.Popen(
@@ -876,7 +976,14 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             if "No conversation found" in full_err or "requires a valid session ID" in full_err:
                 logger.info(f"[WORKER] sid={session_id} resume 失败，fallback 新会话")
                 _unregister_proc(session_id, proc)
-                cmd = _build_cli_cmd(session_id, last_msg, sys_prompt, is_resume=False)
+                cmd = _build_cli_cmd(
+                    session_id,
+                    last_msg,
+                    sys_prompt,
+                    is_resume=False,
+                    workspace=workspace,
+                    tasklist=tasklist,
+                )
                 proc = subprocess.Popen(
                     cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     stdin=subprocess.DEVNULL, env=env, bufsize=1,

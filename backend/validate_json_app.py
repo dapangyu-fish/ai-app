@@ -194,6 +194,7 @@ class Validator:
         self.dependencies: set[str] = set()
         self.self_package_names: set[str] = set()
         self.flame_games: list[tuple[str, dict[str, Any]]] = []
+        self.rendered_flame_games: list[tuple[str, dict[str, Any]]] = []
         self.sprite_boundary_error_keys: set[tuple[str, int, int, int]] = set()
 
     def error(self, path: str, message: str) -> None:
@@ -205,6 +206,7 @@ class Validator:
     def validate(self) -> int:
         self._validate_root()
         self._walk(self.root, "$", in_game_logic=False)
+        self._validate_flame_game_mounts()
         self._validate_presentation_text_slots()
         self._validate_sprite_sheet_usage()
         self._validate_game_profiles()
@@ -257,6 +259,8 @@ class Validator:
             node_type = node.get("type")
             if node_type == "flame_game":
                 self.flame_games.append((path, node))
+                if self._is_rendered_widget_path(path):
+                    self.rendered_flame_games.append((path, node))
                 for key, value in node.items():
                     child_path = self._path(path, key)
                     self._walk(value, child_path, in_game_logic=key in {"frame", "init", "input", "tick"})
@@ -275,6 +279,9 @@ class Validator:
 
         if node_type == "container" and "style" in node:
             self.error(self._path(path, "style"), "container has no style field; flatten style properties")
+
+        if node_type == "ref":
+            self._validate_ref_widget(node, path)
 
         for key in node.keys():
             if key in FORBIDDEN_UI_KEYS and not self._is_allowed_non_ui_key(node, key):
@@ -305,6 +312,36 @@ class Validator:
                 return
             self._validate_call(call, args, path, in_game_logic=in_game_logic)
 
+    def _validate_ref_widget(self, node: dict[str, Any], path: str) -> None:
+        if node.get("from") != "game-controls" or node.get("widget") != "psJoystickGamepad":
+            return
+        props = node.get("props")
+        if props is None:
+            return
+        if not isinstance(props, dict):
+            self.error(self._path(path, "props"), "game-controls.psJoystickGamepad props must be an object")
+            return
+        allowed = {
+            "moveInput",
+            "moveEndInput",
+            "jumpInput",
+            "attackInput",
+            "height",
+            "backgroundColor",
+        }
+        for key in props.keys():
+            if key in allowed:
+                continue
+            self.error(
+                self._path(self._path(path, "props"), key),
+                "unsupported psJoystickGamepad prop; this component only emits input and does not render game/content children",
+            )
+        if isinstance(props.get("game"), dict) and props["game"].get("type") == "flame_game":
+            self.error(
+                self._path(self._path(path, "props"), "game"),
+                "flame_game nested inside psJoystickGamepad props is ignored at runtime; render flame_game as a real UI node and place psJoystickGamepad as a sibling/overlay input control",
+            )
+
     def _validate_call(
         self,
         call: str,
@@ -333,6 +370,32 @@ class Validator:
             self._validate_entity_set(args, path)
         elif call == "@entity.add":
             self._validate_entity_add(args, path)
+
+    def _validate_flame_game_mounts(self) -> None:
+        if not self.flame_games:
+            return
+        hidden_paths: list[str] = []
+        for path, _game in self.flame_games:
+            if ".props." in path or ".props[" in path:
+                hidden_paths.append(path)
+                self.error(
+                    path,
+                    "flame_game is inside a props payload, so the widget tree will not mount it; put flame_game directly under a renderable ui.screens child/body/stack node",
+                )
+        if hidden_paths and not self.rendered_flame_games:
+            self.error(
+                "$.ui.screens",
+                "game JSON defines flame_game only in non-rendered props; the app will open blank because no game widget is mounted",
+            )
+
+    @staticmethod
+    def _is_rendered_widget_path(path: str) -> bool:
+        if not path.startswith("$.ui.screens["):
+            return False
+        # `props` is data passed into another component template. It is not a
+        # generic child slot, so widgets stored there are ignored unless the
+        # template explicitly renders them.
+        return ".props." not in path and ".props[" not in path
 
     def _validate_entity_set(self, args: dict[str, Any], path: str) -> None:
         if "id" not in args:
@@ -796,10 +859,10 @@ class Validator:
     def _validate_game_profiles(self) -> None:
         if not self._needs_run_and_gun_profile():
             return
-        if not self.flame_games:
-            self.error("$", "run-and-gun / side-scrolling action games must use flame_game")
+        if not self.rendered_flame_games:
+            self.error("$", "run-and-gun / side-scrolling action games must render flame_game in ui.screens")
             return
-        for path, game in self.flame_games:
+        for path, game in self.rendered_flame_games:
             self._validate_run_and_gun_game(path, game)
 
     def _validate_run_and_gun_game(self, path: str, game: dict[str, Any]) -> None:
@@ -1537,6 +1600,7 @@ def validate_json_content(
     validator = Validator(data, builtin_calls or load_builtin_calls())
     validator._validate_root()
     validator._walk(validator.root, "$", in_game_logic=False)
+    validator._validate_flame_game_mounts()
     validator._validate_presentation_text_slots()
     validator._validate_sprite_sheet_usage()
     validator._validate_game_profiles()
