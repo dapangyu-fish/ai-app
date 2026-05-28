@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -294,7 +294,10 @@
                 "powerup_hit": null,
                 "powerup_speed": 140,
                 "star_speed": 260,
-                "player_power": null
+                "player_power": null,
+                "coins": 0,
+                "time": 400,
+                "time_accum": 0
               },
               "entities": {
                 "background": {
@@ -479,7 +482,8 @@
                   "render": {
                     "shape": "rect",
                     "color": "#000000"
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_title_logo": {
                   "kind": "sprite",
@@ -502,7 +506,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_selector_mushroom": {
                   "kind": "sprite",
@@ -525,7 +530,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_mario_00": {
                   "kind": "sprite",
@@ -548,7 +554,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_mario_01": {
                   "kind": "sprite",
@@ -571,7 +578,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_mario_02": {
                   "kind": "sprite",
@@ -594,7 +602,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_mario_03": {
                   "kind": "sprite",
@@ -617,7 +626,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_mario_04": {
                   "kind": "sprite",
@@ -640,7 +650,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_00": {
                   "kind": "sprite",
@@ -663,7 +674,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_01": {
                   "kind": "sprite",
@@ -686,7 +698,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_02": {
                   "kind": "sprite",
@@ -709,7 +722,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_03": {
                   "kind": "sprite",
@@ -732,7 +746,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_04": {
                   "kind": "sprite",
@@ -755,7 +770,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_time_00": {
                   "kind": "sprite",
@@ -778,7 +794,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_time_01": {
                   "kind": "sprite",
@@ -801,7 +818,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_time_02": {
                   "kind": "sprite",
@@ -824,7 +842,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_time_03": {
                   "kind": "sprite",
@@ -847,7 +866,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_no_00": {
                   "kind": "sprite",
@@ -870,7 +890,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_no_01": {
                   "kind": "sprite",
@@ -893,7 +914,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_hud_world_no_02": {
                   "kind": "sprite",
@@ -916,7 +938,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_00": {
                   "kind": "sprite",
@@ -939,7 +962,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_01": {
                   "kind": "sprite",
@@ -962,7 +986,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_02": {
                   "kind": "sprite",
@@ -985,7 +1010,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_03": {
                   "kind": "sprite",
@@ -1008,7 +1034,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_04": {
                   "kind": "sprite",
@@ -1031,7 +1058,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_05": {
                   "kind": "sprite",
@@ -1054,7 +1082,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_06": {
                   "kind": "sprite",
@@ -1077,7 +1106,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_07": {
                   "kind": "sprite",
@@ -1100,7 +1130,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_08": {
                   "kind": "sprite",
@@ -1123,7 +1154,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_09": {
                   "kind": "sprite",
@@ -1146,7 +1178,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_10": {
                   "kind": "sprite",
@@ -1169,7 +1202,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_11": {
                   "kind": "sprite",
@@ -1192,7 +1226,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_one_12": {
                   "kind": "sprite",
@@ -1215,7 +1250,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_00": {
                   "kind": "sprite",
@@ -1238,7 +1274,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_01": {
                   "kind": "sprite",
@@ -1261,7 +1298,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_02": {
                   "kind": "sprite",
@@ -1284,7 +1322,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_03": {
                   "kind": "sprite",
@@ -1307,7 +1346,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_04": {
                   "kind": "sprite",
@@ -1330,7 +1370,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_05": {
                   "kind": "sprite",
@@ -1353,7 +1394,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_06": {
                   "kind": "sprite",
@@ -1376,7 +1418,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_07": {
                   "kind": "sprite",
@@ -1399,7 +1442,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_08": {
                   "kind": "sprite",
@@ -1422,7 +1466,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_09": {
                   "kind": "sprite",
@@ -1445,7 +1490,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_10": {
                   "kind": "sprite",
@@ -1468,7 +1514,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_11": {
                   "kind": "sprite",
@@ -1491,7 +1538,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_12": {
                   "kind": "sprite",
@@ -1514,7 +1562,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_13": {
                   "kind": "sprite",
@@ -1537,7 +1586,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_14": {
                   "kind": "sprite",
@@ -1560,7 +1610,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_15": {
                   "kind": "sprite",
@@ -1583,7 +1634,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_16": {
                   "kind": "sprite",
@@ -1606,7 +1658,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_17": {
                   "kind": "sprite",
@@ -1629,7 +1682,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_18": {
                   "kind": "sprite",
@@ -1652,7 +1706,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_19": {
                   "kind": "sprite",
@@ -1675,7 +1730,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_20": {
                   "kind": "sprite",
@@ -1698,7 +1754,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_21": {
                   "kind": "sprite",
@@ -1721,7 +1778,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_22": {
                   "kind": "sprite",
@@ -1744,7 +1802,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_23": {
                   "kind": "sprite",
@@ -1767,7 +1826,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_24": {
                   "kind": "sprite",
@@ -1790,7 +1850,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_25": {
                   "kind": "sprite",
@@ -1813,7 +1874,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_two_26": {
                   "kind": "sprite",
@@ -1836,7 +1898,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_00": {
                   "kind": "sprite",
@@ -1859,7 +1922,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_01": {
                   "kind": "sprite",
@@ -1882,7 +1946,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_02": {
                   "kind": "sprite",
@@ -1905,7 +1970,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_03": {
                   "kind": "sprite",
@@ -1928,7 +1994,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_04": {
                   "kind": "sprite",
@@ -1951,7 +2018,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_05": {
                   "kind": "sprite",
@@ -1974,7 +2042,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_06": {
                   "kind": "sprite",
@@ -1997,7 +2066,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_07": {
                   "kind": "sprite",
@@ -2020,7 +2090,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_08": {
                   "kind": "sprite",
@@ -2043,7 +2114,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_09": {
                   "kind": "sprite",
@@ -2066,7 +2138,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_10": {
                   "kind": "sprite",
@@ -2089,7 +2162,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_menu_top_11": {
                   "kind": "sprite",
@@ -2112,7 +2186,8 @@
                   "auto_update": false,
                   "state": {
                     "assetLoadingOverlay": false
-                  }
+                  },
+                  "fixed_to_screen": true
                 },
                 "title_source": {
                   "kind": "pixel",
@@ -2131,6 +2206,132 @@
                     "value": "Source assets: github.com/DaQinShgy/flutter_game",
                     "color": "#BBBBBB",
                     "fontSize": 13
+                  },
+                  "fixed_to_screen": true
+                },
+                "hud_score_value": {
+                  "kind": "pixel",
+                  "priority": 226,
+                  "fixed_to_screen": true,
+                  "position": [
+                    224,
+                    90
+                  ],
+                  "size": [
+                    112,
+                    18
+                  ],
+                  "auto_update": false,
+                  "state": {
+                    "assetLoadingOverlay": false
+                  },
+                  "render": {
+                    "shape": "text",
+                    "value": "000000",
+                    "color": "#FFFFFF",
+                    "fontSize": 15
+                  }
+                },
+                "hud_coin_icon": {
+                  "kind": "animated_sprite",
+                  "priority": 226,
+                  "fixed_to_screen": true,
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                  "src_origin": [
+                    387,
+                    18
+                  ],
+                  "frame_size": [
+                    10,
+                    14
+                  ],
+                  "frames": 3,
+                  "frames_per_row": 3,
+                  "frame_step": [
+                    16,
+                    0
+                  ],
+                  "step_time": 0.22,
+                  "position": [
+                    382,
+                    86
+                  ],
+                  "size": [
+                    20,
+                    28
+                  ],
+                  "auto_update": true,
+                  "state": {
+                    "assetLoadingOverlay": false
+                  }
+                },
+                "hud_coin_times": {
+                  "kind": "pixel",
+                  "priority": 226,
+                  "fixed_to_screen": true,
+                  "position": [
+                    404,
+                    90
+                  ],
+                  "size": [
+                    18,
+                    18
+                  ],
+                  "auto_update": false,
+                  "state": {
+                    "assetLoadingOverlay": false
+                  },
+                  "render": {
+                    "shape": "text",
+                    "value": "x",
+                    "color": "#FFFFFF",
+                    "fontSize": 15
+                  }
+                },
+                "hud_coin_count": {
+                  "kind": "pixel",
+                  "priority": 226,
+                  "fixed_to_screen": true,
+                  "position": [
+                    420,
+                    90
+                  ],
+                  "size": [
+                    48,
+                    18
+                  ],
+                  "auto_update": false,
+                  "state": {
+                    "assetLoadingOverlay": false
+                  },
+                  "render": {
+                    "shape": "text",
+                    "value": "00",
+                    "color": "#FFFFFF",
+                    "fontSize": 15
+                  }
+                },
+                "hud_time_value": {
+                  "kind": "pixel",
+                  "priority": 226,
+                  "fixed_to_screen": true,
+                  "position": [
+                    700,
+                    90
+                  ],
+                  "size": [
+                    64,
+                    18
+                  ],
+                  "auto_update": false,
+                  "state": {
+                    "assetLoadingOverlay": false
+                  },
+                  "render": {
+                    "shape": "text",
+                    "value": "400",
+                    "color": "#FFFFFF",
+                    "fontSize": 15
                   }
                 }
               },
@@ -2294,108 +2495,6 @@
                           "call": "@despawn",
                           "args": {
                             "id": "title_selector_mushroom"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_02"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_03"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_04"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_02"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_03"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_04"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_02"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_03"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_no_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_no_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_no_02"
                           }
                         },
                         {
@@ -2806,108 +2905,6 @@
                           "call": "@despawn",
                           "args": {
                             "id": "title_selector_mushroom"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_02"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_03"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_mario_04"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_02"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_03"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_04"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_02"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_time_03"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_no_00"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_no_01"
-                          }
-                        },
-                        {
-                          "call": "@despawn",
-                          "args": {
-                            "id": "title_hud_world_no_02"
                           }
                         },
                         {
@@ -3368,108 +3365,6 @@
                   {
                     "call": "@despawn",
                     "args": {
-                      "id": "title_hud_mario_00"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_mario_01"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_mario_02"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_mario_03"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_mario_04"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_00"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_01"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_02"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_03"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_04"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_time_00"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_time_01"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_time_02"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_time_03"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_no_00"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_no_01"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
-                      "id": "title_hud_world_no_02"
-                    }
-                  },
-                  {
-                    "call": "@despawn",
-                    "args": {
                       "id": "title_menu_one_00"
                     }
                   },
@@ -3821,6 +3716,132 @@
               },
               "frame": {
                 "logic": [
+                  {
+                    "call": "@format_number",
+                    "args": {
+                      "value": {
+                        "var": "score"
+                      },
+                      "width": 6
+                    },
+                    "assign": "vars._hud_score"
+                  },
+                  {
+                    "call": "@format_number",
+                    "args": {
+                      "value": {
+                        "var": "vars.coins"
+                      },
+                      "width": 2
+                    },
+                    "assign": "vars._hud_coins"
+                  },
+                  {
+                    "call": "@format_number",
+                    "args": {
+                      "value": {
+                        "var": "vars.time"
+                      },
+                      "width": 3
+                    },
+                    "assign": "vars._hud_time"
+                  },
+                  {
+                    "call": "@entity.set",
+                    "args": {
+                      "id": "hud_score_value",
+                      "field": "render.value",
+                      "value": "{{ vars._hud_score }}"
+                    }
+                  },
+                  {
+                    "call": "@entity.set",
+                    "args": {
+                      "id": "hud_coin_count",
+                      "field": "render.value",
+                      "value": "{{ vars._hud_coins }}"
+                    }
+                  },
+                  {
+                    "call": "@entity.set",
+                    "args": {
+                      "id": "hud_time_value",
+                      "field": "render.value",
+                      "value": "{{ vars._hud_time }}"
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.time_accum",
+                            "value": {
+                              "+": [
+                                {
+                                  "var": "vars.time_accum"
+                                },
+                                {
+                                  "var": "event.dt"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              ">=": [
+                                {
+                                  "var": "vars.time_accum"
+                                },
+                                0.5
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.time",
+                                  "value": {
+                                    "max": [
+                                      0,
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "vars.time"
+                                          },
+                                          1
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.time_accum",
+                                  "value": 0
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
                   {
                     "call": "@if",
                     "args": {
@@ -4870,13 +4891,42 @@
                               "if": [
                                 {
                                   "and": [
-                                    { "var": "vars.jump_held" },
-                                    { ">": [{ "var": "entities.player.vy" }, { "var": "vars.jump_higher_max_vy" }] },
-                                    { "<": [{ "var": "entities.player.vy" }, 0] }
+                                    {
+                                      "var": "vars.jump_held"
+                                    },
+                                    {
+                                      ">": [
+                                        {
+                                          "var": "entities.player.vy"
+                                        },
+                                        {
+                                          "var": "vars.jump_higher_max_vy"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "<": [
+                                        {
+                                          "var": "entities.player.vy"
+                                        },
+                                        0
+                                      ]
+                                    }
                                   ]
                                 },
-                                { "*": [{ "var": "vars.gravity" }, { "var": "vars.jump_higher_factor" }] },
-                                { "var": "vars.gravity" }
+                                {
+                                  "*": [
+                                    {
+                                      "var": "vars.gravity"
+                                    },
+                                    {
+                                      "var": "vars.jump_higher_factor"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "var": "vars.gravity"
+                                }
                               ]
                             },
                             "jump_velocity": "{{ vars.jump_vy }}",
@@ -5033,6 +5083,20 @@
                                       "call": "@score.add",
                                       "args": {
                                         "n": 200
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars.coins",
+                                        "value": {
+                                          "+": [
+                                            {
+                                              "var": "vars.coins"
+                                            },
+                                            1
+                                          ]
+                                        }
                                       }
                                     },
                                     {

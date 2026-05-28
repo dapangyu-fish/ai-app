@@ -49,6 +49,15 @@ class GameActions {
           game.setScore(v);
           return null;
         }
+      case '@format_number':
+        {
+          final value = (args['value'] as num?)?.toInt() ?? 0;
+          final width = (args['width'] as num?)?.toInt() ?? 0;
+          final rawPad = args['pad']?.toString();
+          final pad = rawPad == null || rawPad.isEmpty ? '0' : rawPad[0];
+          final text = value.toString();
+          return width > 0 ? text.padLeft(width, pad) : text;
+        }
       case '@game_over':
         game.triggerGameOver();
         return null;
@@ -866,6 +875,9 @@ class GameActions {
   }
 
   static dynamic _readEntityField(GameEntity? entity, String field) {
+    if (entity != null && field.startsWith('render.')) {
+      return entity.renderConfig[field.substring('render.'.length)];
+    }
     if (entity is PixelEntity) {
       if (field.startsWith('state.')) {
         return entity.state[field.substring('state.'.length)];
@@ -913,6 +925,10 @@ class GameActions {
     String field,
     dynamic value,
   ) {
+    if (entity != null && field.startsWith('render.')) {
+      entity.renderConfig[field.substring('render.'.length)] = value;
+      return true;
+    }
     if (entity is PixelEntity) {
       if (field.startsWith('state.')) {
         entity.state[field.substring('state.'.length)] = value;

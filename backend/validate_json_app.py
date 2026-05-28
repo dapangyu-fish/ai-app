@@ -90,6 +90,7 @@ ENTITY_SET_FIELDS = {
     "autoMove",
     "h",
     "height",
+    "render.",
     "state.",
     "vx",
     "vy",

@@ -223,14 +223,20 @@ class JsonFlameGame extends FlameGame {
     _updateCamera();
     gameWorld.cameraX = _cameraX;
     gameWorld.cameraY = _cameraY;
-    canvas.save();
-    canvas.translate(-_cameraX, -_cameraY);
     final renderList = entities.values.toList()
       ..sort((a, b) => a.priority.compareTo(b.priority));
+    canvas.save();
+    canvas.translate(-_cameraX, -_cameraY);
     for (final e in renderList) {
+      if (_isFixedToScreen(e)) continue;
       e.render(canvas, gameWorld);
     }
     canvas.restore();
+
+    for (final e in renderList) {
+      if (!_isFixedToScreen(e)) continue;
+      e.render(canvas, gameWorld);
+    }
 
     canvas.restore();
 
@@ -350,6 +356,10 @@ class JsonFlameGame extends FlameGame {
   void emitEvent(String eventName, Map<String, dynamic> data) {
     if (eventName.isEmpty) return;
     onEvent?.call(eventName, data);
+  }
+
+  bool _isFixedToScreen(GameEntity entity) {
+    return entity is PixelEntity && entity.state['fixedToScreen'] == true;
   }
 
   void resetGame({
@@ -838,6 +848,11 @@ class JsonFlameGame extends FlameGame {
       vx = _readDouble(vel[0]);
       vy = _readDouble(vel[1]);
     }
+    var state = (spec['state'] as Map?)?.cast<String, dynamic>();
+    if (spec['fixed_to_screen'] == true || spec['screen_fixed'] == true) {
+      state ??= <String, dynamic>{};
+      state['fixedToScreen'] = true;
+    }
     return (
       x: x,
       y: y,
@@ -846,7 +861,7 @@ class JsonFlameGame extends FlameGame {
       vx: vx,
       vy: vy,
       autoMove: spec['auto_update'] != false,
-      state: (spec['state'] as Map?)?.cast<String, dynamic>(),
+      state: state,
     );
   }
 

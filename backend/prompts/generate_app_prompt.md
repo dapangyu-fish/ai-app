@@ -184,9 +184,10 @@ f. **空 list 不要硬塞 jsonlogic**：list 的 `source` 必须是模板字符
 g. **数据 Map vs jsonlogic 表达式**：在 `args` 里写 `{"key": ..., "key2": ...}` 这种**多 key 数据 Map** 是安全的，框架会按数据处理。但**单 key + key 看着像 op 的 Map**（比如 `{"sort": [...]}`、`{"if": [...]}`、`{"merge": [...]}`）会被当 jsonlogic 求值。如果你想原样存一个 `{"sort": "..."}` 数据键名，把它包进多 key Map（比如多加个 `"_data": true` 同伴 key）或者改 key 名避开 op 集合。jsonlogic 标准 op 集合：`var/if/and/or/!/!!/==/!=/===/!==/</>/<=/>=/+/-/*///%/min/max/in/cat/substr/log/missing/missing_some/merge/reduce/map/filter/all/some/none/method`，本框架另注册了：`str_*`、`length/at/slice/sort/reverse/to_string/to_int/to_double/abs`。
 
 h. **flame_game 实体动作参数**：如果 JSON 里出现 `"type": "flame_game"`，必须额外扫描所有 `@entity.*`：
-   - `@entity.set` 标准写法是 `{"id": "...", "field": "x|y|w|h|vx|vy|auto_update|state.xxx", "value": ...}`。新生成 JSON 优先写标量字段，**不要**把 `size` / `position` / `velocity` 写成数组；如确实需要改宽高或坐标，拆成两条 `w/h` 或 `x/y`。
+   - `@entity.set` 标准写法是 `{"id": "...", "field": "x|y|w|h|vx|vy|auto_update|state.xxx|render.xxx", "value": ...}`。新生成 JSON 优先写标量字段，**不要**把 `size` / `position` / `velocity` 写成数组；如确实需要改宽高或坐标，拆成两条 `w/h` 或 `x/y`。HUD 文本可用 `render.value` 更新。
    - `@entity.add` 标准写法是 `{"id": "...", "field": "x|y|vx|vy|state.xxx", "by": ...}`，**不要**使用旧写法 `path/value`。
    - `virtual_gamepad` / 摇杆 / 方向键只负责发输入；必须在 `flame_game.frame.logic` 中把输入变量转成实体移动、攻击、动画或 `@platformer.step`，否则会出现"手柄有反馈但角色不动"。
+   - 标题页、HUD、倒计时、固定按钮等相机无关元素必须在实体上写 `"fixed_to_screen": true`，否则横版相机跟随角色时会被卷出屏幕。
 
 h2. **flame_game 必须真实挂载**：`flame_game` 必须作为 `ui.screens` 下可渲染的 widget 节点出现，不能藏在 `props` 数据里。尤其 `game-controls.psJoystickGamepad` 只是输入控件，不是容器；禁止写 `"props": {"game": {"type":"flame_game"}}` 或 `actionButtons` 这类它不支持的字段。正确结构是一个真实 `flame_game` 节点 + 一个独立的 `game-controls.psJoystickGamepad` 节点作为 sibling/overlay。
 
