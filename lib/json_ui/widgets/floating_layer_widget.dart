@@ -251,8 +251,8 @@ class JsonFloatingLayerWidget extends JsonBaseWidget {
 
     return FloatingLayerHost(
       storageKey: _storageKey(json),
-      enabled: interpreter.resolveExpression(json['enabled']) != false,
-      editing: interpreter.resolveExpression(json['editing']) == true,
+      enabled: _bool(interpreter, json['enabled'], fallback: true),
+      editing: _bool(interpreter, json['editing']),
       resetRevision: _int(
         interpreter.resolveExpression(json['resetRevision']),
         0,
@@ -302,5 +302,29 @@ double _num(dynamic value, double fallback) {
 int _int(dynamic value, int fallback) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+bool _bool(
+  JsonInterpreter interpreter,
+  dynamic value, {
+  bool fallback = false,
+}) {
+  dynamic resolved;
+  if (value is Map<String, dynamic> && interpreter.looksLikeJsonLogic(value)) {
+    resolved = interpreter.evaluateJsonLogicWithLocals(value, const {});
+  } else {
+    resolved = interpreter.resolveExpression(value);
+  }
+  if (resolved == null) return fallback;
+  if (resolved is bool) return resolved;
+  if (resolved is num) return resolved != 0;
+  if (resolved is String) {
+    final lower = resolved.trim().toLowerCase();
+    if (lower == 'true') return true;
+    if (lower == 'false') return false;
+    return lower.isNotEmpty;
+  }
+  if (resolved is List) return resolved.isNotEmpty;
   return fallback;
 }

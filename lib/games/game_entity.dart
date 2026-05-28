@@ -21,7 +21,7 @@ import 'game_world.dart';
 abstract class GameEntity {
   final String id;
   final Map<String, dynamic> renderConfig;
-  final int priority;
+  int priority;
 
   GameEntity({required this.id, required this.renderConfig, this.priority = 0});
 
@@ -293,6 +293,7 @@ class PixelEntity extends GameEntity {
     'vx': vx,
     'vy': vy,
     'autoMove': autoMove,
+    'priority': priority,
     'state': state,
     ...state,
   };

@@ -3,7 +3,7 @@
   "appid": "435a779c-0f12-4993-b19c-0991b681cc7a",
   "meta": {
     "name": "game-controls",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "type": "library",
     "description": "Reusable JSON game controls composed from generic atoms: analog_stick, gesture_detector, floating_layer, stack, and button.",
     "author": "fish",
@@ -254,7 +254,9 @@
                                 }
                               }
                             }
-                          ]
+                          ],
+                          "mainAxisAlignment": "center",
+                          "crossAxisAlignment": "center"
                         }
                       },
                       {
@@ -289,7 +291,9 @@
                                 }
                               }
                             }
-                          ]
+                          ],
+                          "mainAxisAlignment": "center",
+                          "crossAxisAlignment": "center"
                         }
                       },
                       {
@@ -318,7 +322,9 @@
                                 }
                               }
                             }
-                          ]
+                          ],
+                          "mainAxisAlignment": "center",
+                          "crossAxisAlignment": "center"
                         }
                       },
                       {
@@ -347,7 +353,9 @@
                                 }
                               }
                             }
-                          ]
+                          ],
+                          "mainAxisAlignment": "center",
+                          "crossAxisAlignment": "center"
                         }
                       }
                     ]
@@ -510,7 +518,9 @@
                               }
                             }
                           }
-                        ]
+                        ],
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center"
                       }
                     },
                     {
@@ -574,7 +584,9 @@
                               }
                             }
                           }
-                        ]
+                        ],
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center"
                       }
                     },
                     {
@@ -638,7 +650,9 @@
                               }
                             }
                           }
-                        ]
+                        ],
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center"
                       }
                     },
                     {
@@ -702,7 +716,9 @@
                               }
                             }
                           }
-                        ]
+                        ],
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center"
                       }
                     }
                   ]
@@ -763,7 +779,9 @@
                               }
                             }
                           }
-                        ]
+                        ],
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center"
                       }
                     },
                     {
@@ -798,7 +816,9 @@
                               }
                             }
                           }
-                        ]
+                        ],
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center"
                       }
                     },
                     {
@@ -825,7 +845,9 @@
                             }
                           }
                         }
-                      ]
+                      ],
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
                     },
                     {
                       "type": "container",
@@ -851,7 +873,9 @@
                             }
                           }
                         }
-                      ]
+                      ],
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
                     }
                   ]
                 },
@@ -965,7 +989,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 },
                 {
@@ -1008,7 +1034,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 },
                 {
@@ -1051,7 +1079,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 },
                 {
@@ -1094,7 +1124,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 }
               ]
@@ -1148,7 +1180,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 },
                 {
@@ -1191,7 +1225,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 },
                 {
@@ -1234,7 +1270,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 },
                 {
@@ -1277,7 +1315,9 @@
                           }
                         }
                       }
-                    ]
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 }
               ]

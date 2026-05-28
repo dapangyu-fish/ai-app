@@ -875,6 +875,7 @@ class GameActions {
   }
 
   static dynamic _readEntityField(GameEntity? entity, String field) {
+    if (entity != null && field == 'priority') return entity.priority;
     if (entity != null && field.startsWith('render.')) {
       return entity.renderConfig[field.substring('render.'.length)];
     }
@@ -925,6 +926,12 @@ class GameActions {
     String field,
     dynamic value,
   ) {
+    if (entity != null && field == 'priority') {
+      final n = _asDouble(value);
+      if (n == null) return false;
+      entity.priority = n.round();
+      return true;
+    }
     if (entity != null && field.startsWith('render.')) {
       entity.renderConfig[field.substring('render.'.length)] = value;
       return true;
