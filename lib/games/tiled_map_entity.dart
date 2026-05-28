@@ -322,7 +322,7 @@ class TiledMapEntity extends GameEntity {
                 ? object.type
                 : layerHazard
                 ? 'Hazard'
-                : 'Platform',
+                : 'Solid',
             tileset: layerName,
             objectId: object.id,
             objectName: object.name,

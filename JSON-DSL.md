@@ -1935,6 +1935,10 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 它也会写入通用碰撞边信息：`blockedLeft` / `blockedRight` / `blockedUp` /
 `blockedDown`、`xCollision` / `yCollision` / `onGroundCollision`。平台游戏可以据此
 实现撞墙反向、顶砖块、踩地触发等状态机，不要靠猜坐标。
+
+平台游戏发布前至少过这组验收：地面能站住；墙/管道/箱子从侧面会阻挡；砖块从下方能顶到；
+单向平台只在显式 `one_way_types` / `one_way_tilesets` 指定时生效；掉坑、碰危险物、冲出地图会扣命、
+重生或结束；敌人、道具、子弹不会因为离屏/命中路径遗漏而永久卡住状态。
 | `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
 | `@random_double({min, max})` | 返回 [min, max) 的随机 double |
 
@@ -1945,7 +1949,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 
 #### 已知限制 / 设计边界
 
-- 没有音效 atom。
+- 音频能力只负责播放 JSON 引入的 BGM / 短音效；复杂混音、音频精确同步和动态合成暂不支持。
 - 没有动画曲线 / 缓动系统；简单 spritesheet 动画用 `animated_sprite`。
 - 没有游戏专用持久化；高分/进度让 JSON-APP 自己在 `on_game_over` / `on_score_changed` 中用 storage/file/db 保存。
 - `frame.logic` 是逐帧解释执行，适合轻量规则；大批量实体建议用 `@tiled.spawn_objects_near`、前缀遍历和距离 despawn 控制规模。
