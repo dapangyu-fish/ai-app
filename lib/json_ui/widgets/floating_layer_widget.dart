@@ -94,20 +94,23 @@ class _FloatingLayerHostState extends State<FloatingLayerHost> {
 
   Widget _buildOverlay(BuildContext context) {
     return Positioned.fill(
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final area = Size(constraints.maxWidth, constraints.maxHeight);
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                for (final item in widget.items)
-                  _floatingItem(area: area, item: item),
-                if (widget.topRight != null)
-                  Positioned(top: 10, right: 10, child: widget.topRight!),
-              ],
-            );
-          },
+      child: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final area = Size(constraints.maxWidth, constraints.maxHeight);
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (final item in widget.items)
+                    _floatingItem(area: area, item: item),
+                  if (widget.topRight != null)
+                    Positioned(top: 10, right: 10, child: widget.topRight!),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
