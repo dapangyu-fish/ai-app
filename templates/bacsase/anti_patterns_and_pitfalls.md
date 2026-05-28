@@ -938,7 +938,7 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 
 - 普通 JSON-APP 逻辑用 `condition`；`flame_game` 内部逻辑用 `cond`。
 - `flame_game` 必须直接作为 `ui.screens` 下的可渲染 widget 节点出现；不要放进任何组件的 `props.game`。
-- `game-controls.psJoystickGamepad` 只接受 `moveInput`、`moveEndInput`、`jumpInput`、`attackInput`、`height`、`backgroundColor`，它不是游戏容器。
+- `game-controls.psJoystickGamepad` 只接受 `moveInput`、`moveEndInput`、`jumpInput`、`jumpEndInput`、`attackInput`、`height`、`backgroundColor`，它不是游戏容器。
 - 正确组合方式是：真实 `flame_game` 节点负责画面和逻辑，独立的 gamepad 节点作为 sibling 或 overlay 负责输入。
 - 在生成游戏时，先确认 `frame.logic` 里至少有一条 loading -> ready/running 的状态推进，并且这条路径真实会执行。
 - `virtual_gamepad` 只负责发输入；移动必须在 `flame_game.frame.logic` 里把 `vars.move_dir` 转成 `@entity.set(vx)` + `@platformer.step`。
