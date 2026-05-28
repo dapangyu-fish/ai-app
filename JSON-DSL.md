@@ -1500,6 +1500,17 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 字段：`title` / `centerTitle` / `backgroundColor` / `color`(前景) / `elevation` / `leading: {icon, action}` / `actions: [{icon, action}]`。
 
+全屏体验（游戏标题页、沉浸式工具页等）可以显式关闭默认顶部栏：
+
+```json
+{
+  "id": "title",
+  "appBar": false,
+  "backgroundColor": "#000000",
+  "children": [...]
+}
+```
+
 ### 6.38 screen.drawer — 侧边栏（Scaffold 级别）
 
 ```json
