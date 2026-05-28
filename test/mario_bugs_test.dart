@@ -1,4 +1,7 @@
 // 用真实 demo 的 scale=2 还原蘑菇/小怪场景
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/games/flame_game_engine.dart';
 import 'package:flutter_application_1/games/game_entity.dart';
@@ -47,8 +50,15 @@ Future<JsonFlameGame> _buildScene() async {
                 'type': 'objectgroup',
                 'name': 'enemies',
                 'objects': [
-                  {'id': 14, 'name': 'group0', 'type': 'goomba',
-                   'x': 832, 'y': 184, 'width': 16, 'height': 16},
+                  {
+                    'id': 14,
+                    'name': 'group0',
+                    'type': 'goomba',
+                    'x': 832,
+                    'y': 184,
+                    'width': 16,
+                    'height': 16,
+                  },
                 ],
               },
               {
@@ -85,6 +95,97 @@ Future<JsonFlameGame> _buildScene() async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('真实 Mario JSON: 顶红蘑菇问号块后 powerup 会 reveal 并移动', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final entities = Map<String, dynamic>.from(flameSpec['entities'] as Map);
+    entities['map'] = {
+      ...Map<String, dynamic>.from(entities['map'] as Map),
+      'source': '',
+      'map_data': {
+        'width': 100,
+        'height': 30,
+        'tilewidth': 8,
+        'tileheight': 8,
+        'layers': [
+          {
+            'type': 'objectgroup',
+            'name': 'question blocks',
+            'objects': [
+              {
+                'id': 3,
+                'type': 'red mushroom',
+                'x': 336,
+                'y': 136,
+                'width': 16,
+                'height': 16,
+              },
+            ],
+          },
+          {
+            'type': 'objectgroup',
+            'name': 'grounds',
+            'objects': [
+              {'id': 2, 'x': 0, 'y': 200, 'width': 1100, 'height': 24},
+            ],
+          },
+        ],
+      },
+    };
+    flameSpec['entities'] = entities;
+
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'loading'});
+    game.audio.dispose();
+    final map = game.entities['map'] as TiledMapEntity;
+    await map.load();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
+    expect(game.entities.containsKey('qblock_3'), true);
+
+    game.vars['state'] = 'running';
+    game.vars['jump_pressed'] = false;
+    game.vars['jump_held'] = false;
+    game.vars['move_axis'] = 0;
+    final player = game.entities['player'] as PixelEntity;
+    player
+      ..x = 676
+      ..y = 304
+      ..vx = 0
+      ..vy = -360;
+
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
+    final spawned = game.entities['powerup_3'];
+    expect(spawned, isA<PixelEntity>());
+    final mushroom = spawned as PixelEntity;
+    final spawnY = mushroom.y;
+    expect(mushroom.state['revealing'], true);
+    expect(
+      mushroom.priority,
+      lessThan((game.entities['qblock_3'] as PixelEntity).priority),
+      reason: 'reveal 阶段 powerup 要从问号砖块后方冒出，不能盖在砖块上',
+    );
+
+    for (var i = 0; i < 60; i++) {
+      game.logic.runLogic(frameLogic, {'dt': 0.016});
+    }
+
+    expect(mushroom.y, lessThan(spawnY));
+    expect(mushroom.state['revealing'], false);
+    expect(mushroom.x, greaterThan(672));
+  });
+
   test('BUG 1 真实场景: mushroom 从砖块顶升起', () async {
     final game = await _buildScene();
 
@@ -109,9 +210,11 @@ void main() {
     });
     final mushroom = game.entities['powerup_1'] as PixelEntity;
     // ignore: avoid_print
-    print('mushroom 初始: x=${mushroom.x} y=${mushroom.y} '
-        'targetY=${mushroom.state['targetY']} '
-        'revealing=${mushroom.state['revealing']}');
+    print(
+      'mushroom 初始: x=${mushroom.x} y=${mushroom.y} '
+      'targetY=${mushroom.state['targetY']} '
+      'revealing=${mushroom.state['revealing']}',
+    );
 
     // 真实 demo 的 powerup loop（粘贴自 JSON）
     final powerupLogic = [
@@ -122,7 +225,7 @@ void main() {
           'do': [
             {
               'call': '@set',
-              'args': {'var': 'vars._powerup_id', 'value': '{{ loop.id }}'}
+              'args': {'var': 'vars._powerup_id', 'value': '{{ loop.id }}'},
             },
             {
               'call': '@if',
@@ -135,9 +238,12 @@ void main() {
                       'id': '{{ vars._powerup_id }}',
                       'field': 'y',
                       'by': {
-                        '*': [-64, {'var': 'event.dt'}]
+                        '*': [
+                          -64,
+                          {'var': 'event.dt'},
+                        ],
                       },
-                      'min': {'var': 'loop.entity.targetY'}
+                      'min': {'var': 'loop.entity.targetY'},
                     },
                   },
                   {
@@ -149,10 +255,10 @@ void main() {
                           {
                             '+': [
                               {'var': 'loop.entity.targetY'},
-                              1
-                            ]
-                          }
-                        ]
+                              1,
+                            ],
+                          },
+                        ],
                       },
                       'then': [
                         {
@@ -160,16 +266,16 @@ void main() {
                           'args': {
                             'id': '{{ vars._powerup_id }}',
                             'field': 'y',
-                            'value': {'var': 'loop.entity.targetY'}
-                          }
+                            'value': {'var': 'loop.entity.targetY'},
+                          },
                         },
                         {
                           'call': '@entity.set',
                           'args': {
                             'id': '{{ vars._powerup_id }}',
                             'field': 'state.revealing',
-                            'value': false
-                          }
+                            'value': false,
+                          },
                         },
                         {
                           'call': '@entity.set',
@@ -179,11 +285,11 @@ void main() {
                             'value': {
                               '*': [
                                 {'var': 'loop.entity.dir'},
-                                140
-                              ]
-                            }
-                          }
-                        }
+                                140,
+                              ],
+                            },
+                          },
+                        },
                       ],
                     },
                   },
@@ -197,10 +303,10 @@ void main() {
                       'value': {
                         '*': [
                           {'var': 'loop.entity.dir'},
-                          140
-                        ]
-                      }
-                    }
+                          140,
+                        ],
+                      },
+                    },
                   },
                   {
                     'call': '@platformer.step',
@@ -210,28 +316,32 @@ void main() {
                       'dt': '{{ event.dt }}',
                       'gravity': 700,
                       'max_fall': 900,
-                    }
+                    },
                   },
                 ],
               },
-            }
+            },
           ],
-        }
-      }
+        },
+      },
     ];
 
     for (var i = 0; i < 60; i++) {
       game.logic.runLogic(powerupLogic, {'dt': 0.016});
       if (i % 10 == 0) {
         // ignore: avoid_print
-        print('帧 $i: x=${mushroom.x.toStringAsFixed(1)} '
-            'y=${mushroom.y.toStringAsFixed(1)} '
-            'vx=${mushroom.vx} vy=${mushroom.vy} '
-            'revealing=${mushroom.state['revealing']}');
+        print(
+          '帧 $i: x=${mushroom.x.toStringAsFixed(1)} '
+          'y=${mushroom.y.toStringAsFixed(1)} '
+          'vx=${mushroom.vx} vy=${mushroom.vy} '
+          'revealing=${mushroom.state['revealing']}',
+        );
       }
     }
     // ignore: avoid_print
-    print('最终: x=${mushroom.x.toStringAsFixed(1)} y=${mushroom.y.toStringAsFixed(1)}');
+    print(
+      '最终: x=${mushroom.x.toStringAsFixed(1)} y=${mushroom.y.toStringAsFixed(1)}',
+    );
 
     expect(mushroom.state['revealing'], false);
     expect(mushroom.x, isNot(576), reason: '蘑菇应水平移动');
@@ -254,11 +364,7 @@ void main() {
       'size': [32, 32],
       'velocity': [0, 0],
       'auto_update': false,
-      'state': {
-        'kind': 'goomba',
-        'dir': -1,
-        'activated': true,
-      },
+      'state': {'kind': 'goomba', 'dir': -1, 'activated': true},
     });
 
     final goomba = game.entities['enemy_14'] as PixelEntity;
@@ -279,10 +385,10 @@ void main() {
                 'value': {
                   '*': [
                     {'var': 'loop.entity.dir'},
-                    100
-                  ]
-                }
-              }
+                    100,
+                  ],
+                },
+              },
             },
             {
               'call': '@platformer.step',
@@ -292,7 +398,7 @@ void main() {
                 'dt': '{{ event.dt }}',
                 'gravity': 1400,
                 'max_fall': 900,
-              }
+              },
             },
             {
               'call': '@if',
@@ -300,8 +406,8 @@ void main() {
                 'cond': {
                   'or': [
                     {'var': 'entities.{{ loop.id }}.blockedLeft'},
-                    {'var': 'entities.{{ loop.id }}.blockedRight'}
-                  ]
+                    {'var': 'entities.{{ loop.id }}.blockedRight'},
+                  ],
                 },
                 'then': [
                   {
@@ -312,17 +418,17 @@ void main() {
                       'value': {
                         '*': [
                           {'var': 'loop.entity.dir'},
-                          -1
-                        ]
-                      }
-                    }
-                  }
+                          -1,
+                        ],
+                      },
+                    },
+                  },
                 ],
-              }
-            }
+              },
+            },
           ],
-        }
-      }
+        },
+      },
     ];
 
     final startX = goomba.x;
@@ -330,10 +436,12 @@ void main() {
       game.logic.runLogic(enemyLogic, {'dt': 0.016});
       if (i % 5 == 0) {
         // ignore: avoid_print
-        print('帧 $i: x=${goomba.x.toStringAsFixed(2)} '
-            'vx=${goomba.vx} dir=${goomba.state['dir']} '
-            'onGround=${goomba.state['onGround']} '
-            'blockedLeft=${goomba.state['blockedLeft']}');
+        print(
+          '帧 $i: x=${goomba.x.toStringAsFixed(2)} '
+          'vx=${goomba.vx} dir=${goomba.state['dir']} '
+          'onGround=${goomba.state['onGround']} '
+          'blockedLeft=${goomba.state['blockedLeft']}',
+        );
       }
     }
     // ignore: avoid_print
@@ -349,7 +457,12 @@ void main() {
     Future<JsonFlameGame> mk() async {
       final g = JsonFlameGame(
         spec: {
-          'world': {'kind': 'pixel', 'width': 960, 'height': 540, 'bg': '#000000'},
+          'world': {
+            'kind': 'pixel',
+            'width': 960,
+            'height': 540,
+            'bg': '#000000',
+          },
           'physics': {'engine': 'aabb_platformer'},
           'entities': {
             'map': {
@@ -405,48 +518,51 @@ void main() {
       for (var i = 0; i < 80; i++) {
         final pressedThisFrame = i == 0;
         g.vars['jump_held'] = holdJump ? player.vy <= 0 : pressedThisFrame;
-        g.logic.runLogic([
-          {
-            'call': '@platformer.step',
-            'args': {
-              'id': 'player',
-              'map': 'map',
-              'dt': 0.016,
-              // 跟真实 demo 同款 jsonlogic 表达式：长按 + 上升阶段 → 重力 ×0.4
-              'gravity': {
-                'if': [
-                  {
-                    'and': [
-                      {'var': 'vars.jump_held'},
-                      {
-                        '>': [
-                          {'var': 'entities.player.vy'},
-                          {'var': 'vars.jump_higher_max_vy'}
-                        ]
-                      },
-                      {
-                        '<': [
-                          {'var': 'entities.player.vy'},
-                          0
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    '*': [
-                      {'var': 'vars.gravity_base'},
-                      {'var': 'vars.jump_higher_factor'}
-                    ]
-                  },
-                  {'var': 'vars.gravity_base'}
-                ]
+        g.logic.runLogic(
+          [
+            {
+              'call': '@platformer.step',
+              'args': {
+                'id': 'player',
+                'map': 'map',
+                'dt': 0.016,
+                // 跟真实 demo 同款 jsonlogic 表达式：长按 + 上升阶段 → 重力 ×0.4
+                'gravity': {
+                  'if': [
+                    {
+                      'and': [
+                        {'var': 'vars.jump_held'},
+                        {
+                          '>': [
+                            {'var': 'entities.player.vy'},
+                            {'var': 'vars.jump_higher_max_vy'},
+                          ],
+                        },
+                        {
+                          '<': [
+                            {'var': 'entities.player.vy'},
+                            0,
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      '*': [
+                        {'var': 'vars.gravity_base'},
+                        {'var': 'vars.jump_higher_factor'},
+                      ],
+                    },
+                    {'var': 'vars.gravity_base'},
+                  ],
+                },
+                'jump_velocity': -560,
+                'jump': pressedThisFrame,
+                'max_fall': 1100,
               },
-              'jump_velocity': -560,
-              'jump': pressedThisFrame,
-              'max_fall': 1100,
-            }
-          }
-        ], {'dt': 0.016});
+            },
+          ],
+          {'dt': 0.016},
+        );
         if (player.y < minY) minY = player.y;
       }
       return 368 - minY;
@@ -458,8 +574,11 @@ void main() {
     print('短按跳高: ${shortJumpHeight.toStringAsFixed(1)} px');
     // ignore: avoid_print
     print('长按跳高: ${longJumpHeight.toStringAsFixed(1)} px');
-    expect(longJumpHeight, greaterThan(shortJumpHeight * 1.4),
-        reason: '长按应明显比短按高（原版 0.4 重力系数）');
+    expect(
+      longJumpHeight,
+      greaterThan(shortJumpHeight * 1.4),
+      reason: '长按应明显比短按高（原版 0.4 重力系数）',
+    );
     // 玩家在地面 y=368（脚在 400），桶最高 h=64 src → 顶在 y=272 缩放
     // 起跳高度需 ≥ (400 - 272) = 128 px 才能让脚刚好踩到桶顶
     // 长按必须能过桶（脚比桶顶高至少 1 px → 起跳高度 ≥ 128）

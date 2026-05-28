@@ -237,6 +237,7 @@ class LauncherBridges {
           name,
           constraint,
           type: 'app',
+          preferLatest: true,
         );
         if (config == null) {
           debugPrint('[@launch_app] 市场获取失败: $name@$version');

@@ -881,6 +881,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
         name,
         VersionConstraint.parse('^$version'),
         type: 'app',
+        preferLatest: true,
       );
 
       if (config == null) {
