@@ -1,0 +1,735 @@
+{
+  "dsl": "3.3",
+  "appid": "4e3f0f48-419c-555a-b362-21e54658ef8b",
+  "meta": {
+    "name": "demo-guidi-tu-boules",
+    "displayName": "Guidi Tu Boules",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "JSON-DSL boules mini-game inspired by Guidi Tu. Source license: CC BY-NC-SA 4.0.",
+    "author": "fish"
+  },
+  "dependencies": {
+    "common-ui": "^1.3.0"
+  },
+  "global": {
+    "variables": {
+      "score": 0,
+      "bestScore": 0,
+      "status": "Tap the field to throw toward the jack.",
+      "_choice": null
+    },
+    "functions": {
+      "scoreChanged": {
+        "params": [
+          "score"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.score",
+              "value": "{{ params.score }}"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                ">": [
+                  {
+                    "var": "params.score"
+                  },
+                  {
+                    "var": "global.bestScore"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.bestScore",
+                    "value": "{{ params.score }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "status": {
+        "params": [
+          "text"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "{{ params.text }}"
+            }
+          }
+        ]
+      },
+      "over": {
+        "params": [
+          "score"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.score",
+              "value": "{{ params.score }}"
+            }
+          },
+          {
+            "call": "@common-ui.choose",
+            "args": {
+              "title": "Guidi Tu Boules finished",
+              "message": "Score: {{ params.score }}\nBest: {{ global.bestScore }}",
+              "buttons": [
+                {
+                  "label": "Close",
+                  "value": null,
+                  "style": "text"
+                },
+                {
+                  "label": "Restart",
+                  "value": "restart"
+                }
+              ]
+            },
+            "assign": "global._choice"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global._choice"
+                  },
+                  "restart"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@flame_game_reset",
+                  "args": {}
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "reset": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "Ready"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Guidi Tu Boules",
+        "appBar": {
+          "title": "Guidi Tu Boules",
+          "centerTitle": true,
+          "backgroundColor": "#14532D",
+          "color": "#FFFFFF",
+          "actions": [
+            {
+              "icon": "replay",
+              "action": {
+                "call": "@flame_game_reset",
+                "args": {}
+              }
+            }
+          ]
+        },
+        "layout": "column",
+        "padding": 0,
+        "children": [
+          {
+            "type": "container",
+            "padding": 10,
+            "color": "#14532D",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.status }}",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#D1D5DB"
+                },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "text",
+                "value": "Score {{ global.score }}",
+                "style": {
+                  "fontSize": 13,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF"
+                }
+              }
+            ]
+          },
+          {
+            "type": "expanded",
+            "child": {
+              "type": "flame_game",
+              "world": {
+                "kind": "pixel",
+                "bg": "#14532D"
+              },
+              "overlay": {
+                "score": false,
+                "game_over": false
+              },
+              "vars": {
+                "state": "aim",
+                "friction": 0.986,
+                "best": 9999,
+                "stopped": false
+              },
+              "entities": {
+                "target": {
+                  "kind": "pixel",
+                  "position": [
+                    210,
+                    118
+                  ],
+                  "size": [
+                    20,
+                    20
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "priority": 5,
+                  "render": {
+                    "shape": "circle",
+                    "color": "#FDE68A"
+                  }
+                },
+                "bowl": {
+                  "kind": "pixel",
+                  "position": [
+                    202,
+                    610
+                  ],
+                  "size": [
+                    34,
+                    34
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "priority": 10,
+                  "render": {
+                    "shape": "circle",
+                    "color": "#60A5FA"
+                  }
+                },
+                "aim": {
+                  "kind": "pixel",
+                  "position": [
+                    196,
+                    350
+                  ],
+                  "size": [
+                    46,
+                    46
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "priority": 3,
+                  "render": {
+                    "shape": "circle",
+                    "color": "#FFFFFF33"
+                  }
+                }
+              },
+              "input": {
+                "tap": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "aim"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "aim",
+                            "field": "x",
+                            "value": {
+                              "-": [
+                                {
+                                  "var": "event.x"
+                                },
+                                23
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "aim",
+                            "field": "y",
+                            "value": {
+                              "-": [
+                                {
+                                  "var": "event.y"
+                                },
+                                23
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "bowl",
+                            "field": "vx",
+                            "value": {
+                              "*": [
+                                {
+                                  "-": [
+                                    {
+                                      "var": "event.x"
+                                    },
+                                    {
+                                      "var": "entities.bowl.x"
+                                    }
+                                  ]
+                                },
+                                1.7
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "bowl",
+                            "field": "vy",
+                            "value": {
+                              "*": [
+                                {
+                                  "-": [
+                                    {
+                                      "var": "event.y"
+                                    },
+                                    {
+                                      "var": "entities.bowl.y"
+                                    }
+                                  ]
+                                },
+                                1.7
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.state",
+                            "value": "rolling"
+                          }
+                        },
+                        {
+                          "call": "@emit",
+                          "args": {
+                            "event": "status",
+                            "data": {
+                              "text": "Rolling"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "logic": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "rolling"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "bowl",
+                            "field": "vx",
+                            "value": {
+                              "*": [
+                                {
+                                  "var": "entities.bowl.vx"
+                                },
+                                {
+                                  "var": "vars.friction"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "bowl",
+                            "field": "vy",
+                            "value": {
+                              "*": [
+                                {
+                                  "var": "entities.bowl.vy"
+                                },
+                                {
+                                  "var": "vars.friction"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "<": [
+                                {
+                                  "var": "entities.bowl.x"
+                                },
+                                6
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "x",
+                                  "value": 6
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "vx",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "entities.bowl.vx"
+                                      },
+                                      -0.72
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              ">": [
+                                {
+                                  "+": [
+                                    {
+                                      "var": "entities.bowl.x"
+                                    },
+                                    {
+                                      "var": "entities.bowl.w"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "var": "world.width"
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "x",
+                                  "value": {
+                                    "-": [
+                                      {
+                                        "var": "world.width"
+                                      },
+                                      {
+                                        "var": "entities.bowl.w"
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "vx",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "entities.bowl.vx"
+                                      },
+                                      -0.72
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "<": [
+                                {
+                                  "var": "entities.bowl.y"
+                                },
+                                6
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "y",
+                                  "value": 6
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "vy",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "entities.bowl.vy"
+                                      },
+                                      -0.72
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              ">": [
+                                {
+                                  "+": [
+                                    {
+                                      "var": "entities.bowl.y"
+                                    },
+                                    {
+                                      "var": "entities.bowl.h"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "var": "world.height"
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "y",
+                                  "value": {
+                                    "-": [
+                                      {
+                                        "var": "world.height"
+                                      },
+                                      {
+                                        "var": "entities.bowl.h"
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "vy",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "entities.bowl.vy"
+                                      },
+                                      -0.72
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  ">": [
+                                    {
+                                      "var": "entities.bowl.vx"
+                                    },
+                                    -5
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "entities.bowl.vx"
+                                    },
+                                    5
+                                  ]
+                                },
+                                {
+                                  ">": [
+                                    {
+                                      "var": "entities.bowl.vy"
+                                    },
+                                    -5
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "entities.bowl.vy"
+                                    },
+                                    5
+                                  ]
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "vx",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "bowl",
+                                  "field": "vy",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.state",
+                                  "value": "done"
+                                }
+                              },
+                              {
+                                "call": "@emit",
+                                "args": {
+                                  "event": "status",
+                                  "data": {
+                                    "text": "Stopped. Tap restart for another throw."
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@game_over",
+                                "args": {}
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "on_status": {
+                "type": "call",
+                "call": "@global.status",
+                "args": {
+                  "text": "{{ event.text }}"
+                }
+              },
+              "on_game_over": {
+                "type": "call",
+                "call": "@global.over",
+                "args": {
+                  "score": "{{ event.score }}"
+                }
+              },
+              "on_reset": {
+                "type": "call",
+                "call": "@global.reset",
+                "args": {}
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

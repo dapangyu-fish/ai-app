@@ -308,6 +308,7 @@ licensed by their authors unless they explicitly say otherwise.
 - [ ] Agent runtime support: allow different AI coding agents/runtimes such as Codex to generate, repair, and publish JSON-APPs
 - [ ] Audio support for JSON-APPs (recording, playback, upload, and reusable audio UI/actions)
 - [ ] FaaS support: let AI conversations create small backend functions for complex apps, with resource limits, deployment isolation, and self-hosting controls
+- [ ] Mario JSON demo parity: finish Koopa spawn/movement/rendering parity against the original `flutter_game` reference before treating that demo as fully complete
 - [ ] DSL v4 (stabilize breaking-change window)
 - [ ] More tests around the interpreter
 - [ ] Performance: defer interpret of off-screen subtrees

@@ -1,0 +1,414 @@
+{
+  "dsl": "3.3",
+  "appid": "8fcf16bb-9479-54d3-9ffe-233d50ec0fdd",
+  "meta": {
+    "name": "demo-guidi-tu-rps",
+    "displayName": "Guidi Tu RPS",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "JSON-DSL party mini-game inspired by Guidi Tu Rock Paper Scissors. Source license: CC BY-NC-SA 4.0.",
+    "author": "fish"
+  },
+  "dependencies": {
+    "common-ui": "^1.3.0"
+  },
+  "global": {
+    "variables": {
+      "round": 0,
+      "score": 0,
+      "botScore": 0,
+      "player": "-",
+      "bot": "-",
+      "result": "Choose",
+      "history": []
+    },
+    "functions": {
+      "pick": {
+        "params": [
+          "choice"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.player",
+              "value": "{{ params.choice }}"
+            }
+          },
+          {
+            "call": "@random_pick",
+            "args": {
+              "list": [
+                "rock",
+                "paper",
+                "scissors"
+              ]
+            },
+            "assign": "global.bot"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.round",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.round"
+                  },
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.player"
+                  },
+                  {
+                    "var": "global.bot"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.result",
+                    "value": "Draw"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "or": [
+                        {
+                          "and": [
+                            {
+                              "==": [
+                                {
+                                  "var": "global.player"
+                                },
+                                "rock"
+                              ]
+                            },
+                            {
+                              "==": [
+                                {
+                                  "var": "global.bot"
+                                },
+                                "scissors"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "and": [
+                            {
+                              "==": [
+                                {
+                                  "var": "global.player"
+                                },
+                                "paper"
+                              ]
+                            },
+                            {
+                              "==": [
+                                {
+                                  "var": "global.bot"
+                                },
+                                "rock"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "and": [
+                            {
+                              "==": [
+                                {
+                                  "var": "global.player"
+                                },
+                                "scissors"
+                              ]
+                            },
+                            {
+                              "==": [
+                                {
+                                  "var": "global.bot"
+                                },
+                                "paper"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.result",
+                          "value": "Win"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.score",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global.score"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.result",
+                          "value": "Lose"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.botScore",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global.botScore"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.history",
+              "item": "{{ global.round }}. {{ global.player }} vs {{ global.bot }} - {{ global.result }}"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.round",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.botScore",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.player",
+              "value": "-"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.bot",
+              "value": "-"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.result",
+              "value": "Choose"
+            }
+          },
+          {
+            "call": "@list_clear",
+            "args": {
+              "var": "global.history"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Guidi Tu RPS",
+        "appBar": {
+          "title": "Guidi Tu RPS",
+          "centerTitle": true,
+          "backgroundColor": "#111827",
+          "color": "#FFFFFF",
+          "actions": [
+            {
+              "icon": "replay",
+              "action": {
+                "call": "@global.reset",
+                "args": {}
+              }
+            }
+          ]
+        },
+        "layout": "column",
+        "padding": 16,
+        "children": [
+          {
+            "type": "container",
+            "padding": 18,
+            "borderRadius": 18,
+            "color": "#EEF2FF",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "Round {{ global.round }}",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "text",
+                "value": "You {{ global.score }} : {{ global.botScore }} Bot",
+                "style": {
+                  "fontSize": 16,
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "text",
+                "value": "{{ global.player }} vs {{ global.bot }} -> {{ global.result }}",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold",
+                  "color": "#4F46E5"
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "padding": 12,
+            "layout": "row",
+            "mainAxisAlignment": "spaceEvenly",
+            "children": [
+              {
+                "type": "button",
+                "label": "Rock",
+                "style": {
+                  "fontSize": 15,
+                  "paddingH": 14,
+                  "paddingV": 12,
+                  "borderRadius": 18,
+                  "backgroundColor": "#312E81",
+                  "textColor": "#FFFFFF"
+                },
+                "action": {
+                  "call": "@global.pick",
+                  "args": {
+                    "choice": "rock"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "Paper",
+                "style": {
+                  "fontSize": 15,
+                  "paddingH": 14,
+                  "paddingV": 12,
+                  "borderRadius": 18,
+                  "backgroundColor": "#312E81",
+                  "textColor": "#FFFFFF"
+                },
+                "action": {
+                  "call": "@global.pick",
+                  "args": {
+                    "choice": "paper"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "Scissors",
+                "style": {
+                  "fontSize": 15,
+                  "paddingH": 14,
+                  "paddingV": 12,
+                  "borderRadius": 18,
+                  "backgroundColor": "#312E81",
+                  "textColor": "#FFFFFF"
+                },
+                "action": {
+                  "call": "@global.pick",
+                  "args": {
+                    "choice": "scissors"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "expanded",
+            "child": {
+              "type": "list",
+              "source": "{{ global.history }}",
+              "emptyText": "Pick a gesture to start.",
+              "item_template": {
+                "type": "container",
+                "padding": 10,
+                "borderRadius": 10,
+                "color": "#F9FAFB",
+                "child": {
+                  "type": "text",
+                  "value": "{{ loop.item }}",
+                  "style": {
+                    "fontSize": 13,
+                    "color": "#111827"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
