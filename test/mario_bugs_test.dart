@@ -1,6 +1,7 @@
 // 用真实 demo 的 scale=2 还原蘑菇/小怪场景
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/games/flame_game_engine.dart';
@@ -8,12 +9,27 @@ import 'package:flutter_application_1/games/game_entity.dart';
 import 'package:flutter_application_1/games/tiled_map_entity.dart';
 import 'package:flutter_application_1/json_ui/asset_manager.dart';
 
+const _localMarioTmxPath = '/tmp/flutter_game_ref/assets/tiles/mario.tmx';
+
 JsonAppAssetManager _testAssetManager() {
   return JsonAppAssetManager(
     appId: 'test',
     appName: 'test',
     appVersion: '0.0.0',
   );
+}
+
+class _LocalMarioAssetManager extends JsonAppAssetManager {
+  _LocalMarioAssetManager()
+    : super(appId: 'test', appName: 'test', appVersion: '0.0.0');
+
+  @override
+  Future<Uint8List> loadBytes(String path) async {
+    if (path.endsWith('/tiles/mario.tmx') || path.endsWith('tiles/mario.tmx')) {
+      return File(_localMarioTmxPath).readAsBytes();
+    }
+    return super.loadBytes(path);
+  }
 }
 
 Future<JsonFlameGame> _buildScene() async {
@@ -186,6 +202,65 @@ void main() {
       game.logic.runLogic(frameLogic, {'dt': 0.016});
     }
 
+    expect(mushroom.y, lessThan(spawnY));
+    expect(mushroom.state['revealing'], false);
+    expect(mushroom.x, greaterThan(672));
+  });
+
+  test('真实 Mario JSON + 原始 TMX: 红蘑菇块按 qblock content 生成 powerup', () async {
+    if (!File(_localMarioTmxPath).existsSync()) {
+      markTestSkipped('original flutter_game repo is not cloned at /tmp/flutter_game_ref');
+      return;
+    }
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _LocalMarioAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'loading'});
+    game.audio.dispose();
+    final map = game.entities['map'] as TiledMapEntity;
+    await map.load();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
+    final block = game.entities['qblock_3'];
+    expect(block, isA<PixelEntity>());
+    expect((block as PixelEntity).state['content'], 'red mushroom');
+
+    game.vars['state'] = 'running';
+    game.vars['jump_pressed'] = false;
+    game.vars['jump_held'] = false;
+    game.vars['move_axis'] = 0;
+    final player = game.entities['player'] as PixelEntity;
+    player
+      ..x = 676
+      ..y = 304
+      ..vx = 0
+      ..vy = -360;
+
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
+
+    expect(player.state['blockedUp'], true);
+    expect(player.state['yCollision']?['objectId'], 3);
+    expect(game.entities['powerup_3'], isA<PixelEntity>());
+    final mushroom = game.entities['powerup_3'] as PixelEntity;
+    final spawnY = mushroom.y;
+    expect(mushroom.state['kind'], 'red_mushroom');
+    expect(mushroom.state['revealing'], true);
+
+    for (var i = 0; i < 60; i++) {
+      game.logic.runLogic(frameLogic, {'dt': 0.016});
+    }
     expect(mushroom.y, lessThan(spawnY));
     expect(mushroom.state['revealing'], false);
     expect(mushroom.x, greaterThan(672));

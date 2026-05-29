@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.15",
+    "version": "1.0.16",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -5072,11 +5072,23 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "==": [
+                                    "or": [
                                       {
-                                        "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                        "==": [
+                                          {
+                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                          },
+                                          "coin"
+                                        ]
                                       },
-                                      "coin"
+                                      {
+                                        "==": [
+                                          {
+                                            "var": "entities.player.yCollision.type"
+                                          },
+                                          "coin"
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -5168,11 +5180,23 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "==": [
+                                    "or": [
                                       {
-                                        "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                        "==": [
+                                          {
+                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                          },
+                                          "red mushroom"
+                                        ]
                                       },
-                                      "red mushroom"
+                                      {
+                                        "==": [
+                                          {
+                                            "var": "entities.player.yCollision.type"
+                                          },
+                                          "red mushroom"
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -5236,11 +5260,23 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "==": [
+                                    "or": [
                                       {
-                                        "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                        "==": [
+                                          {
+                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                          },
+                                          "green mushroom"
+                                        ]
                                       },
-                                      "green mushroom"
+                                      {
+                                        "==": [
+                                          {
+                                            "var": "entities.player.yCollision.type"
+                                          },
+                                          "green mushroom"
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -5374,11 +5410,23 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "==": [
+                                    "or": [
                                       {
-                                        "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                        "==": [
+                                          {
+                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                          },
+                                          "flower"
+                                        ]
                                       },
-                                      "flower"
+                                      {
+                                        "==": [
+                                          {
+                                            "var": "entities.player.yCollision.type"
+                                          },
+                                          "flower"
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -5512,11 +5560,23 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "==": [
+                                    "or": [
                                       {
-                                        "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                        "==": [
+                                          {
+                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                          },
+                                          "mushroom flower"
+                                        ]
                                       },
-                                      "mushroom flower"
+                                      {
+                                        "==": [
+                                          {
+                                            "var": "entities.player.yCollision.type"
+                                          },
+                                          "mushroom flower"
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -5650,11 +5710,23 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "==": [
+                                    "or": [
                                       {
-                                        "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                        "==": [
+                                          {
+                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                          },
+                                          "star"
+                                        ]
                                       },
-                                      "star"
+                                      {
+                                        "==": [
+                                          {
+                                            "var": "entities.player.yCollision.type"
+                                          },
+                                          "star"
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
