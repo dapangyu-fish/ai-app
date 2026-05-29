@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.20",
+    "version": "1.0.21",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -5280,7 +5280,12 @@
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "field": "y",
                                         "value": {
-                                          "var": "entities.player.yCollision.y"
+                                          "-": [
+                                            {
+                                              "var": "entities.player.yCollision.y"
+                                            },
+                                            32
+                                          ]
                                         }
                                       }
                                     },
@@ -5289,7 +5294,9 @@
                                       "args": {
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "field": "vx",
-                                        "value": 0
+                                        "value": {
+                                          "var": "vars.powerup_speed"
+                                        }
                                       }
                                     },
                                     {
@@ -5305,7 +5312,7 @@
                                       "args": {
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "field": "priority",
-                                        "value": 24
+                                        "value": 35
                                       }
                                     },
                                     {
@@ -5329,7 +5336,7 @@
                                       "args": {
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "field": "state.revealing",
-                                        "value": true
+                                        "value": false
                                       }
                                     },
                                     {

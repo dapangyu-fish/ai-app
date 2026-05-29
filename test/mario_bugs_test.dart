@@ -191,18 +191,18 @@ void main() {
     expect(spawned, isA<PixelEntity>());
     final mushroom = spawned as PixelEntity;
     final spawnY = mushroom.y;
-    expect(mushroom.state['revealing'], true);
+    expect(spawnY, 240);
+    expect(mushroom.state['revealing'], false);
     expect(
       mushroom.priority,
-      lessThan((game.entities['qblock_3'] as PixelEntity).priority),
-      reason: 'reveal 阶段 powerup 要从问号砖块后方冒出，不能盖在砖块上',
+      greaterThan((game.entities['qblock_3'] as PixelEntity).priority),
+      reason: '真机上 reveal 循环不稳定，红蘑菇应先稳定显示在砖块上方',
     );
 
     for (var i = 0; i < 60; i++) {
       game.logic.runLogic(frameLogic, {'dt': 0.016});
     }
 
-    expect(mushroom.y, lessThan(spawnY));
     expect(mushroom.state['revealing'], false);
     expect(mushroom.x, greaterThan(672));
   });
@@ -256,12 +256,12 @@ void main() {
     final mushroom = game.entities['powerup_3'] as PixelEntity;
     final spawnY = mushroom.y;
     expect(mushroom.state['kind'], 'red_mushroom');
-    expect(mushroom.state['revealing'], true);
+    expect(spawnY, 240);
+    expect(mushroom.state['revealing'], false);
 
     for (var i = 0; i < 60; i++) {
       game.logic.runLogic(frameLogic, {'dt': 0.016});
     }
-    expect(mushroom.y, lessThan(spawnY));
     expect(mushroom.state['revealing'], false);
     expect(mushroom.x, greaterThan(672));
   });
