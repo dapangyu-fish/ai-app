@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.38",
+    "version": "1.0.39",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -4813,7 +4813,7 @@
                                 "state": {
                                   "kind": "goomba",
                                   "dir": -1,
-                                  "activated": true,
+                                  "activated": false,
                                   "assetLoadingOverlay": false
                                 },
                                 "animations": {
@@ -4887,14 +4887,11 @@
                                 "state": {
                                   "kind": "koopa",
                                   "dir": -1,
-                                  "minX": 3168,
-                                  "maxX": 3920,
-                                  "groundY": 352,
                                   "activated": false,
                                   "assetLoadingOverlay": false,
                                   "spriteW": 32,
                                   "spriteH": 48,
-                                  "spriteOffsetY": -48,
+                                  "spriteOffsetY": 2,
                                   "shell": false,
                                   "moving_shell": false
                                 },
@@ -5072,20 +5069,42 @@
                                 }
                               },
                               {
-                                "call": "@entity.get",
+                                "call": "@if",
                                 "args": {
-                                  "id": "{{ vars._enemy_id }}",
-                                  "field": "x"
-                                },
-                                "assign": "vars._enemy_prev_x"
+                                  "cond": {
+                                    "var": "vars._enemy_active"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ vars._enemy_id }}",
+                                        "field": "state.activated",
+                                        "value": true
+                                      }
+                                    }
+                                  ]
+                                }
                               },
                               {
-                                "call": "@entity.get",
+                                "call": "@set",
                                 "args": {
-                                  "id": "{{ vars._enemy_id }}",
-                                  "field": "y"
-                                },
-                                "assign": "vars._enemy_prev_y"
+                                  "var": "vars._enemy_should_step",
+                                  "value": {
+                                    "or": [
+                                      {
+                                        "var": "vars._enemy_active"
+                                      },
+                                      {
+                                        "call": "@entity.get",
+                                        "args": {
+                                          "id": "{{ vars._enemy_id }}",
+                                          "field": "state.activated"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
                               },
                               {
                                 "call": "@entity.set",
@@ -5095,7 +5114,7 @@
                                   "value": {
                                     "if": [
                                       {
-                                        "var": "vars._enemy_active"
+                                        "var": "vars._enemy_should_step"
                                       },
                                       {
                                         "*": [
@@ -5116,338 +5135,22 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "==": [
-                                      {
-                                        "var": "vars._enemy_kind"
-                                      },
-                                      "koopa"
-                                    ]
+                                    "var": "vars._enemy_should_step"
                                   },
                                   "then": [
                                     {
-                                      "call": "@if",
+                                      "call": "@platformer.step",
                                       "args": {
-                                        "cond": {
-                                          "var": "vars._enemy_active"
-                                        },
-                                        "then": [
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "state.activated",
-                                              "value": true
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "call": "@if",
-                                      "args": {
-                                        "cond": {
-                                          "or": [
-                                            {
-                                              "var": "vars._enemy_active"
-                                            },
-                                            {
-                                              "call": "@entity.get",
-                                              "args": {
-                                                "id": "{{ vars._enemy_id }}",
-                                                "field": "state.activated"
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "then": [
-                                          {
-                                            "call": "@if",
-                                            "args": {
-                                              "cond": {
-                                                "<=": [
-                                                  {
-                                                    "call": "@entity.get",
-                                                    "args": {
-                                                      "id": "{{ vars._enemy_id }}",
-                                                      "field": "x"
-                                                    }
-                                                  },
-                                                  {
-                                                    "call": "@entity.get",
-                                                    "args": {
-                                                      "id": "{{ vars._enemy_id }}",
-                                                      "field": "state.minX"
-                                                    }
-                                                  }
-                                                ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "call": "@entity.set",
-                                                  "args": {
-                                                    "id": "{{ vars._enemy_id }}",
-                                                    "field": "state.dir",
-                                                    "value": 1
-                                                  }
-                                                },
-                                                {
-                                                  "call": "@set",
-                                                  "args": {
-                                                    "var": "vars._enemy_dir",
-                                                    "value": 1
-                                                  }
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          {
-                                            "call": "@if",
-                                            "args": {
-                                              "cond": {
-                                                ">=": [
-                                                  {
-                                                    "call": "@entity.get",
-                                                    "args": {
-                                                      "id": "{{ vars._enemy_id }}",
-                                                      "field": "x"
-                                                    }
-                                                  },
-                                                  {
-                                                    "call": "@entity.get",
-                                                    "args": {
-                                                      "id": "{{ vars._enemy_id }}",
-                                                      "field": "state.maxX"
-                                                    }
-                                                  }
-                                                ]
-                                              },
-                                              "then": [
-                                                {
-                                                  "call": "@entity.set",
-                                                  "args": {
-                                                    "id": "{{ vars._enemy_id }}",
-                                                    "field": "state.dir",
-                                                    "value": -1
-                                                  }
-                                                },
-                                                {
-                                                  "call": "@set",
-                                                  "args": {
-                                                    "var": "vars._enemy_dir",
-                                                    "value": -1
-                                                  }
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "vx",
-                                              "value": {
-                                                "*": [
-                                                  {
-                                                    "var": "vars._enemy_dir"
-                                                  },
-                                                  {
-                                                    "var": "vars.enemy_speed"
-                                                  }
-                                                ]
-                                              }
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.add",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "x",
-                                              "by": {
-                                                "*": [
-                                                  {
-                                                    "call": "@entity.get",
-                                                    "args": {
-                                                      "id": "{{ vars._enemy_id }}",
-                                                      "field": "vx"
-                                                    }
-                                                  },
-                                                  {
-                                                    "var": "event.dt"
-                                                  }
-                                                ]
-                                              }
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "y",
-                                              "value": {
-                                                "call": "@entity.get",
-                                                "args": {
-                                                  "id": "{{ vars._enemy_id }}",
-                                                  "field": "state.groundY"
-                                                }
-                                              }
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "vy",
-                                              "value": 0
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "state.blockedDown",
-                                              "value": true
-                                            }
-                                          },
-                                          {
-                                            "call": "@set",
-                                            "args": {
-                                              "var": "vars._enemy_step_ok",
-                                              "value": true
-                                            }
-                                          }
-                                        ],
-                                        "else": [
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "vx",
-                                              "value": 0
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "vy",
-                                              "value": 0
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "y",
-                                              "value": {
-                                                "call": "@entity.get",
-                                                "args": {
-                                                  "id": "{{ vars._enemy_id }}",
-                                                  "field": "state.groundY"
-                                                }
-                                              }
-                                            }
-                                          },
-                                          {
-                                            "call": "@set",
-                                            "args": {
-                                              "var": "vars._enemy_step_ok",
-                                              "value": false
-                                            }
-                                          }
-                                        ]
-                                      }
+                                        "id": "{{ vars._enemy_id }}",
+                                        "map": "map",
+                                        "dt": "{{ event.dt }}",
+                                        "gravity": 1400,
+                                        "max_fall": 900
+                                      },
+                                      "assign": "vars._enemy_step_ok"
                                     }
                                   ],
                                   "else": [
-                                    {
-                                      "call": "@if",
-                                      "args": {
-                                        "cond": {
-                                          "var": "vars._enemy_active"
-                                        },
-                                        "then": [
-                                          {
-                                            "call": "@platformer.step",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "map": "map",
-                                              "dt": "{{ event.dt }}",
-                                              "gravity": 1400,
-                                              "max_fall": 900
-                                            },
-                                            "assign": "vars._enemy_step_ok"
-                                          }
-                                        ],
-                                        "else": [
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "vy",
-                                              "value": 0
-                                            }
-                                          },
-                                          {
-                                            "call": "@set",
-                                            "args": {
-                                              "var": "vars._enemy_step_ok",
-                                              "value": false
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "call": "@if",
-                                "args": {
-                                  "cond": {
-                                    "and": [
-                                      {
-                                        "!=": [
-                                          {
-                                            "var": "vars._enemy_kind"
-                                          },
-                                          "koopa"
-                                        ]
-                                      },
-                                      {
-                                        "var": "vars._enemy_active"
-                                      },
-                                      {
-                                        "!": {
-                                          "call": "@entity.get",
-                                          "args": {
-                                            "id": "{{ vars._enemy_id }}",
-                                            "field": "state.blockedDown"
-                                          }
-                                        }
-                                      }
-                                    ]
-                                  },
-                                  "then": [
-                                    {
-                                      "call": "@entity.set",
-                                      "args": {
-                                        "id": "{{ vars._enemy_id }}",
-                                        "field": "x",
-                                        "value": {
-                                          "var": "vars._enemy_prev_x"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "call": "@entity.set",
-                                      "args": {
-                                        "id": "{{ vars._enemy_id }}",
-                                        "field": "y",
-                                        "value": {
-                                          "var": "vars._enemy_prev_y"
-                                        }
-                                      }
-                                    },
                                     {
                                       "call": "@entity.set",
                                       "args": {
@@ -5457,32 +5160,10 @@
                                       }
                                     },
                                     {
-                                      "call": "@entity.set",
-                                      "args": {
-                                        "id": "{{ vars._enemy_id }}",
-                                        "field": "state.dir",
-                                        "value": {
-                                          "*": [
-                                            {
-                                              "var": "vars._enemy_dir"
-                                            },
-                                            -1
-                                          ]
-                                        }
-                                      }
-                                    },
-                                    {
                                       "call": "@set",
                                       "args": {
-                                        "var": "vars._enemy_dir",
-                                        "value": {
-                                          "*": [
-                                            {
-                                              "var": "vars._enemy_dir"
-                                            },
-                                            -1
-                                          ]
-                                        }
+                                        "var": "vars._enemy_step_ok",
+                                        "value": false
                                       }
                                     }
                                   ]
@@ -5535,6 +5216,38 @@
                                             -1
                                           ]
                                         }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    ">": [
+                                      {
+                                        "call": "@entity.get",
+                                        "args": {
+                                          "id": "{{ vars._enemy_id }}",
+                                          "field": "y"
+                                        }
+                                      },
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "entities.map.height"
+                                          },
+                                          64
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "{{ vars._enemy_id }}"
                                       }
                                     }
                                   ]

@@ -812,8 +812,8 @@ void main() {
     expect((koopa as PixelEntity).state['kind'], 'koopa');
     expect(
       koopa.state['spriteOffsetY'],
-      -48,
-      reason: 'Koopa sprite is lifted above its ground-aligned hit box',
+      2,
+      reason: 'Koopa sprite keeps the original bottom-left TMX anchor offset',
     );
     expect(
       koopa.state['spriteH'],
@@ -821,9 +821,10 @@ void main() {
       reason: 'Koopa draws at the original scaled sprite height',
     );
     expect(
-      koopa.y + koopa.h,
-      closeTo(400, 1),
-      reason: 'Koopa hit box should extend down to the ground',
+      koopa.y + koopa.h + ((koopa.state['spriteOffsetY'] as num).toDouble()),
+      closeTo(402, 1),
+      reason:
+          'Inactive Koopa renders at the original scaled bottom-left anchor while its AABB rests on the platform',
     );
     final farX = koopa.x;
     expect(koopa.vx, 0, reason: 'Koopa should be present but idle off-screen');
@@ -849,12 +850,11 @@ void main() {
       game.logic.runLogic(frameLogic, {'dt': 0.016});
     }
     expect(
-      koopa.y,
-      closeTo(352, 1),
-      reason: 'Koopa patrol is scripted to the original ground lane',
+      game.entities['enemy_98'],
+      isNull,
+      reason:
+          'Koopa should fall/despawn after walking off the original ground segment',
     );
-    expect(koopa.x, inInclusiveRange(3168, 3920));
-    expect(koopa.vx.abs(), greaterThan(0));
   });
 
   test('真实 Mario JSON: 只有 fire 状态可以发射原版火球 sprite', () async {
@@ -997,7 +997,7 @@ void main() {
         'dir': -1,
         'tiledObjectId': 98,
         'spriteH': 48,
-        'spriteOffsetY': -48,
+        'spriteOffsetY': 2,
       },
       'frame_size': [16, 24],
       'frames': 2,
