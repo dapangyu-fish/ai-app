@@ -1,12 +1,12 @@
 {
   "dsl": "3.3",
-  "appid": "4e3f0f48-419c-555a-b362-21e54658ef8b",
+  "appid": "0c1d35d8-b451-5a02-b3c6-7ace87207588",
   "meta": {
     "name": "demo-guidi-tu-boules",
     "displayName": "Guidi Tu Boules",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "type": "app",
-    "description": "JSON-DSL boules mini-game inspired by Guidi Tu. Source license: CC BY-NC-SA 4.0.",
+    "description": "JSON-only Boules port with drag projection, wall bounce, damping, jack collision, and distance scoring.",
     "author": "fish"
   },
   "dependencies": {
@@ -16,13 +16,14 @@
     "variables": {
       "score": 0,
       "bestScore": 0,
-      "status": "Tap the field to throw toward the jack.",
+      "status": "Drag above the bowl and release.",
       "_choice": null
     },
     "functions": {
       "scoreChanged": {
         "params": [
-          "score"
+          "score",
+          "best"
         ],
         "logic": [
           {
@@ -33,27 +34,10 @@
             }
           },
           {
-            "call": "@if",
+            "call": "@set",
             "args": {
-              "condition": {
-                ">": [
-                  {
-                    "var": "params.score"
-                  },
-                  {
-                    "var": "global.bestScore"
-                  }
-                ]
-              },
-              "then": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.bestScore",
-                    "value": "{{ params.score }}"
-                  }
-                }
-              ]
+              "var": "global.bestScore",
+              "value": "{{ params.best }}"
             }
           }
         ]
@@ -74,7 +58,8 @@
       },
       "over": {
         "params": [
-          "score"
+          "score",
+          "best"
         ],
         "logic": [
           {
@@ -85,14 +70,28 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.bestScore",
+              "value": "{{ params.best }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "Guidi Tu Boules finished"
+            }
+          },
+          {
             "call": "@common-ui.choose",
             "args": {
               "title": "Guidi Tu Boules finished",
-              "message": "Score: {{ params.score }}\nBest: {{ global.bestScore }}",
+              "message": "Score: {{ params.score }}\nBest: {{ params.best }}",
               "buttons": [
                 {
                   "label": "Close",
-                  "value": null,
+                  "value": "close",
                   "style": "text"
                 },
                 {
@@ -144,7 +143,6 @@
       }
     }
   },
-  "steps": [],
   "ui": {
     "screens": [
       {
@@ -170,7 +168,7 @@
         "children": [
           {
             "type": "container",
-            "padding": 10,
+            "padding": 8,
             "color": "#14532D",
             "layout": "row",
             "crossAxisAlignment": "center",
@@ -180,7 +178,7 @@
                 "value": "{{ global.status }}",
                 "style": {
                   "fontSize": 13,
-                  "color": "#D1D5DB"
+                  "color": "#E5E7EB"
                 },
                 "position": {
                   "type": "flex",
@@ -202,70 +200,95 @@
             "type": "expanded",
             "child": {
               "type": "flame_game",
+              "viewport": {
+                "width": 428,
+                "height": 760,
+                "fit": "contain"
+              },
               "world": {
                 "kind": "pixel",
                 "bg": "#14532D"
               },
               "overlay": {
                 "score": false,
-                "game_over": false
+                "game_over": false,
+                "asset_loading_text": "Loading Boules assets..."
               },
               "vars": {
                 "state": "aim",
                 "friction": 0.986,
-                "best": 9999,
-                "stopped": false
+                "dx": 0,
+                "dy": 0,
+                "dist2": 0,
+                "speed2": 0
               },
               "entities": {
-                "target": {
-                  "kind": "pixel",
+                "jack": {
+                  "kind": "sprite",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/boules/target.png",
                   "position": [
-                    210,
+                    190,
                     118
                   ],
                   "size": [
-                    20,
-                    20
+                    36,
+                    36
                   ],
                   "velocity": [
                     0,
                     0
                   ],
-                  "priority": 5,
-                  "render": {
-                    "shape": "circle",
-                    "color": "#FDE68A"
+                  "priority": 8,
+                  "state": {
+                    "assetLoadingOverlay": true
                   }
                 },
                 "bowl": {
-                  "kind": "pixel",
+                  "kind": "sprite",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/boules/bowl.png",
                   "position": [
-                    202,
-                    610
+                    190,
+                    628
                   ],
                   "size": [
-                    34,
-                    34
+                    42,
+                    42
                   ],
                   "velocity": [
                     0,
                     0
                   ],
-                  "priority": 10,
-                  "render": {
-                    "shape": "circle",
-                    "color": "#60A5FA"
-                  }
+                  "priority": 12
                 },
                 "aim": {
                   "kind": "pixel",
                   "position": [
-                    196,
-                    350
+                    185,
+                    460
                   ],
                   "size": [
-                    46,
-                    46
+                    52,
+                    52
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "priority": 4,
+                  "render": {
+                    "shape": "circle",
+                    "color": "#FFFFFF33"
+                  }
+                },
+                "arrow": {
+                  "kind": "pixel",
+                  "position": [
+                    205,
+                    480
+                  ],
+                  "size": [
+                    8,
+                    150
                   ],
                   "velocity": [
                     0,
@@ -273,13 +296,74 @@
                   ],
                   "priority": 3,
                   "render": {
-                    "shape": "circle",
-                    "color": "#FFFFFF33"
+                    "shape": "rect",
+                    "color": "#E0F2FE88"
                   }
                 }
               },
               "input": {
-                "tap": [
+                "pan": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "aim"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@entity.add",
+                          "args": {
+                            "id": "aim",
+                            "field": "x",
+                            "by": {
+                              "var": "event.dx"
+                            },
+                            "min": 20,
+                            "max": 356
+                          }
+                        },
+                        {
+                          "call": "@entity.add",
+                          "args": {
+                            "id": "aim",
+                            "field": "y",
+                            "by": {
+                              "var": "event.dy"
+                            },
+                            "min": 60,
+                            "max": 650
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "arrow",
+                            "field": "x",
+                            "value": {
+                              "var": "entities.aim.x"
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "arrow",
+                            "field": "y",
+                            "value": {
+                              "var": "entities.aim.y"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "swipe": [
                   {
                     "call": "@if",
                     "args": {
@@ -295,51 +379,14 @@
                         {
                           "call": "@entity.set",
                           "args": {
-                            "id": "aim",
-                            "field": "x",
-                            "value": {
-                              "-": [
-                                {
-                                  "var": "event.x"
-                                },
-                                23
-                              ]
-                            }
-                          }
-                        },
-                        {
-                          "call": "@entity.set",
-                          "args": {
-                            "id": "aim",
-                            "field": "y",
-                            "value": {
-                              "-": [
-                                {
-                                  "var": "event.y"
-                                },
-                                23
-                              ]
-                            }
-                          }
-                        },
-                        {
-                          "call": "@entity.set",
-                          "args": {
                             "id": "bowl",
                             "field": "vx",
                             "value": {
                               "*": [
                                 {
-                                  "-": [
-                                    {
-                                      "var": "event.x"
-                                    },
-                                    {
-                                      "var": "entities.bowl.x"
-                                    }
-                                  ]
+                                  "var": "event.dx"
                                 },
-                                1.7
+                                1.65
                               ]
                             }
                           }
@@ -352,18 +399,19 @@
                             "value": {
                               "*": [
                                 {
-                                  "-": [
-                                    {
-                                      "var": "event.y"
-                                    },
-                                    {
-                                      "var": "entities.bowl.y"
-                                    }
-                                  ]
+                                  "var": "event.dy"
                                 },
-                                1.7
+                                1.65
                               ]
                             }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "arrow",
+                            "field": "render.color",
+                            "value": "#FFFFFF00"
                           }
                         },
                         {
@@ -381,6 +429,27 @@
                               "text": "Rolling"
                             }
                           }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "tap": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "done"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@game_reset",
+                          "args": {}
                         }
                       ]
                     }
@@ -443,7 +512,7 @@
                                 {
                                   "var": "entities.bowl.x"
                                 },
-                                6
+                                0
                               ]
                             },
                             "then": [
@@ -452,7 +521,7 @@
                                 "args": {
                                   "id": "bowl",
                                   "field": "x",
-                                  "value": 6
+                                  "value": 0
                                 }
                               },
                               {
@@ -479,18 +548,9 @@
                             "cond": {
                               ">": [
                                 {
-                                  "+": [
-                                    {
-                                      "var": "entities.bowl.x"
-                                    },
-                                    {
-                                      "var": "entities.bowl.w"
-                                    }
-                                  ]
+                                  "var": "entities.bowl.x"
                                 },
-                                {
-                                  "var": "world.width"
-                                }
+                                386
                               ]
                             },
                             "then": [
@@ -499,16 +559,7 @@
                                 "args": {
                                   "id": "bowl",
                                   "field": "x",
-                                  "value": {
-                                    "-": [
-                                      {
-                                        "var": "world.width"
-                                      },
-                                      {
-                                        "var": "entities.bowl.w"
-                                      }
-                                    ]
-                                  }
+                                  "value": 386
                                 }
                               },
                               {
@@ -537,7 +588,7 @@
                                 {
                                   "var": "entities.bowl.y"
                                 },
-                                6
+                                0
                               ]
                             },
                             "then": [
@@ -546,7 +597,7 @@
                                 "args": {
                                   "id": "bowl",
                                   "field": "y",
-                                  "value": 6
+                                  "value": 0
                                 }
                               },
                               {
@@ -573,18 +624,9 @@
                             "cond": {
                               ">": [
                                 {
-                                  "+": [
-                                    {
-                                      "var": "entities.bowl.y"
-                                    },
-                                    {
-                                      "var": "entities.bowl.h"
-                                    }
-                                  ]
+                                  "var": "entities.bowl.y"
                                 },
-                                {
-                                  "var": "world.height"
-                                }
+                                718
                               ]
                             },
                             "then": [
@@ -593,16 +635,7 @@
                                 "args": {
                                   "id": "bowl",
                                   "field": "y",
-                                  "value": {
-                                    "-": [
-                                      {
-                                        "var": "world.height"
-                                      },
-                                      {
-                                        "var": "entities.bowl.h"
-                                      }
-                                    ]
-                                  }
+                                  "value": 718
                                 }
                               },
                               {
@@ -627,39 +660,115 @@
                           "call": "@if",
                           "args": {
                             "cond": {
-                              "and": [
+                              "call": "@collide.rect",
+                              "args": {
+                                "a": "bowl",
+                                "b": "jack"
+                              }
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "jack",
+                                  "field": "vx",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "entities.bowl.vx"
+                                      },
+                                      0.45
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "jack",
+                                  "field": "vy",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "entities.bowl.vy"
+                                      },
+                                      0.45
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "jack",
+                            "field": "vx",
+                            "value": {
+                              "*": [
                                 {
-                                  ">": [
+                                  "var": "entities.jack.vx"
+                                },
+                                0.965
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "jack",
+                            "field": "vy",
+                            "value": {
+                              "*": [
+                                {
+                                  "var": "entities.jack.vy"
+                                },
+                                0.965
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.speed2",
+                            "value": {
+                              "+": [
+                                {
+                                  "*": [
                                     {
                                       "var": "entities.bowl.vx"
                                     },
-                                    -5
-                                  ]
-                                },
-                                {
-                                  "<": [
                                     {
                                       "var": "entities.bowl.vx"
-                                    },
-                                    5
+                                    }
                                   ]
                                 },
                                 {
-                                  ">": [
+                                  "*": [
                                     {
                                       "var": "entities.bowl.vy"
                                     },
-                                    -5
-                                  ]
-                                },
-                                {
-                                  "<": [
                                     {
                                       "var": "entities.bowl.vy"
-                                    },
-                                    5
+                                    }
                                   ]
                                 }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "<": [
+                                {
+                                  "var": "vars.speed2"
+                                },
+                                20
                               ]
                             },
                             "then": [
@@ -682,6 +791,111 @@
                               {
                                 "call": "@set",
                                 "args": {
+                                  "var": "vars.dx",
+                                  "value": {
+                                    "-": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "entities.bowl.x"
+                                          },
+                                          21
+                                        ]
+                                      },
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "entities.jack.x"
+                                          },
+                                          18
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.dy",
+                                  "value": {
+                                    "-": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "entities.bowl.y"
+                                          },
+                                          21
+                                        ]
+                                      },
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "entities.jack.y"
+                                          },
+                                          18
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.dist2",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "*": [
+                                          {
+                                            "var": "vars.dx"
+                                          },
+                                          {
+                                            "var": "vars.dx"
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "*": [
+                                          {
+                                            "var": "vars.dy"
+                                          },
+                                          {
+                                            "var": "vars.dy"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@score.set",
+                                "args": {
+                                  "value": {
+                                    "max": [
+                                      0,
+                                      {
+                                        "-": [
+                                          1000,
+                                          {
+                                            "*": [
+                                              {
+                                                "var": "vars.dist2"
+                                              },
+                                              0.08
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
                                   "var": "vars.state",
                                   "value": "done"
                                 }
@@ -691,7 +905,7 @@
                                 "args": {
                                   "event": "status",
                                   "data": {
-                                    "text": "Stopped. Tap restart for another throw."
+                                    "text": "Stopped. Tap field or restart."
                                   }
                                 }
                               },
@@ -707,6 +921,14 @@
                   }
                 ]
               },
+              "on_score_changed": {
+                "type": "call",
+                "call": "@global.scoreChanged",
+                "args": {
+                  "score": "{{ event.score }}",
+                  "best": "{{ event.best }}"
+                }
+              },
               "on_status": {
                 "type": "call",
                 "call": "@global.status",
@@ -718,7 +940,8 @@
                 "type": "call",
                 "call": "@global.over",
                 "args": {
-                  "score": "{{ event.score }}"
+                  "score": "{{ event.score }}",
+                  "best": "{{ event.best }}"
                 }
               },
               "on_reset": {
@@ -731,5 +954,16 @@
         ]
       }
     ]
+  },
+  "assets": {
+    "bundles": {
+      "source-guidi-tu": {
+        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/",
+        "manifest": "manifest.json",
+        "license": "CC BY-NC-SA 4.0",
+        "startupDownload": true,
+        "description": "Guidi Tu Boules LFS assets"
+      }
+    }
   }
 }

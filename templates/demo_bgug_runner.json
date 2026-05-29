@@ -1,27 +1,16 @@
 {
   "dsl": "3.3",
-  "appid": "bf42f194-fd73-54ee-a216-143d54c17405",
+  "appid": "6fa98ed7-0c6f-5404-a0c0-255c3d83a48f",
   "meta": {
     "name": "demo-bgug-runner",
     "displayName": "BGUG Runner",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "type": "app",
-    "description": "JSON-DSL port inspired by bgug (MIT). Tap left to jump and right to dive.",
+    "description": "JSON-only parity pass for bgug: held jump, dive, sector generation, gems, coins, shooters, bullets, and block-era HUD assets.",
     "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.3.0"
-  },
-  "assets": {
-    "bundles": {
-      "bgug": {
-        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.0/",
-        "manifest": "manifest.json",
-        "license": "MIT",
-        "startupDownload": true,
-        "description": "bgug source assets"
-      }
-    }
   },
   "global": {
     "variables": {
@@ -33,7 +22,8 @@
     "functions": {
       "scoreChanged": {
         "params": [
-          "score"
+          "score",
+          "best"
         ],
         "logic": [
           {
@@ -44,27 +34,10 @@
             }
           },
           {
-            "call": "@if",
+            "call": "@set",
             "args": {
-              "condition": {
-                ">": [
-                  {
-                    "var": "params.score"
-                  },
-                  {
-                    "var": "global.bestScore"
-                  }
-                ]
-              },
-              "then": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.bestScore",
-                    "value": "{{ params.score }}"
-                  }
-                }
-              ]
+              "var": "global.bestScore",
+              "value": "{{ params.best }}"
             }
           }
         ]
@@ -85,7 +58,8 @@
       },
       "over": {
         "params": [
-          "score"
+          "score",
+          "best"
         ],
         "logic": [
           {
@@ -96,14 +70,28 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.bestScore",
+              "value": "{{ params.best }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "BGUG Runner finished"
+            }
+          },
+          {
             "call": "@common-ui.choose",
             "args": {
               "title": "BGUG Runner finished",
-              "message": "Score: {{ params.score }}\nBest: {{ global.bestScore }}",
+              "message": "Score: {{ params.score }}\nBest: {{ params.best }}",
               "buttons": [
                 {
                   "label": "Close",
-                  "value": null,
+                  "value": "close",
                   "style": "text"
                 },
                 {
@@ -155,7 +143,6 @@
       }
     }
   },
-  "steps": [],
   "ui": {
     "screens": [
       {
@@ -181,7 +168,7 @@
         "children": [
           {
             "type": "container",
-            "padding": 10,
+            "padding": 8,
             "color": "#111827",
             "layout": "row",
             "crossAxisAlignment": "center",
@@ -191,7 +178,7 @@
                 "value": "{{ global.status }}",
                 "style": {
                   "fontSize": 13,
-                  "color": "#D1D5DB"
+                  "color": "#E5E7EB"
                 },
                 "position": {
                   "type": "flex",
@@ -213,77 +200,88 @@
             "type": "expanded",
             "child": {
               "type": "flame_game",
+              "viewport": {
+                "width": 900,
+                "height": 540,
+                "fit": "contain"
+              },
               "world": {
                 "kind": "pixel",
                 "bg": "#111827"
               },
               "overlay": {
+                "score": false,
                 "game_over": false,
                 "asset_loading_text": "Loading BGUG assets..."
               },
+              "camera": {
+                "follow": "player",
+                "offset_x": -250,
+                "offset_y": 0
+              },
+              "audio": {
+                "sounds": {
+                  "jump": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/audio/jump.wav",
+                  "gem": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/audio/gem_collect.wav",
+                  "death": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/audio/death.wav",
+                  "block": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/audio/block.wav",
+                  "laser": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/audio/laser_shoot.wav"
+                }
+              },
               "vars": {
-                "state": "ready",
-                "ground_y": 420,
-                "top_y": 84,
-                "speed": -248,
-                "gravity": 1750,
-                "jump_v": -620,
-                "dive_v": 740,
-                "spawn_timer": 0.2,
-                "gem_timer": 0.6,
-                "coin_timer": 2.2,
-                "on_ground": true,
+                "state": "tutorial",
+                "floor_y": 450,
+                "top_y": 88,
+                "gravity": 1875,
+                "jumpImpulse": -7000,
+                "jumpMul": 0.0004,
+                "diveImpulse": 20000,
+                "maxHold": 500,
+                "gems": 0,
+                "coins": 0,
+                "_sector": -1,
+                "_sector_x": 0,
                 "_id": 0,
-                "_lane": 0,
-                "_hit": null
+                "_count": 0,
+                "_hit": null,
+                "_x": 0,
+                "block_cd": 0,
+                "shot_cd": 0
               },
               "entities": {
                 "bg": {
                   "kind": "parallax",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.0/images/bg.png",
-                  "speed_x": -90,
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/bg.png",
+                  "speed_x": 45,
                   "priority": -20
                 },
-                "top": {
-                  "kind": "pixel",
+                "hud": {
+                  "kind": "sprite",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/hud_bg.png",
                   "position": [
-                    0,
-                    50
+                    230,
+                    6
                   ],
                   "size": [
-                    {
-                      "var": "world.width"
-                    },
-                    28
+                    440,
+                    64
                   ],
                   "velocity": [
                     0,
                     0
                   ],
-                  "priority": -5,
-                  "render": {
-                    "shape": "rect",
-                    "color": "#0F172A"
-                  }
+                  "priority": 50,
+                  "fixed_to_screen": true
                 },
                 "floor": {
                   "kind": "pixel",
                   "position": [
-                    0,
-                    {
-                      "-": [
-                        {
-                          "var": "world.height"
-                        },
-                        52
-                      ]
-                    }
+                    -1000,
+                    450
                   ],
                   "size": [
-                    {
-                      "var": "world.width"
-                    },
-                    52
+                    200000,
+                    90
                   ],
                   "velocity": [
                     0,
@@ -292,35 +290,128 @@
                   "priority": -5,
                   "render": {
                     "shape": "rect",
-                    "color": "#1F2937"
+                    "color": "#374151"
                   }
                 },
-                "player": {
-                  "kind": "animated_sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.0/images/skins/wizard.png",
+                "top": {
+                  "kind": "pixel",
                   "position": [
-                    88,
-                    360
+                    -1000,
+                    64
                   ],
                   "size": [
-                    44,
-                    58
+                    200000,
+                    30
                   ],
                   "velocity": [
                     0,
                     0
                   ],
+                  "priority": -5,
+                  "render": {
+                    "shape": "rect",
+                    "color": "#374151"
+                  }
+                },
+                "player": {
+                  "kind": "animated_sprite",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/skins/wizard.png",
+                  "position": [
+                    130,
+                    408
+                  ],
+                  "size": [
+                    42,
+                    58
+                  ],
+                  "velocity": [
+                    320,
+                    0
+                  ],
                   "priority": 20,
                   "state": {
-                    "assetLoadingOverlay": true
+                    "assetLoadingOverlay": true,
+                    "dead": false
                   },
                   "frame_size": [
                     16,
                     22
                   ],
                   "frames": 8,
-                  "step_time": 0.09,
+                  "step_time": 0.0375,
                   "frames_per_row": 11
+                },
+                "shooter_up": {
+                  "kind": "sprite",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/shooter.png",
+                  "position": [
+                    820,
+                    126
+                  ],
+                  "size": [
+                    50,
+                    72
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "priority": 50,
+                  "src": [
+                    0,
+                    0,
+                    32,
+                    46
+                  ],
+                  "fixed_to_screen": true
+                },
+                "shooter_down": {
+                  "kind": "sprite",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/shooter.png",
+                  "position": [
+                    820,
+                    350
+                  ],
+                  "size": [
+                    50,
+                    72
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "priority": 50,
+                  "src": [
+                    0,
+                    0,
+                    32,
+                    46
+                  ],
+                  "fixed_to_screen": true
+                },
+                "button": {
+                  "kind": "sprite",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/button.png",
+                  "position": [
+                    760,
+                    454
+                  ],
+                  "size": [
+                    116,
+                    54
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "priority": 52,
+                  "src": [
+                    0,
+                    0,
+                    136,
+                    68
+                  ],
+                  "fixed_to_screen": true
                 }
               },
               "init": {
@@ -328,25 +419,401 @@
                   {
                     "call": "@set",
                     "args": {
-                      "var": "vars.ground_y",
+                      "var": "vars._sector",
                       "value": {
-                        "-": [
+                        "+": [
                           {
-                            "var": "world.height"
+                            "var": "vars._sector"
                           },
-                          110
+                          1
                         ]
                       }
                     }
                   },
                   {
-                    "call": "@entity.set",
+                    "call": "@set",
                     "args": {
-                      "id": "player",
-                      "field": "y",
+                      "var": "vars._sector_x",
                       "value": {
-                        "var": "vars.ground_y"
+                        "*": [
+                          {
+                            "var": "vars._sector"
+                          },
+                          1000
+                        ]
                       }
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars._id",
+                      "value": {
+                        "call": "@random_int",
+                        "args": {
+                          "min": 1000,
+                          "max": 999999
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars._sector"
+                          },
+                          0
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@spawn",
+                          "args": {
+                            "id": "gem_{{ vars._id }}",
+                            "kind": "sprite",
+                            "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/gem.png",
+                            "position": [
+                              {
+                                "var": "vars._sector_x"
+                              },
+                              {
+                                "-": [
+                                  {
+                                    "var": "vars.floor_y"
+                                  },
+                                  86
+                                ]
+                              }
+                            ],
+                            "size": [
+                              32,
+                              32
+                            ],
+                            "velocity": [
+                              0,
+                              0
+                            ],
+                            "priority": 14
+                          }
+                        }
+                      ],
+                      "else": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._count",
+                            "value": {
+                              "call": "@random_int",
+                              "args": {
+                                "min": 1,
+                                "max": 5
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "call": "@loop_by_num",
+                          "args": {
+                            "count": "{{ vars._count }}",
+                            "body": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._id",
+                                  "value": {
+                                    "call": "@random_int",
+                                    "args": {
+                                      "min": 1000,
+                                      "max": 999999
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._x",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars._sector_x"
+                                      },
+                                      {
+                                        "call": "@random_int",
+                                        "args": {
+                                          "min": 32,
+                                          "max": 930
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "call": "@random_int",
+                                    "args": {
+                                      "min": 0,
+                                      "max": 2
+                                    }
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@spawn",
+                                      "args": {
+                                        "id": "obstacle_{{ vars._id }}",
+                                        "kind": "animated_sprite",
+                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/obstacle.png",
+                                        "position": [
+                                          "{{ vars._x }}",
+                                          {
+                                            "-": [
+                                              {
+                                                "var": "vars.floor_y"
+                                              },
+                                              48
+                                            ]
+                                          }
+                                        ],
+                                        "size": [
+                                          48,
+                                          48
+                                        ],
+                                        "velocity": [
+                                          0,
+                                          0
+                                        ],
+                                        "priority": 10,
+                                        "frame_size": [
+                                          16,
+                                          16
+                                        ],
+                                        "frames": 3,
+                                        "step_time": 0.1,
+                                        "frames_per_row": 3
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@spawn",
+                                      "args": {
+                                        "id": "obstacle_{{ vars._id }}",
+                                        "kind": "animated_sprite",
+                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/up_obstacle.png",
+                                        "position": [
+                                          "{{ vars._x }}",
+                                          {
+                                            "var": "vars.top_y"
+                                          }
+                                        ],
+                                        "size": [
+                                          48,
+                                          48
+                                        ],
+                                        "velocity": [
+                                          0,
+                                          0
+                                        ],
+                                        "priority": 10,
+                                        "frame_size": [
+                                          16,
+                                          16
+                                        ],
+                                        "frames": 3,
+                                        "step_time": 0.1,
+                                        "frames_per_row": 3
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._count",
+                            "value": {
+                              "call": "@random_int",
+                              "args": {
+                                "min": 0,
+                                "max": 6
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "call": "@loop_by_num",
+                          "args": {
+                            "count": "{{ vars._count }}",
+                            "body": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._id",
+                                  "value": {
+                                    "call": "@random_int",
+                                    "args": {
+                                      "min": 1000,
+                                      "max": 999999
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@spawn",
+                                "args": {
+                                  "id": "gem_{{ vars._id }}",
+                                  "kind": "sprite",
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/gem.png",
+                                  "position": [
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "vars._sector_x"
+                                        },
+                                        {
+                                          "call": "@random_int",
+                                          "args": {
+                                            "min": 50,
+                                            "max": 900
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "vars.floor_y"
+                                        },
+                                        {
+                                          "*": [
+                                            {
+                                              "call": "@random_int",
+                                              "args": {
+                                                "min": 1,
+                                                "max": 9
+                                              }
+                                            },
+                                            42
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "size": [
+                                    32,
+                                    32
+                                  ],
+                                  "velocity": [
+                                    0,
+                                    0
+                                  ],
+                                  "priority": 14
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "<": [
+                                {
+                                  "call": "@random_double",
+                                  "args": {
+                                    "min": 0,
+                                    "max": 1
+                                  }
+                                },
+                                0.42
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._id",
+                                  "value": {
+                                    "call": "@random_int",
+                                    "args": {
+                                      "min": 1000,
+                                      "max": 999999
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@spawn",
+                                "args": {
+                                  "id": "coin_{{ vars._id }}",
+                                  "kind": "animated_sprite",
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/coin.png",
+                                  "position": [
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "vars._sector_x"
+                                        },
+                                        {
+                                          "call": "@random_int",
+                                          "args": {
+                                            "min": 80,
+                                            "max": 850
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "vars.floor_y"
+                                        },
+                                        {
+                                          "*": [
+                                            {
+                                              "call": "@random_int",
+                                              "args": {
+                                                "min": 2,
+                                                "max": 8
+                                              }
+                                            },
+                                            42
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "size": [
+                                    34,
+                                    34
+                                  ],
+                                  "velocity": [
+                                    0,
+                                    0
+                                  ],
+                                  "priority": 14,
+                                  "frame_size": [
+                                    16,
+                                    16
+                                  ],
+                                  "frames": 10,
+                                  "step_time": 0.05,
+                                  "frames_per_row": 10
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
                     }
                   },
                   {
@@ -354,7 +821,7 @@
                     "args": {
                       "event": "status",
                       "data": {
-                        "text": "Tap left to jump, right to dive"
+                        "text": "Tutorial: hold left side, release to jump. Tap right side to dive."
                       }
                     }
                   }
@@ -370,7 +837,7 @@
                           {
                             "var": "vars.state"
                           },
-                          "ready"
+                          "tutorial"
                         ]
                       },
                       "then": [
@@ -386,11 +853,27 @@
                           "args": {
                             "event": "status",
                             "data": {
-                              "text": "Run"
+                              "text": "Running"
                             }
                           }
                         }
-                      ],
+                      ]
+                    }
+                  }
+                ],
+                "press_end": [
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "!=": [
+                          {
+                            "var": "vars.state"
+                          },
+                          "running"
+                        ]
+                      },
+                      "then": [],
                       "else": [
                         {
                           "call": "@if",
@@ -400,14 +883,7 @@
                                 {
                                   "var": "event.x"
                                 },
-                                {
-                                  "/": [
-                                    {
-                                      "var": "world.width"
-                                    },
-                                    2
-                                  ]
-                                }
+                                450
                               ]
                             },
                             "then": [
@@ -415,7 +891,21 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "var": "vars.on_ground"
+                                    "==": [
+                                      {
+                                        "var": "entities.player.y"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "vars.floor_y"
+                                          },
+                                          {
+                                            "var": "entities.player.h"
+                                          }
+                                        ]
+                                      }
+                                    ]
                                   },
                                   "then": [
                                     {
@@ -424,15 +914,36 @@
                                         "id": "player",
                                         "field": "vy",
                                         "value": {
-                                          "var": "vars.jump_v"
+                                          "*": [
+                                            {
+                                              "var": "vars.jumpImpulse"
+                                            },
+                                            {
+                                              "*": [
+                                                {
+                                                  "min": [
+                                                    {
+                                                      "var": "event.held_ms"
+                                                    },
+                                                    {
+                                                      "var": "vars.maxHold"
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "var": "vars.jumpMul"
+                                                }
+                                              ]
+                                            }
+                                          ]
                                         }
                                       }
                                     },
                                     {
-                                      "call": "@set",
+                                      "call": "@audio.play",
                                       "args": {
-                                        "var": "vars.on_ground",
-                                        "value": false
+                                        "id": "jump",
+                                        "volume": 0.6
                                       }
                                     }
                                   ]
@@ -441,13 +952,35 @@
                             ],
                             "else": [
                               {
-                                "call": "@entity.set",
+                                "call": "@if",
                                 "args": {
-                                  "id": "player",
-                                  "field": "vy",
-                                  "value": {
-                                    "var": "vars.dive_v"
-                                  }
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "entities.player.y"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "vars.floor_y"
+                                          },
+                                          {
+                                            "var": "entities.player.h"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "player",
+                                        "field": "vy",
+                                        "value": 760
+                                      }
+                                    }
+                                  ]
                                 }
                               }
                             ]
@@ -458,32 +991,193 @@
                   }
                 ]
               },
-              "tick": {
-                "interval": 0.2,
-                "logic": [
-                  {
-                    "call": "@if",
-                    "args": {
-                      "cond": {
-                        "==": [
+              "tick": [
+                {
+                  "interval": 0.18,
+                  "logic": [
+                    {
+                      "call": "@if",
+                      "args": {
+                        "cond": {
+                          "==": [
+                            {
+                              "var": "vars.state"
+                            },
+                            "running"
+                          ]
+                        },
+                        "then": [
                           {
-                            "var": "vars.state"
-                          },
-                          "running"
-                        ]
-                      },
-                      "then": [
-                        {
-                          "call": "@score.add",
-                          "args": {
-                            "n": 1
+                            "call": "@score.add",
+                            "args": {
+                              "n": 1
+                            }
                           }
-                        }
-                      ]
+                        ]
+                      }
                     }
-                  }
-                ]
-              },
+                  ]
+                },
+                {
+                  "interval": 1.0,
+                  "logic": [
+                    {
+                      "call": "@if",
+                      "args": {
+                        "cond": {
+                          "==": [
+                            {
+                              "var": "vars.state"
+                            },
+                            "running"
+                          ]
+                        },
+                        "then": [
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "vars.shot_cd",
+                              "value": {
+                                "-": [
+                                  {
+                                    "var": "vars.shot_cd"
+                                  },
+                                  1
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "call": "@if",
+                            "args": {
+                              "cond": {
+                                "<=": [
+                                  {
+                                    "var": "vars.shot_cd"
+                                  },
+                                  0
+                                ]
+                              },
+                              "then": [
+                                {
+                                  "call": "@set",
+                                  "args": {
+                                    "var": "vars.shot_cd",
+                                    "value": 2
+                                  }
+                                },
+                                {
+                                  "call": "@set",
+                                  "args": {
+                                    "var": "vars._id",
+                                    "value": {
+                                      "call": "@random_int",
+                                      "args": {
+                                        "min": 1000,
+                                        "max": 999999
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "call": "@spawn",
+                                  "args": {
+                                    "id": "bullet_{{ vars._id }}",
+                                    "kind": "animated_sprite",
+                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/bullet.png",
+                                    "position": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          760
+                                        ]
+                                      },
+                                      160
+                                    ],
+                                    "size": [
+                                      30,
+                                      30
+                                    ],
+                                    "velocity": [
+                                      -500,
+                                      0
+                                    ],
+                                    "priority": 15,
+                                    "frame_size": [
+                                      16,
+                                      16
+                                    ],
+                                    "frames": 3,
+                                    "step_time": 0.1,
+                                    "frames_per_row": 3
+                                  }
+                                },
+                                {
+                                  "call": "@set",
+                                  "args": {
+                                    "var": "vars._id",
+                                    "value": {
+                                      "call": "@random_int",
+                                      "args": {
+                                        "min": 1000,
+                                        "max": 999999
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "call": "@spawn",
+                                  "args": {
+                                    "id": "bullet_{{ vars._id }}",
+                                    "kind": "animated_sprite",
+                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/bullet.png",
+                                    "position": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          760
+                                        ]
+                                      },
+                                      380
+                                    ],
+                                    "size": [
+                                      30,
+                                      30
+                                    ],
+                                    "velocity": [
+                                      -500,
+                                      0
+                                    ],
+                                    "priority": 15,
+                                    "frame_size": [
+                                      16,
+                                      16
+                                    ],
+                                    "frames": 3,
+                                    "step_time": 0.1,
+                                    "frames_per_row": 3
+                                  }
+                                },
+                                {
+                                  "call": "@audio.play",
+                                  "args": {
+                                    "id": "laser",
+                                    "volume": 0.5
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ],
               "frame": {
                 "logic": [
                   {
@@ -527,7 +1221,14 @@
                                   "var": "entities.player.y"
                                 },
                                 {
-                                  "var": "vars.ground_y"
+                                  "-": [
+                                    {
+                                      "var": "vars.floor_y"
+                                    },
+                                    {
+                                      "var": "entities.player.h"
+                                    }
+                                  ]
                                 }
                               ]
                             },
@@ -538,7 +1239,14 @@
                                   "id": "player",
                                   "field": "y",
                                   "value": {
-                                    "var": "vars.ground_y"
+                                    "-": [
+                                      {
+                                        "var": "vars.floor_y"
+                                      },
+                                      {
+                                        "var": "entities.player.h"
+                                      }
+                                    ]
                                   }
                                 }
                               },
@@ -548,13 +1256,6 @@
                                   "id": "player",
                                   "field": "vy",
                                   "value": 0
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars.on_ground",
-                                  "value": true
                                 }
                               }
                             ]
@@ -596,48 +1297,60 @@
                           }
                         },
                         {
-                          "call": "@entity.add",
-                          "args": {
-                            "id": "player",
-                            "field": "x",
-                            "by": 0,
-                            "min": 88,
-                            "max": 88
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.spawn_timer",
-                            "value": {
-                              "+": [
-                                {
-                                  "var": "vars.spawn_timer"
-                                },
-                                {
-                                  "var": "event.dt"
-                                }
-                              ]
-                            }
-                          }
-                        },
-                        {
-                          "call": "@if",
+                          "call": "@while",
                           "args": {
                             "cond": {
-                              ">=": [
+                              "<": [
                                 {
-                                  "var": "vars.spawn_timer"
+                                  "*": [
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "vars._sector"
+                                        },
+                                        1
+                                      ]
+                                    },
+                                    1000
+                                  ]
                                 },
-                                1.05
+                                {
+                                  "+": [
+                                    {
+                                      "var": "entities.player.x"
+                                    },
+                                    1000
+                                  ]
+                                }
                               ]
                             },
-                            "then": [
+                            "body": [
                               {
                                 "call": "@set",
                                 "args": {
-                                  "var": "vars.spawn_timer",
-                                  "value": 0
+                                  "var": "vars._sector",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars._sector"
+                                      },
+                                      1
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._sector_x",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "vars._sector"
+                                      },
+                                      1000
+                                    ]
+                                  }
                                 }
                               },
                               {
@@ -649,19 +1362,6 @@
                                     "args": {
                                       "min": 1000,
                                       "max": 999999
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars._lane",
-                                  "value": {
-                                    "call": "@random_int",
-                                    "args": {
-                                      "min": 0,
-                                      "max": 2
                                     }
                                   }
                                 }
@@ -672,7 +1372,7 @@
                                   "cond": {
                                     "==": [
                                       {
-                                        "var": "vars._lane"
+                                        "var": "vars._sector"
                                       },
                                       0
                                     ]
@@ -681,249 +1381,352 @@
                                     {
                                       "call": "@spawn",
                                       "args": {
-                                        "id": "obstacle_{{ vars._id }}",
+                                        "id": "gem_{{ vars._id }}",
                                         "kind": "sprite",
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.0/images/obstacle.png",
+                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/gem.png",
                                         "position": [
                                           {
-                                            "var": "world.width"
+                                            "var": "vars._sector_x"
                                           },
                                           {
-                                            "+": [
+                                            "-": [
                                               {
-                                                "var": "vars.ground_y"
+                                                "var": "vars.floor_y"
                                               },
-                                              18
+                                              86
                                             ]
                                           }
                                         ],
                                         "size": [
-                                          52,
-                                          52
+                                          32,
+                                          32
                                         ],
                                         "velocity": [
-                                          {
-                                            "var": "vars.speed"
-                                          },
+                                          0,
                                           0
                                         ],
-                                        "priority": 10,
-                                        "src": [
-                                          0,
-                                          0,
-                                          16,
-                                          16
-                                        ]
+                                        "priority": 14
                                       }
                                     }
                                   ],
                                   "else": [
                                     {
-                                      "call": "@spawn",
+                                      "call": "@set",
                                       "args": {
-                                        "id": "obstacle_{{ vars._id }}",
-                                        "kind": "sprite",
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.0/images/up_obstacle.png",
-                                        "position": [
+                                        "var": "vars._count",
+                                        "value": {
+                                          "call": "@random_int",
+                                          "args": {
+                                            "min": 1,
+                                            "max": 5
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@loop_by_num",
+                                      "args": {
+                                        "count": "{{ vars._count }}",
+                                        "body": [
                                           {
-                                            "var": "world.width"
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._id",
+                                              "value": {
+                                                "call": "@random_int",
+                                                "args": {
+                                                  "min": 1000,
+                                                  "max": 999999
+                                                }
+                                              }
+                                            }
                                           },
-                                          92
-                                        ],
-                                        "size": [
-                                          52,
-                                          52
-                                        ],
-                                        "velocity": [
                                           {
-                                            "var": "vars.speed"
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._x",
+                                              "value": {
+                                                "+": [
+                                                  {
+                                                    "var": "vars._sector_x"
+                                                  },
+                                                  {
+                                                    "call": "@random_int",
+                                                    "args": {
+                                                      "min": 32,
+                                                      "max": 930
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            }
                                           },
-                                          0
-                                        ],
-                                        "priority": 10,
-                                        "src": [
-                                          0,
-                                          0,
-                                          16,
-                                          16
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "call": "@random_int",
+                                                "args": {
+                                                  "min": 0,
+                                                  "max": 2
+                                                }
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@spawn",
+                                                  "args": {
+                                                    "id": "obstacle_{{ vars._id }}",
+                                                    "kind": "animated_sprite",
+                                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/obstacle.png",
+                                                    "position": [
+                                                      "{{ vars._x }}",
+                                                      {
+                                                        "-": [
+                                                          {
+                                                            "var": "vars.floor_y"
+                                                          },
+                                                          48
+                                                        ]
+                                                      }
+                                                    ],
+                                                    "size": [
+                                                      48,
+                                                      48
+                                                    ],
+                                                    "velocity": [
+                                                      0,
+                                                      0
+                                                    ],
+                                                    "priority": 10,
+                                                    "frame_size": [
+                                                      16,
+                                                      16
+                                                    ],
+                                                    "frames": 3,
+                                                    "step_time": 0.1,
+                                                    "frames_per_row": 3
+                                                  }
+                                                }
+                                              ],
+                                              "else": [
+                                                {
+                                                  "call": "@spawn",
+                                                  "args": {
+                                                    "id": "obstacle_{{ vars._id }}",
+                                                    "kind": "animated_sprite",
+                                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/up_obstacle.png",
+                                                    "position": [
+                                                      "{{ vars._x }}",
+                                                      {
+                                                        "var": "vars.top_y"
+                                                      }
+                                                    ],
+                                                    "size": [
+                                                      48,
+                                                      48
+                                                    ],
+                                                    "velocity": [
+                                                      0,
+                                                      0
+                                                    ],
+                                                    "priority": 10,
+                                                    "frame_size": [
+                                                      16,
+                                                      16
+                                                    ],
+                                                    "frames": 3,
+                                                    "step_time": 0.1,
+                                                    "frames_per_row": 3
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._count",
+                                        "value": {
+                                          "call": "@random_int",
+                                          "args": {
+                                            "min": 0,
+                                            "max": 6
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@loop_by_num",
+                                      "args": {
+                                        "count": "{{ vars._count }}",
+                                        "body": [
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._id",
+                                              "value": {
+                                                "call": "@random_int",
+                                                "args": {
+                                                  "min": 1000,
+                                                  "max": 999999
+                                                }
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@spawn",
+                                            "args": {
+                                              "id": "gem_{{ vars._id }}",
+                                              "kind": "sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/gem.png",
+                                              "position": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "var": "vars._sector_x"
+                                                    },
+                                                    {
+                                                      "call": "@random_int",
+                                                      "args": {
+                                                        "min": 50,
+                                                        "max": 900
+                                                      }
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "-": [
+                                                    {
+                                                      "var": "vars.floor_y"
+                                                    },
+                                                    {
+                                                      "*": [
+                                                        {
+                                                          "call": "@random_int",
+                                                          "args": {
+                                                            "min": 1,
+                                                            "max": 9
+                                                          }
+                                                        },
+                                                        42
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "size": [
+                                                32,
+                                                32
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "priority": 14
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "<": [
+                                            {
+                                              "call": "@random_double",
+                                              "args": {
+                                                "min": 0,
+                                                "max": 1
+                                              }
+                                            },
+                                            0.42
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars._id",
+                                              "value": {
+                                                "call": "@random_int",
+                                                "args": {
+                                                  "min": 1000,
+                                                  "max": 999999
+                                                }
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "call": "@spawn",
+                                            "args": {
+                                              "id": "coin_{{ vars._id }}",
+                                              "kind": "animated_sprite",
+                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/images/coin.png",
+                                              "position": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "var": "vars._sector_x"
+                                                    },
+                                                    {
+                                                      "call": "@random_int",
+                                                      "args": {
+                                                        "min": 80,
+                                                        "max": 850
+                                                      }
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "-": [
+                                                    {
+                                                      "var": "vars.floor_y"
+                                                    },
+                                                    {
+                                                      "*": [
+                                                        {
+                                                          "call": "@random_int",
+                                                          "args": {
+                                                            "min": 2,
+                                                            "max": 8
+                                                          }
+                                                        },
+                                                        42
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "size": [
+                                                34,
+                                                34
+                                              ],
+                                              "velocity": [
+                                                0,
+                                                0
+                                              ],
+                                              "priority": 14,
+                                              "frame_size": [
+                                                16,
+                                                16
+                                              ],
+                                              "frames": 10,
+                                              "step_time": 0.05,
+                                              "frames_per_row": 10
+                                            }
+                                          }
                                         ]
                                       }
                                     }
                                   ]
                                 }
                               }
-                            ]
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.gem_timer",
-                            "value": {
-                              "+": [
-                                {
-                                  "var": "vars.gem_timer"
-                                },
-                                {
-                                  "var": "event.dt"
-                                }
-                              ]
-                            }
-                          }
-                        },
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              ">=": [
-                                {
-                                  "var": "vars.gem_timer"
-                                },
-                                1.4
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars.gem_timer",
-                                  "value": 0
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars._id",
-                                  "value": {
-                                    "call": "@random_int",
-                                    "args": {
-                                      "min": 1000,
-                                      "max": 999999
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "call": "@spawn",
-                                "args": {
-                                  "id": "gem_{{ vars._id }}",
-                                  "kind": "sprite",
-                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.0/images/gem.png",
-                                  "position": [
-                                    {
-                                      "var": "world.width"
-                                    },
-                                    {
-                                      "call": "@random_int",
-                                      "args": {
-                                        "min": 120,
-                                        "max": 410
-                                      }
-                                    }
-                                  ],
-                                  "size": [
-                                    28,
-                                    28
-                                  ],
-                                  "velocity": [
-                                    {
-                                      "var": "vars.speed"
-                                    },
-                                    0
-                                  ],
-                                  "priority": 12
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.coin_timer",
-                            "value": {
-                              "+": [
-                                {
-                                  "var": "vars.coin_timer"
-                                },
-                                {
-                                  "var": "event.dt"
-                                }
-                              ]
-                            }
-                          }
-                        },
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              ">=": [
-                                {
-                                  "var": "vars.coin_timer"
-                                },
-                                5.5
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars.coin_timer",
-                                  "value": 0
-                                }
-                              },
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "var": "vars._id",
-                                  "value": {
-                                    "call": "@random_int",
-                                    "args": {
-                                      "min": 1000,
-                                      "max": 999999
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "call": "@spawn",
-                                "args": {
-                                  "id": "coin_{{ vars._id }}",
-                                  "kind": "animated_sprite",
-                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.0/images/coin.png",
-                                  "position": [
-                                    {
-                                      "var": "world.width"
-                                    },
-                                    {
-                                      "call": "@random_int",
-                                      "args": {
-                                        "min": 150,
-                                        "max": 390
-                                      }
-                                    }
-                                  ],
-                                  "size": [
-                                    36,
-                                    36
-                                  ],
-                                  "velocity": [
-                                    {
-                                      "var": "vars.speed"
-                                    },
-                                    0
-                                  ],
-                                  "priority": 12,
-                                  "frame_size": [
-                                    16,
-                                    16
-                                  ],
-                                  "frames": 10,
-                                  "step_time": 0.09,
-                                  "frames_per_row": 10
-                                }
-                              }
-                            ]
+                            ],
+                            "max_iterations": 4
                           }
                         },
                         {
@@ -946,6 +1749,59 @@
                               ]
                             },
                             "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.state",
+                                  "value": "dead"
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "death"
+                                }
+                              },
+                              {
+                                "call": "@game_over",
+                                "args": {}
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "bullet_"
+                          },
+                          "assign": "vars._hit"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!=": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.state",
+                                  "value": "dead"
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "death"
+                                }
+                              },
                               {
                                 "call": "@game_over",
                                 "args": {}
@@ -980,9 +1836,30 @@
                                 }
                               },
                               {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.gems",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars.gems"
+                                      },
+                                      1
+                                    ]
+                                  }
+                                }
+                              },
+                              {
                                 "call": "@score.add",
                                 "args": {
-                                  "n": 10
+                                  "n": 20
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "gem",
+                                  "volume": 0.7
                                 }
                               },
                               {
@@ -1022,9 +1899,30 @@
                                 }
                               },
                               {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.coins",
+                                  "value": {
+                                    "+": [
+                                      {
+                                        "var": "vars.coins"
+                                      },
+                                      1
+                                    ]
+                                  }
+                                }
+                              },
+                              {
                                 "call": "@score.add",
                                 "args": {
                                   "n": 50
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "gem",
+                                  "volume": 0.7
                                 }
                               },
                               {
@@ -1050,7 +1948,14 @@
                                       {
                                         "var": "loop.entity.x"
                                       },
-                                      -80
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          600
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -1079,7 +1984,14 @@
                                       {
                                         "var": "loop.entity.x"
                                       },
-                                      -80
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          600
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -1108,7 +2020,50 @@
                                       {
                                         "var": "loop.entity.x"
                                       },
-                                      -80
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          600
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "{{ loop.id }}"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@for_each_entity",
+                          "args": {
+                            "where_prefix": "bullet_",
+                            "do": [
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "loop.entity.x"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          200
+                                        ]
+                                      }
                                     ]
                                   },
                                   "then": [
@@ -1133,7 +2088,8 @@
                 "type": "call",
                 "call": "@global.scoreChanged",
                 "args": {
-                  "score": "{{ event.score }}"
+                  "score": "{{ event.score }}",
+                  "best": "{{ event.best }}"
                 }
               },
               "on_status": {
@@ -1147,7 +2103,8 @@
                 "type": "call",
                 "call": "@global.over",
                 "args": {
-                  "score": "{{ event.score }}"
+                  "score": "{{ event.score }}",
+                  "best": "{{ event.best }}"
                 }
               },
               "on_reset": {
@@ -1160,5 +2117,16 @@
         ]
       }
     ]
+  },
+  "assets": {
+    "bundles": {
+      "source-bgug": {
+        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-bgug/1.1/",
+        "manifest": "manifest.json",
+        "license": "MIT",
+        "startupDownload": true,
+        "description": "BGUG source assets and audio"
+      }
+    }
   }
 }

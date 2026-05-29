@@ -4,6 +4,10 @@ This is the working checklist for JSON-only game ports. Do not add game-specific
 
 ## Current Batch
 
+Corrective pass: the first published versions were removed from production
+because they were not acceptable parity ports. The active publish target is
+`1.1.0` with asset packs under `asset-packs/*/1.1/`.
+
 - [x] `bgug` from `https://github.com/bluefireteam/bgug` -> `demo-bgug-runner`
 - [x] `darkness_dungeon` from `https://github.com/RafaelBarbosatec/darkness_dungeon` -> `demo-darkness-dungeon`
 - [x] `new_super_jumper` from `https://github.com/Yayo-Arellano/flutter_games_compilation/tree/main/new_super_jumper` -> `demo-new-super-jumper`

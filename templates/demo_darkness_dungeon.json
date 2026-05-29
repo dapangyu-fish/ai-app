@@ -1,34 +1,23 @@
 {
   "dsl": "3.3",
-  "appid": "3e47be14-8096-5443-85bd-fe969179db8f",
+  "appid": "f2ec0378-bbb2-5793-97a8-e3bd31dcf98f",
   "meta": {
     "name": "demo-darkness-dungeon",
     "displayName": "Darkness Dungeon",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "type": "app",
-    "description": "JSON-DSL dungeon action port inspired by Darkness Dungeon (MIT).",
+    "description": "JSON-only port using the original Tiled map object layer and source sprites.",
     "author": "fish"
   },
   "dependencies": {
     "common-ui": "^1.3.0",
     "game-controls": "^1.0.8"
   },
-  "assets": {
-    "bundles": {
-      "darkness": {
-        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/",
-        "manifest": "manifest.json",
-        "license": "MIT",
-        "startupDownload": true,
-        "description": "Darkness Dungeon source assets"
-      }
-    }
-  },
   "global": {
     "variables": {
       "score": 0,
       "bestScore": 0,
-      "status": "Joystick to move. Triangle shoots, circle slashes.",
+      "status": "Loading dungeon...",
       "_choice": null,
       "_gamepadStyle": "default",
       "_gamepadEditing": false,
@@ -37,7 +26,8 @@
     "functions": {
       "scoreChanged": {
         "params": [
-          "score"
+          "score",
+          "best"
         ],
         "logic": [
           {
@@ -48,27 +38,10 @@
             }
           },
           {
-            "call": "@if",
+            "call": "@set",
             "args": {
-              "condition": {
-                ">": [
-                  {
-                    "var": "params.score"
-                  },
-                  {
-                    "var": "global.bestScore"
-                  }
-                ]
-              },
-              "then": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.bestScore",
-                    "value": "{{ params.score }}"
-                  }
-                }
-              ]
+              "var": "global.bestScore",
+              "value": "{{ params.best }}"
             }
           }
         ]
@@ -89,7 +62,8 @@
       },
       "over": {
         "params": [
-          "score"
+          "score",
+          "best"
         ],
         "logic": [
           {
@@ -100,14 +74,28 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.bestScore",
+              "value": "{{ params.best }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "Darkness Dungeon finished"
+            }
+          },
+          {
             "call": "@common-ui.choose",
             "args": {
               "title": "Darkness Dungeon finished",
-              "message": "Score: {{ params.score }}\nBest: {{ global.bestScore }}",
+              "message": "Score: {{ params.score }}\nBest: {{ params.best }}",
               "buttons": [
                 {
                   "label": "Close",
-                  "value": null,
+                  "value": "close",
                   "style": "text"
                 },
                 {
@@ -159,7 +147,6 @@
       }
     }
   },
-  "steps": [],
   "ui": {
     "screens": [
       {
@@ -185,7 +172,7 @@
         "children": [
           {
             "type": "container",
-            "padding": 10,
+            "padding": 8,
             "color": "#111827",
             "layout": "row",
             "crossAxisAlignment": "center",
@@ -195,7 +182,7 @@
                 "value": "{{ global.status }}",
                 "style": {
                   "fontSize": 13,
-                  "color": "#D1D5DB"
+                  "color": "#E5E7EB"
                 },
                 "position": {
                   "type": "flex",
@@ -217,73 +204,81 @@
             "type": "expanded",
             "child": {
               "type": "flame_game",
+              "viewport": {
+                "width": 640,
+                "height": 420,
+                "fit": "cover"
+              },
               "world": {
                 "kind": "pixel",
                 "bg": "#111827"
               },
               "overlay": {
+                "score": false,
                 "game_over": false,
-                "asset_loading_text": "Loading dungeon assets..."
+                "asset_loading_text": "Loading dungeon map..."
               },
               "camera": {
                 "follow": "player",
-                "offset_x": -210,
-                "offset_y": -320,
-                "deadzone_y": 90,
-                "smooth_y": 0.22
+                "map": "map",
+                "offset_x": 0,
+                "offset_y": 0,
+                "smooth_y": 0.3
               },
               "vars": {
                 "move_x": 0,
                 "move_y": 0,
-                "speed": 132,
+                "speed": 80,
                 "hp": 200,
                 "stamina": 100,
-                "facing_x": 1,
-                "facing_y": 0,
+                "hasKey": false,
+                "objects_spawned": false,
                 "attack_cd": 0,
                 "hurt_cd": 0,
                 "_hit": null,
-                "_id": 0
+                "_id": 0,
+                "_dist": 9999
               },
               "entities": {
                 "map": {
                   "kind": "tiled_map",
                   "source": "images/tiled/map.json",
-                  "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/",
+                  "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/",
                   "scale": 2,
-                  "priority": -10,
-                  "render": {
-                    "shape": "text",
-                    "value": "Loading map...",
-                    "color": "#FFFFFF"
-                  }
+                  "solid_layers": [
+                    "mapa"
+                  ],
+                  "priority": -10
                 },
                 "player": {
                   "kind": "animated_sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/player/knight_idle.png",
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/player/knight_idle.png",
                   "position": [
                     64,
                     96
                   ],
                   "size": [
-                    42,
-                    42
+                    40,
+                    40
                   ],
                   "velocity": [
                     0,
                     0
                   ],
-                  "priority": 20,
+                  "priority": 30,
+                  "state": {
+                    "assetLoadingOverlay": true
+                  },
                   "frame_size": [
                     16,
                     16
                   ],
                   "frames": 6,
-                  "step_time": 0.09,
+                  "step_time": 0.1,
                   "frames_per_row": 6,
                   "animations": {
                     "idle": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/player/knight_idle.png",
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/player/knight_idle.png",
                       "frame_size": [
                         16,
                         16
@@ -293,7 +288,7 @@
                       "step_time": 0.12
                     },
                     "run": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/player/knight_run.png",
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/player/knight_run.png",
                       "frame_size": [
                         16,
                         16
@@ -304,184 +299,6 @@
                     }
                   },
                   "animation": "idle"
-                },
-                "door": {
-                  "kind": "sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/items/door_closed.png",
-                  "position": [
-                    128,
-                    438
-                  ],
-                  "size": [
-                    54,
-                    54
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 5
-                },
-                "key": {
-                  "kind": "sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/items/key_silver.png",
-                  "position": [
-                    548,
-                    148
-                  ],
-                  "size": [
-                    30,
-                    30
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 12
-                },
-                "potion": {
-                  "kind": "sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/items/potion_red.png",
-                  "position": [
-                    310,
-                    602
-                  ],
-                  "size": [
-                    30,
-                    30
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 12
-                },
-                "torch_1": {
-                  "kind": "sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/items/torch_spritesheet.png",
-                  "position": [
-                    104,
-                    72
-                  ],
-                  "size": [
-                    34,
-                    34
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 8,
-                  "src": [
-                    0,
-                    0,
-                    16,
-                    16
-                  ]
-                },
-                "torch_2": {
-                  "kind": "sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/items/torch_spritesheet.png",
-                  "position": [
-                    510,
-                    326
-                  ],
-                  "size": [
-                    34,
-                    34
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 8,
-                  "src": [
-                    0,
-                    0,
-                    16,
-                    16
-                  ]
-                },
-                "enemy_goblin": {
-                  "kind": "animated_sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/enemy/goblin/goblin_idle.png",
-                  "position": [
-                    430,
-                    164
-                  ],
-                  "size": [
-                    38,
-                    38
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 18,
-                  "state": {
-                    "hp": 2
-                  },
-                  "frame_size": [
-                    16,
-                    16
-                  ],
-                  "frames": 6,
-                  "step_time": 0.09,
-                  "frames_per_row": 6
-                },
-                "enemy_imp": {
-                  "kind": "animated_sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/enemy/imp/imp_idle.png",
-                  "position": [
-                    240,
-                    506
-                  ],
-                  "size": [
-                    38,
-                    38
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 18,
-                  "state": {
-                    "hp": 2
-                  },
-                  "frame_size": [
-                    16,
-                    16
-                  ],
-                  "frames": 4,
-                  "step_time": 0.09,
-                  "frames_per_row": 4
-                },
-                "enemy_boss": {
-                  "kind": "animated_sprite",
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/enemy/boss/boss_idle.png",
-                  "position": [
-                    620,
-                    560
-                  ],
-                  "size": [
-                    80,
-                    80
-                  ],
-                  "velocity": [
-                    0,
-                    0
-                  ],
-                  "priority": 18,
-                  "state": {
-                    "hp": 5
-                  },
-                  "frame_size": [
-                    32,
-                    36
-                  ],
-                  "frames": 4,
-                  "step_time": 0.09,
-                  "frames_per_row": 4
                 }
               },
               "input": {
@@ -503,80 +320,6 @@
                         "var": "event.y"
                       }
                     }
-                  },
-                  {
-                    "call": "@if",
-                    "args": {
-                      "cond": {
-                        "!=": [
-                          {
-                            "var": "event.x"
-                          },
-                          0
-                        ]
-                      },
-                      "then": [
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.facing_x",
-                            "value": {
-                              "var": "event.x"
-                            }
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.facing_y",
-                            "value": 0
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "call": "@if",
-                    "args": {
-                      "cond": {
-                        "and": [
-                          {
-                            "==": [
-                              {
-                                "var": "event.x"
-                              },
-                              0
-                            ]
-                          },
-                          {
-                            "!=": [
-                              {
-                                "var": "event.y"
-                              },
-                              0
-                            ]
-                          }
-                        ]
-                      },
-                      "then": [
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.facing_y",
-                            "value": {
-                              "var": "event.y"
-                            }
-                          }
-                        },
-                        {
-                          "call": "@set",
-                          "args": {
-                            "var": "vars.facing_x",
-                            "value": 0
-                          }
-                        }
-                      ]
-                    }
                   }
                 ],
                 "jump": [
@@ -584,11 +327,23 @@
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "<=": [
+                        "and": [
                           {
-                            "var": "vars.attack_cd"
+                            ">=": [
+                              {
+                                "var": "vars.stamina"
+                              },
+                              10
+                            ]
                           },
-                          0
+                          {
+                            "<=": [
+                              {
+                                "var": "vars.attack_cd"
+                              },
+                              0
+                            ]
+                          }
                         ]
                       },
                       "then": [
@@ -597,6 +352,20 @@
                           "args": {
                             "var": "vars.attack_cd",
                             "value": 0.28
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.stamina",
+                            "value": {
+                              "-": [
+                                {
+                                  "var": "vars.stamina"
+                                },
+                                10
+                              ]
+                            }
                           }
                         },
                         {
@@ -616,8 +385,8 @@
                           "call": "@spawn",
                           "args": {
                             "id": "bolt_{{ vars._id }}",
-                            "kind": "sprite",
-                            "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.0/images/player/fireball_right.png",
+                            "kind": "animated_sprite",
+                            "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/player/fireball_right.png",
                             "position": [
                               {
                                 "var": "entities.player.x"
@@ -627,34 +396,21 @@
                               }
                             ],
                             "size": [
-                              28,
-                              18
+                              30,
+                              30
                             ],
                             "velocity": [
-                              {
-                                "*": [
-                                  {
-                                    "var": "vars.facing_x"
-                                  },
-                                  300
-                                ]
-                              },
-                              {
-                                "*": [
-                                  {
-                                    "var": "vars.facing_y"
-                                  },
-                                  300
-                                ]
-                              }
+                              260,
+                              0
                             ],
-                            "priority": 30,
-                            "src": [
-                              0,
-                              0,
+                            "priority": 40,
+                            "frame_size": [
                               23,
                               23
-                            ]
+                            ],
+                            "frames": 3,
+                            "step_time": 0.1,
+                            "frames_per_row": 3
                           }
                         }
                       ]
@@ -666,11 +422,23 @@
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "<=": [
+                        "and": [
                           {
-                            "var": "vars.attack_cd"
+                            ">=": [
+                              {
+                                "var": "vars.stamina"
+                              },
+                              15
+                            ]
                           },
-                          0
+                          {
+                            "<=": [
+                              {
+                                "var": "vars.attack_cd"
+                              },
+                              0
+                            ]
+                          }
                         ]
                       },
                       "then": [
@@ -678,7 +446,21 @@
                           "call": "@set",
                           "args": {
                             "var": "vars.attack_cd",
-                            "value": 0.25
+                            "value": 0.22
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.stamina",
+                            "value": {
+                              "-": [
+                                {
+                                  "var": "vars.stamina"
+                                },
+                                15
+                              ]
+                            }
                           }
                         },
                         {
@@ -688,51 +470,37 @@
                             "kind": "pixel",
                             "position": [
                               {
-                                "+": [
+                                "-": [
                                   {
                                     "var": "entities.player.x"
                                   },
-                                  {
-                                    "*": [
-                                      {
-                                        "var": "vars.facing_x"
-                                      },
-                                      30
-                                    ]
-                                  }
+                                  20
                                 ]
                               },
                               {
-                                "+": [
+                                "-": [
                                   {
                                     "var": "entities.player.y"
                                   },
-                                  {
-                                    "*": [
-                                      {
-                                        "var": "vars.facing_y"
-                                      },
-                                      30
-                                    ]
-                                  }
+                                  20
                                 ]
                               }
                             ],
                             "size": [
-                              52,
-                              52
+                              82,
+                              82
                             ],
                             "velocity": [
                               0,
                               0
                             ],
-                            "priority": 40,
+                            "priority": 50,
                             "render": {
                               "shape": "circle",
                               "color": "#FBBF2444"
                             },
                             "state": {
-                              "ttl": 0.16
+                              "ttl": 0.14
                             }
                           }
                         }
@@ -744,16 +512,400 @@
               "frame": {
                 "logic": [
                   {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "and": [
+                          {
+                            "call": "@tiled.loaded",
+                            "args": {
+                              "map": "map"
+                            }
+                          },
+                          {
+                            "!": {
+                              "var": "vars.objects_spawned"
+                            }
+                          }
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.objects_spawned",
+                            "value": true
+                          }
+                        },
+                        {
+                          "call": "@tiled.spawn_objects",
+                          "args": {
+                            "map": "map",
+                            "layer": "objects",
+                            "templates": {
+                              "torch": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/items/torch_spritesheet.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  32,
+                                  32
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 8,
+                                "src": [
+                                  0,
+                                  0,
+                                  16,
+                                  16
+                                ],
+                                "state": {
+                                  "kind": "torch"
+                                },
+                                "id_prefix": "torch_"
+                              },
+                              "torch_empty": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/items/torch_spritesheet.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  32,
+                                  32
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 8,
+                                "src": [
+                                  0,
+                                  0,
+                                  16,
+                                  16
+                                ],
+                                "state": {
+                                  "kind": "torch_empty"
+                                },
+                                "id_prefix": "torch_empty_"
+                              },
+                              "door": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/items/door_closed.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  64,
+                                  64
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 10,
+                                "state": {
+                                  "kind": "door"
+                                },
+                                "id_prefix": "door_"
+                              },
+                              "key": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/items/key_silver.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  28,
+                                  28
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 14,
+                                "state": {
+                                  "kind": "key"
+                                },
+                                "id_prefix": "key_"
+                              },
+                              "potion": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/items/potion_red.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  28,
+                                  28
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 14,
+                                "state": {
+                                  "kind": "potion"
+                                },
+                                "id_prefix": "potion_"
+                              },
+                              "spikes": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/items/spikes.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  32,
+                                  32
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 9,
+                                "src": [
+                                  0,
+                                  0,
+                                  16,
+                                  16
+                                ],
+                                "state": {
+                                  "kind": "spikes"
+                                },
+                                "id_prefix": "spikes_"
+                              },
+                              "wizard": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/npc/wizard.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  {
+                                    "-": [
+                                      "{{ object.y }}",
+                                      20
+                                    ]
+                                  }
+                                ],
+                                "size": [
+                                  32,
+                                  56
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 14,
+                                "state": {
+                                  "kind": "wizard"
+                                },
+                                "id_prefix": "wizard_"
+                              },
+                              "kid": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/npc/kid_idle_left.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  {
+                                    "-": [
+                                      "{{ object.y }}",
+                                      12
+                                    ]
+                                  }
+                                ],
+                                "size": [
+                                  44,
+                                  44
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 14,
+                                "src": [
+                                  0,
+                                  0,
+                                  16,
+                                  22
+                                ],
+                                "state": {
+                                  "kind": "kid"
+                                },
+                                "id_prefix": "kid_"
+                              },
+                              "goblin": {
+                                "kind": "animated_sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/enemy/goblin/goblin_idle.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  36,
+                                  36
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 18,
+                                "state": {
+                                  "kind": "enemy",
+                                  "hp": 120,
+                                  "speed": 48,
+                                  "vision": 128
+                                },
+                                "frame_size": [
+                                  16,
+                                  16
+                                ],
+                                "frames": 6,
+                                "step_time": 0.1,
+                                "frames_per_row": 6,
+                                "id_prefix": "goblin_"
+                              },
+                              "imp": {
+                                "kind": "animated_sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/enemy/imp/imp_idle.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  36,
+                                  36
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 18,
+                                "state": {
+                                  "kind": "enemy",
+                                  "hp": 80,
+                                  "speed": 64,
+                                  "vision": 160
+                                },
+                                "frame_size": [
+                                  16,
+                                  16
+                                ],
+                                "frames": 4,
+                                "step_time": 0.1,
+                                "frames_per_row": 4,
+                                "id_prefix": "imp_"
+                              },
+                              "mini_boss": {
+                                "kind": "sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/enemy/mini_boss/mini_boss_idle.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  "{{ object.y }}"
+                                ],
+                                "size": [
+                                  44,
+                                  56
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 18,
+                                "src": [
+                                  0,
+                                  0,
+                                  16,
+                                  24
+                                ],
+                                "state": {
+                                  "kind": "enemy",
+                                  "hp": 150,
+                                  "speed": 48,
+                                  "vision": 160
+                                },
+                                "id_prefix": "mini_boss_"
+                              },
+                              "boss": {
+                                "kind": "animated_sprite",
+                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/images/enemy/boss/boss_idle.png",
+                                "position": [
+                                  "{{ object.x }}",
+                                  {
+                                    "-": [
+                                      "{{ object.y }}",
+                                      24
+                                    ]
+                                  }
+                                ],
+                                "size": [
+                                  72,
+                                  82
+                                ],
+                                "velocity": [
+                                  0,
+                                  0
+                                ],
+                                "priority": 18,
+                                "state": {
+                                  "kind": "enemy",
+                                  "hp": 200,
+                                  "speed": 42,
+                                  "vision": 192,
+                                  "boss": true
+                                },
+                                "frame_size": [
+                                  32,
+                                  36
+                                ],
+                                "frames": 4,
+                                "step_time": 0.1,
+                                "frames_per_row": 4,
+                                "id_prefix": "boss_"
+                              }
+                            },
+                            "debug": false
+                          }
+                        },
+                        {
+                          "call": "@emit",
+                          "args": {
+                            "event": "status",
+                            "data": {
+                              "text": "Explore the dungeon. Circle melee, triangle fireball."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
                     "call": "@set",
                     "args": {
                       "var": "vars.attack_cd",
                       "value": {
-                        "-": [
+                        "max": [
+                          0,
                           {
-                            "var": "vars.attack_cd"
-                          },
-                          {
-                            "var": "event.dt"
+                            "-": [
+                              {
+                                "var": "vars.attack_cd"
+                              },
+                              {
+                                "var": "event.dt"
+                              }
+                            ]
                           }
                         ]
                       }
@@ -764,12 +916,43 @@
                     "args": {
                       "var": "vars.hurt_cd",
                       "value": {
-                        "-": [
+                        "max": [
+                          0,
                           {
-                            "var": "vars.hurt_cd"
-                          },
+                            "-": [
+                              {
+                                "var": "vars.hurt_cd"
+                              },
+                              {
+                                "var": "event.dt"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.stamina",
+                      "value": {
+                        "min": [
+                          100,
                           {
-                            "var": "event.dt"
+                            "+": [
+                              {
+                                "var": "vars.stamina"
+                              },
+                              {
+                                "*": [
+                                  13.3,
+                                  {
+                                    "var": "event.dt"
+                                  }
+                                ]
+                              }
+                            ]
                           }
                         ]
                       }
@@ -858,8 +1041,8 @@
                       "id": "player",
                       "field": "x",
                       "by": 0,
-                      "min": 24,
-                      "max": 740
+                      "min": 16,
+                      "max": 1540
                     }
                   },
                   {
@@ -868,58 +1051,105 @@
                       "id": "player",
                       "field": "y",
                       "by": 0,
-                      "min": 24,
-                      "max": 740
+                      "min": 16,
+                      "max": 1540
                     }
                   },
                   {
                     "call": "@for_each_entity",
                     "args": {
-                      "where_prefix": "enemy_",
+                      "where_prefix": "goblin_",
                       "do": [
                         {
                           "call": "@if",
                           "args": {
                             "cond": {
-                              "<": [
+                              "and": [
                                 {
-                                  "var": "loop.entity.x"
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.x"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
                                 },
                                 {
-                                  "-": [
+                                  "<": [
                                     {
-                                      "var": "entities.player.x"
+                                      "var": "loop.entity.x"
                                     },
-                                    12
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
                                   ]
                                 }
                               ]
                             },
                             "then": [
                               {
-                                "call": "@entity.set",
-                                "args": {
-                                  "id": "{{ loop.id }}",
-                                  "field": "vx",
-                                  "value": 54
-                                }
-                              }
-                            ],
-                            "else": [
-                              {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    ">": [
+                                    "<": [
                                       {
                                         "var": "loop.entity.x"
                                       },
                                       {
-                                        "+": [
+                                        "-": [
                                           {
                                             "var": "entities.player.x"
                                           },
-                                          12
+                                          8
                                         ]
                                       }
                                     ]
@@ -930,68 +1160,351 @@
                                       "args": {
                                         "id": "{{ loop.id }}",
                                         "field": "vx",
-                                        "value": -54
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
                                       }
                                     }
                                   ],
                                   "else": [
                                     {
-                                      "call": "@entity.set",
+                                      "call": "@if",
                                       "args": {
-                                        "id": "{{ loop.id }}",
-                                        "field": "vx",
-                                        "value": 0
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.x"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.x"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "loop.entity.y"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.y"
+                                          },
+                                          8
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "vy",
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.y"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.y"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vx",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vy",
+                                  "value": 0
                                 }
                               }
                             ]
                           }
                         },
                         {
+                          "call": "@entity.flip_by_velocity",
+                          "args": {
+                            "id": "{{ loop.id }}",
+                            "invert": true
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@for_each_entity",
+                    "args": {
+                      "where_prefix": "imp_",
+                      "do": [
+                        {
                           "call": "@if",
                           "args": {
                             "cond": {
-                              "<": [
+                              "and": [
                                 {
-                                  "var": "loop.entity.y"
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.x"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
                                 },
                                 {
-                                  "-": [
+                                  "<": [
                                     {
-                                      "var": "entities.player.y"
+                                      "var": "loop.entity.x"
                                     },
-                                    12
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
                                   ]
                                 }
                               ]
                             },
                             "then": [
                               {
-                                "call": "@entity.set",
+                                "call": "@if",
                                 "args": {
-                                  "id": "{{ loop.id }}",
-                                  "field": "vy",
-                                  "value": 54
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "loop.entity.x"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          8
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "vx",
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.x"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.x"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
                                 }
-                              }
-                            ],
-                            "else": [
+                              },
                               {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    ">": [
+                                    "<": [
                                       {
                                         "var": "loop.entity.y"
                                       },
                                       {
-                                        "+": [
+                                        "-": [
                                           {
                                             "var": "entities.player.y"
                                           },
-                                          12
+                                          8
                                         ]
                                       }
                                     ]
@@ -1002,20 +1515,627 @@
                                       "args": {
                                         "id": "{{ loop.id }}",
                                         "field": "vy",
-                                        "value": -54
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
                                       }
                                     }
                                   ],
                                   "else": [
                                     {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.y"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.y"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vx",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vy",
+                                  "value": 0
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@entity.flip_by_velocity",
+                          "args": {
+                            "id": "{{ loop.id }}",
+                            "invert": true
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@for_each_entity",
+                    "args": {
+                      "where_prefix": "mini_boss_",
+                      "do": [
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.x"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "loop.entity.x"
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "loop.entity.x"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          8
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "vx",
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.x"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.x"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "loop.entity.y"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.y"
+                                          },
+                                          8
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
                                       "call": "@entity.set",
                                       "args": {
                                         "id": "{{ loop.id }}",
                                         "field": "vy",
-                                        "value": 0
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.y"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.y"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ]
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vx",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vy",
+                                  "value": 0
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@entity.flip_by_velocity",
+                          "args": {
+                            "id": "{{ loop.id }}",
+                            "invert": true
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@for_each_entity",
+                    "args": {
+                      "where_prefix": "boss_",
+                      "do": [
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.x"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "loop.entity.x"
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  ">": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "-": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    {
+                                      "var": "loop.entity.y"
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.y"
+                                        },
+                                        {
+                                          "var": "loop.entity.state.vision"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "loop.entity.x"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          8
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "vx",
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.x"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.x"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vx",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "<": [
+                                      {
+                                        "var": "loop.entity.y"
+                                      },
+                                      {
+                                        "-": [
+                                          {
+                                            "var": "entities.player.y"
+                                          },
+                                          8
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ loop.id }}",
+                                        "field": "vy",
+                                        "value": {
+                                          "var": "loop.entity.state.speed"
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "else": [
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          ">": [
+                                            {
+                                              "var": "loop.entity.y"
+                                            },
+                                            {
+                                              "+": [
+                                                {
+                                                  "var": "entities.player.y"
+                                                },
+                                                8
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": {
+                                                "-": [
+                                                  0,
+                                                  {
+                                                    "var": "loop.entity.state.speed"
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "else": [
+                                          {
+                                            "call": "@entity.set",
+                                            "args": {
+                                              "id": "{{ loop.id }}",
+                                              "field": "vy",
+                                              "value": 0
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "else": [
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vx",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ loop.id }}",
+                                  "field": "vy",
+                                  "value": 0
                                 }
                               }
                             ]
@@ -1035,7 +2155,7 @@
                     "call": "@collision.first",
                     "args": {
                       "a": "player",
-                      "where_prefix": "key"
+                      "where_prefix": "key_"
                     },
                     "assign": "vars._hit"
                   },
@@ -1054,7 +2174,20 @@
                         {
                           "call": "@despawn",
                           "args": {
-                            "id": "key"
+                            "id": "{{ vars._hit }}"
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.hasKey",
+                            "value": true
+                          }
+                        },
+                        {
+                          "call": "@score.add",
+                          "args": {
+                            "n": 100
                           }
                         },
                         {
@@ -1067,9 +2200,10 @@
                           }
                         },
                         {
-                          "call": "@score.add",
+                          "call": "@set",
                           "args": {
-                            "n": 100
+                            "var": "vars._hit",
+                            "value": null
                           }
                         }
                       ]
@@ -1079,7 +2213,7 @@
                     "call": "@collision.first",
                     "args": {
                       "a": "player",
-                      "where_prefix": "potion"
+                      "where_prefix": "potion_"
                     },
                     "assign": "vars._hit"
                   },
@@ -1098,14 +2232,26 @@
                         {
                           "call": "@despawn",
                           "args": {
-                            "id": "potion"
+                            "id": "{{ vars._hit }}"
                           }
                         },
                         {
                           "call": "@set",
                           "args": {
                             "var": "vars.hp",
-                            "value": 200
+                            "value": {
+                              "min": [
+                                200,
+                                {
+                                  "+": [
+                                    {
+                                      "var": "vars.hp"
+                                    },
+                                    30
+                                  ]
+                                }
+                              ]
+                            }
                           }
                         },
                         {
@@ -1115,6 +2261,275 @@
                             "data": {
                               "text": "Life restored"
                             }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._hit",
+                            "value": null
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@collision.first",
+                    "args": {
+                      "a": "player",
+                      "where_prefix": "spikes_"
+                    },
+                    "assign": "vars._hit"
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "and": [
+                          {
+                            "!=": [
+                              {
+                                "var": "vars._hit"
+                              },
+                              null
+                            ]
+                          },
+                          {
+                            "<=": [
+                              {
+                                "var": "vars.hurt_cd"
+                              },
+                              0
+                            ]
+                          }
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.hurt_cd",
+                            "value": 1.0
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.hp",
+                            "value": {
+                              "-": [
+                                {
+                                  "var": "vars.hp"
+                                },
+                                30
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@emit",
+                          "args": {
+                            "event": "status",
+                            "data": {
+                              "text": "HP {{ vars.hp }} / Stamina {{ vars.stamina }}"
+                            }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._hit",
+                            "value": null
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "call": "@entity.exists",
+                        "args": {
+                          "id": "slash"
+                        }
+                      },
+                      "then": [
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "slash",
+                            "field": "x",
+                            "value": {
+                              "-": [
+                                {
+                                  "var": "entities.player.x"
+                                },
+                                20
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.set",
+                          "args": {
+                            "id": "slash",
+                            "field": "y",
+                            "value": {
+                              "-": [
+                                {
+                                  "var": "entities.player.y"
+                                },
+                                20
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@entity.add",
+                          "args": {
+                            "id": "slash",
+                            "field": "state.ttl",
+                            "by": {
+                              "-": [
+                                0,
+                                {
+                                  "var": "event.dt"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "slash",
+                            "where_prefix": "goblin_"
+                          },
+                          "assign": "vars._hit"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "==": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@collision.first",
+                                "args": {
+                                  "a": "slash",
+                                  "where_prefix": "imp_"
+                                },
+                                "assign": "vars._hit"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "==": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@collision.first",
+                                "args": {
+                                  "a": "slash",
+                                  "where_prefix": "mini_boss_"
+                                },
+                                "assign": "vars._hit"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "==": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@collision.first",
+                                "args": {
+                                  "a": "slash",
+                                  "where_prefix": "boss_"
+                                },
+                                "assign": "vars._hit"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "!=": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@despawn",
+                                "args": {
+                                  "id": "{{ vars._hit }}"
+                                }
+                              },
+                              {
+                                "call": "@score.add",
+                                "args": {
+                                  "n": 120
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._hit",
+                                  "value": null
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "<=": [
+                                {
+                                  "var": "entities.slash.state.ttl"
+                                },
+                                0
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@despawn",
+                                "args": {
+                                  "id": "slash"
+                                }
+                              }
+                            ]
                           }
                         }
                       ]
@@ -1129,9 +2544,78 @@
                           "call": "@collision.first",
                           "args": {
                             "a": "{{ loop.id }}",
-                            "where_prefix": "enemy_"
+                            "where_prefix": "goblin_"
                           },
                           "assign": "vars._hit"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "==": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@collision.first",
+                                "args": {
+                                  "a": "{{ loop.id }}",
+                                  "where_prefix": "imp_"
+                                },
+                                "assign": "vars._hit"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "==": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@collision.first",
+                                "args": {
+                                  "a": "{{ loop.id }}",
+                                  "where_prefix": "mini_boss_"
+                                },
+                                "assign": "vars._hit"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "==": [
+                                {
+                                  "var": "vars._hit"
+                                },
+                                null
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@collision.first",
+                                "args": {
+                                  "a": "{{ loop.id }}",
+                                  "where_prefix": "boss_"
+                                },
+                                "assign": "vars._hit"
+                              }
+                            ]
+                          }
                         },
                         {
                           "call": "@if",
@@ -1162,6 +2646,13 @@
                                 "args": {
                                   "n": 150
                                 }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._hit",
+                                  "value": null
+                                }
                               }
                             ]
                           }
@@ -1170,37 +2661,16 @@
                           "call": "@if",
                           "args": {
                             "cond": {
-                              "or": [
+                              ">": [
                                 {
-                                  "<": [
-                                    {
-                                      "var": "loop.entity.x"
-                                    },
-                                    -100
-                                  ]
+                                  "var": "loop.entity.x"
                                 },
                                 {
-                                  ">": [
+                                  "+": [
                                     {
-                                      "var": "loop.entity.x"
+                                      "var": "entities.player.x"
                                     },
-                                    900
-                                  ]
-                                },
-                                {
-                                  "<": [
-                                    {
-                                      "var": "loop.entity.y"
-                                    },
-                                    -100
-                                  ]
-                                },
-                                {
-                                  ">": [
-                                    {
-                                      "var": "loop.entity.y"
-                                    },
-                                    900
+                                    500
                                   ]
                                 }
                               ]
@@ -1219,96 +2689,81 @@
                     }
                   },
                   {
+                    "call": "@collision.first",
+                    "args": {
+                      "a": "player",
+                      "where_prefix": "goblin_"
+                    },
+                    "assign": "vars._hit"
+                  },
+                  {
                     "call": "@if",
                     "args": {
                       "cond": {
-                        "call": "@entity.exists",
-                        "args": {
-                          "id": "slash"
-                        }
+                        "==": [
+                          {
+                            "var": "vars._hit"
+                          },
+                          null
+                        ]
                       },
                       "then": [
                         {
                           "call": "@collision.first",
                           "args": {
-                            "a": "slash",
-                            "where_prefix": "enemy_"
+                            "a": "player",
+                            "where_prefix": "imp_"
                           },
                           "assign": "vars._hit"
-                        },
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              "!=": [
-                                {
-                                  "var": "vars._hit"
-                                },
-                                null
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@despawn",
-                                "args": {
-                                  "id": "{{ vars._hit }}"
-                                }
-                              },
-                              {
-                                "call": "@score.add",
-                                "args": {
-                                  "n": 120
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        {
-                          "call": "@entity.add",
-                          "args": {
-                            "id": "slash",
-                            "field": "state.ttl",
-                            "by": {
-                              "-": [
-                                0,
-                                {
-                                  "var": "event.dt"
-                                }
-                              ]
-                            }
-                          }
-                        },
-                        {
-                          "call": "@if",
-                          "args": {
-                            "cond": {
-                              "<=": [
-                                {
-                                  "var": "entities.slash.state.ttl"
-                                },
-                                0
-                              ]
-                            },
-                            "then": [
-                              {
-                                "call": "@despawn",
-                                "args": {
-                                  "id": "slash"
-                                }
-                              }
-                            ]
-                          }
                         }
                       ]
                     }
                   },
                   {
-                    "call": "@collision.first",
+                    "call": "@if",
                     "args": {
-                      "a": "player",
-                      "where_prefix": "enemy_"
-                    },
-                    "assign": "vars._hit"
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars._hit"
+                          },
+                          null
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "mini_boss_"
+                          },
+                          "assign": "vars._hit"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "call": "@if",
+                    "args": {
+                      "cond": {
+                        "==": [
+                          {
+                            "var": "vars._hit"
+                          },
+                          null
+                        ]
+                      },
+                      "then": [
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "boss_"
+                          },
+                          "assign": "vars._hit"
+                        }
+                      ]
+                    }
                   },
                   {
                     "call": "@if",
@@ -1360,8 +2815,15 @@
                           "args": {
                             "event": "status",
                             "data": {
-                              "text": "HP {{ vars.hp }}"
+                              "text": "HP {{ vars.hp }} / Stamina {{ vars.stamina }}"
                             }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars._hit",
+                            "value": null
                           }
                         }
                       ]
@@ -1385,51 +2847,6 @@
                         }
                       ]
                     }
-                  },
-                  {
-                    "call": "@if",
-                    "args": {
-                      "cond": {
-                        "and": [
-                          {
-                            "!": {
-                              "call": "@entity.exists",
-                              "args": {
-                                "id": "enemy_goblin"
-                              }
-                            }
-                          },
-                          {
-                            "!": {
-                              "call": "@entity.exists",
-                              "args": {
-                                "id": "enemy_imp"
-                              }
-                            }
-                          },
-                          {
-                            "!": {
-                              "call": "@entity.exists",
-                              "args": {
-                                "id": "enemy_boss"
-                              }
-                            }
-                          }
-                        ]
-                      },
-                      "then": [
-                        {
-                          "call": "@score.add",
-                          "args": {
-                            "n": 500
-                          }
-                        },
-                        {
-                          "call": "@game_over",
-                          "args": {}
-                        }
-                      ]
-                    }
                   }
                 ]
               },
@@ -1437,7 +2854,8 @@
                 "type": "call",
                 "call": "@global.scoreChanged",
                 "args": {
-                  "score": "{{ event.score }}"
+                  "score": "{{ event.score }}",
+                  "best": "{{ event.best }}"
                 }
               },
               "on_status": {
@@ -1451,7 +2869,8 @@
                 "type": "call",
                 "call": "@global.over",
                 "args": {
-                  "score": "{{ event.score }}"
+                  "score": "{{ event.score }}",
+                  "best": "{{ event.best }}"
                 }
               },
               "on_reset": {
@@ -1470,12 +2889,23 @@
               "moveEndInput": "move_axis",
               "jumpInput": "jump",
               "attackInput": "attack",
-              "height": 176,
+              "height": 160,
               "backgroundColor": "#111827"
             }
           }
         ]
       }
     ]
+  },
+  "assets": {
+    "bundles": {
+      "source-darkness-dungeon": {
+        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-darkness-dungeon/1.1/",
+        "manifest": "manifest.json",
+        "license": "MIT",
+        "startupDownload": true,
+        "description": "Darkness Dungeon source map and sprites"
+      }
+    }
   }
 }
