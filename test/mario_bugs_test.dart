@@ -812,8 +812,8 @@ void main() {
     expect((koopa as PixelEntity).state['kind'], 'koopa');
     expect(
       koopa.state['spriteOffsetY'],
-      0,
-      reason: 'Koopa visual sprite is drawn from the top of its hit box',
+      -48,
+      reason: 'Koopa sprite is lifted above its ground-aligned hit box',
     );
     expect(
       koopa.state['spriteH'],
@@ -837,7 +837,7 @@ void main() {
     }
     expect(
       koopa.y,
-      closeTo(304, 1),
+      closeTo(352, 1),
       reason: 'Koopa should stay on the platform after activation',
     );
     expect(
@@ -845,6 +845,16 @@ void main() {
       0,
       reason: 'Koopa should not fall through the ground while off-camera',
     );
+    for (var i = 0; i < 600; i++) {
+      game.logic.runLogic(frameLogic, {'dt': 0.016});
+    }
+    expect(
+      koopa.y,
+      closeTo(352, 1),
+      reason: 'Koopa patrol is scripted to the original ground lane',
+    );
+    expect(koopa.x, inInclusiveRange(3168, 3920));
+    expect(koopa.vx.abs(), greaterThan(0));
   });
 
   test('真实 Mario JSON: 只有 fire 状态可以发射原版火球 sprite', () async {
@@ -978,11 +988,17 @@ void main() {
     game.spawnEntity('enemy_98', {
       'kind': 'animated_sprite',
       'asset': '',
-      'position': [100, 304],
-      'size': [32, 96],
+      'position': [100, 352],
+      'size': [32, 48],
       'velocity': [0, 0],
       'auto_update': false,
-      'state': {'kind': 'koopa', 'dir': -1, 'tiledObjectId': 98, 'spriteH': 48},
+      'state': {
+        'kind': 'koopa',
+        'dir': -1,
+        'tiledObjectId': 98,
+        'spriteH': 48,
+        'spriteOffsetY': -48,
+      },
       'frame_size': [16, 24],
       'frames': 2,
       'frames_per_row': 2,
