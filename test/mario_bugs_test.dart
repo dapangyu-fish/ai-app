@@ -153,6 +153,11 @@ void main() {
 
     game.logic.runLogic(frameLogic, {'dt': 0.016});
     expect(game.entities.containsKey('qblock_3'), true);
+    expect(
+      (game.entities['qblock_3'] as PixelEntity).state['content'],
+      'red mushroom',
+      reason: 'QuestionBlock 的内容类型要保存在砖块实体上，不能只依赖碰撞返回值',
+    );
 
     game.vars['state'] = 'running';
     game.vars['jump_pressed'] = false;
