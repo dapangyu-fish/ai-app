@@ -18,7 +18,7 @@ This is the working checklist for JSON-only game ports. Do not add game-specific
 - [x] Implement gameplay in JSON DSL using existing game atoms first.
 - [x] Validate every JSON app with `backend/validate_json_app.py`.
 - [x] Add regression tests for any reused or newly discovered framework behavior.
-- [ ] Publish each app to Registry and verify `/resolve` returns the new version.
+- [x] Publish each app to Registry and verify `/resolve` returns the new version.
 
 ## Existing Follow-Up
 
