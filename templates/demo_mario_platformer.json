@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.32",
+    "version": "1.0.33",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -5066,6 +5066,22 @@
                                 }
                               },
                               {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._enemy_id }}",
+                                  "field": "x"
+                                },
+                                "assign": "vars._enemy_prev_x"
+                              },
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._enemy_id }}",
+                                  "field": "y"
+                                },
+                                "assign": "vars._enemy_prev_y"
+                              },
+                              {
                                 "call": "@entity.set",
                                 "args": {
                                   "id": "{{ vars._enemy_id }}",
@@ -5123,6 +5139,86 @@
                                       "args": {
                                         "var": "vars._enemy_step_ok",
                                         "value": false
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "and": [
+                                      {
+                                        "var": "vars._enemy_active"
+                                      },
+                                      {
+                                        "!": {
+                                          "call": "@entity.get",
+                                          "args": {
+                                            "id": "{{ vars._enemy_id }}",
+                                            "field": "state.blockedDown"
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ vars._enemy_id }}",
+                                        "field": "x",
+                                        "value": {
+                                          "var": "vars._enemy_prev_x"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ vars._enemy_id }}",
+                                        "field": "y",
+                                        "value": {
+                                          "var": "vars._enemy_prev_y"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ vars._enemy_id }}",
+                                        "field": "vy",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ vars._enemy_id }}",
+                                        "field": "state.dir",
+                                        "value": {
+                                          "*": [
+                                            {
+                                              "var": "vars._enemy_dir"
+                                            },
+                                            -1
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@set",
+                                      "args": {
+                                        "var": "vars._enemy_dir",
+                                        "value": {
+                                          "*": [
+                                            {
+                                              "var": "vars._enemy_dir"
+                                            },
+                                            -1
+                                          ]
+                                        }
                                       }
                                     }
                                   ]

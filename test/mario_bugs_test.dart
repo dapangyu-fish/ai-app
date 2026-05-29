@@ -817,6 +817,19 @@ void main() {
     game.logic.runLogic(frameLogic, {'dt': 0.016});
     expect(koopa.vx, lessThan(0));
     expect(koopa.x, lessThan(farX));
+    for (var i = 0; i < 90; i++) {
+      game.logic.runLogic(frameLogic, {'dt': 0.016});
+    }
+    expect(
+      koopa.y,
+      closeTo(352, 1),
+      reason: 'Koopa should stay on the platform after activation',
+    );
+    expect(
+      koopa.vy,
+      0,
+      reason: 'Koopa should not fall through the ground while off-camera',
+    );
   });
 
   test('真实 Mario JSON: 只有 fire 状态可以发射原版火球 sprite', () async {
