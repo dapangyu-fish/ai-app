@@ -24,7 +24,7 @@ class JsonFlameGameWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    // 把 spec 里的 "{{ global.x }}" 等模板烤一遍（init 时一次性）
+    // 把 spec 里的 "{{ global.x }}" 等外层模板烤一遍（init 时一次性）
     // —— 注意：游戏内部用的 "{{ vars.x }}" 等仍然由游戏 logic 引擎自己解析
     final bakedSpec = _bakeOuterTemplates(json, interpreter);
 
@@ -38,7 +38,16 @@ class JsonFlameGameWidget extends JsonBaseWidget {
     );
   }
 
-  /// 只烤外层（global.* / loop.*）模板，保留游戏内部命名空间（vars.* / event.* / entities.* / world.*）
+  @visibleForTesting
+  Map<String, dynamic> bakeOuterTemplatesForTest(
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    return _bakeOuterTemplates(json, interpreter);
+  }
+
+  /// 只烤外层（global.*）模板，保留游戏内部命名空间
+  /// （vars.* / event.* / entities.* / world.* / loop.*）。
   Map<String, dynamic> _bakeOuterTemplates(
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
@@ -87,10 +96,16 @@ class JsonFlameGameWidget extends JsonBaseWidget {
   }
 
   bool _isGameInternalExpression(String expr) {
-    return expr.startsWith('vars.') ||
+    return expr == 'vars' ||
+        expr.startsWith('vars.') ||
+        expr == 'event' ||
         expr.startsWith('event.') ||
+        expr == 'entities' ||
         expr.startsWith('entities.') ||
+        expr == 'world' ||
         expr.startsWith('world.') ||
+        expr == 'loop' ||
+        expr.startsWith('loop.') ||
         expr == 'score' ||
         expr == 'best' ||
         expr == 'game_over';
