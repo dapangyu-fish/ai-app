@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -5069,6 +5069,14 @@
                                 }
                               },
                               {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "qblock_{{ entities.player.yCollision.objectId }}",
+                                  "field": "state.content"
+                                },
+                                "assign": "vars._qblock_content"
+                              },
+                              {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
@@ -5076,7 +5084,7 @@
                                       {
                                         "==": [
                                           {
-                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                            "var": "vars._qblock_content"
                                           },
                                           "coin"
                                         ]
@@ -5184,7 +5192,7 @@
                                       {
                                         "==": [
                                           {
-                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                            "var": "vars._qblock_content"
                                           },
                                           "red mushroom"
                                         ]
@@ -5264,7 +5272,7 @@
                                       {
                                         "==": [
                                           {
-                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                            "var": "vars._qblock_content"
                                           },
                                           "green mushroom"
                                         ]
@@ -5414,7 +5422,7 @@
                                       {
                                         "==": [
                                           {
-                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                            "var": "vars._qblock_content"
                                           },
                                           "flower"
                                         ]
@@ -5564,7 +5572,7 @@
                                       {
                                         "==": [
                                           {
-                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                            "var": "vars._qblock_content"
                                           },
                                           "mushroom flower"
                                         ]
@@ -5714,7 +5722,7 @@
                                       {
                                         "==": [
                                           {
-                                            "var": "entities.qblock_{{ entities.player.yCollision.objectId }}.content"
+                                            "var": "vars._qblock_content"
                                           },
                                           "star"
                                         ]
