@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.36",
+    "version": "1.0.37",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -293,7 +293,7 @@
                 "accel": 900,
                 "friction": 900,
                 "enemy_speed": 100,
-                "enemy_activation_ahead": 760,
+                "enemy_activation_ahead": 1200,
                 "title_choice": 0,
                 "powerup_hit": null,
                 "powerup_speed": 140,
@@ -4873,11 +4873,11 @@
                                 "step_time": 0.2,
                                 "position": [
                                   "{{ object.x }}",
-                                  352
+                                  304
                                 ],
                                 "size": [
                                   32,
-                                  48
+                                  96
                                 ],
                                 "velocity": [
                                   0,
@@ -4889,7 +4889,9 @@
                                   "dir": -1,
                                   "activated": true,
                                   "assetLoadingOverlay": false,
-                                  "spriteOffsetY": -48,
+                                  "spriteW": 32,
+                                  "spriteH": 48,
+                                  "spriteOffsetY": 0,
                                   "shell": false,
                                   "moving_shell": false
                                 },

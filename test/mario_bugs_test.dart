@@ -804,7 +804,7 @@ void main() {
     expect(game.entities['flagpole_111'], isA<SpriteEntity>());
 
     final player = game.entities['player'] as PixelEntity;
-    player.x = 2500;
+    player.x = 2200;
     game.vars['state'] = 'running';
     game.logic.runLogic(frameLogic, {'dt': 0.016});
     final koopa = game.entities['enemy_98'];
@@ -812,18 +812,23 @@ void main() {
     expect((koopa as PixelEntity).state['kind'], 'koopa');
     expect(
       koopa.state['spriteOffsetY'],
-      -48,
-      reason: 'Koopa sprite must render above the foreground ground art',
+      0,
+      reason: 'Koopa visual sprite is drawn from the top of its hit box',
+    );
+    expect(
+      koopa.state['spriteH'],
+      48,
+      reason: 'Koopa draws at the original scaled sprite height',
     );
     expect(
       koopa.y + koopa.h,
       closeTo(400, 1),
-      reason: 'Koopa collision feet should still align with the ground',
+      reason: 'Koopa hit box should extend down to the ground',
     );
     final farX = koopa.x;
     expect(koopa.vx, 0, reason: 'Koopa should be present but idle off-screen');
 
-    player.x = 2800;
+    player.x = 2500;
     game.logic.runLogic(frameLogic, {'dt': 0.016});
     expect(koopa.vx, lessThan(0));
     expect(koopa.x, lessThan(farX));
@@ -832,7 +837,7 @@ void main() {
     }
     expect(
       koopa.y,
-      closeTo(352, 1),
+      closeTo(304, 1),
       reason: 'Koopa should stay on the platform after activation',
     );
     expect(
@@ -934,6 +939,68 @@ void main() {
     expect(player.h, 32);
     expect(player.w, 24);
     expect(player.state['hurtTimer'], greaterThan(0));
+  });
+
+  test('真实 Mario JSON: small Mario 侧碰 Koopa 会扣生命', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'running'});
+    game.audio.dispose();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+    final mainLogic =
+        ((frameLogic[8] as Map<String, dynamic>)['args']
+                as Map<String, dynamic>)['else']
+            as List;
+    final hitAction = mainLogic.cast<Map<String, dynamic>>().firstWhere(
+      (node) =>
+          node['call'] == '@if' && node.toString().contains('vars.hit_enemy'),
+    );
+
+    final player = game.entities['player'] as PixelEntity;
+    player
+      ..x = 108
+      ..y = 368
+      ..w = 24
+      ..h = 32
+      ..vy = 0;
+    player.state['hurtTimer'] = 0;
+    game.spawnEntity('enemy_98', {
+      'kind': 'animated_sprite',
+      'asset': '',
+      'position': [100, 304],
+      'size': [32, 96],
+      'velocity': [0, 0],
+      'auto_update': false,
+      'state': {'kind': 'koopa', 'dir': -1, 'tiledObjectId': 98, 'spriteH': 48},
+      'frame_size': [16, 24],
+      'frames': 2,
+      'frames_per_row': 2,
+      'render': {'shape': 'rect', 'color': '#00FF00'},
+    });
+
+    final hit = game.logic.runAction({
+      'call': '@collision.first',
+      'args': {'a': 'player', 'where_prefix': 'enemy_'},
+    });
+    expect(hit, 'enemy_98');
+
+    game.vars['player_power'] = null;
+    game.vars['lives'] = 3;
+    game.vars['hit_enemy'] = 'enemy_98';
+    game.logic.runStep(hitAction);
+
+    expect(game.vars['lives'], 2);
   });
 
   test('真实 Mario JSON: Koopa 被踩后变成可踢龟壳', () async {
