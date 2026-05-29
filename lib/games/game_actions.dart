@@ -1775,43 +1775,74 @@ class GameActions {
     final previousBottom = previousY + player.h;
     player.y += dy;
     var rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
-    for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
-      if (dy < 0 &&
-          _isOneWayPlatform(
+    final collisions = map.collisionRectsIn(rect).where((c) => c.solid);
+    if (dy < 0) {
+      final hit = _bestUpwardCollision(
+        rect,
+        collisions.where(
+          (collision) => !_isOneWayPlatform(
             collision,
             oneWayTypes: oneWayTypes,
             oneWayTilesets: oneWayTilesets,
-          )) {
-        continue;
-      }
+          ),
+        ),
+      );
+      if (hit == null) return;
+      player.y = hit.rect.bottom;
+      player.state['blockedUp'] = true;
+      player.state['yCollision'] = hit.toMap();
+      player.vy = 0;
+      return;
+    }
+
+    for (final collision in collisions) {
       final solid = collision.rect;
       rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
       if (!solid.overlaps(rect)) continue;
-      if (dy > 0) {
-        final slopeTop = _slopeTopAt(collision, rect, map.scale);
-        // Only land on a top surface when the actor approached it from above.
-        // Without this guard, side contact with tall solids (pipes, walls,
-        // crates) can be resolved as a vertical landing and the actor appears
-        // to climb the obstacle while holding horizontal movement.
-        final landingSlop = max(
-          2.0,
-          min(8.0, map.tileHeight * map.scale * 0.25),
-        );
-        if (previousBottom > slopeTop + landingSlop) {
-          continue;
-        }
-        player.y = slopeTop - player.h;
-        player.state['onGround'] = true;
-        player.state['blockedDown'] = true;
-        player.state['onGroundCollision'] = collision.toMap();
-        player.state['doubleJumpUsed'] = false;
-      } else {
-        player.y = solid.bottom;
-        player.state['blockedUp'] = true;
+      final slopeTop = _slopeTopAt(collision, rect, map.scale);
+      // Only land on a top surface when the actor approached it from above.
+      // Without this guard, side contact with tall solids (pipes, walls,
+      // crates) can be resolved as a vertical landing and the actor appears
+      // to climb the obstacle while holding horizontal movement.
+      final landingSlop = max(2.0, min(8.0, map.tileHeight * map.scale * 0.25));
+      if (previousBottom > slopeTop + landingSlop) {
+        continue;
       }
+      player.y = slopeTop - player.h;
+      player.state['onGround'] = true;
+      player.state['blockedDown'] = true;
+      player.state['onGroundCollision'] = collision.toMap();
+      player.state['doubleJumpUsed'] = false;
       player.state['yCollision'] = collision.toMap();
       player.vy = 0;
     }
+  }
+
+  static TiledTileCollision? _bestUpwardCollision(
+    Rect actor,
+    Iterable<TiledTileCollision> collisions,
+  ) {
+    TiledTileCollision? best;
+    double? bestBottom;
+    double? bestScore;
+    for (final collision in collisions) {
+      final solid = collision.rect;
+      if (!solid.overlaps(actor)) continue;
+      final overlap =
+          min(actor.right, solid.right) - max(actor.left, solid.left);
+      if (overlap <= 0) continue;
+      final centerDistance = (actor.center.dx - solid.center.dx).abs();
+      final score = centerDistance - overlap * 0.25;
+      final bottom = solid.bottom;
+      if (best == null ||
+          bottom > bestBottom! + 0.001 ||
+          ((bottom - bestBottom).abs() <= 0.001 && score < bestScore!)) {
+        best = collision;
+        bestBottom = bottom;
+        bestScore = score;
+      }
+    }
+    return best;
   }
 
   static double _slopeTopAt(

@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.26",
+    "version": "1.0.27",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -5422,6 +5422,226 @@
                               ]
                             },
                             "then": [
+                              {
+                                "call": "@spawn",
+                                "args": {
+                                  "kind": "animated_sprite",
+                                  "id": "brick_piece_{{ entities.player.yCollision.objectId }}_a",
+                                  "priority": 34,
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "src_origin": [
+                                    16,
+                                    0
+                                  ],
+                                  "frame_size": [
+                                    8,
+                                    8
+                                  ],
+                                  "frames": 4,
+                                  "frames_per_row": 1,
+                                  "frame_step": [
+                                    0,
+                                    0
+                                  ],
+                                  "step_time": 0.055,
+                                  "loop": false,
+                                  "position": [
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.x"
+                                        },
+                                        2
+                                      ]
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.y"
+                                        },
+                                        2
+                                      ]
+                                    }
+                                  ],
+                                  "size": [
+                                    16,
+                                    16
+                                  ],
+                                  "velocity": [
+                                    -95,
+                                    -255
+                                  ],
+                                  "state": {
+                                    "removeOnFinish": true,
+                                    "assetLoadingOverlay": false
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@spawn",
+                                "args": {
+                                  "kind": "animated_sprite",
+                                  "id": "brick_piece_{{ entities.player.yCollision.objectId }}_b",
+                                  "priority": 34,
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "src_origin": [
+                                    24,
+                                    0
+                                  ],
+                                  "frame_size": [
+                                    8,
+                                    8
+                                  ],
+                                  "frames": 4,
+                                  "frames_per_row": 1,
+                                  "frame_step": [
+                                    0,
+                                    0
+                                  ],
+                                  "step_time": 0.055,
+                                  "loop": false,
+                                  "position": [
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.x"
+                                        },
+                                        14
+                                      ]
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.y"
+                                        },
+                                        2
+                                      ]
+                                    }
+                                  ],
+                                  "size": [
+                                    16,
+                                    16
+                                  ],
+                                  "velocity": [
+                                    95,
+                                    -255
+                                  ],
+                                  "state": {
+                                    "removeOnFinish": true,
+                                    "assetLoadingOverlay": false
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@spawn",
+                                "args": {
+                                  "kind": "animated_sprite",
+                                  "id": "brick_piece_{{ entities.player.yCollision.objectId }}_c",
+                                  "priority": 34,
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "src_origin": [
+                                    16,
+                                    8
+                                  ],
+                                  "frame_size": [
+                                    8,
+                                    8
+                                  ],
+                                  "frames": 4,
+                                  "frames_per_row": 1,
+                                  "frame_step": [
+                                    0,
+                                    0
+                                  ],
+                                  "step_time": 0.055,
+                                  "loop": false,
+                                  "position": [
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.x"
+                                        },
+                                        2
+                                      ]
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.y"
+                                        },
+                                        14
+                                      ]
+                                    }
+                                  ],
+                                  "size": [
+                                    16,
+                                    16
+                                  ],
+                                  "velocity": [
+                                    -70,
+                                    -190
+                                  ],
+                                  "state": {
+                                    "removeOnFinish": true,
+                                    "assetLoadingOverlay": false
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@spawn",
+                                "args": {
+                                  "kind": "animated_sprite",
+                                  "id": "brick_piece_{{ entities.player.yCollision.objectId }}_d",
+                                  "priority": 34,
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "src_origin": [
+                                    24,
+                                    8
+                                  ],
+                                  "frame_size": [
+                                    8,
+                                    8
+                                  ],
+                                  "frames": 4,
+                                  "frames_per_row": 1,
+                                  "frame_step": [
+                                    0,
+                                    0
+                                  ],
+                                  "step_time": 0.055,
+                                  "loop": false,
+                                  "position": [
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.x"
+                                        },
+                                        14
+                                      ]
+                                    },
+                                    {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.yCollision.y"
+                                        },
+                                        14
+                                      ]
+                                    }
+                                  ],
+                                  "size": [
+                                    16,
+                                    16
+                                  ],
+                                  "velocity": [
+                                    70,
+                                    -190
+                                  ],
+                                  "state": {
+                                    "removeOnFinish": true,
+                                    "assetLoadingOverlay": false
+                                  }
+                                }
+                              },
                               {
                                 "call": "@despawn",
                                 "args": {

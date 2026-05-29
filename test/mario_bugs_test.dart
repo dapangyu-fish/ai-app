@@ -905,6 +905,77 @@ void main() {
     expect(player.state['hurtTimer'], greaterThan(0));
   });
 
+  test('平台跳跃: 向上撞击多个相邻块时选择角色中心命中的块', () async {
+    final game = JsonFlameGame(
+      spec: {
+        'world': {'kind': 'pixel', 'width': 320, 'height': 240, 'bg': '#000'},
+        'physics': {'engine': 'aabb_platformer'},
+        'entities': {
+          'map': {
+            'kind': 'tiled_map',
+            'scale': 1,
+            'map_data': {
+              'width': 20,
+              'height': 15,
+              'tilewidth': 16,
+              'tileheight': 16,
+              'layers': [
+                {
+                  'type': 'objectgroup',
+                  'name': 'brick blocks',
+                  'objects': [
+                    {'id': 10, 'x': 64, 'y': 100, 'width': 32, 'height': 32},
+                  ],
+                },
+                {
+                  'type': 'objectgroup',
+                  'name': 'question blocks',
+                  'objects': [
+                    {'id': 20, 'x': 32, 'y': 100, 'width': 32, 'height': 32},
+                    {'id': 21, 'x': 96, 'y': 100, 'width': 32, 'height': 32},
+                  ],
+                },
+              ],
+            },
+            'solid_layers': ['brick blocks', 'question blocks'],
+            'collidable': true,
+          },
+          'player': {
+            'kind': 'pixel',
+            'position': [57, 137],
+            'size': [46, 32],
+            'velocity': [0, -200],
+            'auto_update': false,
+            'state': {},
+            'render': {'shape': 'rect', 'color': '#FF0000'},
+          },
+        },
+      },
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame();
+    final map = game.entities['map'] as TiledMapEntity;
+    await map.load();
+
+    game.logic.runLogic([
+      {
+        'call': '@platformer.step',
+        'args': {
+          'id': 'player',
+          'map': 'map',
+          'dt': 0.05,
+          'gravity': 0,
+          'max_fall': 1000,
+        },
+      },
+    ]);
+
+    final player = game.entities['player'] as PixelEntity;
+    expect(player.state['blockedUp'], true);
+    expect(player.state['yCollision']['tileset'], 'brick blocks');
+    expect(player.state['yCollision']['objectId'], 10);
+  });
+
   test('真实 Mario JSON: powered Mario 碎砖会移除砖块实体和 TMX 碰撞对象', () async {
     final raw =
         json.decode(
@@ -977,6 +1048,10 @@ void main() {
     game.logic.runStep(brickBreakAction);
 
     expect(game.entities['brick_7'], isNull);
+    expect(game.entities['brick_piece_7_a'], isA<AnimatedSpriteEntity>());
+    expect(game.entities['brick_piece_7_b'], isA<AnimatedSpriteEntity>());
+    expect(game.entities['brick_piece_7_c'], isA<AnimatedSpriteEntity>());
+    expect(game.entities['brick_piece_7_d'], isA<AnimatedSpriteEntity>());
     expect(map.objectsByLayer['brick blocks'], isEmpty);
     expect(
       map.collisionRectsIn(const Rect.fromLTWH(200, 160, 32, 32)),
