@@ -1916,7 +1916,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `@tiled.collisions({map, rect})` / `@tiled.collisions({map, entity})` | 返回指定矩形或 entity AABB 范围内的瓦片碰撞列表 |
 | `@tiled.has_collision_type({map, rect, type})` / `@tiled.has_collision_type({map, entity, type})` | 判断范围内是否命中特定碰撞类型；`type: "hazard"` 时掉出地图底部也视为命中 |
 | `@tiled.nearest_object({map, layer, before_x})` | 查某层中 `x < before_x` 且离 `before_x` 最近的 object，常用于找最近重生点 |
-| `@tiled.remove_object({map, layer, object_id})` | 从指定 object layer 移除一个 object，并标记为已消费；适合破坏砖块、拾取后不再参与碰撞的地图对象 |
+| `@tiled.remove_object({map, layer, object_id})` | 从指定 object layer 移除一个 object，并标记为已消费；适合破坏、拾取、开关触发后不再参与碰撞的地图对象 |
 | `@platformer.step({...})` | 通用平台跳跃物理步进：重力、地面、墙、危险区域等 |
 | `@platformer.backend({...})` | 平台物理后端辅助，供复杂 platformer 使用 |
 | `@platformer.respawn({...})` | 按 respawn 点重生 |
@@ -1935,9 +1935,9 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 `frame.logic` 里读取并触发扣命、重生或 `@game_over`，避免角色掉出地图后继续隐形运行。
 它也会写入通用碰撞边信息：`blockedLeft` / `blockedRight` / `blockedUp` /
 `blockedDown`、`xCollision` / `yCollision` / `onGroundCollision`。平台游戏可以据此
-实现撞墙反向、顶砖块、踩地触发等状态机，不要靠猜坐标。
+实现撞墙反向、下方撞击可交互物、踩地触发等状态机，不要靠猜坐标。
 
-平台游戏发布前至少过这组验收：地面能站住；墙/管道/箱子从侧面会阻挡；砖块从下方能顶到；
+平台游戏发布前至少过这组验收：地面能站住；墙/管道/箱子从侧面会阻挡；可交互地图块从下方能命中；
 单向平台只在显式 `one_way_types` / `one_way_tilesets` 指定时生效；掉坑、碰危险物、冲出地图会扣命、
 重生或结束；敌人、道具、子弹不会因为离屏/命中路径遗漏而永久卡住状态。
 | `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
