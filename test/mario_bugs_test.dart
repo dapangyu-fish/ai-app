@@ -810,6 +810,11 @@ void main() {
     final koopa = game.entities['enemy_98'];
     expect(koopa, isA<AnimatedSpriteEntity>());
     expect((koopa as PixelEntity).state['kind'], 'koopa');
+    expect(
+      koopa.state['spriteOffsetY'],
+      -24,
+      reason: 'Koopa sprite is rendered above its collision feet',
+    );
     final farX = koopa.x;
     expect(koopa.vx, 0, reason: 'Koopa should be present but idle off-screen');
 
