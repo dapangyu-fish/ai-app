@@ -468,6 +468,8 @@ class Validator:
         render_box_offenders: list[dict[str, str]] = []
         for path, node in self._iter_dicts(self.root):
             kind = node.get("kind")
+            if kind is not None and not isinstance(kind, str):
+                continue
             if kind not in {"sprite", "animated_sprite"}:
                 continue
             render = node.get("render")

@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -300,7 +300,8 @@
                 "player_power": null,
                 "coins": 0,
                 "time": 400,
-                "time_accum": 0
+                "time_accum": 0,
+                "debug_powerup": true
               },
               "entities": {
                 "background": {
@@ -3951,6 +3952,7 @@
                                 "args": {
                                   "map": "map",
                                   "layer": "question blocks",
+                                  "debug": true,
                                   "templates": {
                                     "coin": {
                                       "id_prefix": "qblock_",
@@ -5110,6 +5112,27 @@
                                 "assign": "vars._qblock_content"
                               },
                               {
+                                "call": "@debug.log",
+                                "args": {
+                                  "enabled": "{{ vars.debug_powerup }}",
+                                  "tag": "MARIO_POWERUP",
+                                  "message": "qblock_hit",
+                                  "data": {
+                                    "objectId": "{{ entities.player.yCollision.objectId }}",
+                                    "collisionType": "{{ entities.player.yCollision.type }}",
+                                    "content": "{{ vars._qblock_content }}",
+                                    "hitX": "{{ entities.player.yCollision.x }}",
+                                    "hitY": "{{ entities.player.yCollision.y }}",
+                                    "powerupExists": {
+                                      "call": "@entity.exists",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
@@ -5338,6 +5361,65 @@
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "field": "state.opacity",
                                         "value": 1
+                                      }
+                                    },
+                                    {
+                                      "call": "@debug.log",
+                                      "args": {
+                                        "enabled": "{{ vars.debug_powerup }}",
+                                        "tag": "MARIO_POWERUP",
+                                        "message": "red_powerup_activated",
+                                        "data": {
+                                          "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                          "exists": {
+                                            "call": "@entity.exists",
+                                            "args": {
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}"
+                                            }
+                                          },
+                                          "x": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "field": "x"
+                                            }
+                                          },
+                                          "y": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "field": "y"
+                                            }
+                                          },
+                                          "powerupKind": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "field": "state.kind"
+                                            }
+                                          },
+                                          "revealing": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "field": "state.revealing"
+                                            }
+                                          },
+                                          "targetY": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "field": "state.targetY"
+                                            }
+                                          },
+                                          "opacity": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                              "field": "state.opacity"
+                                            }
+                                          }
+                                        }
                                       }
                                     },
                                     {
@@ -6123,6 +6205,33 @@
                                               "id": "{{ vars._powerup_id }}",
                                               "field": "priority",
                                               "value": 35
+                                            }
+                                          },
+                                          {
+                                            "call": "@debug.log",
+                                            "args": {
+                                              "enabled": "{{ vars.debug_powerup }}",
+                                              "tag": "MARIO_POWERUP",
+                                              "message": "powerup_revealed",
+                                              "data": {
+                                                "id": "{{ vars._powerup_id }}",
+                                                "powerupKind": "{{ loop.entity.kind }}",
+                                                "x": {
+                                                  "call": "@entity.get",
+                                                  "args": {
+                                                    "id": "{{ vars._powerup_id }}",
+                                                    "field": "x"
+                                                  }
+                                                },
+                                                "y": {
+                                                  "call": "@entity.get",
+                                                  "args": {
+                                                    "id": "{{ vars._powerup_id }}",
+                                                    "field": "y"
+                                                  }
+                                                },
+                                                "targetY": "{{ loop.entity.targetY }}"
+                                              }
                                             }
                                           },
                                           {

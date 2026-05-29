@@ -13,6 +13,7 @@
 // - @game_over    : 触发结束（顺便 emit gameOver 事件）
 // - @game_reset   : 重置（关卡内重玩）
 
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' show Rect;
 
@@ -74,6 +75,21 @@ class GameActions {
           if (eventName == null || eventName.isEmpty) return false;
           final data = (args['data'] as Map?)?.cast<String, dynamic>() ?? {};
           game.emitEvent(eventName, data);
+          return true;
+        }
+      case '@print':
+      case '@debug.log':
+        {
+          if (args['enabled'] == false) return false;
+          final tag = args['tag']?.toString() ?? 'JSON GAME';
+          final message =
+              args['message']?.toString() ??
+              args['value']?.toString() ??
+              args['text']?.toString() ??
+              '';
+          final data = args['data'];
+          final suffix = data == null ? '' : ' ${jsonEncode(data)}';
+          debugPrint('[$tag] $message$suffix');
           return true;
         }
 
