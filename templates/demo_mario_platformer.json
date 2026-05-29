@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.21",
+    "version": "1.0.22",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -301,7 +301,10 @@
                 "coins": 0,
                 "time": 400,
                 "time_accum": 0,
-                "debug_powerup": true
+                "debug_powerup": true,
+                "debug_actors": true,
+                "debug_actor_time": 0,
+                "debug_actor_tick": false
               },
               "entities": {
                 "background": {
@@ -4511,6 +4514,43 @@
                       "then": [],
                       "else": [
                         {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.debug_actor_time",
+                            "value": {
+                              "+": [
+                                {
+                                  "var": "vars.debug_actor_time"
+                                },
+                                {
+                                  "var": "event.dt"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@set",
+                          "args": {
+                            "var": "vars.debug_actor_tick",
+                            "value": {
+                              "and": [
+                                {
+                                  "var": "vars.debug_actors"
+                                },
+                                {
+                                  ">=": [
+                                    {
+                                      "var": "vars.debug_actor_time"
+                                    },
+                                    0.5
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
                           "call": "@tiled.spawn_objects_near",
                           "args": {
                             "map": "map",
@@ -4676,14 +4716,29 @@
                             "where_prefix": "enemy_",
                             "do": [
                               {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._enemy_id",
+                                  "value": "{{ loop.id }}"
+                                }
+                              },
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._enemy_id }}",
+                                  "field": "state.dir"
+                                },
+                                "assign": "vars._enemy_dir"
+                              },
+                              {
                                 "call": "@entity.set",
                                 "args": {
-                                  "id": "{{ loop.id }}",
+                                  "id": "{{ vars._enemy_id }}",
                                   "field": "vx",
                                   "value": {
                                     "*": [
                                       {
-                                        "var": "loop.entity.dir"
+                                        "var": "vars._enemy_dir"
                                       },
                                       {
                                         "var": "vars.enemy_speed"
@@ -4695,12 +4750,13 @@
                               {
                                 "call": "@platformer.step",
                                 "args": {
-                                  "id": "{{ loop.id }}",
+                                  "id": "{{ vars._enemy_id }}",
                                   "map": "map",
                                   "dt": "{{ event.dt }}",
                                   "gravity": 1400,
                                   "max_fall": 900
-                                }
+                                },
+                                "assign": "vars._enemy_step_ok"
                               },
                               {
                                 "call": "@if",
@@ -4708,10 +4764,18 @@
                                   "cond": {
                                     "or": [
                                       {
-                                        "var": "entities.{{ loop.id }}.blockedLeft"
+                                        "call": "@entity.get",
+                                        "args": {
+                                          "id": "{{ vars._enemy_id }}",
+                                          "field": "state.blockedLeft"
+                                        }
                                       },
                                       {
-                                        "var": "entities.{{ loop.id }}.blockedRight"
+                                        "call": "@entity.get",
+                                        "args": {
+                                          "id": "{{ vars._enemy_id }}",
+                                          "field": "state.blockedRight"
+                                        }
                                       }
                                     ]
                                   },
@@ -4719,12 +4783,12 @@
                                     {
                                       "call": "@entity.set",
                                       "args": {
-                                        "id": "{{ loop.id }}",
+                                        "id": "{{ vars._enemy_id }}",
                                         "field": "state.dir",
                                         "value": {
                                           "*": [
                                             {
-                                              "var": "loop.entity.dir"
+                                              "var": "vars._enemy_dir"
                                             },
                                             -1
                                           ]
@@ -4737,9 +4801,59 @@
                               {
                                 "call": "@entity.flip_by_velocity",
                                 "args": {
-                                  "id": "{{ loop.id }}",
+                                  "id": "{{ vars._enemy_id }}",
                                   "axis": "x",
                                   "invert": false
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "var": "vars.debug_actor_tick"
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@debug.log",
+                                      "args": {
+                                        "tag": "MARIO_ACTORS",
+                                        "message": "enemy_step",
+                                        "data": {
+                                          "id": "{{ vars._enemy_id }}",
+                                          "step": "{{ vars._enemy_step_ok }}",
+                                          "x": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "{{ vars._enemy_id }}",
+                                              "field": "x"
+                                            }
+                                          },
+                                          "y": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "{{ vars._enemy_id }}",
+                                              "field": "y"
+                                            }
+                                          },
+                                          "vx": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "{{ vars._enemy_id }}",
+                                              "field": "vx"
+                                            }
+                                          },
+                                          "vy": {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "{{ vars._enemy_id }}",
+                                              "field": "vy"
+                                            }
+                                          },
+                                          "dir": "{{ vars._enemy_dir }}"
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
                               }
                             ]
@@ -6394,7 +6508,7 @@
                                         "cond": {
                                           "!=": [
                                             {
-                                              "var": "loop.entity.kind"
+                                              "var": "vars._powerup_kind"
                                             },
                                             "flower"
                                           ]
@@ -6408,14 +6522,14 @@
                                               "value": {
                                                 "*": [
                                                   {
-                                                    "var": "loop.entity.dir"
+                                                    "var": "vars._powerup_dir"
                                                   },
                                                   {
                                                     "if": [
                                                       {
                                                         "==": [
                                                           {
-                                                            "var": "loop.entity.kind"
+                                                            "var": "vars._powerup_kind"
                                                           },
                                                           "star"
                                                         ]
@@ -6440,7 +6554,8 @@
                                               "dt": "{{ event.dt }}",
                                               "gravity": 700,
                                               "max_fall": 900
-                                            }
+                                            },
+                                            "assign": "vars._powerup_step_ok"
                                           },
                                           {
                                             "call": "@if",
@@ -6471,7 +6586,7 @@
                                                     "value": {
                                                       "*": [
                                                         {
-                                                          "var": "loop.entity.dir"
+                                                          "var": "vars._powerup_dir"
                                                         },
                                                         -1
                                                       ]
@@ -6501,7 +6616,7 @@
                                                             {
                                                               "==": [
                                                                 {
-                                                                  "var": "loop.entity.kind"
+                                                                  "var": "vars._powerup_kind"
                                                                 },
                                                                 "star"
                                                               ]
@@ -6529,7 +6644,7 @@
                                                   {
                                                     "==": [
                                                       {
-                                                        "var": "loop.entity.kind"
+                                                        "var": "vars._powerup_kind"
                                                       },
                                                       "star"
                                                     ]
@@ -6574,11 +6689,86 @@
                                                 }
                                               ]
                                             }
+                                          },
+                                          {
+                                            "call": "@if",
+                                            "args": {
+                                              "cond": {
+                                                "var": "vars.debug_actor_tick"
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@debug.log",
+                                                  "args": {
+                                                    "tag": "MARIO_ACTORS",
+                                                    "message": "powerup_step",
+                                                    "data": {
+                                                      "id": "{{ vars._powerup_id }}",
+                                                      "step": "{{ vars._powerup_step_ok }}",
+                                                      "kind": "{{ vars._powerup_kind }}",
+                                                      "x": {
+                                                        "call": "@entity.get",
+                                                        "args": {
+                                                          "id": "{{ vars._powerup_id }}",
+                                                          "field": "x"
+                                                        }
+                                                      },
+                                                      "y": {
+                                                        "call": "@entity.get",
+                                                        "args": {
+                                                          "id": "{{ vars._powerup_id }}",
+                                                          "field": "y"
+                                                        }
+                                                      },
+                                                      "vx": {
+                                                        "call": "@entity.get",
+                                                        "args": {
+                                                          "id": "{{ vars._powerup_id }}",
+                                                          "field": "vx"
+                                                        }
+                                                      },
+                                                      "vy": {
+                                                        "call": "@entity.get",
+                                                        "args": {
+                                                          "id": "{{ vars._powerup_id }}",
+                                                          "field": "vy"
+                                                        }
+                                                      },
+                                                      "dir": "{{ vars._powerup_dir }}"
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
                                           }
                                         ]
                                       }
                                     }
                                   ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "var": "vars.debug_actor_tick"
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.debug_actor_time",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.debug_actor_tick",
+                                  "value": false
                                 }
                               }
                             ]

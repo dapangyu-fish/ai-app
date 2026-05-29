@@ -8,6 +8,7 @@ import 'package:flutter_application_1/games/flame_game_engine.dart';
 import 'package:flutter_application_1/games/game_entity.dart';
 import 'package:flutter_application_1/games/tiled_map_entity.dart';
 import 'package:flutter_application_1/json_ui/asset_manager.dart';
+import 'package:vector_math/vector_math.dart';
 
 const _localMarioTmxPath = '/tmp/flutter_game_ref/assets/tiles/mario.tmx';
 
@@ -527,6 +528,104 @@ void main() {
     // ignore: avoid_print
     print('位移: ${(goomba.x - startX).toStringAsFixed(2)}');
     expect(goomba.x, lessThan(startX), reason: 'goomba 应向左走');
+  });
+
+  test('真实 Mario JSON: 完整 game.update 帧循环会推进敌人和蘑菇', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final entities = Map<String, dynamic>.from(flameSpec['entities'] as Map);
+    entities['map'] = {
+      ...Map<String, dynamic>.from(entities['map'] as Map),
+      'source': '',
+      'map_data': {
+        'width': 100,
+        'height': 30,
+        'tilewidth': 8,
+        'tileheight': 8,
+        'layers': [
+          {
+            'type': 'objectgroup',
+            'name': 'question blocks',
+            'objects': [
+              {
+                'id': 3,
+                'type': 'red mushroom',
+                'x': 336,
+                'y': 136,
+                'width': 16,
+                'height': 16,
+              },
+            ],
+          },
+          {
+            'type': 'objectgroup',
+            'name': 'grounds',
+            'objects': [
+              {'id': 2, 'x': 0, 'y': 200, 'width': 1100, 'height': 24},
+            ],
+          },
+          {
+            'type': 'objectgroup',
+            'name': 'enemies',
+            'objects': [
+              {
+                'id': 14,
+                'type': 'goomba',
+                'x': 420,
+                'y': 184,
+                'width': 16,
+                'height': 16,
+              },
+            ],
+          },
+        ],
+      },
+    };
+    flameSpec['entities'] = entities;
+
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.onGameResize(Vector2(960, 540));
+    game.resetGame(varOverrides: {'state': 'loading'});
+    game.audio.dispose();
+    final map = game.entities['map'] as TiledMapEntity;
+    await map.load();
+
+    game.update(0.016);
+    expect(game.vars['state'], 'running');
+    expect(game.entities['enemy_14'], isA<PixelEntity>());
+    final goomba = game.entities['enemy_14'] as PixelEntity;
+    final goombaStartX = goomba.x;
+
+    final player = game.entities['player'] as PixelEntity;
+    player
+      ..x = 676
+      ..y = 304
+      ..vx = 0
+      ..vy = -360;
+    game.update(0.016);
+    expect(game.entities['powerup_3'], isA<PixelEntity>());
+    final mushroom = game.entities['powerup_3'] as PixelEntity;
+    final mushroomStartX = mushroom.x;
+
+    for (var i = 0; i < 60; i++) {
+      game.update(0.016);
+    }
+
+    expect(goomba.x, lessThan(goombaStartX), reason: '完整帧循环中 goomba 应向左走');
+    expect(
+      mushroom.x,
+      greaterThan(mushroomStartX),
+      reason: '完整帧循环中 red mushroom 应向右移动',
+    );
   });
 
   test('BUG 2: 长按跳 vs 短按跳 高度对比（原版 0.4 系数）', () async {
