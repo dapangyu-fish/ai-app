@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.29",
+    "version": "1.0.30",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -293,6 +293,7 @@
                 "accel": 900,
                 "friction": 900,
                 "enemy_speed": 100,
+                "enemy_activation_ahead": 760,
                 "title_choice": 0,
                 "powerup_hit": null,
                 "powerup_speed": 140,
@@ -301,8 +302,8 @@
                 "coins": 0,
                 "time": 400,
                 "time_accum": 0,
-                "debug_powerup": true,
-                "debug_actors": true,
+                "debug_powerup": false,
+                "debug_actors": false,
                 "debug_actor_time": 0,
                 "debug_actor_tick": false,
                 "hit_shell": null,
@@ -4763,13 +4764,10 @@
                           }
                         },
                         {
-                          "call": "@tiled.spawn_objects_near",
+                          "call": "@tiled.spawn_objects",
                           "args": {
                             "map": "map",
                             "layer": "enemies",
-                            "reference": "player",
-                            "proximity": 900,
-                            "despawn_distance": 1800,
                             "templates": {
                               "goomba": {
                                 "id_prefix": "enemy_",
@@ -4950,13 +4948,39 @@
                                   "id": "{{ vars._enemy_id }}",
                                   "field": "vx",
                                   "value": {
-                                    "*": [
+                                    "if": [
                                       {
-                                        "var": "vars._enemy_dir"
+                                        "<=": [
+                                          {
+                                            "call": "@entity.get",
+                                            "args": {
+                                              "id": "{{ vars._enemy_id }}",
+                                              "field": "x"
+                                            }
+                                          },
+                                          {
+                                            "+": [
+                                              {
+                                                "var": "entities.player.x"
+                                              },
+                                              {
+                                                "var": "vars.enemy_activation_ahead"
+                                              }
+                                            ]
+                                          }
+                                        ]
                                       },
                                       {
-                                        "var": "vars.enemy_speed"
-                                      }
+                                        "*": [
+                                          {
+                                            "var": "vars._enemy_dir"
+                                          },
+                                          {
+                                            "var": "vars.enemy_speed"
+                                          }
+                                        ]
+                                      },
+                                      0
                                     ]
                                   }
                                 }

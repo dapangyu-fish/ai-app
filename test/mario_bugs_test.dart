@@ -807,16 +807,16 @@ void main() {
     player.x = 2500;
     game.vars['state'] = 'running';
     game.logic.runLogic(frameLogic, {'dt': 0.016});
-    expect(
-      game.entities['enemy_98'],
-      isNull,
-      reason: 'Koopa should not start walking while still far off-screen',
-    );
+    final koopa = game.entities['enemy_98'];
+    expect(koopa, isA<AnimatedSpriteEntity>());
+    expect((koopa as PixelEntity).state['kind'], 'koopa');
+    final farX = koopa.x;
+    expect(koopa.vx, 0, reason: 'Koopa should be present but idle off-screen');
 
-    player.x = 2700;
+    player.x = 2800;
     game.logic.runLogic(frameLogic, {'dt': 0.016});
-    expect(game.entities['enemy_98'], isA<AnimatedSpriteEntity>());
-    expect((game.entities['enemy_98'] as PixelEntity).state['kind'], 'koopa');
+    expect(koopa.vx, lessThan(0));
+    expect(koopa.x, lessThan(farX));
   });
 
   test('真实 Mario JSON: 只有 fire 状态可以发射原版火球 sprite', () async {
