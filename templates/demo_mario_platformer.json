@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -6128,10 +6128,42 @@
                                 }
                               },
                               {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._powerup_id }}",
+                                  "field": "state.revealing"
+                                },
+                                "assign": "vars._powerup_revealing"
+                              },
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._powerup_id }}",
+                                  "field": "state.kind"
+                                },
+                                "assign": "vars._powerup_kind"
+                              },
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._powerup_id }}",
+                                  "field": "state.dir"
+                                },
+                                "assign": "vars._powerup_dir"
+                              },
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._powerup_id }}",
+                                  "field": "state.targetY"
+                                },
+                                "assign": "vars._powerup_target_y"
+                              },
+                              {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "var": "loop.entity.revealing"
+                                    "var": "vars._powerup_revealing"
                                   },
                                   "then": [
                                     {
@@ -6148,7 +6180,7 @@
                                           ]
                                         },
                                         "min": {
-                                          "var": "loop.entity.targetY"
+                                          "var": "vars._powerup_target_y"
                                         }
                                       }
                                     },
@@ -6163,19 +6195,82 @@
                                       }
                                     },
                                     {
+                                      "call": "@entity.get",
+                                      "args": {
+                                        "id": "{{ vars._powerup_id }}",
+                                        "field": "y"
+                                      },
+                                      "assign": "vars._powerup_live_y"
+                                    },
+                                    {
+                                      "call": "@entity.get",
+                                      "args": {
+                                        "id": "{{ vars._powerup_id }}",
+                                        "field": "state.reveal_time"
+                                      },
+                                      "assign": "vars._powerup_reveal_time"
+                                    },
+                                    {
                                       "call": "@if",
                                       "args": {
                                         "cond": {
-                                          "<=": [
+                                          "and": [
                                             {
-                                              "var": "loop.entity.y"
+                                              "var": "vars.debug_powerup"
                                             },
                                             {
-                                              "+": [
+                                              "<": [
                                                 {
-                                                  "var": "loop.entity.targetY"
+                                                  "var": "vars._powerup_reveal_time"
                                                 },
-                                                1
+                                                0.12
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@debug.log",
+                                            "args": {
+                                              "tag": "MARIO_POWERUP",
+                                              "message": "powerup_tick",
+                                              "data": {
+                                                "id": "{{ vars._powerup_id }}",
+                                                "y": "{{ vars._powerup_live_y }}",
+                                                "targetY": "{{ vars._powerup_target_y }}",
+                                                "revealTime": "{{ vars._powerup_reveal_time }}"
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "or": [
+                                            {
+                                              "<=": [
+                                                {
+                                                  "var": "vars._powerup_live_y"
+                                                },
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "var": "vars._powerup_target_y"
+                                                    },
+                                                    1
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              ">=": [
+                                                {
+                                                  "var": "vars._powerup_reveal_time"
+                                                },
+                                                0.75
                                               ]
                                             }
                                           ]
@@ -6187,7 +6282,7 @@
                                               "id": "{{ vars._powerup_id }}",
                                               "field": "y",
                                               "value": {
-                                                "var": "loop.entity.targetY"
+                                                "var": "vars._powerup_target_y"
                                               }
                                             }
                                           },
@@ -6215,7 +6310,7 @@
                                               "message": "powerup_revealed",
                                               "data": {
                                                 "id": "{{ vars._powerup_id }}",
-                                                "powerupKind": "{{ loop.entity.kind }}",
+                                                "powerupKind": "{{ vars._powerup_kind }}",
                                                 "x": {
                                                   "call": "@entity.get",
                                                   "args": {
@@ -6230,7 +6325,7 @@
                                                     "field": "y"
                                                   }
                                                 },
-                                                "targetY": "{{ loop.entity.targetY }}"
+                                                "targetY": "{{ vars._powerup_target_y }}"
                                               }
                                             }
                                           },
@@ -6240,7 +6335,7 @@
                                               "cond": {
                                                 "!=": [
                                                   {
-                                                    "var": "loop.entity.kind"
+                                                    "var": "vars._powerup_kind"
                                                   },
                                                   "flower"
                                                 ]
@@ -6254,14 +6349,14 @@
                                                     "value": {
                                                       "*": [
                                                         {
-                                                          "var": "loop.entity.dir"
+                                                          "var": "vars._powerup_dir"
                                                         },
                                                         {
                                                           "if": [
                                                             {
                                                               "==": [
                                                                 {
-                                                                  "var": "loop.entity.kind"
+                                                                  "var": "vars._powerup_kind"
                                                                 },
                                                                 "star"
                                                               ]
