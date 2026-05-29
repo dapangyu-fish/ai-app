@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.27",
+    "version": "1.0.28",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -304,7 +304,10 @@
                 "debug_powerup": true,
                 "debug_actors": true,
                 "debug_actor_time": 0,
-                "debug_actor_tick": false
+                "debug_actor_tick": false,
+                "hit_shell": null,
+                "hit_shell_enemy": null,
+                "shell_speed": 400
               },
               "entities": {
                 "background": {
@@ -4879,7 +4882,9 @@
                                   "kind": "koopa",
                                   "dir": -1,
                                   "activated": true,
-                                  "assetLoadingOverlay": false
+                                  "assetLoadingOverlay": false,
+                                  "shell": false,
+                                  "moving_shell": false
                                 },
                                 "animations": {
                                   "walk": {
@@ -5060,6 +5065,215 @@
                                           },
                                           "dir": "{{ vars._enemy_dir }}"
                                         }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@for_each_entity",
+                          "args": {
+                            "where_prefix": "shell_",
+                            "do": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._shell_id",
+                                  "value": "{{ loop.id }}"
+                                }
+                              },
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._shell_id }}",
+                                  "field": "state.dir"
+                                },
+                                "assign": "vars._shell_dir"
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ vars._shell_id }}",
+                                  "field": "vx",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "vars._shell_dir"
+                                      },
+                                      {
+                                        "var": "vars.shell_speed"
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ vars._shell_id }}",
+                                  "field": "state.moving_shell",
+                                  "value": {
+                                    "!=": [
+                                      {
+                                        "var": "vars._shell_dir"
+                                      },
+                                      0
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@platformer.step",
+                                "args": {
+                                  "id": "{{ vars._shell_id }}",
+                                  "map": "map",
+                                  "dt": "{{ event.dt }}",
+                                  "gravity": 1400,
+                                  "max_fall": 900
+                                },
+                                "assign": "vars._shell_step_ok"
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "or": [
+                                      {
+                                        "call": "@entity.get",
+                                        "args": {
+                                          "id": "{{ vars._shell_id }}",
+                                          "field": "state.blockedLeft"
+                                        }
+                                      },
+                                      {
+                                        "call": "@entity.get",
+                                        "args": {
+                                          "id": "{{ vars._shell_id }}",
+                                          "field": "state.blockedRight"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "{{ vars._shell_id }}",
+                                        "field": "state.dir",
+                                        "value": {
+                                          "*": [
+                                            {
+                                              "var": "vars._shell_dir"
+                                            },
+                                            -1
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "and": [
+                                      {
+                                        "!=": [
+                                          {
+                                            "var": "vars._shell_dir"
+                                          },
+                                          0
+                                        ]
+                                      },
+                                      {
+                                        "<": [
+                                          {
+                                            "var": "entities.{{ vars._shell_id }}.x"
+                                          },
+                                          {
+                                            "-": [
+                                              {
+                                                "var": "entities.player.x"
+                                              },
+                                              1500
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@despawn",
+                                      "args": {
+                                        "id": "{{ vars._shell_id }}"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "call": "@if",
+                                "args": {
+                                  "cond": {
+                                    "!=": [
+                                      {
+                                        "var": "vars._shell_dir"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  "then": [
+                                    {
+                                      "call": "@collision.first",
+                                      "args": {
+                                        "a": "{{ vars._shell_id }}",
+                                        "where_prefix": "enemy_"
+                                      },
+                                      "assign": "vars.hit_shell_enemy"
+                                    },
+                                    {
+                                      "call": "@if",
+                                      "args": {
+                                        "cond": {
+                                          "!=": [
+                                            {
+                                              "var": "vars.hit_shell_enemy"
+                                            },
+                                            null
+                                          ]
+                                        },
+                                        "then": [
+                                          {
+                                            "call": "@despawn",
+                                            "args": {
+                                              "id": "{{ vars.hit_shell_enemy }}"
+                                            }
+                                          },
+                                          {
+                                            "call": "@score.add",
+                                            "args": {
+                                              "n": 100
+                                            }
+                                          },
+                                          {
+                                            "call": "@audio.play",
+                                            "args": {
+                                              "id": "kick"
+                                            }
+                                          },
+                                          {
+                                            "call": "@set",
+                                            "args": {
+                                              "var": "vars.hit_shell_enemy",
+                                              "value": null
+                                            }
+                                          }
+                                        ]
                                       }
                                     }
                                   ]
@@ -7568,29 +7782,143 @@
                                         },
                                         "then": [
                                           {
-                                            "call": "@despawn",
+                                            "call": "@if",
                                             "args": {
-                                              "id": "{{ vars.hit_enemy }}"
-                                            }
-                                          },
-                                          {
-                                            "call": "@entity.set",
-                                            "args": {
-                                              "id": "player",
-                                              "field": "vy",
-                                              "value": -360
-                                            }
-                                          },
-                                          {
-                                            "call": "@score.add",
-                                            "args": {
-                                              "n": 100
-                                            }
-                                          },
-                                          {
-                                            "call": "@audio.play",
-                                            "args": {
-                                              "id": "stomp"
+                                              "cond": {
+                                                "==": [
+                                                  {
+                                                    "call": "@entity.get",
+                                                    "args": {
+                                                      "id": "{{ vars.hit_enemy }}",
+                                                      "field": "state.kind"
+                                                    }
+                                                  },
+                                                  "koopa"
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@entity.get",
+                                                  "args": {
+                                                    "id": "{{ vars.hit_enemy }}",
+                                                    "field": "state.tiledObjectId"
+                                                  },
+                                                  "assign": "vars._hit_enemy_object_id"
+                                                },
+                                                {
+                                                  "call": "@entity.get",
+                                                  "args": {
+                                                    "id": "{{ vars.hit_enemy }}",
+                                                    "field": "x"
+                                                  },
+                                                  "assign": "vars._hit_enemy_x"
+                                                },
+                                                {
+                                                  "call": "@entity.get",
+                                                  "args": {
+                                                    "id": "{{ vars.hit_enemy }}",
+                                                    "field": "y"
+                                                  },
+                                                  "assign": "vars._hit_enemy_y"
+                                                },
+                                                {
+                                                  "call": "@spawn",
+                                                  "args": {
+                                                    "kind": "sprite",
+                                                    "id": "shell_{{ vars._hit_enemy_object_id }}",
+                                                    "priority": 31,
+                                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                                    "position": [
+                                                      {
+                                                        "var": "vars._hit_enemy_x"
+                                                      },
+                                                      {
+                                                        "+": [
+                                                          {
+                                                            "var": "vars._hit_enemy_y"
+                                                          },
+                                                          18
+                                                        ]
+                                                      }
+                                                    ],
+                                                    "size": [
+                                                      32,
+                                                      30
+                                                    ],
+                                                    "velocity": [
+                                                      0,
+                                                      0
+                                                    ],
+                                                    "auto_update": false,
+                                                    "state": {
+                                                      "kind": "shell",
+                                                      "dir": 0,
+                                                      "moving_shell": false,
+                                                      "assetLoadingOverlay": false
+                                                    },
+                                                    "src": [
+                                                      360,
+                                                      5,
+                                                      16,
+                                                      15
+                                                    ]
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@despawn",
+                                                  "args": {
+                                                    "id": "{{ vars.hit_enemy }}"
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "vy",
+                                                    "value": -360
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@score.add",
+                                                  "args": {
+                                                    "n": 100
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@audio.play",
+                                                  "args": {
+                                                    "id": "kick"
+                                                  }
+                                                }
+                                              ],
+                                              "else": [
+                                                {
+                                                  "call": "@despawn",
+                                                  "args": {
+                                                    "id": "{{ vars.hit_enemy }}"
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "vy",
+                                                    "value": -360
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@score.add",
+                                                  "args": {
+                                                    "n": 100
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@audio.play",
+                                                  "args": {
+                                                    "id": "stomp"
+                                                  }
+                                                }
+                                              ]
                                             }
                                           }
                                         ],
@@ -7788,6 +8116,121 @@
                                 "call": "@set",
                                 "args": {
                                   "var": "vars.hit_enemy",
+                                  "value": null
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@collision.first",
+                          "args": {
+                            "a": "player",
+                            "where_prefix": "shell_"
+                          },
+                          "assign": "vars.hit_shell"
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "!=": [
+                                    {
+                                      "var": "vars.hit_shell"
+                                    },
+                                    null
+                                  ]
+                                },
+                                {
+                                  "<=": [
+                                    {
+                                      "var": "entities.player.hurtTimer"
+                                    },
+                                    0
+                                  ]
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars._shell_kick_dir",
+                                  "value": {
+                                    "if": [
+                                      {
+                                        ">=": [
+                                          {
+                                            "var": "entities.player.x"
+                                          },
+                                          {
+                                            "+": [
+                                              {
+                                                "var": "entities.{{ vars.hit_shell }}.x"
+                                              },
+                                              {
+                                                "/": [
+                                                  {
+                                                    "var": "entities.{{ vars.hit_shell }}.w"
+                                                  },
+                                                  2
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      -1,
+                                      1
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ vars.hit_shell }}",
+                                  "field": "state.dir",
+                                  "value": "{{ vars._shell_kick_dir }}"
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ vars.hit_shell }}",
+                                  "field": "vx",
+                                  "value": {
+                                    "*": [
+                                      {
+                                        "var": "vars._shell_kick_dir"
+                                      },
+                                      {
+                                        "var": "vars.shell_speed"
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@entity.set",
+                                "args": {
+                                  "id": "{{ vars.hit_shell }}",
+                                  "field": "state.moving_shell",
+                                  "value": true
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "kick"
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "vars.hit_shell",
                                   "value": null
                                 }
                               }

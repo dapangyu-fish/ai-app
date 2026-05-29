@@ -905,6 +905,174 @@ void main() {
     expect(player.state['hurtTimer'], greaterThan(0));
   });
 
+  test('真实 Mario JSON: Koopa 被踩后变成可踢龟壳', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'running'});
+    game.audio.dispose();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+    final mainLogic =
+        ((frameLogic[8] as Map<String, dynamic>)['args']
+                as Map<String, dynamic>)['else']
+            as List;
+    final hitAction = mainLogic.cast<Map<String, dynamic>>().firstWhere(
+      (node) =>
+          node['call'] == '@if' && node.toString().contains('vars.hit_enemy'),
+    );
+
+    final player = game.entities['player'] as PixelEntity;
+    player
+      ..x = 100
+      ..y = 100
+      ..w = 24
+      ..h = 32
+      ..vy = 120;
+    player.state['hurtTimer'] = 0;
+    game.spawnEntity('enemy_98', {
+      'kind': 'animated_sprite',
+      'asset': '',
+      'position': [96, 128],
+      'size': [32, 48],
+      'velocity': [0, 0],
+      'auto_update': false,
+      'state': {'kind': 'koopa', 'dir': -1, 'tiledObjectId': 98},
+      'frame_size': [16, 24],
+      'frames': 2,
+      'frames_per_row': 2,
+      'render': {'shape': 'rect', 'color': '#00FF00'},
+    });
+    game.vars['hit_enemy'] = 'enemy_98';
+
+    game.logic.runStep(hitAction);
+
+    expect(game.entities['enemy_98'], isNull);
+    final shell = game.entities['shell_98'];
+    expect(shell, isA<SpriteEntity>());
+    expect((shell as PixelEntity).state['kind'], 'shell');
+    expect(shell.state['dir'], 0);
+    expect(shell.vx, 0);
+  });
+
+  test('真实 Mario JSON: 玩家碰到龟壳会把龟壳踢出', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'running'});
+    game.audio.dispose();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+    final mainLogic =
+        ((frameLogic[8] as Map<String, dynamic>)['args']
+                as Map<String, dynamic>)['else']
+            as List;
+    final hitShellIndex = mainLogic.indexWhere(
+      (node) => node is Map && node['assign'] == 'vars.hit_shell',
+    );
+    expect(hitShellIndex, greaterThanOrEqualTo(0));
+
+    final player = game.entities['player'] as PixelEntity;
+    player
+      ..x = 80
+      ..y = 100
+      ..w = 24
+      ..h = 32;
+    player.state['hurtTimer'] = 0;
+    game.spawnEntity('shell_98', {
+      'kind': 'sprite',
+      'asset': '',
+      'position': [100, 100],
+      'size': [32, 30],
+      'velocity': [0, 0],
+      'auto_update': false,
+      'src': [360, 5, 16, 15],
+      'state': {'kind': 'shell', 'dir': 0},
+      'render': {'shape': 'rect', 'color': '#00FF00'},
+    });
+
+    game.logic.runStep(mainLogic[hitShellIndex]);
+    game.logic.runStep(mainLogic[hitShellIndex + 1]);
+
+    final shell = game.entities['shell_98'] as PixelEntity;
+    expect(shell.state['dir'], 1);
+    expect(shell.vx, 400);
+    expect(shell.state['moving_shell'], true);
+  });
+
+  test('真实 Mario JSON: 移动龟壳会击杀碰到的敌人', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'running'});
+    game.audio.dispose();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+    final mainLogic =
+        ((frameLogic[8] as Map<String, dynamic>)['args']
+                as Map<String, dynamic>)['else']
+            as List;
+    final shellLoop = mainLogic.cast<Map<String, dynamic>>().firstWhere(
+      (node) =>
+          node['call'] == '@for_each_entity' &&
+          (node['args'] as Map)['where_prefix'] == 'shell_',
+    );
+
+    game.spawnEntity('shell_98', {
+      'kind': 'sprite',
+      'asset': '',
+      'position': [100, 100],
+      'size': [32, 30],
+      'velocity': [0, 0],
+      'auto_update': false,
+      'src': [360, 5, 16, 15],
+      'state': {'kind': 'shell', 'dir': 1},
+      'render': {'shape': 'rect', 'color': '#00FF00'},
+    });
+    game.spawnEntity('enemy_14', {
+      'kind': 'pixel',
+      'position': [112, 100],
+      'size': [32, 32],
+      'velocity': [0, 0],
+      'auto_update': false,
+      'state': {'kind': 'goomba', 'dir': -1},
+      'render': {'shape': 'rect', 'color': '#FF0000'},
+    });
+
+    game.logic.runStep(shellLoop);
+
+    expect(game.entities['enemy_14'], isNull);
+    final shell = game.entities['shell_98'] as PixelEntity;
+    expect(shell.vx, 400);
+  });
+
   test('平台跳跃: 向上撞击多个相邻块时选择角色中心命中的块', () async {
     final game = JsonFlameGame(
       spec: {
