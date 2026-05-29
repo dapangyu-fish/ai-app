@@ -1102,6 +1102,24 @@ class JsonInterpreter extends ChangeNotifier {
     String callTarget,
     Map<String, dynamic> args,
   ) async {
+    // Control-flow actions own their child logic arrays. Do not run the generic
+    // args resolver first: it would recursively bake templates inside body /
+    // then / else before the nested loop/event context exists.
+    switch (callTarget) {
+      case '@if':
+        return await _builtinIf(args);
+      case '@while':
+        return await _builtinWhile(args);
+      case '@for_each':
+        return await _builtinForEach(args);
+      case '@loop_by_num':
+        return await _builtinLoopByNum(args);
+      case '@try_catch':
+        return await _builtinTryCatch(args);
+      case '@parallel':
+        return await _builtinParallel(args);
+    }
+
     final resolvedArgs = _resolveArgs(args);
 
     // 自定义全局函数: @global.funcName
@@ -1164,19 +1182,6 @@ class JsonInterpreter extends ChangeNotifier {
         if (screen != null) navigateTo(screen);
         return null;
 
-      // ── 控制流 ──
-      case '@if':
-        return await _builtinIf(args);
-      case '@while':
-        return await _builtinWhile(args);
-      case '@for_each':
-        return await _builtinForEach(args);
-      case '@loop_by_num':
-        return await _builtinLoopByNum(args);
-      case '@try_catch':
-        return await _builtinTryCatch(args);
-      case '@parallel':
-        return await _builtinParallel(args);
       case '@delay':
         final ms = _toInt(
           resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0,

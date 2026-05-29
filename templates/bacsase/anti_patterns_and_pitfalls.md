@@ -20,7 +20,7 @@
 | UI 显示 `{{ t('xxx') }}` / `{{ global.xxx }}` 字面量 | §7 |
 | UI 显示 `{op_name: ...}` 字面量（带大括号和冒号） | §12 |
 | `@while` / `@for_each` 嵌套调用后循环索引诡异 | §10 |
-| flame_game 里 `{{ loop.id }}` 拼路径返 null | §11 |
+| 循环子逻辑里的 `{{ loop.* }}` 被提前解析成外层值或 null | §11 |
 | atom 用 id 反查不命中 / jsonlogic var 直读 OK | §9 |
 | 平台跳跃类游戏：关卡高差靠感觉摆，导致“差一点跳不上” | §13 |
 | 关卡设计类问题：看起来能玩，实测路线/敌人/收集物/复活点不合理 | §14 |
@@ -643,35 +643,52 @@ JSON-DSL 没真函数局部作用域，`global._i` 这种全局可写。两个�
 
 ---
 
-## 11. flame_game `@for_each_entity` body 里直接用 `{{ loop.id }}` 模板路径
+## 11. 循环子逻辑里的 `{{ loop.* }}` 被提前解析
 
-在 flame_game 的 `frame.logic` / `tick.logic` 里写 `@for_each_entity`，body 里很自然会想这样写：
+循环类 atom 的 `body` / `do` 是子逻辑，必须等循环真正 push 当前
+`loop` 上下文后再解析。历史上框架曾把这些子逻辑在外层 build / dispatch
+阶段提前“烤”掉，导致内层 `{{ loop.id }}` / `{{ loop.item }}` 变成 null
+或错误地变成外层循环值。
+
+典型写法应该是合法的：
 
 ```jsonc
 {"call": "@set", "args": {
   "var": "vars._t",
-  "value": {"var": "vars.targets.{{ loop.id }}"}  // ⚠️ 不可靠
+  "value": {"var": "vars.targets.{{ loop.id }}"}
 }}
 ```
 
-**踩坑实例**：消消乐 pixel 版 v0.2.0~v0.2.7。tap 写 `vars.targets[uid]`、frame for_each 用 `{{ loop.id }}` 读。tap 端写读都 OK、frame 开头 `vars.targets[_uid_a]` 也读得到、entity id 跟 _uid_a 在 jsonlogic `==` 下能匹配 —— 唯独 `{"var": "vars.targets.{{ loop.id }}"}` 永远返 null。同一份 `_loopStack`，jsonlogic var op 看得到 `loop.id`、`{{ vars.X }}` 模板能解析，唯独 `{{ loop.X }}` 在嵌套 jsonlogic var path 里失效。
-
-**workaround**（不依赖 framework 哪个版本都通）：每个迭代开头先用 jsonlogic var 把 `loop.id` 抓到 vars，所有路径/id 用到 entity id 的地方都改用 `{{ vars._cap }}`：
+普通 JSON action 也一样：
 
 ```jsonc
-{"call": "@for_each_entity", "args": {
-  "where_prefix": "g",
-  "do": [
-    {"call": "@set", "args": {"var": "vars._cap", "value": {"var": "loop.id"}}},  // 先抓
-    {"call": "@set", "args": {"var": "vars._t", "value": {"var": "vars.targets.{{ vars._cap }}"}}},
-    {"call": "@pixel.set_position", "args": {"id": "{{ vars._cap }}", "position": [...]}}
+{"call": "@for_each", "args": {
+  "source": "{{ global.items }}",
+  "body": [
+    {"call": "@list_add", "args": {
+      "var": "global.names",
+      "item": "{{ loop.item.name }}"
+    }}
   ]
 }}
 ```
 
-**约定**：在 flame_game 的 `@for_each_entity` body 里，**永远**第一步抓 `loop.id` 到 `vars._cap`（或加函数级前缀），后续路径/id 全用 `{{ vars._cap }}`。`{{ loop.id }}` 直接用是埋雷。
+**排查方式**：如果日志里 `loop.id` / `loop.item` 是 null、或者嵌套循环里内层
+值总是外层值，优先怀疑“子逻辑被提前解析”。不要靠把 `loop.id` 先拷贝到
+临时变量做长期 workaround；这会掩盖框架层时序 bug。
 
-**回归保护**：`test/flame_loop_template_test.dart` 覆盖几条关键路径，framework 改坏会 catch。
+**当前约定**：`@for_each` / `@loop_by_num` 的 `body`、flame_game
+`@for_each_entity` 的 `do` 都应保持惰性解析。`{{ loop.id }}` / `{{ loop.item }}`
+可以直接使用。`loop.entity` 仍是本轮遍历快照，同一轮里修改 entity 后不要继续
+依赖旧的 `loop.entity.*` 推导状态，改读 `entities.<id>.*` 或先写入临时变量。
+
+如果列表项按钮里再开启内层 `@for_each`，内层 `body` 的 `loop.*` 属于内层循环。
+确实需要外层列表项时，先在进入内层循环前把外层值写进 `global._xxx` 或函数参数，
+不要指望同一个 `loop.item` 同时表示两层循环。
+
+**回归保护**：`test/flame_loop_template_test.dart`、`test/flame_game_widget_bake_test.dart`、
+`test/interpreter_control_flow_lazy_test.dart` 和 `test/action_helper_lazy_test.dart`
+覆盖关键路径。
 
 ---
 

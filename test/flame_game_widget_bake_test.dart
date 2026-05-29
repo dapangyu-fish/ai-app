@@ -13,19 +13,16 @@ void main() {
         },
       });
 
-    final baked = JsonFlameGameWidget().bakeOuterTemplatesForTest(
-      {
-        'type': 'flame_game',
-        'vars': {
-          'best': '{{ global.bestScore }}',
-          'loopId': '{{ loop.id }}',
-          'loopPath': 'enemy_{{ loop.id }}',
-          'eventDt': '{{ event.dt }}',
-          'entityX': '{{ entities.player.x }}',
-        },
+    final baked = JsonFlameGameWidget().bakeOuterTemplatesForTest({
+      'type': 'flame_game',
+      'vars': {
+        'best': '{{ global.bestScore }}',
+        'loopId': '{{ loop.id }}',
+        'loopPath': 'enemy_{{ loop.id }}',
+        'eventDt': '{{ event.dt }}',
+        'entityX': '{{ entities.player.x }}',
       },
-      interpreter,
-    );
+    }, interpreter);
 
     final vars = baked['vars'] as Map<String, dynamic>;
     expect(vars['best'], 42);

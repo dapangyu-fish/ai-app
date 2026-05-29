@@ -1732,7 +1732,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `{{ world.cols }}` / `{{ world.rows }}` / `{{ world.width }}` / `{{ world.height }}` / `{{ world.cell_w }}` / `{{ world.cell_h }}` | 世界尺寸 |
 | `{{ score }}` / `{{ best }}` / `{{ game_over }}` | 内置标量 |
 
-外层模板（`{{ global.x }}`, `{{ params.x }}`, `{{ loop.x }}`）会在 widget build 时一次性烤进 spec，仅作为初始值用。
+外层模板（`{{ global.x }}`, `{{ params.x }}`）会在 widget build 时一次性烤进 spec，仅作为初始值用。`vars.*` / `event.*` / `entities.*` / `world.*` / `loop.*` 属于游戏内部命名空间，必须保留到 game logic 执行时再解析。
 
 #### `world` —— 坐标系
 
