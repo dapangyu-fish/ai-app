@@ -812,8 +812,13 @@ void main() {
     expect((koopa as PixelEntity).state['kind'], 'koopa');
     expect(
       koopa.state['spriteOffsetY'],
-      -24,
-      reason: 'Koopa sprite is rendered above its collision feet',
+      0,
+      reason: 'Koopa uses the same bottom edge for sprite and collision',
+    );
+    expect(
+      koopa.y + koopa.h,
+      closeTo(400, 1),
+      reason: 'Koopa feet should align with the scaled ground top',
     );
     final farX = koopa.x;
     expect(koopa.vx, 0, reason: 'Koopa should be present but idle off-screen');
