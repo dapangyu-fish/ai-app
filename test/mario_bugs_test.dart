@@ -807,6 +807,14 @@ void main() {
     player.x = 2500;
     game.vars['state'] = 'running';
     game.logic.runLogic(frameLogic, {'dt': 0.016});
+    expect(
+      game.entities['enemy_98'],
+      isNull,
+      reason: 'Koopa should not start walking while still far off-screen',
+    );
+
+    player.x = 2700;
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
     expect(game.entities['enemy_98'], isA<AnimatedSpriteEntity>());
     expect((game.entities['enemy_98'] as PixelEntity).state['kind'], 'koopa');
   });
