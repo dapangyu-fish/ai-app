@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -338,6 +338,39 @@
                   "auto_update": false,
                   "state": {
                     "opacity": 0
+                  }
+                },
+                "powerup_3": {
+                  "kind": "sprite",
+                  "priority": 24,
+                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                  "position": [
+                    -9999,
+                    -9999
+                  ],
+                  "size": [
+                    32,
+                    32
+                  ],
+                  "velocity": [
+                    0,
+                    0
+                  ],
+                  "auto_update": false,
+                  "src": [
+                    0,
+                    0,
+                    16,
+                    16
+                  ],
+                  "state": {
+                    "kind": "flower",
+                    "dir": 0,
+                    "revealing": false,
+                    "reveal_time": 0,
+                    "targetY": -9999,
+                    "opacity": 0,
+                    "assetLoadingOverlay": false
                   }
                 },
                 "preload_enemy_sheet": {
@@ -5209,50 +5242,102 @@
                                   },
                                   "then": [
                                     {
-                                      "call": "@spawn",
+                                      "call": "@entity.set",
                                       "args": {
-                                        "kind": "sprite",
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                        "priority": 24,
-                                        "position": [
-                                          {
-                                            "var": "entities.player.yCollision.x"
-                                          },
-                                          {
-                                            "var": "entities.player.yCollision.y"
-                                          }
-                                        ],
-                                        "size": [
-                                          32,
-                                          32
-                                        ],
-                                        "velocity": [
-                                          0,
-                                          0
-                                        ],
-                                        "auto_update": false,
-                                        "src": [
-                                          0,
-                                          0,
-                                          16,
-                                          16
-                                        ],
-                                        "state": {
-                                          "kind": "red_mushroom",
-                                          "dir": 1,
-                                          "revealing": true,
-                                          "reveal_time": 0,
-                                          "targetY": {
-                                            "-": [
-                                              {
-                                                "var": "entities.player.yCollision.y"
-                                              },
-                                              32
-                                            ]
-                                          },
-                                          "assetLoadingOverlay": false
+                                        "field": "x",
+                                        "value": {
+                                          "var": "entities.player.yCollision.x"
                                         }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "y",
+                                        "value": {
+                                          "var": "entities.player.yCollision.y"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "vx",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "vy",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "priority",
+                                        "value": 24
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "state.kind",
+                                        "value": "red_mushroom"
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "state.dir",
+                                        "value": 1
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "state.revealing",
+                                        "value": true
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "state.reveal_time",
+                                        "value": 0
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "state.targetY",
+                                        "value": {
+                                          "-": [
+                                            {
+                                              "var": "entities.player.yCollision.y"
+                                            },
+                                            32
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "call": "@entity.set",
+                                      "args": {
+                                        "id": "powerup_{{ entities.player.yCollision.objectId }}",
+                                        "field": "state.opacity",
+                                        "value": 1
                                       }
                                     },
                                     {
