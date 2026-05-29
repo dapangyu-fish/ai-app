@@ -341,6 +341,17 @@ class TiledMapEntity extends GameEntity {
     return objects.first;
   }
 
+  bool removeObject(String layer, int objectId) {
+    final objects = objectsByLayer[layer];
+    if (objects == null || objects.isEmpty) return false;
+    final next = objects
+        .where((object) => object.id != objectId)
+        .toList(growable: true);
+    if (next.length == objects.length) return false;
+    objectsByLayer[layer] = next;
+    return true;
+  }
+
   bool _usesLayer(TiledLayer layer) {
     if (!layer.visible) return false;
     if (includeLayers != null && !includeLayers!.contains(layer.name)) {

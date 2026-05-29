@@ -710,6 +710,25 @@ class GameActions {
           }
           return ids.length;
         }
+      case '@tiled.remove_object':
+        {
+          final mapId = args['map']?.toString();
+          final layer = args['layer']?.toString();
+          final rawObjectId = args['object_id'] ?? args['objectId'];
+          final objectId = rawObjectId is num
+              ? rawObjectId.toInt()
+              : int.tryParse(rawObjectId?.toString() ?? '');
+          if (mapId == null || layer == null || objectId == null) {
+            return false;
+          }
+          final map = game.entities[mapId];
+          if (map is! TiledMapEntity) return false;
+          final removed = map.removeObject(layer, objectId);
+          if (removed) {
+            game.consumedTiledObjectKeys.add('$mapId/$layer/$objectId');
+          }
+          return removed;
+        }
       case '@tiled.spawn_objects':
         {
           return _spawnTiledObjects(game, args);

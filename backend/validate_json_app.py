@@ -184,6 +184,7 @@ DEFAULT_BUILTIN_CALLS = {
     "@tiled.load",
     "@tiled.loaded",
     "@tiled.nearest_object",
+    "@tiled.remove_object",
     "@tiled.spawn_objects",
     "@tiled.spawn_objects_near",
     "@value_grid.can_move",

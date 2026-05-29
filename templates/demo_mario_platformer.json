@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.25",
+    "version": "1.0.26",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -441,7 +441,8 @@
                     "spriteW": 32,
                     "spriteH": 32,
                     "spriteOffsetX": -4,
-                    "spriteOffsetY": 0
+                    "spriteOffsetY": 0,
+                    "hurtTimer": 0
                   },
                   "frame_size": [
                     12,
@@ -542,6 +543,62 @@
                       "src_origin": [
                         144,
                         0
+                      ],
+                      "frame_size": [
+                        16,
+                        32
+                      ],
+                      "frames": 1,
+                      "frames_per_row": 1,
+                      "step_time": 0.12
+                    },
+                    "fire_idle": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "src_origin": [
+                        176,
+                        48
+                      ],
+                      "frame_size": [
+                        16,
+                        32
+                      ],
+                      "frames": 1,
+                      "frames_per_row": 1,
+                      "step_time": 0.12
+                    },
+                    "fire_run": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "src_origin": [
+                        81,
+                        48
+                      ],
+                      "frame_size": [
+                        16,
+                        32
+                      ],
+                      "frames": 3,
+                      "frames_per_row": 3,
+                      "step_time": 0.08
+                    },
+                    "fire_jump": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "src_origin": [
+                        144,
+                        48
+                      ],
+                      "frame_size": [
+                        16,
+                        32
+                      ],
+                      "frames": 1,
+                      "frames_per_row": 1,
+                      "step_time": 0.12
+                    },
+                    "fire_throw": {
+                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "src_origin": [
+                        336,
+                        48
                       ],
                       "frame_size": [
                         16,
@@ -3349,20 +3406,51 @@
                           "call": "@if",
                           "args": {
                             "cond": {
-                              "!": {
-                                "call": "@entity.exists",
-                                "args": {
-                                  "id": "fireball"
+                              "and": [
+                                {
+                                  "==": [
+                                    {
+                                      "var": "vars.player_power"
+                                    },
+                                    "fire"
+                                  ]
+                                },
+                                {
+                                  "!": {
+                                    "call": "@entity.exists",
+                                    "args": {
+                                      "id": "fireball"
+                                    }
+                                  }
                                 }
-                              }
+                              ]
                             },
                             "then": [
+                              {
+                                "call": "@animated_sprite.set_animation",
+                                "args": {
+                                  "id": "player",
+                                  "animation": "fire_throw"
+                                }
+                              },
                               {
                                 "call": "@spawn",
                                 "args": {
                                   "id": "fireball",
-                                  "kind": "pixel",
+                                  "kind": "animated_sprite",
                                   "priority": 45,
+                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                  "src_origin": [
+                                    96,
+                                    144
+                                  ],
+                                  "frame_size": [
+                                    8,
+                                    8
+                                  ],
+                                  "frames": 4,
+                                  "frames_per_row": 2,
+                                  "step_time": 0.06,
                                   "position": [
                                     {
                                       "+": [
@@ -3374,13 +3462,26 @@
                                             {
                                               "==": [
                                                 {
-                                                  "var": "vars.facing"
+                                                  "var": "vars.player_power"
                                                 },
-                                                1
+                                                "fire"
                                               ]
                                             },
-                                            28,
-                                            -12
+                                            {
+                                              "if": [
+                                                {
+                                                  "==": [
+                                                    {
+                                                      "var": "vars.facing"
+                                                    },
+                                                    1
+                                                  ]
+                                                },
+                                                28,
+                                                -16
+                                              ]
+                                            },
+                                            0
                                           ]
                                         }
                                       ]
@@ -3390,13 +3491,13 @@
                                         {
                                           "var": "entities.player.y"
                                         },
-                                        12
+                                        24
                                       ]
                                     }
                                   ],
                                   "size": [
-                                    10,
-                                    10
+                                    16,
+                                    16
                                   ],
                                   "velocity": [
                                     {
@@ -3410,9 +3511,8 @@
                                     0
                                   ],
                                   "auto_update": true,
-                                  "render": {
-                                    "shape": "circle",
-                                    "color": "#FFB000"
+                                  "state": {
+                                    "assetLoadingOverlay": false
                                   }
                                 }
                               },
@@ -4478,6 +4578,84 @@
                                 }
                               },
                               {
+                                "call": "@tiled.spawn_objects",
+                                "args": {
+                                  "map": "map",
+                                  "layer": "flagpole",
+                                  "templates": {
+                                    "pole": {
+                                      "id_prefix": "flagpole_",
+                                      "kind": "sprite",
+                                      "priority": 26,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src": [
+                                        263,
+                                        144,
+                                        2,
+                                        16
+                                      ],
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "state": {
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "finial": {
+                                      "id_prefix": "flagpole_",
+                                      "kind": "sprite",
+                                      "priority": 27,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "src": [
+                                        228,
+                                        120,
+                                        8,
+                                        8
+                                      ],
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "state": {
+                                        "assetLoadingOverlay": false
+                                      }
+                                    },
+                                    "flag": {
+                                      "id_prefix": "flagpole_",
+                                      "kind": "sprite",
+                                      "priority": 28,
+                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                      "src": [
+                                        128,
+                                        32,
+                                        16,
+                                        16
+                                      ],
+                                      "position": [
+                                        "{{ object.x }}",
+                                        "{{ object.y }}"
+                                      ],
+                                      "size": [
+                                        "{{ object.w }}",
+                                        "{{ object.h }}"
+                                      ],
+                                      "state": {
+                                        "assetLoadingOverlay": false
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              {
                                 "call": "@set",
                                 "args": {
                                   "var": "vars.state",
@@ -4551,12 +4729,43 @@
                           }
                         },
                         {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              ">": [
+                                {
+                                  "var": "entities.player.hurtTimer"
+                                },
+                                0
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@entity.add",
+                                "args": {
+                                  "id": "player",
+                                  "field": "state.hurtTimer",
+                                  "by": {
+                                    "*": [
+                                      -1,
+                                      {
+                                        "var": "event.dt"
+                                      }
+                                    ]
+                                  },
+                                  "min": 0
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
                           "call": "@tiled.spawn_objects_near",
                           "args": {
                             "map": "map",
                             "layer": "enemies",
                             "reference": "player",
-                            "proximity": 1100,
+                            "proximity": 1800,
                             "despawn_distance": 1500,
                             "templates": {
                               "goomba": {
@@ -4636,7 +4845,7 @@
                               "koopa": {
                                 "id_prefix": "enemy_",
                                 "kind": "animated_sprite",
-                                "priority": 30,
+                                "priority": 31,
                                 "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                 "src_origin": [
                                   150,
@@ -5165,6 +5374,78 @@
                                 "call": "@audio.play",
                                 "args": {
                                   "id": "bump"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "var": "entities.player.blockedUp"
+                                },
+                                {
+                                  "==": [
+                                    {
+                                      "var": "entities.player.yCollision.tileset"
+                                    },
+                                    "brick blocks"
+                                  ]
+                                },
+                                {
+                                  "!=": [
+                                    {
+                                      "var": "vars.player_power"
+                                    },
+                                    null
+                                  ]
+                                },
+                                {
+                                  "!=": [
+                                    {
+                                      "var": "entities.player.yCollision.type"
+                                    },
+                                    "coin"
+                                  ]
+                                },
+                                {
+                                  "!=": [
+                                    {
+                                      "var": "entities.player.yCollision.type"
+                                    },
+                                    "star"
+                                  ]
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@despawn",
+                                "args": {
+                                  "id": "brick_{{ entities.player.yCollision.objectId }}"
+                                }
+                              },
+                              {
+                                "call": "@tiled.remove_object",
+                                "args": {
+                                  "map": "map",
+                                  "layer": "brick blocks",
+                                  "object_id": "{{ entities.player.yCollision.objectId }}"
+                                }
+                              },
+                              {
+                                "call": "@score.add",
+                                "args": {
+                                  "n": 50
+                                }
+                              },
+                              {
+                                "call": "@audio.play",
+                                "args": {
+                                  "id": "brick_smash"
                                 }
                               }
                             ]
@@ -6101,75 +6382,68 @@
                           }
                         },
                         {
-                          "call": "@if",
+                          "call": "@set",
                           "args": {
-                            "cond": {
-                              "!": {
-                                "var": "vars.on_ground"
-                              }
-                            },
-                            "then": [
-                              {
-                                "call": "@if",
-                                "args": {
-                                  "cond": {
-                                    "==": [
-                                      {
-                                        "var": "vars.player_power"
-                                      },
-                                      null
-                                    ]
-                                  },
-                                  "then": [
+                            "var": "vars._player_anim",
+                            "value": {
+                              "if": [
+                                {
+                                  "!": {
+                                    "var": "vars.on_ground"
+                                  }
+                                },
+                                {
+                                  "if": [
                                     {
-                                      "call": "@animated_sprite.set_animation",
-                                      "args": {
-                                        "id": "player",
-                                        "animation": "jump"
-                                      }
-                                    }
-                                  ],
-                                  "else": [
+                                      "==": [
+                                        {
+                                          "var": "vars.player_power"
+                                        },
+                                        null
+                                      ]
+                                    },
+                                    "jump",
                                     {
-                                      "call": "@animated_sprite.set_animation",
-                                      "args": {
-                                        "id": "player",
-                                        "animation": "big_jump"
-                                      }
+                                      "if": [
+                                        {
+                                          "==": [
+                                            {
+                                              "var": "vars.player_power"
+                                            },
+                                            "fire"
+                                          ]
+                                        },
+                                        "fire_jump",
+                                        "big_jump"
+                                      ]
                                     }
                                   ]
-                                }
-                              }
-                            ],
-                            "else": [
-                              {
-                                "call": "@if",
-                                "args": {
-                                  "cond": {
-                                    "or": [
-                                      {
-                                        ">": [
-                                          {
-                                            "var": "entities.player.vx"
-                                          },
-                                          10
-                                        ]
-                                      },
-                                      {
-                                        "<": [
-                                          {
-                                            "var": "entities.player.vx"
-                                          },
-                                          -10
-                                        ]
-                                      }
-                                    ]
-                                  },
-                                  "then": [
+                                },
+                                {
+                                  "if": [
                                     {
-                                      "call": "@if",
-                                      "args": {
-                                        "cond": {
+                                      "or": [
+                                        {
+                                          ">": [
+                                            {
+                                              "var": "entities.player.vx"
+                                            },
+                                            10
+                                          ]
+                                        },
+                                        {
+                                          "<": [
+                                            {
+                                              "var": "entities.player.vx"
+                                            },
+                                            -10
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "if": [
+                                        {
                                           "==": [
                                             {
                                               "var": "vars.player_power"
@@ -6177,32 +6451,26 @@
                                             null
                                           ]
                                         },
-                                        "then": [
-                                          {
-                                            "call": "@animated_sprite.set_animation",
-                                            "args": {
-                                              "id": "player",
-                                              "animation": "run"
-                                            }
-                                          }
-                                        ],
-                                        "else": [
-                                          {
-                                            "call": "@animated_sprite.set_animation",
-                                            "args": {
-                                              "id": "player",
-                                              "animation": "big_run"
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ],
-                                  "else": [
+                                        "run",
+                                        {
+                                          "if": [
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.player_power"
+                                                },
+                                                "fire"
+                                              ]
+                                            },
+                                            "fire_run",
+                                            "big_run"
+                                          ]
+                                        }
+                                      ]
+                                    },
                                     {
-                                      "call": "@if",
-                                      "args": {
-                                        "cond": {
+                                      "if": [
+                                        {
                                           "==": [
                                             {
                                               "var": "vars.player_power"
@@ -6210,30 +6478,34 @@
                                             null
                                           ]
                                         },
-                                        "then": [
-                                          {
-                                            "call": "@animated_sprite.set_animation",
-                                            "args": {
-                                              "id": "player",
-                                              "animation": "idle"
-                                            }
-                                          }
-                                        ],
-                                        "else": [
-                                          {
-                                            "call": "@animated_sprite.set_animation",
-                                            "args": {
-                                              "id": "player",
-                                              "animation": "big_idle"
-                                            }
-                                          }
-                                        ]
-                                      }
+                                        "idle",
+                                        {
+                                          "if": [
+                                            {
+                                              "==": [
+                                                {
+                                                  "var": "vars.player_power"
+                                                },
+                                                "fire"
+                                              ]
+                                            },
+                                            "fire_idle",
+                                            "big_idle"
+                                          ]
+                                        }
+                                      ]
                                     }
                                   ]
                                 }
-                              }
-                            ]
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "call": "@animated_sprite.set_animation",
+                          "args": {
+                            "id": "player",
+                            "animation": "{{ vars._player_anim }}"
                           }
                         },
                         {
@@ -7029,135 +7301,261 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "and": [
+                                    "<=": [
                                       {
-                                        ">": [
-                                          {
-                                            "var": "entities.player.vy"
-                                          },
-                                          0
-                                        ]
+                                        "var": "entities.player.hurtTimer"
                                       },
-                                      {
-                                        "<": [
-                                          {
-                                            "+": [
-                                              {
-                                                "var": "entities.player.y"
-                                              },
-                                              {
-                                                "var": "entities.player.h"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "+": [
-                                              {
-                                                "var": "entities.{{ vars.hit_enemy }}.y"
-                                              },
-                                              22
-                                            ]
-                                          }
-                                        ]
-                                      }
+                                      0
                                     ]
                                   },
                                   "then": [
                                     {
-                                      "call": "@despawn",
-                                      "args": {
-                                        "id": "{{ vars.hit_enemy }}"
-                                      }
-                                    },
-                                    {
-                                      "call": "@entity.set",
-                                      "args": {
-                                        "id": "player",
-                                        "field": "vy",
-                                        "value": -360
-                                      }
-                                    },
-                                    {
-                                      "call": "@score.add",
-                                      "args": {
-                                        "n": 100
-                                      }
-                                    },
-                                    {
-                                      "call": "@audio.play",
-                                      "args": {
-                                        "id": "stomp"
-                                      }
-                                    }
-                                  ],
-                                  "else": [
-                                    {
-                                      "call": "@set",
-                                      "args": {
-                                        "var": "vars.lives",
-                                        "value": {
-                                          "-": [
-                                            {
-                                              "var": "vars.lives"
-                                            },
-                                            1
-                                          ]
-                                        }
-                                      }
-                                    },
-                                    {
                                       "call": "@if",
                                       "args": {
                                         "cond": {
-                                          "<=": [
+                                          "and": [
                                             {
-                                              "var": "vars.lives"
+                                              ">": [
+                                                {
+                                                  "var": "entities.player.vy"
+                                                },
+                                                0
+                                              ]
                                             },
-                                            0
+                                            {
+                                              "<": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "var": "entities.player.y"
+                                                    },
+                                                    {
+                                                      "var": "entities.player.h"
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "var": "entities.{{ vars.hit_enemy }}.y"
+                                                    },
+                                                    22
+                                                  ]
+                                                }
+                                              ]
+                                            }
                                           ]
                                         },
                                         "then": [
                                           {
-                                            "call": "@animated_sprite.set_animation",
+                                            "call": "@despawn",
                                             "args": {
-                                              "id": "player",
-                                              "animation": "dead"
+                                              "id": "{{ vars.hit_enemy }}"
                                             }
                                           },
                                           {
-                                            "call": "@audio.stop",
+                                            "call": "@entity.set",
                                             "args": {
-                                              "id": "main_theme"
+                                              "id": "player",
+                                              "field": "vy",
+                                              "value": -360
+                                            }
+                                          },
+                                          {
+                                            "call": "@score.add",
+                                            "args": {
+                                              "n": 100
                                             }
                                           },
                                           {
                                             "call": "@audio.play",
                                             "args": {
-                                              "id": "death"
+                                              "id": "stomp"
                                             }
-                                          },
-                                          {
-                                            "call": "@game_over",
-                                            "args": {}
                                           }
                                         ],
                                         "else": [
                                           {
-                                            "call": "@platformer.respawn",
+                                            "call": "@if",
                                             "args": {
-                                              "id": "player",
-                                              "map": "map",
-                                              "layer": "grounds"
-                                            }
-                                          },
-                                          {
-                                            "call": "@emit",
-                                            "args": {
-                                              "event": "status",
-                                              "data": {
-                                                "text": "Try again",
-                                                "lives": "{{ vars.lives }}"
-                                              }
+                                              "cond": {
+                                                "!=": [
+                                                  {
+                                                    "var": "vars.player_power"
+                                                  },
+                                                  null
+                                                ]
+                                              },
+                                              "then": [
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars.player_power",
+                                                    "value": null
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.add",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "y",
+                                                    "by": 32
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "h",
+                                                    "value": 32
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "w",
+                                                    "value": 24
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.spriteH",
+                                                    "value": 32
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.spriteW",
+                                                    "value": 32
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.spriteOffsetX",
+                                                    "value": -4
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.spriteOffsetY",
+                                                    "value": 0
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "state.hurtTimer",
+                                                    "value": 1.25
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@entity.set",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "field": "vy",
+                                                    "value": -180
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@animated_sprite.set_animation",
+                                                  "args": {
+                                                    "id": "player",
+                                                    "animation": {
+                                                      "if": [
+                                                        {
+                                                          "var": "vars.on_ground"
+                                                        },
+                                                        "idle",
+                                                        "jump"
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "else": [
+                                                {
+                                                  "call": "@set",
+                                                  "args": {
+                                                    "var": "vars.lives",
+                                                    "value": {
+                                                      "-": [
+                                                        {
+                                                          "var": "vars.lives"
+                                                        },
+                                                        1
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                {
+                                                  "call": "@if",
+                                                  "args": {
+                                                    "cond": {
+                                                      "<=": [
+                                                        {
+                                                          "var": "vars.lives"
+                                                        },
+                                                        0
+                                                      ]
+                                                    },
+                                                    "then": [
+                                                      {
+                                                        "call": "@animated_sprite.set_animation",
+                                                        "args": {
+                                                          "id": "player",
+                                                          "animation": "dead"
+                                                        }
+                                                      },
+                                                      {
+                                                        "call": "@audio.stop",
+                                                        "args": {
+                                                          "id": "main_theme"
+                                                        }
+                                                      },
+                                                      {
+                                                        "call": "@audio.play",
+                                                        "args": {
+                                                          "id": "death"
+                                                        }
+                                                      },
+                                                      {
+                                                        "call": "@game_over",
+                                                        "args": {}
+                                                      }
+                                                    ],
+                                                    "else": [
+                                                      {
+                                                        "call": "@platformer.respawn",
+                                                        "args": {
+                                                          "id": "player",
+                                                          "map": "map",
+                                                          "layer": "grounds"
+                                                        }
+                                                      },
+                                                      {
+                                                        "call": "@emit",
+                                                        "args": {
+                                                          "event": "status",
+                                                          "data": {
+                                                            "text": "Try again",
+                                                            "lives": "{{ vars.lives }}"
+                                                          }
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                }
+                                              ]
                                             }
                                           }
                                         ]

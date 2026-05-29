@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flame/extensions.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/games/flame_game_engine.dart';
 import 'package:flutter_application_1/games/game_entity.dart';
 import 'package:flutter_application_1/games/tiled_map_entity.dart';
 import 'package:flutter_application_1/json_ui/asset_manager.dart';
-import 'package:vector_math/vector_math.dart';
 
 const _localMarioTmxPath = '/tmp/flutter_game_ref/assets/tiles/mario.tmx';
 
@@ -210,7 +210,9 @@ void main() {
 
   test('真实 Mario JSON + 原始 TMX: 红蘑菇块按 qblock content 生成 powerup', () async {
     if (!File(_localMarioTmxPath).existsSync()) {
-      markTestSkipped('original flutter_game repo is not cloned at /tmp/flutter_game_ref');
+      markTestSkipped(
+        'original flutter_game repo is not cloned at /tmp/flutter_game_ref',
+      );
       return;
     }
     final raw =
@@ -769,5 +771,216 @@ void main() {
     print('长按能跳过 h=64src 桶: $clearedLong');
     expect(clearedShort, false, reason: '短按不应跳过最高桶（这是 bug 的来源）');
     expect(clearedLong, true, reason: '长按应能跳过最高桶');
+  });
+
+  test('真实 Mario JSON: 加载后渲染旗杆并能生成原始 Koopa 对象', () async {
+    if (!File(_localMarioTmxPath).existsSync()) {
+      markTestSkipped(
+        'original flutter_game repo is not cloned at /tmp/flutter_game_ref',
+      );
+      return;
+    }
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _LocalMarioAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'loading'});
+    game.audio.dispose();
+    final map = game.entities['map'] as TiledMapEntity;
+    await map.load();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
+    expect(game.entities['flagpole_101'], isA<SpriteEntity>());
+    expect(game.entities['flagpole_111'], isA<SpriteEntity>());
+
+    final player = game.entities['player'] as PixelEntity;
+    player.x = 2500;
+    game.vars['state'] = 'running';
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
+    expect(game.entities['enemy_98'], isA<AnimatedSpriteEntity>());
+    expect((game.entities['enemy_98'] as PixelEntity).state['kind'], 'koopa');
+  });
+
+  test('真实 Mario JSON: 只有 fire 状态可以发射原版火球 sprite', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'running'});
+    game.audio.dispose();
+    final attackLogic =
+        (flameSpec['input'] as Map<String, dynamic>)['attack'] as List;
+
+    game.vars['player_power'] = null;
+    game.logic.runLogic(attackLogic, {});
+    expect(game.entities['fireball'], isNull);
+
+    game.vars['player_power'] = 'big';
+    game.logic.runLogic(attackLogic, {});
+    expect(game.entities['fireball'], isNull);
+
+    game.vars['player_power'] = 'fire';
+    game.logic.runLogic(attackLogic, {});
+    final fireball = game.entities['fireball'];
+    expect(fireball, isA<AnimatedSpriteEntity>());
+    expect(
+      (fireball as AnimatedSpriteEntity).asset,
+      contains('item_objects.png'),
+    );
+    expect(fireball.frameW, 8);
+    expect(fireball.frameH, 8);
+  });
+
+  test('真实 Mario JSON: powered Mario 碰敌人会变小且不扣生命', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'running'});
+    game.audio.dispose();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+    final mainLogic =
+        ((frameLogic[8] as Map<String, dynamic>)['args']
+                as Map<String, dynamic>)['else']
+            as List;
+    final hitAction = mainLogic.cast<Map<String, dynamic>>().firstWhere(
+      (node) =>
+          node['call'] == '@if' && node.toString().contains('vars.hit_enemy'),
+    );
+
+    final player = game.entities['player'] as PixelEntity;
+    player
+      ..x = 100
+      ..y = 100
+      ..w = 28
+      ..h = 64
+      ..vy = 0;
+    player.state['spriteW'] = 32;
+    player.state['spriteH'] = 64;
+    player.state['hurtTimer'] = 0;
+    game.spawnEntity('enemy_test', {
+      'kind': 'pixel',
+      'position': [110, 120],
+      'size': [32, 32],
+      'velocity': [0, 0],
+      'render': {'shape': 'rect', 'color': '#00FF00'},
+    });
+    game.vars['player_power'] = 'fire';
+    game.vars['lives'] = 3;
+    game.vars['hit_enemy'] = 'enemy_test';
+
+    game.logic.runStep(hitAction);
+
+    expect(game.vars['lives'], 3);
+    expect(game.vars['player_power'], isNull);
+    expect(player.h, 32);
+    expect(player.w, 24);
+    expect(player.state['hurtTimer'], greaterThan(0));
+  });
+
+  test('真实 Mario JSON: powered Mario 碎砖会移除砖块实体和 TMX 碰撞对象', () async {
+    final raw =
+        json.decode(
+              File('templates/demo_mario_platformer.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final flameSpec = Map<String, dynamic>.from(
+      raw['ui']['screens'][0]['children'][0]['child'] as Map,
+    );
+    final entities = Map<String, dynamic>.from(flameSpec['entities'] as Map);
+    entities['map'] = {
+      ...Map<String, dynamic>.from(entities['map'] as Map),
+      'source': '',
+      'map_data': {
+        'width': 20,
+        'height': 20,
+        'tilewidth': 8,
+        'tileheight': 8,
+        'layers': [
+          {
+            'type': 'objectgroup',
+            'name': 'brick blocks',
+            'objects': [
+              {'id': 7, 'x': 100, 'y': 80, 'width': 16, 'height': 16},
+            ],
+          },
+        ],
+      },
+    };
+    flameSpec['entities'] = entities;
+    final game = JsonFlameGame(
+      spec: flameSpec,
+      assetManager: _testAssetManager(),
+    );
+    game.resetGame(varOverrides: {'state': 'loading'});
+    game.audio.dispose();
+    final map = game.entities['map'] as TiledMapEntity;
+    await map.load();
+    final frameLogic =
+        (flameSpec['frame'] as Map<String, dynamic>)['logic'] as List;
+
+    game.logic.runLogic(frameLogic, {'dt': 0.016});
+    expect(game.entities['brick_7'], isA<SpriteEntity>());
+    expect(
+      map.collisionRectsIn(const Rect.fromLTWH(200, 160, 32, 32)),
+      isNotEmpty,
+    );
+
+    final player = game.entities['player'] as PixelEntity;
+    player.state['blockedUp'] = true;
+    player.state['yCollision'] = {
+      'x': 200,
+      'y': 160,
+      'w': 32,
+      'h': 32,
+      'type': 'Solid',
+      'tileset': 'brick blocks',
+      'objectId': 7,
+      'layer': 'brick blocks',
+    };
+    game.vars['player_power'] = 'big';
+    game.vars['state'] = 'running';
+    final brickBreakAction =
+        ((frameLogic[8] as Map<String, dynamic>)['args']
+                as Map<String, dynamic>)['else']
+            .cast<Map<String, dynamic>>()
+            .firstWhere(
+              (node) => node.toString().contains('@tiled.remove_object'),
+            );
+    game.logic.runStep(brickBreakAction);
+
+    expect(game.entities['brick_7'], isNull);
+    expect(map.objectsByLayer['brick blocks'], isEmpty);
+    expect(
+      map.collisionRectsIn(const Rect.fromLTWH(200, 160, 32, 32)),
+      isEmpty,
+    );
   });
 }

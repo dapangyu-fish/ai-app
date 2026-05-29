@@ -1916,6 +1916,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `@tiled.collisions({map, rect})` / `@tiled.collisions({map, entity})` | 返回指定矩形或 entity AABB 范围内的瓦片碰撞列表 |
 | `@tiled.has_collision_type({map, rect, type})` / `@tiled.has_collision_type({map, entity, type})` | 判断范围内是否命中特定碰撞类型；`type: "hazard"` 时掉出地图底部也视为命中 |
 | `@tiled.nearest_object({map, layer, before_x})` | 查某层中 `x < before_x` 且离 `before_x` 最近的 object，常用于找最近重生点 |
+| `@tiled.remove_object({map, layer, object_id})` | 从指定 object layer 移除一个 object，并标记为已消费；适合破坏砖块、拾取后不再参与碰撞的地图对象 |
 | `@platformer.step({...})` | 通用平台跳跃物理步进：重力、地面、墙、危险区域等 |
 | `@platformer.backend({...})` | 平台物理后端辅助，供复杂 platformer 使用 |
 | `@platformer.respawn({...})` | 按 respawn 点重生 |
