@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.30",
+    "version": "1.0.31",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -304,6 +304,7 @@
                 "time_accum": 0,
                 "debug_powerup": false,
                 "debug_actors": false,
+                "debug_koopa": true,
                 "debug_actor_time": 0,
                 "debug_actor_tick": false,
                 "hit_shell": null,
@@ -4718,7 +4719,14 @@
                             "value": {
                               "and": [
                                 {
-                                  "var": "vars.debug_actors"
+                                  "or": [
+                                    {
+                                      "var": "vars.debug_actors"
+                                    },
+                                    {
+                                      "var": "vars.debug_koopa"
+                                    }
+                                  ]
                                 },
                                 {
                                   ">=": [
@@ -4923,6 +4931,86 @@
                           }
                         },
                         {
+                          "call": "@if",
+                          "args": {
+                            "cond": {
+                              "and": [
+                                {
+                                  "var": "vars.debug_koopa"
+                                },
+                                {
+                                  "var": "vars.debug_actor_tick"
+                                }
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@debug.log",
+                                "args": {
+                                  "tag": "MARIO_KOOPA",
+                                  "message": "koopa_presence",
+                                  "data": {
+                                    "exists": {
+                                      "call": "@entity.exists",
+                                      "args": {
+                                        "id": "enemy_98"
+                                      }
+                                    },
+                                    "playerX": {
+                                      "var": "entities.player.x"
+                                    },
+                                    "activationX": {
+                                      "+": [
+                                        {
+                                          "var": "entities.player.x"
+                                        },
+                                        {
+                                          "var": "vars.enemy_activation_ahead"
+                                        }
+                                      ]
+                                    },
+                                    "x": {
+                                      "call": "@entity.get",
+                                      "args": {
+                                        "id": "enemy_98",
+                                        "field": "x"
+                                      }
+                                    },
+                                    "y": {
+                                      "call": "@entity.get",
+                                      "args": {
+                                        "id": "enemy_98",
+                                        "field": "y"
+                                      }
+                                    },
+                                    "vx": {
+                                      "call": "@entity.get",
+                                      "args": {
+                                        "id": "enemy_98",
+                                        "field": "vx"
+                                      }
+                                    },
+                                    "vy": {
+                                      "call": "@entity.get",
+                                      "args": {
+                                        "id": "enemy_98",
+                                        "field": "vy"
+                                      }
+                                    },
+                                    "kind": {
+                                      "call": "@entity.get",
+                                      "args": {
+                                        "id": "enemy_98",
+                                        "field": "state.kind"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
                           "call": "@for_each_entity",
                           "args": {
                             "where_prefix": "enemy_",
@@ -4941,6 +5029,14 @@
                                   "field": "state.dir"
                                 },
                                 "assign": "vars._enemy_dir"
+                              },
+                              {
+                                "call": "@entity.get",
+                                "args": {
+                                  "id": "{{ vars._enemy_id }}",
+                                  "field": "state.kind"
+                                },
+                                "assign": "vars._enemy_kind"
                               },
                               {
                                 "call": "@entity.set",
@@ -5048,7 +5144,26 @@
                                 "call": "@if",
                                 "args": {
                                   "cond": {
-                                    "var": "vars.debug_actor_tick"
+                                    "and": [
+                                      {
+                                        "var": "vars.debug_actor_tick"
+                                      },
+                                      {
+                                        "or": [
+                                          {
+                                            "var": "vars.debug_actors"
+                                          },
+                                          {
+                                            "==": [
+                                              {
+                                                "var": "vars._enemy_kind"
+                                              },
+                                              "koopa"
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
                                   },
                                   "then": [
                                     {
