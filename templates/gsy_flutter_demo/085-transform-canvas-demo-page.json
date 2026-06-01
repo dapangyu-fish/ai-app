@@ -3,13 +3,13 @@
   "appid": "126e3c9f-7214-554f-8611-1e0fd0b29e71",
   "meta": {
     "name": "gsy_flutter_demo/085-transform-canvas-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "展示 canvas transform",
       "en": "Canvas transform demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：展示 canvas transform",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：展示 canvas transform",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "transform_canvas_demo_page",
       "widgetClass": "TransformCanvasDemoPage",
       "category": "canvas",
-      "routeIndex": 85
+      "routeIndex": 85,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
     }
   },
   "dependencies": {},
@@ -27,161 +29,157 @@
       "upstreamTitle": "展示 canvas transform",
       "upstreamSource": "lib/widget/canvas/transform_canvas_demo_page.dart",
       "upstreamWidget": "TransformCanvasDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "angle": 0
     },
-    "functions": {}
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.angle",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.angle"
+                      },
+                      18
+                    ]
+                  },
+                  360
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "展示 canvas transform",
-        "layout": "column",
+        "title": "TransformCanvasDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 300,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
                 "type": "container",
-                "layout": "column",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "palette",
-                    "size": 26,
-                    "color": "#7A57D1"
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "positioned",
+                        "child": {
+                          "type": "transform",
+                          "perspective": 0.001,
+                          "rotateX": 0,
+                          "rotateY": 0,
+                          "child": {
+                            "type": "container",
+                            "children": [],
+                            "width": 60,
+                            "height": 30,
+                            "color": "#FF5252",
+                            "borderRadius": 15
+                          }
+                        },
+                        "left": 70,
+                        "top": 0
+                      },
+                      {
+                        "type": "positioned",
+                        "child": {
+                          "type": "transform",
+                          "perspective": 0.001,
+                          "rotateX": 0,
+                          "rotateY": "{{ global.angle }}",
+                          "child": {
+                            "type": "container",
+                            "children": [],
+                            "width": 60,
+                            "height": 30,
+                            "color": "#FF5252",
+                            "borderRadius": 15
+                          }
+                        },
+                        "left": 70,
+                        "top": 85
+                      },
+                      {
+                        "type": "positioned",
+                        "child": {
+                          "type": "transform",
+                          "perspective": 0.001,
+                          "rotateX": "{{ global.angle }}",
+                          "rotateY": 0,
+                          "child": {
+                            "type": "container",
+                            "children": [],
+                            "width": 60,
+                            "height": 30,
+                            "color": "#FF5252",
+                            "borderRadius": 15
+                          }
+                        },
+                        "left": 150,
+                        "top": 85
+                      },
+                      {
+                        "type": "positioned",
+                        "child": {
+                          "type": "transform",
+                          "perspective": 0.001,
+                          "rotateX": "{{ global.angle }}",
+                          "rotateY": "{{ global.angle }}",
+                          "child": {
+                            "type": "container",
+                            "children": [],
+                            "width": 60,
+                            "height": 30,
+                            "color": "#FF5252",
+                            "borderRadius": 15
+                          }
+                        },
+                        "left": 230,
+                        "top": 85
+                      }
+                    ],
+                    "layout": "stack",
+                    "width": 320,
+                    "height": 220
                   }
                 ],
-                "width": 58,
-                "height": 58,
-                "color": "#F0ECFB",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "展示 canvas transform",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Canvas transform demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                "layout": "column",
+                "alignment": "center",
+                "mainAxisAlignment": "center"
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：绘制与Shader",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/canvas/transform_canvas_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：TransformCanvasDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "TransformCanvasDemoPage"
+        }
       }
     ]
   }
