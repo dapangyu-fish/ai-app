@@ -3,13 +3,13 @@
   "appid": "a26e7220-ec4a-5697-b2f7-605eae853d84",
   "meta": {
     "name": "gsy_flutter_demo/048-overflow-image-page",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "使用 overflow 处理图片",
       "en": "Image overflow demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：使用 overflow 处理图片",
+    "description": "gsy_flutter_demo JSON 移植子示例（已实现）：使用 overflow 处理图片",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,7 +27,8 @@
       "upstreamTitle": "使用 overflow 处理图片",
       "upstreamSource": "lib/widget/basic/overflow_image_page.dart",
       "upstreamWidget": "OverflowImagePage",
-      "portStatus": "in_development"
+      "portStatus": "ported",
+      "portVersion": "native-gsy-demo-widget-v1"
     },
     "functions": {}
   },
@@ -37,151 +38,23 @@
       {
         "id": "home",
         "title": "使用 overflow 处理图片",
-        "layout": "column",
+        "layout": "stack",
+        "appBar": false,
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "使用 overflow 处理图片",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Image overflow demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/overflow_image_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：OverflowImagePage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "gsy_demo_page",
+              "demo": "048"
             }
           }
         ],
         "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "backgroundColor": "#FFFFFF"
       }
     ]
   }

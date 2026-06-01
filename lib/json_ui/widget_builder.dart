@@ -66,6 +66,7 @@ import 'widgets/gsy_animation_widgets.dart';
 import 'widgets/floating_touch_demo_widget.dart';
 import 'widgets/floating_action_button_widget.dart';
 import 'widgets/hero_image_viewer_widget.dart';
+import 'widgets/gsy_demo_page_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -134,6 +135,7 @@ class JsonWidgetBuilder {
     'floating_touch_demo': JsonFloatingTouchDemoWidget(),
     'floating_action_button': JsonFloatingActionButtonWidget(),
     'hero_image_viewer': JsonHeroImageViewerWidget(),
+    'gsy_demo_page': JsonGsyDemoPageWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
