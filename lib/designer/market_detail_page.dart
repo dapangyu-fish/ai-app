@@ -1,7 +1,7 @@
 // 市场 App 详情页 + 用户主页
 // ─────────────────────────────────────────────────────────
 // - MarketAppDetailPage: 点市场卡片进，展示作者(头像可点)/summary/tech_stack/
-//   点赞下载量/运行按钮。运行=pop 返回 'run' 让市场加载 + 发 install 埋点。
+//   点赞下载量/运行按钮。运行=pop 返回带 version 的 app map 让市场加载 + 发 install 埋点。
 // - MarketUserProfilePage: 点作者进，展示总下载/总点赞 + 他的 app 列表。
 //
 // 数据来自 registry: GET /packages/<name>/detail、GET /users/<id>/profile。
@@ -28,6 +28,29 @@ String _pickSummary(BuildContext ctx, Map<String, dynamic> d) {
   final en = (d['summary_en'] as String?) ?? '';
   if (_isZh(ctx)) return zh.isNotEmpty ? zh : en;
   return en.isNotEmpty ? en : zh;
+}
+
+int _compareVersionsDesc(String a, String b) {
+  final av = _parseVersionParts(a);
+  final bv = _parseVersionParts(b);
+  for (var i = 0; i < 3; i++) {
+    final diff = bv[i].compareTo(av[i]);
+    if (diff != 0) return diff;
+  }
+  return b.compareTo(a);
+}
+
+List<int> _parseVersionParts(String version) {
+  final core = version
+      .trim()
+      .replaceFirst(RegExp(r'^v'), '')
+      .split(RegExp(r'[-+]'))
+      .first;
+  final parts = core.split('.');
+  return List<int>.generate(3, (i) {
+    if (i >= parts.length) return 0;
+    return int.tryParse(parts[i]) ?? 0;
+  });
 }
 
 class _MarketAvatar extends StatelessWidget {
@@ -94,16 +117,21 @@ class MarketAppDetailPage extends StatefulWidget {
 
 class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
   Map<String, dynamic>? _detail;
+  List<String> _versions = const [];
+  String? _selectedVersion;
   bool _loading = true;
   bool _likeBusy = false;
   bool _favorited = false;
+  bool _versionsLoading = false;
 
   String get _name => widget.app['name']?.toString() ?? '';
 
   @override
   void initState() {
     super.initState();
+    _selectedVersion = widget.app['version']?.toString();
     _fetchDetail();
+    _fetchVersions();
     _loadFavorite();
   }
 
@@ -135,6 +163,40 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
       }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _fetchVersions() async {
+    if (_name.isEmpty) return;
+    setState(() => _versionsLoading = true);
+    try {
+      final resp = await http
+          .get(Uri.parse('${AppConfig.registryUrl}/package/$_name'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) return;
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final versions =
+          (data['versions'] as List? ?? const [])
+              .map((v) => v.toString())
+              .where((v) => v.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort(_compareVersionsDesc);
+      final latest = data['latest']?.toString();
+      if (!mounted) return;
+      setState(() {
+        _versions = versions;
+        if (latest != null && latest.isNotEmpty && versions.contains(latest)) {
+          _selectedVersion = latest;
+        } else if ((_selectedVersion == null || _selectedVersion!.isEmpty) &&
+            versions.isNotEmpty) {
+          _selectedVersion = versions.first;
+        }
+      });
+    } catch (_) {
+      // 版本列表失败时保留列表页传入的版本，运行仍可继续。
+    } finally {
+      if (mounted) setState(() => _versionsLoading = false);
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -172,7 +234,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
   }
 
   Future<void> _run() async {
-    // 发 install 埋点（fire-and-forget），然后 pop 返回 'run' 让市场加载
+    // 发 install 埋点（fire-and-forget），然后 pop 返回选中版本让市场加载
     final token = AuthService.token;
     if (token != null) {
       // ignore: unawaited_futures
@@ -184,7 +246,13 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
           .timeout(const Duration(seconds: 5))
           .catchError((_) => http.Response('', 0));
     }
-    if (mounted) Navigator.of(context).pop('run');
+    if (!mounted) return;
+    final appToRun = Map<String, dynamic>.from(widget.app);
+    final version = _selectedVersion?.trim();
+    if (version != null && version.isNotEmpty) {
+      appToRun['version'] = version;
+    }
+    Navigator.of(context).pop(appToRun);
   }
 
   void _openAuthor() {
@@ -198,12 +266,64 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
     );
   }
 
+  Widget _versionSelector(ColorScheme cs) {
+    final selected =
+        _selectedVersion ?? widget.app['version']?.toString() ?? '';
+    final versions = _versions.isEmpty && selected.isNotEmpty
+        ? <String>[selected]
+        : _versions;
+    return PopupMenuButton<String>(
+      enabled: versions.isNotEmpty,
+      initialValue: selected.isNotEmpty ? selected : null,
+      onSelected: (value) => setState(() => _selectedVersion = value),
+      itemBuilder: (context) => [
+        for (final version in versions)
+          PopupMenuItem<String>(
+            value: version,
+            child: Row(
+              children: [
+                Expanded(child: Text('v$version')),
+                if (version == selected)
+                  Icon(Icons.check, size: 18, color: cs.primary),
+              ],
+            ),
+          ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_versionsLoading) ...[
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              selected.isEmpty
+                  ? (_isZh(context) ? '加载版本' : 'Loading versions')
+                  : 'v$selected',
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            ),
+            Icon(Icons.arrow_drop_down, size: 18, color: cs.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final d = _detail;
     final displayName = widget.app['name']?.toString() ?? '';
-    final version = widget.app['version']?.toString() ?? '';
+    final version = _selectedVersion ?? widget.app['version']?.toString() ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -249,14 +369,8 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                               color: cs.onSurface,
                             ),
                           ),
-                          if (version.isNotEmpty)
-                            Text(
-                              'v$version',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: cs.onSurfaceVariant,
-                              ),
-                            ),
+                          if (version.isNotEmpty || _versionsLoading)
+                            _versionSelector(cs),
                         ],
                       ),
                     ),

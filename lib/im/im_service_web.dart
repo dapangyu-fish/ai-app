@@ -330,7 +330,49 @@ class IMService {
     final ids = userIDList.where((id) => id.isNotEmpty).toSet().toList();
     if (ids.isEmpty) return const {};
     final result = <String, Map<String, dynamic>>{};
-    for (final id in ids) {
+    try {
+      final token = AuthService.token;
+      final uri = Uri.parse(
+        '$_backendUrl/api/im/users/profiles',
+      ).replace(queryParameters: {'ids': ids.join(',')});
+      final resp = await http
+          .get(
+            uri,
+            headers: token == null ? null : {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        for (final raw in List<Map<String, dynamic>>.from(
+          data['users'] ?? const [],
+        )) {
+          final id = raw['im_user_id']?.toString() ?? '';
+          if (id.isEmpty) continue;
+          final face =
+              raw['face_url']?.toString() ??
+              raw['avatar_url']?.toString() ??
+              '';
+          result[id] = {
+            'im_user_id': id,
+            'nickname': raw['nickname']?.toString() ?? '',
+            'email': raw['email']?.toString() ?? '',
+            'face_url': face,
+            'avatar_url': face,
+          };
+        }
+      } else {
+        debugPrint(
+          '[IM_WEB] profiles lookup failed ${resp.statusCode}: ${resp.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[IM_WEB] profiles lookup exception: $e');
+    }
+
+    final missingIds = ids.where((id) => !result.containsKey(id)).toList();
+    if (missingIds.isEmpty) return result;
+
+    for (final id in missingIds) {
       try {
         final hits = await searchUsers(id);
         for (final user in hits) {

@@ -66,6 +66,31 @@ final ValueNotifier<String> appLifecycleEvent = ValueNotifier<String>('init');
 /// （达到 RemoteConfigService.splashDuration 才放行）。
 final DateTime appStartTime = DateTime.now();
 
+const List<String> _localJsonDebugParamNames = [
+  'local_json',
+  'json_path',
+  'json_app',
+];
+
+String? _localJsonDebugSource() {
+  final params = Uri.base.queryParameters;
+  for (final name in _localJsonDebugParamNames) {
+    final value = params[name]?.trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+bool _isLocalDebugHost() {
+  if (!kIsWeb) return true;
+  final host = Uri.base.host.toLowerCase();
+  return host.isEmpty ||
+      host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host == '::1' ||
+      host == '[::1]';
+}
+
 String? _lastUiCrashKey;
 DateTime? _lastUiCrashAt;
 
@@ -272,6 +297,7 @@ void main() async {
   appStartTime;
 
   WidgetsFlutterBinding.ensureInitialized();
+  final localJsonDebug = _localJsonDebugSource() != null && _isLocalDebugHost();
 
   // Firebase Core 初始化 —— FirebaseMessaging 等所有 firebase_xxx 插件都依赖它。
   // Android 自动从 android/app/google-services.json 读配置；其他平台暂时不开 FCM 跳过。
@@ -342,12 +368,12 @@ void main() async {
   // 并行：恢复鉴权 + 拉取远程配置（1s 超时，超时 fall back 到缓存/默认值）。
   // 配置必须早于 splash 渲染拿到，splash_text / splash_duration_ms 才能正确生效。
   await Future.wait([
-    AuthService.restoreSession(),
+    if (!localJsonDebug) AuthService.restoreSession(),
     AiChatService.loadProvider(),
-    RemoteConfigService.instance.bootstrap(),
+    if (!localJsonDebug) RemoteConfigService.instance.bootstrap(),
   ]);
   // 如果已登录，后台初始化 IM 连接
-  if (AuthService.isLoggedIn) {
+  if (!localJsonDebug && AuthService.isLoggedIn) {
     IMService.instance.restoreSession();
   }
   runApp(const ProviderScope(child: JsonDslApp()));
@@ -578,6 +604,9 @@ class JsonDslApp extends ConsumerWidget {
       themeMode: mode,
       // 使用 builder 注入悬浮球，凌驾于所有路由之上
       builder: (context, child) {
+        if (_localJsonDebugSource() != null && _isLocalDebugHost()) {
+          return child ?? const SizedBox.shrink();
+        }
         return DesignerBall(
           child: child ?? const SizedBox.shrink(),
           getCurrentConfig: () => ProviderScope.containerOf(
@@ -607,7 +636,145 @@ class JsonDslApp extends ConsumerWidget {
           },
         );
       },
-      home: const _SplashGate(child: _AuthGate()),
+      home:
+          _LocalJsonDebugLoader.maybeBuild() ??
+          const _SplashGate(child: _AuthGate()),
+    );
+  }
+}
+
+class _LocalJsonDebugLoader extends ConsumerStatefulWidget {
+  final String source;
+
+  const _LocalJsonDebugLoader({required this.source});
+
+  static Widget? maybeBuild() {
+    final source = _localJsonDebugSource();
+    if (source == null || !_isLocalDebugHost()) return null;
+    return _LocalJsonDebugLoader(source: source);
+  }
+
+  @override
+  ConsumerState<_LocalJsonDebugLoader> createState() =>
+      _LocalJsonDebugLoaderState();
+}
+
+class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
+  bool _loading = true;
+  String? _error;
+  String? _fileName;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<String> _readJsonSource(String source) async {
+    final uri = Uri.tryParse(source);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      final resp = await http.get(uri).timeout(const Duration(seconds: 20));
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}: $source');
+      }
+      return resp.body;
+    }
+
+    if (kIsWeb) {
+      final helper = Uri.parse(
+        Uri.base.queryParameters['local_json_server'] ??
+            'http://127.0.0.1:8765/json',
+      );
+      final query = Map<String, String>.from(helper.queryParameters)
+        ..['path'] = source;
+      final resp = await http
+          .get(helper.replace(queryParameters: query))
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode != 200) {
+        throw Exception('Local JSON helper ${resp.statusCode}: ${resp.body}');
+      }
+      return resp.body;
+    }
+
+    final content = await NativeFs.readStringAbs(source);
+    if (content == null) {
+      throw Exception('File not found or unreadable: $source');
+    }
+    return content;
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final jsonStr = await _readJsonSource(widget.source);
+      final config = json.decode(jsonStr) as Map<String, dynamic>;
+      final interpreter = ref.read(interpreterProvider);
+      interpreter.loadConfig(config);
+      await interpreter.executeSteps();
+      final meta = config['meta'] as Map<String, dynamic>?;
+      final fallback = widget.source.split('/').last;
+      final fileName = resolveDisplayName(meta, fallback: fallback);
+      if (!mounted) return;
+      setState(() {
+        _fileName = fileName;
+        _loading = false;
+      });
+    } catch (e, stack) {
+      debugPrint('[LocalJsonDebug] load failed: $e\n$stack');
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('local_json_debug');
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_error != null) {
+      final cs = Theme.of(context).colorScheme;
+      return Scaffold(
+        appBar: AppBar(title: const Text('Local JSON Debug')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Failed to load local JSON',
+                  style: TextStyle(
+                    color: cs.error,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(widget.source),
+                const SizedBox(height: 12),
+                SelectableText(_error!, style: TextStyle(color: cs.error)),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return JsonScreenView(
+      fileName: _fileName ?? 'Local JSON',
+      isStartupRoot: true,
     );
   }
 }
@@ -944,15 +1111,19 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     });
 
     try {
-      final name = app['name'] as String;
-      final version = app['version'] as String;
+      final name = app['name']?.toString() ?? '';
+      final version = app['version']?.toString().trim() ?? '';
+      if (name.isEmpty) {
+        throw Exception(T.current.mainCantResolveAppConfigError);
+      }
 
-      // 使用 CacheManager 走统一的热更新缓存策略，传确切的版本号进行约束
+      // 市场详情页选择的是要运行的具体版本；这里必须精确解析，避免
+      // "^1.5.1 + preferLatest" 把旧版本又升级成最新版，导致版本对比失真。
       final config = await CacheManager.instance.getResource(
         name,
-        VersionConstraint.parse('^$version'),
+        VersionConstraint.parse(version.isEmpty ? '*' : version),
         type: 'app',
-        preferLatest: true,
+        preferLatest: version.isEmpty,
       );
 
       if (config == null) {
@@ -1979,13 +2150,17 @@ class _MarketPageState extends State<_MarketPage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () async {
-          // 先进详情页；详情页"运行"会 pop 返回 'run'，这里再 pop 市场 + 加载
-          final result = await Navigator.of(context).push<String>(
+          // 先进详情页；详情页"运行"会 pop 返回带 version 的 app map。
+          final result = await Navigator.of(context).push<Object?>(
             MaterialPageRoute(builder: (_) => MarketAppDetailPage(app: app)),
           );
-          if (result == 'run' && context.mounted) {
+          if (result is Map && context.mounted) {
             Navigator.of(context).pop();
-            widget.onSelect(app);
+            await widget.onSelect(Map<String, dynamic>.from(result));
+          } else if (result == 'run' && context.mounted) {
+            // 兼容旧详情页返回值。
+            Navigator.of(context).pop();
+            await widget.onSelect(app);
           } else if (_selectedTabIndex == 2 && mounted) {
             // 收藏 tab：返回时刷新（详情页里可能取消了收藏）
             _fetchApps();
@@ -2124,6 +2299,34 @@ bool _containsListInChildren(List<dynamic> children) {
   return false;
 }
 
+List<dynamic> _screenChildren(Map<String, dynamic> screenConfig) {
+  final children = screenConfig['children'];
+  if (children is List<dynamic>) return children;
+
+  // Compatibility for AI-generated JSON that uses a Flutter-like
+  // screen.body shape. The canonical DSL field remains screen.children.
+  final body = screenConfig['body'];
+  if (body is List<dynamic>) return body;
+  if (body is Map<String, dynamic>) return [body];
+  return const [];
+}
+
+Map<String, dynamic> _screenContentConfig(Map<String, dynamic> screenConfig) {
+  if (screenConfig['children'] is List<dynamic>) return screenConfig;
+
+  final body = screenConfig['body'];
+  if (body is Map<String, dynamic> &&
+      body['type'] == 'container' &&
+      body['children'] is List<dynamic>) {
+    final merged = Map<String, dynamic>.from(screenConfig);
+    merged['children'] = body['children'];
+    if (body.containsKey('layout')) merged['layout'] = body['layout'];
+    if (body.containsKey('padding')) merged['padding'] = body['padding'];
+    return merged;
+  }
+  return screenConfig;
+}
+
 /// 根据当前 screen ID 渲染对应的 JSON 页面
 class JsonScreenView extends ConsumerWidget {
   final String fileName;
@@ -2215,7 +2418,8 @@ class JsonScreenView extends ConsumerWidget {
     JsonInterpreter interpreter,
     List<dynamic> screens,
   ) {
-    final children = screenConfig['children'] as List<dynamic>? ?? [];
+    final contentConfig = _screenContentConfig(screenConfig);
+    final children = _screenChildren(contentConfig);
     final hasListWidget = _containsListInChildren(children);
 
     final childWidgets = children
@@ -2280,7 +2484,7 @@ class JsonScreenView extends ConsumerWidget {
 
     // screen.layout=stack 时，需要全屏 Stack（绝对定位才有参考系），
     // 不能再放进 SingleChildScrollView 里——否则 Stack 高度坍缩到子项最大尺寸
-    final isStackLayout = (screenConfig['layout'] ?? 'column') == 'stack';
+    final isStackLayout = (contentConfig['layout'] ?? 'column') == 'stack';
 
     final Widget bodyContent;
     if (isStackLayout) {
@@ -2288,7 +2492,7 @@ class JsonScreenView extends ConsumerWidget {
     } else if (hasListWidget) {
       bodyContent = Padding(
         padding: EdgeInsets.all(
-          (screenConfig['padding'] as num?)?.toDouble() ?? 0,
+          (contentConfig['padding'] as num?)?.toDouble() ?? 0,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2297,7 +2501,7 @@ class JsonScreenView extends ConsumerWidget {
       );
     } else {
       bodyContent = SingleChildScrollView(
-        child: buildScreenLayout(screenConfig, childWidgets),
+        child: buildScreenLayout(contentConfig, childWidgets),
       );
     }
 
@@ -2511,7 +2715,8 @@ class _TabScreenViewState extends State<_TabScreenView> {
 
     // 当前 tab 配置
     final currentTab = tabs[_currentIndex] as Map<String, dynamic>;
-    final tabChildren = currentTab['children'] as List<dynamic>? ?? [];
+    final currentTabContent = _screenContentConfig(currentTab);
+    final tabChildren = _screenChildren(currentTabContent);
     final tabBgColorStr = currentTab['backgroundColor'] as String?;
 
     Color? tabBgColor;
@@ -2529,6 +2734,7 @@ class _TabScreenViewState extends State<_TabScreenView> {
 
     final padding =
         (currentTab['padding'] as num?)?.toDouble() ??
+        (currentTabContent['padding'] as num?)?.toDouble() ??
         (widget.screenConfig['padding'] as num?)?.toDouble() ??
         0;
 

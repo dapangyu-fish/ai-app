@@ -92,6 +92,7 @@ def create_app():
     app.add_url_rule("/api/im/token", methods=["POST"], view_func=im.get_im_token)
     app.add_url_rule("/api/im/users/lookup", methods=["GET"], view_func=im.lookup_user)
     app.add_url_rule("/api/im/users/search", methods=["GET"], view_func=im.search_users)
+    app.add_url_rule("/api/im/users/profiles", methods=["GET"], view_func=im.user_profiles)
     app.add_url_rule("/api/im/push_token", methods=["POST"], view_func=im.upload_push_token)
     app.add_url_rule("/api/im/push_token", methods=["DELETE"], view_func=im.remove_push_token)
     # IM 富媒体上传：客户端拿预签名 PUT 直传 MinIO，避免大文件经 Flask

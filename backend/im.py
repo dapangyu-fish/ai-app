@@ -364,6 +364,55 @@ def search_users():
     return jsonify({"users": matches})
 
 
+@require_auth
+def user_profiles():
+    """
+    GET /api/im/users/profiles?ids=im_user_id1,im_user_id2
+
+    给客户端/JSON-DSL 精确回填头像和昵称用：
+      - ids 是 OpenIM userID（去掉 hyphen 的 Supabase uuid），也兼容带 hyphen uuid
+      - 不排除当前用户自己，聊天列表/消息流需要用它补自己的头像
+      - 返回字段与 search_users 保持兼容：{ im_user_id, nickname, email, face_url }
+    """
+    raw_ids = [
+        item.strip()
+        for item in (request.args.get("ids") or "").split(",")
+        if item.strip()
+    ]
+    if not raw_ids:
+        return jsonify({"users": []})
+    if len(raw_ids) > 100:
+        return jsonify({"error": "too many ids"}), 400
+
+    wanted = {item.replace("-", "").lower() for item in raw_ids}
+
+    try:
+        all_users = _list_supabase_users()
+    except RuntimeError as e:
+        logger.error(f"[IM] user profiles 拉表失败: {e}")
+        return jsonify({"error": str(e)}), 502
+
+    users = []
+    for u in all_users:
+        uid = str(u.get("id", ""))
+        im_user_id = _to_im_user_id(uid)
+        if im_user_id.lower() not in wanted and uid.replace("-", "").lower() not in wanted:
+            continue
+
+        email = u.get("email", "")
+        meta = u.get("user_metadata") or {}
+        users.append({
+            "im_user_id": im_user_id,
+            "nickname": meta.get("username") or email.split("@")[0] or uid[:8],
+            "email": email,
+            "face_url": meta.get("avatar_url") or "",
+        })
+        if len(users) >= len(wanted):
+            break
+
+    return jsonify({"users": users})
+
+
 def _rank_user(u, q_lower: str, q_no_hyphen: str, me_im_id: str) -> int:
     """越小越靠前。完全匹配 / 前缀 / 包含 各档分。"""
     uid = str(u.get("id", ""))

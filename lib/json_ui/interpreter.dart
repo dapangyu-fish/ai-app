@@ -3559,13 +3559,24 @@ class JsonInterpreter extends ChangeNotifier {
         .toSet()
         .toList();
     if (ids.isEmpty) return;
+    final myId = IMService.instance.currentUserId;
+    final myAvatar = AuthService.currentUser?['avatar_url']?.toString() ?? '';
+    final myName = AuthService.currentUser?['username']?.toString() ?? '';
+    if (myId != null && myId.isNotEmpty && myAvatar.isNotEmpty) {
+      for (final item in items) {
+        if ((item[idField]?.toString() ?? '') != myId) continue;
+        item[faceField] = myAvatar;
+        if (myName.isNotEmpty) item[nicknameField] = myName;
+      }
+    }
     final supaMap = await IMService.instance.lookupUsersFromSupabase(ids);
     if (supaMap.isEmpty) return;
     for (final item in items) {
       final id = item[idField]?.toString() ?? '';
       final supa = supaMap[id];
       if (supa == null) continue;
-      final supaFace = supa['face_url']?.toString() ?? '';
+      final supaFace =
+          supa['face_url']?.toString() ?? supa['avatar_url']?.toString() ?? '';
       if (supaFace.isNotEmpty) item[faceField] = supaFace;
       // 昵称同样可能更新过；非空时盖一下，让显示用最新值
       final supaName = supa['nickname']?.toString() ?? '';
