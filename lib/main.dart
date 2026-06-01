@@ -2550,7 +2550,8 @@ class JsonScreenView extends ConsumerWidget {
       );
     }
 
-    return PopScope(
+    final onLoad = screenConfig['onLoad'];
+    final screen = PopScope(
       // 拦截系统返回手势（iOS edge swipe / Android 返回键）：
       //   - 内部 JSON 历史栈非空 → 拦下来走 navigateBack
       //   - isStartupRoot → 整个就这个 app，没地方退，也拦下来吃掉
@@ -2575,7 +2576,65 @@ class JsonScreenView extends ConsumerWidget {
         body: SafeArea(child: bodyContent),
       ),
     );
+
+    if (onLoad is Map<String, dynamic>) {
+      return _JsonScreenOnLoad(
+        screenId: interpreter.currentScreenId,
+        onLoad: onLoad,
+        interpreter: interpreter,
+        child: screen,
+      );
+    }
+
+    return screen;
   }
+}
+
+class _JsonScreenOnLoad extends StatefulWidget {
+  final String screenId;
+  final Map<String, dynamic> onLoad;
+  final JsonInterpreter interpreter;
+  final Widget child;
+
+  const _JsonScreenOnLoad({
+    required this.screenId,
+    required this.onLoad,
+    required this.interpreter,
+    required this.child,
+  });
+
+  @override
+  State<_JsonScreenOnLoad> createState() => _JsonScreenOnLoadState();
+}
+
+class _JsonScreenOnLoadState extends State<_JsonScreenOnLoad> {
+  String? _loadedScreenId;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant _JsonScreenOnLoad oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.screenId != widget.screenId) {
+      _scheduleIfNeeded();
+    }
+  }
+
+  void _scheduleIfNeeded() {
+    if (_loadedScreenId == widget.screenId) return;
+    _loadedScreenId = widget.screenId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.interpreter.executeAction(widget.onLoad, context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 // ============================================================

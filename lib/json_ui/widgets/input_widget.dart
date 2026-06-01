@@ -14,7 +14,8 @@ class JsonInputWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final placeholder = interpreter.resolveTemplate(
-        json['placeholder']?.toString() ?? '');
+      json['placeholder']?.toString() ?? '',
+    );
     final bindPath = json['bind'] as String?;
     final maxLines = (json['maxLines'] as num?)?.toInt() ?? 1;
     final obscureText = json['obscureText'] == true;
@@ -23,7 +24,9 @@ class JsonInputWidget extends JsonBaseWidget {
     final prefixIcon = json['prefixIcon']?.toString();
     final suffixIcon = json['suffixIcon']?.toString();
     final rawLabel = json['label']?.toString();
-    final label = rawLabel != null ? interpreter.resolveTemplate(rawLabel) : null;
+    final label = rawLabel != null
+        ? interpreter.resolveTemplate(rawLabel)
+        : null;
     final style = json['style'] as Map<String, dynamic>? ?? {};
 
     // 键盘类型
@@ -49,6 +52,7 @@ class JsonInputWidget extends JsonBaseWidget {
     // 样式
     final borderRadius = (style['borderRadius'] as num?)?.toDouble() ?? 8;
     final fontSize = (style['fontSize'] as num?)?.toDouble() ?? 14;
+    final borderStyle = style['border']?.toString() ?? 'outline';
     final fillColorStr = style['fillColor'] as String?;
     Color? fillColor;
     if (fillColorStr != null && fillColorStr.startsWith('#')) {
@@ -59,6 +63,45 @@ class JsonInputWidget extends JsonBaseWidget {
     final currentValue = bindPath != null
         ? interpreter.getVariable(bindPath)?.toString() ?? ''
         : '';
+
+    final InputBorder border;
+    final InputBorder enabledBorder;
+    final InputBorder focusedBorder;
+    if (borderStyle == 'underline') {
+      border = const UnderlineInputBorder();
+      enabledBorder = UnderlineInputBorder(
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+        ),
+      );
+      focusedBorder = UnderlineInputBorder(
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.primary,
+          width: 2,
+        ),
+      );
+    } else if (borderStyle == 'none') {
+      border = InputBorder.none;
+      enabledBorder = InputBorder.none;
+      focusedBorder = InputBorder.none;
+    } else {
+      border = OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+      );
+      enabledBorder = OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+        ),
+      );
+      focusedBorder = OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.primary,
+          width: 2,
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -81,24 +124,13 @@ class JsonInputWidget extends JsonBaseWidget {
               : null,
           filled: fillColor != null,
           fillColor: fillColor,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
+          border: border,
+          enabledBorder: enabledBorder,
+          focusedBorder: focusedBorder,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
-            borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
-            borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.primary,
-              width: 2,
-            ),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         ),
         onChanged: (value) {
           if (bindPath != null) {

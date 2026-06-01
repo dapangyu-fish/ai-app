@@ -3,7 +3,7 @@
   "appid": "9f6399f7-a647-5e08-b4eb-84d64af51f12",
   "meta": {
     "name": "gsy_flutter_demo/001-controller-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "文本输入框简单的 Controller",
@@ -24,12 +24,7 @@
   "dependencies": {},
   "global": {
     "variables": {
-      "upstreamTitle": "文本输入框简单的 Controller",
-      "upstreamSource": "lib/widget/basic/controller_demo_page.dart",
-      "upstreamWidget": "ControllerDemoPage",
-      "portStatus": "v1_json_port",
-      "message": "Hello GSY",
-      "note": ""
+      "text": ""
     },
     "functions": {}
   },
@@ -38,605 +33,57 @@
     "screens": [
       {
         "id": "home",
-        "title": "文本输入框简单的 Controller",
-        "layout": "column",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "dashboard",
-                        "size": 26,
-                        "color": "#1D7BCB"
-                      }
-                    ],
-                    "width": 56,
-                    "height": 56,
-                    "color": "#E8F2FD",
-                    "borderRadius": 16,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 12
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "文本输入框简单的 Controller",
-                        "style": {
-                          "fontSize": 20,
-                          "fontWeight": "800",
-                          "color": "#111827"
-                        },
-                        "maxLines": 2
-                      },
-                      {
-                        "type": "spacer",
-                        "height": 4
-                      },
-                      {
-                        "type": "text",
-                        "value": "Simple text input controller",
-                        "style": {
-                          "fontSize": 12,
-                          "color": "#667085"
-                        },
-                        "maxLines": 2
-                      }
-                    ],
-                    "position": {
-                      "type": "flex",
-                      "flex": 1
-                    },
-                    "crossAxisAlignment": "start"
-                  }
-                ],
-                "crossAxisAlignment": "center"
+            "type": "center",
+            "child": {
+              "type": "gesture_detector",
+              "onTap": {
+                "type": "navigate",
+                "screen": "edit"
               },
-              {
-                "type": "spacer",
-                "height": 12
-              },
-              {
-                "type": "wrap",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "001",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#1D7BCB"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#E8F2FD",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "基础控件",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#374151"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#F8FAFC",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "V1 JSON 移植",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#047857"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#ECFDF5",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  }
-                ],
-                "spacing": 8,
-                "runSpacing": 8
-              }
-            ],
-            "padding": 18,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "edit",
-                        "size": 17,
-                        "color": "#1D7BCB"
-                      }
-                    ],
-                    "width": 32,
-                    "height": 32,
-                    "color": "#EEF6FF",
-                    "borderRadius": 10,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 8
-                  },
-                  {
-                    "type": "text",
-                    "value": "TextEditingController",
-                    "style": {
-                      "fontSize": 16,
-                      "fontWeight": "800",
-                      "color": "#111827"
-                    }
-                  }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "input",
-                "bind": "global.message",
-                "placeholder": "输入文本",
-                "prefixIcon": "edit"
-              },
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "text",
-                    "value": "Controller text",
-                    "style": {
-                      "fontSize": 12,
-                      "color": "#667085"
-                    }
-                  },
-                  {
-                    "type": "text",
-                    "value": "{{ global.message }}",
-                    "style": {
-                      "fontSize": 22,
-                      "fontWeight": "800",
-                      "color": "#0B4D88"
-                    }
-                  }
-                ],
-                "padding": 14,
-                "color": "#EAF2FF",
-                "borderRadius": 16,
-                "crossAxisAlignment": "start"
-              },
-              {
-                "type": "button",
-                "label": "进入第二页",
-                "action": {
-                  "type": "navigate",
-                  "screen": "detail"
-                },
-                "icon": "forward"
-              }
-            ],
-            "padding": 14,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 18,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+              "child": {
                 "type": "text",
-                "value": "移植说明",
+                "value": "Click",
                 "style": {
-                  "fontSize": 15,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                  "fontSize": 50,
+                  "color": "#000000"
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "此版本已从纯占位页推进为可运行 JSON 演示。复杂 CustomPainter、Shader、3D、Sliver 等能力在当前框架中仍以降级视觉或交互近似呈现。",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#4B5563",
-                  "lineHeight": 1.35
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "warning_amber",
-                    "size": 16,
-                    "color": "#B45309"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 6
-                  },
-                  {
-                    "type": "text",
-                    "value": "Flutter 原版展示真实 TextEditingController 生命周期；JSON 版保留绑定输入与跨屏同步语义。",
-                    "style": {
-                      "fontSize": 12,
-                      "color": "#92400E"
-                    },
-                    "maxLines": 3
-                  }
-                ],
-                "crossAxisAlignment": "start"
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/controller_demo_page.dart",
-                "style": {
-                  "fontSize": 11,
-                  "color": "#6B7280"
-                },
-                "maxLines": 1
-              },
-              {
-                "type": "text",
-                "value": "Widget：ControllerDemoPage",
-                "style": {
-                  "fontSize": 11,
-                  "color": "#6B7280"
-                },
-                "maxLines": 1
               }
-            ],
-            "padding": 14,
-            "margin": 12,
-            "color": "#FFFBEB",
-            "borderRadius": 16,
-            "border": {
-              "color": "#FDE68A",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "type": "back"
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
             }
-          },
-          {
-            "type": "spacer",
-            "height": 18
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       },
       {
-        "id": "detail",
-        "title": "Controller Detail",
-        "layout": "column",
+        "id": "edit",
+        "title": "ControllerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "edit",
-                        "size": 26,
-                        "color": "#1D7BCB"
-                      }
-                    ],
-                    "width": 56,
-                    "height": 56,
-                    "color": "#E8F2FD",
-                    "borderRadius": 16,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 12
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "文本输入框简单的 Controller",
-                        "style": {
-                          "fontSize": 20,
-                          "fontWeight": "800",
-                          "color": "#111827"
-                        },
-                        "maxLines": 2
-                      },
-                      {
-                        "type": "spacer",
-                        "height": 4
-                      },
-                      {
-                        "type": "text",
-                        "value": "Simple text input controller",
-                        "style": {
-                          "fontSize": 12,
-                          "color": "#667085"
-                        },
-                        "maxLines": 2
-                      }
-                    ],
-                    "position": {
-                      "type": "flex",
-                      "flex": 1
-                    },
-                    "crossAxisAlignment": "start"
+            "type": "center",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "input",
+                  "bind": "global.text",
+                  "placeholder": "",
+                  "style": {
+                    "border": "underline",
+                    "fontSize": 14
                   }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 12
-              },
-              {
-                "type": "wrap",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "001",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#1D7BCB"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#E8F2FD",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "基础控件",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#374151"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#F8FAFC",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "双屏输入演示",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#047857"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#ECFDF5",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  }
-                ],
-                "spacing": 8,
-                "runSpacing": 8
-              }
-            ],
-            "padding": 18,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "forward",
-                        "size": 17,
-                        "color": "#1D7BCB"
-                      }
-                    ],
-                    "width": 32,
-                    "height": 32,
-                    "color": "#EEF6FF",
-                    "borderRadius": 10,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 8
-                  },
-                  {
-                    "type": "text",
-                    "value": "Second route",
-                    "style": {
-                      "fontSize": 16,
-                      "fontWeight": "800",
-                      "color": "#111827"
-                    }
-                  }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "input",
-                "bind": "global.message",
-                "placeholder": "修改 controller 文本",
-                "prefixIcon": "edit"
-              },
-              {
-                "type": "text",
-                "value": "当前值：{{ global.message }}",
-                "style": {
-                  "fontSize": 18,
-                  "fontWeight": "700",
-                  "color": "#1D7BCB"
                 }
-              },
-              {
-                "type": "button",
-                "label": "返回输入页",
-                "action": {
-                  "type": "back"
-                },
-                "icon": "back",
-                "variant": "outlined"
-              }
-            ],
-            "padding": 14,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 18,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
+              ],
+              "width": 360,
+              "padding": 10
+            }
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }
