@@ -3,7 +3,7 @@
   "appid": "480c01a2-cadf-51bc-bb77-2c4e472f6ef7",
   "meta": {
     "name": "gsy_flutter_demo/021-anima-demo-page2",
-    "version": "0.1.1",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "控件展开动画效果",
