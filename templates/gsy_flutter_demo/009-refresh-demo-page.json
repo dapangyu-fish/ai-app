@@ -3,7 +3,7 @@
   "appid": "f471e5d7-d569-515b-9a8a-1b4d960c8bef",
   "meta": {
     "name": "gsy_flutter_demo/009-refresh-demo-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "简单上下刷新",
@@ -25,20 +25,12 @@
   "global": {
     "variables": {
       "dataList": [],
-      "isRefreshing": true,
       "isLoadingMore": false
     },
     "functions": {
       "refresh": {
         "params": [],
         "logic": [
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.isRefreshing",
-              "value": true
-            }
-          },
           {
             "call": "@delay",
             "args": {
@@ -64,13 +56,6 @@
                   }
                 }
               ]
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.isRefreshing",
-              "value": false
             }
           }
         ]
@@ -140,30 +125,12 @@
         "title": "RefreshDemoPage",
         "layout": "column",
         "backgroundColor": "#FFFFFF",
-        "onLoad": {
-          "call": "@global.refresh",
-          "args": {}
-        },
         "children": [
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "loading",
-                "kind": "circular"
-              }
-            ],
-            "height": 160,
-            "mainAxisAlignment": "center",
-            "crossAxisAlignment": "center",
-            "visible": {
-              "var": "global.isRefreshing"
-            }
-          },
           {
             "type": "list",
             "source": "{{ global.dataList }}",
+            "initialRefresh": true,
+            "emptyState": "none",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -200,13 +167,6 @@
             "onLoadMore": {
               "call": "@global.loadMore",
               "args": {}
-            },
-            "visible": {
-              "!": [
-                {
-                  "var": "global.isRefreshing"
-                }
-              ]
             }
           }
         ]

@@ -38,6 +38,10 @@ class JsonListWidget extends JsonBaseWidget {
     final separator = json['separator']?.toString() ?? 'divider';
     // scrollToEnd: true 时进入页面 / 列表项数增加时自动滚到底（聊天页用）
     final scrollToEnd = json['scrollToEnd'] == true;
+    // initialRefresh: true 时首帧后主动展示 RefreshIndicator，并触发 onRefresh。
+    // 用于复刻 Flutter demo 里 refreshKey.currentState!.show() 的行为。
+    final initialRefresh = json['initialRefresh'] == true;
+    final emptyState = json['emptyState']?.toString() ?? 'default';
     // shrinkWrap: true 时 list 不再占满剩余高度，适合放在可滚动详情页 /
     // 仪表盘页里。长列表、聊天页仍应保持默认 Expanded(ListView)。
     final shrinkWrap = json['shrinkWrap'] == true;
@@ -50,6 +54,25 @@ class JsonListWidget extends JsonBaseWidget {
 
     // 空状态
     if (itemTemplate == null || items.isEmpty) {
+      if (itemTemplate != null && items.isEmpty && emptyState == 'none') {
+        final emptyList = ListView(
+          shrinkWrap: shrinkWrap,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [SizedBox(height: 1)],
+        );
+
+        if (onRefresh != null) {
+          final refreshWidget = _RefreshIndicatorWithInitial(
+            initialRefresh: initialRefresh,
+            onRefresh: () => interpreter.executeAction(onRefresh, context),
+            child: emptyList,
+          );
+          return shrinkWrap ? refreshWidget : Expanded(child: refreshWidget);
+        }
+
+        return shrinkWrap ? emptyList : Expanded(child: emptyList);
+      }
+
       final emptyContent = Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -121,7 +144,8 @@ class JsonListWidget extends JsonBaseWidget {
             ),
           ],
         );
-        final refreshWidget = RefreshIndicator(
+        final refreshWidget = _RefreshIndicatorWithInitial(
+          initialRefresh: initialRefresh,
           onRefresh: () => interpreter.executeAction(onRefresh, context),
           child: refreshChild,
         );
@@ -160,13 +184,68 @@ class JsonListWidget extends JsonBaseWidget {
 
     // 下拉刷新包裹
     if (onRefresh != null) {
-      listView = RefreshIndicator(
+      listView = _RefreshIndicatorWithInitial(
+        initialRefresh: initialRefresh,
         onRefresh: () => interpreter.executeAction(onRefresh, context),
         child: listView,
       );
     }
 
     return shrinkWrap ? listView : Expanded(child: listView);
+  }
+}
+
+class _RefreshIndicatorWithInitial extends StatefulWidget {
+  final bool initialRefresh;
+  final RefreshCallback onRefresh;
+  final Widget child;
+
+  const _RefreshIndicatorWithInitial({
+    required this.initialRefresh,
+    required this.onRefresh,
+    required this.child,
+  });
+
+  @override
+  State<_RefreshIndicatorWithInitial> createState() =>
+      _RefreshIndicatorWithInitialState();
+}
+
+class _RefreshIndicatorWithInitialState
+    extends State<_RefreshIndicatorWithInitial> {
+  final _key = GlobalKey<RefreshIndicatorState>();
+  bool _shown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleInitialRefresh();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RefreshIndicatorWithInitial oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.initialRefresh && widget.initialRefresh) {
+      _scheduleInitialRefresh();
+    }
+  }
+
+  void _scheduleInitialRefresh() {
+    if (!widget.initialRefresh || _shown) return;
+    _shown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _key.currentState?.show();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      key: _key,
+      onRefresh: widget.onRefresh,
+      child: widget.child,
+    );
   }
 }
 
