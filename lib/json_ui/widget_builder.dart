@@ -150,6 +150,8 @@ class JsonWidgetBuilder {
     'aspect_ratio': JsonAspectRatioWidget(),
     'interval_action': JsonIntervalActionWidget(),
     'action_region': JsonActionRegionWidget(),
+    'animated_positioned': JsonAnimatedPositionedWidget(),
+    'wave_painter': JsonWavePainterWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

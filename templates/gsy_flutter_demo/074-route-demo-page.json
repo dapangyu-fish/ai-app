@@ -9,7 +9,7 @@
       "zh": "测试路由嵌套",
       "en": "Nested route test"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：测试路由嵌套",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：测试路由嵌套",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "route_demo_page",
       "widgetClass": "RouteDemoPage",
       "category": "basic",
-      "routeIndex": 74
+      "routeIndex": 74,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
     }
   },
   "dependencies": {},
@@ -27,425 +29,422 @@
       "upstreamTitle": "测试路由嵌套",
       "upstreamSource": "lib/widget/basic/route_demo_page.dart",
       "upstreamWidget": "RouteDemoPage",
-      "portStatus": "v1_json_port",
-      "pane": "Home"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "currentRoute": 0,
+      "previousRoute": 0
     },
-    "functions": {}
+    "functions": {
+      "openRoute": {
+        "params": [
+          "index"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.previousRoute",
+              "value": {
+                "var": "global.currentRoute"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentRoute",
+              "value": {
+                "var": "params.index"
+              }
+            }
+          }
+        ]
+      },
+      "popRoute": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentRoute",
+              "value": {
+                "var": "global.previousRoute"
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "测试路由嵌套",
-        "layout": "column",
+        "title": "RouteDemoPage",
+        "layout": "row",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "dashboard",
-                        "size": 26,
-                        "color": "#1D7BCB"
+            "type": "expanded",
+            "flex": 1,
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  0",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
                       }
-                    ],
-                    "width": 56,
-                    "height": 56,
-                    "color": "#E8F2FD",
-                    "borderRadius": 16,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
                   },
-                  {
-                    "type": "spacer",
-                    "width": 12
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "测试路由嵌套",
-                        "style": {
-                          "fontSize": 20,
-                          "fontWeight": "800",
-                          "color": "#111827"
-                        },
-                        "maxLines": 2
-                      },
-                      {
-                        "type": "spacer",
-                        "height": 4
-                      },
-                      {
-                        "type": "text",
-                        "value": "Nested route test",
-                        "style": {
-                          "fontSize": 12,
-                          "color": "#667085"
-                        },
-                        "maxLines": 2
-                      }
-                    ],
-                    "position": {
-                      "type": "flex",
-                      "flex": 1
-                    },
-                    "crossAxisAlignment": "start"
-                  }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 12
-              },
-              {
-                "type": "wrap",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "074",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#1D7BCB"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#E8F2FD",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "基础控件",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#374151"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#F8FAFC",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "V1 JSON 移植",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#047857"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#ECFDF5",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  }
-                ],
-                "spacing": 8,
-                "runSpacing": 8
-              }
-            ],
-            "padding": 18,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "menu",
-                        "size": 17,
-                        "color": "#1D7BCB"
-                      }
-                    ],
-                    "width": 32,
-                    "height": 32,
-                    "color": "#EEF6FF",
-                    "borderRadius": 10,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 8
-                  },
-                  {
-                    "type": "text",
-                    "value": "嵌套路由近似",
-                    "style": {
-                      "fontSize": 16,
-                      "fontWeight": "800",
-                      "color": "#111827"
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 0
                     }
                   }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "button",
-                        "label": "Home",
-                        "action": {
-                          "call": "@set",
-                          "args": {
-                            "var": "global.pane",
-                            "value": "Home"
-                          }
-                        },
-                        "icon": "home",
-                        "variant": "text"
-                      },
-                      {
-                        "type": "button",
-                        "label": "List",
-                        "action": {
-                          "call": "@set",
-                          "args": {
-                            "var": "global.pane",
-                            "value": "List"
-                          }
-                        },
-                        "icon": "list",
-                        "variant": "text"
-                      },
-                      {
-                        "type": "button",
-                        "label": "Settings",
-                        "action": {
-                          "call": "@set",
-                          "args": {
-                            "var": "global.pane",
-                            "value": "Settings"
-                          }
-                        },
-                        "icon": "settings",
-                        "variant": "text"
-                      }
-                    ],
-                    "width": 120,
-                    "color": "#F8FAFC",
-                    "borderRadius": 16,
-                    "padding": 8
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 10
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "{{ global.pane }}",
-                        "style": {
-                          "fontSize": 22,
-                          "fontWeight": "900",
-                          "color": "#1D7BCB"
-                        }
-                      },
-                      {
-                        "type": "text",
-                        "value": "右侧内容区根据左侧选择切换，模拟嵌套 Navigator 的主体行为。",
-                        "style": {
-                          "fontSize": 13,
-                          "color": "#475569"
-                        }
-                      }
-                    ],
-                    "position": {
-                      "type": "flex",
-                      "flex": 1
-                    },
-                    "padding": 16,
-                    "color": "#EEF6FF",
-                    "borderRadius": 18,
-                    "crossAxisAlignment": "start"
-                  }
-                ],
-                "crossAxisAlignment": "start"
-              }
-            ],
-            "padding": 14,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 18,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "移植说明",
-                "style": {
-                  "fontSize": 15,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "此版本已从纯占位页推进为可运行 JSON 演示。复杂 CustomPainter、Shader、3D、Sliver 等能力在当前框架中仍以降级视觉或交互近似呈现。",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#4B5563",
-                  "lineHeight": 1.35
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "warning_amber",
-                    "size": 16,
-                    "color": "#B45309"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 6
-                  },
-                  {
-                    "type": "text",
-                    "value": "真实 nested Navigator、子路由栈和独立返回历史暂未暴露。",
-                    "style": {
-                      "fontSize": 12,
-                      "color": "#92400E"
-                    },
-                    "maxLines": 3
-                  }
-                ],
-                "crossAxisAlignment": "start"
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/route_demo_page.dart",
-                "style": {
-                  "fontSize": 11,
-                  "color": "#6B7280"
                 },
-                "maxLines": 1
-              },
-              {
-                "type": "text",
-                "value": "Widget：RouteDemoPage",
-                "style": {
-                  "fontSize": 11,
-                  "color": "#6B7280"
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  1",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 1
+                    }
+                  }
                 },
-                "maxLines": 1
-              }
-            ],
-            "padding": 14,
-            "margin": 12,
-            "color": "#FFFBEB",
-            "borderRadius": 16,
-            "border": {
-              "color": "#FDE68A",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "type": "back"
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  2",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 2
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  3",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 3
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  4",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 4
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  5",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 5
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  6",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 6
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  7",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 7
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  8",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 8
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  9",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 9
+                    }
+                  }
+                }
+              ],
+              "layout": "column",
+              "color": "#2196F3"
             }
           },
           {
+            "type": "container",
+            "children": [],
+            "width": 1,
+            "color": "#9E9E9E"
+          },
+          {
             "type": "spacer",
-            "height": 18
+            "width": 30
+          },
+          {
+            "type": "expanded",
+            "flex": 3,
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.currentRoute }}",
+                          "style": {
+                            "fontSize": 100,
+                            "color": "#F44336",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "layout": "column",
+                      "width": 200,
+                      "height": 200,
+                      "color": "#FFC107",
+                      "alignment": "center",
+                      "onTap": {
+                        "call": "@global.popRoute",
+                        "args": {}
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "alignment": "center",
+                  "mainAxisAlignment": "center"
+                }
+              ],
+              "layout": "column",
+              "color": "#9E9E9E",
+              "alignment": "center",
+              "mainAxisAlignment": "center"
+            }
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "RouteDemoPage"
+        }
       }
     ]
   }

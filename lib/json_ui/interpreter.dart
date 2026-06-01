@@ -1255,6 +1255,18 @@ class JsonInterpreter extends ChangeNotifier {
           curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
         );
         return true;
+      case '@scroll_to_bottom':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final controller = _scrollControllers[id];
+        if (controller == null || !controller.hasClients) return false;
+        await controller.animateTo(
+          controller.position.maxScrollExtent,
+          duration: Duration(
+            milliseconds: _toInt(resolvedArgs['durationMs'] ?? 300),
+          ),
+          curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+        );
+        return true;
       case '@scroll_to_index':
         final id = resolvedArgs['controller']?.toString() ?? '';
         final index = _toInt(resolvedArgs['index'] ?? 0);

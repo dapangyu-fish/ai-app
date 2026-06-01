@@ -3,13 +3,13 @@
   "appid": "8ec1dad8-24b7-5639-99ab-31fb576df79f",
   "meta": {
     "name": "gsy_flutter_demo/082-card3-d-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "3D 卡片旋转",
       "en": "3D card rotation"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：3D 卡片旋转",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：3D 卡片旋转",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "card_3d_demo_page",
       "widgetClass": "Card3DDemoPage",
       "category": "visual",
-      "routeIndex": 82
+      "routeIndex": 82,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
     }
   },
   "dependencies": {},
@@ -27,161 +29,305 @@
       "upstreamTitle": "3D 卡片旋转",
       "upstreamSource": "lib/widget/visual/card_3d_demo_page.dart",
       "upstreamWidget": "Card3DDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "angle": 0,
+      "tiltX": 0,
+      "autoSpin": true
     },
-    "functions": {}
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.angle",
+                    "value": {
+                      "%": [
+                        {
+                          "+": [
+                            {
+                              "var": "global.angle"
+                            },
+                            3
+                          ]
+                        },
+                        360
+                      ]
+                    }
+                  }
+                }
+              ],
+              "condition": {
+                "var": "global.autoSpin"
+              }
+            }
+          }
+        ]
+      },
+      "panStart": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.autoSpin",
+              "value": false
+            }
+          }
+        ]
+      },
+      "panUpdate": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.angle",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "/": [
+                          {
+                            "-": [
+                              296,
+                              {
+                                "var": "event.localX"
+                              }
+                            ]
+                          },
+                          2
+                        ]
+                      },
+                      360
+                    ]
+                  },
+                  360
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tiltX",
+              "value": {
+                "/": [
+                  {
+                    "-": [
+                      {
+                        "var": "event.localY"
+                      },
+                      201
+                    ]
+                  },
+                  6
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "reset3d": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.angle",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tiltX",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.autoSpin",
+              "value": true
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "3D 卡片旋转",
-        "layout": "column",
+        "title": "Card3DDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 50,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
                 "type": "container",
-                "layout": "column",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "visibility",
-                    "size": 26,
-                    "color": "#4A74E8"
+                    "type": "gesture_detector",
+                    "onPanStart": {
+                      "call": "@global.panStart",
+                      "args": {}
+                    },
+                    "onPanUpdate": {
+                      "call": "@global.panUpdate",
+                      "args": {}
+                    },
+                    "onPanEnd": {
+                      "call": "@global.reset3d",
+                      "args": {}
+                    },
+                    "onPanCancel": {
+                      "call": "@global.reset3d",
+                      "args": {}
+                    },
+                    "onTapUp": {
+                      "call": "@global.reset3d",
+                      "args": {}
+                    },
+                    "child": {
+                      "type": "transform",
+                      "perspective": 0.001,
+                      "rotateY": "{{ global.angle }}",
+                      "rotateX": "{{ global.tiltX }}",
+                      "child": {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "aspect_ratio",
+                            "aspectRatio": 1.475,
+                            "child": {
+                              "type": "container",
+                              "children": [
+                                {
+                                  "type": "image",
+                                  "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_up.png",
+                                  "fit": "contain",
+                                  "paddingV": 0,
+                                  "visible": {
+                                    "or": [
+                                      {
+                                        "<": [
+                                          {
+                                            "var": "global.angle"
+                                          },
+                                          90
+                                        ]
+                                      },
+                                      {
+                                        ">": [
+                                          {
+                                            "var": "global.angle"
+                                          },
+                                          270
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "type": "image",
+                                  "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_down.png",
+                                  "fit": "contain",
+                                  "paddingV": 0,
+                                  "visible": {
+                                    "and": [
+                                      {
+                                        ">=": [
+                                          {
+                                            "var": "global.angle"
+                                          },
+                                          90
+                                        ]
+                                      },
+                                      {
+                                        "<=": [
+                                          {
+                                            "var": "global.angle"
+                                          },
+                                          270
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "type": "positioned",
+                                  "child": {
+                                    "type": "text",
+                                    "value": "8888 8888 8888 8888",
+                                    "style": {
+                                      "fontSize": 25,
+                                      "color": "#FFFFFF",
+                                      "textAlign": "center",
+                                      "gradient": [
+                                        "#FFFFFF",
+                                        "#448AFF",
+                                        "#333333"
+                                      ],
+                                      "gradientWidth": 1000,
+                                      "gradientHeight": 100,
+                                      "strokeWidth": 0.3
+                                    }
+                                  },
+                                  "left": 34,
+                                  "right": 34,
+                                  "bottom": 34
+                                }
+                              ],
+                              "layout": "stack"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "width": 340
+                      }
+                    }
                   }
                 ],
-                "width": 58,
-                "height": 58,
-                "color": "#EAEFFE",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "3D 卡片旋转",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "3D card rotation",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                "layout": "column",
+                "gradient": {
+                  "colors": [
+                    "#448AFF",
+                    "#FFFF8D"
+                  ],
+                  "begin": "topCenter",
+                  "end": "bottomCenter"
+                },
+                "alignment": "center",
+                "mainAxisAlignment": "center"
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：3D与视觉",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/visual/card_3d_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：Card3DDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "Card3DDemoPage"
+        }
       }
     ]
   }

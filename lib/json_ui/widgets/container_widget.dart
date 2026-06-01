@@ -30,6 +30,7 @@ class JsonContainerWidget extends JsonBaseWidget {
     Color? bgColor = _parseColor(
       rawColor != null ? interpreter.resolveTemplate(rawColor) : null,
     );
+    final gradient = _parseGradient(interpreter, json['gradient']);
 
     // 边框
     Border? border;
@@ -112,7 +113,8 @@ class JsonContainerWidget extends JsonBaseWidget {
       alignment: alignment,
       padding: padding,
       decoration: BoxDecoration(
-        color: bgColor,
+        color: gradient == null ? bgColor : null,
+        gradient: gradient,
         shape: shape == 'circle' ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: shape == 'circle'
             ? null
@@ -120,7 +122,11 @@ class JsonContainerWidget extends JsonBaseWidget {
         border: border,
       ),
       clipBehavior: clipBehavior,
-      child: _wrapWithContrastText(context, bgColor, layoutWidget),
+      child: _wrapWithContrastText(
+        context,
+        bgColor ?? _firstGradientColor(gradient),
+        layoutWidget,
+      ),
     );
 
     // 阴影 (elevation)
@@ -191,6 +197,53 @@ class JsonContainerWidget extends JsonBaseWidget {
     final hex = colorStr.replaceFirst('#', '');
     if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
     if (hex.length == 8) return Color(int.parse(hex, radix: 16));
+    return null;
+  }
+
+  Gradient? _parseGradient(JsonInterpreter interpreter, dynamic value) {
+    if (value == null) return null;
+    List<dynamic>? rawColors;
+    String? begin;
+    String? end;
+    if (value is List) {
+      rawColors = value;
+    } else if (value is Map<String, dynamic>) {
+      final colors = value['colors'];
+      if (colors is List) rawColors = colors;
+      begin = value['begin']?.toString();
+      end = value['end']?.toString();
+    }
+    if (rawColors == null || rawColors.length < 2) return null;
+    final colors = rawColors
+        .map((raw) => _parseColor(interpreter.resolveTemplate(raw.toString())))
+        .whereType<Color>()
+        .toList();
+    if (colors.length < 2) return null;
+    return LinearGradient(
+      colors: colors,
+      begin: _parseGradientAlignment(begin) ?? Alignment.topCenter,
+      end: _parseGradientAlignment(end) ?? Alignment.bottomCenter,
+    );
+  }
+
+  Alignment? _parseGradientAlignment(String? value) {
+    return switch (value) {
+      'topLeft' => Alignment.topLeft,
+      'topCenter' => Alignment.topCenter,
+      'topRight' => Alignment.topRight,
+      'centerLeft' => Alignment.centerLeft,
+      'centerRight' => Alignment.centerRight,
+      'bottomLeft' => Alignment.bottomLeft,
+      'bottomCenter' => Alignment.bottomCenter,
+      'bottomRight' => Alignment.bottomRight,
+      _ => null,
+    };
+  }
+
+  Color? _firstGradientColor(Gradient? gradient) {
+    if (gradient is LinearGradient && gradient.colors.isNotEmpty) {
+      return gradient.colors.first;
+    }
     return null;
   }
 

@@ -7,7 +7,7 @@ import 'package:flutter_application_1/json_ui/interpreter.dart';
 import 'package:flutter_application_1/json_ui/widgets/screen_layout.dart';
 
 void main() {
-  for (var index = 20; index <= 72; index++) {
+  for (var index = 20; index <= 82; index++) {
     testWidgets('ported JSON demo ${index.toString().padLeft(3, '0')} builds', (
       tester,
     ) async {

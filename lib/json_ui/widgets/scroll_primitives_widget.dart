@@ -20,6 +20,11 @@ class JsonPageViewWidget extends JsonBaseWidget {
     return _JsonPageView(
       children: children,
       transformer: json['transformer']?.toString() ?? 'none',
+      scrollDirection: _parseAxis(json['scrollDirection']?.toString()),
+      pageSnapping: json['pageSnapping'] != false,
+      physics: _parsePhysics(json['physics']?.toString()),
+      viewportFraction:
+          _resolveDouble(interpreter, json['viewportFraction']) ?? 1.0,
       interpreter: interpreter,
     );
   }
@@ -28,11 +33,19 @@ class JsonPageViewWidget extends JsonBaseWidget {
 class _JsonPageView extends StatefulWidget {
   final List<Map<String, dynamic>> children;
   final String transformer;
+  final Axis scrollDirection;
+  final bool pageSnapping;
+  final ScrollPhysics? physics;
+  final double viewportFraction;
   final JsonInterpreter interpreter;
 
   const _JsonPageView({
     required this.children,
     required this.transformer,
+    required this.scrollDirection,
+    required this.pageSnapping,
+    required this.physics,
+    required this.viewportFraction,
     required this.interpreter,
   });
 
@@ -41,7 +54,18 @@ class _JsonPageView extends StatefulWidget {
 }
 
 class _JsonPageViewState extends State<_JsonPageView> {
-  late final PageController _controller = PageController();
+  late PageController _controller = PageController(
+    viewportFraction: widget.viewportFraction,
+  );
+
+  @override
+  void didUpdateWidget(covariant _JsonPageView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewportFraction != widget.viewportFraction) {
+      _controller.dispose();
+      _controller = PageController(viewportFraction: widget.viewportFraction);
+    }
+  }
 
   @override
   void dispose() {
@@ -53,6 +77,9 @@ class _JsonPageViewState extends State<_JsonPageView> {
   Widget build(BuildContext context) {
     return PageView.builder(
       controller: _controller,
+      scrollDirection: widget.scrollDirection,
+      pageSnapping: widget.pageSnapping,
+      physics: widget.physics,
       itemCount: widget.children.length,
       itemBuilder: (context, index) {
         return AnimatedBuilder(
@@ -104,6 +131,10 @@ class _JsonPageViewState extends State<_JsonPageView> {
   }
 }
 
+Axis _parseAxis(String? value) {
+  return value == 'vertical' ? Axis.vertical : Axis.horizontal;
+}
+
 class JsonCustomScrollViewWidget extends JsonBaseWidget {
   @override
   Widget build(
@@ -121,6 +152,20 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
         if (sliver != null) slivers.add(sliver);
       }
     }
+    final centerIndex = _resolveDouble(
+      interpreter,
+      json['centerIndex'],
+    )?.toInt();
+    Key? centerKey;
+    if (centerIndex != null &&
+        centerIndex >= 0 &&
+        centerIndex < slivers.length) {
+      centerKey = ValueKey('json_custom_scroll_center_$centerIndex');
+      slivers[centerIndex] = KeyedSubtree(
+        key: centerKey,
+        child: slivers[centerIndex],
+      );
+    }
     return _JsonCustomScrollViewHost(
       controllerId: controllerId == null || controllerId.isEmpty
           ? null
@@ -129,6 +174,7 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
       onScroll: onScroll is Map<String, dynamic> ? onScroll : null,
       interpreter: interpreter,
       slivers: slivers,
+      centerKey: centerKey,
     );
   }
 
@@ -256,6 +302,7 @@ class _JsonCustomScrollViewHost extends StatefulWidget {
   final Map<String, dynamic>? onScroll;
   final JsonInterpreter interpreter;
   final List<Widget> slivers;
+  final Key? centerKey;
 
   const _JsonCustomScrollViewHost({
     required this.controllerId,
@@ -263,6 +310,7 @@ class _JsonCustomScrollViewHost extends StatefulWidget {
     required this.onScroll,
     required this.interpreter,
     required this.slivers,
+    required this.centerKey,
   });
 
   @override
@@ -330,6 +378,7 @@ class _JsonCustomScrollViewHostState extends State<_JsonCustomScrollViewHost> {
     return CustomScrollView(
       controller: _controller,
       physics: widget.physics,
+      center: widget.centerKey,
       slivers: widget.slivers,
     );
   }
@@ -647,6 +696,8 @@ ScrollPhysics? _parsePhysics(String? value) {
       );
     case 'clamping':
       return const ClampingScrollPhysics();
+    case 'never':
+      return const NeverScrollableScrollPhysics();
     default:
       return null;
   }

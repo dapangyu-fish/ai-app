@@ -3,13 +3,13 @@
   "appid": "6e0bf47a-aa4e-5c92-8847-47a287c7f755",
   "meta": {
     "name": "gsy_flutter_demo/078-vp-nest-list-view",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "垂直  ViewPager 嵌套垂直 ListView ",
       "en": "Vertical ViewPager nestedVertical ListView"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：垂直  ViewPager 嵌套垂直 ListView ",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：垂直  ViewPager 嵌套垂直 ListView ",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "vp_list_demo_page",
       "widgetClass": "VPNestListView",
       "category": "scroll",
-      "routeIndex": 78
+      "routeIndex": 78,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
     }
   },
   "dependencies": {},
@@ -27,7 +29,100 @@
       "upstreamTitle": "垂直  ViewPager 嵌套垂直 ListView ",
       "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
       "upstreamWidget": "VPNestListView",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "items": [
+        {
+          "index": 0
+        },
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        },
+        {
+          "index": 5
+        },
+        {
+          "index": 6
+        },
+        {
+          "index": 7
+        },
+        {
+          "index": 8
+        },
+        {
+          "index": 9
+        },
+        {
+          "index": 10
+        },
+        {
+          "index": 11
+        },
+        {
+          "index": 12
+        },
+        {
+          "index": 13
+        },
+        {
+          "index": 14
+        },
+        {
+          "index": 15
+        },
+        {
+          "index": 16
+        },
+        {
+          "index": 17
+        },
+        {
+          "index": 18
+        },
+        {
+          "index": 19
+        },
+        {
+          "index": 20
+        },
+        {
+          "index": 21
+        },
+        {
+          "index": 22
+        },
+        {
+          "index": 23
+        },
+        {
+          "index": 24
+        },
+        {
+          "index": 25
+        },
+        {
+          "index": 26
+        },
+        {
+          "index": 27
+        },
+        {
+          "index": 28
+        },
+        {
+          "index": 29
+        }
+      ]
     },
     "functions": {}
   },
@@ -36,152 +131,70 @@
     "screens": [
       {
         "id": "home",
-        "title": "垂直  ViewPager 嵌套垂直 ListView ",
+        "title": "VPNestListView",
         "layout": "column",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "list",
-                    "size": 26,
-                    "color": "#0B8E70"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E7F6F1",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "垂直  ViewPager 嵌套垂直 ListView ",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+            "type": "expanded",
+            "child": {
+              "type": "page_view",
+              "scrollDirection": "vertical",
+              "children": [
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "list",
+                      "source": "{{ global.items }}",
+                      "item_template": {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "List Item {{ loop.item.index }}",
+                            "style": {
+                              "fontSize": 16,
+                              "color": "#212121"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": 48,
+                        "padding": {
+                          "left": 16
+                        },
+                        "alignment": "centerLeft"
+                      }
+                    }
+                  ],
+                  "layout": "column"
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Page View",
+                      "style": {
+                        "fontSize": 50,
+                        "color": "#000000",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "color": "#4CAF50",
+                  "alignment": "center",
+                  "mainAxisAlignment": "center"
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Vertical ViewPager nestedVertical ListView",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：列表滚动",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/scroll/vp_list_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：VPNestListView",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+              ]
             }
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "VPNestListView"
+        }
       }
     ]
   }

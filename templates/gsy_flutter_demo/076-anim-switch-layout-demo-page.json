@@ -3,13 +3,13 @@
   "appid": "b6788a57-85df-528d-abcf-cf2009e5783a",
   "meta": {
     "name": "gsy_flutter_demo/076-anim-switch-layout-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "控件动画切换效果",
       "en": "Widget switch animation"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：控件动画切换效果",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：控件动画切换效果",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "anim_switch_layout_demo_page",
       "widgetClass": "AnimSwitchLayoutDemoPage",
       "category": "animation",
-      "routeIndex": 76
+      "routeIndex": 76,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
     }
   },
   "dependencies": {},
@@ -27,161 +29,408 @@
       "upstreamTitle": "控件动画切换效果",
       "upstreamSource": "lib/widget/animation/anim_switch_layout_demo_page.dart",
       "upstreamWidget": "AnimSwitchLayoutDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "currentIndex": 0
     },
-    "functions": {}
+    "functions": {
+      "next": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentIndex",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.currentIndex"
+                      },
+                      1
+                    ]
+                  },
+                  3
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "控件动画切换效果",
-        "layout": "column",
+        "title": "ControllerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "控件动画切换效果",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "animated_positioned",
+                      "durationMs": 1000,
+                      "curve": "fastOutSlowIn",
+                      "left": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          180
+                        ]
+                      },
+                      "top": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "global.currentIndex"
+                                          },
+                                          0
+                                        ]
+                                      },
+                                      3
+                                    ]
+                                  },
+                                  1
+                                ]
+                              },
+                              0,
+                              155
+                            ]
+                          }
+                        ]
+                      },
+                      "width": 170,
+                      "height": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              1
+                            ]
+                          },
+                          145,
+                          300
+                        ]
+                      },
+                      "child": {
+                        "type": "container",
+                        "children": [],
+                        "layout": "column",
+                        "color": "#FF5252"
+                      }
+                    },
+                    {
+                      "type": "animated_positioned",
+                      "durationMs": 1000,
+                      "curve": "fastOutSlowIn",
+                      "left": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      1
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          180
+                        ]
+                      },
+                      "top": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      1
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "global.currentIndex"
+                                          },
+                                          1
+                                        ]
+                                      },
+                                      3
+                                    ]
+                                  },
+                                  1
+                                ]
+                              },
+                              0,
+                              155
+                            ]
+                          }
+                        ]
+                      },
+                      "width": 170,
+                      "height": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      1
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              1
+                            ]
+                          },
+                          145,
+                          300
+                        ]
+                      },
+                      "child": {
+                        "type": "container",
+                        "children": [],
+                        "layout": "column",
+                        "color": "#69F0AE"
+                      }
+                    },
+                    {
+                      "type": "animated_positioned",
+                      "durationMs": 1000,
+                      "curve": "fastOutSlowIn",
+                      "left": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      2
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          180
+                        ]
+                      },
+                      "top": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      2
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "global.currentIndex"
+                                          },
+                                          2
+                                        ]
+                                      },
+                                      3
+                                    ]
+                                  },
+                                  1
+                                ]
+                              },
+                              0,
+                              155
+                            ]
+                          }
+                        ]
+                      },
+                      "width": 170,
+                      "height": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      2
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              1
+                            ]
+                          },
+                          145,
+                          300
+                        ]
+                      },
+                      "child": {
+                        "type": "container",
+                        "children": [],
+                        "layout": "column",
+                        "color": "#FFFF8D"
+                      }
+                    }
+                  ],
+                  "layout": "stack",
+                  "width": 350,
+                  "height": 300,
+                  "clipBehavior": "hardEdge"
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget switch animation",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+              ],
+              "layout": "column",
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "center"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/anim_switch_layout_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：AnimSwitchLayoutDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
+            "type": "positioned",
+            "child": {
+              "type": "floating_action_button",
+              "label": "",
+              "action": {
+                "call": "@global.next",
+                "args": {}
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "right": 24,
+            "bottom": 24
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "ControllerDemoPage"
+        }
       }
     ]
   }

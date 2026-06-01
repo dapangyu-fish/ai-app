@@ -1,7 +1,8 @@
 // GestureDetector 控件 — 通用手势检测（无水波纹）
 // 比 inkwell 更灵活但少了 Material 视觉反馈
 // 支持: child, onTap, onTapDown, onTapUp, onTapCancel, onDoubleTap,
-//       onLongPress, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown
+//       onLongPress, onPanStart, onPanUpdate, onPanEnd, onPanCancel,
+//       onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import 'action_helper.dart';
@@ -28,6 +29,10 @@ class JsonGestureDetectorWidget extends JsonBaseWidget {
     final onTapDown = json['onTapDown'] as Map<String, dynamic>?;
     final onTapUp = json['onTapUp'] as Map<String, dynamic>?;
     final onTapCancel = json['onTapCancel'] as Map<String, dynamic>?;
+    final onPanStart = json['onPanStart'] as Map<String, dynamic>?;
+    final onPanUpdate = json['onPanUpdate'] as Map<String, dynamic>?;
+    final onPanEnd = json['onPanEnd'] as Map<String, dynamic>?;
+    final onPanCancel = json['onPanCancel'] as Map<String, dynamic>?;
     final onDouble =
         resolveActionAtBuildTime(json['onDoubleTap'], interpreter)
             as Map<String, dynamic>?;
@@ -79,6 +84,34 @@ class JsonGestureDetectorWidget extends JsonBaseWidget {
       onLongPress: onLong != null
           ? () => interpreter.executeAction(onLong, context)
           : null,
+      onPanStart: onPanStart != null
+          ? (details) => _runPointerAction(
+              interpreter,
+              context,
+              onPanStart,
+              details.localPosition,
+              details.globalPosition,
+            )
+          : null,
+      onPanUpdate: onPanUpdate != null
+          ? (details) => _runPointerAction(
+              interpreter,
+              context,
+              onPanUpdate,
+              details.localPosition,
+              details.globalPosition,
+              delta: details.delta,
+            )
+          : null,
+      onPanEnd: onPanEnd != null
+          ? (details) => interpreter.executeActionWithEvent(onPanEnd, context, {
+              'velocityX': details.velocity.pixelsPerSecond.dx,
+              'velocityY': details.velocity.pixelsPerSecond.dy,
+            })
+          : null,
+      onPanCancel: onPanCancel != null
+          ? () => interpreter.executeAction(onPanCancel, context)
+          : null,
       onHorizontalDragEnd: (onSwipeLeft != null || onSwipeRight != null)
           ? (details) {
               const threshold = 200.0;
@@ -111,14 +144,17 @@ void _runPointerAction(
   BuildContext context,
   Map<String, dynamic> action,
   Offset local,
-  Offset global,
-) {
+  Offset global, {
+  Offset? delta,
+}) {
   interpreter
       .executeActionWithEvent(action, context, {
         'localX': local.dx,
         'localY': local.dy,
         'globalX': global.dx,
         'globalY': global.dy,
+        'deltaX': delta?.dx ?? 0,
+        'deltaY': delta?.dy ?? 0,
       })
       .catchError((e, st) {
         debugPrint('[gesture_detector] pointer action error: $e');

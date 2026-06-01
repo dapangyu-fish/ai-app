@@ -3,13 +3,13 @@
   "appid": "cecf1c7e-dfc0-5cb5-9dc3-384caf9974ca",
   "meta": {
     "name": "gsy_flutter_demo/073-chat-list-scroll-demo-page2",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "首尾添加数据不会抖动2",
       "en": "Stable list when prepend/append2"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：首尾添加数据不会抖动2",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：首尾添加数据不会抖动2",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "chat_list_scroll_demo_page_2",
       "widgetClass": "ChatListScrollDemoPage2",
       "category": "basic",
-      "routeIndex": 73
+      "routeIndex": 73,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
     }
   },
   "dependencies": {},
@@ -27,161 +29,547 @@
       "upstreamTitle": "首尾添加数据不会抖动2",
       "upstreamSource": "lib/widget/basic/chat_list_scroll_demo_page_2.dart",
       "upstreamWidget": "ChatListScrollDemoPage2",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "oldData": [],
+      "newData": [
+        {
+          "txt": "*********init 1*********",
+          "type": "Left",
+          "height": 110
+        },
+        {
+          "txt": "*********init 2*********",
+          "type": "Left",
+          "height": 120
+        },
+        {
+          "txt": "*********init 3*********",
+          "type": "Left",
+          "height": 150
+        }
+      ],
+      "oldCount": 0,
+      "newCount": 3,
+      "atBottom": true
     },
-    "functions": {}
+    "functions": {
+      "scrollToBottom": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 120
+            }
+          },
+          {
+            "call": "@scroll_to_bottom",
+            "args": {
+              "controller": "chat2",
+              "durationMs": 120
+            }
+          }
+        ]
+      },
+      "send": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.newData",
+              "item": {
+                "txt": {
+                  "cat": [
+                    "#### new Send ",
+                    {
+                      "var": "global.newCount"
+                    },
+                    " #### #### #### #### "
+                  ]
+                },
+                "type": "Right",
+                "height": {
+                  "+": [
+                    60,
+                    {
+                      "*": [
+                        {
+                          "%": [
+                            {
+                              "var": "global.newCount"
+                            },
+                            6
+                          ]
+                        },
+                        10
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.newCount",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.newCount"
+                  },
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.scrollToBottom",
+            "args": {}
+          }
+        ]
+      },
+      "addOld": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.oldData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "---------Old ",
+                          {
+                            "var": "global.oldCount"
+                          },
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  4
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          "Right",
+                          "Left"
+                        ]
+                      },
+                      "height": {
+                        "+": [
+                          60,
+                          {
+                            "*": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  6
+                                ]
+                              },
+                              10
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.oldCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.oldCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "addNew": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.newData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "##########   New ",
+                          {
+                            "var": "global.newCount"
+                          },
+                          " ",
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  4
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          "Left",
+                          "Right"
+                        ]
+                      },
+                      "height": {
+                        "+": [
+                          60,
+                          {
+                            "*": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  6
+                                ]
+                              },
+                              10
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.newCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@show_snackbar",
+                  "args": {
+                    "message": "你目前位于最底部，自动跳转新消息item",
+                    "durationMs": 1000
+                  }
+                },
+                {
+                  "call": "@global.scrollToBottom",
+                  "args": {}
+                }
+              ],
+              "else": [
+                {
+                  "call": "@show_snackbar",
+                  "args": {
+                    "message": "点击我自动跳转新消息item",
+                    "actionLabel": "跳转",
+                    "action": {
+                      "call": "@global.scrollToBottom",
+                      "args": {}
+                    },
+                    "durationMs": 2000,
+                    "backgroundColor": "#3367D6"
+                  }
+                }
+              ],
+              "condition": {
+                "var": "global.atBottom"
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "首尾添加数据不会抖动2",
-        "layout": "column",
+        "title": "ControllerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+            "type": "positioned",
+            "child": {
+              "type": "custom_scroll_view",
+              "controller": "chat2",
+              "physics": "bouncing",
+              "centerIndex": 1,
+              "onScroll": {
+                "call": "@set",
+                "args": {
+                  "var": "global.atBottom",
+                  "value": "{{ event.isEnd }}"
+                }
+              },
+              "slivers": [
+                {
+                  "type": "sliver_list",
+                  "source": "{{ global.oldData }}",
+                  "itemTemplate": {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#F44336",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 50,
+                          "right": 10,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerRight",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Right"
+                          ]
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#4CAF50",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 10,
+                          "right": 50,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerLeft",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Left"
+                          ]
+                        }
+                      }
+                    ],
+                    "layout": "column"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "首尾添加数据不会抖动2",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 1,
+                  "child": {
+                    "type": "container",
+                    "children": [],
+                    "layout": "column",
+                    "color": "#00000000"
+                  }
+                },
+                {
+                  "type": "sliver_list",
+                  "source": "{{ global.newData }}",
+                  "itemTemplate": {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#F44336",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 50,
+                          "right": 10,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerRight",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Right"
+                          ]
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#4CAF50",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 10,
+                          "right": 50,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerLeft",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Left"
+                          ]
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Stable list when prepend/append2",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
+            "type": "positioned",
+            "child": {
+              "type": "button",
+              "label": "Send",
+              "action": {
+                "call": "@global.send",
+                "args": {}
               },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/chat_list_scroll_demo_page_2.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：ChatListScrollDemoPage2",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
+              "variant": "filled",
+              "style": {
+                "backgroundColor": "#2196F3",
+                "textColor": "#FFFF00",
+                "borderRadius": 28,
+                "paddingH": 18,
+                "paddingV": 14
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "right": 24,
+            "bottom": 24
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "ControllerDemoPage",
+          "actions": [
+            {
+              "icon": "add",
+              "action": {
+                "call": "@global.addOld",
+                "args": {}
+              }
+            },
+            {
+              "icon": "add_circle_outline",
+              "action": {
+                "call": "@global.addNew",
+                "args": {}
+              }
+            }
+          ]
+        }
       }
     ]
   }

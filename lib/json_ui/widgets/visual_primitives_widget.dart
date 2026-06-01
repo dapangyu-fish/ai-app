@@ -382,6 +382,118 @@ class JsonActionRegionWidget extends JsonBaseWidget {
   }
 }
 
+class JsonAnimatedPositionedWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final childJson = json['child'];
+    return AnimatedPositioned(
+      duration: Duration(
+        milliseconds: (_resolveDouble(interpreter, json['durationMs']) ?? 300)
+            .toInt(),
+      ),
+      curve: _parseCurve(json['curve']?.toString()),
+      left: _resolveDouble(interpreter, json['left']),
+      top: _resolveDouble(interpreter, json['top']),
+      right: _resolveDouble(interpreter, json['right']),
+      bottom: _resolveDouble(interpreter, json['bottom']),
+      width: _resolveDouble(interpreter, json['width']),
+      height: _resolveDouble(interpreter, json['height']),
+      child: childJson is Map<String, dynamic>
+          ? interpreter.buildWidget(context, childJson)
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class JsonWavePainterWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final height = _resolveDouble(interpreter, json['height']) ?? 100;
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: CustomPaint(
+        painter: _WavePainter(
+          value: _resolveDouble(interpreter, json['value']) ?? 50,
+          gradientColors: _parseColorList(json['gradientColors']),
+          fillColor: _parseColor(json['fillColor']?.toString()),
+          blurSigma: _resolveDouble(interpreter, json['blurSigma']) ?? 0,
+          blurStyle: _parseBlurStyle(json['blurStyle']?.toString()),
+        ),
+      ),
+    );
+  }
+}
+
+class _WavePainter extends CustomPainter {
+  final double value;
+  final List<Color> gradientColors;
+  final Color? fillColor;
+  final double blurSigma;
+  final BlurStyle blurStyle;
+
+  _WavePainter({
+    required this.value,
+    required this.gradientColors,
+    required this.fillColor,
+    required this.blurSigma,
+    required this.blurStyle,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final y1 = math.sin(value);
+    final y2 = math.sin(value + math.pi / 2);
+    final y3 = math.sin(value + math.pi);
+    final path = Path()
+      ..moveTo(0, size.height * (0.5 + 0.4 * y1))
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * (0.5 + 0.4 * y2),
+        size.width,
+        size.height * (0.5 + 0.4 * y3),
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    if (gradientColors.length >= 2) {
+      final paint = Paint()
+        ..shader = LinearGradient(
+          colors: gradientColors,
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+      if (blurSigma > 0) {
+        paint.maskFilter = MaskFilter.blur(blurStyle, blurSigma);
+      }
+      canvas.drawPath(path, paint);
+    }
+    if (fillColor != null) {
+      final paint = Paint()..color = fillColor!;
+      if (blurSigma > 0 && gradientColors.isEmpty) {
+        paint.maskFilter = MaskFilter.blur(blurStyle, blurSigma);
+      }
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavePainter oldDelegate) {
+    return oldDelegate.value != value ||
+        oldDelegate.gradientColors != gradientColors ||
+        oldDelegate.fillColor != fillColor ||
+        oldDelegate.blurSigma != blurSigma ||
+        oldDelegate.blurStyle != blurStyle;
+  }
+}
+
 Curve _parseCurve(String? value) {
   switch (value) {
     case 'fastOutSlowIn':
@@ -404,6 +516,23 @@ Alignment? _parseAlignment(String? value) {
     'centerRight' => Alignment.centerRight,
     _ => null,
   };
+}
+
+BlurStyle _parseBlurStyle(String? value) {
+  return switch (value) {
+    'normal' => BlurStyle.normal,
+    'outer' => BlurStyle.outer,
+    'inner' => BlurStyle.inner,
+    _ => BlurStyle.solid,
+  };
+}
+
+List<Color> _parseColorList(dynamic value) {
+  if (value is! List) return const [];
+  return value
+      .map((raw) => _parseColor(raw?.toString()))
+      .whereType<Color>()
+      .toList();
 }
 
 double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
