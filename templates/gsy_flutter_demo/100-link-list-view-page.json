@@ -3,13 +3,13 @@
   "appid": "8b4f11d6-2cb1-5c64-b7a8-c5f022baba1b",
   "meta": {
     "name": "gsy_flutter_demo/100-link-list-view-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "link scroll",
       "en": "link scroll"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：link scroll",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：link scroll",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "link_scroll_page",
       "widgetClass": "LinkListViewPage",
       "category": "scroll",
-      "routeIndex": 100
+      "routeIndex": 100,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5"
     }
   },
   "dependencies": {},
@@ -27,161 +29,271 @@
       "upstreamTitle": "link scroll",
       "upstreamSource": "lib/widget/scroll/link_scroll_page.dart",
       "upstreamWidget": "LinkListViewPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5",
+      "selected": 0,
+      "items": [
+        {
+          "index": 0,
+          "height": 100,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 1,
+          "height": 150,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 2,
+          "height": 200,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 3,
+          "height": 250,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 4,
+          "height": 300,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 5,
+          "height": 100,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 6,
+          "height": 150,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 7,
+          "height": 200,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 8,
+          "height": 250,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 9,
+          "height": 300,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 10,
+          "height": 100,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 11,
+          "height": 150,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 12,
+          "height": 200,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 13,
+          "height": 250,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 14,
+          "height": 300,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 15,
+          "height": 100,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 16,
+          "height": 150,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 17,
+          "height": 200,
+          "bg": "#F5F5F5"
+        },
+        {
+          "index": 18,
+          "height": 250,
+          "bg": "#FFFFFF"
+        },
+        {
+          "index": 19,
+          "height": 300,
+          "bg": "#F5F5F5"
+        }
+      ]
     },
-    "functions": {}
+    "functions": {
+      "select": {
+        "params": [
+          "idx"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.selected",
+              "value": "{{ params.idx }}"
+            }
+          },
+          {
+            "call": "@scroll_to_index",
+            "args": {
+              "controller": "rightList",
+              "index": "{{ params.idx }}",
+              "durationMs": 300,
+              "alignment": 0
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "link scroll",
-        "layout": "column",
+        "title": "Dual ListView Demo",
+        "layout": "row",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
             "type": "container",
             "layout": "column",
             "children": [
               {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "list",
-                    "size": 26,
-                    "color": "#0B8E70"
+                "type": "list",
+                "source": "{{ global.items }}",
+                "controller": "leftList",
+                "separator": "none",
+                "item_template": {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "Item {{ loop.item.index }}",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#111111",
+                            "fontWeight": "bold",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "visible": {
+                        "==": [
+                          {
+                            "var": "loop.item.index"
+                          },
+                          {
+                            "var": "global.selected"
+                          }
+                        ]
+                      },
+                      "height": 60,
+                      "color": "#BBDEFB",
+                      "alignment": "center",
+                      "mainAxisAlignment": "center"
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "Item {{ loop.item.index }}",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#111111",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "loop.item.index"
+                          },
+                          {
+                            "var": "global.selected"
+                          }
+                        ]
+                      },
+                      "height": 60,
+                      "color": "#00000000",
+                      "alignment": "center",
+                      "mainAxisAlignment": "center"
+                    }
+                  ],
+                  "height": 60,
+                  "onTap": {
+                    "call": "@global.select",
+                    "args": {
+                      "idx": "{{ loop.item.index }}"
+                    }
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E7F6F1",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "link scroll",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "link scroll",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
                 }
               }
             ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+            "width": 130,
+            "color": "#EEEEEE"
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
+            "type": "expanded",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "list",
+                  "source": "{{ global.items }}",
+                  "controller": "rightList",
+                  "separator": "none",
+                  "item_template": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Content {{ loop.item.index }}",
+                        "style": {
+                          "fontSize": 18,
+                          "color": "#212121",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "height": "{{ loop.item.height }}",
+                    "color": "{{ loop.item.bg }}",
+                    "alignment": "center",
+                    "mainAxisAlignment": "center"
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：列表滚动",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/scroll/link_scroll_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：LinkListViewPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+              ]
             }
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "Dual ListView Demo"
+        }
       }
     ]
   }

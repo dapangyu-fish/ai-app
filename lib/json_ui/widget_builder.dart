@@ -152,6 +152,8 @@ class JsonWidgetBuilder {
     'action_region': JsonActionRegionWidget(),
     'animated_positioned': JsonAnimatedPositionedWidget(),
     'wave_painter': JsonWavePainterWidget(),
+    'particle_burst_button': JsonParticleBurstButtonWidget(),
+    'gesture_password': JsonGesturePasswordWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

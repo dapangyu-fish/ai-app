@@ -433,6 +433,395 @@ class JsonWavePainterWidget extends JsonBaseWidget {
   }
 }
 
+class JsonParticleBurstButtonWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final action = resolveActionAtBuildTime(json['onTap'], interpreter);
+    return _ParticleBurstButton(
+      size: _resolveDouble(interpreter, json['size']) ?? 300,
+      color: _parseColor(json['color']?.toString()) ?? Colors.yellow,
+      particleCount: (_resolveDouble(interpreter, json['particleCount']) ?? 30)
+          .toInt(),
+      durationMs: (_resolveDouble(interpreter, json['durationMs']) ?? 500)
+          .toInt(),
+      shape: json['shape']?.toString() ?? 'star',
+      action: action is Map<String, dynamic> ? action : null,
+      interpreter: interpreter,
+    );
+  }
+}
+
+class _ParticleBurstButton extends StatefulWidget {
+  final double size;
+  final Color color;
+  final int particleCount;
+  final int durationMs;
+  final String shape;
+  final Map<String, dynamic>? action;
+  final JsonInterpreter interpreter;
+
+  const _ParticleBurstButton({
+    required this.size,
+    required this.color,
+    required this.particleCount,
+    required this.durationMs,
+    required this.shape,
+    required this.action,
+    required this.interpreter,
+  });
+
+  @override
+  State<_ParticleBurstButton> createState() => _ParticleBurstButtonState();
+}
+
+class _ParticleBurstButtonState extends State<_ParticleBurstButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool _exploding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: Duration(milliseconds: widget.durationMs),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed && mounted) {
+            setState(() => _exploding = false);
+          }
+        });
+  }
+
+  @override
+  void didUpdateWidget(covariant _ParticleBurstButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.durationMs != widget.durationMs) {
+      _controller.duration = Duration(milliseconds: widget.durationMs);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _tap() {
+    if (!_exploding) {
+      setState(() => _exploding = true);
+      _controller.forward(from: 0);
+    }
+    final action = widget.action;
+    if (action != null) {
+      widget.interpreter.executeAction(action, context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _tap,
+      child: SizedBox.square(
+        dimension: widget.size,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return CustomPaint(
+              painter: _ParticleBurstPainter(
+                value: _controller.value,
+                exploding: _exploding,
+                color: widget.color,
+                particleCount: widget.particleCount,
+                shape: widget.shape,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ParticleBurstPainter extends CustomPainter {
+  final double value;
+  final bool exploding;
+  final Color color;
+  final int particleCount;
+  final String shape;
+
+  _ParticleBurstPainter({
+    required this.value,
+    required this.exploding,
+    required this.color,
+    required this.particleCount,
+    required this.shape,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final side = math.min(size.width, size.height);
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    if (exploding) {
+      final count = math.max(1, particleCount);
+      final particleSize = side * 0.4 / 30;
+      for (var i = 0; i < count; i++) {
+        final angle = -math.pi / 2 + i * math.pi * 2 / count;
+        final wave = math.sin(i * 12.9898) * 0.5 + 0.5;
+        final radius = side * (0.08 + 0.32 * value) * (0.7 + wave * 0.6);
+        final opacity = (1 - value).clamp(0.0, 1.0);
+        paint.color = color.withValues(alpha: opacity);
+        canvas.drawCircle(
+          center + Offset(math.cos(angle) * radius, math.sin(angle) * radius),
+          particleSize * (1 + value),
+          paint,
+        );
+      }
+      return;
+    }
+
+    if (shape == 'circle') {
+      canvas.drawCircle(center, side * 0.18, paint);
+      return;
+    }
+    canvas.drawPath(_starPath(center, side * 0.2, side * 0.08), paint);
+  }
+
+  Path _starPath(Offset center, double outerRadius, double innerRadius) {
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final radius = i.isEven ? outerRadius : innerRadius;
+      final angle = -math.pi / 2 + i * math.pi / 5;
+      final point =
+          center + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    return path..close();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ParticleBurstPainter oldDelegate) {
+    return oldDelegate.value != value ||
+        oldDelegate.exploding != exploding ||
+        oldDelegate.color != color ||
+        oldDelegate.particleCount != particleCount ||
+        oldDelegate.shape != shape;
+  }
+}
+
+class JsonGesturePasswordWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final action = resolveActionAtBuildTime(json['onDone'], interpreter);
+    return _GesturePasswordPad(
+      size: _resolveDouble(interpreter, json['size']) ?? 300,
+      frameRadius: _resolveDouble(interpreter, json['frameRadius']) ?? 30,
+      pointRadius: _resolveDouble(interpreter, json['pointRadius']) ?? 10,
+      pathWidth: _resolveDouble(interpreter, json['pathWidth']) ?? 6,
+      color: _parseColor(json['color']?.toString()) ?? Colors.grey,
+      highlightColor:
+          _parseColor(json['highlightColor']?.toString()) ?? Colors.blue,
+      pathColor: _parseColor(json['pathColor']?.toString()) ?? Colors.blue,
+      action: action is Map<String, dynamic> ? action : null,
+      interpreter: interpreter,
+    );
+  }
+}
+
+class _GesturePasswordPad extends StatefulWidget {
+  final double size;
+  final double frameRadius;
+  final double pointRadius;
+  final double pathWidth;
+  final Color color;
+  final Color highlightColor;
+  final Color pathColor;
+  final Map<String, dynamic>? action;
+  final JsonInterpreter interpreter;
+
+  const _GesturePasswordPad({
+    required this.size,
+    required this.frameRadius,
+    required this.pointRadius,
+    required this.pathWidth,
+    required this.color,
+    required this.highlightColor,
+    required this.pathColor,
+    required this.action,
+    required this.interpreter,
+  });
+
+  @override
+  State<_GesturePasswordPad> createState() => _GesturePasswordPadState();
+}
+
+class _GesturePasswordPadState extends State<_GesturePasswordPad> {
+  final List<int> _selected = [];
+  Offset? _moving;
+
+  List<Offset> _centers(Size size) {
+    final cell = size.width / 3;
+    return List.generate(9, (index) {
+      final row = index ~/ 3;
+      final col = index % 3;
+      return Offset(col * cell + cell / 2, row * cell + cell / 2);
+    });
+  }
+
+  void _trySelect(Offset position, Size size) {
+    final centers = _centers(size);
+    for (var i = 0; i < centers.length; i++) {
+      if (_selected.contains(i)) continue;
+      if ((position - centers[i]).distance <= widget.frameRadius) {
+        setState(() => _selected.add(i));
+        return;
+      }
+    }
+  }
+
+  void _finish() {
+    final password = _selected.join();
+    final action = widget.action;
+    if (action != null) {
+      widget.interpreter.executeActionWithEvent(action, context, {
+        'password': password,
+        'sequence': List<int>.from(_selected),
+      });
+    }
+    setState(() {
+      _selected.clear();
+      _moving = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: widget.size,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final side = math.min(constraints.maxWidth, constraints.maxHeight);
+          final size = Size.square(side.isFinite ? side : widget.size);
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanDown: (details) => _trySelect(details.localPosition, size),
+            onPanUpdate: (details) {
+              _trySelect(details.localPosition, size);
+              setState(() => _moving = details.localPosition);
+            },
+            onPanEnd: (_) => _finish(),
+            onPanCancel: _finish,
+            child: CustomPaint(
+              size: size,
+              painter: _GesturePasswordPainter(
+                centers: _centers(size),
+                selected: List<int>.from(_selected),
+                moving: _moving,
+                frameRadius: widget.frameRadius,
+                pointRadius: widget.pointRadius,
+                pathWidth: widget.pathWidth,
+                color: widget.color,
+                highlightColor: widget.highlightColor,
+                pathColor: widget.pathColor,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GesturePasswordPainter extends CustomPainter {
+  final List<Offset> centers;
+  final List<int> selected;
+  final Offset? moving;
+  final double frameRadius;
+  final double pointRadius;
+  final double pathWidth;
+  final Color color;
+  final Color highlightColor;
+  final Color pathColor;
+
+  _GesturePasswordPainter({
+    required this.centers,
+    required this.selected,
+    required this.moving,
+    required this.frameRadius,
+    required this.pointRadius,
+    required this.pathWidth,
+    required this.color,
+    required this.highlightColor,
+    required this.pathColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pathPaint = Paint()
+      ..color = pathColor
+      ..strokeWidth = pathWidth
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke
+      ..isAntiAlias = true;
+    if (selected.length > 1) {
+      for (var i = 0; i < selected.length - 1; i++) {
+        canvas.drawLine(
+          centers[selected[i]],
+          centers[selected[i + 1]],
+          pathPaint,
+        );
+      }
+    }
+    if (selected.isNotEmpty && moving != null) {
+      canvas.drawLine(centers[selected.last], moving!, pathPaint);
+    }
+
+    final fill = Paint()..isAntiAlias = true;
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..isAntiAlias = true;
+    for (var i = 0; i < centers.length; i++) {
+      final active = selected.contains(i);
+      fill.color = active ? highlightColor : color;
+      stroke.color = active ? highlightColor : color;
+      canvas.drawCircle(centers[i], frameRadius, stroke);
+      canvas.drawCircle(centers[i], pointRadius, fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GesturePasswordPainter oldDelegate) {
+    return oldDelegate.centers != centers ||
+        oldDelegate.selected != selected ||
+        oldDelegate.moving != moving ||
+        oldDelegate.frameRadius != frameRadius ||
+        oldDelegate.pointRadius != pointRadius ||
+        oldDelegate.pathWidth != pathWidth ||
+        oldDelegate.color != color ||
+        oldDelegate.highlightColor != highlightColor ||
+        oldDelegate.pathColor != pathColor;
+  }
+}
+
 class _WavePainter extends CustomPainter {
   final double value;
   final List<Color> gradientColors;

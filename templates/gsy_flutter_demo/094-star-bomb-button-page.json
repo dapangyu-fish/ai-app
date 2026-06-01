@@ -3,13 +3,13 @@
   "appid": "8046a3f9-42fd-5c0f-afec-dc3c73a43544",
   "meta": {
     "name": "gsy_flutter_demo/094-star-bomb-button-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "点击爆炸的五角星（ChatGPT 生成代码）",
-      "en": "Tap-to-explode star(ChatGPT 生成代码)"
+      "en": "Yellow Star"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：点击爆炸的五角星（ChatGPT 生成代码）",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：点击爆炸的五角星（ChatGPT 生成代码）",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "star_bomb_button_page",
       "widgetClass": "StarBombButtonPage",
       "category": "scroll",
-      "routeIndex": 94
+      "routeIndex": 94,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5"
     }
   },
   "dependencies": {},
@@ -27,7 +29,8 @@
       "upstreamTitle": "点击爆炸的五角星（ChatGPT 生成代码）",
       "upstreamSource": "lib/widget/scroll/star_bomb_button_page.dart",
       "upstreamWidget": "StarBombButtonPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5"
     },
     "functions": {}
   },
@@ -36,152 +39,37 @@
     "screens": [
       {
         "id": "home",
-        "title": "点击爆炸的五角星（ChatGPT 生成代码）",
-        "layout": "column",
+        "title": "Yellow Star",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "list",
-                    "size": 26,
-                    "color": "#0B8E70"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E7F6F1",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "点击爆炸的五角星（ChatGPT 生成代码）",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "particle_burst_button",
+                  "shape": "star",
+                  "size": 300,
+                  "color": "#FFFF00",
+                  "particleCount": 30,
+                  "durationMs": 500
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Tap-to-explode star(ChatGPT 生成代码)",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：列表滚动",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/scroll/star_bomb_button_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：StarBombButtonPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
+              ],
+              "alignment": "center",
+              "mainAxisAlignment": "center"
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "Yellow Star"
+        }
       }
     ]
   }
