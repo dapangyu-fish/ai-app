@@ -3,7 +3,7 @@
   "appid": "69a3a112-f2e7-5211-8687-ffe04f3ccf55",
   "meta": {
     "name": "gsy_flutter_demo/124-koi-fish-animation-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Koi Fish",
@@ -20,7 +20,7 @@
       "category": "visual",
       "routeIndex": 124,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/visual/koi_fish_animation.dart",
       "upstreamWidget": "KoiFishAnimationPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,13 +46,231 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "koiFish",
-              "particleCount": 1200,
-              "pointSize": 1.8,
-              "color": "#FFF8E1",
-              "secondaryColor": "#FF7043",
-              "backgroundColor": "#061D24"
+              "type": "animated_canvas",
+              "backgroundColor": "#061D24",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 270,
+                  "x": {
+                    "+": [
+                      "headX",
+                      {
+                        "*": [
+                          {
+                            "cos": "dir"
+                          },
+                          "u",
+                          92
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      "headY",
+                      {
+                        "*": [
+                          {
+                            "sin": "dir"
+                          },
+                          "u",
+                          34
+                        ]
+                      },
+                      {
+                        "*": [
+                          "bend",
+                          "u"
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      1.6,
+                      {
+                        "-": [
+                          4,
+                          {
+                            "*": [
+                              "u",
+                              2.2
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#FFF8E1",
+                  "alpha": {
+                    "*": [
+                      0.75,
+                      {
+                        "-": [
+                          1,
+                          {
+                            "*": [
+                              "u",
+                              0.45
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "blendMode": "plus",
+                  "color2": "#FF7043",
+                  "mix": "u",
+                  "locals": {
+                    "fish": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          90
+                        ]
+                      }
+                    },
+                    "j": {
+                      "%": [
+                        "i",
+                        90
+                      ]
+                    },
+                    "u": {
+                      "/": [
+                        "j",
+                        90
+                      ]
+                    },
+                    "baseAngle": {
+                      "+": [
+                        {
+                          "*": [
+                            "t",
+                            {
+                              "+": [
+                                0.25,
+                                {
+                                  "*": [
+                                    "fish",
+                                    0.08
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "fish",
+                            {
+                              "/": [
+                                {
+                                  "*": [
+                                    3.141592653589793,
+                                    2
+                                  ]
+                                },
+                                3
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "orbit": {
+                      "*": [
+                        "min",
+                        {
+                          "+": [
+                            0.18,
+                            {
+                              "*": [
+                                "fish",
+                                0.06
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "headX": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "cos": "baseAngle"
+                            },
+                            "orbit"
+                          ]
+                        }
+                      ]
+                    },
+                    "headY": {
+                      "+": [
+                        {
+                          "/": [
+                            "h",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "sin": "baseAngle"
+                            },
+                            "orbit"
+                          ]
+                        }
+                      ]
+                    },
+                    "bend": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "u",
+                                  6.283185307179586
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  2
+                                ]
+                              },
+                              "fish"
+                            ]
+                          }
+                        },
+                        12
+                      ]
+                    },
+                    "dir": {
+                      "+": [
+                        "baseAngle",
+                        3.141592653589793,
+                        {
+                          "*": [
+                            "bend",
+                            0.01
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
             },
             "left": 0,
             "top": 0,

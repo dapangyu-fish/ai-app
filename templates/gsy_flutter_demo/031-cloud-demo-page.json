@@ -3,7 +3,7 @@
   "appid": "f918e26c-f415-515f-9208-b57fee896989",
   "meta": {
     "name": "gsy_flutter_demo/031-cloud-demo-page",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "自定义布局实现云词图展示",
@@ -18,7 +18,9 @@
       "deferredAlias": "cloud_demo_page",
       "widgetClass": "CloudDemoPage",
       "category": "basic",
-      "routeIndex": 31
+      "routeIndex": 31,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -28,7 +30,7 @@
       "upstreamSource": "lib/widget/basic/cloud/cloud_demo_page.dart",
       "upstreamWidget": "CloudDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v1"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -42,265 +44,619 @@
         "children": [
           {
             "type": "positioned",
-            "left": 0,
-            "top": 0,
-            "right": 0,
-            "bottom": 0,
             "child": {
               "type": "center",
               "child": {
-                "type": "word_cloud",
-                "backgroundColor": "#795548",
-                "items": [
+                "type": "container",
+                "layout": "stack",
+                "width": 430,
+                "height": 430,
+                "color": "#795548",
+                "padding": {
+                  "vertical": 10,
+                  "horizontal": 6
+                },
+                "children": [
                   {
-                    "text": "CloudGSY11111",
-                    "color": "#FFE57F",
-                    "fontSize": 10,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 178.0,
+                    "top": 205.0,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY11111",
+                      "style": {
+                        "fontSize": 10,
+                        "color": "#FFE57F"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY3333333T",
-                    "color": "#EEFF41",
-                    "fontSize": 16,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 160.89,
+                    "top": 213.34,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY3333333T",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#EEFF41"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYXXXXXXX",
-                    "color": "#000000",
-                    "fontSize": 14,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 171.46,
+                    "top": 188.36,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYXXXXXXX",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY55",
-                    "color": "#212121",
-                    "fontSize": 33,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 182.81,
+                    "top": 221.71,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY55",
+                      "style": {
+                        "fontSize": 33,
+                        "color": "#212121"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYAA",
-                    "color": "#448AFF",
-                    "fontSize": 15,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 144.99,
+                    "top": 200.58,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSYAA",
+                      "style": {
+                        "fontSize": 15,
+                        "color": "#448AFF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY44",
-                    "color": "#536DFE",
-                    "fontSize": 16,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 195.1,
+                    "top": 189.03,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY44",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#536DFE"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYBWWWWWW",
-                    "color": "#FF5722",
-                    "fontSize": 12,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 161.15,
+                    "top": 237.93,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYBWWWWWW",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#FF5722"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY<<<",
-                    "color": "#2196F3",
-                    "fontSize": 20,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 152.28,
+                    "top": 170.88,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSY<<<",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#2196F3"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "FFFFFFFFFFFFFF",
-                    "color": "#2196F3",
-                    "fontSize": 12,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 210.2,
+                    "top": 219.68,
+                    "child": {
+                      "type": "text",
+                      "value": "FFFFFFFFFFFFFF",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#2196F3"
+                      }
+                    }
                   },
                   {
-                    "text": "BBBBBBBBBBB",
-                    "color": "#7C4DFF",
-                    "fontSize": 14,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 126.42,
+                    "top": 222.99,
+                    "child": {
+                      "type": "text",
+                      "value": "BBBBBBBBBBB",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#7C4DFF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY%%%%",
-                    "color": "#FF9800",
-                    "fontSize": 20,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 191.83,
+                    "top": 158.35,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSY%%%%",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#FF9800"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY%%%%%%%",
-                    "color": "#2196F3",
-                    "fontSize": 12,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 186.72,
+                    "top": 258.29,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY%%%%%%%",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#2196F3"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY&&&&",
-                    "color": "#536DFE",
-                    "fontSize": 10,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 117.91,
+                    "top": 174.82,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY&&&&",
+                      "style": {
+                        "fontSize": 10,
+                        "color": "#536DFE"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYCCCC",
-                    "color": "#FFFF00",
-                    "fontSize": 14,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 233.04,
+                    "top": 191.14,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYCCCC",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFF00"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY****",
-                    "color": "#448AFF",
-                    "fontSize": 13,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 130.37,
+                    "top": 261.36,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY****",
+                      "style": {
+                        "fontSize": 13,
+                        "color": "#448AFF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYRRRR",
-                    "color": "#FF5252",
-                    "fontSize": 12,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 160.59,
+                    "top": 132.36,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYRRRR",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#FF5252"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYFFFFF",
-                    "color": "#2196F3",
-                    "fontSize": 12,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 229.34,
+                    "top": 255.01,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSYFFFFF",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#2196F3"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYBBBBBBB",
-                    "color": "#18FFFF",
-                    "fontSize": 15,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 88.12,
+                    "top": 208.39,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSYBBBBBBB",
+                      "style": {
+                        "fontSize": 15,
+                        "color": "#18FFFF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY222222",
-                    "color": "#2196F3",
-                    "fontSize": 16,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 231.17,
+                    "top": 144.13,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY222222",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#2196F3"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY1111111111111111",
-                    "color": "#64FFDA",
-                    "fontSize": 19,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 165.81,
+                    "top": 295.55,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY1111111111111111",
+                      "style": {
+                        "fontSize": 19,
+                        "color": "#64FFDA"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY####",
-                    "color": "#8A000000",
-                    "fontSize": 12,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 109.13,
+                    "top": 132.06,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY####",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#8A000000"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYFDWE",
-                    "color": "#E040FB",
-                    "fontSize": 14,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 268.46,
+                    "top": 218.25,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYFDWE",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#E040FB"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY22222",
-                    "color": "#536DFE",
-                    "fontSize": 19,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 84.88,
+                    "top": 264.23,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY22222",
+                      "style": {
+                        "fontSize": 19,
+                        "color": "#536DFE"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY44444",
-                    "color": "#FFFF00",
-                    "fontSize": 18,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 193.71,
+                    "top": 99.58,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSY44444",
+                        "style": {
+                          "fontSize": 18,
+                          "color": "#FFFF00"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY33333",
-                    "color": "#40C4FF",
-                    "fontSize": 17,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 225.88,
+                    "top": 302.52,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY33333",
+                      "style": {
+                        "fontSize": 17,
+                        "color": "#40C4FF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYXXXXXXXX",
-                    "color": "#2196F3",
-                    "fontSize": 16,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 58.77,
+                    "top": 169.52,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYXXXXXXXX",
+                        "style": {
+                          "fontSize": 16,
+                          "color": "#2196F3"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYFFFFFFFF",
-                    "color": "#42000000",
-                    "fontSize": 14,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 279.93,
+                    "top": 154.21,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSYFFFFFFFF",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#42000000"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYZUuzzuuu",
-                    "color": "#2196F3",
-                    "fontSize": 16,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 121.57,
+                    "top": 320.72,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYZUuzzuuu",
+                        "style": {
+                          "fontSize": 16,
+                          "color": "#2196F3"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYVVVVVVVVV",
-                    "color": "#FF9800",
-                    "fontSize": 12,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 126.07,
+                    "top": 82.86,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSYVVVVVVVVV",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#FF9800"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY222223",
-                    "color": "#42000000",
-                    "fontSize": 13,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 288.75,
+                    "top": 267.41,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSY222223",
+                        "style": {
+                          "fontSize": 13,
+                          "color": "#42000000"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYGFD",
-                    "color": "#FFFF00",
-                    "fontSize": 14,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 36.07,
+                    "top": 240.3,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYGFD",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFF00"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "GGGGGGGGGG",
-                    "color": "#7C4DFF",
-                    "fontSize": 14,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 247.26,
+                    "top": 84.85,
+                    "child": {
+                      "type": "text",
+                      "value": "GGGGGGGGGG",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#7C4DFF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYFFFFFF",
-                    "color": "#448AFF",
-                    "fontSize": 10,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 194.93,
+                    "top": 350.07,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYFFFFFF",
+                        "style": {
+                          "fontSize": 10,
+                          "color": "#448AFF"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY222",
-                    "color": "#EEFF41",
-                    "fontSize": 12,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 50.18,
+                    "top": 112.21,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY222",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#EEFF41"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY6666",
-                    "color": "#2196F3",
-                    "fontSize": 20,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 325.37,
+                    "top": 192.13,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSY6666",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#2196F3"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY33333",
-                    "color": "#009688",
-                    "fontSize": 14,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 61.18,
+                    "top": 322.63,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY33333",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#009688"
+                      }
+                    }
                   },
                   {
-                    "text": "YYYYYYYYYYYYYY",
-                    "color": "#7C4DFF",
-                    "fontSize": 14,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 170.8,
+                    "top": 40.4,
+                    "child": {
+                      "type": "text",
+                      "value": "YYYYYYYYYYYYYY",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#7C4DFF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSY  3  ",
-                    "color": "#2196F3",
-                    "fontSize": 10,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 283.51,
+                    "top": 330.13,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSY  3  ",
+                      "style": {
+                        "fontSize": 10,
+                        "color": "#2196F3"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYYYYYY",
-                    "color": "#8A000000",
-                    "fontSize": 17,
-                    "rotate": true
+                    "type": "positioned",
+                    "left": 0,
+                    "top": 189.01,
+                    "child": {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "text",
+                        "value": "CloudGSYYYYYY",
+                        "style": {
+                          "fontSize": 17,
+                          "color": "#8A000000"
+                        }
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYCC",
-                    "color": "#40C4FF",
-                    "fontSize": 11,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 311.51,
+                    "top": 97.6,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSYCC",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#40C4FF"
+                      }
+                    }
                   },
                   {
-                    "text": "CloudGSYGGGGG",
-                    "color": "#7C4DFF",
-                    "fontSize": 10,
-                    "rotate": false
+                    "type": "positioned",
+                    "left": 137.42,
+                    "top": 384.06,
+                    "child": {
+                      "type": "text",
+                      "value": "CloudGSYGGGGG",
+                      "style": {
+                        "fontSize": 10,
+                        "color": "#7C4DFF"
+                      }
+                    }
                   }
                 ]
               }
-            }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
         "padding": 0,

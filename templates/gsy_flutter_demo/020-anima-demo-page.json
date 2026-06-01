@@ -3,7 +3,7 @@
   "appid": "cb08d3aa-b8cd-5808-8997-fd2b0b2ec3b3",
   "meta": {
     "name": "gsy_flutter_demo/020-anima-demo-page",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "控件动画组合展示（旋转加放大圆）",
@@ -18,13 +18,16 @@
       "deferredAlias": "anima_demo_page",
       "widgetClass": "AnimaDemoPage",
       "category": "animation",
-      "routeIndex": 20
+      "routeIndex": 20,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "portVersion": "json-dsl-primitives-v2"
+      "portVersion": "json-dsl-clean-v1",
+      "portStatus": "ported_json"
     },
     "functions": {}
   },
@@ -41,12 +44,47 @@
             "child": {
               "type": "center",
               "child": {
-                "type": "rotating_circle_painter"
+                "type": "container",
+                "width": 200,
+                "height": 200,
+                "children": [
+                  {
+                    "type": "animated_canvas",
+                    "backgroundColor": "#69F0AE",
+                    "durationMs": 3000,
+                    "layers": [
+                      {
+                        "kind": "circle",
+                        "x": {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        "y": {
+                          "/": [
+                            "h",
+                            2
+                          ]
+                        },
+                        "radius": {
+                          "*": [
+                            "progress",
+                            150
+                          ]
+                        },
+                        "color": "#FF5252",
+                        "style": "stroke",
+                        "strokeWidth": 4
+                      }
+                    ]
+                  }
+                ]
               }
             },
             "left": 0,
-            "right": 0,
             "top": 0,
+            "right": 0,
             "bottom": 0
           }
         ],

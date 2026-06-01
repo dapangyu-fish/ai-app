@@ -3,7 +3,7 @@
   "appid": "d9d78e45-88c3-5e5e-85aa-14c7f2f01914",
   "meta": {
     "name": "gsy_flutter_demo/075-shader-canvas-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "测试 canvas 阴影",
@@ -20,7 +20,7 @@
       "category": "canvas",
       "routeIndex": 75,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/canvas/shader_canvas_demo_page.dart",
       "upstreamWidget": "ShaderCanvasDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -44,28 +44,224 @@
         "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "wave_painter",
+            "type": "container",
+            "width": 9999,
             "height": 100,
-            "value": 50,
-            "gradientColors": [
-              "#01333333",
-              "#44333333"
-            ],
-            "fillColor": "#3C2196F3",
-            "blurSigma": 5,
-            "blurStyle": "solid"
+            "children": [
+              {
+                "type": "animated_canvas",
+                "backgroundColor": "#00000000",
+                "speed": 0.2,
+                "layers": [
+                  {
+                    "kind": "path",
+                    "style": "fill",
+                    "color": "#3C2196F3",
+                    "alpha": 1,
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": 0,
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.28,
+                                    {
+                                      "sin": "t"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "quadTo",
+                        "x1": {
+                          "*": [
+                            "w",
+                            0.5
+                          ]
+                        },
+                        "y1": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.34,
+                                    {
+                                      "cos": "t"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "x": "w",
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.28,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "t",
+                                          3.14159
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": "w",
+                        "y": "h"
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": 0,
+                        "y": "h"
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
           },
           {
             "type": "spacer",
             "height": 5
           },
           {
-            "type": "wave_painter",
+            "type": "container",
+            "width": 9999,
             "height": 100,
-            "value": 50,
-            "fillColor": "#3C000000",
-            "blurSigma": 2,
-            "blurStyle": "outer"
+            "children": [
+              {
+                "type": "animated_canvas",
+                "backgroundColor": "#00000000",
+                "speed": 0.2,
+                "layers": [
+                  {
+                    "kind": "path",
+                    "style": "fill",
+                    "color": "#3C000000",
+                    "alpha": 1,
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": 0,
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.28,
+                                    {
+                                      "sin": "t"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "quadTo",
+                        "x1": {
+                          "*": [
+                            "w",
+                            0.5
+                          ]
+                        },
+                        "y1": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.34,
+                                    {
+                                      "cos": "t"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "x": "w",
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.28,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "t",
+                                          3.14159
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": "w",
+                        "y": "h"
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": 0,
+                        "y": "h"
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
           }
         ],
         "appBar": {

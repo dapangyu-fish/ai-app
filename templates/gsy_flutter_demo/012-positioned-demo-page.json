@@ -3,7 +3,7 @@
   "appid": "fc20296e-8588-597b-b9fd-c363e0f9f543",
   "meta": {
     "name": "gsy_flutter_demo/012-positioned-demo-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "通过绝对定位布局",
@@ -18,12 +18,17 @@
       "deferredAlias": "positioned_demo_page",
       "widgetClass": "PositionedDemoPage",
       "category": "basic",
-      "routeIndex": 12
+      "routeIndex": 12,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
   "global": {
-    "variables": {},
+    "variables": {
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    },
     "functions": {}
   },
   "steps": [],
@@ -37,15 +42,21 @@
         "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "material_button",
-            "color": "#2196F3"
+            "type": "container",
+            "width": 88,
+            "height": 36,
+            "color": "#2196F3",
+            "borderRadius": 2
           },
           {
             "type": "positioned",
             "leftFactor": 0.5,
             "child": {
-              "type": "material_button",
-              "color": "#69F0AE"
+              "type": "container",
+              "width": 88,
+              "height": 36,
+              "color": "#69F0AE",
+              "borderRadius": 2
             }
           },
           {
@@ -53,8 +64,11 @@
             "leftFactor": 0.2,
             "topFactor": 0.75,
             "child": {
-              "type": "material_button",
-              "color": "#FFEB3B"
+              "type": "container",
+              "width": 88,
+              "height": 36,
+              "color": "#FFEB3B",
+              "borderRadius": 2
             }
           },
           {
@@ -65,8 +79,11 @@
             "subtractSafeTop": true,
             "subtractToolbar": true,
             "child": {
-              "type": "material_button",
-              "color": "#FF5252"
+              "type": "container",
+              "width": 88,
+              "height": 36,
+              "color": "#FF5252",
+              "borderRadius": 2
             }
           }
         ]

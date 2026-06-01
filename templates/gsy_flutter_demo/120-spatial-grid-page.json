@@ -3,7 +3,7 @@
   "appid": "1bb841a5-55f6-5e86-b717-1f5933dd7353",
   "meta": {
     "name": "gsy_flutter_demo/120-spatial-grid-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Cool Spatial Grid",
@@ -20,7 +20,7 @@
       "category": "visual",
       "routeIndex": 120,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/visual/spatial_grid_page.dart",
       "upstreamWidget": "SpatialGridPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,13 +46,192 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "spatialGrid",
-              "particleCount": 1200,
-              "pointSize": 1,
-              "color": "#7C4DFF",
-              "secondaryColor": "#00E5FF",
-              "backgroundColor": "#03030A"
+              "type": "animated_canvas",
+              "backgroundColor": "#03030A",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "segments",
+                  "count": 26,
+                  "x1": {
+                    "-": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "half"
+                    ]
+                  },
+                  "y1": "y",
+                  "x2": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "half"
+                    ]
+                  },
+                  "y2": "y",
+                  "color": "#00E5FF",
+                  "alpha": "a",
+                  "strokeWidth": 1,
+                  "strokeCap": "round",
+                  "blendMode": "plus",
+                  "locals": {
+                    "depth": {
+                      "/": [
+                        {
+                          "+": [
+                            "i",
+                            1
+                          ]
+                        },
+                        26
+                      ]
+                    },
+                    "y": {
+                      "+": [
+                        {
+                          "*": [
+                            "h",
+                            0.52
+                          ]
+                        },
+                        {
+                          "*": [
+                            260,
+                            {
+                              "-": [
+                                1,
+                                "depth"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "sin": {
+                                "+": [
+                                  "t",
+                                  "i"
+                                ]
+                              }
+                            },
+                            3
+                          ]
+                        }
+                      ]
+                    },
+                    "half": {
+                      "*": [
+                        "w",
+                        {
+                          "+": [
+                            0.08,
+                            {
+                              "*": [
+                                "depth",
+                                0.55
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "a": {
+                      "clamp": [
+                        {
+                          "-": [
+                            1,
+                            "depth"
+                          ]
+                        },
+                        0.05,
+                        0.8
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 19,
+                  "x1": "x0",
+                  "y1": {
+                    "+": [
+                      {
+                        "*": [
+                          "h",
+                          0.52
+                        ]
+                      },
+                      260
+                    ]
+                  },
+                  "x2": "x1",
+                  "y2": {
+                    "-": [
+                      {
+                        "*": [
+                          "h",
+                          0.52
+                        ]
+                      },
+                      220
+                    ]
+                  },
+                  "color": "#FFFFFF",
+                  "alpha": 0.25,
+                  "strokeWidth": 1,
+                  "strokeCap": "round",
+                  "blendMode": "plus",
+                  "locals": {
+                    "k": {
+                      "-": [
+                        "i",
+                        9
+                      ]
+                    },
+                    "x0": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "k",
+                            12
+                          ]
+                        }
+                      ]
+                    },
+                    "x1": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "k",
+                            42
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
             },
             "left": 0,
             "top": 0,

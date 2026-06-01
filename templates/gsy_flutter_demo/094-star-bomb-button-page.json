@@ -3,7 +3,7 @@
   "appid": "8046a3f9-42fd-5c0f-afec-dc3c73a43544",
   "meta": {
     "name": "gsy_flutter_demo/094-star-bomb-button-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "点击爆炸的五角星（ChatGPT 生成代码）",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 94,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/star_bomb_button_page.dart",
       "upstreamWidget": "StarBombButtonPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -50,12 +50,171 @@
               "layout": "column",
               "children": [
                 {
-                  "type": "particle_burst_button",
-                  "shape": "star",
-                  "size": 300,
-                  "color": "#FFFF00",
-                  "particleCount": 30,
-                  "durationMs": 500
+                  "type": "container",
+                  "width": 300,
+                  "height": 300,
+                  "children": [
+                    {
+                      "type": "animated_canvas",
+                      "backgroundColor": "#FFFFFF",
+                      "interactive": true,
+                      "layers": [
+                        {
+                          "kind": "text",
+                          "value": "*",
+                          "x": {
+                            "-": [
+                              {
+                                "/": [
+                                  "w",
+                                  2
+                                ]
+                              },
+                              12
+                            ]
+                          },
+                          "y": {
+                            "-": [
+                              {
+                                "/": [
+                                  "h",
+                                  2
+                                ]
+                              },
+                              24
+                            ]
+                          },
+                          "color": "#FFD600",
+                          "fontSize": 48,
+                          "fontWeight": "bold"
+                        },
+                        {
+                          "kind": "particles",
+                          "count": 120,
+                          "x": {
+                            "+": [
+                              "touchX",
+                              {
+                                "*": [
+                                  {
+                                    "cos": "angle"
+                                  },
+                                  {
+                                    "+": [
+                                      "orbit",
+                                      {
+                                        "*": [
+                                          "burst",
+                                          {
+                                            "sin": "i"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          "y": {
+                            "+": [
+                              "touchY",
+                              {
+                                "*": [
+                                  {
+                                    "sin": {
+                                      "*": [
+                                        "angle",
+                                        1.7
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "+": [
+                                      {
+                                        "*": [
+                                          "orbit",
+                                          0.6
+                                        ]
+                                      },
+                                      {
+                                        "*": [
+                                          "burst",
+                                          {
+                                            "cos": "i"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          "radius": 2.2,
+                          "color": "#FFD600",
+                          "alpha": {
+                            "+": [
+                              0.2,
+                              {
+                                "*": [
+                                  0.65,
+                                  {
+                                    "-": [
+                                      1,
+                                      "f"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          "blendMode": "plus",
+                          "locals": {
+                            "angle": {
+                              "+": [
+                                {
+                                  "*": [
+                                    "i",
+                                    2.399963
+                                  ]
+                                },
+                                {
+                                  "*": [
+                                    "t",
+                                    0.8
+                                  ]
+                                }
+                              ]
+                            },
+                            "orbit": {
+                              "*": [
+                                "min",
+                                {
+                                  "+": [
+                                    0.08,
+                                    {
+                                      "*": [
+                                        0.32,
+                                        "f"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "burst": {
+                              "*": [
+                                "pulse",
+                                "min",
+                                0.28
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ],
               "alignment": "center",

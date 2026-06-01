@@ -3,7 +3,7 @@
   "appid": "d304cc02-4de9-5c14-84e6-65c8608c488e",
   "meta": {
     "name": "gsy_flutter_demo/106-galaxy-scene",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "星云动画",
@@ -20,7 +20,7 @@
       "category": "visual",
       "routeIndex": 106,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v6"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/visual/galaxy_scene_page.dart",
       "upstreamWidget": "GalaxyScene",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v6"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,13 +46,186 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "galaxy",
-              "particleCount": 5200,
-              "pointSize": 1.2,
-              "color": "#FFD050",
-              "secondaryColor": "#00E676",
-              "backgroundColor": "#020205"
+              "type": "animated_canvas",
+              "backgroundColor": "#020205",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "r"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          "r",
+                          0.58
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      1.6,
+                      {
+                        "-": [
+                          1.2,
+                          {
+                            "*": [
+                              "f",
+                              0.5
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#FFFFFF",
+                  "alpha": "a",
+                  "blendMode": "plus",
+                  "color2": "#00E5FF",
+                  "mix": "f",
+                  "locals": {
+                    "maxR": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "arm": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "i",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        0,
+                        3.141592653589793
+                      ]
+                    },
+                    "r": {
+                      "*": [
+                        {
+                          "sqrt": "f"
+                        },
+                        "maxR"
+                      ]
+                    },
+                    "angle": {
+                      "+": [
+                        "arm",
+                        {
+                          "*": [
+                            "f",
+                            7.5
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            {
+                              "+": [
+                                0.08,
+                                {
+                                  "*": [
+                                    "f",
+                                    0.1
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "-": [
+                            {
+                              "*": [
+                                {
+                                  "seed": "i"
+                                },
+                                0.16
+                              ]
+                            },
+                            0.08
+                          ]
+                        }
+                      ]
+                    },
+                    "a": {
+                      "clamp": [
+                        {
+                          "-": [
+                            1,
+                            "f"
+                          ]
+                        },
+                        0.15,
+                        0.9
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  "y": {
+                    "/": [
+                      "h",
+                      2
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "min",
+                      0.15
+                    ]
+                  },
+                  "color": "#FFFFFF",
+                  "alpha": 0.35,
+                  "style": "fill",
+                  "strokeWidth": 1,
+                  "blendMode": "plus",
+                  "color2": "#00E5FF",
+                  "mix": 0.4
+                }
+              ]
             },
             "left": 0,
             "top": 0,

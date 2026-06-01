@@ -29,8 +29,7 @@ class JsonCupertinoRefreshListWidget extends JsonBaseWidget {
       onRefreshAction: json['onRefresh'] as Map<String, dynamic>?,
       onLoadMoreAction: json['onLoadMore'] as Map<String, dynamic>?,
       interpreter: interpreter,
-      initialOverscroll:
-          (json['initialOverscroll'] as num?)?.toDouble() ?? -141,
+      initialOverscroll: (json['initialOverscroll'] as num?)?.toDouble() ?? 0,
       initialDelayMs: (json['initialDelayMs'] as num?)?.toInt() ?? 500,
       initialDurationMs: (json['initialDurationMs'] as num?)?.toInt() ?? 600,
       customIndicator: json['customIndicator'] == true,
@@ -83,6 +82,7 @@ class _CupertinoRefreshListViewState extends State<_CupertinoRefreshListView> {
   void _scheduleInitialOverscroll() {
     if (_didInitialOverscroll) return;
     _didInitialOverscroll = true;
+    if (widget.initialOverscroll == 0) return;
     Future.delayed(Duration(milliseconds: widget.initialDelayMs), () {
       if (!mounted || !_controller.hasClients) return;
       _controller.animateTo(

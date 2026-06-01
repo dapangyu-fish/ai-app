@@ -3,7 +3,7 @@
   "appid": "1dcbe0d8-fd15-5a56-a0c0-06ab56a04d18",
   "meta": {
     "name": "gsy_flutter_demo/114-akaza-compass-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "破坏杀·罗针",
@@ -20,7 +20,7 @@
       "category": "basic",
       "routeIndex": 114,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/basic/akaza_page.dart",
       "upstreamWidget": "AkazaCompassPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -59,13 +59,253 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "radialLines",
-              "particleCount": 900,
-              "pointSize": 1,
+              "type": "animated_canvas",
               "backgroundColor": "#00000000",
-              "color": "#4488FFFF",
-              "secondaryColor": "#FF4488FF"
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "segments",
+                  "count": 1440,
+                  "x1": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "a1"
+                          },
+                          "r1"
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": "a1"
+                          },
+                          "r1"
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "a2"
+                          },
+                          "r2"
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": "a2"
+                          },
+                          "r2"
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#EFEFEF",
+                  "alpha": 1,
+                  "strokeWidth": 1,
+                  "strokeCap": "round",
+                  "color2": "#272727",
+                  "mix": "mixv",
+                  "locals": {
+                    "layer": {
+                      "+": [
+                        {
+                          "floor": {
+                            "/": [
+                              "i",
+                              8
+                            ]
+                          }
+                        },
+                        1
+                      ]
+                    },
+                    "v": {
+                      "%": [
+                        "i",
+                        8
+                      ]
+                    },
+                    "r1": {
+                      "*": [
+                        {
+                          "-": [
+                            "layer",
+                            1
+                          ]
+                        },
+                        {
+                          "/": [
+                            "min",
+                            360
+                          ]
+                        }
+                      ]
+                    },
+                    "r2": {
+                      "*": [
+                        "layer",
+                        {
+                          "/": [
+                            "min",
+                            360
+                          ]
+                        }
+                      ]
+                    },
+                    "a1": {
+                      "+": [
+                        {
+                          "*": [
+                            "t",
+                            0.2
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "-": [
+                                "layer",
+                                1
+                              ]
+                            },
+                            0.09
+                          ]
+                        },
+                        {
+                          "*": [
+                            "v",
+                            {
+                              "/": [
+                                3.141592653589793,
+                                4
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "sin": {
+                                "+": [
+                                  {
+                                    "*": [
+                                      {
+                                        "-": [
+                                          "layer",
+                                          1
+                                        ]
+                                      },
+                                      0.05
+                                    ]
+                                  },
+                                  "t"
+                                ]
+                              }
+                            },
+                            0.8
+                          ]
+                        }
+                      ]
+                    },
+                    "a2": {
+                      "+": [
+                        {
+                          "*": [
+                            "t",
+                            0.2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "layer",
+                            0.09
+                          ]
+                        },
+                        {
+                          "*": [
+                            "v",
+                            {
+                              "/": [
+                                3.141592653589793,
+                                4
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "sin": {
+                                "+": [
+                                  {
+                                    "*": [
+                                      "layer",
+                                      0.05
+                                    ]
+                                  },
+                                  "t"
+                                ]
+                              }
+                            },
+                            0.8
+                          ]
+                        }
+                      ]
+                    },
+                    "mixv": {
+                      "/": [
+                        "layer",
+                        180
+                      ]
+                    }
+                  },
+                  "skipWhen": {
+                    "<=": [
+                      "layer",
+                      1
+                    ]
+                  }
+                }
+              ]
             },
             "left": 0,
             "top": 0,

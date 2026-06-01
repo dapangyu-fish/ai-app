@@ -3,7 +3,7 @@
   "appid": "c1849b64-5665-54f7-a387-e4c24a209973",
   "meta": {
     "name": "gsy_flutter_demo/121-shockwave-chat-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Shock Wave Chat",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 121,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/shock_wave_chat_page.dart",
       "upstreamWidget": "ShockwaveChatPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7",
+      "portVersion": "json-dsl-clean-v1",
       "messages": [
         {
           "me": false,
@@ -64,12 +64,111 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "shockwave",
-              "particleCount": 800,
-              "pointSize": 1,
-              "secondaryColor": "#40C4FF",
-              "backgroundColor": "#05050A"
+              "type": "animated_canvas",
+              "backgroundColor": "#05050A",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 768,
+                  "x": {
+                    "+": [
+                      "touchX",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "r"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      "touchY",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          "r"
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.4,
+                  "color": "#00E5FF",
+                  "alpha": "a",
+                  "blendMode": "plus",
+                  "locals": {
+                    "ring": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          96
+                        ]
+                      }
+                    },
+                    "p": {
+                      "%": [
+                        "i",
+                        96
+                      ]
+                    },
+                    "r": {
+                      "%": [
+                        {
+                          "+": [
+                            {
+                              "*": [
+                                "progress",
+                                360
+                              ]
+                            },
+                            {
+                              "*": [
+                                "ring",
+                                44
+                              ]
+                            }
+                          ]
+                        },
+                        360
+                      ]
+                    },
+                    "angle": {
+                      "*": [
+                        "p",
+                        {
+                          "/": [
+                            6.283185307179586,
+                            96
+                          ]
+                        }
+                      ]
+                    },
+                    "a": {
+                      "clamp": [
+                        {
+                          "-": [
+                            1,
+                            {
+                              "/": [
+                                "r",
+                                360
+                              ]
+                            }
+                          ]
+                        },
+                        0,
+                        0.65
+                      ]
+                    }
+                  }
+                }
+              ],
+              "interactive": true
             },
             "left": 0,
             "top": 0,

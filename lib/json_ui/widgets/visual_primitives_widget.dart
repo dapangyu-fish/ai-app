@@ -9,68 +9,6 @@ import '../interpreter.dart';
 import 'action_helper.dart';
 import 'base_widget.dart';
 
-class JsonWordCloudWidget extends JsonBaseWidget {
-  @override
-  Widget build(
-    BuildContext context,
-    Map<String, dynamic> json,
-    JsonInterpreter interpreter,
-  ) {
-    final items = (json['items'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .toList();
-    final backgroundColor = _parseColor(json['backgroundColor']?.toString());
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = math
-            .min(
-              constraints.maxWidth.isFinite ? constraints.maxWidth : 360,
-              constraints.maxHeight.isFinite ? constraints.maxHeight : 360,
-            )
-            .toDouble();
-        return SizedBox.square(
-          dimension: size,
-          child: FittedBox(
-            child: Container(
-              width: 430,
-              height: 430,
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-              color: backgroundColor,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: List.generate(items.length, (index) {
-                  final item = items[index];
-                  final angle = index * 2.399963229728653;
-                  final radius = 8 + index * 4.35;
-                  final x = 215 + math.cos(angle) * radius - 45;
-                  final y = 215 + math.sin(angle) * radius - 10;
-                  final text = Text(
-                    interpreter.resolveTemplate(item['text']?.toString() ?? ''),
-                    style: TextStyle(
-                      fontSize:
-                          _resolveDouble(interpreter, item['fontSize']) ?? 14,
-                      color:
-                          _parseColor(item['color']?.toString()) ??
-                          Colors.black,
-                    ),
-                  );
-                  return Positioned(
-                    left: x.clamp(0, 350).toDouble(),
-                    top: y.clamp(0, 405).toDouble(),
-                    child: item['rotate'] == true
-                        ? RotatedBox(quarterTurns: 1, child: text)
-                        : text,
-                  );
-                }),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 class JsonBackdropBlurWidget extends JsonBaseWidget {
   @override
   Widget build(
@@ -362,26 +300,6 @@ class _IntervalActionHostState extends State<_IntervalActionHost> {
   Widget build(BuildContext context) => widget.child;
 }
 
-class JsonActionRegionWidget extends JsonBaseWidget {
-  @override
-  Widget build(
-    BuildContext context,
-    Map<String, dynamic> json,
-    JsonInterpreter interpreter,
-  ) {
-    final action = resolveActionAtBuildTime(json['onTap'], interpreter);
-    final childJson = json['child'];
-    return GestureDetector(
-      onTap: action is Map<String, dynamic>
-          ? () => interpreter.executeAction(action, context)
-          : null,
-      child: childJson is Map<String, dynamic>
-          ? interpreter.buildWidget(context, childJson)
-          : const SizedBox.shrink(),
-    );
-  }
-}
-
 class JsonAnimatedPositionedWidget extends JsonBaseWidget {
   @override
   Widget build(
@@ -409,471 +327,48 @@ class JsonAnimatedPositionedWidget extends JsonBaseWidget {
   }
 }
 
-class JsonWavePainterWidget extends JsonBaseWidget {
+class JsonAnimatedCanvasWidget extends JsonBaseWidget {
   @override
   Widget build(
     BuildContext context,
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    final height = _resolveDouble(interpreter, json['height']) ?? 100;
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _WavePainter(
-          value: _resolveDouble(interpreter, json['value']) ?? 50,
-          gradientColors: _parseColorList(json['gradientColors']),
-          fillColor: _parseColor(json['fillColor']?.toString()),
-          blurSigma: _resolveDouble(interpreter, json['blurSigma']) ?? 0,
-          blurStyle: _parseBlurStyle(json['blurStyle']?.toString()),
-        ),
-      ),
-    );
-  }
-}
-
-class JsonParticleBurstButtonWidget extends JsonBaseWidget {
-  @override
-  Widget build(
-    BuildContext context,
-    Map<String, dynamic> json,
-    JsonInterpreter interpreter,
-  ) {
-    final action = resolveActionAtBuildTime(json['onTap'], interpreter);
-    return _ParticleBurstButton(
-      size: _resolveDouble(interpreter, json['size']) ?? 300,
-      color: _parseColor(json['color']?.toString()) ?? Colors.yellow,
-      particleCount: (_resolveDouble(interpreter, json['particleCount']) ?? 30)
-          .toInt(),
-      durationMs: (_resolveDouble(interpreter, json['durationMs']) ?? 500)
-          .toInt(),
-      shape: json['shape']?.toString() ?? 'star',
-      action: action is Map<String, dynamic> ? action : null,
-      interpreter: interpreter,
-    );
-  }
-}
-
-class _ParticleBurstButton extends StatefulWidget {
-  final double size;
-  final Color color;
-  final int particleCount;
-  final int durationMs;
-  final String shape;
-  final Map<String, dynamic>? action;
-  final JsonInterpreter interpreter;
-
-  const _ParticleBurstButton({
-    required this.size,
-    required this.color,
-    required this.particleCount,
-    required this.durationMs,
-    required this.shape,
-    required this.action,
-    required this.interpreter,
-  });
-
-  @override
-  State<_ParticleBurstButton> createState() => _ParticleBurstButtonState();
-}
-
-class _ParticleBurstButtonState extends State<_ParticleBurstButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  bool _exploding = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller =
-        AnimationController(
-          vsync: this,
-          duration: Duration(milliseconds: widget.durationMs),
-        )..addStatusListener((status) {
-          if (status == AnimationStatus.completed && mounted) {
-            setState(() => _exploding = false);
-          }
-        });
-  }
-
-  @override
-  void didUpdateWidget(covariant _ParticleBurstButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.durationMs != widget.durationMs) {
-      _controller.duration = Duration(milliseconds: widget.durationMs);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _tap() {
-    if (!_exploding) {
-      setState(() => _exploding = true);
-      _controller.forward(from: 0);
-    }
-    final action = widget.action;
-    if (action != null) {
-      widget.interpreter.executeAction(action, context);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _tap,
-      child: SizedBox.square(
-        dimension: widget.size,
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            return CustomPaint(
-              painter: _ParticleBurstPainter(
-                value: _controller.value,
-                exploding: _exploding,
-                color: widget.color,
-                particleCount: widget.particleCount,
-                shape: widget.shape,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _ParticleBurstPainter extends CustomPainter {
-  final double value;
-  final bool exploding;
-  final Color color;
-  final int particleCount;
-  final String shape;
-
-  _ParticleBurstPainter({
-    required this.value,
-    required this.exploding,
-    required this.color,
-    required this.particleCount,
-    required this.shape,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final side = math.min(size.width, size.height);
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-
-    if (exploding) {
-      final count = math.max(1, particleCount);
-      final particleSize = side * 0.4 / 30;
-      for (var i = 0; i < count; i++) {
-        final angle = -math.pi / 2 + i * math.pi * 2 / count;
-        final wave = math.sin(i * 12.9898) * 0.5 + 0.5;
-        final radius = side * (0.08 + 0.32 * value) * (0.7 + wave * 0.6);
-        final opacity = (1 - value).clamp(0.0, 1.0);
-        paint.color = color.withValues(alpha: opacity);
-        canvas.drawCircle(
-          center + Offset(math.cos(angle) * radius, math.sin(angle) * radius),
-          particleSize * (1 + value),
-          paint,
-        );
-      }
-      return;
-    }
-
-    if (shape == 'circle') {
-      canvas.drawCircle(center, side * 0.18, paint);
-      return;
-    }
-    canvas.drawPath(_starPath(center, side * 0.2, side * 0.08), paint);
-  }
-
-  Path _starPath(Offset center, double outerRadius, double innerRadius) {
-    final path = Path();
-    for (var i = 0; i < 10; i++) {
-      final radius = i.isEven ? outerRadius : innerRadius;
-      final angle = -math.pi / 2 + i * math.pi / 5;
-      final point =
-          center + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
-      if (i == 0) {
-        path.moveTo(point.dx, point.dy);
-      } else {
-        path.lineTo(point.dx, point.dy);
-      }
-    }
-    return path..close();
-  }
-
-  @override
-  bool shouldRepaint(covariant _ParticleBurstPainter oldDelegate) {
-    return oldDelegate.value != value ||
-        oldDelegate.exploding != exploding ||
-        oldDelegate.color != color ||
-        oldDelegate.particleCount != particleCount ||
-        oldDelegate.shape != shape;
-  }
-}
-
-class JsonGesturePasswordWidget extends JsonBaseWidget {
-  @override
-  Widget build(
-    BuildContext context,
-    Map<String, dynamic> json,
-    JsonInterpreter interpreter,
-  ) {
-    final action = resolveActionAtBuildTime(json['onDone'], interpreter);
-    return _GesturePasswordPad(
-      size: _resolveDouble(interpreter, json['size']) ?? 300,
-      frameRadius: _resolveDouble(interpreter, json['frameRadius']) ?? 30,
-      pointRadius: _resolveDouble(interpreter, json['pointRadius']) ?? 10,
-      pathWidth: _resolveDouble(interpreter, json['pathWidth']) ?? 6,
-      color: _parseColor(json['color']?.toString()) ?? Colors.grey,
-      highlightColor:
-          _parseColor(json['highlightColor']?.toString()) ?? Colors.blue,
-      pathColor: _parseColor(json['pathColor']?.toString()) ?? Colors.blue,
-      action: action is Map<String, dynamic> ? action : null,
-      interpreter: interpreter,
-    );
-  }
-}
-
-class _GesturePasswordPad extends StatefulWidget {
-  final double size;
-  final double frameRadius;
-  final double pointRadius;
-  final double pathWidth;
-  final Color color;
-  final Color highlightColor;
-  final Color pathColor;
-  final Map<String, dynamic>? action;
-  final JsonInterpreter interpreter;
-
-  const _GesturePasswordPad({
-    required this.size,
-    required this.frameRadius,
-    required this.pointRadius,
-    required this.pathWidth,
-    required this.color,
-    required this.highlightColor,
-    required this.pathColor,
-    required this.action,
-    required this.interpreter,
-  });
-
-  @override
-  State<_GesturePasswordPad> createState() => _GesturePasswordPadState();
-}
-
-class _GesturePasswordPadState extends State<_GesturePasswordPad> {
-  final List<int> _selected = [];
-  Offset? _moving;
-
-  List<Offset> _centers(Size size) {
-    final cell = size.width / 3;
-    return List.generate(9, (index) {
-      final row = index ~/ 3;
-      final col = index % 3;
-      return Offset(col * cell + cell / 2, row * cell + cell / 2);
-    });
-  }
-
-  void _trySelect(Offset position, Size size) {
-    final centers = _centers(size);
-    for (var i = 0; i < centers.length; i++) {
-      if (_selected.contains(i)) continue;
-      if ((position - centers[i]).distance <= widget.frameRadius) {
-        setState(() => _selected.add(i));
-        return;
-      }
-    }
-  }
-
-  void _finish() {
-    final password = _selected.join();
-    final action = widget.action;
-    if (action != null) {
-      widget.interpreter.executeActionWithEvent(action, context, {
-        'password': password,
-        'sequence': List<int>.from(_selected),
-      });
-    }
-    setState(() {
-      _selected.clear();
-      _moving = null;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: widget.size,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final side = math.min(constraints.maxWidth, constraints.maxHeight);
-          final size = Size.square(side.isFinite ? side : widget.size);
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanDown: (details) => _trySelect(details.localPosition, size),
-            onPanUpdate: (details) {
-              _trySelect(details.localPosition, size);
-              setState(() => _moving = details.localPosition);
-            },
-            onPanEnd: (_) => _finish(),
-            onPanCancel: _finish,
-            child: CustomPaint(
-              size: size,
-              painter: _GesturePasswordPainter(
-                centers: _centers(size),
-                selected: List<int>.from(_selected),
-                moving: _moving,
-                frameRadius: widget.frameRadius,
-                pointRadius: widget.pointRadius,
-                pathWidth: widget.pathWidth,
-                color: widget.color,
-                highlightColor: widget.highlightColor,
-                pathColor: widget.pathColor,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _GesturePasswordPainter extends CustomPainter {
-  final List<Offset> centers;
-  final List<int> selected;
-  final Offset? moving;
-  final double frameRadius;
-  final double pointRadius;
-  final double pathWidth;
-  final Color color;
-  final Color highlightColor;
-  final Color pathColor;
-
-  _GesturePasswordPainter({
-    required this.centers,
-    required this.selected,
-    required this.moving,
-    required this.frameRadius,
-    required this.pointRadius,
-    required this.pathWidth,
-    required this.color,
-    required this.highlightColor,
-    required this.pathColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pathPaint = Paint()
-      ..color = pathColor
-      ..strokeWidth = pathWidth
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke
-      ..isAntiAlias = true;
-    if (selected.length > 1) {
-      for (var i = 0; i < selected.length - 1; i++) {
-        canvas.drawLine(
-          centers[selected[i]],
-          centers[selected[i + 1]],
-          pathPaint,
-        );
-      }
-    }
-    if (selected.isNotEmpty && moving != null) {
-      canvas.drawLine(centers[selected.last], moving!, pathPaint);
-    }
-
-    final fill = Paint()..isAntiAlias = true;
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..isAntiAlias = true;
-    for (var i = 0; i < centers.length; i++) {
-      final active = selected.contains(i);
-      fill.color = active ? highlightColor : color;
-      stroke.color = active ? highlightColor : color;
-      canvas.drawCircle(centers[i], frameRadius, stroke);
-      canvas.drawCircle(centers[i], pointRadius, fill);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _GesturePasswordPainter oldDelegate) {
-    return oldDelegate.centers != centers ||
-        oldDelegate.selected != selected ||
-        oldDelegate.moving != moving ||
-        oldDelegate.frameRadius != frameRadius ||
-        oldDelegate.pointRadius != pointRadius ||
-        oldDelegate.pathWidth != pathWidth ||
-        oldDelegate.color != color ||
-        oldDelegate.highlightColor != highlightColor ||
-        oldDelegate.pathColor != pathColor;
-  }
-}
-
-class JsonProceduralVisualWidget extends JsonBaseWidget {
-  @override
-  Widget build(
-    BuildContext context,
-    Map<String, dynamic> json,
-    JsonInterpreter interpreter,
-  ) {
-    final mode =
-        interpreter.resolveExpression(json['mode'])?.toString() ??
-        json['mode']?.toString() ??
-        'galaxy';
-    return _ProceduralVisual(
-      mode: mode,
-      particleCount:
-          (_resolveDouble(interpreter, json['particleCount']) ?? 1200).toInt(),
-      pointSize: _resolveDouble(interpreter, json['pointSize']) ?? 1.6,
+    final layers = (json['layers'] as List<dynamic>? ?? const [])
+        .whereType<Map>()
+        .map((layer) => layer.map((key, value) => MapEntry('$key', value)))
+        .toList();
+    return _AnimatedCanvas(
+      layers: layers,
+      background: _parseColor(json['backgroundColor']?.toString()),
       speed: _resolveDouble(interpreter, json['speed']) ?? 1,
-      primary:
-          _parseColor(json['color']?.toString()) ?? const Color(0xFFFFFFFF),
-      secondary:
-          _parseColor(json['secondaryColor']?.toString()) ??
-          const Color(0xFF00E5FF),
-      background:
-          _parseColor(json['backgroundColor']?.toString()) ?? Colors.black,
+      durationMs: (_resolveDouble(interpreter, json['durationMs']) ?? 24000)
+          .toInt(),
+      interactive: json['interactive'] == true,
     );
   }
 }
 
-class _ProceduralVisual extends StatefulWidget {
-  final String mode;
-  final int particleCount;
-  final double pointSize;
+class _AnimatedCanvas extends StatefulWidget {
+  final List<Map<String, dynamic>> layers;
+  final Color? background;
   final double speed;
-  final Color primary;
-  final Color secondary;
-  final Color background;
+  final int durationMs;
+  final bool interactive;
 
-  const _ProceduralVisual({
-    required this.mode,
-    required this.particleCount,
-    required this.pointSize,
-    required this.speed,
-    required this.primary,
-    required this.secondary,
+  const _AnimatedCanvas({
+    required this.layers,
     required this.background,
+    required this.speed,
+    required this.durationMs,
+    required this.interactive,
   });
 
   @override
-  State<_ProceduralVisual> createState() => _ProceduralVisualState();
+  State<_AnimatedCanvas> createState() => _AnimatedCanvasState();
 }
 
-class _ProceduralVisualState extends State<_ProceduralVisual>
+class _AnimatedCanvasState extends State<_AnimatedCanvas>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   Offset? _touch;
@@ -884,8 +379,19 @@ class _ProceduralVisualState extends State<_ProceduralVisual>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 24),
+      duration: Duration(milliseconds: math.max(16, widget.durationMs)),
     )..repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.durationMs != widget.durationMs) {
+      _controller.duration = Duration(
+        milliseconds: math.max(16, widget.durationMs),
+      );
+      if (!_controller.isAnimating) _controller.repeat();
+    }
   }
 
   @override
@@ -903,585 +409,510 @@ class _ProceduralVisualState extends State<_ProceduralVisual>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (details) => _setTouch(details.localPosition),
-      onPanStart: (details) => _setTouch(details.localPosition),
-      onPanUpdate: (details) => _setTouch(details.localPosition),
-      onPanEnd: (_) => setState(() => _touch = null),
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final pulse = _pulse;
-          _pulse = math.max(0, _pulse - 0.015);
-          return CustomPaint(
-            painter: _ProceduralVisualPainter(
-              mode: widget.mode,
-              time: _controller.value * math.pi * 2 * widget.speed,
-              particleCount: widget.particleCount.clamp(80, 6000),
-              pointSize: widget.pointSize,
-              primary: widget.primary,
-              secondary: widget.secondary,
-              background: widget.background,
-              touch: _touch,
-              pulse: pulse,
-            ),
-            child: const SizedBox.expand(),
-          );
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : 300.0;
+        final height = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : 300.0;
+        final canvas = SizedBox(
+          width: width,
+          height: height,
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final pulse = _pulse;
+              _pulse = math.max(0, _pulse - 0.015);
+              return CustomPaint(
+                painter: _AnimatedCanvasPainter(
+                  layers: widget.layers,
+                  background: widget.background,
+                  time: _controller.value * math.pi * 2 * widget.speed,
+                  progress: _controller.value,
+                  touch: _touch,
+                  pulse: pulse,
+                ),
+                child: const SizedBox.expand(),
+              );
+            },
+          ),
+        );
+        if (!widget.interactive) return canvas;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (details) => _setTouch(details.localPosition),
+          onPanStart: (details) => _setTouch(details.localPosition),
+          onPanUpdate: (details) => _setTouch(details.localPosition),
+          onPanEnd: (_) => setState(() => _touch = null),
+          child: canvas,
+        );
+      },
     );
   }
 }
 
-class _ProceduralVisualPainter extends CustomPainter {
-  final String mode;
+class _AnimatedCanvasPainter extends CustomPainter {
+  final List<Map<String, dynamic>> layers;
+  final Color? background;
   final double time;
-  final int particleCount;
-  final double pointSize;
-  final Color primary;
-  final Color secondary;
-  final Color background;
+  final double progress;
   final Offset? touch;
   final double pulse;
 
-  _ProceduralVisualPainter({
-    required this.mode,
-    required this.time,
-    required this.particleCount,
-    required this.pointSize,
-    required this.primary,
-    required this.secondary,
+  _AnimatedCanvasPainter({
+    required this.layers,
     required this.background,
+    required this.time,
+    required this.progress,
     required this.touch,
     required this.pulse,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawColor(background, BlendMode.src);
-    switch (mode) {
-      case 'fibonacciSphere':
-        _drawFibonacciSphere(canvas, size);
+    if (background != null) canvas.drawColor(background!, BlendMode.src);
+    for (final layer in layers) {
+      final vars = _baseVars(size);
+      switch (layer['kind']?.toString()) {
+        case 'particles':
+          _drawRepeated(canvas, size, layer, vars, _drawParticle);
+          break;
+        case 'segments':
+          _drawRepeated(canvas, size, layer, vars, _drawSegment);
+          break;
+        case 'grid':
+          _drawGrid(canvas, size, layer, vars);
+          break;
+        case 'circle':
+          _drawCircle(canvas, size, layer, vars);
+          break;
+        case 'rect':
+          _drawRect(canvas, size, layer, vars);
+          break;
+        case 'path':
+          _drawPath(canvas, size, layer, vars);
+          break;
+        case 'text':
+          _drawText(canvas, size, layer, vars);
+          break;
+      }
+    }
+  }
+
+  Map<String, double> _baseVars(Size size) => {
+    't': time,
+    'time': time,
+    'progress': progress,
+    'w': size.width,
+    'h': size.height,
+    'min': math.min(size.width, size.height),
+    'max': math.max(size.width, size.height),
+    'pi': math.pi,
+    'pulse': pulse,
+    'touchX': touch?.dx ?? size.width / 2,
+    'touchY': touch?.dy ?? size.height / 2,
+  };
+
+  void _drawRepeated(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> baseVars,
+    void Function(Canvas, Size, Map<String, dynamic>, Map<String, double>) draw,
+  ) {
+    final count = _num(layer['count'], baseVars).round().clamp(0, 8000);
+    if (count <= 0) return;
+    for (var i = 0; i < count; i++) {
+      final vars = Map<String, double>.from(baseVars)
+        ..['i'] = i.toDouble()
+        ..['n'] = count.toDouble()
+        ..['f'] = count <= 1 ? 0 : i / (count - 1);
+      _applyLocals(layer, vars);
+      if (_bool(layer['skipWhen'], vars)) continue;
+      draw(canvas, size, layer, vars);
+    }
+  }
+
+  void _drawParticle(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> vars,
+  ) {
+    final x = _num(layer['x'], vars, size.width / 2);
+    final y = _num(layer['y'], vars, size.height / 2);
+    final radius = _num(layer['radius'], vars, 2);
+    final paint = _paint(layer, vars)..style = PaintingStyle.fill;
+    switch (layer['shape']?.toString()) {
+      case 'square':
+        final side = radius * 2;
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(x, y), width: side, height: side),
+          paint,
+        );
         break;
-      case 'attractor':
-        _drawAttractor(canvas, size);
-        break;
-      case 'radialLines':
-        _drawRadialLines(canvas, size);
-        break;
-      case 'blackHoleDisk':
-        _drawBlackHoleDisk(canvas, size);
-        break;
-      case 'taiChiParticles':
-        _drawTaiChi(canvas, size);
-        break;
-      case 'boomParticles':
-        _drawBoom(canvas, size);
-        break;
-      case 'discoSphere':
-        _drawDiscoSphere(canvas, size);
-        break;
-      case 'spatialGrid':
-        _drawSpatialGrid(canvas, size);
-        break;
-      case 'fire':
-        _drawFire(canvas, size);
-        break;
-      case 'particleTree':
-        _drawParticleTree(canvas, size);
-        break;
-      case 'mosaicScanner':
-        _drawMosaicScanner(canvas, size);
-        break;
-      case 'koiFish':
-        _drawKoiFish(canvas, size);
-        break;
-      case 'shockwave':
-        _drawShockwave(canvas, size);
-        break;
-      case 'jawControl':
-        _drawJawControl(canvas, size);
-        break;
-      case 'galaxy':
       default:
-        _drawGalaxy(canvas, size);
+        canvas.drawCircle(Offset(x, y), radius, paint);
         break;
     }
   }
 
-  void _drawFibonacciSphere(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.36);
-    final radius = math.min(size.width, size.height) * 0.36;
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = pointSize;
-    const goldenAngle = math.pi * (3 - 2.23606797749979);
-    for (var i = 0; i < particleCount; i++) {
-      final y = 1 - (i / (particleCount - 1)) * 2;
-      final r = math.sqrt(math.max(0, 1 - y * y));
-      final theta = goldenAngle * i;
-      final x = math.cos(theta) * r;
-      final z = math.sin(theta) * r;
-      final rotX = x * math.cos(time * 0.4) - z * math.sin(time * 0.4);
-      final rotZ = x * math.sin(time * 0.4) + z * math.cos(time * 0.4);
-      final perspective = 720 / (720 - rotZ * radius);
-      final alpha = ((rotZ + 1) / 2).clamp(0.18, 1.0);
-      paint.color = Color.lerp(
-        secondary,
-        primary,
-        alpha,
-      )!.withValues(alpha: alpha);
-      canvas.drawCircle(
-        Offset(
-          center.dx + rotX * radius * perspective,
-          center.dy + y * radius * perspective,
-        ),
-        pointSize * perspective,
-        paint,
-      );
-    }
-  }
-
-  void _drawAttractor(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final scale = math.min(size.width, size.height) * 0.18;
-    final paint = Paint()
-      ..color = secondary.withValues(alpha: 0.65)
-      ..strokeWidth = pointSize
-      ..strokeCap = StrokeCap.round
-      ..blendMode = BlendMode.plus;
-    final points = <Offset>[];
-    for (var i = 0; i < particleCount; i++) {
-      final t = i * 0.018 + time * 0.3;
-      final x = math.sin(t * 1.7) * math.cos(t * 0.41) * 2.1;
-      final y = math.sin(t * 1.13 + math.sin(t * 0.23)) * 2.0;
-      final z = math.cos(t * 0.71) * 1.3;
-      final rx = x * math.cos(time * 0.3) - z * math.sin(time * 0.3);
-      points.add(center + Offset(rx * scale, y * scale));
-    }
-    canvas.drawPoints(PointMode.points, points, paint);
-    _drawTitle(canvas, size, 'HALVORSEN', primary);
-  }
-
-  void _drawGalaxy(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final maxR = math.min(size.width, size.height) * 0.43;
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = pointSize
-      ..blendMode = BlendMode.plus;
-    for (var i = 0; i < particleCount; i++) {
-      final f = i / particleCount;
-      final arm = i % 2 == 0 ? 0 : math.pi;
-      final wobble = math.sin(i * 12.9898) * 0.08;
-      final r = math.sqrt(f) * maxR;
-      final angle = arm + f * 7.5 + time * (0.08 + f * 0.1) + wobble;
-      final alpha = (1 - f).clamp(0.15, 0.9);
-      paint.color = Color.lerp(primary, secondary, f)!.withValues(alpha: alpha);
-      canvas.drawCircle(
-        center + Offset(math.cos(angle) * r, math.sin(angle) * r * 0.58),
-        pointSize * (1.2 - f * 0.5),
-        paint,
-      );
-    }
-    final core = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          primary.withValues(alpha: 0.8),
-          secondary.withValues(alpha: 0.25),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: center, radius: maxR * 0.35))
-      ..blendMode = BlendMode.plus;
-    canvas.drawCircle(center, maxR * 0.35, core);
-  }
-
-  void _drawRadialLines(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
+  void _drawSegment(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> vars,
+  ) {
+    final paint = _paint(layer, vars)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    List<Offset>? prev;
-    for (var layer = 1; layer < 180; layer++) {
-      final r = layer * math.min(size.width, size.height) / 360;
-      final a = time * 0.2 + layer * 0.09;
-      final vertices = List.generate(8, (i) {
-        final angle = i * math.pi / 4 + a + math.sin(layer * 0.05 + time) * 0.8;
-        return center + Offset(math.cos(angle) * r, math.sin(angle) * r);
-      });
-      final v = (239 * (1 - layer / 180) + 39 * layer / 180).toInt();
-      paint.color = Color.fromARGB(255, v, v, v);
-      if (prev != null) {
-        for (var i = 0; i < vertices.length; i++) {
-          canvas.drawLine(prev[i], vertices[i], paint);
-        }
-      }
-      prev = vertices;
-    }
+      ..strokeWidth = _num(layer['strokeWidth'], vars, 1)
+      ..strokeCap = _strokeCap(layer['strokeCap']?.toString());
+    canvas.drawLine(
+      Offset(
+        _num(layer['x1'] ?? layer['x'], vars),
+        _num(layer['y1'] ?? layer['y'], vars),
+      ),
+      Offset(_num(layer['x2'], vars), _num(layer['y2'], vars)),
+      paint,
+    );
   }
 
-  void _drawBlackHoleDisk(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final base = math.min(size.width, size.height) * 0.12;
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = pointSize
-      ..blendMode = BlendMode.plus;
-    for (var i = 0; i < particleCount; i++) {
-      final f = i / particleCount;
-      final r = base * (1.6 + math.sqrt(f) * 5.4);
-      final theta = i * 2.399963 + time * (2.8 / math.sqrt(r / base));
-      final y = math.sin(theta) * r * 0.34;
-      final x = math.cos(theta) * r;
-      final hot = (1 - f).clamp(0.0, 1.0);
-      final color = hot > 0.7
-          ? Colors.white
-          : Color.lerp(const Color(0xFFFFD180), const Color(0xFFFF3D00), f)!;
-      paint.color = color.withValues(alpha: 0.55 + hot * 0.3);
-      canvas.drawCircle(
-        center + Offset(x, y),
-        pointSize * (1.4 - f * 0.6),
-        paint,
-      );
-    }
-    canvas.drawCircle(center, base * 1.45, Paint()..color = Colors.black);
-  }
-
-  void _drawTaiChi(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) * 0.43;
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = pointSize
-      ..blendMode = BlendMode.plus;
-    final points = <Offset>[];
-    for (var i = 0; i < particleCount; i++) {
-      final rnd = math.sin(i * 78.233) * 43758.5453;
-      final frac = rnd - rnd.floorToDouble();
-      final r = math.sqrt(frac) * 1.02;
-      final angle = i * 2.399963 + time * 0.16;
-      final x = math.cos(angle) * r;
-      final y = math.sin(angle) * r;
-      final top = math.sqrt(x * x + (y - 0.5) * (y - 0.5));
-      final bottom = math.sqrt(x * x + (y + 0.5) * (y + 0.5));
-      var bright = x > 0 ? 1.0 : 0.08;
-      if (top < 0.5) bright = 1.0;
-      if (bottom < 0.5) bright = 0.08;
-      if (top < 0.13) bright = 0.06;
-      if (bottom < 0.13) bright = 1.0;
-      if (bright > 0.2) points.add(center + Offset(x * radius, y * radius));
-    }
-    paint.color = primary.withValues(alpha: 0.75);
-    canvas.drawPoints(PointMode.points, points, paint);
-  }
-
-  void _drawBoom(Canvas canvas, Size size) {
-    final center = touch ?? Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = pointSize
-      ..blendMode = BlendMode.plus;
-    for (var i = 0; i < particleCount; i++) {
-      final f = i / particleCount;
-      final angle = i * 2.399963 + time * 0.8;
-      final orbit = math.min(size.width, size.height) * (0.08 + 0.32 * f);
-      final burst = pulse * math.min(size.width, size.height) * 0.2;
-      final x = math.cos(angle) * (orbit + burst * math.sin(i));
-      final y = math.sin(angle * 1.7) * (orbit * 0.6 + burst * math.cos(i));
-      paint.color = secondary.withValues(alpha: 0.25 + 0.55 * (1 - f));
-      canvas.drawCircle(center + Offset(x, y), pointSize, paint);
-    }
-  }
-
-  void _drawDiscoSphere(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.43);
-    final radius = math.min(size.width, size.height) * 0.34;
-    final paint = Paint()..blendMode = BlendMode.plus;
-    const goldenAngle = math.pi * (3 - 2.23606797749979);
-    for (var i = 0; i < particleCount; i++) {
-      final y = 1 - (i / (particleCount - 1)) * 2;
-      final r = math.sqrt(math.max(0, 1 - y * y));
-      final theta = goldenAngle * i;
-      final x = math.cos(theta) * r;
-      final z = math.sin(theta) * r;
-      final rx = x * math.cos(time * 0.35) - z * math.sin(time * 0.35);
-      final rz = x * math.sin(time * 0.35) + z * math.cos(time * 0.35);
-      if (rz < -0.7) continue;
-      final hue = (i * 37 + time * 80) % 360;
-      paint.color = HSVColor.fromAHSV(
-        0.35 + rz.clamp(0, 1) * 0.55,
-        hue.toDouble(),
-        0.85,
-        1,
-      ).toColor();
-      final p = center + Offset(rx * radius, y * radius);
-      canvas.drawRect(
-        Rect.fromCenter(center: p, width: pointSize * 4, height: pointSize * 4),
-        paint,
-      );
-    }
-  }
-
-  void _drawSpatialGrid(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.52);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = secondary.withValues(alpha: 0.55)
-      ..blendMode = BlendMode.plus;
-    for (var z = 1; z < 26; z++) {
-      final depth = z / 26;
-      final y = center.dy + 260 * (1 - depth) + math.sin(time + z) * 3;
-      final half = size.width * (0.08 + depth * 0.55);
-      final alpha = (1 - depth).clamp(0.05, 0.8);
-      paint.color = secondary.withValues(alpha: alpha);
-      canvas.drawLine(
-        Offset(center.dx - half, y),
-        Offset(center.dx + half, y),
-        paint,
-      );
-    }
-    for (var i = -9; i <= 9; i++) {
-      final x0 = center.dx + i * 12.0;
-      final x1 = center.dx + i * 42.0;
-      paint.color = primary.withValues(alpha: 0.25);
-      canvas.drawLine(
-        Offset(x0, center.dy + 260),
-        Offset(x1, center.dy - 220),
-        paint,
-      );
-    }
-  }
-
-  void _drawFire(Canvas canvas, Size size) {
-    final paint = Paint()..blendMode = BlendMode.plus;
-    for (var i = 0; i < particleCount; i++) {
-      final f = i / particleCount;
-      final seed = math.sin(i * 91.345) * 43758.5453;
-      final xSeed = seed - seed.floorToDouble();
-      final y = size.height * (0.92 - f * 0.78);
-      final width = size.width * (0.35 * (1 - f) + 0.04);
-      final x =
-          size.width / 2 +
-          (xSeed - 0.5) * width +
-          math.sin(time * 2 + i * 0.05) * 18 * (1 - f);
-      final hot = 1 - f;
-      paint.color = Color.lerp(
-        const Color(0xFFFFF59D),
-        const Color(0xFFFF3D00),
-        f,
-      )!.withValues(alpha: 0.08 + hot * 0.55);
-      canvas.drawCircle(Offset(x, y), pointSize * (1.2 + hot * 2.4), paint);
-    }
-  }
-
-  void _drawParticleTree(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.58);
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = pointSize
-      ..blendMode = BlendMode.plus;
-    for (var i = 0; i < particleCount; i++) {
-      final f = i / particleCount;
-      final h = f * 1.8 - 0.9;
-      final radius = (1 - f) * math.min(size.width, size.height) * 0.28;
-      final angle = i * 2.399963 + time * 0.3;
-      final x = math.cos(angle) * radius;
-      final y = -h * math.min(size.width, size.height) * 0.33;
-      paint.color = Color.lerp(
-        const Color(0xFF00E676),
-        const Color(0xFFFFFFFF),
-        f,
-      )!.withValues(alpha: 0.55);
-      canvas.drawCircle(
-        center + Offset(x, y),
-        pointSize * (1.4 - f * 0.5),
-        paint,
-      );
-    }
-    _drawTitle(canvas, size, '*', const Color(0xFFFFF176));
-  }
-
-  void _drawMosaicScanner(Canvas canvas, Size size) {
-    final cell = math.max(10.0, size.width / 22);
-    final scanY = (time * 80) % (size.height + cell * 4) - cell * 2;
-    final paint = Paint();
-    for (var y = 0.0; y < size.height; y += cell) {
-      for (var x = 0.0; x < size.width; x += cell) {
-        final v =
-            (math.sin(x * 0.03 + time) + math.cos(y * 0.04 - time)) * 0.5 + 0.5;
-        final nearScan = (y - scanY).abs() < cell * 2;
-        paint.color = Color.lerp(
-          primary,
-          secondary,
-          v,
-        )!.withValues(alpha: nearScan ? 0.85 : 0.25);
-        canvas.drawRect(Rect.fromLTWH(x + 1, y + 1, cell - 2, cell - 2), paint);
-      }
-    }
-    paint
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..color = secondary;
-    canvas.drawLine(Offset(0, scanY), Offset(size.width, scanY), paint);
-  }
-
-  void _drawKoiFish(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..blendMode = BlendMode.plus;
-    for (var fish = 0; fish < 3; fish++) {
-      final baseAngle = time * (0.25 + fish * 0.08) + fish * math.pi * 2 / 3;
-      final orbit = math.min(size.width, size.height) * (0.18 + fish * 0.06);
-      final head =
-          center +
-          Offset(math.cos(baseAngle) * orbit, math.sin(baseAngle) * orbit);
-      for (var i = 0; i < 90; i++) {
-        final t = i / 90;
-        final bend = math.sin(t * math.pi * 2 + time * 2 + fish) * 12;
-        final dir = baseAngle + math.pi + bend * 0.01;
-        final p =
-            head +
-            Offset(math.cos(dir) * t * 92, math.sin(dir) * t * 34 + bend * t);
-        paint.color = Color.lerp(
-          const Color(0xFFFFF8E1),
-          const Color(0xFFFF7043),
-          t,
-        )!.withValues(alpha: 0.75 * (1 - t * 0.45));
-        canvas.drawCircle(p, pointSize * (4 - t * 2.2), paint);
+  void _drawGrid(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> baseVars,
+  ) {
+    final columns = _num(layer['columns'], baseVars, 12).round().clamp(1, 400);
+    final rows = _num(layer['rows'], baseVars, 12).round().clamp(1, 400);
+    final cellW = _num(layer['cellWidth'], baseVars, size.width / columns);
+    final cellH = _num(layer['cellHeight'], baseVars, size.height / rows);
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < columns; col++) {
+        final vars = Map<String, double>.from(baseVars)
+          ..['row'] = row.toDouble()
+          ..['col'] = col.toDouble()
+          ..['i'] = (row * columns + col).toDouble()
+          ..['n'] = (rows * columns).toDouble()
+          ..['cellW'] = cellW
+          ..['cellH'] = cellH;
+        _applyLocals(layer, vars);
+        if (_bool(layer['skipWhen'], vars)) continue;
+        final x = _num(layer['x'], vars, col * cellW);
+        final y = _num(layer['y'], vars, row * cellH);
+        final width = _num(layer['width'], vars, cellW);
+        final height = _num(layer['height'], vars, cellH);
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, width, height),
+          _paint(layer, vars)..style = PaintingStyle.fill,
+        );
       }
     }
   }
 
-  void _drawShockwave(Canvas canvas, Size size) {
-    final center = touch ?? Offset(size.width / 2, size.height * 0.62);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..blendMode = BlendMode.plus;
-    for (var i = 0; i < 8; i++) {
-      final r = ((time * 80 + i * 44) % 360).toDouble();
-      paint.color = secondary.withValues(alpha: (1 - r / 360).clamp(0, 0.65));
-      canvas.drawCircle(center, r, paint);
-    }
+  void _drawCircle(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> vars,
+  ) {
+    final paint = _paint(layer, vars)
+      ..style = layer['style'] == 'stroke'
+          ? PaintingStyle.stroke
+          : PaintingStyle.fill
+      ..strokeWidth = _num(layer['strokeWidth'], vars, 1);
+    canvas.drawCircle(
+      Offset(
+        _num(layer['x'], vars, size.width / 2),
+        _num(layer['y'], vars, size.height / 2),
+      ),
+      _num(layer['radius'], vars, math.min(size.width, size.height) * 0.1),
+      paint,
+    );
   }
 
-  void _drawJawControl(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.52);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..color = primary;
-    final open = 0.35 + 0.25 * math.sin(time * 2);
-    final jaw = Path()
-      ..moveTo(center.dx - 88, center.dy)
-      ..quadraticBezierTo(
-        center.dx,
-        center.dy + 86 + open * 80,
-        center.dx + 88,
-        center.dy,
-      )
-      ..moveTo(center.dx - 78, center.dy - 6)
-      ..quadraticBezierTo(
-        center.dx,
-        center.dy - 55,
-        center.dx + 78,
-        center.dy - 6,
-      );
-    canvas.drawPath(jaw, paint);
-    paint.strokeWidth = 2;
-    for (var i = -4; i <= 4; i++) {
-      final x = center.dx + i * 18;
-      canvas.drawLine(
-        Offset(x, center.dy + 6),
-        Offset(x + i.sign * 2, center.dy + 32 + open * 34),
+  void _drawRect(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> vars,
+  ) {
+    final rect = Rect.fromLTWH(
+      _num(layer['x'], vars),
+      _num(layer['y'], vars),
+      _num(layer['width'], vars, size.width),
+      _num(layer['height'], vars, size.height),
+    );
+    final radius = _num(layer['borderRadius'], vars);
+    final paint = _paint(layer, vars)
+      ..style = layer['style'] == 'stroke'
+          ? PaintingStyle.stroke
+          : PaintingStyle.fill
+      ..strokeWidth = _num(layer['strokeWidth'], vars, 1);
+    if (radius > 0) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(radius)),
         paint,
       );
+    } else {
+      canvas.drawRect(rect, paint);
     }
   }
 
-  void _drawTitle(Canvas canvas, Size size, String value, Color color) {
+  void _drawPath(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> vars,
+  ) {
+    _applyLocals(layer, vars);
+    final commands = layer['commands'];
+    if (commands is! List) return;
+    final path = Path();
+    for (final raw in commands.whereType<Map>()) {
+      final command = raw.map((key, value) => MapEntry('$key', value));
+      switch (command['op']?.toString()) {
+        case 'moveTo':
+          path.moveTo(_num(command['x'], vars), _num(command['y'], vars));
+          break;
+        case 'lineTo':
+          path.lineTo(_num(command['x'], vars), _num(command['y'], vars));
+          break;
+        case 'quadTo':
+          path.quadraticBezierTo(
+            _num(command['x1'], vars),
+            _num(command['y1'], vars),
+            _num(command['x'], vars),
+            _num(command['y'], vars),
+          );
+          break;
+        case 'cubicTo':
+          path.cubicTo(
+            _num(command['x1'], vars),
+            _num(command['y1'], vars),
+            _num(command['x2'], vars),
+            _num(command['y2'], vars),
+            _num(command['x'], vars),
+            _num(command['y'], vars),
+          );
+          break;
+        case 'close':
+          path.close();
+          break;
+      }
+    }
+    final paint = _paint(layer, vars)
+      ..style = layer['style'] == 'fill'
+          ? PaintingStyle.fill
+          : PaintingStyle.stroke
+      ..strokeWidth = _num(layer['strokeWidth'], vars, 1)
+      ..strokeCap = _strokeCap(layer['strokeCap']?.toString());
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawText(
+    Canvas canvas,
+    Size size,
+    Map<String, dynamic> layer,
+    Map<String, double> vars,
+  ) {
     final painter = TextPainter(
       text: TextSpan(
-        text: value,
+        text: layer['value']?.toString() ?? '',
         style: TextStyle(
-          color: color,
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 2,
+          color: _color(layer, vars),
+          fontSize: _num(layer['fontSize'], vars, 24),
+          fontWeight: layer['fontWeight'] == 'bold'
+              ? FontWeight.bold
+              : FontWeight.normal,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    painter.paint(canvas, Offset((size.width - painter.width) / 2, 28));
+    painter.paint(
+      canvas,
+      Offset(
+        _num(layer['x'], vars, (size.width - painter.width) / 2),
+        _num(layer['y'], vars, 0),
+      ),
+    );
   }
 
-  @override
-  bool shouldRepaint(covariant _ProceduralVisualPainter oldDelegate) => true;
-}
+  Paint _paint(Map<String, dynamic> layer, Map<String, double> vars) {
+    final paint = Paint()
+      ..color = _color(layer, vars)
+      ..isAntiAlias = true;
+    final blendMode = _blendMode(layer['blendMode']?.toString());
+    if (blendMode != null) paint.blendMode = blendMode;
+    return paint;
+  }
 
-class _WavePainter extends CustomPainter {
-  final double value;
-  final List<Color> gradientColors;
-  final Color? fillColor;
-  final double blurSigma;
-  final BlurStyle blurStyle;
-
-  _WavePainter({
-    required this.value,
-    required this.gradientColors,
-    required this.fillColor,
-    required this.blurSigma,
-    required this.blurStyle,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final y1 = math.sin(value);
-    final y2 = math.sin(value + math.pi / 2);
-    final y3 = math.sin(value + math.pi);
-    final path = Path()
-      ..moveTo(0, size.height * (0.5 + 0.4 * y1))
-      ..quadraticBezierTo(
-        size.width * 0.5,
-        size.height * (0.5 + 0.4 * y2),
-        size.width,
-        size.height * (0.5 + 0.4 * y3),
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-
-    if (gradientColors.length >= 2) {
-      final paint = Paint()
-        ..shader = LinearGradient(
-          colors: gradientColors,
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-      if (blurSigma > 0) {
-        paint.maskFilter = MaskFilter.blur(blurStyle, blurSigma);
-      }
-      canvas.drawPath(path, paint);
+  Color _color(Map<String, dynamic> layer, Map<String, double> vars) {
+    final hue = layer['hue'];
+    final alpha = _num(layer['alpha'], vars, 1).clamp(0.0, 1.0);
+    if (hue != null) {
+      return HSVColor.fromAHSV(
+        alpha,
+        _num(hue, vars) % 360,
+        _num(layer['saturation'], vars, 0.85).clamp(0.0, 1.0),
+        _num(layer['valueBrightness'], vars, 1).clamp(0.0, 1.0),
+      ).toColor();
     }
-    if (fillColor != null) {
-      final paint = Paint()..color = fillColor!;
-      if (blurSigma > 0 && gradientColors.isEmpty) {
-        paint.maskFilter = MaskFilter.blur(blurStyle, blurSigma);
-      }
-      canvas.drawPath(path, paint);
+    final start = _parseColor(layer['color']?.toString()) ?? Colors.white;
+    final end = _parseColor(layer['color2']?.toString());
+    final mixed = end == null
+        ? start
+        : Color.lerp(start, end, _num(layer['mix'], vars).clamp(0.0, 1.0))!;
+    return mixed.withValues(alpha: alpha);
+  }
+
+  void _applyLocals(Map<String, dynamic> layer, Map<String, double> vars) {
+    final locals = layer['locals'];
+    if (locals is! Map) return;
+    for (final entry in locals.entries) {
+      vars['${entry.key}'] = _num(entry.value, vars);
     }
   }
 
-  @override
-  bool shouldRepaint(covariant _WavePainter oldDelegate) {
-    return oldDelegate.value != value ||
-        oldDelegate.gradientColors != gradientColors ||
-        oldDelegate.fillColor != fillColor ||
-        oldDelegate.blurSigma != blurSigma ||
-        oldDelegate.blurStyle != blurStyle;
+  bool _bool(dynamic expression, Map<String, double> vars) {
+    final value = _eval(expression, vars);
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    return false;
   }
+
+  double _num(
+    dynamic expression,
+    Map<String, double> vars, [
+    double fallback = 0,
+  ]) {
+    final value = _eval(expression, vars);
+    if (value is num && value.isFinite) return value.toDouble();
+    return fallback;
+  }
+
+  dynamic _eval(dynamic expression, Map<String, double> vars) {
+    if (expression == null) return null;
+    if (expression is num || expression is bool) return expression;
+    if (expression is String) {
+      if (vars.containsKey(expression)) return vars[expression];
+      return double.tryParse(expression) ?? expression;
+    }
+    if (expression is List) {
+      return expression.map((item) => _eval(item, vars)).toList();
+    }
+    if (expression is! Map || expression.isEmpty) return null;
+    final key = expression.keys.first.toString();
+    final raw = expression.values.first;
+    final values = raw is List ? raw : [raw];
+    double at(int index, [double fallback = 0]) {
+      if (index >= values.length) return fallback;
+      final value = _eval(values[index], vars);
+      return value is num && value.isFinite ? value.toDouble() : fallback;
+    }
+
+    switch (key) {
+      case 'var':
+        return vars[raw.toString()] ?? 0;
+      case '+':
+        return values.fold<double>(0, (sum, item) => sum + _num(item, vars));
+      case '-':
+        if (values.length == 1) return -at(0);
+        return at(0) - at(1);
+      case '*':
+        return values.fold<double>(
+          1,
+          (product, item) => product * _num(item, vars, 1),
+        );
+      case '/':
+        final divisor = at(1, 1);
+        return divisor == 0 ? 0 : at(0) / divisor;
+      case '%':
+        final divisor = at(1, 1);
+        return divisor == 0 ? 0 : at(0) % divisor;
+      case 'sin':
+        return math.sin(at(0));
+      case 'cos':
+        return math.cos(at(0));
+      case 'tan':
+        return math.tan(at(0));
+      case 'sqrt':
+        return math.sqrt(math.max(0, at(0)));
+      case 'pow':
+        return math.pow(at(0), at(1)).toDouble();
+      case 'abs':
+        return at(0).abs();
+      case 'floor':
+        return at(0).floorToDouble();
+      case 'ceil':
+        return at(0).ceilToDouble();
+      case 'round':
+        return at(0).roundToDouble();
+      case 'min':
+        if (values.isEmpty) return 0;
+        return values.map((item) => _num(item, vars)).reduce(math.min);
+      case 'max':
+        if (values.isEmpty) return 0;
+        return values.map((item) => _num(item, vars)).reduce(math.max);
+      case 'clamp':
+        return at(0).clamp(at(1), at(2)).toDouble();
+      case 'lerp':
+        return at(0) + (at(1) - at(0)) * at(2);
+      case 'seed':
+        final seed = math.sin(at(0) * 12.9898) * 43758.5453;
+        return seed - seed.floorToDouble();
+      case '>':
+        return at(0) > at(1);
+      case '>=':
+        return at(0) >= at(1);
+      case '<':
+        return at(0) < at(1);
+      case '<=':
+        return at(0) <= at(1);
+      case '==':
+        return at(0) == at(1);
+      case '!=':
+        return at(0) != at(1);
+      case 'and':
+        return values.every((item) => _bool(item, vars));
+      case 'or':
+        return values.any((item) => _bool(item, vars));
+      case '!':
+        return !_bool(values.isEmpty ? null : values.first, vars);
+      case 'if':
+        return _bool(values.isEmpty ? null : values[0], vars)
+            ? _eval(values.length > 1 ? values[1] : null, vars)
+            : _eval(values.length > 2 ? values[2] : null, vars);
+      default:
+        return null;
+    }
+  }
+
+  BlendMode? _blendMode(String? value) {
+    return switch (value) {
+      'plus' => BlendMode.plus,
+      'screen' => BlendMode.screen,
+      'multiply' => BlendMode.multiply,
+      _ => null,
+    };
+  }
+
+  StrokeCap _strokeCap(String? value) {
+    return switch (value) {
+      'square' => StrokeCap.square,
+      'butt' => StrokeCap.butt,
+      _ => StrokeCap.round,
+    };
+  }
+
+  @override
+  bool shouldRepaint(covariant _AnimatedCanvasPainter oldDelegate) => true;
 }
 
 Curve _parseCurve(String? value) {
@@ -1506,23 +937,6 @@ Alignment? _parseAlignment(String? value) {
     'centerRight' => Alignment.centerRight,
     _ => null,
   };
-}
-
-BlurStyle _parseBlurStyle(String? value) {
-  return switch (value) {
-    'normal' => BlurStyle.normal,
-    'outer' => BlurStyle.outer,
-    'inner' => BlurStyle.inner,
-    _ => BlurStyle.solid,
-  };
-}
-
-List<Color> _parseColorList(dynamic value) {
-  if (value is! List) return const [];
-  return value
-      .map((raw) => _parseColor(raw?.toString()))
-      .whereType<Color>()
-      .toList();
 }
 
 double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {

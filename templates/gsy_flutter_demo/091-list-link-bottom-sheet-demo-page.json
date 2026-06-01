@@ -3,7 +3,7 @@
   "appid": "548bafd0-2cd1-5e87-88dc-00d8c985e5df",
   "meta": {
     "name": "gsy_flutter_demo/091-list-link-bottom-sheet-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "列表联动 BottomSheet 效果",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 91,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -201,6 +201,7 @@
                     {
                       "type": "list",
                       "source": "{{ global.items }}",
+                      "allowNestedScroll": true,
                       "item_template": {
                         "type": "container",
                         "children": [

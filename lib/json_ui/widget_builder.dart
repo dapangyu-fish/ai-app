@@ -56,16 +56,10 @@ import 'widgets/flame_game_widget.dart';
 import 'widgets/analog_stick_widget.dart';
 import 'widgets/floating_layer_widget.dart';
 import 'widgets/transform_widget.dart';
-import 'widgets/material_button_widget.dart';
 import 'widgets/positioned_widget.dart';
 import 'widgets/cupertino_refresh_list_widget.dart';
-import 'widgets/bubble_button_widget.dart';
 import 'widgets/keyboard_detector_widget.dart';
-import 'widgets/slide_verify_widget.dart';
-import 'widgets/animation_primitives_widget.dart';
-import 'widgets/floating_touch_demo_widget.dart';
 import 'widgets/floating_action_button_widget.dart';
-import 'widgets/hero_image_viewer_widget.dart';
 import 'widgets/scroll_primitives_widget.dart';
 import 'widgets/visual_primitives_widget.dart';
 
@@ -125,22 +119,13 @@ class JsonWidgetBuilder {
     'analog_stick': JsonAnalogStickWidget(),
     'floating_layer': JsonFloatingLayerWidget(),
     'transform': JsonTransformWidget(),
-    'material_button': JsonMaterialButtonWidget(),
     'positioned': JsonPositionedWidget(),
     'cupertino_refresh_list': JsonCupertinoRefreshListWidget(),
-    'bubble_button': JsonBubbleButtonWidget(),
     'keyboard_detector': JsonKeyboardDetectorWidget(),
-    'slide_verify': JsonSlideVerifyWidget(),
-    'rotating_circle_painter': JsonRotatingCircleWidget(),
-    'circular_reveal': JsonCircularRevealWidget(),
-    'floating_touch_demo': JsonFloatingTouchDemoWidget(),
     'floating_action_button': JsonFloatingActionButtonWidget(),
-    'hero_image_viewer': JsonHeroImageViewerWidget(),
     'page_view': JsonPageViewWidget(),
     'custom_scroll_view': JsonCustomScrollViewWidget(),
-    'verification_code_input': JsonVerificationCodeInputWidget(),
     'radial_layout': JsonRadialLayoutWidget(),
-    'word_cloud': JsonWordCloudWidget(),
     'backdrop_blur': JsonBackdropBlurWidget(),
     'animated_container': JsonAnimatedContainerWidget(),
     'animated_visibility': JsonAnimatedVisibilityWidget(),
@@ -149,12 +134,8 @@ class JsonWidgetBuilder {
     'overflow_box': JsonOverflowBoxWidget(),
     'aspect_ratio': JsonAspectRatioWidget(),
     'interval_action': JsonIntervalActionWidget(),
-    'action_region': JsonActionRegionWidget(),
     'animated_positioned': JsonAnimatedPositionedWidget(),
-    'wave_painter': JsonWavePainterWidget(),
-    'particle_burst_button': JsonParticleBurstButtonWidget(),
-    'gesture_password': JsonGesturePasswordWidget(),
-    'procedural_visual': JsonProceduralVisualWidget(),
+    'animated_canvas': JsonAnimatedCanvasWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

@@ -3,7 +3,7 @@
   "appid": "e3bf0458-52cb-5301-b055-63990eacedf8",
   "meta": {
     "name": "gsy_flutter_demo/092-demo-draggable-sheet-stick-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "DraggableSheet 的 stick 效果",
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/demo_draggable_sheet_stick_page.dart",
       "upstreamWidget": "DemoDraggableSheetStickPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4",
+      "portVersion": "json-dsl-clean-v1",
       "expanded": false,
       "sheetHeight": 330,
       "items": [
@@ -197,6 +197,7 @@
                 {
                   "type": "list",
                   "source": "{{ global.items }}",
+                  "allowNestedScroll": true,
                   "item_template": {
                     "type": "container",
                     "children": [

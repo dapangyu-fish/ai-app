@@ -3,7 +3,7 @@
   "appid": "0ddf6fa5-3f6b-596a-b290-c085524508a7",
   "meta": {
     "name": "gsy_flutter_demo/110-black-hole-simulation",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Black hole",
@@ -20,7 +20,7 @@
       "category": "basic",
       "routeIndex": 110,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v6"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/visual/black_hole_simulation_page.dart",
       "upstreamWidget": "BlackHoleSimulation",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v6"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,11 +46,175 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "blackHoleDisk",
-              "particleCount": 5200,
-              "pointSize": 1.5,
-              "backgroundColor": "#000000"
+              "type": "animated_canvas",
+              "backgroundColor": "#000000",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "theta"
+                          },
+                          "r"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": "theta"
+                          },
+                          "r",
+                          0.34
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      1.6,
+                      {
+                        "-": [
+                          1.4,
+                          {
+                            "*": [
+                              "f",
+                              0.6
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#FFD180",
+                  "alpha": "a",
+                  "blendMode": "plus",
+                  "color2": "#FF3D00",
+                  "mix": "f",
+                  "locals": {
+                    "base": {
+                      "*": [
+                        "min",
+                        0.12
+                      ]
+                    },
+                    "r": {
+                      "*": [
+                        "base",
+                        {
+                          "+": [
+                            1.6,
+                            {
+                              "*": [
+                                {
+                                  "sqrt": "f"
+                                },
+                                5.4
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "theta": {
+                      "+": [
+                        {
+                          "*": [
+                            "i",
+                            2.399963229728653
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            {
+                              "/": [
+                                2.8,
+                                {
+                                  "sqrt": {
+                                    "/": [
+                                      "r",
+                                      "base"
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "hot": {
+                      "clamp": [
+                        {
+                          "-": [
+                            1,
+                            "f"
+                          ]
+                        },
+                        0,
+                        1
+                      ]
+                    },
+                    "a": {
+                      "+": [
+                        0.55,
+                        {
+                          "*": [
+                            "hot",
+                            0.3
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  "y": {
+                    "/": [
+                      "h",
+                      2
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "min",
+                      0.174
+                    ]
+                  },
+                  "color": "#000000",
+                  "alpha": 1,
+                  "style": "fill",
+                  "strokeWidth": 1
+                }
+              ]
             },
             "left": 0,
             "top": 0,

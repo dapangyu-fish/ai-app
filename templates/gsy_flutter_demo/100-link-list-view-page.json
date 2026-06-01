@@ -3,7 +3,7 @@
   "appid": "8b4f11d6-2cb1-5c64-b7a8-c5f022baba1b",
   "meta": {
     "name": "gsy_flutter_demo/100-link-list-view-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "link scroll",
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/link_scroll_page.dart",
       "upstreamWidget": "LinkListViewPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5",
+      "portVersion": "json-dsl-clean-v1",
       "selected": 0,
       "items": [
         {
@@ -177,6 +177,7 @@
               {
                 "type": "list",
                 "source": "{{ global.items }}",
+                "allowNestedScroll": true,
                 "controller": "leftList",
                 "separator": "none",
                 "item_template": {
@@ -265,6 +266,7 @@
                 {
                   "type": "list",
                   "source": "{{ global.items }}",
+                  "allowNestedScroll": true,
                   "controller": "rightList",
                   "separator": "none",
                   "item_template": {

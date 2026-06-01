@@ -3,7 +3,7 @@
   "appid": "b8c184d8-41a0-5ccd-9b90-ed045de37dd0",
   "meta": {
     "name": "gsy_flutter_demo/125-dynamic-jaw-control-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Jaw Control",
@@ -20,7 +20,7 @@
       "category": "canvas",
       "routeIndex": 125,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/canvas/dynamic_jaw_control_page.dart",
       "upstreamWidget": "DynamicJawControlPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,13 +46,237 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "jawControl",
-              "particleCount": 600,
-              "pointSize": 1,
-              "color": "#E0F7FA",
-              "secondaryColor": "#80DEEA",
-              "backgroundColor": "#111217"
+              "type": "animated_canvas",
+              "backgroundColor": "#111217",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "path",
+                  "commands": [
+                    {
+                      "op": "moveTo",
+                      "x": {
+                        "-": [
+                          "cx",
+                          88
+                        ]
+                      },
+                      "y": "cy"
+                    },
+                    {
+                      "op": "quadTo",
+                      "x1": "cx",
+                      "y1": {
+                        "+": [
+                          "cy",
+                          86,
+                          {
+                            "*": [
+                              "open",
+                              80
+                            ]
+                          }
+                        ]
+                      },
+                      "x": {
+                        "+": [
+                          "cx",
+                          88
+                        ]
+                      },
+                      "y": "cy"
+                    },
+                    {
+                      "op": "moveTo",
+                      "x": {
+                        "-": [
+                          "cx",
+                          78
+                        ]
+                      },
+                      "y": {
+                        "-": [
+                          "cy",
+                          6
+                        ]
+                      }
+                    },
+                    {
+                      "op": "quadTo",
+                      "x1": "cx",
+                      "y1": {
+                        "-": [
+                          "cy",
+                          55
+                        ]
+                      },
+                      "x": {
+                        "+": [
+                          "cx",
+                          78
+                        ]
+                      },
+                      "y": {
+                        "-": [
+                          "cy",
+                          6
+                        ]
+                      }
+                    }
+                  ],
+                  "color": "#E0F7FA",
+                  "alpha": 1,
+                  "style": "stroke",
+                  "strokeWidth": 4,
+                  "strokeCap": "round",
+                  "locals": {
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "*": [
+                        "h",
+                        0.52
+                      ]
+                    },
+                    "open": {
+                      "+": [
+                        0.35,
+                        {
+                          "*": [
+                            0.25,
+                            {
+                              "sin": {
+                                "*": [
+                                  "t",
+                                  2
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 9,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          "k",
+                          18
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      6
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          "k",
+                          18
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "if": [
+                              {
+                                ">": [
+                                  "k",
+                                  0
+                                ]
+                              },
+                              1,
+                              {
+                                "if": [
+                                  {
+                                    "<": [
+                                      "k",
+                                      0
+                                    ]
+                                  },
+                                  -1,
+                                  0
+                                ]
+                              }
+                            ]
+                          },
+                          2
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "cy",
+                      32,
+                      {
+                        "*": [
+                          "open",
+                          34
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#E0F7FA",
+                  "alpha": 1,
+                  "strokeWidth": 2,
+                  "strokeCap": "round",
+                  "locals": {
+                    "k": {
+                      "-": [
+                        "i",
+                        4
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "*": [
+                        "h",
+                        0.52
+                      ]
+                    },
+                    "open": {
+                      "+": [
+                        0.35,
+                        {
+                          "*": [
+                            0.25,
+                            {
+                              "sin": {
+                                "*": [
+                                  "t",
+                                  2
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
             },
             "left": 0,
             "top": 0,

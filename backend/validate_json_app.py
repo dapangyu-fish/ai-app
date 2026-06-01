@@ -511,6 +511,8 @@ class Validator:
 
             if "shrinkWrap" in node and not isinstance(node.get("shrinkWrap"), bool):
                 self.error(self._path(path, "shrinkWrap"), "shrinkWrap must be a boolean")
+            if "allowNestedScroll" in node and not isinstance(node.get("allowNestedScroll"), bool):
+                self.error(self._path(path, "allowNestedScroll"), "allowNestedScroll must be a boolean")
 
             style = node.get("style")
             if isinstance(style, dict):
@@ -694,11 +696,16 @@ class Validator:
             if not self._is_ui_path(path):
                 continue
             if self._is_non_shrink_scroll_widget(node):
-                if not self._is_direct_screen_scroll_path(path) and not self._is_direct_refresh_child_path(path):
+                if (
+                    node.get("allowNestedScroll") is not True
+                    and not self._is_direct_screen_scroll_path(path)
+                    and not self._is_direct_refresh_child_path(path)
+                ):
                     self.warn(
                         path,
                         "non-shrinkWrap list/grid is nested inside another widget; long pages can lose full-page vertical scroll. "
-                        "For embedded short lists set shrinkWrap:true, or lift the list/refresh to a direct screen/tab child.",
+                        "For embedded short lists set shrinkWrap:true, lift the list/refresh to a direct screen/tab child, "
+                        "or set allowNestedScroll:true only for intentional nested-scroll surfaces.",
                     )
             if not self._is_screen_or_tab_path(path):
                 continue

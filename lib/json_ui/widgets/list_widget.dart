@@ -43,7 +43,6 @@ class JsonListWidget extends JsonBaseWidget {
     // scrollToEnd: true 时进入页面 / 列表项数增加时自动滚到底（聊天页用）
     final scrollToEnd = json['scrollToEnd'] == true;
     // initialRefresh: true 时首帧后主动展示 RefreshIndicator，并触发 onRefresh。
-    // 用于复刻 Flutter demo 里 refreshKey.currentState!.show() 的行为。
     final initialRefresh = json['initialRefresh'] == true;
     final emptyState = json['emptyState']?.toString() ?? 'default';
     // shrinkWrap: true 时 list 不再占满剩余高度，适合放在可滚动详情页 /
@@ -352,7 +351,7 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
       ScrollStartNotification() => 'ScrollStart',
       ScrollUpdateNotification() => 'ScrollUpdate',
       ScrollEndNotification() => 'ScrollEnd',
-      UserScrollNotification() => ' UserScroll',
+      UserScrollNotification() => 'UserScroll',
       _ => '',
     };
     widget.interpreter.executeActionWithEvent(

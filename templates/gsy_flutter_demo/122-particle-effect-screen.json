@@ -3,7 +3,7 @@
   "appid": "8d51a9de-21cc-5b4f-94dc-6d9802a227a3",
   "meta": {
     "name": "gsy_flutter_demo/122-particle-effect-screen",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Particle Effect",
@@ -20,7 +20,7 @@
       "category": "animation",
       "routeIndex": 122,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/animation/particle_effect_screen.dart",
       "upstreamWidget": "ParticleEffectScreen",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,12 +46,136 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "boomParticles",
-              "particleCount": 5000,
-              "pointSize": 1.8,
-              "secondaryColor": "#18FFFF",
-              "backgroundColor": "#000000"
+              "type": "animated_canvas",
+              "backgroundColor": "#000000",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      "touchX",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "+": [
+                              "orbit",
+                              {
+                                "*": [
+                                  "burst",
+                                  {
+                                    "sin": "i"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      "touchY",
+                      {
+                        "*": [
+                          {
+                            "sin": {
+                              "*": [
+                                "angle",
+                                1.7
+                              ]
+                            }
+                          },
+                          {
+                            "+": [
+                              {
+                                "*": [
+                                  "orbit",
+                                  0.6
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "burst",
+                                  {
+                                    "cos": "i"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.6,
+                  "color": "#00E5FF",
+                  "alpha": {
+                    "+": [
+                      0.25,
+                      {
+                        "*": [
+                          0.55,
+                          {
+                            "-": [
+                              1,
+                              "f"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "blendMode": "plus",
+                  "locals": {
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "i",
+                            2.399963229728653
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.8
+                          ]
+                        }
+                      ]
+                    },
+                    "orbit": {
+                      "*": [
+                        "min",
+                        {
+                          "+": [
+                            0.08,
+                            {
+                              "*": [
+                                0.32,
+                                "f"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "burst": {
+                      "*": [
+                        "pulse",
+                        "min",
+                        0.2
+                      ]
+                    }
+                  }
+                }
+              ],
+              "interactive": true
             },
             "left": 0,
             "top": 0,

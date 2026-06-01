@@ -3,7 +3,7 @@
   "appid": "d96c650e-7d95-5766-b6c5-ad900bbb1891",
   "meta": {
     "name": "gsy_flutter_demo/123-mosaic-scanner-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Mosaic Scanner ",
@@ -20,7 +20,7 @@
       "category": "visual",
       "routeIndex": 123,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/visual/mosaic_scanner_page.dart",
       "upstreamWidget": "MosaicScannerPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,13 +46,262 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "mosaicScanner",
-              "particleCount": 600,
-              "pointSize": 1,
-              "color": "#1DE9B6",
-              "secondaryColor": "#64FFDA",
-              "backgroundColor": "#001A1A"
+              "type": "animated_canvas",
+              "backgroundColor": "#001A1A",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "grid",
+                  "columns": 22,
+                  "rows": 42,
+                  "x": {
+                    "+": [
+                      {
+                        "*": [
+                          "col",
+                          "cellW"
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "*": [
+                          "row",
+                          "cellH"
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  "width": {
+                    "-": [
+                      "cellW",
+                      2
+                    ]
+                  },
+                  "height": {
+                    "-": [
+                      "cellH",
+                      2
+                    ]
+                  },
+                  "color": "#FFFFFF",
+                  "color2": "#00E5FF",
+                  "mix": "v",
+                  "alpha": "a",
+                  "locals": {
+                    "v": {
+                      "+": [
+                        {
+                          "*": [
+                            {
+                              "+": [
+                                {
+                                  "sin": {
+                                    "+": [
+                                      {
+                                        "*": [
+                                          "col",
+                                          0.3
+                                        ]
+                                      },
+                                      "t"
+                                    ]
+                                  }
+                                },
+                                {
+                                  "cos": {
+                                    "-": [
+                                      {
+                                        "*": [
+                                          "row",
+                                          0.4
+                                        ]
+                                      },
+                                      "t"
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            0.25
+                          ]
+                        },
+                        0.5
+                      ]
+                    },
+                    "scanY": {
+                      "-": [
+                        {
+                          "*": [
+                            "progress",
+                            {
+                              "+": [
+                                "h",
+                                {
+                                  "*": [
+                                    "cellH",
+                                    4
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "cellH",
+                            2
+                          ]
+                        }
+                      ]
+                    },
+                    "near": {
+                      "<": [
+                        {
+                          "abs": {
+                            "-": [
+                              {
+                                "*": [
+                                  "row",
+                                  "cellH"
+                                ]
+                              },
+                              "scanY"
+                            ]
+                          }
+                        },
+                        {
+                          "*": [
+                            "cellH",
+                            2
+                          ]
+                        }
+                      ]
+                    },
+                    "a": {
+                      "if": [
+                        "near",
+                        0.85,
+                        0.25
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 1,
+                  "x1": 0,
+                  "y1": "scanY",
+                  "x2": "w",
+                  "y2": "scanY",
+                  "color": "#00E5FF",
+                  "alpha": 1,
+                  "strokeWidth": 3,
+                  "strokeCap": "round",
+                  "locals": {
+                    "v": {
+                      "+": [
+                        {
+                          "*": [
+                            {
+                              "+": [
+                                {
+                                  "sin": {
+                                    "+": [
+                                      {
+                                        "*": [
+                                          "col",
+                                          0.3
+                                        ]
+                                      },
+                                      "t"
+                                    ]
+                                  }
+                                },
+                                {
+                                  "cos": {
+                                    "-": [
+                                      {
+                                        "*": [
+                                          "row",
+                                          0.4
+                                        ]
+                                      },
+                                      "t"
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            0.25
+                          ]
+                        },
+                        0.5
+                      ]
+                    },
+                    "scanY": {
+                      "-": [
+                        {
+                          "*": [
+                            "progress",
+                            {
+                              "+": [
+                                "h",
+                                {
+                                  "*": [
+                                    "cellH",
+                                    4
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "cellH",
+                            2
+                          ]
+                        }
+                      ]
+                    },
+                    "near": {
+                      "<": [
+                        {
+                          "abs": {
+                            "-": [
+                              {
+                                "*": [
+                                  "row",
+                                  "cellH"
+                                ]
+                              },
+                              "scanY"
+                            ]
+                          }
+                        },
+                        {
+                          "*": [
+                            "cellH",
+                            2
+                          ]
+                        }
+                      ]
+                    },
+                    "a": {
+                      "if": [
+                        "near",
+                        0.85,
+                        0.25
+                      ]
+                    }
+                  }
+                }
+              ]
             },
             "left": 0,
             "top": 0,

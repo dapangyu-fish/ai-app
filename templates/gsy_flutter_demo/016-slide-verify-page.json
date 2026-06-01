@@ -3,7 +3,7 @@
   "appid": "656523ad-8afc-5054-bb5f-66ed8e3e341c",
   "meta": {
     "name": "gsy_flutter_demo/016-slide-verify-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "滑动验证",
@@ -18,15 +18,39 @@
       "deferredAlias": "slider_verify_page",
       "widgetClass": "SlideVerifyPage",
       "category": "scroll",
-      "routeIndex": 16
+      "routeIndex": 16,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "verified": false
+      "verified": false,
+      "slideValue": 0,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
     },
-    "functions": {}
+    "functions": {},
+    "computed": {
+      "slideProgress": {
+        "/": [
+          {
+            "var": "global.slideValue"
+          },
+          100
+        ]
+      },
+      "slideText": {
+        "if": [
+          {
+            "var": "global.verified"
+          },
+          "验证成功",
+          "滑动验证"
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
@@ -41,27 +65,105 @@
             "child": {
               "type": "center",
               "child": {
-                "type": "slide_verify",
+                "type": "container",
+                "layout": "stack",
                 "width": 250,
                 "height": 60,
-                "sliderImage": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
-                "successText": "验证成功",
-                "initText": "滑动验证",
-                "bgColor": "#9E9E9E",
-                "moveColor": "#2196F3",
-                "borderColor": "#448AFF",
-                "onSuccess": {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.verified",
-                    "value": true
+                "borderRadius": 30,
+                "clipBehavior": "hardEdge",
+                "color": "#9E9E9E",
+                "border": {
+                  "color": "#448AFF",
+                  "width": 1
+                },
+                "children": [
+                  {
+                    "type": "positioned",
+                    "left": 0,
+                    "right": 0,
+                    "top": 0,
+                    "bottom": 0,
+                    "child": {
+                      "type": "progress",
+                      "value": "{{ global.slideProgress }}",
+                      "height": 60,
+                      "color": "#2196F3",
+                      "backgroundColor": "#9E9E9E"
+                    }
+                  },
+                  {
+                    "type": "positioned",
+                    "left": 0,
+                    "right": 0,
+                    "top": 4,
+                    "bottom": 4,
+                    "child": {
+                      "type": "slider",
+                      "bind": "global.slideValue",
+                      "min": 0,
+                      "max": 100,
+                      "divisions": 100,
+                      "showLabel": false,
+                      "color": "#FFFFFF",
+                      "action": {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            ">=": [
+                              {
+                                "var": "global.slideValue"
+                              },
+                              100
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.verified",
+                                "value": true
+                              }
+                            }
+                          ],
+                          "else": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.verified",
+                                "value": false
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "positioned",
+                    "left": 0,
+                    "right": 0,
+                    "top": 0,
+                    "bottom": 0,
+                    "child": {
+                      "type": "center",
+                      "child": {
+                        "type": "text",
+                        "value": "{{ global.slideText }}",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFFFF",
+                          "fontWeight": "bold",
+                          "textAlign": "center"
+                        }
+                      }
+                    }
                   }
-                }
+                ]
               }
             },
             "left": 0,
-            "right": 0,
             "top": 0,
+            "right": 0,
             "bottom": 0
           }
         ],

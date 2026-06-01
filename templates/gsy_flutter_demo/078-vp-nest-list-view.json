@@ -3,7 +3,7 @@
   "appid": "6e0bf47a-aa4e-5c92-8847-47a287c7f755",
   "meta": {
     "name": "gsy_flutter_demo/078-vp-nest-list-view",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "垂直  ViewPager 嵌套垂直 ListView ",
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
       "upstreamWidget": "VPNestListView",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4",
+      "portVersion": "json-dsl-clean-v1",
       "items": [
         {
           "index": 0
@@ -147,6 +147,7 @@
                     {
                       "type": "list",
                       "source": "{{ global.items }}",
+                      "allowNestedScroll": true,
                       "item_template": {
                         "type": "container",
                         "children": [

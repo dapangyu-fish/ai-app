@@ -3,7 +3,7 @@
   "appid": "e1bbc988-a917-53a5-b473-db101c0ccf53",
   "meta": {
     "name": "gsy_flutter_demo/117-combined-scene-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "炫酷圣诞树",
@@ -20,7 +20,7 @@
       "category": "animation",
       "routeIndex": 117,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/animation/combined_scene_page.dart",
       "upstreamWidget": "CombinedScenePage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,13 +46,136 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "particleTree",
-              "particleCount": 4200,
-              "pointSize": 2,
-              "color": "#FFFFFF",
-              "secondaryColor": "#00E676",
-              "backgroundColor": "#020A06"
+              "type": "animated_canvas",
+              "backgroundColor": "#020A06",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "r"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "*": [
+                          "h",
+                          0.58
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "-": [
+                              0,
+                              "hpos"
+                            ]
+                          },
+                          "min",
+                          0.33
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      1.6,
+                      {
+                        "-": [
+                          1.4,
+                          {
+                            "*": [
+                              "f",
+                              0.5
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#00E676",
+                  "alpha": 0.55,
+                  "blendMode": "plus",
+                  "color2": "#FFFFFF",
+                  "mix": "f",
+                  "locals": {
+                    "hpos": {
+                      "-": [
+                        {
+                          "*": [
+                            "f",
+                            1.8
+                          ]
+                        },
+                        0.9
+                      ]
+                    },
+                    "r": {
+                      "*": [
+                        {
+                          "-": [
+                            1,
+                            "f"
+                          ]
+                        },
+                        "min",
+                        0.28
+                      ]
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "i",
+                            2.399963229728653
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.3
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "text",
+                  "value": "*",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      -8
+                    ]
+                  },
+                  "y": 28,
+                  "color": "#FFF176",
+                  "fontSize": 28,
+                  "fontWeight": "bold"
+                }
+              ]
             },
             "left": 0,
             "top": 0,

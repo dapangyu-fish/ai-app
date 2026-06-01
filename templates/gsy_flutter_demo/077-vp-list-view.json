@@ -3,7 +3,7 @@
   "appid": "779a2902-3af6-58ef-91d1-22c59c53f7a4",
   "meta": {
     "name": "gsy_flutter_demo/077-vp-list-view",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "ListView 嵌套 ViewPager 解决斜着滑动问题",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 77,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -103,6 +103,7 @@
                     {
                       "type": "list",
                       "source": "{{ global.items }}",
+                      "allowNestedScroll": true,
                       "separator": "none",
                       "item_template": {
                         "type": "container",
@@ -145,6 +146,7 @@
                     {
                       "type": "list",
                       "source": "{{ global.items }}",
+                      "allowNestedScroll": true,
                       "separator": "none",
                       "item_template": {
                         "type": "container",

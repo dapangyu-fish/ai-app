@@ -3,7 +3,7 @@
   "appid": "6ce48f8e-3dc5-51b2-9428-254694bc08d7",
   "meta": {
     "name": "gsy_flutter_demo/126-fire-shader-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "Fire Shader",
@@ -20,7 +20,7 @@
       "category": "canvas",
       "routeIndex": 126,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/canvas/fire_shader_demo_page.dart",
       "upstreamWidget": "FireShaderDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-clean-v1"
     },
     "functions": {}
   },
@@ -46,11 +46,139 @@
           {
             "type": "positioned",
             "child": {
-              "type": "procedural_visual",
-              "mode": "fire",
-              "particleCount": 5200,
-              "pointSize": 1.6,
-              "backgroundColor": "#050000"
+              "type": "animated_canvas",
+              "backgroundColor": "#090300",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1600,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "-": [
+                              "xSeed",
+                              0.5
+                            ]
+                          },
+                          "width"
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": {
+                              "+": [
+                                {
+                                  "*": [
+                                    "t",
+                                    2
+                                  ]
+                                },
+                                {
+                                  "*": [
+                                    "i",
+                                    0.05
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          18,
+                          "hot"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "*": [
+                      "h",
+                      {
+                        "-": [
+                          0.92,
+                          {
+                            "*": [
+                              "f",
+                              0.78
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      1.6,
+                      {
+                        "+": [
+                          1.2,
+                          {
+                            "*": [
+                              "hot",
+                              2.4
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#FFF59D",
+                  "alpha": {
+                    "+": [
+                      0.08,
+                      {
+                        "*": [
+                          "hot",
+                          0.55
+                        ]
+                      }
+                    ]
+                  },
+                  "blendMode": "plus",
+                  "color2": "#FF3D00",
+                  "mix": "f",
+                  "locals": {
+                    "hot": {
+                      "-": [
+                        1,
+                        "f"
+                      ]
+                    },
+                    "width": {
+                      "*": [
+                        "w",
+                        {
+                          "+": [
+                            {
+                              "*": [
+                                0.35,
+                                "hot"
+                              ]
+                            },
+                            0.04
+                          ]
+                        }
+                      ]
+                    },
+                    "xSeed": {
+                      "seed": {
+                        "*": [
+                          "i",
+                          91.345
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
             },
             "left": 0,
             "top": 0,
