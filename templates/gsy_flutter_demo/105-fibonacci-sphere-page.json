@@ -3,13 +3,13 @@
   "appid": "babfeedc-77a7-5d63-90c0-6c6da254dafc",
   "meta": {
     "name": "gsy_flutter_demo/105-fibonacci-sphere-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "斐波那契球体动画",
       "en": "Fibonacci sphere animation"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：斐波那契球体动画",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：斐波那契球体动画",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "fibonacci_sphere_page",
       "widgetClass": "FibonacciSpherePage",
       "category": "animation",
-      "routeIndex": 105
+      "routeIndex": 105,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6"
     }
   },
   "dependencies": {},
@@ -27,7 +29,11 @@
       "upstreamTitle": "斐波那契球体动画",
       "upstreamSource": "lib/widget/animation/fibonacci_sphere_page.dart",
       "upstreamWidget": "FibonacciSpherePage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6",
+      "points": 3000,
+      "speed": 0.25,
+      "size": 4.0
     },
     "functions": {}
   },
@@ -36,152 +42,217 @@
     "screens": [
       {
         "id": "home",
-        "title": "斐波那契球体动画",
-        "layout": "column",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "斐波那契球体动画",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Fibonacci sphere animation",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+            "type": "positioned",
+            "child": {
+              "type": "procedural_visual",
+              "mode": "fibonacciSphere",
+              "particleCount": "{{ global.points }}",
+              "pointSize": "{{ global.size }}",
+              "speed": "{{ global.speed }}",
+              "color": "#FFFFFFFF",
+              "secondaryColor": "#42A5F5"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "POINTS",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#FFFFFFFF",
+                            "fontWeight": "w900"
+                          }
+                        }
+                      ],
+                      "width": 62,
+                      "alignment": "centerLeft"
+                    },
+                    {
+                      "type": "expanded",
+                      "child": {
+                        "type": "slider",
+                        "bind": "global.points",
+                        "min": 100,
+                        "max": 5000,
+                        "divisions": 49,
+                        "color": "#FFFFFF"
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.points }}",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#FFFFFFFF",
+                            "fontWeight": "bold",
+                            "textAlign": "right"
+                          }
+                        }
+                      ],
+                      "width": 52,
+                      "alignment": "centerRight"
+                    }
+                  ],
+                  "height": 42,
+                  "crossAxisAlignment": "center"
+                },
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "SPEED",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#FFFFFFFF",
+                            "fontWeight": "w900"
+                          }
+                        }
+                      ],
+                      "width": 62,
+                      "alignment": "centerLeft"
+                    },
+                    {
+                      "type": "expanded",
+                      "child": {
+                        "type": "slider",
+                        "bind": "global.speed",
+                        "min": 0,
+                        "max": 2,
+                        "divisions": null,
+                        "color": "#FFFFFF"
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.speed }}",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#FFFFFFFF",
+                            "fontWeight": "bold",
+                            "textAlign": "right"
+                          }
+                        }
+                      ],
+                      "width": 52,
+                      "alignment": "centerRight"
+                    }
+                  ],
+                  "height": 42,
+                  "crossAxisAlignment": "center"
+                },
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "SIZE",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#FFFFFFFF",
+                            "fontWeight": "w900"
+                          }
+                        }
+                      ],
+                      "width": 62,
+                      "alignment": "centerLeft"
+                    },
+                    {
+                      "type": "expanded",
+                      "child": {
+                        "type": "slider",
+                        "bind": "global.size",
+                        "min": 1,
+                        "max": 10,
+                        "divisions": null,
+                        "color": "#FFFFFF"
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.size }}",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#FFFFFFFF",
+                            "fontWeight": "bold",
+                            "textAlign": "right"
+                          }
+                        }
+                      ],
+                      "width": 52,
+                      "alignment": "centerRight"
+                    }
+                  ],
+                  "height": 42,
+                  "crossAxisAlignment": "center"
                 }
+              ],
+              "padding": {
+                "left": 24,
+                "right": 24,
+                "top": 18,
+                "bottom": 18
               },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/fibonacci_sphere_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：FibonacciSpherePage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
+              "margin": 0,
+              "borderRadius": 24,
+              "color": "#993F51B5",
+              "border": {
+                "color": "#553F51B5",
+                "width": 1.5
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 18,
+            "right": 18,
+            "bottom": 24
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": ""
+        }
       }
     ]
   }

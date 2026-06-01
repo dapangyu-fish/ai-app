@@ -3,13 +3,13 @@
   "appid": "cd4329e4-0f9e-5609-8f27-2e8292c27b5a",
   "meta": {
     "name": "gsy_flutter_demo/103-liquid-glass-shader-view2",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "liquid glass 2",
       "en": "liquid glass 2"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：liquid glass 2",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：liquid glass 2",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "liquid_glass_demo2",
       "widgetClass": "LiquidGlassShaderView2",
       "category": "canvas",
-      "routeIndex": 103
+      "routeIndex": 103,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6"
     }
   },
   "dependencies": {},
@@ -27,161 +29,206 @@
       "upstreamTitle": "liquid glass 2",
       "upstreamSource": "lib/widget/canvas/liquid_glass_demo2.dart",
       "upstreamWidget": "LiquidGlassShaderView2",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6",
+      "down": false,
+      "lensLeft": 120,
+      "lensTop": 280
     },
-    "functions": {}
+    "functions": {
+      "track": {
+        "params": [
+          "x",
+          "y"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.down",
+              "value": true
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.lensLeft",
+              "value": {
+                "-": [
+                  {
+                    "var": "params.x"
+                  },
+                  72
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.lensTop",
+              "value": {
+                "-": [
+                  {
+                    "var": "params.y"
+                  },
+                  72
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "release": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.down",
+              "value": false
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "liquid glass 2",
-        "layout": "column",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "image",
+              "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg",
+              "fit": "cover",
+              "heightFactor": 2.2
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "gesture_detector",
+              "onTapDown": {
+                "call": "@global.track",
+                "args": {
+                  "x": "{{ event.localX }}",
+                  "y": "{{ event.localY }}"
+                }
+              },
+              "onTapUp": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "onTapCancel": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "onPanStart": {
+                "call": "@global.track",
+                "args": {
+                  "x": "{{ event.localX }}",
+                  "y": "{{ event.localY }}"
+                }
+              },
+              "onPanUpdate": {
+                "call": "@global.track",
+                "args": {
+                  "x": "{{ event.localX }}",
+                  "y": "{{ event.localY }}"
+                }
+              },
+              "onPanEnd": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "onPanCancel": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "color": "#00000000"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "backdrop_blur",
+              "sigmaX": 16,
+              "sigmaY": 16,
+              "borderRadius": 72,
+              "child": {
                 "type": "container",
                 "layout": "column",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "palette",
-                    "size": 26,
-                    "color": "#7A57D1"
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 82,
+                    "height": 82,
+                    "shape": "circle",
+                    "border": {
+                      "color": "#55FFFFFF",
+                      "width": 1
+                    },
+                    "gradient": {
+                      "colors": [
+                        "#46FFFFFF",
+                        "#08FFFFFF"
+                      ],
+                      "begin": "topLeft",
+                      "end": "bottomRight"
+                    }
                   }
                 ],
-                "width": 58,
-                "height": 58,
-                "color": "#F0ECFB",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "liquid glass 2",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "liquid glass 2",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                "width": 144,
+                "height": 144,
+                "shape": "circle",
+                "border": {
+                  "color": "#AAFFFFFF",
+                  "width": 1.4
+                },
+                "gradient": {
+                  "colors": [
+                    "#35FFFFFF",
+                    "#10FFFFFF"
+                  ],
+                  "begin": "topLeft",
+                  "end": "bottomRight"
+                },
+                "alignment": "center",
+                "mainAxisAlignment": "center"
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：绘制与Shader",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/canvas/liquid_glass_demo2.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：LiquidGlassShaderView2",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+            "left": "{{ global.lensLeft }}",
+            "top": "{{ global.lensTop }}",
+            "visible": {
+              "var": "global.down"
             }
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": ""
+        }
       }
     ]
   }

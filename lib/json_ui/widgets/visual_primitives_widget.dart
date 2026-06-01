@@ -822,6 +822,374 @@ class _GesturePasswordPainter extends CustomPainter {
   }
 }
 
+class JsonProceduralVisualWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final mode =
+        interpreter.resolveExpression(json['mode'])?.toString() ??
+        json['mode']?.toString() ??
+        'galaxy';
+    return _ProceduralVisual(
+      mode: mode,
+      particleCount:
+          (_resolveDouble(interpreter, json['particleCount']) ?? 1200).toInt(),
+      pointSize: _resolveDouble(interpreter, json['pointSize']) ?? 1.6,
+      speed: _resolveDouble(interpreter, json['speed']) ?? 1,
+      primary:
+          _parseColor(json['color']?.toString()) ?? const Color(0xFFFFFFFF),
+      secondary:
+          _parseColor(json['secondaryColor']?.toString()) ??
+          const Color(0xFF00E5FF),
+      background:
+          _parseColor(json['backgroundColor']?.toString()) ?? Colors.black,
+    );
+  }
+}
+
+class _ProceduralVisual extends StatefulWidget {
+  final String mode;
+  final int particleCount;
+  final double pointSize;
+  final double speed;
+  final Color primary;
+  final Color secondary;
+  final Color background;
+
+  const _ProceduralVisual({
+    required this.mode,
+    required this.particleCount,
+    required this.pointSize,
+    required this.speed,
+    required this.primary,
+    required this.secondary,
+    required this.background,
+  });
+
+  @override
+  State<_ProceduralVisual> createState() => _ProceduralVisualState();
+}
+
+class _ProceduralVisualState extends State<_ProceduralVisual>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  Offset? _touch;
+  double _pulse = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 24),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _setTouch(Offset position) {
+    setState(() {
+      _touch = position;
+      _pulse = (_pulse + 0.35).clamp(0, 1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (details) => _setTouch(details.localPosition),
+      onPanStart: (details) => _setTouch(details.localPosition),
+      onPanUpdate: (details) => _setTouch(details.localPosition),
+      onPanEnd: (_) => setState(() => _touch = null),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final pulse = _pulse;
+          _pulse = math.max(0, _pulse - 0.015);
+          return CustomPaint(
+            painter: _ProceduralVisualPainter(
+              mode: widget.mode,
+              time: _controller.value * math.pi * 2 * widget.speed,
+              particleCount: widget.particleCount.clamp(80, 6000),
+              pointSize: widget.pointSize,
+              primary: widget.primary,
+              secondary: widget.secondary,
+              background: widget.background,
+              touch: _touch,
+              pulse: pulse,
+            ),
+            child: const SizedBox.expand(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ProceduralVisualPainter extends CustomPainter {
+  final String mode;
+  final double time;
+  final int particleCount;
+  final double pointSize;
+  final Color primary;
+  final Color secondary;
+  final Color background;
+  final Offset? touch;
+  final double pulse;
+
+  _ProceduralVisualPainter({
+    required this.mode,
+    required this.time,
+    required this.particleCount,
+    required this.pointSize,
+    required this.primary,
+    required this.secondary,
+    required this.background,
+    required this.touch,
+    required this.pulse,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawColor(background, BlendMode.src);
+    switch (mode) {
+      case 'fibonacciSphere':
+        _drawFibonacciSphere(canvas, size);
+        break;
+      case 'attractor':
+        _drawAttractor(canvas, size);
+        break;
+      case 'radialLines':
+        _drawRadialLines(canvas, size);
+        break;
+      case 'blackHoleDisk':
+        _drawBlackHoleDisk(canvas, size);
+        break;
+      case 'taiChiParticles':
+        _drawTaiChi(canvas, size);
+        break;
+      case 'boomParticles':
+        _drawBoom(canvas, size);
+        break;
+      case 'galaxy':
+      default:
+        _drawGalaxy(canvas, size);
+        break;
+    }
+  }
+
+  void _drawFibonacciSphere(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.36);
+    final radius = math.min(size.width, size.height) * 0.36;
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = pointSize;
+    const goldenAngle = math.pi * (3 - 2.23606797749979);
+    for (var i = 0; i < particleCount; i++) {
+      final y = 1 - (i / (particleCount - 1)) * 2;
+      final r = math.sqrt(math.max(0, 1 - y * y));
+      final theta = goldenAngle * i;
+      final x = math.cos(theta) * r;
+      final z = math.sin(theta) * r;
+      final rotX = x * math.cos(time * 0.4) - z * math.sin(time * 0.4);
+      final rotZ = x * math.sin(time * 0.4) + z * math.cos(time * 0.4);
+      final perspective = 720 / (720 - rotZ * radius);
+      final alpha = ((rotZ + 1) / 2).clamp(0.18, 1.0);
+      paint.color = Color.lerp(
+        secondary,
+        primary,
+        alpha,
+      )!.withValues(alpha: alpha);
+      canvas.drawCircle(
+        Offset(
+          center.dx + rotX * radius * perspective,
+          center.dy + y * radius * perspective,
+        ),
+        pointSize * perspective,
+        paint,
+      );
+    }
+  }
+
+  void _drawAttractor(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final scale = math.min(size.width, size.height) * 0.18;
+    final paint = Paint()
+      ..color = secondary.withValues(alpha: 0.65)
+      ..strokeWidth = pointSize
+      ..strokeCap = StrokeCap.round
+      ..blendMode = BlendMode.plus;
+    final points = <Offset>[];
+    for (var i = 0; i < particleCount; i++) {
+      final t = i * 0.018 + time * 0.3;
+      final x = math.sin(t * 1.7) * math.cos(t * 0.41) * 2.1;
+      final y = math.sin(t * 1.13 + math.sin(t * 0.23)) * 2.0;
+      final z = math.cos(t * 0.71) * 1.3;
+      final rx = x * math.cos(time * 0.3) - z * math.sin(time * 0.3);
+      points.add(center + Offset(rx * scale, y * scale));
+    }
+    canvas.drawPoints(PointMode.points, points, paint);
+    _drawTitle(canvas, size, 'HALVORSEN', primary);
+  }
+
+  void _drawGalaxy(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = math.min(size.width, size.height) * 0.43;
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = pointSize
+      ..blendMode = BlendMode.plus;
+    for (var i = 0; i < particleCount; i++) {
+      final f = i / particleCount;
+      final arm = i % 2 == 0 ? 0 : math.pi;
+      final wobble = math.sin(i * 12.9898) * 0.08;
+      final r = math.sqrt(f) * maxR;
+      final angle = arm + f * 7.5 + time * (0.08 + f * 0.1) + wobble;
+      final alpha = (1 - f).clamp(0.15, 0.9);
+      paint.color = Color.lerp(primary, secondary, f)!.withValues(alpha: alpha);
+      canvas.drawCircle(
+        center + Offset(math.cos(angle) * r, math.sin(angle) * r * 0.58),
+        pointSize * (1.2 - f * 0.5),
+        paint,
+      );
+    }
+    final core = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          primary.withValues(alpha: 0.8),
+          secondary.withValues(alpha: 0.25),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: maxR * 0.35))
+      ..blendMode = BlendMode.plus;
+    canvas.drawCircle(center, maxR * 0.35, core);
+  }
+
+  void _drawRadialLines(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    List<Offset>? prev;
+    for (var layer = 1; layer < 180; layer++) {
+      final r = layer * math.min(size.width, size.height) / 360;
+      final a = time * 0.2 + layer * 0.09;
+      final vertices = List.generate(8, (i) {
+        final angle = i * math.pi / 4 + a + math.sin(layer * 0.05 + time) * 0.8;
+        return center + Offset(math.cos(angle) * r, math.sin(angle) * r);
+      });
+      final v = (239 * (1 - layer / 180) + 39 * layer / 180).toInt();
+      paint.color = Color.fromARGB(255, v, v, v);
+      if (prev != null) {
+        for (var i = 0; i < vertices.length; i++) {
+          canvas.drawLine(prev[i], vertices[i], paint);
+        }
+      }
+      prev = vertices;
+    }
+  }
+
+  void _drawBlackHoleDisk(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final base = math.min(size.width, size.height) * 0.12;
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = pointSize
+      ..blendMode = BlendMode.plus;
+    for (var i = 0; i < particleCount; i++) {
+      final f = i / particleCount;
+      final r = base * (1.6 + math.sqrt(f) * 5.4);
+      final theta = i * 2.399963 + time * (2.8 / math.sqrt(r / base));
+      final y = math.sin(theta) * r * 0.34;
+      final x = math.cos(theta) * r;
+      final hot = (1 - f).clamp(0.0, 1.0);
+      final color = hot > 0.7
+          ? Colors.white
+          : Color.lerp(const Color(0xFFFFD180), const Color(0xFFFF3D00), f)!;
+      paint.color = color.withValues(alpha: 0.55 + hot * 0.3);
+      canvas.drawCircle(
+        center + Offset(x, y),
+        pointSize * (1.4 - f * 0.6),
+        paint,
+      );
+    }
+    canvas.drawCircle(center, base * 1.45, Paint()..color = Colors.black);
+  }
+
+  void _drawTaiChi(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) * 0.43;
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = pointSize
+      ..blendMode = BlendMode.plus;
+    final points = <Offset>[];
+    for (var i = 0; i < particleCount; i++) {
+      final rnd = math.sin(i * 78.233) * 43758.5453;
+      final frac = rnd - rnd.floorToDouble();
+      final r = math.sqrt(frac) * 1.02;
+      final angle = i * 2.399963 + time * 0.16;
+      final x = math.cos(angle) * r;
+      final y = math.sin(angle) * r;
+      final top = math.sqrt(x * x + (y - 0.5) * (y - 0.5));
+      final bottom = math.sqrt(x * x + (y + 0.5) * (y + 0.5));
+      var bright = x > 0 ? 1.0 : 0.08;
+      if (top < 0.5) bright = 1.0;
+      if (bottom < 0.5) bright = 0.08;
+      if (top < 0.13) bright = 0.06;
+      if (bottom < 0.13) bright = 1.0;
+      if (bright > 0.2) points.add(center + Offset(x * radius, y * radius));
+    }
+    paint.color = primary.withValues(alpha: 0.75);
+    canvas.drawPoints(PointMode.points, points, paint);
+  }
+
+  void _drawBoom(Canvas canvas, Size size) {
+    final center = touch ?? Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = pointSize
+      ..blendMode = BlendMode.plus;
+    for (var i = 0; i < particleCount; i++) {
+      final f = i / particleCount;
+      final angle = i * 2.399963 + time * 0.8;
+      final orbit = math.min(size.width, size.height) * (0.08 + 0.32 * f);
+      final burst = pulse * math.min(size.width, size.height) * 0.2;
+      final x = math.cos(angle) * (orbit + burst * math.sin(i));
+      final y = math.sin(angle * 1.7) * (orbit * 0.6 + burst * math.cos(i));
+      paint.color = secondary.withValues(alpha: 0.25 + 0.55 * (1 - f));
+      canvas.drawCircle(center + Offset(x, y), pointSize, paint);
+    }
+  }
+
+  void _drawTitle(Canvas canvas, Size size, String value, Color color) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: value,
+        style: TextStyle(
+          color: color,
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, Offset((size.width - painter.width) / 2, 28));
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProceduralVisualPainter oldDelegate) => true;
+}
+
 class _WavePainter extends CustomPainter {
   final double value;
   final List<Color> gradientColors;

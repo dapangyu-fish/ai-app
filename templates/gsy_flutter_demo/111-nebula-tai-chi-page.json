@@ -3,13 +3,13 @@
   "appid": "6bcb139c-12bf-5745-8d6f-9178799b8dc1",
   "meta": {
     "name": "gsy_flutter_demo/111-nebula-tai-chi-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "流体太极",
       "en": "Fluid Taichi"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：流体太极",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：流体太极",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "stream_taichi_page",
       "widgetClass": "NebulaTaiChiPage",
       "category": "visual",
-      "routeIndex": 111
+      "routeIndex": 111,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6"
     }
   },
   "dependencies": {},
@@ -27,7 +29,8 @@
       "upstreamTitle": "流体太极",
       "upstreamSource": "lib/widget/visual/stream_taichi_page.dart",
       "upstreamWidget": "NebulaTaiChiPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6"
     },
     "functions": {}
   },
@@ -36,152 +39,29 @@
     "screens": [
       {
         "id": "home",
-        "title": "流体太极",
-        "layout": "column",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "visibility",
-                    "size": 26,
-                    "color": "#4A74E8"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#EAEFFE",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "流体太极",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Fluid Taichi",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：3D与视觉",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/visual/stream_taichi_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：NebulaTaiChiPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
+            "type": "positioned",
+            "child": {
+              "type": "procedural_visual",
+              "mode": "taiChiParticles",
+              "particleCount": 5200,
+              "pointSize": 1.4,
+              "color": "#FFFFFFFF",
+              "backgroundColor": "#000000"
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": ""
+        }
       }
     ]
   }

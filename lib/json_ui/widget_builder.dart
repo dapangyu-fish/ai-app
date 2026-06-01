@@ -154,6 +154,7 @@ class JsonWidgetBuilder {
     'wave_painter': JsonWavePainterWidget(),
     'particle_burst_button': JsonParticleBurstButtonWidget(),
     'gesture_password': JsonGesturePasswordWidget(),
+    'procedural_visual': JsonProceduralVisualWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

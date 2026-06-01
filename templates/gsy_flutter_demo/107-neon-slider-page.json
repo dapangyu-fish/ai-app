@@ -3,13 +3,13 @@
   "appid": "36794694-e715-5e46-8abc-d9239020de8f",
   "meta": {
     "name": "gsy_flutter_demo/107-neon-slider-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "霓虹滑块，100%高亮",
       "en": "Neon slider, full highlight"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：霓虹滑块，100%高亮",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：霓虹滑块，100%高亮",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "neon_slider_page",
       "widgetClass": "NeonSliderPage",
       "category": "animation",
-      "routeIndex": 107
+      "routeIndex": 107,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6"
     }
   },
   "dependencies": {},
@@ -27,7 +29,9 @@
       "upstreamTitle": "霓虹滑块，100%高亮",
       "upstreamSource": "lib/widget/animation/neon_slider_page.dart",
       "upstreamWidget": "NeonSliderPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v6",
+      "progress": 34
     },
     "functions": {}
   },
@@ -36,152 +40,81 @@
     "screens": [
       {
         "id": "home",
-        "title": "霓虹滑块，100%高亮",
-        "layout": "column",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.progress }}",
+                      "style": {
+                        "fontSize": 18,
+                        "color": "#FFFFFFFF",
+                        "fontWeight": "w600",
+                        "textAlign": "right"
+                      }
+                    }
+                  ],
+                  "height": 56,
+                  "borderRadius": 28,
+                  "border": {
+                    "color": "#FF5F6D",
+                    "width": 2
+                  },
+                  "gradient": {
+                    "colors": [
+                      "#FF5F6D",
+                      "#FFC371",
+                      "#25D366",
+                      "#00C6FF"
+                    ],
+                    "begin": "centerLeft",
+                    "end": "centerRight"
+                  },
+                  "alignment": "centerRight",
+                  "padding": {
+                    "right": 22
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "霓虹滑块，100%高亮",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "spacer",
+                  "height": 18
+                },
+                {
+                  "type": "slider",
+                  "bind": "global.progress",
+                  "min": 0,
+                  "max": 100,
+                  "divisions": 100,
+                  "color": "#00C6FF"
                 }
+              ],
+              "padding": {
+                "left": 40,
+                "right": 40
               },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Neon slider, full highlight",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/neon_slider_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：NeonSliderPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
+              "alignment": "center",
+              "mainAxisAlignment": "center"
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": ""
+        }
       }
     ]
   }
