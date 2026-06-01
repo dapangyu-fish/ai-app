@@ -406,6 +406,7 @@ class Validator:
     def validate(self) -> int:
         self._validate_root()
         self._walk(self.root, "$", in_game_logic=False)
+        self._validate_scroll_contract()
         self._validate_flame_game_mounts()
         self._validate_presentation_text_slots()
         self._validate_sprite_sheet_usage()
@@ -500,6 +501,9 @@ class Validator:
                 if key in node and not self._is_number(node[key]):
                     self.error(self._path(path, key), f"{key} must be a number, not {type(node[key]).__name__}")
 
+            if "shrinkWrap" in node and not isinstance(node.get("shrinkWrap"), bool):
+                self.error(self._path(path, "shrinkWrap"), "shrinkWrap must be a boolean")
+
             style = node.get("style")
             if isinstance(style, dict):
                 for key in UNSUPPORTED_STYLE_KEYS:
@@ -511,6 +515,12 @@ class Validator:
 
         if node_type == "list" and isinstance(node.get("source"), dict):
             self.error(self._path(path, "source"), "list.source must be a string interpolation, not jsonlogic")
+
+        if node_type == "list" and node.get("shrinkWrap") is True and node.get("scrollToEnd") is True:
+            self.warn(
+                self._path(path, "shrinkWrap"),
+                "shrinkWrap lists should not also scrollToEnd; keep chat/long feeds as normal full-height lists",
+            )
 
         action = node.get("action")
         if isinstance(action, dict) and action.get("type") == "call":
@@ -670,6 +680,67 @@ class Validator:
     @staticmethod
     def _is_screen_or_tab_path(path: str) -> bool:
         return re.fullmatch(r"\$\.ui\.screens\[\d+\](?:\.tabs\[\d+\])?", path) is not None
+
+    def _validate_scroll_contract(self) -> None:
+        for path, node in self._iter_dicts(self.root):
+            if not self._is_ui_path(path):
+                continue
+            if self._is_non_shrink_scroll_widget(node):
+                if not self._is_direct_screen_scroll_path(path) and not self._is_direct_refresh_child_path(path):
+                    self.warn(
+                        path,
+                        "non-shrinkWrap list/grid is nested inside another widget; long pages can lose full-page vertical scroll. "
+                        "For embedded short lists set shrinkWrap:true, or lift the list/refresh to a direct screen/tab child.",
+                    )
+            if not self._is_screen_or_tab_path(path):
+                continue
+            children = node.get("children")
+            if not isinstance(children, list):
+                continue
+            if len(children) < 6:
+                continue
+            if any(
+                isinstance(child, dict) and self._subtree_has_non_shrink_scroll_widget(child)
+                for child in children
+            ):
+                self.warn(
+                    path,
+                    "screen/tab mixes a full-height list/grid/refresh with many static siblings; only the inner list scrolls. "
+                    "Keep static header/footer compact, use shrinkWrap:true for embedded short lists, or split content into tabs/screens.",
+                )
+
+    @staticmethod
+    def _is_direct_screen_scroll_path(path: str) -> bool:
+        return re.fullmatch(
+            r"\$\.ui\.screens\[\d+\](?:\.tabs\[\d+\])?\.children\[\d+\]",
+            path,
+        ) is not None
+
+    @staticmethod
+    def _is_direct_refresh_child_path(path: str) -> bool:
+        return re.fullmatch(
+            r"\$\.ui\.screens\[\d+\](?:\.tabs\[\d+\])?\.children\[\d+\]\.child",
+            path,
+        ) is not None
+
+    @classmethod
+    def _is_non_shrink_scroll_widget(cls, node: dict[str, Any]) -> bool:
+        node_type = node.get("type")
+        if node_type == "list":
+            return node.get("shrinkWrap") is not True
+        if node_type == "grid":
+            return node.get("shrinkWrap") is not True
+        return False
+
+    @classmethod
+    def _subtree_has_non_shrink_scroll_widget(cls, value: Any) -> bool:
+        if isinstance(value, dict):
+            if cls._is_non_shrink_scroll_widget(value) or value.get("type") == "refresh":
+                return True
+            return any(cls._subtree_has_non_shrink_scroll_widget(child) for child in value.values())
+        if isinstance(value, list):
+            return any(cls._subtree_has_non_shrink_scroll_widget(child) for child in value)
+        return False
 
     def _validate_entity_set(self, args: dict[str, Any], path: str) -> None:
         if "id" not in args:
@@ -1911,6 +1982,7 @@ def validate_json_content(
     validator = Validator(data, builtin_calls or load_builtin_calls())
     validator._validate_root()
     validator._walk(validator.root, "$", in_game_logic=False)
+    validator._validate_scroll_contract()
     validator._validate_flame_game_mounts()
     validator._validate_presentation_text_slots()
     validator._validate_sprite_sheet_usage()

@@ -65,10 +65,14 @@ Another exception was thrown: RenderFlex children have non-zero flex but incomin
 2. **在滚动视图内误用垂直 Flex**：
    在 Tab 的直接子层级中，如果不包含 `list`，页面会被框架默认包裹在 `SingleChildScrollView -> Column` 中（意味着垂直高度是无限的）。如果在这种无限高度的 Column 中直接放入一个带有 `"position": { "type": "flex" }` 的 `button` 或 `container`，`Expanded` 控件会试图在无限高的父容器里填满“剩余空间”，从而报出**高度无约束（unbounded height）**崩溃。
 
+3. **长页面里误用默认 list 导致无法滚到底**：
+   默认 `list` 是 full-height 内部滚动区。screen/tab 一旦包含默认 `list`，框架会避免外层 `SingleChildScrollView`，只让 list 自己滚动。如果同一页还堆了很多统计卡、设置项、表单分组或底部按钮，用户就可能看得到上半屏却滑不到下方内容。
+
 ### ✅ 正确姿势 / 避坑指南
 * **永远显式声明布局**：在写 `container` 时，务必明确写出 `"layout": "column"` 或 `"layout": "row"`，不要依赖默认行为。
 * **Flex 约束环境**：使用 `type: flex` 时，必须确保其父容器在主轴方向上是有固定尺寸或被强制约束尺寸的（例如屏幕宽度的 Row 内，或者有固定高度的 Column 内）。
 * **不在 ScrollView 里拉伸**：不要在可滚动容器的直接子元素上使用 `flex` 占位。
+* **区分主列表和嵌入列表**：主列表直接作为 screen/tab `children` 的一项；详情页/仪表盘中的“最近记录/预览列表”必须设置 `"shrinkWrap": true`，并让外层页面滚动。
 
 ---
 

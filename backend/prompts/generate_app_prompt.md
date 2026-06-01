@@ -465,6 +465,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 - 空数据时也要保留 0 值摘要 / 进度 / 分类入口；空状态只是列表区域的一部分，不应占据大半屏。
 - 不要同时使用默认 screen title AppBar 和自定义大 header 造成重复标题；二选一。
 - 主要按钮和标题不要用 emoji 装饰；用 `icon` / button `icon` 字段。
+- 长内容页面必须能纵向滚到底。普通静态详情页/仪表盘页直接让 screen/tab 外层滚动；短列表/最近记录/预览网格嵌在页面中时必须写 `shrinkWrap: true`。普通 full-height `list` 只作为 screen/tab 的主滚动区域直接放在 `children` 中，前后静态内容必须很紧凑。
 - validator 已无 ERROR 后，不要继续大改 UI。若只有冗余 `action.type` 等机械 WARN，运行 `repair_json_app.py` 后重新校验；无 ERROR 就完成。
 
 1. **Container 默认是横向排列 (layout: "row")！** 如果你需要上下排列，必须显式加上 `"layout": "column"`！否则内部放入 list 会直接导致 Flutter 布局崩溃（白屏）！
@@ -474,7 +475,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 5. **Container 绝对没有 `style` 字段！** 其样式（`color`, `padding`, `margin`, `borderRadius` 等）直接平铺写在 Container 节点上！
 6. **禁止臆造 Web CSS 属性！** 框架不支持 `transform`、`transition`、`marginTop`、`marginBottom`、`marginLeft`、`marginRight`、`shadow` 等属性！如需间距，请使用 `margin` 或者直接插入 `{"type": "spacer", "height": 20}`。
 7. **数值字段只能是数字标量**：`margin`、`padding`、`height`、`width`、`fontSize`、`borderRadius`、`elevation`、`flex` 等都必须是 `12` 这类数字，不能写 `{top,bottom,left,right}`，也不能写 `"12"` 或 `{{ ... }}`。需要局部间距就插入 `spacer`，不要写 Flutter/React 风格 edge object。
-8. **List 的高度是无限的！** 如果要在一个竖直排列的地方放入 `list`，其父节点或者它所在的直接 Container 必须是 `layout: "column"`。
+8. **List 滚动契约！** 默认 `list` 是 full-height 内部滚动区，会关闭 screen/tab 外层滚动，只能作为主列表直接放在 screen/tab `children` 中。不要把默认 `list` 嵌进 `card/container/padding/center`，也不要在它周围堆很多静态内容；仪表盘/详情页里的短列表必须写 `"shrinkWrap": true`，由外层页面滚动。
 9. **Button 的 action 推荐写成简洁对象**：推荐 `"action": { "call": "@global.xxx", "args": {} }`。框架兼容旧写法 `"action": { "type": "call", "call": "@global.xxx", "args": {} }`，但新生成 JSON 不需要写这个冗余 `type`。
 10. **完成前 grep 禁忌字段**：上传 / 最终回复前必须执行一次等价检查，确认 JSON 内不存在 `"body"`（screen/tab 内容）、`"marginTop"`、`"marginBottom"`、`"marginLeft"`、`"marginRight"`、`"shadow"`、`"transform"`、`"transition"`。如果存在，修复后重新校验。
 

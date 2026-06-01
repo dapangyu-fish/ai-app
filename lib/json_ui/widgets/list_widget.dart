@@ -1,7 +1,7 @@
 // List 控件 — 增强版
 // 支持：source(数据源)、item_template(列表项模板)、
 //       onRefresh(下拉刷新)、onLoadMore(上拉加载更多)、
-//       emptyText(空状态文案)
+//       emptyText(空状态文案)、shrinkWrap(嵌入外层滚动页)
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
@@ -29,7 +29,8 @@ class JsonListWidget extends JsonBaseWidget {
 
     final itemTemplate = json['item_template'] as Map<String, dynamic>?;
     final emptyText = interpreter.resolveTemplate(
-        json['emptyText']?.toString() ?? T.of(context).empty);
+      json['emptyText']?.toString() ?? T.of(context).empty,
+    );
     final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
     final onLoadMore = json['onLoadMore'] as Map<String, dynamic>?;
     // separator: "none" 时不画横线（聊天气泡列表 / 卡片网格用），
@@ -37,6 +38,9 @@ class JsonListWidget extends JsonBaseWidget {
     final separator = json['separator']?.toString() ?? 'divider';
     // scrollToEnd: true 时进入页面 / 列表项数增加时自动滚到底（聊天页用）
     final scrollToEnd = json['scrollToEnd'] == true;
+    // shrinkWrap: true 时 list 不再占满剩余高度，适合放在可滚动详情页 /
+    // 仪表盘页里。长列表、聊天页仍应保持默认 Expanded(ListView)。
+    final shrinkWrap = json['shrinkWrap'] == true;
     // 跨屏导航时保留滚动位置：JSON 里给 list 设 "key": "唯一名"，
     // 框架包成 PageStorageKey，Flutter 的 PageStorage 自动存/取 scroll offset
     final keyStr = json['key']?.toString();
@@ -46,63 +50,82 @@ class JsonListWidget extends JsonBaseWidget {
 
     // 空状态
     if (itemTemplate == null || items.isEmpty) {
-      Widget emptyWidget = Expanded(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.inbox_outlined,
-                  size: 48,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-              const SizedBox(height: 12),
-              Text(
-                items.isEmpty ? emptyText : T.of(context).widgetMissingItemTemplate,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 14,
-                ),
+      final emptyContent = Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 48,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              items.isEmpty
+                  ? emptyText
+                  : T.of(context).widgetMissingItemTemplate,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 14,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
+      Widget emptyWidget = shrinkWrap
+          ? SizedBox(height: 160, child: emptyContent)
+          : Expanded(child: emptyContent);
 
       // 空状态也支持下拉刷新
       if (onRefresh != null) {
-        return Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => interpreter.executeAction(onRefresh, context),
-            child: ListView(
-              children: [
-                SizedBox(
-                  height: 300,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.inbox_outlined,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                        const SizedBox(height: 12),
-                        Text(emptyText,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontSize: 14,
-                            )),
-                        const SizedBox(height: 8),
-                        Text(T.of(context).widgetPullToRefresh,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                              fontSize: 12,
-                            )),
-                      ],
+        final refreshChild = ListView(
+          shrinkWrap: shrinkWrap,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: shrinkWrap ? 160 : 300,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.inbox_outlined,
+                      size: 48,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Text(
+                      emptyText,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      T.of(context).widgetPullToRefresh,
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         );
+        final refreshWidget = RefreshIndicator(
+          onRefresh: () => interpreter.executeAction(onRefresh, context),
+          child: refreshChild,
+        );
+        return shrinkWrap ? refreshWidget : Expanded(child: refreshWidget);
       }
 
       return emptyWidget;
@@ -132,6 +155,7 @@ class JsonListWidget extends JsonBaseWidget {
       separator: separator,
       itemBuilder: itemBuilder,
       scrollToEnd: scrollToEnd,
+      shrinkWrap: shrinkWrap,
     );
 
     // 下拉刷新包裹
@@ -142,7 +166,7 @@ class JsonListWidget extends JsonBaseWidget {
       );
     }
 
-    return Expanded(child: listView);
+    return shrinkWrap ? listView : Expanded(child: listView);
   }
 }
 
@@ -154,6 +178,7 @@ class _AutoScrollListView extends StatefulWidget {
   final String separator;
   final Widget Function(BuildContext, int) itemBuilder;
   final bool scrollToEnd;
+  final bool shrinkWrap;
 
   const _AutoScrollListView({
     this.pageKey,
@@ -161,6 +186,7 @@ class _AutoScrollListView extends StatefulWidget {
     required this.separator,
     required this.itemBuilder,
     required this.scrollToEnd,
+    required this.shrinkWrap,
   });
 
   @override
@@ -209,6 +235,10 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
       return ListView.builder(
         key: widget.pageKey,
         controller: _controller,
+        shrinkWrap: widget.shrinkWrap,
+        physics: widget.shrinkWrap
+            ? const NeverScrollableScrollPhysics()
+            : null,
         itemCount: widget.itemCount,
         itemBuilder: widget.itemBuilder,
       );
@@ -216,6 +246,8 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
     return ListView.separated(
       key: widget.pageKey,
       controller: _controller,
+      shrinkWrap: widget.shrinkWrap,
+      physics: widget.shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       itemCount: widget.itemCount,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: widget.itemBuilder,

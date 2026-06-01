@@ -87,6 +87,8 @@ controls must not be clipped horizontally.
    - Does it look like a native mobile app rather than a web demo?
    - Is the first viewport useful and dense enough?
    - Are core controls visible after summary/header content?
+   - If content extends below the viewport, can it actually scroll to the
+     bottom on the phone viewport?
    - Are icons real, not red question marks?
    - Are QR codes, cards, chips, buttons, and tabs clipped?
    - Are dynamic labels rendered as user text, not JSON/JsonLogic objects?
@@ -172,6 +174,11 @@ multi-turn drift.
 - **QR or chips clipped at small widths:** primary design is `402x874`, but
   `360x780` lower-bound must not horizontally clip key content. Use wrap,
   flexible layout, shorter labels, or a vertical fallback.
+- **Long page cannot scroll to lower content:** usually caused by a default
+  full-height `list`/non-shrink grid/refresh changing the screen to a fixed
+  Column, or by over-conservative runtime detection of horizontal `expanded`
+  cards. Use `shrinkWrap:true` for embedded short lists/grids, keep full-height
+  lists as direct screen/tab main regions, and verify scroll on `402x874`.
 - **Game uses emoji as player/collectible:** game prompt requires sprite,
   animated sprite, or coherent pixel art for primary entities.
 

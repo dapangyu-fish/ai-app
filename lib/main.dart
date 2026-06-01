@@ -2263,40 +2263,82 @@ class _MarketPageState extends State<_MarketPage> {
 // JSON 渲染页面
 // ============================================================
 
-// 检测子树里是否存在会返回 Expanded 的 widget（list、非 shrinkWrap 的 grid、
-// refresh —— refresh 自身也包了 Expanded）。命中时屏幕级别要走 Column 而不是
-// SingleChildScrollView，否则 Expanded 在 unbounded 高度里会抛 RenderFlex 异常。
-bool _containsListInChildren(List<dynamic> children) {
+// 检测子树里是否存在必须吃满有界高度的 widget（非 shrinkWrap list/grid、
+// refresh、顶层/纵向 flex 等）。命中时屏幕级别要走 Column 而不是
+// SingleChildScrollView，否则 Expanded/ListView 在 unbounded 高度里会抛
+// RenderFlex 异常。
+//
+// 注意：横向 Row 里的 expanded/flexible 是正常的两列/左右布局写法，不应该让
+// 整个长页面失去外层滚动。这里会跟踪父级 flex 方向，只把纵向 flex 视为需要
+// 有界高度。
+bool _containsListInChildren(
+  List<dynamic> children, {
+  String parentLayout = 'column',
+}) {
   for (final child in children) {
     if (child is Map<String, dynamic>) {
-      final type = child['type'];
-      if (type == 'list') return true;
-      if (type == 'grid' && child['shrinkWrap'] != true) return true;
-      if (type == 'refresh') return true;
-      // flame_game 跟 list 一样想吃无限高度（Flame GameWidget 占满父级），
-      // 没显式给 height 时屏幕级要走 Column 而不是 SingleChildScrollView。
-      if (type == 'flame_game' && child['height'] == null) return true;
-      // expanded 只在 Flex 父级里有效——出现在屏幕顶层就必须走 Column 布局，
-      // 否则 SingleChildScrollView 给的是 unbounded 高度，Expanded 直接哑火。
-      if (type == 'expanded') return true;
-      // ref 引用的模板里可能塞 list/refresh/expanded（典型：launcher 组件库），
-      // 这边解析阶段没法看进 dep 模板，保守按 Column 处理（拿不到滚动条但不崩；
-      // 如果 ref 出来是个短小的 leaf，组件作者自己负责裹个 SingleChildScrollView）。
-      if (type == 'ref') return true;
-      // 递归 children 字段
-      final subChildren = child['children'] as List<dynamic>?;
-      if (subChildren != null && _containsListInChildren(subChildren)) {
-        return true;
-      }
-      // 递归单 child 字段（refresh / padding / align / center 等）
-      final singleChild = child['child'];
-      if (singleChild is Map<String, dynamic> &&
-          _containsListInChildren([singleChild])) {
+      if (_needsBoundedVerticalParent(child, parentLayout: parentLayout)) {
         return true;
       }
     }
   }
   return false;
+}
+
+bool _needsBoundedVerticalParent(
+  Map<String, dynamic> child, {
+  required String parentLayout,
+}) {
+  final type = child['type'];
+  if (type == 'list' && child['shrinkWrap'] != true) return true;
+  if (type == 'reorderable_list') return true;
+  if (type == 'grid' && child['shrinkWrap'] != true) return true;
+  if (type == 'refresh') return true;
+  // flame_game 跟 list 一样想吃无限高度（Flame GameWidget 占满父级），
+  // 没显式给 height 时屏幕级要走 Column 而不是 SingleChildScrollView。
+  if (type == 'flame_game' && child['height'] == null) return true;
+  // ref 引用的模板里可能塞 list/refresh/expanded（典型：launcher 组件库），
+  // 这边解析阶段没法看进 dep 模板，保守按 Column 处理（拿不到滚动条但不崩；
+  // 如果 ref 出来是个短小的 leaf，组件作者自己负责裹个 SingleChildScrollView）。
+  if (type == 'ref') return true;
+
+  final position = child['position'];
+  final isFlexPosition =
+      position is Map<String, dynamic> && position['type'] == 'flex';
+  final isFlexNode = type == 'expanded' || type == 'flexible' || isFlexPosition;
+  if (isFlexNode && parentLayout != 'row') return true;
+
+  // 递归 children 字段。不同容器的默认 layout 不同：container 默认 row，
+  // card/screen 默认 column。判断错会把正常两列卡片页误判成不可滚。
+  final subChildren = child['children'] as List<dynamic>?;
+  if (subChildren != null &&
+      _containsListInChildren(
+        subChildren,
+        parentLayout: _childrenLayoutForNode(child),
+      )) {
+    return true;
+  }
+
+  // 递归单 child 字段（refresh / padding / align / center / expanded 等）。
+  // 单 child wrapper 自身不是 Flex 父级，所以内部 expanded 仍然需要被拦住。
+  final singleChild = child['child'];
+  if (singleChild is Map<String, dynamic> &&
+      _needsBoundedVerticalParent(singleChild, parentLayout: 'box')) {
+    return true;
+  }
+
+  return false;
+}
+
+String _childrenLayoutForNode(Map<String, dynamic> child) {
+  final rawLayout = child['layout']?.toString();
+  if (rawLayout != null && rawLayout.isNotEmpty) return rawLayout;
+  final type = child['type'];
+  if (type == 'container') return 'row';
+  if (type == 'card') return 'column';
+  if (type == 'stack') return 'stack';
+  if (type == 'wrap') return 'wrap';
+  return 'column';
 }
 
 List<dynamic> _screenChildren(Map<String, dynamic> screenConfig) {
@@ -2420,7 +2462,10 @@ class JsonScreenView extends ConsumerWidget {
   ) {
     final contentConfig = _screenContentConfig(screenConfig);
     final children = _screenChildren(contentConfig);
-    final hasListWidget = _containsListInChildren(children);
+    final hasListWidget = _containsListInChildren(
+      children,
+      parentLayout: (contentConfig['layout'] ?? 'column').toString(),
+    );
 
     final childWidgets = children
         .whereType<Map<String, dynamic>>()
@@ -2726,7 +2771,10 @@ class _TabScreenViewState extends State<_TabScreenView> {
     }
 
     // 构建当前 tab 的内容
-    final hasListWidget = _containsListInChildren(tabChildren);
+    final hasListWidget = _containsListInChildren(
+      tabChildren,
+      parentLayout: (currentTabContent['layout'] ?? 'column').toString(),
+    );
     final childWidgets = tabChildren
         .whereType<Map<String, dynamic>>()
         .map((childJson) => widget.interpreter.buildWidget(context, childJson))

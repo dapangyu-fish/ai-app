@@ -72,6 +72,7 @@ python3 backend/validate_json_app.py "$TMPFILE"
 - 禁止 `transform`、`transition`、`shadow`、`marginTop`、`marginBottom`、`marginLeft`、`marginRight`。
 - `margin`、`padding`、`height`、`width`、`fontSize`、`borderRadius`、`elevation`、`flex` 必须是数字标量，不能是 dict/string/template。
 - list 的 `source` 必须是 `"{{ global.xxx }}"` 这种字符串；排序、过滤在 logic 层做完再绑定。
+- 长页面必须能滚到底：普通 full-height `list`/非 `shrinkWrap` `grid` 只能作为 screen/tab 的主滚动区域直接放在 `children` 中；嵌入详情页/仪表盘的短列表、最近记录、预览网格必须写 `"shrinkWrap": true`。
 - 新 button action 推荐 `{ "call": "@global.xxx", "args": {} }`，不要写冗余 `"type": "call"`。
 - JsonLogic 使用标准单 key 形状，例如 `{ "if": [cond, a, b] }`、`{ "+": [1, 2] }`。不要写 `{ "op": "if", "args": [...] }`。
 - `text.value`、`label`、`title`、`subtitle`、`emptyText` 等展示字段必须是字符串或 `{{ global.xxx }}` 插值。不要把 JsonLogic Map/List 直接放进去；需要动态文案时先在 action/global 函数里写入 `global.xxxLabel`，再显示 `{{ global.xxxLabel }}`。

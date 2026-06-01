@@ -65,6 +65,17 @@ from json_app_builder import (
 - 行程票夹/钱包/证件类 hero 卡里如果放二维码或缩略图，二维码宽高控制在 56-72；左侧文本必须用 `expanded/flexible` 或单独纵向布局，不能把二维码裁出屏幕右侧。
 - 动态状态文案不要把 JsonLogic 对象直接写进 `text.value`。例如安防状态、窗帘开关、票证状态，应该用 `{{ global.securityLabel }}` 这类字符串变量显示，并在切换动作里同步更新 label。
 
+## 滚动布局契约
+
+生成前先判断每个 screen/tab 的主滚动模型，避免“下方内容存在但用户滑不到”：
+
+- 普通静态长页面、设置页、详情页、控制台、仪表盘：直接用 `children` 顺序堆卡片/控件，框架会自动给 screen/tab 外层加纵向滚动。横向摘要卡可以在 `row` 里用 `expanded`，不要因此改成固定高度页面。
+- 普通 `list` 默认是 full-height 内部滚动区，会让 screen/tab 外层不再滚动。它适合作为列表页的主区域，必须作为 screen/tab 的直接 child 使用，前面只放紧凑搜索/筛选/摘要，后面不要再堆大段静态内容。
+- 如果只是“最近 3 条记录 / 日程预览 / 小历史列表”嵌在仪表盘或详情页中，必须在 `list` 上写 `"shrinkWrap": true`，不要写 `scrollToEnd` 或 `onLoadMore`；外层页面负责滚动。
+- `grid` 嵌在长页面时同样写 `"shrinkWrap": true`。只有真正需要占满剩余高度的瀑布/宫格页才使用默认非 shrinkWrap。
+- 不要把非 shrinkWrap 的 `list` 放进 `card`、`container`、`padding`、`center` 等 wrapper 里；这类结构要么无法滚动到底，要么会触发 Flutter 高度约束问题。需要包视觉样式时，把样式放到 `item_template` 的卡片里。
+- 如果一屏内容超过 iPhone 17 逻辑视口 402x874，必须保证底部主要按钮、设置项、详情分组能通过纵向滚动到达；不要依赖用户“再让 AI 修改”。
+
 ## 图标规则
 
 图标名必须来自 `lib/json_ui/widgets/icon_registry.dart`。常用安全图标包括：
