@@ -68,6 +68,7 @@ python3 backend/validate_json_app.py "$TMPFILE"
 
 - 顶层不能用 `entry`、`pages`；页面必须在 `ui.screens`。
 - screen/tab 内容必须用 `children`，不要用 Flutter/React 的 `body`。
+- `children` 必须永远是数组，哪怕只有一个子控件也写 `"children": [{...}]`。不要写 `"children": {...}`；只有 `center`、`padding`、`align`、`expanded` 等单子控件 wrapper 才写 `child: {...}`。
 - container 没有 `style`；样式字段直接平铺。
 - 禁止 `transform`、`transition`、`shadow`、`marginTop`、`marginBottom`、`marginLeft`、`marginRight`。
 - `margin`、`padding`、`height`、`width`、`fontSize`、`borderRadius`、`elevation`、`flex` 必须是数字标量，不能是 dict/string/template。

@@ -73,6 +73,7 @@ Another exception was thrown: RenderFlex children have non-zero flex but incomin
 * **Flex 约束环境**：使用 `type: flex` 时，必须确保其父容器在主轴方向上是有固定尺寸或被强制约束尺寸的（例如屏幕宽度的 Row 内，或者有固定高度的 Column 内）。
 * **不在 ScrollView 里拉伸**：不要在可滚动容器的直接子元素上使用 `flex` 占位。
 * **区分主列表和嵌入列表**：主列表直接作为 screen/tab `children` 的一项；详情页/仪表盘中的“最近记录/预览列表”必须设置 `"shrinkWrap": true`，并让外层页面滚动。
+* **children 永远是数组**：多子控件节点必须写 `"children": [{...}]`。写成 `"children": {...}` 会在切到该页面/Tab 时触发运行时类型转换崩溃。
 
 ---
 

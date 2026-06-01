@@ -163,6 +163,8 @@ class _DesignerBallState extends State<DesignerBall>
   StreamSubscription<ChatEvent>? _streamSub;
   bool _resumeInFlight = false;
   bool _appResumeProbeInFlight = false;
+  Timer? _sessionReconcileTimer;
+  bool _sessionReconcileInFlight = false;
   // 老的 5s 独立 heartbeat 已被删掉。新逻辑：
   // - SSE 内部 20s idle timeout → _checkAliveCarefully 三态探活
   // - 后端 worker 自身在 CLI 异常退出 / 外部 kill 时主动写 needs_retry 事件
@@ -406,6 +408,7 @@ class _DesignerBallState extends State<DesignerBall>
     _longPressTimer?.cancel();
     _streamSub?.cancel();
     _messagePersistTimer?.cancel();
+    _sessionReconcileTimer?.cancel();
     unawaited(_flushActiveMessages());
     // Plan A 关键：app 关掉 worker 继续在 backend 跑，下次启动 _maybeResumeUnfinishedSession 接回来
     // 所以 dispose 只关本地 SSE，绝不通知 backend abort
@@ -601,6 +604,59 @@ class _DesignerBallState extends State<DesignerBall>
       debugPrint('[DesignerBall] app resume probe failed (ignored): $e');
     } finally {
       _appResumeProbeInFlight = false;
+    }
+  }
+
+  void _startSessionReconcileTimer({bool immediate = false}) {
+    _sessionReconcileTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
+      unawaited(_reconcileActiveSession(reason: 'timer'));
+    });
+    if (immediate) {
+      unawaited(_reconcileActiveSession(reason: 'immediate'));
+    }
+  }
+
+  void _stopSessionReconcileTimer() {
+    _sessionReconcileTimer?.cancel();
+    _sessionReconcileTimer = null;
+  }
+
+  /// Low-frequency safety net for long generations after local SSE was detached
+  /// or the final [DONE] action event was missed. This only runs while the chat
+  /// overlay is visible and there is no active local stream, so normal streaming
+  /// does not add backend load.
+  Future<void> _reconcileActiveSession({required String reason}) async {
+    if (!mounted ||
+        !_chatMode ||
+        _streamSub != null ||
+        _sessionReconcileInFlight ||
+        !AuthService.authNotifier.value) {
+      return;
+    }
+    final sid = _chatService.sessionId;
+    if (sid.isEmpty) return;
+
+    _sessionReconcileInFlight = true;
+    try {
+      final statusData = await _chatService.probeActiveSessionStatus();
+      if (!mounted || !_chatMode || _streamSub != null) return;
+      if (statusData == null) return;
+
+      final status = statusData['status'] as String? ?? '';
+      debugPrint('[DesignerBall] reconcile($reason) status=$status sid=$sid');
+      if (status == 'queued' || status == 'running' || status == 'done') {
+        await _resumeActiveSessionIfNeeded();
+        if (mounted) {
+          unawaited(_flushActiveMessages());
+        }
+      }
+      if (status == 'done' || status == 'failed' || status == 'aborted') {
+        _stopSessionReconcileTimer();
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] reconcile($reason) failed (ignored): $e');
+    } finally {
+      _sessionReconcileInFlight = false;
     }
   }
 
@@ -858,6 +914,7 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _restoreSession() async {
     if (_chatMode || _messages.isEmpty) return;
     setState(() => _chatMode = true);
+    _startSessionReconcileTimer(immediate: true);
     _scrollToBottom();
     await _resumeActiveSessionIfNeeded();
   }
@@ -1059,6 +1116,7 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
+    _startSessionReconcileTimer(immediate: true);
     if (!_pointerDown) {
       debugPrint(
         '[DesignerBall] Pointer lifted before startListening, skipping',
@@ -1204,6 +1262,7 @@ class _DesignerBallState extends State<DesignerBall>
   ///
   /// 调用方负责在调本方法之前把 user 气泡 / 空 assistant 气泡先注入好。
   void _attachAiStream(Stream<ChatEvent> stream) {
+    _startSessionReconcileTimer();
     // 用于累积流式事件中的指令，[DONE] 时统一处理
     Map<String, dynamic>? pendingJsonApp;
     String? pendingRequestAction;
@@ -1265,6 +1324,7 @@ class _DesignerBallState extends State<DesignerBall>
               ),
             );
           });
+          _stopSessionReconcileTimer();
           _scrollToBottom();
           return;
         }
@@ -1373,6 +1433,7 @@ class _DesignerBallState extends State<DesignerBall>
             );
           }
         });
+        _startSessionReconcileTimer(immediate: true);
       },
       onDone: () {
         _streamSub = null;
@@ -1395,6 +1456,17 @@ class _DesignerBallState extends State<DesignerBall>
             jsonApp: pendingJsonApp,
           );
         });
+        final hasFinalAction =
+            pendingRequestAction != null ||
+            pendingJsonUrl != null ||
+            pendingFailedJsonUrl != null ||
+            pendingJsonApp != null;
+        if (hasFinalAction) {
+          _stopSessionReconcileTimer();
+        } else {
+          _startSessionReconcileTimer();
+          unawaited(_reconcileActiveSession(reason: 'stream-done-no-action'));
+        }
         _scrollToBottom();
       },
     );
@@ -1995,6 +2067,7 @@ class _DesignerBallState extends State<DesignerBall>
       _speech?.stop();
     } catch (_) {}
     _detachCurrentStreamForHide();
+    _stopSessionReconcileTimer();
     _pulseController.stop();
     _pulseController.reset();
     setState(() {

@@ -493,6 +493,12 @@ class Validator:
         if self._is_ui_path(path):
             self._validate_icon_fields(node, path)
 
+            if "children" in node and not isinstance(node.get("children"), list):
+                self.error(
+                    self._path(path, "children"),
+                    "children must be an array of widget objects; use child:{...} only for single-child wrapper widgets",
+                )
+
             for key in node.keys():
                 if key in FORBIDDEN_UI_KEYS and not self._is_allowed_non_ui_key(node, key):
                     self.error(self._path(path, key), f"unsupported web/CSS-like field: {key}")

@@ -425,6 +425,17 @@ class AiChatService {
     return data['status'] == 'running' && data['process_alive'] == true;
   }
 
+  Future<Map<String, dynamic>?> probeActiveSessionStatus() async {
+    final active = _active;
+    if (active == null) return null;
+    final data = await _probeSessionStatus(active.id);
+    if (data == null) return null;
+    active.lastKnownStatus = data['status'] as String?;
+    active.processAlive = data['process_alive'] == true;
+    await _persistSessions();
+    return data;
+  }
+
   /// 探一条 session 的 /status；返回原始 JSON 或 null（任何失败都视为 null）。
   /// session list sheet 批量探活和 isSessionAlive / tryResume 共用这条路径。
   Future<Map<String, dynamic>?> _probeSessionStatus(String sid) async {
@@ -653,6 +664,9 @@ class AiChatService {
       final data = json.decode(resp.body) as Map<String, dynamic>;
       final status = data['status'] as String? ?? '';
       final procAlive = data['process_alive'] == true;
+      active.lastKnownStatus = status;
+      active.processAlive = procAlive;
+      unawaited(_persistSessions());
       debugPrint('[AI_CHAT] resume status=$status alive=$procAlive');
 
       if (status == 'failed' || status == 'aborted') {

@@ -113,6 +113,11 @@ def _repair(
             changes.append(f"{_path_text(path)}: removed redundant body")
 
     if is_ui:
+        if "children" in node and not isinstance(node["children"], list):
+            old_type = type(node["children"]).__name__
+            node["children"] = _as_children(node["children"])
+            changes.append(f"{_path_text((*path, 'children'))}: wrapped {old_type} children as list")
+
         for key in list(node.keys()):
             if key in FORBIDDEN_UI_KEYS:
                 node.pop(key)

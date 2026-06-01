@@ -469,7 +469,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 - validator 已无 ERROR 后，不要继续大改 UI。若只有冗余 `action.type` 等机械 WARN，运行 `repair_json_app.py` 后重新校验；无 ERROR 就完成。
 
 1. **Container 默认是横向排列 (layout: "row")！** 如果你需要上下排列，必须显式加上 `"layout": "column"`！否则内部放入 list 会直接导致 Flutter 布局崩溃（白屏）！
-2. **Screen 内容字段只能用 `children`！** `ui.screens[]` 和底部 tabs 的每个 tab 都应写 `"children": [...]`。不要写 `"body": {...}` 或 `"body": [...]`，那是 Flutter 的概念，不是本 DSL 的标准屏幕结构。
+2. **Screen 内容字段只能用 `children` 数组！** `ui.screens[]`、底部 tabs、container、card 等多子控件节点都应写 `"children": [{...}]`。不要写 `"children": {...}`，哪怕只有一个子控件也必须包数组；只有 `center/padding/align/expanded` 等单子控件 wrapper 才用 `"child": {...}`。不要写 `"body": {...}` 或 `"body": [...]`，那是 Flutter 的概念，不是本 DSL 的标准屏幕结构。
 3. **禁用 Map 字典作为静态 UI 样式！** `color`, `border`, `width` 等必须是明确的字符串或数字，绝不能传入包含 JSONLogic（例如 `{"if": ...}`）的字典，否则直接强转异常！
 4. **List `source` 限制！** 列表的数据源只接受字符串插值 `{{ global.xxx }}`，如果需要排序必须在逻辑层提前用 `@list_sort` 处理，不可在 UI 中直接手写 `{ "sort": ... }`。
 5. **Container 绝对没有 `style` 字段！** 其样式（`color`, `padding`, `margin`, `borderRadius` 等）直接平铺写在 Container 节点上！
