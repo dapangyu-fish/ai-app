@@ -3,13 +3,13 @@
   "appid": "aee903d5-9cc9-50e9-af38-de424a0af57c",
   "meta": {
     "name": "gsy_flutter_demo/038-tick-click-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "时钟动画绘制展示",
       "en": "Clock animation drawing"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：时钟动画绘制展示",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：时钟动画绘制展示",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,316 @@
       "upstreamTitle": "时钟动画绘制展示",
       "upstreamSource": "lib/widget/canvas/tick_click_demo_page.dart",
       "upstreamWidget": "TickClickDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "clockTime": "--:--",
+      "clockDate": "--.-- 星期-",
+      "clockTick": 0
     },
-    "functions": {}
+    "functions": {
+      "tickClock": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@timestamp",
+            "args": {},
+            "assign": "global._clockTs"
+          },
+          {
+            "call": "@date_format",
+            "args": {
+              "timestamp": "{{ global._clockTs }}",
+              "format": "HH:mm"
+            },
+            "assign": "global.clockTime"
+          },
+          {
+            "call": "@date_format",
+            "args": {
+              "timestamp": "{{ global._clockTs }}",
+              "format": "MM.DD 星期DD"
+            },
+            "assign": "global.clockDate"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.clockTick",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.clockTick"
+                  },
+                  6
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "时钟动画绘制展示",
-        "layout": "column",
+        "title": "TickClickDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "palette",
-                    "size": 26,
-                    "color": "#7A57D1"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#F0ECFB",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 1000,
+              "runImmediately": true,
+              "action": {
+                "call": "@global.tickClock",
+                "args": {}
               },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "时钟动画绘制展示",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Clock animation drawing",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
+              "child": {
+                "type": "center",
+                "child": {
+                  "type": "container",
+                  "width": 390,
+                  "height": 390,
+                  "color": "#69F0AE",
+                  "layout": "stack",
+                  "children": [
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ global.clockTime }}",
+                            "style": {
+                              "fontSize": 28,
+                              "color": "#FFFFFF",
+                              "fontWeight": "bold",
+                              "textAlign": "center"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ global.clockDate }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#FFFFFF",
+                              "textAlign": "center"
+                            }
+                          }
+                        ],
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center"
+                      }
+                    },
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "radial_layout",
+                        "source": [
+                          "1点",
+                          "2点",
+                          "3点",
+                          "4点",
+                          "5点",
+                          "6点",
+                          "7点",
+                          "8点",
+                          "9点",
+                          "10点",
+                          "11点",
+                          "12点"
+                        ],
+                        "radius": 82,
+                        "childSize": 44,
+                        "startAngleDeg": -60,
+                        "sweepAngleDeg": 360,
+                        "rotateItems": true,
+                        "itemTemplate": {
+                          "type": "text",
+                          "value": "{{ loop.item }}",
+                          "style": {
+                            "fontSize": 10,
+                            "color": "#FFFFFF"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "radial_layout",
+                        "source": [
+                          "1分",
+                          "2分",
+                          "3分",
+                          "4分",
+                          "5分",
+                          "6分",
+                          "7分",
+                          "8分",
+                          "9分",
+                          "10分",
+                          "11分",
+                          "12分",
+                          "13分",
+                          "14分",
+                          "15分",
+                          "16分",
+                          "17分",
+                          "18分",
+                          "19分",
+                          "20分",
+                          "21分",
+                          "22分",
+                          "23分",
+                          "24分",
+                          "25分",
+                          "26分",
+                          "27分",
+                          "28分",
+                          "29分",
+                          "30分",
+                          "31分",
+                          "32分",
+                          "33分",
+                          "34分",
+                          "35分",
+                          "36分",
+                          "37分",
+                          "38分",
+                          "39分",
+                          "40分",
+                          "41分",
+                          "42分",
+                          "43分",
+                          "44分",
+                          "45分",
+                          "46分",
+                          "47分",
+                          "48分",
+                          "49分",
+                          "50分",
+                          "51分",
+                          "52分",
+                          "53分",
+                          "54分",
+                          "55分",
+                          "56分",
+                          "57分",
+                          "58分",
+                          "59分"
+                        ],
+                        "radius": 126,
+                        "childSize": 34,
+                        "startAngleDeg": -84,
+                        "sweepAngleDeg": 354,
+                        "rotateItems": true,
+                        "itemTemplate": {
+                          "type": "text",
+                          "value": "{{ loop.item }}",
+                          "style": {
+                            "fontSize": 8,
+                            "color": "#FFFFFF"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "center",
+                      "child": {
+                        "type": "radial_layout",
+                        "source": [
+                          "1秒",
+                          "2秒",
+                          "3秒",
+                          "4秒",
+                          "5秒",
+                          "6秒",
+                          "7秒",
+                          "8秒",
+                          "9秒",
+                          "10秒",
+                          "11秒",
+                          "12秒",
+                          "13秒",
+                          "14秒",
+                          "15秒",
+                          "16秒",
+                          "17秒",
+                          "18秒",
+                          "19秒",
+                          "20秒",
+                          "21秒",
+                          "22秒",
+                          "23秒",
+                          "24秒",
+                          "25秒",
+                          "26秒",
+                          "27秒",
+                          "28秒",
+                          "29秒",
+                          "30秒",
+                          "31秒",
+                          "32秒",
+                          "33秒",
+                          "34秒",
+                          "35秒",
+                          "36秒",
+                          "37秒",
+                          "38秒",
+                          "39秒",
+                          "40秒",
+                          "41秒",
+                          "42秒",
+                          "43秒",
+                          "44秒",
+                          "45秒",
+                          "46秒",
+                          "47秒",
+                          "48秒",
+                          "49秒",
+                          "50秒",
+                          "51秒",
+                          "52秒",
+                          "53秒",
+                          "54秒",
+                          "55秒",
+                          "56秒",
+                          "57秒",
+                          "58秒",
+                          "59秒"
+                        ],
+                        "radius": 154,
+                        "childSize": 34,
+                        "startAngleDeg": -84,
+                        "sweepAngleDeg": 354,
+                        "rotateItems": true,
+                        "itemTemplate": {
+                          "type": "text",
+                          "value": "{{ loop.item }}",
+                          "style": {
+                            "fontSize": 8,
+                            "color": "#FFFFFF"
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：绘制与Shader",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/canvas/tick_click_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：TickClickDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
             }
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

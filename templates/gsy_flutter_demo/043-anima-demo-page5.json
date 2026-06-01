@@ -3,13 +3,13 @@
   "appid": "b0503ea4-f1a0-5f78-9748-b22eff3d01bc",
   "meta": {
     "name": "gsy_flutter_demo/043-anima-demo-page5",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "文本弹出动画效果",
       "en": "Text pop animation"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：文本弹出动画效果",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：文本弹出动画效果",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,426 @@
       "upstreamTitle": "文本弹出动画效果",
       "upstreamSource": "lib/widget/animation/anima_demo_page5.dart",
       "upstreamWidget": "AnimaDemoPage5",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "played": false,
+      "char_0": false,
+      "char_1": false,
+      "char_2": false,
+      "char_3": false,
+      "char_4": false,
+      "char_5": false,
+      "char_6": false,
+      "char_7": false,
+      "char_8": false,
+      "char_9": false,
+      "char_10": false,
+      "char_11": false,
+      "char_12": false,
+      "char_13": false,
+      "char_14": false,
+      "char_15": false
     },
-    "functions": {}
+    "functions": {
+      "playText": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.played"
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.played",
+                    "value": false
+                  }
+                },
+                {
+                  "call": "@loop_by_num",
+                  "args": {
+                    "count": 16,
+                    "body": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.char_{{ loop.index }}",
+                          "value": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.played",
+                    "value": true
+                  }
+                },
+                {
+                  "call": "@loop_by_num",
+                  "args": {
+                    "count": 16,
+                    "body": [
+                      {
+                        "call": "@delay",
+                        "args": {
+                          "ms": {
+                            "*": [
+                              {
+                                "var": "loop.index"
+                              },
+                              80
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.char_{{ loop.index }}",
+                          "value": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "文本弹出动画效果",
-        "layout": "column",
+        "title": "AnimaDemoPage5",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "wrap",
+                "spacing": 0,
+                "runSpacing": 0,
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_0"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "H",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_1"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "e",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_2"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "l",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_3"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "l",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_4"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "o",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_5"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": " ",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_6"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "G",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_7"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "S",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_8"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "Y",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_9"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "，",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_10"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "欢",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_11"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "迎",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_12"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "你",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_13"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "的",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_14"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "交",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
+                  },
+                  {
+                    "type": "animated_visibility",
+                    "visibleWhen": {
+                      "var": "global.char_15"
+                    },
+                    "hiddenOffsetY": 5,
+                    "durationMs": 600,
+                    "curve": "easeInOutExpo",
+                    "child": {
+                      "type": "text",
+                      "value": "流",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "fontWeight": "bold"
+                      }
+                    }
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "文本弹出动画效果",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Text pop animation",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                ]
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/anima_demo_page5.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：AnimaDemoPage5",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
             }
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "icon": "play",
+          "action": {
+            "call": "@global.playText",
+            "args": {}
+          }
+        }
       }
     ]
   }

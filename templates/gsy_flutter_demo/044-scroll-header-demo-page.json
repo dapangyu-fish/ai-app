@@ -3,13 +3,13 @@
   "appid": "cd3dc80e-87ec-5689-b928-5ade0a81578c",
   "meta": {
     "name": "gsy_flutter_demo/044-scroll-header-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "强大的自定义滑动与停靠结合展示",
       "en": "Advanced custom scroll + sticky"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：强大的自定义滑动与停靠结合展示",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：强大的自定义滑动与停靠结合展示",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,259 @@
       "upstreamTitle": "强大的自定义滑动与停靠结合展示",
       "upstreamSource": "lib/widget/scroll/custom_sliver/scroll_header_demo_page.dart",
       "upstreamWidget": "ScrollHeaderDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "pinned": true,
+      "initHeight": 70,
+      "pinnedLabel": "pinned",
+      "heightLabel": "minHeight",
+      "autoBackLabel": "non autoBack",
+      "pullTall": false
     },
-    "functions": {}
+    "functions": {
+      "togglePinned": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.pinned",
+              "value": {
+                "!": {
+                  "var": "global.pinned"
+                }
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.pinnedLabel",
+              "value": {
+                "if": [
+                  {
+                    "var": "global.pinned"
+                  },
+                  "pinned",
+                  "scroll"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "toggleHeight": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.initHeight",
+              "value": {
+                "if": [
+                  {
+                    ">": [
+                      {
+                        "var": "global.initHeight"
+                      },
+                      0
+                    ]
+                  },
+                  0,
+                  70
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.heightLabel",
+              "value": {
+                "if": [
+                  {
+                    ">": [
+                      {
+                        "var": "global.initHeight"
+                      },
+                      0
+                    ]
+                  },
+                  "minHeight",
+                  "non Height"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "toggleAutoBack": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.pullTall",
+              "value": {
+                "!": {
+                  "var": "global.pullTall"
+                }
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.autoBackLabel",
+              "value": {
+                "if": [
+                  {
+                    "var": "global.pullTall"
+                  },
+                  "autoBack",
+                  "non autoBack"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "强大的自定义滑动与停靠结合展示",
-        "layout": "column",
+        "title": "ScrollHeaderDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#1A237E",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "list",
-                    "size": 26,
-                    "color": "#0B8E70"
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "custom_scroll_view",
+              "physics": "bouncing",
+              "slivers": [
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 200,
+                  "minHeight": {
+                    "var": "global.initHeight"
+                  },
+                  "pinned": {
+                    "var": "global.pinned"
+                  },
+                  "child": {
+                    "type": "stack",
+                    "children": [
+                      {
+                        "type": "positioned",
+                        "left": 0,
+                        "top": 0,
+                        "right": 0,
+                        "bottom": 0,
+                        "child": {
+                          "type": "container",
+                          "color": "#F44336",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "positioned",
+                        "left": 0,
+                        "top": 0,
+                        "right": 0,
+                        "bottom": 0,
+                        "child": {
+                          "type": "opacity",
+                          "opacity": 0.88,
+                          "child": {
+                            "type": "image",
+                            "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                            "fit": "cover",
+                            "paddingV": 0
+                          }
+                        }
+                      }
+                    ]
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E7F6F1",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "强大的自定义滑动与停靠结合展示",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "sliver_padding",
+                  "padding": {
+                    "bottom": 70
+                  },
+                  "sliver": {
+                    "type": "sliver_grid",
+                    "count": 40,
+                    "crossAxisCount": 2,
+                    "mainAxisSpacing": 2,
+                    "crossAxisSpacing": 2,
+                    "childAspectRatio": 2,
+                    "itemTemplate": {
+                      "type": "card",
+                      "padding": 0,
+                      "margin": 4,
+                      "borderRadius": 4,
+                      "elevation": 1,
+                      "children": [
+                        {
+                          "type": "container",
+                          "height": 60,
+                          "alignment": "centerLeft",
+                          "padding": {
+                            "left": 10
+                          },
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "Item {{ loop.index }}",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#000000"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Advanced custom scroll + sticky",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：列表滚动",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/scroll/custom_sliver/scroll_header_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：ScrollHeaderDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+              ]
             }
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "footerButtons": [
+          {
+            "type": "button",
+            "label": "{{ global.pinnedLabel }}",
+            "action": {
+              "call": "@global.togglePinned",
+              "args": {}
+            }
+          },
+          {
+            "type": "button",
+            "label": "{{ global.heightLabel }}",
+            "action": {
+              "call": "@global.toggleHeight",
+              "args": {}
+            }
+          },
+          {
+            "type": "button",
+            "label": "{{ global.autoBackLabel }}",
+            "action": {
+              "call": "@global.toggleAutoBack",
+              "args": {}
+            }
+          }
+        ]
       }
     ]
   }

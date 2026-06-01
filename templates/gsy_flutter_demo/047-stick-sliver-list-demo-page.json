@@ -3,13 +3,13 @@
   "appid": "e8316489-b4b0-5681-a0bd-3feb88b98831",
   "meta": {
     "name": "gsy_flutter_demo/047-stick-sliver-list-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "列表停靠展开+回到当前头部",
       "en": "列表停靠展开+回到当前头部"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：列表停靠展开+回到当前头部",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：列表停靠展开+回到当前头部",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,3864 @@
       "upstreamTitle": "列表停靠展开+回到当前头部",
       "upstreamSource": "lib/widget/scroll/stick_sliver_list_demo_page.dart",
       "upstreamWidget": "StickSliverListDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "expanded_0": false,
+      "expanded_1": false,
+      "expanded_2": false,
+      "expanded_3": false,
+      "expanded_4": false,
+      "expanded_5": false,
+      "expanded_6": false
     },
-    "functions": {}
+    "functions": {
+      "toggleGroup": {
+        "params": [
+          "i"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expanded_{{ params.i }}",
+              "value": {
+                "!": {
+                  "var": "global.expanded_{{ params.i }}"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "列表停靠展开+回到当前头部",
-        "layout": "column",
+        "title": "StickSliverListDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "list",
-                    "size": 26,
-                    "color": "#0B8E70"
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "custom_scroll_view",
+              "physics": "clamping",
+              "slivers": [
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 50,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "我的 header 0 头啊",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "vertical_align_top",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "color": "#673AB7",
+                    "padding": {
+                      "left": 10,
+                      "right": 8
+                    }
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E7F6F1",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "列表停靠展开+回到当前头部",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          0,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 1",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          1,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          2,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 3",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          3,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 4",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          4,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 5",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          5,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 6",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          6,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 7",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          7,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_0"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 8",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 50,
+                  "visible": {
+                    ">": [
+                      8,
+                      3
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "height": 50,
+                    "color": "#9E9E9E",
+                    "layout": "column",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "查看更多 / 收起",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "onTap": {
+                      "call": "@global.toggleGroup",
+                      "args": {
+                        "i": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 50,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "我的 header 1 头啊",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "vertical_align_top",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "color": "#673AB7",
+                    "padding": {
+                      "left": 10,
+                      "right": 8
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          0,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 1",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          1,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          2,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 3",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          3,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 4",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          4,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 5",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          5,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 6",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          6,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 7",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          7,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 8",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          8,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 9",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          9,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 10",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          10,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 11",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          11,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 12",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          12,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 13",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          13,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_1"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 14",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 50,
+                  "visible": {
+                    ">": [
+                      14,
+                      3
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "height": 50,
+                    "color": "#9E9E9E",
+                    "layout": "column",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "查看更多 / 收起",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "onTap": {
+                      "call": "@global.toggleGroup",
+                      "args": {
+                        "i": 1
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 50,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "我的 header 2 头啊",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "vertical_align_top",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "color": "#673AB7",
+                    "padding": {
+                      "left": 10,
+                      "right": 8
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          0,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_2"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 1",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          1,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_2"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          2,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_2"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 3",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          3,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_2"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 4",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          4,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_2"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 5",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 50,
+                  "visible": {
+                    ">": [
+                      5,
+                      3
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "height": 50,
+                    "color": "#9E9E9E",
+                    "layout": "column",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "查看更多 / 收起",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "onTap": {
+                      "call": "@global.toggleGroup",
+                      "args": {
+                        "i": 2
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 50,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "我的 header 3 头啊",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "vertical_align_top",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "color": "#673AB7",
+                    "padding": {
+                      "left": 10,
+                      "right": 8
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          0,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 1",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          1,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          2,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 3",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          3,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 4",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          4,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 5",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          5,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 6",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          6,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 7",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          7,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 8",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          8,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 9",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          9,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 10",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          10,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 11",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          11,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 12",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          12,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 13",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          13,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 14",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          14,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 15",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          15,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 16",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          16,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 17",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          17,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 18",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          18,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 19",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          19,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_3"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 20",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 50,
+                  "visible": {
+                    ">": [
+                      20,
+                      3
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "height": 50,
+                    "color": "#9E9E9E",
+                    "layout": "column",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "查看更多 / 收起",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "onTap": {
+                      "call": "@global.toggleGroup",
+                      "args": {
+                        "i": 3
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 50,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "我的 header 4 头啊",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "vertical_align_top",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "color": "#673AB7",
+                    "padding": {
+                      "left": 10,
+                      "right": 8
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          0,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_4"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 1",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          1,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_4"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          2,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_4"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 3",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          3,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_4"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 4",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          4,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_4"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 5",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          5,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_4"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 6",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          6,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_4"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 7",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 50,
+                  "visible": {
+                    ">": [
+                      7,
+                      3
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "height": 50,
+                    "color": "#9E9E9E",
+                    "layout": "column",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "查看更多 / 收起",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "onTap": {
+                      "call": "@global.toggleGroup",
+                      "args": {
+                        "i": 4
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 50,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "我的 header 5 头啊",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "vertical_align_top",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "color": "#673AB7",
+                    "padding": {
+                      "left": 10,
+                      "right": 8
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          0,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 1",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          1,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          2,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 3",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          3,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 4",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          4,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 5",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          5,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 6",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          6,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 7",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          7,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 8",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          8,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 9",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          9,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 10",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          10,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 11",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          11,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_5"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 12",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 50,
+                  "visible": {
+                    ">": [
+                      12,
+                      3
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "height": 50,
+                    "color": "#9E9E9E",
+                    "layout": "column",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "查看更多 / 收起",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "onTap": {
+                      "call": "@global.toggleGroup",
+                      "args": {
+                        "i": 5
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 50,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "我的 header 6 头啊",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "children": []
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "vertical_align_top",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "color": "#673AB7",
+                    "padding": {
+                      "left": 10,
+                      "right": 8
+                    }
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          0,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 1",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          1,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          2,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 3",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          3,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 4",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          4,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 5",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          5,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 6",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          6,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 7",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          7,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 8",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 60,
+                  "visible": {
+                    "or": [
+                      {
+                        "<": [
+                          8,
+                          3
+                        ]
+                      },
+                      {
+                        "var": "global.expanded_6"
+                      }
+                    ]
+                  },
+                  "child": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        },
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item 9",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 50,
+                  "visible": {
+                    ">": [
+                      9,
+                      3
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "height": 50,
+                    "color": "#9E9E9E",
+                    "layout": "column",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "查看更多 / 收起",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "onTap": {
+                      "call": "@global.toggleGroup",
+                      "args": {
+                        "i": 6
+                      }
+                    }
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "列表停靠展开+回到当前头部",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：列表滚动",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/scroll/stick_sliver_list_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：StickSliverListDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+              ]
             }
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

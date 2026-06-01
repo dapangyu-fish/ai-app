@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../interpreter.dart';
 import 'base_widget.dart';
 
-class JsonGsyRotatingCircleWidget extends JsonBaseWidget {
+class JsonRotatingCircleWidget extends JsonBaseWidget {
   @override
   Widget build(
     BuildContext context,
@@ -73,7 +73,7 @@ class _CirclePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-class JsonGsyCircularRevealWidget extends JsonBaseWidget {
+class JsonCircularRevealWidget extends JsonBaseWidget {
   @override
   Widget build(
     BuildContext context,

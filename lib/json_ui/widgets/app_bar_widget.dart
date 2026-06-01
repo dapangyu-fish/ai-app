@@ -45,7 +45,10 @@ PreferredSizeWidget buildAppBar(
   Widget? leading;
   final leadingDef = json['leading'];
   if (leadingDef is Map<String, dynamic>) {
-    final iconName = leadingDef['icon']?.toString();
+    final rawIconName = leadingDef['icon']?.toString();
+    final iconName = rawIconName == null
+        ? null
+        : interpreter.resolveTemplate(rawIconName);
     final iconData = iconName != null ? IconRegistry.get(iconName) : null;
     final action = leadingDef['action'] as Map<String, dynamic>?;
     leading = IconButton(
@@ -62,7 +65,12 @@ PreferredSizeWidget buildAppBar(
     for (final a in rawActions) {
       if (a is Map<String, dynamic>) {
         final iconName = a['icon']?.toString();
-        final iconData = iconName != null ? IconRegistry.get(iconName) : null;
+        final resolvedIconName = iconName == null
+            ? null
+            : interpreter.resolveTemplate(iconName);
+        final iconData = resolvedIconName != null
+            ? IconRegistry.get(resolvedIconName)
+            : null;
         final action = a['action'] as Map<String, dynamic>?;
         actionWidgets.add(
           IconButton(

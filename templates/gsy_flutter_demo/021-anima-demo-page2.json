@@ -3,7 +3,7 @@
   "appid": "480c01a2-cadf-51bc-bb77-2c4e472f6ef7",
   "meta": {
     "name": "gsy_flutter_demo/021-anima-demo-page2",
-    "version": "0.1.2",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "控件展开动画效果",
@@ -24,7 +24,8 @@
   "dependencies": {},
   "global": {
     "variables": {
-      "collapsed": false
+      "collapsed": false,
+      "portVersion": "json-dsl-primitives-v2"
     },
     "functions": {}
   },
@@ -39,7 +40,7 @@
           {
             "type": "positioned",
             "child": {
-              "type": "gsy_circular_reveal",
+              "type": "circular_reveal",
               "collapsed": "{{ global.collapsed }}",
               "durationMs": 500,
               "child": {

@@ -28,7 +28,10 @@ class JsonTextWidget extends JsonBaseWidget {
     }
 
     // 颜色
-    Color? color = _parseColor(style['color'] as String?);
+    final rawColor = style['color']?.toString();
+    Color? color = _parseColor(
+      rawColor == null ? null : interpreter.resolveTemplate(rawColor),
+    );
 
     // 斜体
     FontStyle fontStyle = FontStyle.normal;

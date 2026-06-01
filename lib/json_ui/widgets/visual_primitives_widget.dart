@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert' as convert;
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -140,8 +142,12 @@ class JsonAnimatedVisibilityWidget extends JsonBaseWidget {
   ) {
     final childJson = json['child'];
     final visible = interpreter.resolveExpression(json['visibleWhen']) == true;
+    final hiddenOffsetX =
+        _resolveDouble(interpreter, json['hiddenOffsetX']) ?? 0;
+    final hiddenOffsetY =
+        _resolveDouble(interpreter, json['hiddenOffsetY']) ?? -1;
     return AnimatedSlide(
-      offset: visible ? Offset.zero : const Offset(0, -1),
+      offset: visible ? Offset.zero : Offset(hiddenOffsetX, hiddenOffsetY),
       duration: Duration(
         milliseconds: (_resolveDouble(interpreter, json['durationMs']) ?? 300)
             .toInt(),
@@ -159,6 +165,201 @@ class JsonAnimatedVisibilityWidget extends JsonBaseWidget {
       ),
     );
   }
+}
+
+class JsonAnimatedSwitcherWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final childJson = json['child'];
+    final switchKey = interpreter.resolveTemplate(
+      json['switchKey']?.toString() ?? '',
+    );
+    Widget child = childJson is Map<String, dynamic>
+        ? interpreter.buildWidget(context, childJson)
+        : const SizedBox.shrink();
+    if (switchKey.isNotEmpty) {
+      child = KeyedSubtree(key: ValueKey(switchKey), child: child);
+    }
+    return AnimatedSwitcher(
+      duration: Duration(
+        milliseconds: (_resolveDouble(interpreter, json['durationMs']) ?? 300)
+            .toInt(),
+      ),
+      switchInCurve: _parseCurve(json['switchInCurve']?.toString()),
+      switchOutCurve: _parseCurve(json['switchOutCurve']?.toString()),
+      transitionBuilder: (child, animation) {
+        switch (json['transitionType']?.toString()) {
+          case 'slideDown':
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, -1),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          case 'scale':
+            return ScaleTransition(scale: animation, child: child);
+          case 'fade':
+          default:
+            return FadeTransition(opacity: animation, child: child);
+        }
+      },
+      child: child,
+    );
+  }
+}
+
+class JsonOpacityWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final childJson = json['child'];
+    return Opacity(
+      opacity: (_resolveDouble(interpreter, json['opacity']) ?? 1).clamp(0, 1),
+      child: childJson is Map<String, dynamic>
+          ? interpreter.buildWidget(context, childJson)
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class JsonOverflowBoxWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final childJson = json['child'];
+    return OverflowBox(
+      alignment:
+          _parseAlignment(json['alignment']?.toString()) ?? Alignment.center,
+      minWidth: _resolveDouble(interpreter, json['minWidth']) ?? 0,
+      minHeight: _resolveDouble(interpreter, json['minHeight']) ?? 0,
+      maxWidth:
+          _resolveDouble(interpreter, json['maxWidth']) ?? double.infinity,
+      maxHeight:
+          _resolveDouble(interpreter, json['maxHeight']) ?? double.infinity,
+      child: childJson is Map<String, dynamic>
+          ? interpreter.buildWidget(context, childJson)
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class JsonAspectRatioWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final childJson = json['child'];
+    return AspectRatio(
+      aspectRatio: _resolveDouble(interpreter, json['aspectRatio']) ?? 1,
+      child: childJson is Map<String, dynamic>
+          ? interpreter.buildWidget(context, childJson)
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class JsonIntervalActionWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final childJson = json['child'];
+    final action = resolveActionAtBuildTime(json['action'], interpreter);
+    final actionSignature = action == null ? '' : convert.jsonEncode(action);
+    return _IntervalActionHost(
+      intervalMs: (_resolveDouble(interpreter, json['intervalMs']) ?? 1000)
+          .toInt(),
+      runImmediately: json['runImmediately'] != false,
+      action: action is Map<String, dynamic> ? action : null,
+      actionSignature: actionSignature,
+      interpreter: interpreter,
+      child: childJson is Map<String, dynamic>
+          ? interpreter.buildWidget(context, childJson)
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _IntervalActionHost extends StatefulWidget {
+  final int intervalMs;
+  final bool runImmediately;
+  final Map<String, dynamic>? action;
+  final String actionSignature;
+  final JsonInterpreter interpreter;
+  final Widget child;
+
+  const _IntervalActionHost({
+    required this.intervalMs,
+    required this.runImmediately,
+    required this.action,
+    required this.actionSignature,
+    required this.interpreter,
+    required this.child,
+  });
+
+  @override
+  State<_IntervalActionHost> createState() => _IntervalActionHostState();
+}
+
+class _IntervalActionHostState extends State<_IntervalActionHost> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  @override
+  void didUpdateWidget(covariant _IntervalActionHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.intervalMs != widget.intervalMs ||
+        oldWidget.runImmediately != widget.runImmediately ||
+        oldWidget.actionSignature != widget.actionSignature) {
+      _start();
+    }
+  }
+
+  void _start() {
+    _timer?.cancel();
+    if (widget.action == null || widget.intervalMs <= 0) return;
+    if (widget.runImmediately) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+    }
+    _timer = Timer.periodic(
+      Duration(milliseconds: widget.intervalMs),
+      (_) => _run(),
+    );
+  }
+
+  void _run() {
+    if (!mounted || widget.action == null) return;
+    widget.interpreter.executeAction(widget.action!, context);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class JsonActionRegionWidget extends JsonBaseWidget {

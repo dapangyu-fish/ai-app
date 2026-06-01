@@ -62,7 +62,7 @@ import 'widgets/cupertino_refresh_list_widget.dart';
 import 'widgets/bubble_button_widget.dart';
 import 'widgets/keyboard_detector_widget.dart';
 import 'widgets/slide_verify_widget.dart';
-import 'widgets/gsy_animation_widgets.dart';
+import 'widgets/animation_primitives_widget.dart';
 import 'widgets/floating_touch_demo_widget.dart';
 import 'widgets/floating_action_button_widget.dart';
 import 'widgets/hero_image_viewer_widget.dart';
@@ -131,8 +131,8 @@ class JsonWidgetBuilder {
     'bubble_button': JsonBubbleButtonWidget(),
     'keyboard_detector': JsonKeyboardDetectorWidget(),
     'slide_verify': JsonSlideVerifyWidget(),
-    'gsy_rotating_circle': JsonGsyRotatingCircleWidget(),
-    'gsy_circular_reveal': JsonGsyCircularRevealWidget(),
+    'rotating_circle_painter': JsonRotatingCircleWidget(),
+    'circular_reveal': JsonCircularRevealWidget(),
     'floating_touch_demo': JsonFloatingTouchDemoWidget(),
     'floating_action_button': JsonFloatingActionButtonWidget(),
     'hero_image_viewer': JsonHeroImageViewerWidget(),
@@ -144,6 +144,11 @@ class JsonWidgetBuilder {
     'backdrop_blur': JsonBackdropBlurWidget(),
     'animated_container': JsonAnimatedContainerWidget(),
     'animated_visibility': JsonAnimatedVisibilityWidget(),
+    'animated_switcher': JsonAnimatedSwitcherWidget(),
+    'opacity': JsonOpacityWidget(),
+    'overflow_box': JsonOverflowBoxWidget(),
+    'aspect_ratio': JsonAspectRatioWidget(),
+    'interval_action': JsonIntervalActionWidget(),
     'action_region': JsonActionRegionWidget(),
   };
 

@@ -67,6 +67,8 @@ class JsonInterpreter extends ChangeNotifier {
     }
   }
 
+  ScrollController? scrollController(String id) => _scrollControllers[id];
+
   GlobalKey scrollTargetKey(String controllerId, int index) {
     final targets = _scrollTargetKeys.putIfAbsent(
       controllerId,

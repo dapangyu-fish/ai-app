@@ -111,6 +111,8 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
+    final controllerId = json['controller']?.toString();
+    final onScroll = resolveActionAtBuildTime(json['onScroll'], interpreter);
     final slivers = <Widget>[];
     final rawSlivers = json['slivers'];
     if (rawSlivers is List) {
@@ -119,7 +121,15 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
         if (sliver != null) slivers.add(sliver);
       }
     }
-    return CustomScrollView(slivers: slivers);
+    return _JsonCustomScrollViewHost(
+      controllerId: controllerId == null || controllerId.isEmpty
+          ? null
+          : controllerId,
+      physics: _parsePhysics(json['physics']?.toString()),
+      onScroll: onScroll is Map<String, dynamic> ? onScroll : null,
+      interpreter: interpreter,
+      slivers: slivers,
+    );
   }
 
   Widget? _buildSliver(
@@ -140,21 +150,41 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
             : const SizedBox.shrink();
         if (height != null) child = SizedBox(height: height, child: child);
         return SliverToBoxAdapter(child: child);
+      case 'sliver_padding':
+        final sliverJson = json['sliver'];
+        final sliver = sliverJson is Map<String, dynamic>
+            ? _buildSliver(context, sliverJson, interpreter)
+            : null;
+        if (sliver == null) return null;
+        return SliverPadding(
+          padding:
+              _resolveInsets(interpreter, json['padding']) ?? EdgeInsets.zero,
+          sliver: sliver,
+        );
       case 'sliver_persistent_header':
         final childJson = json['child'];
-        final height = _resolveDouble(interpreter, json['height']) ?? 56;
+        final height =
+            _resolveDouble(interpreter, json['height']) ??
+            _resolveDouble(interpreter, json['maxHeight']) ??
+            56;
+        final minHeight =
+            _resolveDouble(interpreter, json['minHeight']) ?? height;
         return SliverPersistentHeader(
-          pinned: json['pinned'] == true,
-          floating: json['floating'] == true,
+          pinned: _resolveBool(interpreter, json['pinned']),
+          floating: _resolveBool(interpreter, json['floating']),
           delegate: _JsonFixedHeaderDelegate(
-            height: height,
+            minHeight: minHeight,
+            maxHeight: height,
             child: childJson is Map<String, dynamic>
                 ? interpreter.buildWidget(context, childJson)
                 : const SizedBox.shrink(),
           ),
         );
       case 'sliver_list':
-        final count = (_resolveDouble(interpreter, json['count']) ?? 0).toInt();
+        final source = _resolveSource(interpreter, json['source']);
+        final count =
+            source?.length ??
+            (_resolveDouble(interpreter, json['count']) ?? 0).toInt();
         final template = json['itemTemplate'];
         if (template is! Map<String, dynamic>) return null;
         return SliverList.builder(
@@ -163,33 +193,54 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
             return interpreter.buildWidgetInLoopContext(
               context: context,
               json: template,
-              loopItem: index,
+              loopItem: source == null ? index : source[index],
               loopIndex: index,
             );
           },
         );
       case 'sliver_grid':
-        final count = (_resolveDouble(interpreter, json['count']) ?? 0).toInt();
+        final source = _resolveSource(interpreter, json['source']);
+        final count =
+            source?.length ??
+            (_resolveDouble(interpreter, json['count']) ?? 0).toInt();
         final template = json['itemTemplate'];
         if (template is! Map<String, dynamic>) return null;
+        final maxCrossAxisExtent = _resolveDouble(
+          interpreter,
+          json['maxCrossAxisExtent'],
+        );
         return SliverGrid.builder(
           itemCount: count,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount:
-                (_resolveDouble(interpreter, json['crossAxisCount']) ?? 2)
-                    .toInt(),
-            mainAxisSpacing:
-                _resolveDouble(interpreter, json['mainAxisSpacing']) ?? 0,
-            crossAxisSpacing:
-                _resolveDouble(interpreter, json['crossAxisSpacing']) ?? 0,
-            childAspectRatio:
-                _resolveDouble(interpreter, json['childAspectRatio']) ?? 1,
-          ),
+          gridDelegate: maxCrossAxisExtent == null
+              ? SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount:
+                      (_resolveDouble(interpreter, json['crossAxisCount']) ?? 2)
+                          .toInt(),
+                  mainAxisSpacing:
+                      _resolveDouble(interpreter, json['mainAxisSpacing']) ?? 0,
+                  crossAxisSpacing:
+                      _resolveDouble(interpreter, json['crossAxisSpacing']) ??
+                      0,
+                  childAspectRatio:
+                      _resolveDouble(interpreter, json['childAspectRatio']) ??
+                      1,
+                )
+              : SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: maxCrossAxisExtent,
+                  mainAxisSpacing:
+                      _resolveDouble(interpreter, json['mainAxisSpacing']) ?? 0,
+                  crossAxisSpacing:
+                      _resolveDouble(interpreter, json['crossAxisSpacing']) ??
+                      0,
+                  childAspectRatio:
+                      _resolveDouble(interpreter, json['childAspectRatio']) ??
+                      1,
+                ),
           itemBuilder: (context, index) {
             return interpreter.buildWidgetInLoopContext(
               context: context,
               json: template,
-              loopItem: index,
+              loopItem: source == null ? index : source[index],
               loopIndex: index,
             );
           },
@@ -199,17 +250,107 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
   }
 }
 
+class _JsonCustomScrollViewHost extends StatefulWidget {
+  final String? controllerId;
+  final ScrollPhysics? physics;
+  final Map<String, dynamic>? onScroll;
+  final JsonInterpreter interpreter;
+  final List<Widget> slivers;
+
+  const _JsonCustomScrollViewHost({
+    required this.controllerId,
+    required this.physics,
+    required this.onScroll,
+    required this.interpreter,
+    required this.slivers,
+  });
+
+  @override
+  State<_JsonCustomScrollViewHost> createState() =>
+      _JsonCustomScrollViewHostState();
+}
+
+class _JsonCustomScrollViewHostState extends State<_JsonCustomScrollViewHost> {
+  late final ScrollController _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _register();
+    if (widget.onScroll != null) _controller.addListener(_handleScroll);
+  }
+
+  @override
+  void didUpdateWidget(covariant _JsonCustomScrollViewHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controllerId != widget.controllerId) {
+      _unregister(oldWidget.controllerId);
+      _register();
+    }
+    if (oldWidget.onScroll == null && widget.onScroll != null) {
+      _controller.addListener(_handleScroll);
+    } else if (oldWidget.onScroll != null && widget.onScroll == null) {
+      _controller.removeListener(_handleScroll);
+    }
+  }
+
+  void _register() {
+    final id = widget.controllerId;
+    if (id != null) {
+      widget.interpreter.registerScrollController(id, _controller);
+    }
+  }
+
+  void _unregister(String? id) {
+    if (id != null) {
+      widget.interpreter.unregisterScrollController(id, _controller);
+    }
+  }
+
+  void _handleScroll() {
+    if (!mounted || !_controller.hasClients || widget.onScroll == null) return;
+    final position = _controller.position;
+    widget.interpreter.executeActionWithEvent(widget.onScroll!, context, {
+      'offset': position.pixels,
+      'maxScrollExtent': position.maxScrollExtent,
+      'isEnd': position.pixels == position.maxScrollExtent,
+    });
+  }
+
+  @override
+  void dispose() {
+    if (widget.onScroll != null) _controller.removeListener(_handleScroll);
+    _unregister(widget.controllerId);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      controller: _controller,
+      physics: widget.physics,
+      slivers: widget.slivers,
+    );
+  }
+}
+
 class _JsonFixedHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final double height;
+  final double minHeight;
+  final double maxHeight;
   final Widget child;
 
-  const _JsonFixedHeaderDelegate({required this.height, required this.child});
+  const _JsonFixedHeaderDelegate({
+    required this.minHeight,
+    required this.maxHeight,
+    required this.child,
+  });
 
   @override
-  double get minExtent => height;
+  double get minExtent => minHeight;
 
   @override
-  double get maxExtent => height;
+  double get maxExtent => math.max(maxHeight, minHeight);
 
   @override
   Widget build(
@@ -222,7 +363,9 @@ class _JsonFixedHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _JsonFixedHeaderDelegate oldDelegate) {
-    return oldDelegate.height != height || oldDelegate.child != child;
+    return oldDelegate.minHeight != minHeight ||
+        oldDelegate.maxHeight != maxHeight ||
+        oldDelegate.child != child;
   }
 }
 
@@ -436,7 +579,10 @@ class JsonRadialLayoutWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    final count = (_resolveDouble(interpreter, json['count']) ?? 0).toInt();
+    final source = _resolveSource(interpreter, json['source']);
+    final count =
+        source?.length ??
+        (_resolveDouble(interpreter, json['count']) ?? 0).toInt();
     final template = json['itemTemplate'];
     if (template is! Map<String, dynamic>) return const SizedBox.shrink();
     return LayoutBuilder(
@@ -451,21 +597,36 @@ class JsonRadialLayoutWidget extends JsonBaseWidget {
             _resolveDouble(interpreter, json['radius']) ?? size * .28;
         final childSize = _resolveDouble(interpreter, json['childSize']) ?? 56;
         final color = _parseColor(json['backgroundColor']?.toString());
+        final startAngle =
+            (_resolveDouble(interpreter, json['startAngleDeg']) ?? -90) *
+            math.pi /
+            180;
+        final sweepAngle =
+            (_resolveDouble(interpreter, json['sweepAngleDeg']) ?? 360) *
+            math.pi /
+            180;
+        final rotateItems = json['rotateItems'] == true;
         Widget stack = Stack(
           children: List.generate(count, (index) {
-            final angle =
-                -math.pi / 2 + index * 2 * math.pi / math.max(1, count);
+            final divisor = sweepAngle.abs() >= math.pi * 2
+                ? math.max(1, count)
+                : math.max(1, count - 1);
+            final angle = startAngle + index * sweepAngle / divisor;
+            Widget item = interpreter.buildWidgetInLoopContext(
+              context: context,
+              json: template,
+              loopItem: source == null ? index : source[index],
+              loopIndex: index,
+            );
+            if (rotateItems) {
+              item = Transform.rotate(angle: angle + math.pi / 2, child: item);
+            }
             return Positioned(
               left: size / 2 + math.cos(angle) * radius - childSize / 2,
               top: size / 2 + math.sin(angle) * radius - childSize / 2,
               width: childSize,
               height: childSize,
-              child: interpreter.buildWidgetInLoopContext(
-                context: context,
-                json: template,
-                loopItem: index,
-                loopIndex: index,
-              ),
+              child: item,
             );
           }),
         );
@@ -474,6 +635,63 @@ class JsonRadialLayoutWidget extends JsonBaseWidget {
       },
     );
   }
+}
+
+ScrollPhysics? _parsePhysics(String? value) {
+  switch (value) {
+    case 'always':
+      return const AlwaysScrollableScrollPhysics();
+    case 'bouncing':
+      return const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      );
+    case 'clamping':
+      return const ClampingScrollPhysics();
+    default:
+      return null;
+  }
+}
+
+List<dynamic>? _resolveSource(JsonInterpreter interpreter, dynamic sourceRaw) {
+  if (sourceRaw is List) return sourceRaw;
+  if (sourceRaw is String) {
+    final resolved = interpreter.resolveExpression(sourceRaw);
+    if (resolved is List) return resolved;
+  }
+  return null;
+}
+
+EdgeInsets? _resolveInsets(JsonInterpreter interpreter, dynamic value) {
+  if (value == null) return null;
+  if (value is num) {
+    final v = value.toDouble();
+    return v == 0 ? null : EdgeInsets.all(v);
+  }
+  if (value is Map<String, dynamic>) {
+    final all = _resolveDouble(interpreter, value['all']);
+    if (all != null) return all == 0 ? null : EdgeInsets.all(all);
+    final horizontal = _resolveDouble(interpreter, value['horizontal']) ?? 0;
+    final vertical = _resolveDouble(interpreter, value['vertical']) ?? 0;
+    final left = _resolveDouble(interpreter, value['left']) ?? horizontal;
+    final right = _resolveDouble(interpreter, value['right']) ?? horizontal;
+    final top = _resolveDouble(interpreter, value['top']) ?? vertical;
+    final bottom = _resolveDouble(interpreter, value['bottom']) ?? vertical;
+    if (left == 0 && right == 0 && top == 0 && bottom == 0) return null;
+    return EdgeInsets.fromLTRB(left, top, right, bottom);
+  }
+  return null;
+}
+
+bool _resolveBool(JsonInterpreter interpreter, dynamic value) {
+  if (value == null) return false;
+  final resolved = interpreter.resolveExpression(value);
+  if (resolved is bool) return resolved;
+  if (resolved is num) return resolved != 0;
+  if (resolved is String) {
+    final normalized = resolved.trim().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
+  }
+  return false;
 }
 
 double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {

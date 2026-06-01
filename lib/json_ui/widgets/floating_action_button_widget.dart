@@ -13,7 +13,10 @@ class JsonFloatingActionButtonWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final label = interpreter.resolveTemplate(json['label']?.toString() ?? '');
-    final iconName = json['icon']?.toString();
+    final rawIconName = json['icon']?.toString();
+    final iconName = rawIconName == null
+        ? null
+        : interpreter.resolveTemplate(rawIconName);
     final iconData = iconName == null ? null : IconRegistry.get(iconName);
     final action =
         resolveActionAtBuildTime(json['action'], interpreter)

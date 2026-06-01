@@ -3,13 +3,13 @@
   "appid": "19f75283-c206-53a2-8c17-37f48c6d5983",
   "meta": {
     "name": "gsy_flutter_demo/042-drop-select-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "下弹筛选展示效果",
       "en": "Dropdown filter demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：下弹筛选展示效果",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：下弹筛选展示效果",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,532 @@
       "upstreamTitle": "下弹筛选展示效果",
       "upstreamSource": "lib/widget/basic/drop_select_menu/drop_select_demo_page.dart",
       "upstreamWidget": "DropSelectDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "menu": -1,
+      "title1": "title1",
+      "title2": "title2",
+      "title3": "title3"
     },
-    "functions": {}
+    "functions": {
+      "openMenu": {
+        "params": [
+          "i"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.menu"
+                      },
+                      {
+                        "var": "params.i"
+                      }
+                    ]
+                  },
+                  -1,
+                  {
+                    "var": "params.i"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "selectValue": {
+        "params": [
+          "slot",
+          "title"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.title{{ params.slot }}",
+              "value": "{{ params.title }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": -1
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "下弹筛选展示效果",
+        "title": "DropSelectDemoPage",
         "layout": "column",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
             "type": "container",
-            "layout": "column",
+            "layout": "row",
             "children": [
               {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.title1 }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#222222"
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "expand",
+                      "size": 20,
+                      "color": "#666666"
+                    }
+                  ],
+                  "height": 48,
+                  "mainAxisAlignment": "center",
+                  "onTap": {
+                    "call": "@global.openMenu",
+                    "args": {
+                      "i": 0
+                    }
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "下弹筛选展示效果",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
                 }
               },
               {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Dropdown filter demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.title2 }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#222222"
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "expand",
+                      "size": 20,
+                      "color": "#666666"
+                    }
+                  ],
+                  "height": 48,
+                  "mainAxisAlignment": "center",
+                  "onTap": {
+                    "call": "@global.openMenu",
+                    "args": {
+                      "i": 1
+                    }
+                  }
                 }
               },
               {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/drop_select_menu/drop_select_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：DropSelectDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.title3 }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#222222"
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "expand",
+                      "size": 20,
+                      "color": "#666666"
+                    }
+                  ],
+                  "height": 48,
+                  "mainAxisAlignment": "center",
+                  "onTap": {
+                    "call": "@global.openMenu",
+                    "args": {
+                      "i": 2
+                    }
+                  }
                 }
               }
             ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
             "border": {
-              "color": "#E5E7EB",
+              "color": "#EEEEEE",
               "width": 1
-            },
-            "crossAxisAlignment": "start"
+            }
           },
           {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+            "type": "expanded",
+            "child": {
+              "type": "stack",
+              "children": [
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "child": {
+                    "type": "custom_scroll_view",
+                    "slivers": [
+                      {
+                        "type": "sliver_list",
+                        "source": [
+                          "Text 0",
+                          "Text 1",
+                          "Text 2",
+                          "Text 3",
+                          "Text 4",
+                          "Text 5",
+                          "Text 6",
+                          "Text 7",
+                          "Text 8",
+                          "Text 9",
+                          "Text 10",
+                          "Text 11",
+                          "Text 12",
+                          "Text 13",
+                          "Text 14",
+                          "Text 15",
+                          "Text 16",
+                          "Text 17",
+                          "Text 18",
+                          "Text 19",
+                          "Text 20",
+                          "Text 21",
+                          "Text 22",
+                          "Text 23",
+                          "Text 24",
+                          "Text 25",
+                          "Text 26",
+                          "Text 27",
+                          "Text 28",
+                          "Text 29",
+                          "Text 30",
+                          "Text 31",
+                          "Text 32",
+                          "Text 33",
+                          "Text 34",
+                          "Text 35",
+                          "Text 36",
+                          "Text 37",
+                          "Text 38",
+                          "Text 39",
+                          "Text 40",
+                          "Text 41",
+                          "Text 42",
+                          "Text 43",
+                          "Text 44",
+                          "Text 45",
+                          "Text 46",
+                          "Text 47",
+                          "Text 48",
+                          "Text 49",
+                          "Text 50",
+                          "Text 51",
+                          "Text 52",
+                          "Text 53",
+                          "Text 54",
+                          "Text 55",
+                          "Text 56",
+                          "Text 57",
+                          "Text 58",
+                          "Text 59",
+                          "Text 60",
+                          "Text 61",
+                          "Text 62",
+                          "Text 63",
+                          "Text 64",
+                          "Text 65",
+                          "Text 66",
+                          "Text 67",
+                          "Text 68",
+                          "Text 69",
+                          "Text 70",
+                          "Text 71",
+                          "Text 72",
+                          "Text 73",
+                          "Text 74",
+                          "Text 75",
+                          "Text 76",
+                          "Text 77",
+                          "Text 78",
+                          "Text 79",
+                          "Text 80",
+                          "Text 81",
+                          "Text 82",
+                          "Text 83",
+                          "Text 84",
+                          "Text 85",
+                          "Text 86",
+                          "Text 87",
+                          "Text 88",
+                          "Text 89",
+                          "Text 90",
+                          "Text 91",
+                          "Text 92",
+                          "Text 93",
+                          "Text 94",
+                          "Text 95",
+                          "Text 96",
+                          "Text 97",
+                          "Text 98",
+                          "Text 99"
+                        ],
+                        "itemTemplate": {
+                          "type": "container",
+                          "height": 40,
+                          "margin": {
+                            "left": 10
+                          },
+                          "alignment": "centerLeft",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item }}",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#000000"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "list",
+                        "source": [
+                          "距离",
+                          "范围",
+                          "路径",
+                          "回家"
+                        ],
+                        "separator": "none",
+                        "shrinkWrap": true,
+                        "item_template": {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item }}",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#222222"
+                              }
+                            },
+                            {
+                              "type": "expanded",
+                              "child": {
+                                "type": "container",
+                                "children": []
+                              }
+                            },
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 22,
+                              "color": "#2196F3",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  0
+                                ]
+                              }
+                            }
+                          ],
+                          "height": 44,
+                          "padding": {
+                            "horizontal": 10
+                          },
+                          "onTap": {
+                            "call": "@global.selectValue",
+                            "args": {
+                              "slot": 1,
+                              "title": "{{ loop.item }}"
+                            }
+                          }
+                        },
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "global.menu"
+                            },
+                            0
+                          ]
+                        }
+                      },
+                      {
+                        "type": "grid",
+                        "source": [
+                          "选择1",
+                          "选择2"
+                        ],
+                        "crossAxisCount": 2,
+                        "childAspectRatio": 3.2,
+                        "shrinkWrap": true,
+                        "item_template": {
+                          "type": "container",
+                          "padding": 10,
+                          "children": [
+                            {
+                              "type": "container",
+                              "height": 42,
+                              "layout": "column",
+                              "mainAxisAlignment": "center",
+                              "border": {
+                                "color": "#9E9E9E",
+                                "width": 1
+                              },
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "{{ loop.item }}",
+                                  "style": {
+                                    "fontSize": 14,
+                                    "color": "#222222",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ],
+                              "onTap": {
+                                "call": "@global.selectValue",
+                                "args": {
+                                  "slot": 2,
+                                  "title": "{{ loop.item }}"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "global.menu"
+                            },
+                            1
+                          ]
+                        }
+                      },
+                      {
+                        "type": "list",
+                        "source": [
+                          "全部",
+                          "选择2",
+                          "选择3",
+                          "选择4",
+                          "选择5",
+                          "选择6",
+                          "选择7",
+                          "选择7"
+                        ],
+                        "separator": "none",
+                        "shrinkWrap": true,
+                        "item_template": {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item }}",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#222222"
+                              }
+                            },
+                            {
+                              "type": "expanded",
+                              "child": {
+                                "type": "container",
+                                "children": []
+                              }
+                            },
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 22,
+                              "color": "#2196F3",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  0
+                                ]
+                              }
+                            }
+                          ],
+                          "height": 44,
+                          "padding": {
+                            "horizontal": 10
+                          },
+                          "onTap": {
+                            "call": "@global.selectValue",
+                            "args": {
+                              "slot": 3,
+                              "title": "{{ loop.item }}"
+                            }
+                          }
+                        },
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "global.menu"
+                            },
+                            2
+                          ]
+                        }
+                      }
+                    ],
+                    "color": "#F8F8F8",
+                    "visible": {
+                      ">=": [
+                        {
+                          "var": "global.menu"
+                        },
+                        0
+                      ]
+                    }
+                  }
+                }
+              ]
             }
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

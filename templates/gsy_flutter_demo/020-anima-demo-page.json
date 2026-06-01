@@ -3,7 +3,7 @@
   "appid": "cb08d3aa-b8cd-5808-8997-fd2b0b2ec3b3",
   "meta": {
     "name": "gsy_flutter_demo/020-anima-demo-page",
-    "version": "0.1.2",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "控件动画组合展示（旋转加放大圆）",
@@ -23,7 +23,9 @@
   },
   "dependencies": {},
   "global": {
-    "variables": {},
+    "variables": {
+      "portVersion": "json-dsl-primitives-v2"
+    },
     "functions": {}
   },
   "steps": [],
@@ -39,7 +41,7 @@
             "child": {
               "type": "center",
               "child": {
-                "type": "gsy_rotating_circle"
+                "type": "rotating_circle_painter"
               }
             },
             "left": 0,

@@ -13,18 +13,21 @@ class JsonIconWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final rawName = json['name']?.toString();
-    final name =
-        rawName != null ? interpreter.resolveTemplate(rawName) : null;
-    final size = (json['size'] as num?)?.toDouble() ?? 24;
+    final name = rawName != null ? interpreter.resolveTemplate(rawName) : null;
+    final size = _resolveDouble(interpreter, json['size']) ?? 24;
     final rawColor = json['color']?.toString();
-    final colorStr =
-        rawColor != null ? interpreter.resolveTemplate(rawColor) : null;
+    final colorStr = rawColor != null
+        ? interpreter.resolveTemplate(rawColor)
+        : null;
 
     final iconData = name != null ? IconRegistry.get(name) : null;
 
     if (iconData == null) {
-      return Icon(Icons.help_outline,
-          size: size, color: Theme.of(context).colorScheme.error);
+      return Icon(
+        Icons.help_outline,
+        size: size,
+        color: Theme.of(context).colorScheme.error,
+      );
     }
 
     return Icon(iconData, size: size, color: _parseColor(colorStr));
@@ -36,5 +39,13 @@ class JsonIconWidget extends JsonBaseWidget {
     if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
     if (hex.length == 8) return Color(int.parse(hex, radix: 16));
     return null;
+  }
+
+  double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    final resolved = interpreter.resolveExpression(value);
+    if (resolved is num) return resolved.toDouble();
+    return double.tryParse(resolved?.toString() ?? '');
   }
 }
