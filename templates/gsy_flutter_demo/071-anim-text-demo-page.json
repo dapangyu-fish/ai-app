@@ -3,13 +3,13 @@
   "appid": "9deb1473-3f24-5c10-9b65-53a5dc3fbfb0",
   "meta": {
     "name": "gsy_flutter_demo/071-anim-text-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "第三方的动画字体",
       "en": "Animated font package demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：第三方的动画字体",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：第三方的动画字体",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,309 @@
       "upstreamTitle": "第三方的动画字体",
       "upstreamSource": "lib/widget/animation/anim_text_demo_page.dart",
       "upstreamWidget": "AnimTextDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "index": 0,
+      "tapCount": 0
     },
-    "functions": {}
+    "functions": {
+      "next": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.index",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.index"
+                      },
+                      1
+                    ]
+                  },
+                  6
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tapCount",
+              "value": 0
+            }
+          }
+        ]
+      },
+      "tap": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tapCount",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.tapCount"
+                  },
+                  1
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "第三方的动画字体",
-        "layout": "column",
+        "title": "AnimTextDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Be AWESOME",
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "width": 300,
+                  "height": 300,
+                  "color": "#EF6C00",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      0
+                    ]
+                  },
+                  "onTap": {
+                    "call": "@global.tap",
+                    "args": {}
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "第三方的动画字体",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "do it RIGHT NOW!!!",
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "width": 300,
+                  "height": 300,
+                  "color": "#6D4C41",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      1
+                    ]
+                  },
+                  "onTap": {
+                    "call": "@global.tap",
+                    "args": {}
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "you must know what to do,",
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "width": 300,
+                  "height": 300,
+                  "color": "#558B2F",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      2
+                    ]
+                  },
+                  "onTap": {
+                    "call": "@global.tap",
+                    "args": {}
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Design first, then code |",
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "width": 300,
+                  "height": 300,
+                  "color": "#00796B",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      3
+                    ]
+                  },
+                  "onTap": {
+                    "call": "@global.tap",
+                    "args": {}
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Think Build Ship",
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "width": 300,
+                  "height": 300,
+                  "color": "#1976D2",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      4
+                    ]
+                  },
+                  "onTap": {
+                    "call": "@global.tap",
+                    "args": {}
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "GSY Flutter Demo",
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#673AB7",
+                        "fontWeight": "bold",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "width": 300,
+                  "height": 300,
+                  "color": "#ECEFF1",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      5
+                    ]
+                  },
+                  "onTap": {
+                    "call": "@global.tap",
+                    "args": {}
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Animated font package demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+              ],
+              "height": 300,
+              "alignment": "center"
+            },
+            "left": 45,
+            "top": 190,
+            "right": 45
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/anim_text_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：AnimTextDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
+            "type": "positioned",
+            "child": {
+              "type": "text",
+              "value": "Taps: {{ global.tapCount }}",
+              "style": {
+                "fontSize": 16,
+                "color": "#333333",
+                "textAlign": "center"
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
+            "left": 0,
+            "right": 0,
+            "bottom": 110
           },
           {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
+            "type": "positioned",
+            "child": {
+              "type": "button",
+              "label": "▶",
+              "variant": "filled",
+              "action": {
+                "call": "@global.next",
+                "args": {}
+              }
             },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "right": 24,
+            "bottom": 24
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

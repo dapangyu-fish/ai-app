@@ -3,13 +3,13 @@
   "appid": "b2cb5878-ccd5-50ac-bc43-9d3192dc3c5e",
   "meta": {
     "name": "gsy_flutter_demo/068-link-sliver-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "类似 boss 直聘我的页面联动效果",
       "en": "BOSS-style linked page"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：类似 boss 直聘我的页面联动效果",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：类似 boss 直聘我的页面联动效果",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,7 +27,310 @@
       "upstreamTitle": "类似 boss 直聘我的页面联动效果",
       "upstreamSource": "lib/widget/scroll/link_sliver/link_sliver_demo_page.dart",
       "upstreamWidget": "LinkSliverDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "items": [
+        {
+          "index": 0
+        },
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        },
+        {
+          "index": 5
+        },
+        {
+          "index": 6
+        },
+        {
+          "index": 7
+        },
+        {
+          "index": 8
+        },
+        {
+          "index": 9
+        },
+        {
+          "index": 10
+        },
+        {
+          "index": 11
+        },
+        {
+          "index": 12
+        },
+        {
+          "index": 13
+        },
+        {
+          "index": 14
+        },
+        {
+          "index": 15
+        },
+        {
+          "index": 16
+        },
+        {
+          "index": 17
+        },
+        {
+          "index": 18
+        },
+        {
+          "index": 19
+        },
+        {
+          "index": 20
+        },
+        {
+          "index": 21
+        },
+        {
+          "index": 22
+        },
+        {
+          "index": 23
+        },
+        {
+          "index": 24
+        },
+        {
+          "index": 25
+        },
+        {
+          "index": 26
+        },
+        {
+          "index": 27
+        },
+        {
+          "index": 28
+        },
+        {
+          "index": 29
+        },
+        {
+          "index": 30
+        },
+        {
+          "index": 31
+        },
+        {
+          "index": 32
+        },
+        {
+          "index": 33
+        },
+        {
+          "index": 34
+        },
+        {
+          "index": 35
+        },
+        {
+          "index": 36
+        },
+        {
+          "index": 37
+        },
+        {
+          "index": 38
+        },
+        {
+          "index": 39
+        },
+        {
+          "index": 40
+        },
+        {
+          "index": 41
+        },
+        {
+          "index": 42
+        },
+        {
+          "index": 43
+        },
+        {
+          "index": 44
+        },
+        {
+          "index": 45
+        },
+        {
+          "index": 46
+        },
+        {
+          "index": 47
+        },
+        {
+          "index": 48
+        },
+        {
+          "index": 49
+        },
+        {
+          "index": 50
+        },
+        {
+          "index": 51
+        },
+        {
+          "index": 52
+        },
+        {
+          "index": 53
+        },
+        {
+          "index": 54
+        },
+        {
+          "index": 55
+        },
+        {
+          "index": 56
+        },
+        {
+          "index": 57
+        },
+        {
+          "index": 58
+        },
+        {
+          "index": 59
+        },
+        {
+          "index": 60
+        },
+        {
+          "index": 61
+        },
+        {
+          "index": 62
+        },
+        {
+          "index": 63
+        },
+        {
+          "index": 64
+        },
+        {
+          "index": 65
+        },
+        {
+          "index": 66
+        },
+        {
+          "index": 67
+        },
+        {
+          "index": 68
+        },
+        {
+          "index": 69
+        },
+        {
+          "index": 70
+        },
+        {
+          "index": 71
+        },
+        {
+          "index": 72
+        },
+        {
+          "index": 73
+        },
+        {
+          "index": 74
+        },
+        {
+          "index": 75
+        },
+        {
+          "index": 76
+        },
+        {
+          "index": 77
+        },
+        {
+          "index": 78
+        },
+        {
+          "index": 79
+        },
+        {
+          "index": 80
+        },
+        {
+          "index": 81
+        },
+        {
+          "index": 82
+        },
+        {
+          "index": 83
+        },
+        {
+          "index": 84
+        },
+        {
+          "index": 85
+        },
+        {
+          "index": 86
+        },
+        {
+          "index": 87
+        },
+        {
+          "index": 88
+        },
+        {
+          "index": 89
+        },
+        {
+          "index": 90
+        },
+        {
+          "index": 91
+        },
+        {
+          "index": 92
+        },
+        {
+          "index": 93
+        },
+        {
+          "index": 94
+        },
+        {
+          "index": 95
+        },
+        {
+          "index": 96
+        },
+        {
+          "index": 97
+        },
+        {
+          "index": 98
+        },
+        {
+          "index": 99
+        }
+      ]
     },
     "functions": {}
   },
@@ -36,152 +339,207 @@
     "screens": [
       {
         "id": "home",
-        "title": "类似 boss 直聘我的页面联动效果",
-        "layout": "column",
+        "title": "LinkSliverDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "list",
-                    "size": 26,
-                    "color": "#0B8E70"
+            "type": "positioned",
+            "child": {
+              "type": "custom_scroll_view",
+              "physics": "bouncing",
+              "slivers": [
+                {
+                  "type": "sliver_box",
+                  "height": 260,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "image",
+                        "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                        "fit": "cover",
+                        "height": 200,
+                        "paddingV": 0
+                      },
+                      {
+                        "type": "container",
+                        "layout": "row",
+                        "children": [
+                          {
+                            "type": "container",
+                            "layout": "column",
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "GSY",
+                                "style": {
+                                  "fontSize": 20,
+                                  "color": "#FFFFFF",
+                                  "fontWeight": "bold"
+                                }
+                              }
+                            ],
+                            "width": 70,
+                            "height": 60,
+                            "alignment": "centerLeft"
+                          },
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "layout": "column",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "FFFF",
+                                  "style": {
+                                    "fontSize": 16,
+                                    "color": "#FFFFFF",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ],
+                              "height": 60,
+                              "alignment": "center"
+                            }
+                          },
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "layout": "column",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "FFFF",
+                                  "style": {
+                                    "fontSize": 16,
+                                    "color": "#FFFFFF",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ],
+                              "height": 60,
+                              "alignment": "center"
+                            }
+                          },
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "layout": "column",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "FFFF",
+                                  "style": {
+                                    "fontSize": 16,
+                                    "color": "#FFFFFF",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ],
+                              "height": 60,
+                              "alignment": "center"
+                            }
+                          },
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "layout": "column",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "FFFF",
+                                  "style": {
+                                    "fontSize": 16,
+                                    "color": "#FFFFFF",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ],
+                              "height": 60,
+                              "alignment": "center"
+                            }
+                          }
+                        ],
+                        "height": 60,
+                        "color": "#66000000",
+                        "padding": {
+                          "left": 20
+                        }
+                      }
+                    ],
+                    "color": "#2196F3"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E7F6F1",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "类似 boss 直聘我的页面联动效果",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 60,
+                  "minHeight": 60,
+                  "pinned": false,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Pull linked header",
+                        "style": {
+                          "fontSize": 16,
+                          "color": "#FFFFFF",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "color": "#0B8E70",
+                    "alignment": "center"
+                  }
+                },
+                {
+                  "type": "sliver_list",
+                  "source": "{{ global.items }}",
+                  "itemTemplate": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "row",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item  {{ loop.index }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "padding": {
+                          "left": 10
+                        }
+                      }
+                    ]
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "BOSS-style linked page",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：列表滚动",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/scroll/link_sliver/link_sliver_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：LinkSliverDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
+              ]
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": false
       }
     ]
   }

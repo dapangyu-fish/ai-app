@@ -3,13 +3,13 @@
   "appid": "7344912c-17d1-54cf-8599-46618162a5f6",
   "meta": {
     "name": "gsy_flutter_demo/067-canvas-click-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "纯 Canvas 绘制闹钟",
       "en": "Canvas alarm clock"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：纯 Canvas 绘制闹钟",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：纯 Canvas 绘制闹钟",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,195 @@
       "upstreamTitle": "纯 Canvas 绘制闹钟",
       "upstreamSource": "lib/widget/canvas/canvas_click_demo_page.dart",
       "upstreamWidget": "CanvasClickDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "tick": 0,
+      "shake": false
     },
-    "functions": {}
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tick",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.tick"
+                      },
+                      1
+                    ]
+                  },
+                  60
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "toggle": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.shake",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.shake"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "纯 Canvas 绘制闹钟",
-        "layout": "column",
+        "title": "CanvasClickDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 800,
+              "runImmediately": true,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
                 "type": "container",
                 "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "palette",
-                    "size": 26,
-                    "color": "#7A57D1"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#F0ECFB",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "纯 Canvas 绘制闹钟",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Canvas alarm clock",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                "children": [],
+                "color": "#FFFFFF"
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
+            "type": "positioned",
+            "child": {
+              "type": "gesture_detector",
+              "onTap": {
+                "call": "@global.toggle",
+                "args": {}
               },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：绘制与Shader",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/canvas/canvas_click_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：CanvasClickDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
+              "child": {
+                "type": "transform",
+                "rotateZ": {
+                  "if": [
+                    {
+                      "var": "global.shake"
+                    },
+                    3,
+                    0
+                  ]
+                },
+                "child": {
+                  "type": "container",
+                  "layout": "stack",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [],
+                      "width": 260,
+                      "height": 260,
+                      "shape": "circle",
+                      "border": {
+                        "color": "#448AFF",
+                        "width": 18
+                      }
+                    },
+                    {
+                      "type": "radial_layout",
+                      "count": 12,
+                      "radius": 116,
+                      "childSize": 22,
+                      "itemTemplate": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.index }}",
+                            "style": {
+                              "fontSize": 10,
+                              "color": "#000000",
+                              "textAlign": "center"
+                            }
+                          }
+                        ],
+                        "alignment": "center"
+                      }
+                    },
+                    {
+                      "type": "transform",
+                      "rotateZ": 90,
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [],
+                        "width": 70,
+                        "height": 6,
+                        "color": "#111111"
+                      }
+                    },
+                    {
+                      "type": "transform",
+                      "rotateZ": {
+                        "*": [
+                          {
+                            "var": "global.tick"
+                          },
+                          6
+                        ]
+                      },
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [],
+                        "width": 110,
+                        "height": 3,
+                        "color": "#F44336"
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [],
+                      "width": 16,
+                      "height": 16,
+                      "shape": "circle",
+                      "color": "#FFC107"
+                    }
+                  ],
+                  "width": 300,
+                  "height": 300,
+                  "alignment": "center"
                 }
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 45,
+            "top": 220
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }
