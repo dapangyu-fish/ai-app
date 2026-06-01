@@ -179,6 +179,12 @@ multi-turn drift.
   Column, or by over-conservative runtime detection of horizontal `expanded`
   cards. Use `shrinkWrap:true` for embedded short lists/grids, keep full-height
   lists as direct screen/tab main regions, and verify scroll on `402x874`.
+- **Template anchoring / skinning:** DeepSeek may over-copy the nearest demo.
+  Treat templates as DSL/API references only. For IM/social apps, `demo_im`
+  is only for `lib_im` / `lib_user` wiring; tabs, page ids, function names,
+  contact rows, visual hierarchy, and copy must be redesigned for the current
+  product. If replacing the brand words still leaves the app looking like the
+  template, update the prompt and regenerate.
 - **Game uses emoji as player/collectible:** game prompt requires sprite,
   animated sprite, or coherent pixel art for primary entities.
 

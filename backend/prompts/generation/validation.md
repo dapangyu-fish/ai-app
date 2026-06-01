@@ -77,6 +77,7 @@ python3 backend/validate_json_app.py "$TMPFILE"
 - 新 button action 推荐 `{ "call": "@global.xxx", "args": {} }`，不要写冗余 `"type": "call"`。
 - JsonLogic 使用标准单 key 形状，例如 `{ "if": [cond, a, b] }`、`{ "+": [1, 2] }`。不要写 `{ "op": "if", "args": [...] }`。
 - `text.value`、`label`、`title`、`subtitle`、`emptyText` 等展示字段必须是字符串或 `{{ global.xxx }}` 插值。不要把 JsonLogic Map/List 直接放进去；需要动态文案时先在 action/global 函数里写入 `global.xxxLabel`，再显示 `{{ global.xxxLabel }}`。
+- 模板只能作为 DSL/API 参考，不能整套换壳。IM/社交类尤其不能复用 `demo_im` 的 tab 结构、页面 id、函数名集合、通讯录静态行和视觉样式。
 
 ## action / widget 检查
 

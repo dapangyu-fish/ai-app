@@ -25,6 +25,7 @@ FORBIDDEN_UI_KEYS = {
 
 EDGE_KEYS = {"margin", "padding"}
 UNSUPPORTED_STYLE_KEYS = {"margin", "padding"}
+SCROLL_WIDGET_TYPES = {"list", "grid"}
 
 
 def _path_text(path: tuple[Any, ...]) -> str:
@@ -82,6 +83,47 @@ def _convert_op_args_expression(value: dict[str, Any]) -> dict[str, Any]:
     return {value["op"]: value.get("args")}
 
 
+def _is_direct_embedded_scroll_widget(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and value.get("type") in SCROLL_WIDGET_TYPES
+        and value.get("shrinkWrap") is not True
+        and value.get("scrollToEnd") is not True
+    )
+
+
+def _repair_screen_scroll_contract(
+    node: dict[str, Any],
+    path: tuple[Any, ...],
+    changes: list[str],
+) -> None:
+    if not _is_screen_or_tab_path(path):
+        return
+
+    children = node.get("children")
+    if not isinstance(children, list) or len(children) < 6:
+        return
+
+    scroll_indices = [
+        i
+        for i, child in enumerate(children)
+        if _is_direct_embedded_scroll_widget(child)
+    ]
+    if not scroll_indices:
+        return
+
+    static_sibling_count = len(children) - len(scroll_indices)
+    if static_sibling_count < 4:
+        return
+
+    for i in scroll_indices:
+        children[i]["shrinkWrap"] = True
+        changes.append(
+            f"{_path_text((*path, 'children', i, 'shrinkWrap'))}: "
+            "set true for embedded list/grid in long screen"
+        )
+
+
 def _repair(
     node: Any,
     path: tuple[Any, ...],
@@ -117,6 +159,8 @@ def _repair(
             old_type = type(node["children"]).__name__
             node["children"] = _as_children(node["children"])
             changes.append(f"{_path_text((*path, 'children'))}: wrapped {old_type} children as list")
+
+        _repair_screen_scroll_contract(node, path, changes)
 
         for key in list(node.keys()):
             if key in FORBIDDEN_UI_KEYS:

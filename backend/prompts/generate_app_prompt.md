@@ -238,7 +238,7 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 2. 阅读 `templates/bacsase/anti_patterns_and_pitfalls.md` 避坑指南，了解极其容易犯的白屏崩溃错误（必读！！！）。
 3. 阅读 `lib/json_ui/interpreter.dart` 确认所有可用的 @内置函数。
 4. 查看 `templates/` 目录下有哪些模板 APP。
-5. 阅读至少一个与用户需求最相似的模板文件，学习正确写法。普通记录 / 管理 / CRM / 列表工具类 APP 可阅读 `templates/native_quality_notes.json`、`templates/native_quality_crm.json`、`templates/native_quality_budget.json`、`templates/native_quality_habits.json`、`templates/native_quality_workout.json`，学习首屏信息密度、摘要卡、搜索、筛选、列表卡片、详情/表单结构。**非 CRUD 应用不要套这些列表模板**，应优先阅读 `templates/framework_quality_smart_home.json`、`templates/framework_quality_ops_dashboard.json`、`templates/framework_quality_travel_pass.json`、`templates/framework_quality_course_player.json`、`templates/framework_quality_camera_inspection.json`，学习 `switch/slider/grid/chart/map/qr_code/video/image_picker/tab_view/progress` 等框架控件如何组合成完全不同的应用形态；IM/聊天类可参考 `templates/demo_im.json`。
+5. 阅读至少一个与用户需求最相似的模板文件，学习正确写法。普通记录 / 管理 / CRM / 列表工具类 APP 可阅读 `templates/native_quality_notes.json`、`templates/native_quality_crm.json`、`templates/native_quality_budget.json`、`templates/native_quality_habits.json`、`templates/native_quality_workout.json`，学习首屏信息密度、摘要卡、搜索、筛选、列表卡片、详情/表单结构。**非 CRUD 应用不要套这些列表模板**，应优先阅读 `templates/framework_quality_smart_home.json`、`templates/framework_quality_ops_dashboard.json`、`templates/framework_quality_travel_pass.json`、`templates/framework_quality_course_player.json`、`templates/framework_quality_camera_inspection.json`，学习 `switch/slider/grid/chart/map/qr_code/video/image_picker/tab_view/progress` 等框架控件如何组合成完全不同的应用形态；IM/聊天类只能把 `templates/demo_im.json` 当作 `lib_im` / `lib_user` API 接线参考，不能复用它的 tab 结构、页面 id、函数名集合、通讯录静态行或视觉样式。
 6. 如果需求涉及游戏、角色、地图、图标、背景、图片素材等视觉内容，必须按下文"官方 CC0 素材库"流程选择素材。
 7. 如有不确定的组件属性或行为，阅读 `lib/json_ui/widgets/` 下的 Dart 源码确认。
 
@@ -466,6 +466,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 - 不要同时使用默认 screen title AppBar 和自定义大 header 造成重复标题；二选一。
 - 主要按钮和标题不要用 emoji 装饰；用 `icon` / button `icon` 字段。
 - 长内容页面必须能纵向滚到底。普通静态详情页/仪表盘页直接让 screen/tab 外层滚动；短列表/最近记录/预览网格嵌在页面中时必须写 `shrinkWrap: true`。普通 full-height `list` 只作为 screen/tab 的主滚动区域直接放在 `children` 中，前后静态内容必须很紧凑。
+- 模板只能学习 DSL/API 写法，不能当换壳骨架。生成前必须让 tabs、页面、函数名和视觉层级服务于本轮产品；如果换掉品牌词后仍像所读模板，说明设计失败。
 - validator 已无 ERROR 后，不要继续大改 UI。若只有冗余 `action.type` 等机械 WARN，运行 `repair_json_app.py` 后重新校验；无 ERROR 就完成。
 
 1. **Container 默认是横向排列 (layout: "row")！** 如果你需要上下排列，必须显式加上 `"layout": "column"`！否则内部放入 list 会直接导致 Flutter 布局崩溃（白屏）！

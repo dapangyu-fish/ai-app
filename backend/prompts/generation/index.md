@@ -35,7 +35,7 @@
 `im_social`：
 - 读 `backend/prompts/generation/im_social.md`
 - 读 `backend/prompts/generation/validation.md`
-- 参考 `templates/demo_im.json`，但不要直接换壳照抄。
+- 只把 `templates/demo_im.json` 当作 `lib_im` / `lib_user` API 接线参考；不要复用它的 tab 结构、页面 id、函数名集合、通讯录静态行或视觉样式。
 
 `media_device`：
 - 读 `backend/prompts/generation/media_device.md`
