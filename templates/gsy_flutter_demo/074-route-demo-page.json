@@ -3,7 +3,7 @@
   "appid": "6971cd17-c7aa-5395-b0ad-753d8fa33c82",
   "meta": {
     "name": "gsy_flutter_demo/074-route-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "测试路由嵌套",
