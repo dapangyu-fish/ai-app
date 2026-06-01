@@ -3,13 +3,13 @@
   "appid": "fc20296e-8588-597b-b9fd-c363e0f9f543",
   "meta": {
     "name": "gsy_flutter_demo/012-positioned-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "通过绝对定位布局",
       "en": "Absolute positioned layout"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：通过绝对定位布局",
+    "description": "PositionedDemoPage：通过绝对定位布局",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -23,12 +23,7 @@
   },
   "dependencies": {},
   "global": {
-    "variables": {
-      "upstreamTitle": "通过绝对定位布局",
-      "upstreamSource": "lib/widget/basic/positioned_demo_page.dart",
-      "upstreamWidget": "PositionedDemoPage",
-      "portStatus": "in_development"
-    },
+    "variables": {},
     "functions": {}
   },
   "steps": [],
@@ -36,152 +31,45 @@
     "screens": [
       {
         "id": "home",
-        "title": "通过绝对定位布局",
-        "layout": "column",
+        "title": "PositionedDemoPage",
+        "layout": "stack",
+        "padding": 15,
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "通过绝对定位布局",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Absolute positioned layout",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+            "type": "material_button",
+            "color": "#2196F3"
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/positioned_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：PositionedDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
+            "type": "positioned",
+            "leftFactor": 0.5,
+            "child": {
+              "type": "material_button",
+              "color": "#69F0AE"
+            }
           },
           {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+            "type": "positioned",
+            "leftFactor": 0.2,
+            "topFactor": 0.75,
+            "child": {
+              "type": "material_button",
+              "color": "#FFEB3B"
+            }
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.5,
+            "leftOffset": -44,
+            "topFactor": 0.5,
+            "subtractSafeTop": true,
+            "subtractToolbar": true,
+            "child": {
+              "type": "material_button",
+              "color": "#FF5252"
             }
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

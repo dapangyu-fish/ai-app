@@ -823,7 +823,9 @@ class Validator:
 
     @staticmethod
     def _is_number(value: Any) -> bool:
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return True
+        return isinstance(value, str) and "{{" in value and "}}" in value
 
     @staticmethod
     def _path(base: str, key: Any) -> str:

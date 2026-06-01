@@ -2527,6 +2527,14 @@ class JsonScreenView extends ConsumerWidget {
       drawer = drawer_helper.buildDrawer(context, drawerConfig, interpreter);
     }
 
+    final footerButtonsConfig = screenConfig['footerButtons'];
+    final footerButtons = footerButtonsConfig is List
+        ? footerButtonsConfig
+              .whereType<Map<String, dynamic>>()
+              .map((childJson) => interpreter.buildWidget(context, childJson))
+              .toList()
+        : null;
+
     // screen.layout=stack 时，需要全屏 Stack（绝对定位才有参考系），
     // 不能再放进 SingleChildScrollView 里——否则 Stack 高度坍缩到子项最大尺寸
     final isStackLayout = (contentConfig['layout'] ?? 'column') == 'stack';
@@ -2573,6 +2581,7 @@ class JsonScreenView extends ConsumerWidget {
         backgroundColor: bgColor,
         appBar: appBar,
         drawer: drawer,
+        persistentFooterButtons: footerButtons,
         body: SafeArea(child: bodyContent),
       ),
     );

@@ -53,6 +53,27 @@ class JsonInterpreter extends ChangeNotifier {
   final List<void Function()> _flameGameResetters = [];
   final List<void Function(String name, Map<String, dynamic> data)>
   _flameGameInputHandlers = [];
+  final Map<String, ScrollController> _scrollControllers = {};
+  final Map<String, Map<int, GlobalKey>> _scrollTargetKeys = {};
+
+  void registerScrollController(String id, ScrollController controller) {
+    if (id.isEmpty) return;
+    _scrollControllers[id] = controller;
+  }
+
+  void unregisterScrollController(String id, ScrollController controller) {
+    if (_scrollControllers[id] == controller) {
+      _scrollControllers.remove(id);
+    }
+  }
+
+  GlobalKey scrollTargetKey(String controllerId, int index) {
+    final targets = _scrollTargetKeys.putIfAbsent(
+      controllerId,
+      () => <int, GlobalKey>{},
+    );
+    return targets.putIfAbsent(index, GlobalKey.new);
+  }
 
   void registerFlameGameResetter(void Function() resetter) {
     _flameGameResetters.add(resetter);
@@ -471,6 +492,8 @@ class JsonInterpreter extends ChangeNotifier {
     _eventContextStack.clear();
     _navigationHistory.clear();
     _depLoader.clear();
+    _scrollControllers.clear();
+    _scrollTargetKeys.clear();
     for (final c in _textControllers.values) {
       c.dispose();
     }
@@ -1188,6 +1211,33 @@ class JsonInterpreter extends ChangeNotifier {
         );
         await Future.delayed(Duration(milliseconds: ms));
         return null;
+      case '@scroll_to_top':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final controller = _scrollControllers[id];
+        if (controller == null || !controller.hasClients) return false;
+        await controller.animateTo(
+          0,
+          duration: Duration(
+            milliseconds: _toInt(resolvedArgs['durationMs'] ?? 1000),
+          ),
+          curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+        );
+        return true;
+      case '@scroll_to_index':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final index = _toInt(resolvedArgs['index'] ?? 0);
+        final key = _scrollTargetKeys[id]?[index];
+        final targetContext = key?.currentContext;
+        if (targetContext == null) return false;
+        await Scrollable.ensureVisible(
+          targetContext,
+          duration: Duration(
+            milliseconds: _toInt(resolvedArgs['durationMs'] ?? 500),
+          ),
+          curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+          alignment: _toDouble(resolvedArgs['alignment'] ?? 0.0),
+        );
+        return true;
       case '@throw':
         // 主动抛错——用于测试 @try_catch / 业务侧主动失败
         throw Exception(
@@ -3406,6 +3456,23 @@ class JsonInterpreter extends ChangeNotifier {
     if (val is int) return val.toDouble();
     if (val is String) return double.tryParse(val) ?? 0.0;
     return 0.0;
+  }
+
+  Curve _parseScrollCurve(String? value) {
+    switch (value) {
+      case 'linear':
+        return Curves.linear;
+      case 'bounceInOut':
+        return Curves.bounceInOut;
+      case 'easeInOut':
+        return Curves.easeInOut;
+      case 'easeOut':
+        return Curves.easeOut;
+      case 'easeIn':
+        return Curves.easeIn;
+      default:
+        return Curves.ease;
+    }
   }
 
   Map<String, String>? _toStringMap(dynamic val) {

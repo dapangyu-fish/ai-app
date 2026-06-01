@@ -33,6 +33,10 @@ class JsonListWidget extends JsonBaseWidget {
     );
     final onRefresh = json['onRefresh'] as Map<String, dynamic>?;
     final onLoadMore = json['onLoadMore'] as Map<String, dynamic>?;
+    final onScroll = json['onScroll'] as Map<String, dynamic>?;
+    final onScrollNotification =
+        json['onScrollNotification'] as Map<String, dynamic>?;
+    final controllerId = json['controller']?.toString();
     // separator: "none" 时不画横线（聊天气泡列表 / 卡片网格用），
     // 默认（不写或 "divider"）保留 1px 分隔线，跟历史行为一致
     final separator = json['separator']?.toString() ?? 'divider';
@@ -169,7 +173,14 @@ class JsonListWidget extends JsonBaseWidget {
         loopItem: items[index],
         loopIndex: index,
       );
-      return IntrinsicHeight(child: itemWidget);
+      final wrapped = IntrinsicHeight(child: itemWidget);
+      if (controllerId != null && controllerId.isNotEmpty) {
+        return KeyedSubtree(
+          key: interpreter.scrollTargetKey(controllerId, index),
+          child: wrapped,
+        );
+      }
+      return wrapped;
     }
 
     final totalCount = items.length + (onLoadMore != null ? 1 : 0);
@@ -180,6 +191,10 @@ class JsonListWidget extends JsonBaseWidget {
       itemBuilder: itemBuilder,
       scrollToEnd: scrollToEnd,
       shrinkWrap: shrinkWrap,
+      controllerId: controllerId,
+      interpreter: interpreter,
+      onScroll: onScroll,
+      onScrollNotification: onScrollNotification,
     );
 
     // 下拉刷新包裹
@@ -258,6 +273,10 @@ class _AutoScrollListView extends StatefulWidget {
   final Widget Function(BuildContext, int) itemBuilder;
   final bool scrollToEnd;
   final bool shrinkWrap;
+  final String? controllerId;
+  final JsonInterpreter interpreter;
+  final Map<String, dynamic>? onScroll;
+  final Map<String, dynamic>? onScrollNotification;
 
   const _AutoScrollListView({
     this.pageKey,
@@ -266,6 +285,10 @@ class _AutoScrollListView extends StatefulWidget {
     required this.itemBuilder,
     required this.scrollToEnd,
     required this.shrinkWrap,
+    required this.controllerId,
+    required this.interpreter,
+    required this.onScroll,
+    required this.onScrollNotification,
   });
 
   @override
@@ -280,6 +303,15 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
   void initState() {
     super.initState();
     _controller = ScrollController();
+    if (widget.controllerId != null && widget.controllerId!.isNotEmpty) {
+      widget.interpreter.registerScrollController(
+        widget.controllerId!,
+        _controller,
+      );
+    }
+    if (widget.onScroll != null) {
+      _controller.addListener(_handleScroll);
+    }
     if (widget.scrollToEnd) {
       _scheduleJumpToEnd();
     }
@@ -302,16 +334,58 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
     });
   }
 
+  void _handleScroll() {
+    if (!mounted || !_controller.hasClients || widget.onScroll == null) {
+      return;
+    }
+    final position = _controller.position;
+    widget.interpreter.executeActionWithEvent(widget.onScroll!, context, {
+      'offset': position.pixels,
+      'maxScrollExtent': position.maxScrollExtent,
+      'isEnd': position.pixels == position.maxScrollExtent,
+    });
+  }
+
+  bool _handleNotification(ScrollNotification notification) {
+    if (widget.onScrollNotification == null) return false;
+    final type = switch (notification) {
+      ScrollStartNotification() => 'ScrollStart',
+      ScrollUpdateNotification() => 'ScrollUpdate',
+      ScrollEndNotification() => 'ScrollEnd',
+      UserScrollNotification() => ' UserScroll',
+      _ => '',
+    };
+    widget.interpreter.executeActionWithEvent(
+      widget.onScrollNotification!,
+      context,
+      {
+        'type': type,
+        'offset': notification.metrics.pixels,
+        'maxScrollExtent': notification.metrics.maxScrollExtent,
+        'isEnd':
+            notification.metrics.pixels == notification.metrics.maxScrollExtent,
+      },
+    );
+    return false;
+  }
+
   @override
   void dispose() {
+    if (widget.controllerId != null && widget.controllerId!.isNotEmpty) {
+      widget.interpreter.unregisterScrollController(
+        widget.controllerId!,
+        _controller,
+      );
+    }
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    Widget list;
     if (widget.separator == 'none') {
-      return ListView.builder(
+      list = ListView.builder(
         key: widget.pageKey,
         controller: _controller,
         shrinkWrap: widget.shrinkWrap,
@@ -321,16 +395,26 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
         itemCount: widget.itemCount,
         itemBuilder: widget.itemBuilder,
       );
+    } else {
+      list = ListView.separated(
+        key: widget.pageKey,
+        controller: _controller,
+        shrinkWrap: widget.shrinkWrap,
+        physics: widget.shrinkWrap
+            ? const NeverScrollableScrollPhysics()
+            : null,
+        itemCount: widget.itemCount,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: widget.itemBuilder,
+      );
     }
-    return ListView.separated(
-      key: widget.pageKey,
-      controller: _controller,
-      shrinkWrap: widget.shrinkWrap,
-      physics: widget.shrinkWrap ? const NeverScrollableScrollPhysics() : null,
-      itemCount: widget.itemCount,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: widget.itemBuilder,
-    );
+    if (widget.onScrollNotification != null) {
+      list = NotificationListener<ScrollNotification>(
+        onNotification: _handleNotification,
+        child: list,
+      );
+    }
+    return list;
   }
 }
 

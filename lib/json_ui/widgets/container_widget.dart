@@ -16,12 +16,12 @@ class JsonContainerWidget extends JsonBaseWidget {
   ) {
     final children = json['children'] as List<dynamic>? ?? [];
     final layout = json['layout'] ?? 'row';
-    final padding = (json['padding'] as num?)?.toDouble() ?? 0;
-    final margin = (json['margin'] as num?)?.toDouble() ?? 0;
-    final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 0;
-    final elevation = (json['elevation'] as num?)?.toDouble() ?? 0;
-    final width = (json['width'] as num?)?.toDouble();
-    final height = (json['height'] as num?)?.toDouble();
+    final padding = _resolveDouble(interpreter, json['padding']) ?? 0;
+    final margin = _resolveDouble(interpreter, json['margin']) ?? 0;
+    final borderRadius = _resolveDouble(interpreter, json['borderRadius']) ?? 0;
+    final elevation = _resolveDouble(interpreter, json['elevation']) ?? 0;
+    final width = _resolveDouble(interpreter, json['width']);
+    final height = _resolveDouble(interpreter, json['height']);
 
     // 背景色（支持 "{{ loop.item.bubble_color }}" 这类模板）
     final rawColor = json['color']?.toString();
@@ -95,17 +95,27 @@ class JsonContainerWidget extends JsonBaseWidget {
       );
     }
 
+    final shape = json['shape']?.toString();
+    final clipBehavior = switch (json['clipBehavior']?.toString()) {
+      'hardEdge' => Clip.hardEdge,
+      'antiAlias' => Clip.antiAlias,
+      'antiAliasWithSaveLayer' => Clip.antiAliasWithSaveLayer,
+      _ => Clip.none,
+    };
+
     Widget container = Container(
       width: width,
       height: height,
       padding: padding > 0 ? EdgeInsets.all(padding) : null,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: borderRadius > 0
-            ? BorderRadius.circular(borderRadius)
-            : null,
+        shape: shape == 'circle' ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: shape == 'circle'
+            ? null
+            : (borderRadius > 0 ? BorderRadius.circular(borderRadius) : null),
         border: border,
       ),
+      clipBehavior: clipBehavior,
       child: _wrapWithContrastText(context, bgColor, layoutWidget),
     );
 
@@ -179,5 +189,13 @@ class JsonContainerWidget extends JsonBaseWidget {
     if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
     if (hex.length == 8) return Color(int.parse(hex, radix: 16));
     return null;
+  }
+
+  double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    final resolved = interpreter.resolveExpression(value);
+    if (resolved is num) return resolved.toDouble();
+    return double.tryParse(resolved?.toString() ?? '');
   }
 }

@@ -55,6 +55,10 @@ import 'widgets/reorderable_list_widget.dart';
 import 'widgets/flame_game_widget.dart';
 import 'widgets/analog_stick_widget.dart';
 import 'widgets/floating_layer_widget.dart';
+import 'widgets/transform_widget.dart';
+import 'widgets/material_button_widget.dart';
+import 'widgets/positioned_widget.dart';
+import 'widgets/cupertino_refresh_list_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -111,6 +115,10 @@ class JsonWidgetBuilder {
     'flame_game': JsonFlameGameWidget(),
     'analog_stick': JsonAnalogStickWidget(),
     'floating_layer': JsonFloatingLayerWidget(),
+    'transform': JsonTransformWidget(),
+    'material_button': JsonMaterialButtonWidget(),
+    'positioned': JsonPositionedWidget(),
+    'cupertino_refresh_list': JsonCupertinoRefreshListWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

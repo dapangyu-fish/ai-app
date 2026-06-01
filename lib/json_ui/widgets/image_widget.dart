@@ -26,6 +26,7 @@ class JsonImageWidget extends JsonBaseWidget {
     final width = (json['width'] as num?)?.toDouble();
     final height = (json['height'] as num?)?.toDouble();
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 0;
+    final paddingV = (json['paddingV'] as num?)?.toDouble() ?? 4;
 
     // fit
     BoxFit fit = BoxFit.cover;
@@ -78,8 +79,9 @@ class JsonImageWidget extends JsonBaseWidget {
       image = SizedBox(width: width, height: height, child: image);
     }
 
+    if (paddingV <= 0) return image;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: paddingV),
       child: image,
     );
   }

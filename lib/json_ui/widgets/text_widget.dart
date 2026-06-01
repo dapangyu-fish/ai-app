@@ -82,6 +82,8 @@ class JsonTextWidget extends JsonBaseWidget {
     // 字间距 / 行高
     final letterSpacing = (style['letterSpacing'] as num?)?.toDouble();
     final lineHeight = (style['lineHeight'] as num?)?.toDouble();
+    final foreground = _buildForegroundPaint(style);
+    final strutStyle = _buildStrutStyle(style);
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -93,10 +95,12 @@ class JsonTextWidget extends JsonBaseWidget {
         textAlign: textAlign,
         maxLines: maxLines,
         overflow: overflow,
+        strutStyle: strutStyle,
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: fontWeight,
-          color: color,
+          color: foreground == null ? color : null,
+          foreground: foreground,
           fontStyle: fontStyle,
           decoration: decoration,
           letterSpacing: letterSpacing,
@@ -139,5 +143,43 @@ class JsonTextWidget extends JsonBaseWidget {
     if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
     if (hex.length == 8) return Color(int.parse(hex, radix: 16));
     return null;
+  }
+
+  Paint? _buildForegroundPaint(Map<String, dynamic> style) {
+    final gradient = style['gradient'];
+    final strokeWidth = (style['strokeWidth'] as num?)?.toDouble();
+    if (gradient is! List || gradient.isEmpty) {
+      if (strokeWidth == null) return null;
+      return Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth;
+    }
+
+    final colors = gradient
+        .map((value) => _parseColor(value.toString()))
+        .whereType<Color>()
+        .toList();
+    if (colors.isEmpty) return null;
+    final width = (style['gradientWidth'] as num?)?.toDouble() ?? 200;
+    final height = (style['gradientHeight'] as num?)?.toDouble() ?? 100;
+    return Paint()
+      ..style = strokeWidth != null ? PaintingStyle.stroke : PaintingStyle.fill
+      ..strokeWidth = strokeWidth ?? 0
+      ..shader = LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: colors,
+      ).createShader(Rect.fromLTWH(0, 0, width, height));
+  }
+
+  StrutStyle? _buildStrutStyle(Map<String, dynamic> style) {
+    final strut = style['strut'];
+    if (strut is! Map<String, dynamic>) return null;
+    return StrutStyle(
+      fontSize: (strut['fontSize'] as num?)?.toDouble(),
+      height: (strut['height'] as num?)?.toDouble(),
+      leading: (strut['leading'] as num?)?.toDouble(),
+      forceStrutHeight: strut['forceStrutHeight'] == true,
+    );
   }
 }

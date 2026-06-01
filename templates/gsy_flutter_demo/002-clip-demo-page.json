@@ -3,13 +3,13 @@
   "appid": "df31c67a-79ed-5f2a-96a3-c43a21bfe150",
   "meta": {
     "name": "gsy_flutter_demo/002-clip-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "实现控件圆角不同组合",
       "en": "Different rounded corner combinations"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：实现控件圆角不同组合",
+    "description": "ClipDemoPage：实现控件圆角不同组合",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -23,12 +23,7 @@
   },
   "dependencies": {},
   "global": {
-    "variables": {
-      "upstreamTitle": "实现控件圆角不同组合",
-      "upstreamSource": "lib/widget/basic/clip_demo_page.dart",
-      "upstreamWidget": "ClipDemoPage",
-      "portStatus": "in_development"
-    },
+    "variables": {},
     "functions": {}
   },
   "steps": [],
@@ -36,152 +31,95 @@
     "screens": [
       {
         "id": "home",
-        "title": "实现控件圆角不同组合",
-        "layout": "column",
+        "title": "ClipDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+            "type": "center",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "margin": 10,
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "BoxDecoration 圆角",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#000000",
+                    "paddingV": 0
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "实现控件圆角不同组合",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "image",
+                  "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                  "width": 100,
+                  "height": 100,
+                  "fit": "cover",
+                  "paddingV": 0,
+                  "borderRadius": 5
+                },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
+                {
+                  "type": "text",
+                  "value": "BoxDecoration 圆角对 child",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#000000",
+                    "paddingV": 0
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": "stack",
+                  "width": 100,
+                  "height": 100,
+                  "color": "#F44336",
+                  "borderRadius": 5,
+                  "clipBehavior": "none",
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                      "width": 100,
+                      "height": 100,
+                      "fit": "cover",
+                      "paddingV": 0
+                    }
+                  ]
+                },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
+                {
+                  "type": "text",
+                  "value": "ClipRRect 圆角对 child",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#000000",
+                    "paddingV": 0
+                  }
+                },
+                {
+                  "type": "image",
+                  "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                  "width": 100,
+                  "height": 100,
+                  "fit": "cover",
+                  "paddingV": 0,
+                  "borderRadius": 5
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Different rounded corner combinations",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/clip_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：ClipDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+              ]
             }
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }
