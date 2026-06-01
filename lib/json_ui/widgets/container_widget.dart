@@ -26,16 +26,20 @@ class JsonContainerWidget extends JsonBaseWidget {
     // 背景色（支持 "{{ loop.item.bubble_color }}" 这类模板）
     final rawColor = json['color']?.toString();
     Color? bgColor = _parseColor(
-        rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
+      rawColor != null ? interpreter.resolveTemplate(rawColor) : null,
+    );
 
     // 边框
     Border? border;
     final borderDef = json['border'] as Map<String, dynamic>?;
     if (borderDef != null) {
       final rawBorderColor = borderDef['color']?.toString();
-      final borderColor = _parseColor(rawBorderColor != null
-              ? interpreter.resolveTemplate(rawBorderColor)
-              : null) ??
+      final borderColor =
+          _parseColor(
+            rawBorderColor != null
+                ? interpreter.resolveTemplate(rawBorderColor)
+                : null,
+          ) ??
           Colors.grey;
       final borderWidth = (borderDef['width'] as num?)?.toDouble() ?? 1;
       border = Border.all(color: borderColor, width: borderWidth);
@@ -48,15 +52,24 @@ class JsonContainerWidget extends JsonBaseWidget {
         .toList();
 
     CrossAxisAlignment crossAlign = CrossAxisAlignment.center;
-    if (json['crossAxisAlignment'] == 'start') crossAlign = CrossAxisAlignment.start;
-    else if (json['crossAxisAlignment'] == 'end') crossAlign = CrossAxisAlignment.end;
-    else if (json['crossAxisAlignment'] == 'stretch') crossAlign = CrossAxisAlignment.stretch;
-    else if (layout == 'column' && json['crossAxisAlignment'] == null) crossAlign = CrossAxisAlignment.stretch;
+    if (json['crossAxisAlignment'] == 'start') {
+      crossAlign = CrossAxisAlignment.start;
+    } else if (json['crossAxisAlignment'] == 'end') {
+      crossAlign = CrossAxisAlignment.end;
+    } else if (json['crossAxisAlignment'] == 'stretch') {
+      crossAlign = CrossAxisAlignment.stretch;
+    } else if (layout == 'column' && json['crossAxisAlignment'] == null) {
+      crossAlign = CrossAxisAlignment.stretch;
+    }
 
     MainAxisAlignment mainAlign = MainAxisAlignment.start;
-    if (json['mainAxisAlignment'] == 'center') mainAlign = MainAxisAlignment.center;
-    else if (json['mainAxisAlignment'] == 'end') mainAlign = MainAxisAlignment.end;
-    else if (json['mainAxisAlignment'] == 'spaceBetween') mainAlign = MainAxisAlignment.spaceBetween;
+    if (json['mainAxisAlignment'] == 'center') {
+      mainAlign = MainAxisAlignment.center;
+    } else if (json['mainAxisAlignment'] == 'end') {
+      mainAlign = MainAxisAlignment.end;
+    } else if (json['mainAxisAlignment'] == 'spaceBetween') {
+      mainAlign = MainAxisAlignment.spaceBetween;
+    }
 
     Widget layoutWidget;
     if (layout == 'row') {
@@ -65,11 +78,14 @@ class JsonContainerWidget extends JsonBaseWidget {
         mainAxisAlignment: mainAlign,
         children: childWidgets,
       );
+      if (json['scrollDirection'] == 'horizontal') {
+        layoutWidget = SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: layoutWidget,
+        );
+      }
     } else if (layout == 'stack') {
-      layoutWidget = Stack(
-        clipBehavior: Clip.none,
-        children: childWidgets,
-      );
+      layoutWidget = Stack(clipBehavior: Clip.none, children: childWidgets);
     } else {
       layoutWidget = Column(
         crossAxisAlignment: crossAlign,
@@ -85,8 +101,9 @@ class JsonContainerWidget extends JsonBaseWidget {
       padding: padding > 0 ? EdgeInsets.all(padding) : null,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius:
-            borderRadius > 0 ? BorderRadius.circular(borderRadius) : null,
+        borderRadius: borderRadius > 0
+            ? BorderRadius.circular(borderRadius)
+            : null,
         border: border,
       ),
       child: _wrapWithContrastText(context, bgColor, layoutWidget),
@@ -96,12 +113,17 @@ class JsonContainerWidget extends JsonBaseWidget {
     if (elevation > 0) {
       container = Material(
         elevation: elevation,
-        borderRadius:
-            borderRadius > 0 ? BorderRadius.circular(borderRadius) : null,
+        borderRadius: borderRadius > 0
+            ? BorderRadius.circular(borderRadius)
+            : null,
         color: bgColor ?? Theme.of(context).colorScheme.surface,
         child: Padding(
           padding: padding > 0 ? EdgeInsets.all(padding) : EdgeInsets.zero,
-          child: _wrapWithContrastText(context, bgColor ?? Theme.of(context).colorScheme.surface, layoutWidget),
+          child: _wrapWithContrastText(
+            context,
+            bgColor ?? Theme.of(context).colorScheme.surface,
+            layoutWidget,
+          ),
         ),
       );
     }
@@ -118,7 +140,7 @@ class JsonContainerWidget extends JsonBaseWidget {
     final rawOnTap = json['onTap'];
     final onTapDef = rawOnTap is Map<String, dynamic>
         ? resolveActionAtBuildTime(rawOnTap, interpreter)
-            as Map<String, dynamic>?
+              as Map<String, dynamic>?
         : null;
     if (onTapDef != null) {
       return GestureDetector(
@@ -132,13 +154,17 @@ class JsonContainerWidget extends JsonBaseWidget {
 
   /// 当容器有背景色时，自动为子控件设置对比文字颜色
   /// 防止 AI 生成的 JSON-APP 出现背景色和文字颜色相近导致看不清的问题
-  Widget _wrapWithContrastText(BuildContext context, Color? bgColor, Widget child) {
+  Widget _wrapWithContrastText(
+    BuildContext context,
+    Color? bgColor,
+    Widget child,
+  ) {
     if (bgColor == null) return child;
 
     // 计算背景亮度，选择对比文字颜色
     final luminance = bgColor.computeLuminance();
     final contrastColor = luminance > 0.5
-        ? const Color(0xFF1A1A1A)  // 浅色背景 → 深色文字
+        ? const Color(0xFF1A1A1A) // 浅色背景 → 深色文字
         : const Color(0xFFFFFFFF); // 深色背景 → 白色文字
 
     return DefaultTextStyle.merge(

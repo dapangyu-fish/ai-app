@@ -25,7 +25,8 @@ ROUTES = UPSTREAM / "lib/routes/demo_routes.dart"
 CATEGORY_CONFIG = UPSTREAM / "lib/home/demo_category_config.dart"
 LOCALIZER = UPSTREAM / "lib/l10n/route_title_localizer.dart"
 
-VERSION = "0.1.0"
+CHILD_VERSION = "0.1.0"
+LAUNCHER_VERSION = "0.1.1"
 LAUNCHER_NAME = "gsy_flutter_demo_launcher"
 CHILD_NAMESPACE = "gsy_flutter_demo"
 UUID_NS = uuid.UUID("b7c1f247-47df-4a66-9b9e-7ad47ef57e14")
@@ -35,14 +36,16 @@ CATEGORY_META = {
     "basic": {
         "zh": "基础控件",
         "en": "Basics",
-        "icon": "dashboard",
+        "icon": "widgets",
+        "placeholderIcon": "dashboard",
         "color": "#1D7BCB",
         "soft": "#E8F2FD",
     },
     "scroll": {
         "zh": "列表滚动",
         "en": "Scrolling",
-        "icon": "list",
+        "icon": "swap_vert",
+        "placeholderIcon": "list",
         "color": "#0B8E70",
         "soft": "#E7F6F1",
     },
@@ -50,20 +53,23 @@ CATEGORY_META = {
         "zh": "动画交互",
         "en": "Animation",
         "icon": "play",
+        "placeholderIcon": "play",
         "color": "#E66A00",
         "soft": "#FFF2E5",
     },
     "canvas": {
         "zh": "绘制与Shader",
         "en": "Canvas & Shader",
-        "icon": "palette",
+        "icon": "brush",
+        "placeholderIcon": "palette",
         "color": "#7A57D1",
         "soft": "#F0ECFB",
     },
     "visual": {
         "zh": "3D与视觉",
         "en": "3D & Visual",
-        "icon": "visibility",
+        "icon": "auto_awesome_mosaic",
+        "placeholderIcon": "visibility",
         "color": "#4A74E8",
         "soft": "#EAEFFE",
     },
@@ -251,30 +257,35 @@ def screen(
 def new_app(
     *,
     name: str,
+    version: str,
     appid: str,
     display_name: dict[str, str],
     description: str,
     dependencies: dict[str, Any] | None,
     variables: dict[str, Any],
     functions: dict[str, Any] | None,
+    i18n: dict[str, Any] | None = None,
     screens: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    global_config: dict[str, Any] = {
+        "variables": variables,
+        "functions": functions or {},
+    }
+    if i18n:
+        global_config["i18n"] = i18n
     return {
         "dsl": "3.3",
         "appid": appid,
         "meta": {
             "name": name,
-            "version": VERSION,
+            "version": version,
             "type": "app",
             "displayName": display_name,
             "description": description,
             "author": "fish",
         },
         "dependencies": dependencies or {},
-        "global": {
-            "variables": variables,
-            "functions": functions or {},
-        },
+        "global": global_config,
         "steps": [],
         "ui": {"screens": screens},
     }
@@ -299,6 +310,10 @@ def categorize(title: str) -> str:
         if any(keyword in value for keyword in keywords):
             return category
     return "basic"
+
+
+def demo_key(entry: DemoEntry) -> str:
+    return f"d{entry.index:03d}"
 
 
 def load_title_localizer() -> list[tuple[str, str]]:
@@ -408,7 +423,7 @@ def demo_row(entry: DemoEntry) -> dict[str, Any]:
                     container(
                         [
                             text(
-                                entry.title_zh,
+                                "{{ t('demos." + demo_key(entry) + "') }}",
                                 style={
                                     "fontSize": 14,
                                     "fontWeight": "600",
@@ -457,7 +472,7 @@ def category_section(category: str, entries: list[DemoEntry]) -> dict[str, Any]:
                     ),
                     spacer(width=8),
                     text(
-                        meta["zh"],
+                        "{{ t('categories." + category + "') }}",
                         style={
                             "fontSize": 16,
                             "fontWeight": "700",
@@ -486,7 +501,55 @@ def category_section(category: str, entries: list[DemoEntry]) -> dict[str, Any]:
         color="#FFFFFF",
         borderRadius=18,
         border={"color": "#E5ECF7", "width": 1},
+        visible={
+            "or": [
+                {"==": [{"var": "global.selectedCategory"}, None]},
+                {"==": [{"var": "global.selectedCategory"}, category]},
+            ]
+        },
     )
+
+
+def category_chip(category: str, count: int) -> dict[str, Any]:
+    meta = CATEGORY_META[category]
+    return {
+        "type": "chip",
+        "variant": "choice",
+        "bind": "global.selectedCategory",
+        "value": category,
+        "label": "{{ t('categories." + category + "') }} · " + str(count),
+        "icon": meta["icon"],
+        "color": meta["color"],
+    }
+
+
+def launcher_i18n(entries: list[DemoEntry]) -> dict[str, Any]:
+    return {
+        "zh": {
+            "appTitle": "GSY Flutter Demo",
+            "homeSubtitle": "分组浏览、快速检索，一键进入示例。",
+            "allExamples": "全部示例",
+            "currentShown": "当前显示",
+            "searchHint": "搜索示例名称（中英文均可）",
+            "language": "语言",
+            "categories": {
+                key: meta["zh"] for key, meta in CATEGORY_META.items()
+            },
+            "demos": {demo_key(entry): entry.title_zh for entry in entries},
+        },
+        "en": {
+            "appTitle": "GSY Flutter Demo",
+            "homeSubtitle": "Browse by category, search quickly, and open examples in one tap.",
+            "allExamples": "All examples",
+            "currentShown": "Shown",
+            "searchHint": "Search examples",
+            "language": "Language",
+            "categories": {
+                key: meta["en"] for key, meta in CATEGORY_META.items()
+            },
+            "demos": {demo_key(entry): entry.title_en for entry in entries},
+        },
+    }
 
 
 def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
@@ -495,7 +558,7 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
         by_category[entry.category].append(entry)
 
     dependencies = {
-        entry.package: {"version": f"^{VERSION}", "type": "app", "lazy": True}
+        entry.package: {"version": f"^{CHILD_VERSION}", "type": "app", "lazy": True}
         for entry in entries
     }
     sections = [
@@ -503,42 +566,63 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
         for category in CATEGORY_ORDER
         if by_category[category]
     ]
+    chips = [
+        category_chip(category, len(by_category[category]))
+        for category in CATEGORY_ORDER
+    ]
 
     children = [
         container(
             [
                 container(
-                    [icon("star", size=22, color="#FFFFFF")],
-                    layout="column",
-                    width=46,
-                    height=46,
-                    color="#1D7BCB",
-                    borderRadius=13,
-                    mainAxisAlignment="center",
+                    [
+                        container(
+                            [icon("auto_awesome", size=22, color="#FFFFFF")],
+                            layout="column",
+                            width=44,
+                            height=44,
+                            color="#2D82D3",
+                            borderRadius=12,
+                            mainAxisAlignment="center",
+                            crossAxisAlignment="center",
+                        ),
+                        spacer(width=12),
+                        text(
+                            "{{ t('appTitle') }}",
+                            style={
+                                "fontSize": 22,
+                                "fontWeight": "700",
+                                "color": "#FFFFFF",
+                            },
+                            position={"type": "flex", "flex": 1},
+                        ),
+                        container(
+                            [icon("language", size=22, color="#FFFFFF")],
+                            layout="column",
+                            width=42,
+                            height=42,
+                            borderRadius=12,
+                            mainAxisAlignment="center",
+                            crossAxisAlignment="center",
+                            onTap=action("@global.toggleLocale"),
+                        ),
+                    ],
+                    layout="row",
                     crossAxisAlignment="center",
                 ),
-                spacer(height=12),
+                spacer(height=10),
                 text(
-                    "GSY Flutter Demo",
-                    style={
-                        "fontSize": 24,
-                        "fontWeight": "800",
-                        "color": "#FFFFFF",
-                    },
-                ),
-                spacer(height=8),
-                text(
-                    "分组浏览、快速检索，一键进入示例。",
+                    "{{ t('homeSubtitle') }}",
                     style={"fontSize": 14, "color": "#EAF2FF"},
                 ),
                 spacer(height=14),
                 container(
                     [
-                        text("全部示例", style={"fontSize": 12, "color": "#D9ECFF"}),
+                        text("{{ t('allExamples') }}", style={"fontSize": 12, "color": "#D9ECFF"}),
                         spacer(width=8),
                         text(str(len(entries)), style={"fontSize": 15, "fontWeight": "800", "color": "#FFFFFF"}),
                         spacer(width=16),
-                        text("当前显示", style={"fontSize": 12, "color": "#D9ECFF"}),
+                        text("{{ t('currentShown') }}", style={"fontSize": 12, "color": "#D9ECFF"}),
                         spacer(width=8),
                         text(str(len(entries)), style={"fontSize": 15, "fontWeight": "800", "color": "#FFFFFF"}),
                     ],
@@ -559,7 +643,7 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
                 {
                     "type": "input",
                     "bind": "global.query",
-                    "placeholder": "搜索示例名称（中英文均可）",
+                    "placeholder": "{{ t('searchHint') }}",
                     "position": {"type": "flex", "flex": 1},
                     "style": {"fontSize": 14, "borderRadius": 12},
                 },
@@ -572,17 +656,13 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
             crossAxisAlignment="center",
         ),
         container(
-            [
-                text(
-                    "当前版本保持 upstream 分组、顺序和入口完整；搜索框先作为 UI 复刻保留，后续补运行时过滤能力。",
-                    style={"fontSize": 12, "color": "#526174"},
-                )
-            ],
-            layout="column",
+            chips,
+            layout="row",
+            scrollDirection="horizontal",
+            padding=8,
             margin=12,
-            padding=10,
-            color="#EDF4FF",
-            borderRadius=12,
+            height=56,
+            crossAxisAlignment="center",
         ),
         *sections,
         spacer(height=20),
@@ -590,6 +670,7 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
 
     return new_app(
         name=LAUNCHER_NAME,
+        version=LAUNCHER_VERSION,
         appid=deterministic_uuid(LAUNCHER_NAME),
         display_name={
             "zh": "GSY Flutter Demo 启动器",
@@ -599,14 +680,40 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
         dependencies=dependencies,
         variables={
             "query": "",
+            "selectedCategory": None,
             "source": "https://github.com/CarGuo/gsy_flutter_demo",
             "total": len(entries),
         },
-        functions={},
+        functions={
+            "toggleLocale": {
+                "params": [],
+                "logic": [
+                    {
+                        "call": "@if",
+                        "args": {
+                            "condition": {"==": [{"var": "global.locale"}, "en"]},
+                            "then": [
+                                {
+                                    "call": "@set_framework_locale",
+                                    "args": {"value": "zh"},
+                                }
+                            ],
+                            "else": [
+                                {
+                                    "call": "@set_framework_locale",
+                                    "args": {"value": "en"},
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        },
+        i18n=launcher_i18n(entries),
         screens=[
             screen(
                 "home",
-                title="GSY Flutter Demo",
+                title="{{ t('appTitle') }}",
                 children=children,
                 padding=0,
                 backgroundColor="#F2F6FF",
@@ -621,7 +728,7 @@ def child_app(entry: DemoEntry) -> dict[str, Any]:
         container(
             [
                 container(
-                    [icon(meta["icon"], size=26, color=meta["color"])],
+                    [icon(meta["placeholderIcon"], size=26, color=meta["color"])],
                     layout="column",
                     width=58,
                     height=58,
@@ -682,6 +789,7 @@ def child_app(entry: DemoEntry) -> dict[str, Any]:
 
     app = new_app(
         name=entry.package,
+        version=CHILD_VERSION,
         appid=deterministic_uuid(entry.package),
         display_name={"zh": entry.title_zh, "en": entry.title_en},
         description=f"gsy_flutter_demo JSON 移植子示例：{entry.title_zh}",

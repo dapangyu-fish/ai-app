@@ -3,7 +3,7 @@
   "appid": "1c0020ca-bd1f-5e48-a78c-7a6efbba0d81",
   "meta": {
     "name": "gsy_flutter_demo_launcher",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "GSY Flutter Demo 启动器",
@@ -647,17 +647,341 @@
   "global": {
     "variables": {
       "query": "",
+      "selectedCategory": null,
       "source": "https://github.com/CarGuo/gsy_flutter_demo",
       "total": 126
     },
-    "functions": {}
+    "functions": {
+      "toggleLocale": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.locale"
+                  },
+                  "en"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set_framework_locale",
+                  "args": {
+                    "value": "zh"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set_framework_locale",
+                  "args": {
+                    "value": "en"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "i18n": {
+      "zh": {
+        "appTitle": "GSY Flutter Demo",
+        "homeSubtitle": "分组浏览、快速检索，一键进入示例。",
+        "allExamples": "全部示例",
+        "currentShown": "当前显示",
+        "searchHint": "搜索示例名称（中英文均可）",
+        "language": "语言",
+        "categories": {
+          "basic": "基础控件",
+          "scroll": "列表滚动",
+          "animation": "动画交互",
+          "canvas": "绘制与Shader",
+          "visual": "3D与视觉"
+        },
+        "demos": {
+          "d001": "文本输入框简单的 Controller",
+          "d002": "实现控件圆角不同组合",
+          "d003": "列表滑动监听",
+          "d004": "滑动到指定位置",
+          "d005": "滑动到指定位置2",
+          "d006": "展示渐变带边框的文本",
+          "d007": "Transform 效果展示",
+          "d008": "计算另类文本行间距展示",
+          "d009": "简单上下刷新",
+          "d010": "简单上下刷新2",
+          "d011": "简单上下刷新3",
+          "d012": "通过绝对定位布局",
+          "d013": "气泡提示框",
+          "d014": "Tag效果展示",
+          "d015": "共享元素跳转效果",
+          "d016": "滑动验证",
+          "d017": "warpContent实现",
+          "d018": "状态栏颜色修改（仅 App）",
+          "d019": "键盘弹出与监听（仅 App）",
+          "d020": "控件动画组合展示（旋转加放大圆）",
+          "d021": "控件展开动画效果",
+          "d022": "全局悬浮按键效果",
+          "d023": "全局设置字体大小",
+          "d024": "旧版实现富文本",
+          "d025": "官方实现富文本",
+          "d026": "第三方 viewpager 封装实现",
+          "d027": "列表滑动过程控件停靠效果",
+          "d028": "验证码输入框",
+          "d029": "验证码输入框2",
+          "d030": "自定义布局展示效果",
+          "d031": "自定义布局实现云词图展示",
+          "d032": "列表滑动停靠 （Stick）",
+          "d033": "列表滑动停靠 （Stick）+ 展开收回",
+          "d034": "列表滑动停靠效果2 （Stick",
+          "d035": "键盘顶起展示（仅 App）",
+          "d036": "Blur 高斯模糊效果",
+          "d037": "控件动画变形效果",
+          "d038": "时钟动画绘制展示",
+          "d039": "按键切换动画效果",
+          "d040": "列表滑动过程 item 停靠动画效果",
+          "d041": "列表滑动过程 item 停靠动画效果2",
+          "d042": "下弹筛选展示效果",
+          "d043": "文本弹出动画效果",
+          "d044": "强大的自定义滑动与停靠结合展示",
+          "d045": "自定义列表内sliver渲染顺序",
+          "d046": "点击弹出动画提示",
+          "d047": "列表停靠展开+回到当前头部",
+          "d048": "使用 overflow 处理图片",
+          "d049": "展示 Align 排布控件",
+          "d050": "通过不同尺寸计算方式展示比例",
+          "d051": "多列表+顶部Tab效果展示",
+          "d052": "多列表+顶部Tab效果展示2",
+          "d053": "多列表+顶部Tab效果展示3",
+          "d054": "仿真书本翻页动画（仅APP）",
+          "d055": "粒子动画效果",
+          "d056": "动画背景效果",
+          "d057": "手势效果",
+          "d058": "一个有趣的底部跟随和停靠例子",
+          "d059": "一个有趣的圆形选择器",
+          "d060": "一个类似探探堆叠卡片例子",
+          "d061": "一个类似探探堆叠卡片例子2",
+          "d062": "动画按键例子",
+          "d063": "类似QQ发送图片的动画",
+          "d064": "类似探探扫描的动画效果",
+          "d065": "圆弧形的 SeekBar（仅APP）",
+          "d066": "一个国外友人很惊艳的动画效果",
+          "d067": "纯 Canvas 绘制闹钟",
+          "d068": "类似 boss 直聘我的页面联动效果",
+          "d069": "结合 Matrix 的拖拽",
+          "d070": "彩色进度条",
+          "d071": "第三方的动画字体",
+          "d072": "首尾添加数据不会抖动",
+          "d073": "首尾添加数据不会抖动2",
+          "d074": "测试路由嵌套",
+          "d075": "测试 canvas 阴影",
+          "d076": "控件动画切换效果",
+          "d077": "ListView 嵌套 ViewPager 解决斜着滑动问题",
+          "d078": "垂直  ViewPager 嵌套垂直 ListView ",
+          "d079": "垂直  ListView 嵌套垂直  ViewPager",
+          "d080": "垂直  ListView 联动  ListView",
+          "d081": "3D 透视卡片",
+          "d082": "3D 卡片旋转",
+          "d083": "硬核 3D 卡片旋转",
+          "d084": "3D Dash",
+          "d085": "展示 canvas transform",
+          "d086": "rive 掘金 logo",
+          "d087": "掘金 3d logo",
+          "d088": "掘金更 3d logo",
+          "d089": "png shadow",
+          "d090": "path 路径 png 效果",
+          "d091": "列表联动 BottomSheet 效果",
+          "d092": "DraggableSheet 的 stick 效果",
+          "d093": "异步调用的顺序执行",
+          "d094": "点击爆炸的五角星（ChatGPT 生成代码）",
+          "d095": "有趣画廊",
+          "d096": "有趣的文本撕裂动画",
+          "d097": "自适应横竖列表",
+          "d098": "PageView嵌套PageView",
+          "d099": "手势密码",
+          "d100": "link scroll",
+          "d101": "glass",
+          "d102": "liquid glass",
+          "d103": "liquid glass 2",
+          "d104": "粒子动画",
+          "d105": "斐波那契球体动画",
+          "d106": "星云动画",
+          "d107": "霓虹滑块，100%高亮",
+          "d108": "Radial lines",
+          "d109": "炫酷爆炸粒子",
+          "d110": "Black hole",
+          "d111": "流体太极",
+          "d112": "黑洞流体",
+          "d113": "太极粒子",
+          "d114": "破坏杀·罗针",
+          "d115": "骚气滑动列表",
+          "d116": "骚气粒子效果",
+          "d117": "炫酷圣诞树",
+          "d118": "炫酷二维码",
+          "d119": "Cool Disco Sphere",
+          "d120": "Cool Spatial Grid",
+          "d121": "Shock Wave Chat",
+          "d122": "Particle Effect",
+          "d123": "Mosaic Scanner ",
+          "d124": "Koi Fish",
+          "d125": "Jaw Control",
+          "d126": "Fire Shader"
+        }
+      },
+      "en": {
+        "appTitle": "GSY Flutter Demo",
+        "homeSubtitle": "Browse by category, search quickly, and open examples in one tap.",
+        "allExamples": "All examples",
+        "currentShown": "Shown",
+        "searchHint": "Search examples",
+        "language": "Language",
+        "categories": {
+          "basic": "Basics",
+          "scroll": "Scrolling",
+          "animation": "Animation",
+          "canvas": "Canvas & Shader",
+          "visual": "3D & Visual"
+        },
+        "demos": {
+          "d001": "Simple text input controller",
+          "d002": "Different rounded corner combinations",
+          "d003": "List scroll listener",
+          "d004": "Scroll to target position",
+          "d005": "Scroll to target position2",
+          "d006": "Gradient text with border",
+          "d007": "Transform effectdemo",
+          "d008": "Custom text line-height demo",
+          "d009": "Simple pull refresh",
+          "d010": "Simple pull refresh2",
+          "d011": "Simple pull refresh3",
+          "d012": "Absolute positioned layout",
+          "d013": "Bubble tooltip",
+          "d014": "Tageffectdemo",
+          "d015": "Shared element transition",
+          "d016": "Slider verification",
+          "d017": "warpContent实现",
+          "d018": "Status bar color update(App only)",
+          "d019": "Keyboard show/hide listener(App only)",
+          "d020": "Combined widget animations(旋转加放大圆)",
+          "d021": "Expand animation",
+          "d022": "Global floating action button",
+          "d023": "Global font size setting",
+          "d024": "Legacy rich text implementation",
+          "d025": "Official rich text implementation",
+          "d026": "Third-party ViewPager wrapper",
+          "d027": "Sticky items while scrolling",
+          "d028": "Verification code input",
+          "d029": "Verification code input2",
+          "d030": "Custom layout demo",
+          "d031": "Word cloud with custom layout",
+          "d032": "List sticky header (Stick)",
+          "d033": "List sticky header (Stick)+ 展开收回",
+          "d034": "List sticky headereffect2 (Stick",
+          "d035": "Keyboard insets demo(App only)",
+          "d036": "Blur Gaussian blur effect",
+          "d037": "Morphing animation",
+          "d038": "Clock animation drawing",
+          "d039": "Switch animation",
+          "d040": "Sticky item animation",
+          "d041": "Sticky item animation2",
+          "d042": "Dropdown filter demo",
+          "d043": "Text pop animation",
+          "d044": "Advanced custom scroll + sticky",
+          "d045": "Custom sliver render order",
+          "d046": "Tap animation tip",
+          "d047": "列表停靠展开+回到当前头部",
+          "d048": "Image overflow demo",
+          "d049": "Align layout demo",
+          "d050": "Ratio by size calculation",
+          "d051": "Multi-list + top tabs",
+          "d052": "Multi-list + top tabs2",
+          "d053": "Multi-list + top tabs3",
+          "d054": "Book page flip animation(仅APP)",
+          "d055": "Particle animation effect",
+          "d056": "Animated background effect",
+          "d057": "Gesture effect",
+          "d058": "Bottom follow + sticky demo",
+          "d059": "Circular selector demo",
+          "d060": "Stacked card demo",
+          "d061": "Stacked card demo2",
+          "d062": "Animated button demo",
+          "d063": "QQ-style image send animation",
+          "d064": "Tantan-style scan animation",
+          "d065": "Arc SeekBar(仅APP)",
+          "d066": "Impressive animation demo",
+          "d067": "Canvas alarm clock",
+          "d068": "BOSS-style linked page",
+          "d069": "Matrix drag interaction",
+          "d070": "Color progress bar",
+          "d071": "Animated font package demo",
+          "d072": "Stable list when prepend/append",
+          "d073": "Stable list when prepend/append2",
+          "d074": "Nested route test",
+          "d075": "Canvas shadow test",
+          "d076": "Widget switch animation",
+          "d077": "ListView nested ViewPager fix diagonal gesture conflict",
+          "d078": "Vertical ViewPager nestedVertical ListView",
+          "d079": "Vertical ListView nestedVertical ViewPager",
+          "d080": "Vertical ListView 联动 ListView",
+          "d081": "3D perspective card",
+          "d082": "3D card rotation",
+          "d083": "advanced 3D card rotation",
+          "d084": "3D Dash",
+          "d085": "Canvas transform demo",
+          "d086": "rive Juejin logo",
+          "d087": "Juejin 3d logo",
+          "d088": "Juejinenhanced 3d logo",
+          "d089": "png shadow",
+          "d090": "path path png effect",
+          "d091": "列表联动 BottomSheet effect",
+          "d092": "DraggableSheet stick effect",
+          "d093": "Ordered async calls",
+          "d094": "Tap-to-explode star(ChatGPT 生成代码)",
+          "d095": "Interesting gallery",
+          "d096": "Text tear animation",
+          "d097": "Adaptive list orientation",
+          "d098": "PageViewnestedPageView",
+          "d099": "Gesture password",
+          "d100": "link scroll",
+          "d101": "glass",
+          "d102": "liquid glass",
+          "d103": "liquid glass 2",
+          "d104": "Particle animation",
+          "d105": "Fibonacci sphere animation",
+          "d106": "Nebula animation",
+          "d107": "Neon slider, full highlight",
+          "d108": "Radial lines",
+          "d109": "Cool boom particles",
+          "d110": "Black hole",
+          "d111": "Fluid Taichi",
+          "d112": "Black hole fluid",
+          "d113": "Taichi particles",
+          "d114": "Destructive Compass Needle",
+          "d115": "Fancy scrolling list",
+          "d116": "骚气粒子effect",
+          "d117": "Cool Christmas tree",
+          "d118": "Cool QR code",
+          "d119": "Cool Disco Sphere",
+          "d120": "Cool Spatial Grid",
+          "d121": "Shock Wave Chat",
+          "d122": "Particle Effect",
+          "d123": "Mosaic Scanner ",
+          "d124": "Koi Fish",
+          "d125": "Jaw Control",
+          "d126": "Fire Shader"
+        }
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "GSY Flutter Demo",
+        "title": "{{ t('appTitle') }}",
         "layout": "column",
         "children": [
           {
@@ -666,42 +990,74 @@
             "children": [
               {
                 "type": "container",
-                "layout": "column",
+                "layout": "row",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "star",
-                    "size": 22,
-                    "color": "#FFFFFF"
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "auto_awesome",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "width": 44,
+                    "height": 44,
+                    "color": "#2D82D3",
+                    "borderRadius": 12,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 12
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ t('appTitle') }}",
+                    "style": {
+                      "fontSize": 22,
+                      "fontWeight": "700",
+                      "color": "#FFFFFF"
+                    },
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "language",
+                        "size": 22,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "width": 42,
+                    "height": 42,
+                    "borderRadius": 12,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "onTap": {
+                      "call": "@global.toggleLocale",
+                      "args": {}
+                    }
                   }
                 ],
-                "width": 46,
-                "height": 46,
-                "color": "#1D7BCB",
-                "borderRadius": 13,
-                "mainAxisAlignment": "center",
                 "crossAxisAlignment": "center"
               },
               {
                 "type": "spacer",
-                "height": 12
+                "height": 10
               },
               {
                 "type": "text",
-                "value": "GSY Flutter Demo",
-                "style": {
-                  "fontSize": 24,
-                  "fontWeight": "800",
-                  "color": "#FFFFFF"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "分组浏览、快速检索，一键进入示例。",
+                "value": "{{ t('homeSubtitle') }}",
                 "style": {
                   "fontSize": 14,
                   "color": "#EAF2FF"
@@ -717,7 +1073,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "全部示例",
+                    "value": "{{ t('allExamples') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#D9ECFF"
@@ -742,7 +1098,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "当前显示",
+                    "value": "{{ t('currentShown') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#D9ECFF"
@@ -787,7 +1143,7 @@
               {
                 "type": "input",
                 "bind": "global.query",
-                "placeholder": "搜索示例名称（中英文均可）",
+                "placeholder": "{{ t('searchHint') }}",
                 "position": {
                   "type": "flex",
                   "flex": 1
@@ -806,21 +1162,59 @@
           },
           {
             "type": "container",
-            "layout": "column",
+            "layout": "row",
             "children": [
               {
-                "type": "text",
-                "value": "当前版本保持 upstream 分组、顺序和入口完整；搜索框先作为 UI 复刻保留，后续补运行时过滤能力。",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#526174"
-                }
+                "type": "chip",
+                "variant": "choice",
+                "bind": "global.selectedCategory",
+                "value": "basic",
+                "label": "{{ t('categories.basic') }} · 39",
+                "icon": "widgets",
+                "color": "#1D7BCB"
+              },
+              {
+                "type": "chip",
+                "variant": "choice",
+                "bind": "global.selectedCategory",
+                "value": "scroll",
+                "label": "{{ t('categories.scroll') }} · 31",
+                "icon": "swap_vert",
+                "color": "#0B8E70"
+              },
+              {
+                "type": "chip",
+                "variant": "choice",
+                "bind": "global.selectedCategory",
+                "value": "animation",
+                "label": "{{ t('categories.animation') }} · 24",
+                "icon": "play",
+                "color": "#E66A00"
+              },
+              {
+                "type": "chip",
+                "variant": "choice",
+                "bind": "global.selectedCategory",
+                "value": "canvas",
+                "label": "{{ t('categories.canvas') }} · 15",
+                "icon": "brush",
+                "color": "#7A57D1"
+              },
+              {
+                "type": "chip",
+                "variant": "choice",
+                "bind": "global.selectedCategory",
+                "value": "visual",
+                "label": "{{ t('categories.visual') }} · 17",
+                "icon": "auto_awesome_mosaic",
+                "color": "#4A74E8"
               }
             ],
+            "scrollDirection": "horizontal",
+            "padding": 8,
             "margin": 12,
-            "padding": 10,
-            "color": "#EDF4FF",
-            "borderRadius": 12
+            "height": 56,
+            "crossAxisAlignment": "center"
           },
           {
             "type": "container",
@@ -836,7 +1230,7 @@
                     "children": [
                       {
                         "type": "icon",
-                        "name": "dashboard",
+                        "name": "widgets",
                         "size": 17,
                         "color": "#1D7BCB"
                       }
@@ -854,7 +1248,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "基础控件",
+                    "value": "{{ t('categories.basic') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "700",
@@ -920,7 +1314,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "文本输入框简单的 Controller",
+                            "value": "{{ t('demos.d001') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1014,7 +1408,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "实现控件圆角不同组合",
+                            "value": "{{ t('demos.d002') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1108,7 +1502,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "展示渐变带边框的文本",
+                            "value": "{{ t('demos.d006') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1202,7 +1596,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Transform 效果展示",
+                            "value": "{{ t('demos.d007') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1296,7 +1690,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "计算另类文本行间距展示",
+                            "value": "{{ t('demos.d008') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1390,7 +1784,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "简单上下刷新",
+                            "value": "{{ t('demos.d009') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1484,7 +1878,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "简单上下刷新2",
+                            "value": "{{ t('demos.d010') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1578,7 +1972,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "简单上下刷新3",
+                            "value": "{{ t('demos.d011') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1672,7 +2066,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "通过绝对定位布局",
+                            "value": "{{ t('demos.d012') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1766,7 +2160,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "气泡提示框",
+                            "value": "{{ t('demos.d013') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1860,7 +2254,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Tag效果展示",
+                            "value": "{{ t('demos.d014') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -1954,7 +2348,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "共享元素跳转效果",
+                            "value": "{{ t('demos.d015') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2048,7 +2442,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "warpContent实现",
+                            "value": "{{ t('demos.d017') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2142,7 +2536,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "状态栏颜色修改（仅 App）",
+                            "value": "{{ t('demos.d018') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2236,7 +2630,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "键盘弹出与监听（仅 App）",
+                            "value": "{{ t('demos.d019') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2330,7 +2724,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "全局悬浮按键效果",
+                            "value": "{{ t('demos.d022') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2424,7 +2818,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "全局设置字体大小",
+                            "value": "{{ t('demos.d023') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2518,7 +2912,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "旧版实现富文本",
+                            "value": "{{ t('demos.d024') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2612,7 +3006,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "官方实现富文本",
+                            "value": "{{ t('demos.d025') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2706,7 +3100,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "验证码输入框",
+                            "value": "{{ t('demos.d028') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2800,7 +3194,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "验证码输入框2",
+                            "value": "{{ t('demos.d029') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2894,7 +3288,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "自定义布局展示效果",
+                            "value": "{{ t('demos.d030') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -2988,7 +3382,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "自定义布局实现云词图展示",
+                            "value": "{{ t('demos.d031') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3082,7 +3476,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "键盘顶起展示（仅 App）",
+                            "value": "{{ t('demos.d035') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3176,7 +3570,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "下弹筛选展示效果",
+                            "value": "{{ t('demos.d042') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3270,7 +3664,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "使用 overflow 处理图片",
+                            "value": "{{ t('demos.d048') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3364,7 +3758,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "展示 Align 排布控件",
+                            "value": "{{ t('demos.d049') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3458,7 +3852,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "通过不同尺寸计算方式展示比例",
+                            "value": "{{ t('demos.d050') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3552,7 +3946,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "一个有趣的圆形选择器",
+                            "value": "{{ t('demos.d059') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3646,7 +4040,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "一个类似探探堆叠卡片例子",
+                            "value": "{{ t('demos.d060') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3740,7 +4134,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "一个类似探探堆叠卡片例子2",
+                            "value": "{{ t('demos.d061') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3834,7 +4228,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "彩色进度条",
+                            "value": "{{ t('demos.d070') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -3928,7 +4322,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "首尾添加数据不会抖动",
+                            "value": "{{ t('demos.d072') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4022,7 +4416,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "首尾添加数据不会抖动2",
+                            "value": "{{ t('demos.d073') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4116,7 +4510,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "测试路由嵌套",
+                            "value": "{{ t('demos.d074') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4210,7 +4604,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "png shadow",
+                            "value": "{{ t('demos.d089') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4304,7 +4698,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "异步调用的顺序执行",
+                            "value": "{{ t('demos.d093') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4398,7 +4792,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Black hole",
+                            "value": "{{ t('demos.d110') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4492,7 +4886,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "破坏杀·罗针",
+                            "value": "{{ t('demos.d114') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4555,6 +4949,26 @@
             "border": {
               "color": "#E5ECF7",
               "width": 1
+            },
+            "visible": {
+              "or": [
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    null
+                  ]
+                },
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    "basic"
+                  ]
+                }
+              ]
             }
           },
           {
@@ -4571,7 +4985,7 @@
                     "children": [
                       {
                         "type": "icon",
-                        "name": "list",
+                        "name": "swap_vert",
                         "size": 17,
                         "color": "#0B8E70"
                       }
@@ -4589,7 +5003,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "列表滚动",
+                    "value": "{{ t('categories.scroll') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "700",
@@ -4655,7 +5069,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表滑动监听",
+                            "value": "{{ t('demos.d003') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4749,7 +5163,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "滑动到指定位置",
+                            "value": "{{ t('demos.d004') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4843,7 +5257,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "滑动到指定位置2",
+                            "value": "{{ t('demos.d005') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -4937,7 +5351,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "滑动验证",
+                            "value": "{{ t('demos.d016') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5031,7 +5445,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "第三方 viewpager 封装实现",
+                            "value": "{{ t('demos.d026') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5125,7 +5539,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表滑动过程控件停靠效果",
+                            "value": "{{ t('demos.d027') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5219,7 +5633,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表滑动停靠 （Stick）",
+                            "value": "{{ t('demos.d032') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5313,7 +5727,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表滑动停靠 （Stick）+ 展开收回",
+                            "value": "{{ t('demos.d033') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5407,7 +5821,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表滑动停靠效果2 （Stick",
+                            "value": "{{ t('demos.d034') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5501,7 +5915,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表滑动过程 item 停靠动画效果",
+                            "value": "{{ t('demos.d040') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5595,7 +6009,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表滑动过程 item 停靠动画效果2",
+                            "value": "{{ t('demos.d041') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5689,7 +6103,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "强大的自定义滑动与停靠结合展示",
+                            "value": "{{ t('demos.d044') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5783,7 +6197,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "自定义列表内sliver渲染顺序",
+                            "value": "{{ t('demos.d045') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5877,7 +6291,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表停靠展开+回到当前头部",
+                            "value": "{{ t('demos.d047') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -5971,7 +6385,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "多列表+顶部Tab效果展示",
+                            "value": "{{ t('demos.d051') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6065,7 +6479,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "多列表+顶部Tab效果展示2",
+                            "value": "{{ t('demos.d052') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6159,7 +6573,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "多列表+顶部Tab效果展示3",
+                            "value": "{{ t('demos.d053') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6253,7 +6667,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "一个有趣的底部跟随和停靠例子",
+                            "value": "{{ t('demos.d058') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6347,7 +6761,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "类似 boss 直聘我的页面联动效果",
+                            "value": "{{ t('demos.d068') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6441,7 +6855,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "ListView 嵌套 ViewPager 解决斜着滑动问题",
+                            "value": "{{ t('demos.d077') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6535,7 +6949,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "垂直  ViewPager 嵌套垂直 ListView ",
+                            "value": "{{ t('demos.d078') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6629,7 +7043,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "垂直  ListView 嵌套垂直  ViewPager",
+                            "value": "{{ t('demos.d079') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6723,7 +7137,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "垂直  ListView 联动  ListView",
+                            "value": "{{ t('demos.d080') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6817,7 +7231,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "列表联动 BottomSheet 效果",
+                            "value": "{{ t('demos.d091') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -6911,7 +7325,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "DraggableSheet 的 stick 效果",
+                            "value": "{{ t('demos.d092') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7005,7 +7419,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "点击爆炸的五角星（ChatGPT 生成代码）",
+                            "value": "{{ t('demos.d094') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7099,7 +7513,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "自适应横竖列表",
+                            "value": "{{ t('demos.d097') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7193,7 +7607,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "PageView嵌套PageView",
+                            "value": "{{ t('demos.d098') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7287,7 +7701,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "link scroll",
+                            "value": "{{ t('demos.d100') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7381,7 +7795,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "骚气滑动列表",
+                            "value": "{{ t('demos.d115') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7475,7 +7889,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Shock Wave Chat",
+                            "value": "{{ t('demos.d121') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7538,6 +7952,26 @@
             "border": {
               "color": "#E5ECF7",
               "width": 1
+            },
+            "visible": {
+              "or": [
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    null
+                  ]
+                },
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    "scroll"
+                  ]
+                }
+              ]
             }
           },
           {
@@ -7572,7 +8006,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "动画交互",
+                    "value": "{{ t('categories.animation') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "700",
@@ -7638,7 +8072,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "控件动画组合展示（旋转加放大圆）",
+                            "value": "{{ t('demos.d020') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7732,7 +8166,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "控件展开动画效果",
+                            "value": "{{ t('demos.d021') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7826,7 +8260,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "控件动画变形效果",
+                            "value": "{{ t('demos.d037') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -7920,7 +8354,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "按键切换动画效果",
+                            "value": "{{ t('demos.d039') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8014,7 +8448,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "文本弹出动画效果",
+                            "value": "{{ t('demos.d043') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8108,7 +8542,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "点击弹出动画提示",
+                            "value": "{{ t('demos.d046') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8202,7 +8636,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "仿真书本翻页动画（仅APP）",
+                            "value": "{{ t('demos.d054') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8296,7 +8730,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "粒子动画效果",
+                            "value": "{{ t('demos.d055') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8390,7 +8824,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "动画背景效果",
+                            "value": "{{ t('demos.d056') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8484,7 +8918,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "动画按键例子",
+                            "value": "{{ t('demos.d062') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8578,7 +9012,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "类似QQ发送图片的动画",
+                            "value": "{{ t('demos.d063') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8672,7 +9106,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "类似探探扫描的动画效果",
+                            "value": "{{ t('demos.d064') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8766,7 +9200,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "圆弧形的 SeekBar（仅APP）",
+                            "value": "{{ t('demos.d065') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8860,7 +9294,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "一个国外友人很惊艳的动画效果",
+                            "value": "{{ t('demos.d066') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -8954,7 +9388,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "第三方的动画字体",
+                            "value": "{{ t('demos.d071') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9048,7 +9482,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "控件动画切换效果",
+                            "value": "{{ t('demos.d076') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9142,7 +9576,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "有趣的文本撕裂动画",
+                            "value": "{{ t('demos.d096') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9236,7 +9670,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "粒子动画",
+                            "value": "{{ t('demos.d104') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9330,7 +9764,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "斐波那契球体动画",
+                            "value": "{{ t('demos.d105') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9424,7 +9858,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "霓虹滑块，100%高亮",
+                            "value": "{{ t('demos.d107') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9518,7 +9952,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "炫酷爆炸粒子",
+                            "value": "{{ t('demos.d109') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9612,7 +10046,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "骚气粒子效果",
+                            "value": "{{ t('demos.d116') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9706,7 +10140,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "炫酷圣诞树",
+                            "value": "{{ t('demos.d117') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9800,7 +10234,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Particle Effect",
+                            "value": "{{ t('demos.d122') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -9863,6 +10297,26 @@
             "border": {
               "color": "#E5ECF7",
               "width": 1
+            },
+            "visible": {
+              "or": [
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    null
+                  ]
+                },
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    "animation"
+                  ]
+                }
+              ]
             }
           },
           {
@@ -9879,7 +10333,7 @@
                     "children": [
                       {
                         "type": "icon",
-                        "name": "palette",
+                        "name": "brush",
                         "size": 17,
                         "color": "#7A57D1"
                       }
@@ -9897,7 +10351,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "绘制与Shader",
+                    "value": "{{ t('categories.canvas') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "700",
@@ -9963,7 +10417,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Blur 高斯模糊效果",
+                            "value": "{{ t('demos.d036') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10057,7 +10511,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "时钟动画绘制展示",
+                            "value": "{{ t('demos.d038') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10151,7 +10605,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "手势效果",
+                            "value": "{{ t('demos.d057') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10245,7 +10699,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "纯 Canvas 绘制闹钟",
+                            "value": "{{ t('demos.d067') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10339,7 +10793,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "结合 Matrix 的拖拽",
+                            "value": "{{ t('demos.d069') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10433,7 +10887,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "测试 canvas 阴影",
+                            "value": "{{ t('demos.d075') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10527,7 +10981,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "展示 canvas transform",
+                            "value": "{{ t('demos.d085') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10621,7 +11075,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "path 路径 png 效果",
+                            "value": "{{ t('demos.d090') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10715,7 +11169,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "手势密码",
+                            "value": "{{ t('demos.d099') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10809,7 +11263,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "glass",
+                            "value": "{{ t('demos.d101') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10903,7 +11357,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "liquid glass",
+                            "value": "{{ t('demos.d102') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -10997,7 +11451,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "liquid glass 2",
+                            "value": "{{ t('demos.d103') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11091,7 +11545,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Radial lines",
+                            "value": "{{ t('demos.d108') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11185,7 +11639,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Jaw Control",
+                            "value": "{{ t('demos.d125') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11279,7 +11733,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Fire Shader",
+                            "value": "{{ t('demos.d126') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11342,6 +11796,26 @@
             "border": {
               "color": "#E5ECF7",
               "width": 1
+            },
+            "visible": {
+              "or": [
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    null
+                  ]
+                },
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    "canvas"
+                  ]
+                }
+              ]
             }
           },
           {
@@ -11358,7 +11832,7 @@
                     "children": [
                       {
                         "type": "icon",
-                        "name": "visibility",
+                        "name": "auto_awesome_mosaic",
                         "size": 17,
                         "color": "#4A74E8"
                       }
@@ -11376,7 +11850,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "3D与视觉",
+                    "value": "{{ t('categories.visual') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "700",
@@ -11442,7 +11916,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "3D 透视卡片",
+                            "value": "{{ t('demos.d081') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11536,7 +12010,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "3D 卡片旋转",
+                            "value": "{{ t('demos.d082') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11630,7 +12104,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "硬核 3D 卡片旋转",
+                            "value": "{{ t('demos.d083') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11724,7 +12198,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "3D Dash",
+                            "value": "{{ t('demos.d084') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11818,7 +12292,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "rive 掘金 logo",
+                            "value": "{{ t('demos.d086') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -11912,7 +12386,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "掘金 3d logo",
+                            "value": "{{ t('demos.d087') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12006,7 +12480,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "掘金更 3d logo",
+                            "value": "{{ t('demos.d088') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12100,7 +12574,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "有趣画廊",
+                            "value": "{{ t('demos.d095') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12194,7 +12668,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "星云动画",
+                            "value": "{{ t('demos.d106') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12288,7 +12762,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "流体太极",
+                            "value": "{{ t('demos.d111') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12382,7 +12856,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "黑洞流体",
+                            "value": "{{ t('demos.d112') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12476,7 +12950,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "太极粒子",
+                            "value": "{{ t('demos.d113') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12570,7 +13044,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "炫酷二维码",
+                            "value": "{{ t('demos.d118') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12664,7 +13138,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Cool Disco Sphere",
+                            "value": "{{ t('demos.d119') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12758,7 +13232,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Cool Spatial Grid",
+                            "value": "{{ t('demos.d120') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12852,7 +13326,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Mosaic Scanner ",
+                            "value": "{{ t('demos.d123') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -12946,7 +13420,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "Koi Fish",
+                            "value": "{{ t('demos.d124') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -13009,6 +13483,26 @@
             "border": {
               "color": "#E5ECF7",
               "width": 1
+            },
+            "visible": {
+              "or": [
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    null
+                  ]
+                },
+                {
+                  "==": [
+                    {
+                      "var": "global.selectedCategory"
+                    },
+                    "visual"
+                  ]
+                }
+              ]
             }
           },
           {

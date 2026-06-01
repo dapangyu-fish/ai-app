@@ -119,6 +119,10 @@ class JsonWidgetBuilder {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
+    if (!_isVisible(json['visible'], interpreter)) {
+      return const SizedBox.shrink();
+    }
+
     final type = json['type'] as String?;
 
     if (type == null) {
@@ -148,5 +152,25 @@ class JsonWidgetBuilder {
         ),
       ),
     );
+  }
+
+  bool _isVisible(dynamic raw, JsonInterpreter interpreter) {
+    if (raw == null) return true;
+    dynamic value = raw;
+    if (raw is Map<String, dynamic> && interpreter.looksLikeJsonLogic(raw)) {
+      value = interpreter.evaluateJsonLogicWithLocals(raw, const {});
+    } else {
+      value = interpreter.resolveExpression(raw);
+    }
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized.isNotEmpty &&
+          normalized != 'false' &&
+          normalized != '0' &&
+          normalized != 'null';
+    }
+    return value != null;
   }
 }
