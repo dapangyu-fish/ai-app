@@ -1,0 +1,188 @@
+{
+  "dsl": "3.3",
+  "appid": "c2711d86-44b0-5043-b226-6b521ad7fce5",
+  "meta": {
+    "name": "gsy_flutter_demo/090-custom-shader-path-demo-page",
+    "version": "0.1.0",
+    "type": "app",
+    "displayName": {
+      "zh": "path 路径 png 效果",
+      "en": "path path png effect"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例：path 路径 png 效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "path 路径 png 效果",
+      "sourcePath": "lib/widget/canvas/custom_shader_path_demo_page.dart",
+      "deferredAlias": "custom_shader_path_demo_page",
+      "widgetClass": "CustomShaderPathDemoPage",
+      "category": "canvas",
+      "routeIndex": 90
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "path 路径 png 效果",
+      "upstreamSource": "lib/widget/canvas/custom_shader_path_demo_page.dart",
+      "upstreamWidget": "CustomShaderPathDemoPage",
+      "portStatus": "in_development"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "path 路径 png 效果",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "palette",
+                    "size": 26,
+                    "color": "#7A57D1"
+                  }
+                ],
+                "width": 58,
+                "height": 58,
+                "color": "#F0ECFB",
+                "borderRadius": 16,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "path 路径 png 效果",
+                "style": {
+                  "fontSize": 22,
+                  "fontWeight": "800",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "path path png effect",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#667085"
+                }
+              }
+            ],
+            "padding": 20,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 20,
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "JSON 移植状态",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "700",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#4B5563"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "text",
+                "value": "分类：绘制与Shader",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Upstream：lib/widget/canvas/custom_shader_path_demo_page.dart",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Widget：CustomShaderPathDemoPage",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#6B7280"
+                }
+              }
+            ],
+            "padding": 16,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 16,
+            "border": {
+              "color": "#E5E7EB",
+              "width": 1
+            },
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "button",
+            "label": "返回",
+            "action": {
+              "call": "@back",
+              "args": {}
+            },
+            "icon": "back",
+            "variant": "outlined",
+            "style": {
+              "fontSize": 14,
+              "borderRadius": 12
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#F7F8FA"
+      }
+    ]
+  }
+}

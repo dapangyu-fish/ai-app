@@ -1,0 +1,188 @@
+{
+  "dsl": "3.3",
+  "appid": "9c8d931e-af2e-55d6-b8c9-e6e2c10f083f",
+  "meta": {
+    "name": "gsy_flutter_demo/115-tornado-scroll-demo",
+    "version": "0.1.0",
+    "type": "app",
+    "displayName": {
+      "zh": "骚气滑动列表",
+      "en": "Fancy scrolling list"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例：骚气滑动列表",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "骚气滑动列表",
+      "sourcePath": "lib/widget/scroll/tornado_scroll_demo.dart",
+      "deferredAlias": "tornado_scroll_demo",
+      "widgetClass": "TornadoScrollDemo",
+      "category": "scroll",
+      "routeIndex": 115
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "骚气滑动列表",
+      "upstreamSource": "lib/widget/scroll/tornado_scroll_demo.dart",
+      "upstreamWidget": "TornadoScrollDemo",
+      "portStatus": "in_development"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "骚气滑动列表",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "list",
+                    "size": 26,
+                    "color": "#0B8E70"
+                  }
+                ],
+                "width": 58,
+                "height": 58,
+                "color": "#E7F6F1",
+                "borderRadius": 16,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "骚气滑动列表",
+                "style": {
+                  "fontSize": 22,
+                  "fontWeight": "800",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Fancy scrolling list",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#667085"
+                }
+              }
+            ],
+            "padding": 20,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 20,
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "JSON 移植状态",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "700",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#4B5563"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "text",
+                "value": "分类：列表滚动",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Upstream：lib/widget/scroll/tornado_scroll_demo.dart",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Widget：TornadoScrollDemo",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#6B7280"
+                }
+              }
+            ],
+            "padding": 16,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 16,
+            "border": {
+              "color": "#E5E7EB",
+              "width": 1
+            },
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "button",
+            "label": "返回",
+            "action": {
+              "call": "@back",
+              "args": {}
+            },
+            "icon": "back",
+            "variant": "outlined",
+            "style": {
+              "fontSize": 14,
+              "borderRadius": 12
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#F7F8FA"
+      }
+    ]
+  }
+}

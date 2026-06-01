@@ -1,0 +1,188 @@
+{
+  "dsl": "3.3",
+  "appid": "21502662-0338-57b2-ad5f-1e976f1d3317",
+  "meta": {
+    "name": "gsy_flutter_demo/053-sliver-tab-demo-page3",
+    "version": "0.1.0",
+    "type": "app",
+    "displayName": {
+      "zh": "多列表+顶部Tab效果展示3",
+      "en": "Multi-list + top tabs3"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例：多列表+顶部Tab效果展示3",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "多列表+顶部Tab效果展示3",
+      "sourcePath": "lib/widget/scroll/sliver_tab/sliver_tab_demo_page3.dart",
+      "deferredAlias": "sliver_tab_demo_page3",
+      "widgetClass": "SliverTabDemoPage3",
+      "category": "scroll",
+      "routeIndex": 53
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "多列表+顶部Tab效果展示3",
+      "upstreamSource": "lib/widget/scroll/sliver_tab/sliver_tab_demo_page3.dart",
+      "upstreamWidget": "SliverTabDemoPage3",
+      "portStatus": "in_development"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "多列表+顶部Tab效果展示3",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "list",
+                    "size": 26,
+                    "color": "#0B8E70"
+                  }
+                ],
+                "width": 58,
+                "height": 58,
+                "color": "#E7F6F1",
+                "borderRadius": 16,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "多列表+顶部Tab效果展示3",
+                "style": {
+                  "fontSize": 22,
+                  "fontWeight": "800",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Multi-list + top tabs3",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#667085"
+                }
+              }
+            ],
+            "padding": 20,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 20,
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "JSON 移植状态",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "700",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#4B5563"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "text",
+                "value": "分类：列表滚动",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Upstream：lib/widget/scroll/sliver_tab/sliver_tab_demo_page3.dart",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "Widget：SliverTabDemoPage3",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#6B7280"
+                }
+              }
+            ],
+            "padding": 16,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 16,
+            "border": {
+              "color": "#E5E7EB",
+              "width": 1
+            },
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "button",
+            "label": "返回",
+            "action": {
+              "call": "@back",
+              "args": {}
+            },
+            "icon": "back",
+            "variant": "outlined",
+            "style": {
+              "fontSize": 14,
+              "borderRadius": 12
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#F7F8FA"
+      }
+    ]
+  }
+}

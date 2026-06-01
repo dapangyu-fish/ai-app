@@ -1,8 +1,6 @@
 // 依赖加载器
 // 负责：下载依赖 JSON、校验版本、检测循环依赖、注册到命名空间
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'http_client.dart';
 import 'semver.dart';
 import 'cache_manager.dart';
 import '../config/app_config.dart';
@@ -42,11 +40,15 @@ class DependencySpec {
   final String name;
   final String? url; // 可选，如果为空则通过 registry 解析
   final VersionConstraint constraint;
+  final String resourceType;
+  final bool lazy;
 
   DependencySpec({
     required this.name,
     this.url,
     required this.constraint,
+    this.resourceType = 'library',
+    this.lazy = false,
   });
 
   factory DependencySpec.fromJson(String name, dynamic json) {
@@ -57,6 +59,8 @@ class DependencySpec {
         name: name,
         url: null,
         constraint: VersionConstraint.parse(json),
+        resourceType: 'library',
+        lazy: false,
       );
     }
 
@@ -67,6 +71,8 @@ class DependencySpec {
         name: name,
         url: json['url']?.toString(),
         constraint: VersionConstraint.parse(json['version']?.toString() ?? '*'),
+        resourceType: _normalizeResourceType(json['type']?.toString()),
+        lazy: json['lazy'] == true,
       );
     }
 
@@ -75,13 +81,19 @@ class DependencySpec {
       name: name,
       url: null,
       constraint: VersionConstraint.parse('*'),
+      resourceType: 'library',
+      lazy: false,
     );
+  }
+
+  static String _normalizeResourceType(String? value) {
+    final normalized = (value ?? '').trim().toLowerCase();
+    if (normalized == 'app') return 'app';
+    return 'library';
   }
 }
 
 class DependencyLoader {
-  final DslHttpClient _httpClient = DslHttpClient();
-
   /// 已加载的模块缓存（按 name 缓存，避免重复加载）
   final Map<String, LoadedModule> _loadedModules = {};
 
@@ -119,10 +131,10 @@ class DependencyLoader {
     }
 
     // 并发加载所有依赖
-    await Future.wait(specs.map((spec) => _loadDependency(spec)));
+    await Future.wait(
+      specs.where((spec) => !spec.lazy).map((spec) => _loadDependency(spec)),
+    );
   }
-
-
 
   /// 加载单个依赖
   Future<void> _loadDependency(DependencySpec spec) async {
@@ -130,15 +142,19 @@ class DependencyLoader {
     if (_loadedModules.containsKey(spec.name)) {
       final existing = _loadedModules[spec.name]!;
       if (!spec.constraint.satisfiedBy(existing.version)) {
-        debugPrint('[JSON DSL] 版本冲突: ${spec.name} '
-            '已加载 ${existing.version}, 需要 ${spec.constraint}');
+        debugPrint(
+          '[JSON DSL] 版本冲突: ${spec.name} '
+          '已加载 ${existing.version}, 需要 ${spec.constraint}',
+        );
       }
       return;
     }
 
     // 循环依赖检测
     if (_loadingStack.contains(spec.name)) {
-      debugPrint('[JSON DSL] 检测到循环依赖: ${_loadingStack.join(" → ")} → ${spec.name}');
+      debugPrint(
+        '[JSON DSL] 检测到循环依赖: ${_loadingStack.join(" → ")} → ${spec.name}',
+      );
       return;
     }
 
@@ -146,8 +162,12 @@ class DependencyLoader {
 
     try {
       // 通过 CacheManager 获取资源（自带本地缓存 + 后台热更新）
-      final config = await CacheManager.instance.getResource(spec.name, spec.constraint, type: 'library');
-      
+      final config = await CacheManager.instance.getResource(
+        spec.name,
+        spec.constraint,
+        type: spec.resourceType,
+      );
+
       if (config == null) {
         debugPrint('[JSON DSL] 加载依赖失败或无法解析: ${spec.name}');
         return;
@@ -155,17 +175,22 @@ class DependencyLoader {
 
       // 解析模块信息
       final meta = config['meta'] as Map<String, dynamic>? ?? {};
-      final moduleVersion = SemVer.parse(meta['version']?.toString() ?? '0.0.0');
+      final moduleVersion = SemVer.parse(
+        meta['version']?.toString() ?? '0.0.0',
+      );
 
       // 版本约束校验
       if (!spec.constraint.satisfiedBy(moduleVersion)) {
-        debugPrint('[JSON DSL] 版本不满足: ${spec.name} '
-            'v$moduleVersion 不满足 ${spec.constraint}');
+        debugPrint(
+          '[JSON DSL] 版本不满足: ${spec.name} '
+          'v$moduleVersion 不满足 ${spec.constraint}',
+        );
         return;
       }
 
       final global = config['global'] as Map<String, dynamic>? ?? {};
-      final exportsList = (meta['exports'] as List<dynamic>?)
+      final exportsList =
+          (meta['exports'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [];
@@ -178,17 +203,21 @@ class DependencyLoader {
         config: config,
         functions: global['functions'] as Map<String, dynamic>? ?? {},
         variables: global['variables'] as Map<String, dynamic>? ?? {},
-        screens: (config['ui'] as Map<String, dynamic>?)?['screens']
+        screens:
+            (config['ui'] as Map<String, dynamic>?)?['screens']
                 as List<dynamic>? ??
             [],
-        templates: (config['ui'] as Map<String, dynamic>?)?['templates']
+        templates:
+            (config['ui'] as Map<String, dynamic>?)?['templates']
                 as Map<String, dynamic>? ??
             {},
       );
 
       _loadedModules[spec.name] = module;
-      debugPrint('[JSON DSL] 依赖加载成功: ${spec.name} v$moduleVersion '
-          '(${module.type}, exports: ${exportsList.join(", ")})');
+      debugPrint(
+        '[JSON DSL] 依赖加载成功: ${spec.name} v$moduleVersion '
+        '(${module.type}, exports: ${exportsList.join(", ")})',
+      );
 
       // 递归加载子依赖
       final subDeps = config['dependencies'] as Map<String, dynamic>?;
