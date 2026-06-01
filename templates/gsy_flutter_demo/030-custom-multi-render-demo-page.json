@@ -3,13 +3,13 @@
   "appid": "60ae90f6-82d5-5bf8-ac42-664bf2f70668",
   "meta": {
     "name": "gsy_flutter_demo/030-custom-multi-render-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "自定义布局展示效果",
       "en": "Custom layout demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：自定义布局展示效果",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：自定义布局展示效果",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,7 +27,9 @@
       "upstreamTitle": "自定义布局展示效果",
       "upstreamSource": "lib/widget/basic/custom_multi_render_demo_page.dart",
       "upstreamWidget": "CustomMultiRenderDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1",
+      "circleCount": 5
     },
     "functions": {}
   },
@@ -36,152 +38,102 @@
     "screens": [
       {
         "id": "home",
-        "title": "自定义布局展示效果",
-        "layout": "column",
+        "title": "CustomMultiRenderDemoPage",
+        "layout": "stack",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "自定义布局展示效果",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Custom layout demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "radial_layout",
+                "count": {
+                  "var": "global.circleCount"
+                },
+                "radius": 100,
+                "childSize": 66,
+                "backgroundColor": "#69F0AE",
+                "itemTemplate": {
+                  "type": "container",
+                  "shape": "circle",
+                  "color": "#3F51B5",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.index }}",
+                      "style": {
+                        "fontSize": 22,
+                        "color": "#FFFFFF"
+                      }
+                    }
+                  ]
                 }
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/custom_multi_render_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：CustomMultiRenderDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
             }
           }
         ],
         "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "backgroundColor": "#FFFFFF",
+        "footerButtons": [
+          {
+            "type": "button",
+            "label": "加",
+            "variant": "text",
+            "style": {
+              "backgroundColor": "#FFE57F",
+              "textColor": "#FFFFFF"
+            },
+            "action": {
+              "call": "@set",
+              "args": {
+                "var": "global.circleCount",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.circleCount"
+                    },
+                    1
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "减",
+            "variant": "text",
+            "style": {
+              "backgroundColor": "#3F51B5",
+              "textColor": "#FFFFFF"
+            },
+            "action": {
+              "call": "@set",
+              "args": {
+                "var": "global.circleCount",
+                "value": {
+                  "max": [
+                    1,
+                    {
+                      "-": [
+                        {
+                          "var": "global.circleCount"
+                        },
+                        1
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
       }
     ]
   }

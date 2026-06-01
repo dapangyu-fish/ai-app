@@ -18,7 +18,7 @@ class JsonTextWidget extends JsonBaseWidget {
     final style = json['style'] as Map<String, dynamic>? ?? {};
 
     // 字号
-    final fontSize = (style['fontSize'] as num?)?.toDouble();
+    final fontSize = _resolveDouble(interpreter, style['fontSize']);
 
     // 字重
     FontWeight fontWeight = FontWeight.normal;
@@ -80,8 +80,8 @@ class JsonTextWidget extends JsonBaseWidget {
     }
 
     // 字间距 / 行高
-    final letterSpacing = (style['letterSpacing'] as num?)?.toDouble();
-    final lineHeight = (style['lineHeight'] as num?)?.toDouble();
+    final letterSpacing = _resolveDouble(interpreter, style['letterSpacing']);
+    final lineHeight = _resolveDouble(interpreter, style['lineHeight']);
     final foreground = _buildForegroundPaint(style);
     final strutStyle = _buildStrutStyle(style);
 
@@ -181,5 +181,13 @@ class JsonTextWidget extends JsonBaseWidget {
       leading: (strut['leading'] as num?)?.toDouble(),
       forceStrutHeight: strut['forceStrutHeight'] == true,
     );
+  }
+
+  double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    final resolved = interpreter.resolveExpression(value);
+    if (resolved is num) return resolved.toDouble();
+    return double.tryParse(resolved?.toString() ?? '');
   }
 }

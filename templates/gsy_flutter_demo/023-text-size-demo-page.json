@@ -3,13 +3,13 @@
   "appid": "bd44e11a-8990-5f9a-8fe1-99ca4228c41a",
   "meta": {
     "name": "gsy_flutter_demo/023-text-size-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "全局设置字体大小",
       "en": "Global font size setting"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：全局设置字体大小",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：全局设置字体大小",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,7 +27,9 @@
       "upstreamTitle": "全局设置字体大小",
       "upstreamSource": "lib/widget/basic/text_size_demo_page.dart",
       "upstreamWidget": "TextSizeDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1",
+      "textScale": 1.0
     },
     "functions": {}
   },
@@ -36,152 +38,120 @@
     "screens": [
       {
         "id": "home",
-        "title": "全局设置字体大小",
-        "layout": "column",
+        "title": "TextLineHeightDemoPage",
+        "layout": "stack",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+            "type": "positioned",
+            "left": 20,
+            "top": 20,
+            "right": 20,
+            "bottom": 120,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "padding": 12,
+              "color": "#607D8B",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "This document describes the rationale for and changes to the slots syntax proposed for Vue 2.6.0. It is based on the discussions in the RFC issue and tries to balance explicitness, readability, and backwards compatibility with existing slot usage.",
+                  "style": {
+                    "fontSize": {
+                      "*": [
+                        14,
+                        {
+                          "var": "global.textScale"
+                        }
+                      ]
+                    },
+                    "color": "#000000"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "全局设置字体大小",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Global font size setting",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+              ],
+              "crossAxisAlignment": "start"
+            }
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "bottom": 50,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "mainAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "button",
+                  "label": "-",
+                  "variant": "text",
+                  "style": {
+                    "backgroundColor": "#FF5252",
+                    "textColor": "#FFFFFF",
+                    "paddingH": 24,
+                    "paddingV": 10
+                  },
+                  "action": {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.textScale",
+                      "value": {
+                        "max": [
+                          0.5,
+                          {
+                            "-": [
+                              {
+                                "var": "global.textScale"
+                              },
+                              0.2
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "width": 20
+                },
+                {
+                  "type": "button",
+                  "label": "+",
+                  "variant": "text",
+                  "style": {
+                    "backgroundColor": "#69F0AE",
+                    "textColor": "#000000",
+                    "paddingH": 24,
+                    "paddingV": 10
+                  },
+                  "action": {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.textScale",
+                      "value": {
+                        "min": [
+                          3,
+                          {
+                            "+": [
+                              {
+                                "var": "global.textScale"
+                              },
+                              0.2
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/text_size_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：TextSizeDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+              ]
             }
           }
         ],
         "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "backgroundColor": "#FFFFFF"
       }
     ]
   }

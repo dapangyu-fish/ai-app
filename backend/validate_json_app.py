@@ -504,7 +504,7 @@ class Validator:
                     self.error(self._path(path, key), f"unsupported web/CSS-like field: {key}")
 
             for key in NUMERIC_SCALAR_KEYS:
-                if key in node and not self._is_number(node[key]):
+                if key in node and not self._is_number_or_expression(node[key]):
                     if key in {"margin", "padding"} and self._is_edge_insets(node[key]):
                         continue
                     self.error(self._path(path, key), f"{key} must be a number, not {type(node[key]).__name__}")
@@ -518,7 +518,7 @@ class Validator:
                     if key in style:
                         self.error(self._path(self._path(path, "style"), key), f"style.{key} is unsupported; use widget-level spacing or spacer")
                 for key in NUMERIC_SCALAR_KEYS:
-                    if key in style and not self._is_number(style[key]):
+                    if key in style and not self._is_number_or_expression(style[key]):
                         self.error(self._path(self._path(path, "style"), key), f"style.{key} must be a number, not {type(style[key]).__name__}")
 
         if node_type == "list" and isinstance(node.get("source"), dict):
@@ -829,12 +829,22 @@ class Validator:
             return True
         return isinstance(value, str) and "{{" in value and "}}" in value
 
+    @classmethod
+    def _is_number_or_expression(cls, value: Any) -> bool:
+        if cls._is_number(value):
+            return True
+        return (
+            isinstance(value, dict)
+            and len(value) == 1
+            and next(iter(value)) in JSONLOGIC_SINGLE_KEYS
+        )
+
     def _is_edge_insets(self, value: Any) -> bool:
         if not isinstance(value, dict):
             return False
         allowed = {"all", "horizontal", "vertical", "left", "right", "top", "bottom"}
         for key, raw in value.items():
-            if key not in allowed or not self._is_number(raw):
+            if key not in allowed or not self._is_number_or_expression(raw):
                 return False
         return True
 

@@ -18,7 +18,9 @@ class IconRegistry {
 
     // 操作
     'add': Icons.add,
+    'add_circle_outline': Icons.add_circle_outline,
     'remove': Icons.remove,
+    'remove_circle_outline': Icons.remove_circle_outline,
     'delete': Icons.delete,
     'edit': Icons.edit,
     'save': Icons.save,
@@ -101,6 +103,7 @@ class IconRegistry {
     'expand': Icons.expand_more,
     'collapse': Icons.expand_less,
     'fullscreen': Icons.fullscreen,
+    'vertical_align_top': Icons.vertical_align_top,
 
     // 游戏 / 历史
     'history': Icons.history,
