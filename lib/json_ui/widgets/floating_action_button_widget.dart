@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../interpreter.dart';
 import 'action_helper.dart';
 import 'base_widget.dart';
+import 'icon_registry.dart';
 
 class JsonFloatingActionButtonWidget extends JsonBaseWidget {
   @override
@@ -12,6 +13,8 @@ class JsonFloatingActionButtonWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final label = interpreter.resolveTemplate(json['label']?.toString() ?? '');
+    final iconName = json['icon']?.toString();
+    final iconData = iconName == null ? null : IconRegistry.get(iconName);
     final action =
         resolveActionAtBuildTime(json['action'], interpreter)
             as Map<String, dynamic>?;
@@ -19,7 +22,9 @@ class JsonFloatingActionButtonWidget extends JsonBaseWidget {
       onPressed: action == null
           ? null
           : () => interpreter.executeAction(action, context),
-      child: label.isEmpty ? null : Text(label),
+      child: iconData != null
+          ? Icon(iconData)
+          : (label.isEmpty ? null : Text(label)),
     );
   }
 }

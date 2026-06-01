@@ -127,6 +127,10 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
+    final visible = json['visible'];
+    if (visible != null && interpreter.resolveExpression(visible) != true) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
     switch (json['kind']?.toString() ?? json['type']?.toString()) {
       case 'sliver_box':
         final childJson = json['child'];

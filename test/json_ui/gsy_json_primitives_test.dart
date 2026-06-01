@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/json_ui/interpreter.dart';
 
 void main() {
-  for (var index = 23; index <= 30; index++) {
+  for (var index = 23; index <= 37; index++) {
     testWidgets('GSY JSON demo ${index.toString().padLeft(3, '0')} builds', (
       tester,
     ) async {

@@ -67,6 +67,7 @@ import 'widgets/floating_touch_demo_widget.dart';
 import 'widgets/floating_action_button_widget.dart';
 import 'widgets/hero_image_viewer_widget.dart';
 import 'widgets/scroll_primitives_widget.dart';
+import 'widgets/visual_primitives_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -139,6 +140,11 @@ class JsonWidgetBuilder {
     'custom_scroll_view': JsonCustomScrollViewWidget(),
     'verification_code_input': JsonVerificationCodeInputWidget(),
     'radial_layout': JsonRadialLayoutWidget(),
+    'word_cloud': JsonWordCloudWidget(),
+    'backdrop_blur': JsonBackdropBlurWidget(),
+    'animated_container': JsonAnimatedContainerWidget(),
+    'animated_visibility': JsonAnimatedVisibilityWidget(),
+    'action_region': JsonActionRegionWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

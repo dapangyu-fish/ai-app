@@ -3,13 +3,13 @@
   "appid": "f918e26c-f415-515f-9208-b57fee896989",
   "meta": {
     "name": "gsy_flutter_demo/031-cloud-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "自定义布局实现云词图展示",
       "en": "Word cloud with custom layout"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：自定义布局实现云词图展示",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：自定义布局实现云词图展示",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,7 +27,8 @@
       "upstreamTitle": "自定义布局实现云词图展示",
       "upstreamSource": "lib/widget/basic/cloud/cloud_demo_page.dart",
       "upstreamWidget": "CloudDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1"
     },
     "functions": {}
   },
@@ -36,152 +37,274 @@
     "screens": [
       {
         "id": "home",
-        "title": "自定义布局实现云词图展示",
-        "layout": "column",
+        "title": "CloudDemoPage",
+        "layout": "stack",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "word_cloud",
+                "backgroundColor": "#795548",
+                "items": [
                   {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+                    "text": "CloudGSY11111",
+                    "color": "#FFE57F",
+                    "fontSize": 10,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY3333333T",
+                    "color": "#EEFF41",
+                    "fontSize": 16,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYXXXXXXX",
+                    "color": "#000000",
+                    "fontSize": 14,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY55",
+                    "color": "#212121",
+                    "fontSize": 33,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYAA",
+                    "color": "#448AFF",
+                    "fontSize": 15,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY44",
+                    "color": "#536DFE",
+                    "fontSize": 16,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYBWWWWWW",
+                    "color": "#FF5722",
+                    "fontSize": 12,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY<<<",
+                    "color": "#2196F3",
+                    "fontSize": 20,
+                    "rotate": true
+                  },
+                  {
+                    "text": "FFFFFFFFFFFFFF",
+                    "color": "#2196F3",
+                    "fontSize": 12,
+                    "rotate": false
+                  },
+                  {
+                    "text": "BBBBBBBBBBB",
+                    "color": "#7C4DFF",
+                    "fontSize": 14,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY%%%%",
+                    "color": "#FF9800",
+                    "fontSize": 20,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY%%%%%%%",
+                    "color": "#2196F3",
+                    "fontSize": 12,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY&&&&",
+                    "color": "#536DFE",
+                    "fontSize": 10,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYCCCC",
+                    "color": "#FFFF00",
+                    "fontSize": 14,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY****",
+                    "color": "#448AFF",
+                    "fontSize": 13,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYRRRR",
+                    "color": "#FF5252",
+                    "fontSize": 12,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSYFFFFF",
+                    "color": "#2196F3",
+                    "fontSize": 12,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYBBBBBBB",
+                    "color": "#18FFFF",
+                    "fontSize": 15,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY222222",
+                    "color": "#2196F3",
+                    "fontSize": 16,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY1111111111111111",
+                    "color": "#64FFDA",
+                    "fontSize": 19,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY####",
+                    "color": "#8A000000",
+                    "fontSize": 12,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYFDWE",
+                    "color": "#E040FB",
+                    "fontSize": 14,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY22222",
+                    "color": "#536DFE",
+                    "fontSize": 19,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY44444",
+                    "color": "#FFFF00",
+                    "fontSize": 18,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY33333",
+                    "color": "#40C4FF",
+                    "fontSize": 17,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYXXXXXXXX",
+                    "color": "#2196F3",
+                    "fontSize": 16,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSYFFFFFFFF",
+                    "color": "#42000000",
+                    "fontSize": 14,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYZUuzzuuu",
+                    "color": "#2196F3",
+                    "fontSize": 16,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSYVVVVVVVVV",
+                    "color": "#FF9800",
+                    "fontSize": 12,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY222223",
+                    "color": "#42000000",
+                    "fontSize": 13,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSYGFD",
+                    "color": "#FFFF00",
+                    "fontSize": 14,
+                    "rotate": true
+                  },
+                  {
+                    "text": "GGGGGGGGGG",
+                    "color": "#7C4DFF",
+                    "fontSize": 14,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYFFFFFF",
+                    "color": "#448AFF",
+                    "fontSize": 10,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY222",
+                    "color": "#EEFF41",
+                    "fontSize": 12,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY6666",
+                    "color": "#2196F3",
+                    "fontSize": 20,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSY33333",
+                    "color": "#009688",
+                    "fontSize": 14,
+                    "rotate": false
+                  },
+                  {
+                    "text": "YYYYYYYYYYYYYY",
+                    "color": "#7C4DFF",
+                    "fontSize": 14,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSY  3  ",
+                    "color": "#2196F3",
+                    "fontSize": 10,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYYYYYY",
+                    "color": "#8A000000",
+                    "fontSize": 17,
+                    "rotate": true
+                  },
+                  {
+                    "text": "CloudGSYCC",
+                    "color": "#40C4FF",
+                    "fontSize": 11,
+                    "rotate": false
+                  },
+                  {
+                    "text": "CloudGSYGGGGG",
+                    "color": "#7C4DFF",
+                    "fontSize": 10,
+                    "rotate": false
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "自定义布局实现云词图展示",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Word cloud with custom layout",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                ]
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/cloud/cloud_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：CloudDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
             }
           }
         ],
         "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "backgroundColor": "#FFFFFF"
       }
     ]
   }
