@@ -152,7 +152,14 @@ PROJECT_ROOT = os.environ.get("SERVER_PROJECT_PATH", os.path.realpath(os.path.jo
 TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
 DSL_SPEC_PATH = os.path.join(PROJECT_ROOT, "JSON-DSL.md")
 PROMPTS_DIR = os.path.join(BASE_DIR, "prompts")
-GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
+GENERATE_PROMPT_MODE = os.environ.get("AI_GENERATION_PROMPT_MODE", "indexed").strip().lower()
+LEGACY_GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt.md")
+INDEXED_GENERATE_PROMPT_PATH = os.path.join(PROMPTS_DIR, "generate_app_prompt_indexed.md")
+GENERATE_PROMPT_PATH = (
+    LEGACY_GENERATE_PROMPT_PATH
+    if GENERATE_PROMPT_MODE in ("legacy", "full")
+    else INDEXED_GENERATE_PROMPT_PATH
+)
 
 
 def load_generate_prompt() -> str:
@@ -162,7 +169,10 @@ def load_generate_prompt() -> str:
     测试环境：env 注入 http://IP:port，prompt 里 AI 看到的引用就指向测试服了
     （否则 AI 生成的 JSON-APP 会硬塞生产 URL，跑起来仍然访问生产）。
     """
-    with open(GENERATE_PROMPT_PATH, "r", encoding="utf-8") as f:
+    prompt_path = GENERATE_PROMPT_PATH
+    if not os.path.isfile(prompt_path):
+        prompt_path = LEGACY_GENERATE_PROMPT_PATH
+    with open(prompt_path, "r", encoding="utf-8") as f:
         content = f.read()
     return (
         content

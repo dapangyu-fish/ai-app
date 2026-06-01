@@ -97,10 +97,373 @@ def text(value: Any, **props: Any) -> dict[str, Any]:
     return out
 
 
+def icon(name: str, *, size: int = 20, color: str = "#6B7280", **props: Any) -> dict[str, Any]:
+    out = {"type": "icon", "name": name, "size": size, "color": color}
+    out.update(props)
+    return out
+
+
+def spacer(*, height: int | None = None, width: int | None = None) -> dict[str, Any]:
+    out: dict[str, Any] = {"type": "spacer"}
+    if height is not None:
+        out["height"] = height
+    if width is not None:
+        out["width"] = width
+    return out
+
+
 def container(children: list[dict[str, Any]], layout: str = "column", **props: Any) -> dict[str, Any]:
     out = {"type": "container", "layout": layout, "children": children}
     out.update(props)
     return out
+
+
+def card(children: list[dict[str, Any]], layout: str = "column", **props: Any) -> dict[str, Any]:
+    out = {
+        "type": "card",
+        "layout": layout,
+        "color": "#FFFFFF",
+        "padding": 16,
+        "margin": 8,
+        "elevation": 0,
+        "borderRadius": 14,
+        "children": children,
+    }
+    out.update(props)
+    return out
+
+
+def button(
+    label: str,
+    *,
+    action: dict[str, Any],
+    variant: str = "filled",
+    icon_name: str | None = None,
+    style: dict[str, Any] | None = None,
+    **props: Any,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "type": "button",
+        "label": label,
+        "variant": variant,
+        "action": action,
+    }
+    if icon_name:
+        out["icon"] = icon_name
+    if style:
+        out["style"] = style
+    out.update(props)
+    return out
+
+
+def native_app_bar(
+    title: str,
+    *,
+    actions: list[dict[str, Any]] | None = None,
+    background: str = "#FFFFFF",
+    color: str = "#111827",
+    center_title: bool = True,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "title": title,
+        "centerTitle": center_title,
+        "backgroundColor": background,
+        "color": color,
+        "elevation": 0,
+    }
+    if actions:
+        out["actions"] = actions
+    return out
+
+
+def native_search_bar(
+    *,
+    bind: str,
+    placeholder: str = "搜索",
+    action: dict[str, Any] | None = None,
+    trailing_label: str = "搜索",
+) -> dict[str, Any]:
+    children = [
+        icon("search", size=18, color="#8E8E93"),
+        spacer(width=8),
+        {
+            "type": "input",
+            "placeholder": placeholder,
+            "bind": bind,
+            "position": {"type": "flex", "flex": 1},
+            "style": {"fontSize": 15, "borderRadius": 10},
+        },
+    ]
+    if action is not None:
+        children.append(
+            button(
+                trailing_label,
+                variant="text",
+                action=action,
+                style={"textColor": "#2563EB", "fontSize": 14},
+            )
+        )
+    return container(
+        children,
+        layout="row",
+        padding=10,
+        margin=12,
+        color="#F7F8FA",
+        borderRadius=14,
+        crossAxisAlignment="center",
+    )
+
+
+def native_action_icon(
+    icon_name: str,
+    *,
+    action: dict[str, Any],
+    color: str = "#2563EB",
+    tooltip: str | None = None,
+) -> dict[str, Any]:
+    out = button(
+        "",
+        variant="text",
+        action=action,
+        icon_name=icon_name,
+        style={"textColor": color, "fontSize": 18, "paddingH": 10, "paddingV": 8},
+    )
+    if tooltip:
+        out["tooltip"] = tooltip
+    return out
+
+
+def native_metric_card(
+    label: str,
+    value: str,
+    *,
+    icon_name: str = "insights",
+    accent: str = "#2563EB",
+) -> dict[str, Any]:
+    return card(
+        [
+            container(
+                [
+                    icon(icon_name, size=18, color=accent),
+                    spacer(width=8),
+                    text(label, style={"fontSize": 13, "color": "#6B7280"}),
+                ],
+                layout="row",
+                crossAxisAlignment="center",
+            ),
+            spacer(height=8),
+            text(value, style={"fontSize": 21, "fontWeight": "bold", "color": "#111827", "maxLines": 1}),
+        ],
+        margin=6,
+        padding=14,
+    )
+
+
+def native_metric_row(metrics: list[dict[str, str]], *, accent: str = "#2563EB") -> dict[str, Any]:
+    """Build a compact native summary row.
+
+    Each metric accepts: label, value, icon, accent. The helper intentionally
+    uses only scalar spacing because JSON widgets do not support edge objects.
+    On phone widths more than two cards in one row becomes cramped, so the
+    helper wraps metrics into two-card rows.
+    """
+    def build_row(row_metrics: list[dict[str, str]]) -> dict[str, Any]:
+        children: list[dict[str, Any]] = []
+        for i, metric in enumerate(row_metrics):
+            if i:
+                children.append(spacer(width=8))
+            children.append(
+                {
+                    "type": "expanded",
+                    "child": native_metric_card(
+                        metric.get("label", ""),
+                        metric.get("value", "0"),
+                        icon_name=metric.get("icon", "insights"),
+                        accent=metric.get("accent", accent),
+                    ),
+                }
+            )
+        return container(children, layout="row")
+
+    if len(metrics) <= 2:
+        return container(build_row(metrics)["children"], layout="row", margin=8)
+
+    rows: list[dict[str, Any]] = []
+    for i in range(0, len(metrics), 2):
+        if i:
+            rows.append(spacer(height=8))
+        rows.append(build_row(metrics[i : i + 2]))
+    return container(rows, layout="column", margin=8)
+
+
+def native_filter_chips(
+    options: list[tuple[str, str]] | list[dict[str, str]],
+    *,
+    bind: str,
+    action: dict[str, Any] | None = None,
+    accent: str = "#2563EB",
+) -> dict[str, Any]:
+    children: list[dict[str, Any]] = []
+    for option in options:
+        if isinstance(option, dict):
+            label = option.get("label", "")
+            value = option.get("value", label)
+        else:
+            label, value = option
+        chip: dict[str, Any] = {
+            "type": "chip",
+            "label": label,
+            "variant": "choice",
+            "bind": bind,
+            "value": value,
+            "color": accent,
+        }
+        if action is not None:
+            chip["action"] = action
+        children.append(chip)
+    return {
+        "type": "wrap",
+        "spacing": 8,
+        "runSpacing": 8,
+        "children": children,
+    }
+
+
+def native_empty_state(
+    *,
+    title: str,
+    subtitle: str,
+    icon_name: str = "inbox",
+    action: dict[str, Any] | None = None,
+    action_label: str = "新建",
+) -> dict[str, Any]:
+    children = [
+        icon(icon_name, size=34, color="#A1A1AA"),
+        spacer(height=10),
+        text(title, style={"fontSize": 15, "fontWeight": "600", "color": "#52525B"}),
+        spacer(height=4),
+        text(subtitle, style={"fontSize": 13, "color": "#8E8E93"}),
+    ]
+    if action is not None:
+        children.extend(
+            [
+                spacer(height=12),
+                button(
+                    action_label,
+                    action=action,
+                    icon_name="add",
+                    style={
+                        "backgroundColor": "#2563EB",
+                        "textColor": "#FFFFFF",
+                        "borderRadius": 18,
+                        "fontSize": 14,
+                        "paddingH": 16,
+                        "paddingV": 9,
+                    },
+                ),
+            ]
+        )
+    return container(
+        children,
+        layout="column",
+        padding=20,
+        margin=12,
+        color="#FFFFFF",
+        borderRadius=14,
+        mainAxisAlignment="center",
+        crossAxisAlignment="center",
+    )
+
+
+def native_crud_app_shell(
+    *,
+    screen_id: str,
+    title: str,
+    list_source: str,
+    item_template: dict[str, Any],
+    metrics: list[dict[str, str]] | None = None,
+    search_bind: str | None = None,
+    search_placeholder: str = "搜索",
+    search_action: dict[str, Any] | None = None,
+    filters: list[tuple[str, str]] | list[dict[str, str]] | None = None,
+    filter_bind: str | None = None,
+    filter_action: dict[str, Any] | None = None,
+    primary_action: dict[str, Any] | None = None,
+    primary_icon: str = "add",
+    primary_label: str = "新增",
+    empty_text: str = "暂无数据",
+    accent: str = "#2563EB",
+    background: str = "#F4F6F8",
+) -> dict[str, Any]:
+    """Native CRUD/list screen scaffold for generated apps.
+
+    This helper deliberately encodes a good first viewport: summary, search,
+    filters and list are all present before empty-state content.
+    """
+    children: list[dict[str, Any]] = []
+    if metrics:
+        children.append(native_metric_row(metrics, accent=accent))
+    if search_bind:
+        children.append(
+            native_search_bar(
+                bind=search_bind,
+                placeholder=search_placeholder,
+                action=search_action,
+                trailing_label="搜索" if search_action is not None else "",
+            )
+        )
+    if filters and filter_bind:
+        children.append(
+            container(
+                [native_filter_chips(filters, bind=filter_bind, action=filter_action, accent=accent)],
+                layout="column",
+                padding=12,
+                margin=8,
+                color="#FFFFFF",
+                borderRadius=14,
+            )
+        )
+    children.append(
+        {
+            "type": "list",
+            "source": list_source,
+            "emptyText": empty_text,
+            "item_template": item_template,
+        }
+    )
+    if primary_action is not None:
+        children.append(
+            container(
+                [
+                    button(
+                        primary_label,
+                        action=primary_action,
+                        icon_name=primary_icon,
+                        style={
+                            "backgroundColor": accent,
+                            "textColor": "#FFFFFF",
+                            "borderRadius": 16,
+                            "fontSize": 15,
+                            "paddingV": 12,
+                        },
+                    )
+                ],
+                padding=12,
+                color=background,
+            )
+        )
+    return screen(
+        screen_id,
+        title=title,
+        backgroundColor=background,
+        appBar=native_app_bar(
+            title,
+            actions=[native_action_icon(primary_icon, action=primary_action, color=accent)]
+            if primary_action is not None
+            else None,
+        ),
+        children=children,
+    )
 
 
 def expanded(child: dict[str, Any], flex: int = 1) -> dict[str, Any]:

@@ -3,9 +3,9 @@
   "appid": "a8e5f201-5d4c-4c2a-9f9b-7e26e3c8d1f4",
   "meta": {
     "name": "demo-im",
-    "version": "1.5.1",
+    "version": "1.5.5",
     "type": "app",
-    "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 加好友",
+    "description": "lib_im 演示 — 微信风格 单聊 / 通讯录 / 个人页 / 加好友",
     "author": "fish"
   },
   "dependencies": {
@@ -15,8 +15,9 @@
   },
   "global": {
     "variables": {
-      "myId": "",
-      "myName": "",
+      "locale": "zh",
+      "myId": "未登录",
+      "myName": "微信用户",
       "myAvatar": "",
       "otherAvatar": "",
       "friends": [],
@@ -29,7 +30,173 @@
       "currentChatName": "",
       "messages": [],
       "draft": "",
+      "editName": "",
+      "themeMode": "system",
+      "language": "zh",
+      "_photoPath": "",
       "_im": null
+    },
+    "i18n": {
+      "zh": {
+        "tabs": {"wechat": "微信", "contacts": "通讯录", "me": "我"},
+        "me": {
+          "fallback_name": "微信用户",
+          "wechat_id": "微信号：{{ global.myId }}",
+          "wechat_id_empty": "微信号：未登录",
+          "favorites": "收藏",
+          "moments": "朋友圈",
+          "refresh": "刷新个人信息",
+          "settings": "设置",
+          "developing": "开发中",
+          "developing_msg": "{{ params.feature }} 正在开发中"
+        },
+        "profile": {"avatar_title": "头像", "qr_title": "我的二维码"},
+        "settings": {
+          "title": "设置",
+          "profile": "个人资料",
+          "change_avatar": "更换头像",
+          "nickname": "昵称",
+          "nickname_hint": "输入新的昵称",
+          "save_name": "保存昵称",
+          "appearance": "外观",
+          "theme": "主题",
+          "theme_system": "跟随系统",
+          "theme_light": "浅色",
+          "theme_dark": "深色",
+          "language": "语言",
+          "language_system": "跟随系统",
+          "language_zh": "中文",
+          "language_en": "English",
+          "language_de": "Deutsch",
+          "language_es": "Español",
+          "saved": "已保存",
+          "profile_refreshed": "已刷新个人信息",
+          "avatar_saved": "头像已更新",
+          "theme_saved": "主题已切换",
+          "language_saved": "语言已切换",
+          "name_empty": "昵称不能为空"
+        }
+      },
+      "en": {
+        "tabs": {"wechat": "Chats", "contacts": "Contacts", "me": "Me"},
+        "me": {
+          "fallback_name": "WeChat User",
+          "wechat_id": "WeChat ID: {{ global.myId }}",
+          "wechat_id_empty": "WeChat ID: Not signed in",
+          "favorites": "Favorites",
+          "moments": "Moments",
+          "refresh": "Refresh profile",
+          "settings": "Settings",
+          "developing": "In development",
+          "developing_msg": "{{ params.feature }} is in development"
+        },
+        "profile": {"avatar_title": "Avatar", "qr_title": "My QR Code"},
+        "settings": {
+          "title": "Settings",
+          "profile": "Profile",
+          "change_avatar": "Change avatar",
+          "nickname": "Nickname",
+          "nickname_hint": "Enter a new nickname",
+          "save_name": "Save nickname",
+          "appearance": "Appearance",
+          "theme": "Theme",
+          "theme_system": "System",
+          "theme_light": "Light",
+          "theme_dark": "Dark",
+          "language": "Language",
+          "language_system": "System",
+          "language_zh": "中文",
+          "language_en": "English",
+          "language_de": "Deutsch",
+          "language_es": "Español",
+          "saved": "Saved",
+          "profile_refreshed": "Profile refreshed",
+          "avatar_saved": "Avatar updated",
+          "theme_saved": "Theme changed",
+          "language_saved": "Language changed",
+          "name_empty": "Nickname cannot be empty"
+        }
+      },
+      "de": {
+        "tabs": {"wechat": "Chats", "contacts": "Kontakte", "me": "Ich"},
+        "me": {
+          "fallback_name": "WeChat-Nutzer",
+          "wechat_id": "WeChat-ID: {{ global.myId }}",
+          "wechat_id_empty": "WeChat-ID: Nicht angemeldet",
+          "favorites": "Favoriten",
+          "moments": "Momente",
+          "refresh": "Profil aktualisieren",
+          "settings": "Einstellungen",
+          "developing": "In Entwicklung",
+          "developing_msg": "{{ params.feature }} ist in Entwicklung"
+        },
+        "profile": {"avatar_title": "Avatar", "qr_title": "Mein QR-Code"},
+        "settings": {
+          "title": "Einstellungen",
+          "profile": "Profil",
+          "change_avatar": "Avatar ändern",
+          "nickname": "Nickname",
+          "nickname_hint": "Neuen Nickname eingeben",
+          "save_name": "Nickname speichern",
+          "appearance": "Darstellung",
+          "theme": "Design",
+          "theme_system": "System",
+          "theme_light": "Hell",
+          "theme_dark": "Dunkel",
+          "language": "Sprache",
+          "language_system": "System",
+          "language_zh": "中文",
+          "language_en": "English",
+          "language_de": "Deutsch",
+          "language_es": "Español",
+          "saved": "Gespeichert",
+          "profile_refreshed": "Profil aktualisiert",
+          "avatar_saved": "Avatar aktualisiert",
+          "theme_saved": "Design geändert",
+          "language_saved": "Sprache geändert",
+          "name_empty": "Nickname darf nicht leer sein"
+        }
+      },
+      "es": {
+        "tabs": {"wechat": "Chats", "contacts": "Contactos", "me": "Yo"},
+        "me": {
+          "fallback_name": "Usuario de WeChat",
+          "wechat_id": "ID de WeChat: {{ global.myId }}",
+          "wechat_id_empty": "ID de WeChat: sin sesión",
+          "favorites": "Favoritos",
+          "moments": "Momentos",
+          "refresh": "Actualizar perfil",
+          "settings": "Ajustes",
+          "developing": "En desarrollo",
+          "developing_msg": "{{ params.feature }} está en desarrollo"
+        },
+        "profile": {"avatar_title": "Avatar", "qr_title": "Mi código QR"},
+        "settings": {
+          "title": "Ajustes",
+          "profile": "Perfil",
+          "change_avatar": "Cambiar avatar",
+          "nickname": "Apodo",
+          "nickname_hint": "Introduce un nuevo apodo",
+          "save_name": "Guardar apodo",
+          "appearance": "Apariencia",
+          "theme": "Tema",
+          "theme_system": "Sistema",
+          "theme_light": "Claro",
+          "theme_dark": "Oscuro",
+          "language": "Idioma",
+          "language_system": "Sistema",
+          "language_zh": "中文",
+          "language_en": "English",
+          "language_de": "Deutsch",
+          "language_es": "Español",
+          "saved": "Guardado",
+          "profile_refreshed": "Perfil actualizado",
+          "avatar_saved": "Avatar actualizado",
+          "theme_saved": "Tema cambiado",
+          "language_saved": "Idioma cambiado",
+          "name_empty": "El apodo no puede estar vacío"
+        }
+      }
     },
     "computed": {
       "applicationCount": {
@@ -51,6 +218,35 @@
           {"call": "@lib_im.listFriendApplications", "args": {"bind": "global.applications"}},
           {"call": "@lib_im.listConversations", "args": {"bind": "global.conversations"}},
           {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}}
+        ]
+      },
+
+      "preloadMessageAvatars": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@for_each",
+            "args": {
+              "source": "{{ global.messages }}",
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": "{{ loop.item.is_me }}",
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.messages.{{ loop.index }}.sender_face_url",
+                          "value": "{{ global.myAvatar }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
         ]
       },
 
@@ -106,6 +302,7 @@
             "call": "@lib_im.getMessages",
             "args": {"userId": "{{ params.userId }}", "count": 50, "bind": "global.messages"}
           },
+          {"call": "@global.preloadMessageAvatars", "args": {}},
           {"call": "@lib_im.markRead", "args": {"userId": "{{ params.userId }}"}},
           {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}},
           {"call": "@navigate", "args": {"screen": "chat"}}
@@ -126,6 +323,7 @@
             "call": "@lib_im.getMessages",
             "args": {"userId": "{{ global.currentChatUserId }}", "count": 50, "bind": "global.messages"}
           },
+          {"call": "@global.preloadMessageAvatars", "args": {}},
           {"call": "@lib_im.markRead", "args": {"userId": "{{ global.currentChatUserId }}"}},
           {"call": "@lib_im.totalUnread", "args": {"bind": "global.totalUnread"}}
         ]
@@ -154,6 +352,96 @@
             }
           }
         ]
+      },
+
+      "refreshMe": {
+        "params": [],
+        "logic": [
+          {"call": "@global.loadHome", "args": {}},
+          {"call": "@common-ui.showSuccess", "args": {"message": "{{ t('settings.profile_refreshed') }}"}}
+        ]
+      },
+
+      "showDeveloping": {
+        "params": ["feature"],
+        "logic": [
+          {"call": "@common-ui.showInfo", "args": {"message": "{{ t('me.developing_msg') }}"}}
+        ]
+      },
+
+      "openSettings": {
+        "params": [],
+        "logic": [
+          {"call": "@set", "args": {"var": "global.editName", "value": "{{ global.myName }}"}},
+          {"call": "@get_theme", "args": {}, "assign": "global.themeMode"},
+          {"call": "@get_framework_locale", "args": {}, "assign": "global.language"},
+          {"call": "@navigate", "args": {"screen": "settings"}}
+        ]
+      },
+
+      "changeAvatar": {
+        "params": [],
+        "logic": [
+          {"call": "@set", "args": {"var": "global._photoPath", "value": ""}},
+          {"call": "@common-ui.pickImage", "args": {"bind": "global._photoPath"}},
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "and": [
+                  {"!=": [{"var": "global._photoPath"}, null]},
+                  {"!=": [{"var": "global._photoPath"}, ""]}
+                ]
+              },
+              "then": [
+                {"call": "@lib_user.updateAvatar", "args": {"imagePath": "{{ global._photoPath }}"}},
+                {"call": "@global.loadHome", "args": {}},
+                {"call": "@common-ui.showSuccess", "args": {"message": "{{ t('settings.avatar_saved') }}"}}
+              ]
+            }
+          }
+        ]
+      },
+
+      "saveName": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "and": [
+                  {"!=": [{"var": "global.editName"}, null]},
+                  {"!=": [{"var": "global.editName"}, ""]}
+                ]
+              },
+              "then": [
+                {"call": "@lib_user.updateName", "args": {"newName": "{{ global.editName }}"}},
+                {"call": "@global.loadHome", "args": {}},
+                {"call": "@common-ui.showSuccess", "args": {"message": "{{ t('settings.saved') }}"}}
+              ],
+              "else": [
+                {"call": "@common-ui.showInfo", "args": {"message": "{{ t('settings.name_empty') }}"}}
+              ]
+            }
+          }
+        ]
+      },
+
+      "applyTheme": {
+        "params": [],
+        "logic": [
+          {"call": "@set_theme", "args": {"mode": "{{ global.themeMode }}"}},
+          {"call": "@common-ui.showSuccess", "args": {"message": "{{ t('settings.theme_saved') }}"}}
+        ]
+      },
+
+      "applyLanguage": {
+        "params": [],
+        "logic": [
+          {"call": "@set_framework_locale", "args": {"value": "{{ global.language }}"}},
+          {"call": "@common-ui.showSuccess", "args": {"message": "{{ t('settings.language_saved') }}"}}
+        ]
       }
     }
   },
@@ -164,12 +452,13 @@
     "screens": [
       {
         "id": "home",
-        "title": "微信",
+        "title": "{{ t('tabs.wechat') }}",
         "tabs": [
           {
-            "label": "微信",
+            "label": "{{ t('tabs.wechat') }}",
+            "title": "{{ t('tabs.wechat') }}",
             "icon": "chat",
-            "backgroundColor": "#EDEDED",
+            "backgroundColor": "#F5F5F5",
             "padding": 0,
             "children": [
               {
@@ -183,7 +472,6 @@
                   "color": "#FFFFFF",
                   "crossAxisAlignment": "center",
                   "onTap": {
-                    "type": "call",
                     "call": "@global.openChatFromConversation",
                     "args": {
                       "userId": "{{ loop.item.user_id }}",
@@ -196,7 +484,7 @@
                       "url": "{{ loop.item.face_url }}",
                       "text": "{{ loop.item.show_name }}",
                       "size": 48,
-                      "color": "#5C6BC0",
+                      "color": "#07C160",
                       "textColor": "#FFFFFF"
                     },
                     {"type": "spacer", "width": 12},
@@ -253,8 +541,9 @@
             ]
           },
           {
-            "label": "通讯录",
-            "icon": "person",
+            "label": "{{ t('tabs.contacts') }}",
+            "title": "{{ t('tabs.contacts') }}",
+            "icon": "people",
             "backgroundColor": "#FFFFFF",
             "padding": 0,
             "children": [
@@ -272,7 +561,7 @@
                     "borderRadius": 8,
                     "padding": 8,
                     "children": [
-                      {"type": "icon", "name": "person_add", "color": "#FFFFFF", "size": 20}
+                      {"type": "icon", "name": "add", "color": "#FFFFFF", "size": 20}
                     ]
                   },
                   {"type": "spacer", "width": 12},
@@ -313,7 +602,7 @@
                     "borderRadius": 8,
                     "padding": 8,
                     "children": [
-                      {"type": "icon", "name": "person_search", "color": "#FFFFFF", "size": 20}
+                      {"type": "icon", "name": "search", "color": "#FFFFFF", "size": 20}
                     ]
                   },
                   {"type": "spacer", "width": 12},
@@ -349,7 +638,6 @@
                   "color": "#FFFFFF",
                   "crossAxisAlignment": "center",
                   "onTap": {
-                    "type": "call",
                     "call": "@global.openChat",
                     "args": {
                       "userId": "{{ loop.item.user_id }}",
@@ -362,7 +650,7 @@
                       "url": "{{ loop.item.face_url }}",
                       "text": "{{ loop.item.nickname }}",
                       "size": 40,
-                      "color": "#5C6BC0",
+                      "color": "#07C160",
                       "textColor": "#FFFFFF"
                     },
                     {"type": "spacer", "width": 12},
@@ -374,6 +662,388 @@
                     }
                   ]
                 }
+              }
+            ]
+          },
+          {
+            "label": "{{ t('tabs.me') }}",
+            "title": "{{ t('tabs.me') }}",
+            "icon": "account",
+            "backgroundColor": "#F5F5F5",
+            "padding": 0,
+            "children": [
+              {"type": "spacer", "height": 12},
+              {
+                "type": "container",
+                "layout": "row",
+                "padding": 18,
+                "color": "#FFFFFF",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "onTap": {"type": "navigate", "screen": "avatar_preview"},
+                    "children": [
+                      {
+                        "type": "avatar",
+                        "url": "{{ global.myAvatar }}",
+                        "text": "{{ global.myName }}",
+                        "size": 64,
+                        "color": "#07C160",
+                        "textColor": "#FFFFFF"
+                      }
+                    ]
+                  },
+                  {"type": "spacer", "width": 14},
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "crossAxisAlignment": "start",
+                    "position": {"type": "flex", "flex": 1},
+                    "children": [
+                      {
+                        "type": "text",
+                        "visible": "{{ global.myName }}",
+                        "value": "{{ global.myName }}",
+                        "style": {"fontSize": 20, "fontWeight": "bold", "color": "#1A1A1A"}
+                      },
+                      {
+                        "type": "text",
+                        "visible": {"!": [{"var": "global.myName"}]},
+                        "value": "{{ t('me.fallback_name') }}",
+                        "style": {"fontSize": 20, "fontWeight": "bold", "color": "#1A1A1A"}
+                      },
+                      {"type": "spacer", "height": 6},
+                      {
+                        "type": "text",
+                        "visible": "{{ global.myId }}",
+                        "value": "{{ t('me.wechat_id') }}",
+                        "style": {"fontSize": 13, "color": "#888888", "maxLines": 1, "overflow": "ellipsis"}
+                      },
+                      {
+                        "type": "text",
+                        "visible": {"!": [{"var": "global.myId"}]},
+                        "value": "{{ t('me.wechat_id_empty') }}",
+                        "style": {"fontSize": 13, "color": "#888888"}
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "width": 44,
+                    "height": 44,
+                    "padding": 10,
+                    "color": "#FFFFFF",
+                    "borderRadius": 22,
+                    "onTap": {"type": "navigate", "screen": "profile_qr"},
+                    "children": [
+                      {"type": "icon", "name": "qr_code", "color": "#8A8A8A", "size": 22}
+                    ]
+                  }
+                ]
+              },
+              {"type": "spacer", "height": 10},
+              {
+                "type": "container",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "padding": 16,
+                    "crossAxisAlignment": "center",
+                    "onTap": {
+                      "call": "@global.showDeveloping",
+                      "args": {"feature": "{{ t('me.favorites') }}"}
+                    },
+                    "children": [
+                      {"type": "icon", "name": "favorite_outline", "color": "#07C160", "size": 22},
+                      {"type": "spacer", "width": 14},
+                      {
+                        "type": "text",
+                        "value": "{{ t('me.favorites') }}",
+                        "style": {"fontSize": 16, "color": "#1A1A1A"},
+                        "position": {"type": "flex", "flex": 1}
+                      },
+                      {"type": "icon", "name": "right", "color": "#C7C7CC", "size": 18}
+                    ]
+                  },
+                  {"type": "divider"},
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "padding": 16,
+                    "crossAxisAlignment": "center",
+                    "onTap": {
+                      "call": "@global.showDeveloping",
+                      "args": {"feature": "{{ t('me.moments') }}"}
+                    },
+                    "children": [
+                      {"type": "icon", "name": "photo", "color": "#07C160", "size": 22},
+                      {"type": "spacer", "width": 14},
+                      {
+                        "type": "text",
+                        "value": "{{ t('me.moments') }}",
+                        "style": {"fontSize": 16, "color": "#1A1A1A"},
+                        "position": {"type": "flex", "flex": 1}
+                      },
+                      {"type": "icon", "name": "right", "color": "#C7C7CC", "size": 18}
+                    ]
+                  }
+                ]
+              },
+              {"type": "spacer", "height": 10},
+              {
+                "type": "container",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "padding": 16,
+                    "crossAxisAlignment": "center",
+                    "onTap": {"call": "@global.refreshMe", "args": {}},
+                    "children": [
+                      {"type": "icon", "name": "refresh", "color": "#07C160", "size": 22},
+                      {"type": "spacer", "width": 14},
+                      {
+                        "type": "text",
+                        "value": "{{ t('me.refresh') }}",
+                        "style": {"fontSize": 16, "color": "#1A1A1A"},
+                        "position": {"type": "flex", "flex": 1}
+                      },
+                      {"type": "icon", "name": "right", "color": "#C7C7CC", "size": 18}
+                    ]
+                  },
+                  {"type": "divider"},
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "padding": 16,
+                    "crossAxisAlignment": "center",
+                    "onTap": {"call": "@global.openSettings", "args": {}},
+                    "children": [
+                      {"type": "icon", "name": "settings", "color": "#07C160", "size": 22},
+                      {"type": "spacer", "width": 14},
+                      {
+                        "type": "text",
+                        "value": "{{ t('me.settings') }}",
+                        "style": {"fontSize": 16, "color": "#1A1A1A"},
+                        "position": {"type": "flex", "flex": 1}
+                      },
+                      {"type": "icon", "name": "right", "color": "#C7C7CC", "size": 18}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "id": "profile_qr",
+        "title": "{{ t('profile.qr_title') }}",
+        "backgroundColor": "#F5F5F5",
+        "layout": "column",
+        "padding": 20,
+        "children": [
+          {
+            "type": "card",
+            "elevation": 1,
+            "borderRadius": 8,
+            "margin": 0,
+            "padding": 22,
+            "layout": "column",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "avatar",
+                "url": "{{ global.myAvatar }}",
+                "text": "{{ global.myName }}",
+                "size": 72,
+                "color": "#07C160",
+                "textColor": "#FFFFFF"
+              },
+              {"type": "spacer", "height": 12},
+              {
+                "type": "text",
+                "visible": "{{ global.myName }}",
+                "value": "{{ global.myName }}",
+                "style": {"fontSize": 19, "fontWeight": "bold", "color": "#1A1A1A", "textAlign": "center"}
+              },
+              {
+                "type": "text",
+                "visible": {"!": [{"var": "global.myName"}]},
+                "value": "{{ t('me.fallback_name') }}",
+                "style": {"fontSize": 19, "fontWeight": "bold", "color": "#1A1A1A", "textAlign": "center"}
+              },
+              {"type": "spacer", "height": 4},
+              {
+                "type": "text",
+                "value": "{{ t('me.wechat_id') }}",
+                "style": {"fontSize": 13, "color": "#888888", "textAlign": "center", "maxLines": 1, "overflow": "ellipsis"}
+              },
+              {"type": "spacer", "height": 22},
+              {
+                "type": "qr_code",
+                "data": "wechat://user/{{ global.myId }}",
+                "size": 230,
+                "backgroundColor": "#FFFFFF",
+                "color": "#1A1A1A",
+                "errorCorrectionLevel": "M"
+              }
+            ]
+          }
+        ]
+      },
+
+      {
+        "id": "avatar_preview",
+        "title": "{{ t('profile.avatar_title') }}",
+        "backgroundColor": "#111111",
+        "layout": "column",
+        "padding": 24,
+        "children": [
+          {"type": "spacer", "height": 80},
+          {
+            "type": "center",
+            "child": {
+              "type": "avatar",
+              "url": "{{ global.myAvatar }}",
+              "text": "{{ global.myName }}",
+              "size": 220,
+              "color": "#07C160",
+              "textColor": "#FFFFFF"
+            }
+          }
+        ]
+      },
+
+      {
+        "id": "settings",
+        "title": "{{ t('settings.title') }}",
+        "backgroundColor": "#F5F5F5",
+        "layout": "column",
+        "padding": 12,
+        "children": [
+          {
+            "type": "card",
+            "elevation": 1,
+            "borderRadius": 8,
+            "margin": 0,
+            "padding": 16,
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {"type": "icon", "name": "account", "size": 22, "color": "#07C160"},
+                  {"type": "spacer", "width": 10},
+                  {
+                    "type": "text",
+                    "value": "{{ t('settings.profile') }}",
+                    "style": {"fontSize": 16, "fontWeight": "bold", "color": "#1A1A1A"}
+                  }
+                ]
+              },
+              {"type": "spacer", "height": 14},
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "avatar",
+                    "url": "{{ global.myAvatar }}",
+                    "text": "{{ global.myName }}",
+                    "size": 58,
+                    "color": "#07C160",
+                    "textColor": "#FFFFFF"
+                  },
+                  {"type": "spacer", "width": 12},
+                  {
+                    "type": "button",
+                    "label": "{{ t('settings.change_avatar') }}",
+                    "icon": "camera",
+                    "variant": "outlined",
+                    "style": {"borderRadius": 10, "paddingH": 14, "paddingV": 10},
+                    "action": {"call": "@global.changeAvatar", "args": {}}
+                  }
+                ]
+              },
+              {"type": "spacer", "height": 10},
+              {
+                "type": "input",
+                "label": "{{ t('settings.nickname') }}",
+                "placeholder": "{{ t('settings.nickname_hint') }}",
+                "bind": "global.editName",
+                "prefixIcon": "edit"
+              },
+              {
+                "type": "button",
+                "label": "{{ t('settings.save_name') }}",
+                "icon": "edit",
+                "variant": "filled",
+                "style": {"backgroundColor": "#07C160", "textColor": "#FFFFFF", "borderRadius": 10},
+                "action": {"call": "@global.saveName", "args": {}}
+              }
+            ]
+          },
+          {"type": "spacer", "height": 12},
+          {
+            "type": "card",
+            "elevation": 1,
+            "borderRadius": 8,
+            "margin": 0,
+            "padding": 16,
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {"type": "icon", "name": "dark_mode", "size": 22, "color": "#07C160"},
+                  {"type": "spacer", "width": 10},
+                  {
+                    "type": "text",
+                    "value": "{{ t('settings.appearance') }}",
+                    "style": {"fontSize": 16, "fontWeight": "bold", "color": "#1A1A1A"}
+                  }
+                ]
+              },
+              {"type": "spacer", "height": 12},
+              {
+                "type": "dropdown",
+                "label": "{{ t('settings.theme') }}",
+                "prefixIcon": "light_mode",
+                "bind": "global.themeMode",
+                "options": [
+                  {"label": "{{ t('settings.theme_system') }}", "value": "system"},
+                  {"label": "{{ t('settings.theme_light') }}", "value": "light"},
+                  {"label": "{{ t('settings.theme_dark') }}", "value": "dark"}
+                ],
+                "action": {"call": "@global.applyTheme", "args": {}}
+              },
+              {"type": "spacer", "height": 8},
+              {
+                "type": "dropdown",
+                "label": "{{ t('settings.language') }}",
+                "prefixIcon": "globe",
+                "bind": "global.language",
+                "options": [
+                  {"label": "{{ t('settings.language_system') }}", "value": "system"},
+                  {"label": "{{ t('settings.language_zh') }}", "value": "zh"},
+                  {"label": "{{ t('settings.language_en') }}", "value": "en"},
+                  {"label": "{{ t('settings.language_de') }}", "value": "de"},
+                  {"label": "{{ t('settings.language_es') }}", "value": "es"}
+                ],
+                "action": {"call": "@global.applyLanguage", "args": {}}
               }
             ]
           }
@@ -398,7 +1068,7 @@
             "label": "搜索",
             "icon": "search",
             "variant": "filled",
-            "action": {"type": "call", "call": "@global.search", "args": {}}
+            "action": {"call": "@global.search", "args": {}}
           },
           {"type": "spacer", "height": 12},
           {
@@ -419,7 +1089,7 @@
                   "url": "{{ loop.item.face_url }}",
                   "text": "{{ loop.item.nickname }}",
                   "size": 40,
-                  "color": "#5C6BC0",
+                  "color": "#07C160",
                   "textColor": "#FFFFFF"
                 },
                 {"type": "spacer", "width": 12},
@@ -444,14 +1114,13 @@
                 {
                   "type": "button",
                   "label": "加",
-                  "icon": "person_add",
+                  "icon": "add",
                   "variant": "filled",
                   "visible": {"and": [
                     {"!": [{"var": "loop.item.is_friend"}]},
                     {"!": [{"var": "loop.item.is_self"}]}
                   ]},
                   "action": {
-                    "type": "call",
                     "call": "@global.addFriendByRow",
                     "args": {"userId": "{{ loop.item.im_user_id }}"}
                   }
@@ -459,11 +1128,10 @@
                 {
                   "type": "button",
                   "label": "发消息",
-                  "icon": "chat_bubble_outline",
+                  "icon": "chat",
                   "variant": "outlined",
                   "visible": "{{ loop.item.is_friend }}",
                   "action": {
-                    "type": "call",
                     "call": "@global.openChat",
                     "args": {
                       "userId": "{{ loop.item.im_user_id }}",
@@ -505,7 +1173,7 @@
                   "url": "{{ loop.item.from_face_url }}",
                   "text": "{{ loop.item.from_nickname }}",
                   "size": 44,
-                  "color": "#5C6BC0",
+                  "color": "#07C160",
                   "textColor": "#FFFFFF"
                 },
                 {"type": "spacer", "width": 12},
@@ -533,7 +1201,6 @@
                   "label": "通过",
                   "variant": "filled",
                   "action": {
-                    "type": "call",
                     "call": "@global.acceptFriend",
                     "args": {"userId": "{{ loop.item.from_user_id }}"}
                   }
@@ -549,7 +1216,6 @@
                   "label": "拒",
                   "variant": "outlined",
                   "action": {
-                    "type": "call",
                     "call": "@global.rejectFriend",
                     "args": {"userId": "{{ loop.item.from_user_id }}"}
                   }
@@ -583,7 +1249,7 @@
             "position": {"type": "flex", "flex": 1},
             "layout": "column",
             "padding": 8,
-            "color": "#EDEDED",
+            "color": "#F5F5F5",
             "children": [
               {
                 "type": "list",
@@ -603,7 +1269,7 @@
                       "url": "{{ loop.item.sender_face_url }}",
                       "text": "{{ global.currentChatName }}",
                       "size": 40,
-                      "color": "#5C6BC0",
+                      "color": "#07C160",
                       "textColor": "#FFFFFF"
                     },
                     {"type": "spacer", "width": 8},
@@ -705,7 +1371,7 @@
                       "url": "{{ loop.item.sender_face_url }}",
                       "text": "{{ global.myName }}",
                       "size": 40,
-                      "color": "#5C6BC0",
+                      "color": "#07C160",
                       "textColor": "#FFFFFF"
                     }
                   ]
@@ -733,7 +1399,7 @@
                 "label": "发送",
                 "icon": "send",
                 "variant": "filled",
-                "action": {"type": "call", "call": "@global.sendMessage", "args": {}}
+                "action": {"call": "@global.sendMessage", "args": {}}
               }
             ]
           }

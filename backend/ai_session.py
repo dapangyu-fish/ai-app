@@ -137,25 +137,13 @@ def _cleanup_old_workspaces() -> None:
         logger.info("[WORKSPACE] 清理旧工作目录 %s 个 (> %ss)", deleted, _WORKSPACE_RETENTION_SECONDS)
 
 
-def _prepare_worker_workspace(session_id: str, job_id: Optional[str]) -> tuple[str, str]:
+def _prepare_worker_workspace(session_id: str, job_id: Optional[str]) -> str:
     _cleanup_old_workspaces()
     safe_session = _safe_path_part(session_id, "session")
     safe_job = _safe_path_part(job_id, "job")
     workspace = os.path.join(_WORKSPACE_ROOT, safe_session, safe_job)
     os.makedirs(workspace, exist_ok=True)
-    tasklist = os.path.join(workspace, "TASKS.md")
-    if not os.path.exists(tasklist):
-        with open(tasklist, "w", encoding="utf-8") as f:
-            f.write(
-                "# Task List\n"
-                "- [ ] Clarify target app/game type and success criteria\n"
-                "- [ ] Read DSL / anti-patterns / closest template for API shape only\n"
-                "- [ ] Select assets from manifest; do not hand-build asset URLs\n"
-                "- [ ] Generate JSON inside this workspace\n"
-                "- [ ] Run json.tool and validate_json_app.py\n"
-                "- [ ] Upload only after all ERRORs are fixed\n"
-            )
-    return workspace, tasklist
+    return workspace
 
 
 # ────────────────────────────── Redis 单例 ──────────────────────────────
@@ -389,6 +377,8 @@ def _tool_status_message(tool_name: str, tool_input: dict) -> str:
         return "正在获取网页..."
     elif tool_name == "WebSearch":
         return "正在搜索网络..."
+    elif tool_name in ("Task", "TodoWrite", "TaskUpdate"):
+        return "正在更新执行计划..."
     return f"正在使用工具 {tool_name}..."
 
 
@@ -815,16 +805,14 @@ def _build_cli_cmd(
     is_resume: bool,
     *,
     workspace: Optional[str] = None,
-    tasklist: Optional[str] = None,
 ) -> list:
     workspace_note = ""
-    if workspace and tasklist:
+    if workspace:
         workspace_note = (
             "\n\n本轮后端已为你分配独立工作目录，必须使用它隔离所有临时文件："
             f"\nAI_APP_WORKSPACE={workspace}"
-            f"\nAI_APP_TASKLIST={tasklist}"
             "\n生成器、下载的 manifest、app.json、校验输出都放在 AI_APP_WORKSPACE 下；"
-            "每完成一步更新 AI_APP_TASKLIST。不要写 /tmp/app.json 或 /tmp/generate_app.py。"
+            "不要写 /tmp/app.json 或 /tmp/generate_app.py。"
         )
     cmd = [
         CLAUDE_BIN,
@@ -834,7 +822,9 @@ def _build_cli_cmd(
         "--verbose",
         "-p", (
             f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>"
-            f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户"
+            f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
+            "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
+            "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
         ),
     ]
     if is_resume:
@@ -904,9 +894,8 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             logger.warning(f"[WORKER] 系统提示词文件未找到: {GENERATE_PROMPT_PATH}")
 
         provider, env = _provider_env(provider_id)
-        workspace, tasklist = _prepare_worker_workspace(session_id, job_id)
+        workspace = _prepare_worker_workspace(session_id, job_id)
         env["AI_APP_WORKSPACE"] = workspace
-        env["AI_APP_TASKLIST"] = tasklist
         env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
 
         _append_cli_log(session_id, "meta", json.dumps({
@@ -914,7 +903,6 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             "provider": provider.get("id"),
             "user_msg_len": len(last_msg),
             "workspace": workspace,
-            "tasklist": tasklist,
             "ts": int(time.time() * 1000),
         }, ensure_ascii=False))
 
@@ -925,7 +913,6 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             sys_prompt,
             is_resume=True,
             workspace=workspace,
-            tasklist=tasklist,
         )
         logger.info(f"[WORKER] sid={session_id} 起 CLI (resume): {cmd[0]}...")
 
@@ -982,7 +969,6 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                     sys_prompt,
                     is_resume=False,
                     workspace=workspace,
-                    tasklist=tasklist,
                 )
                 proc = subprocess.Popen(
                     cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,

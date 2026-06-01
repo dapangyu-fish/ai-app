@@ -14,8 +14,6 @@
 ```bash
 WORKDIR="${AI_APP_WORKSPACE:-$(mktemp -d /tmp/ai-workspaces/current.XXXXXX)}"
 mkdir -p "$WORKDIR"
-TASKS="${AI_APP_TASKLIST:-$WORKDIR/TASKS.md}"
-touch "$TASKS"
 TARGET="$WORKDIR/current_app.json" && echo "WORKDIR=$WORKDIR" && echo "DOWNLOAD_TO=$TARGET"
 curl -sS --max-time 30 -o "$TARGET" "<完整URL，从 [json_app_url]…[/json_app_url] 标签里取出>"
 ```
@@ -60,34 +58,21 @@ Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要�
 
 当你生成了新的或修改好的 JSON-APP 代码后，你**必须**按顺序执行以下步骤，**任何一步失败都不能跳过/上传**：
 
-**步骤 0（每次生成前必跑，禁止跳过）**：先创建本轮独立工作目录和任务清单。用 `Bash` 执行：
+**步骤 0（每次生成前必跑，禁止跳过）**：先创建本轮独立工作目录。用 `Bash` 执行：
 
 ```bash
 WORKDIR="${AI_APP_WORKSPACE:-$(mktemp -d /tmp/ai-workspaces/session.XXXXXX)}"
 mkdir -p "$WORKDIR"
-TASKS="${AI_APP_TASKLIST:-$WORKDIR/TASKS.md}"
-if [ ! -s "$TASKS" ]; then
-cat > "$TASKS" <<'EOF'
-# Task List
-- [ ] Clarify target app/game type and success criteria
-- [ ] Read DSL / anti-patterns / closest template for API shape only
-- [ ] Select assets from manifest, never hand-build asset URLs
-- [ ] Generate JSON inside this workspace
-- [ ] Run json.tool and validate_json_app.py
-- [ ] Upload only after all ERRORs are fixed
-EOF
-fi
 TMPFILE="$WORKDIR/app.json"
 echo "WORKDIR=$WORKDIR"
-echo "TASKS=$TASKS"
 echo "TMPFILE=$TMPFILE"
 ```
 
-后续所有"临时文件"、生成器、下载的 manifest、校验输出都必须放在 `$WORKDIR` 下面；每完成一步更新 `$TASKS`。**禁止使用 `/tmp/app.json`、`/tmp/generate_app.py` 之类固定路径**（多用户并发或同一会话连续生成会互相覆盖，造成上传到错误的内容）。下文用 `$TMPFILE` 代指 `$WORKDIR/app.json`。
+后续所有"临时文件"、生成器、下载的 manifest、校验输出都必须放在 `$WORKDIR` 下面。**禁止使用 `/tmp/app.json`、`/tmp/generate_app.py` 之类固定路径**（多用户并发或同一会话连续生成会互相覆盖，造成上传到错误的内容）。下文用 `$TMPFILE` 代指 `$WORKDIR/app.json`。
 
 1. 使用工具把生成的 JSON 代码写入到 `$TMPFILE`。
 2. **强制：上传前过一遍合法性校验**（见下"上传前自检 checklist"），任何一条不通过，回去改 JSON，**重新过一遍**，再继续。
-3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh "$TMPFILE"`。该脚本会再次运行 `validate_json_app.py`；如果校验失败，必须按错误路径修复后重跑，不能绕过上传。成功时命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
+3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh "$TMPFILE"`。该脚本会先运行 `repair_json_app.py` 清理常见机械错误，再运行 `validate_json_app.py`；如果校验失败，必须按错误路径修复后重跑，不能绕过上传。成功时命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
 4. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
 5. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
 
@@ -106,6 +91,7 @@ GEN="$WORKDIR/generate_app.py"
 # 用 Write 工具写入 $GEN；不要用固定路径
 python3 "$GEN" "$TMPFILE"
 python3 -m json.tool "$TMPFILE" > /dev/null
+python3 backend/repair_json_app.py "$TMPFILE"
 python3 backend/validate_json_app.py "$TMPFILE"
 ```
 
@@ -114,7 +100,11 @@ python3 backend/validate_json_app.py "$TMPFILE"
 ```python
 import sys
 sys.path.insert(0, "backend")
-from json_app_builder import AssetPack, new_app, screen, text, asset_bundle, save_json
+from json_app_builder import (
+    AssetPack, new_app, screen, text, icon, spacer, container, card, button,
+    native_app_bar, native_search_bar, native_metric_card, native_empty_state,
+    asset_bundle, save_json,
+)
 
 out = sys.argv[1]
 pack = AssetPack.from_url("https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/kenney-tiny-town/1.0/manifest.json")
@@ -131,6 +121,8 @@ app["ui"]["screens"].append(screen("home", title={"en": "Home", "zh": "首页"},
 ]))
 save_json(app, out, packs=[pack])
 ```
+
+普通工具 / 记录 / 管理类 APP 必须优先使用 `json_app_builder` 的 native UI helper（`native_crud_app_shell`、`native_app_bar`、`native_search_bar`、`native_metric_card`、`native_metric_row`、`native_filter_chips`、`native_empty_state`、`card`、`button`、`icon`、`spacer`）。这些 helper 只输出本 DSL 已支持的字段，能避免临场写出 `marginTop`、`shadow`、`body` 等 Flutter/CSS 习惯字段。复杂 CRUD APP 必须用临时 Python 生成器 + helper 组合，而不是手写整份 JSON。可直接参考 `scripts/generate_native_quality_templates.py` 的生成方式。
 
 游戏生成器可继续使用 `json_app_builder` 里的 `pixel_entity`、`sprite_entity`、`animated_sprite_entity`、`parallax_entity`、`tiled_map_entity`、`tile_layer`、`fill_rect`、`tiled_object`、`tiled_objects_from_run_and_gun_plan`、`tileset`、`tiled_map`、`AssetPack.frame_size()`、`AssetPack.animation()`、`run_and_gun_stage_plan()` 等工具。多格棋盘/下落方块用 `value_grid` + `@matrix.*` + `@polyomino.rotate`，不要手写一堆静态格子实体。`save_json(..., packs=[pack])` 会提前拦截手拼 asset URL、重复静态 spawn id 等低级错误。非常小的一屏表单 / 静态页面可以直接写 JSON，但仍必须执行上传前自检。
 
@@ -164,9 +156,13 @@ objects_layer = tiled_objects_from_run_and_gun_plan(plan)
 a. **JSON 语法**：`python3 -m json.tool "$TMPFILE" > /dev/null && echo OK`
    - 报错 → 改到 OK 再走 b。
 
+a1. **机械修复**：`python3 backend/repair_json_app.py "$TMPFILE"`，清理 `screen.body`、per-side margin、container `style`、冗余 `action.type` 等常见生成错误。
+
 a2. **框架静态校验**：`python3 backend/validate_json_app.py "$TMPFILE"`
    - 输出 `ERROR` → 必须按路径修复，重新从 a 开始。
    - 输出 `WARN` → 新生成 APP 尽量修复；确认为兼容旧 APP 的修复场景才可保留。
+   - 只要还有任何 `ERROR`，绝对不能回复"已完成"、"检查通过"、"已生成"。最终回答前最后一次 validator 必须无 ERROR。
+   - 如果出现大量重复机械错误（例如 `marginTop/marginBottom/marginLeft/marginRight`、`body`、container `style`），不要逐条手改到漏项；写一个临时 Python 脚本递归清理 / 迁移这些字段，保存后重新跑 `json.tool` 和 validator。
 
 b. **必填字段**：用 `python3 -c "..."` 或 `jq` 确认 `dsl`、`meta.name`、`meta.version`、`meta.type`、`ui.screens` 都齐全且非空（library 例外，可以没有 `ui.screens`）。
 
@@ -177,7 +173,7 @@ c. **不存在的 `@action` / 控件类型**：grep 一遍 JSON 里所有 `"call
 
 d. **跨依赖调用**：所有 `@<dep>.<func>` 形式，要么 `<dep>` 在 `dependencies` 里，要么 `<dep>` 是 `global`。漏声明一律删 / 补。
 
-e. **不写自创框架字段**：禁忌字段名（基本都是 web 来的）：`transform`、`transition`、`marginBottom`、`shadow`、`style`（在 container 上）、`pages`、`entry` —— grep 出现就改。
+e. **不写自创框架字段**：禁忌字段名（基本都是 web 来的）：`transform`、`transition`、`marginTop`、`marginBottom`、`marginLeft`、`marginRight`、`shadow`、`style`（在 container 上）、`pages`、`entry` —— grep 出现就改。
 
 f. **空 list 不要硬塞 jsonlogic**：list 的 `source` 必须是模板字符串 `"{{ global.xxx }}"`，**不能**是 `{"sort": [...]}` 等 jsonlogic Map（在 logic 层先 sort 完写到变量再绑）。
 
@@ -242,9 +238,11 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 2. 阅读 `templates/bacsase/anti_patterns_and_pitfalls.md` 避坑指南，了解极其容易犯的白屏崩溃错误（必读！！！）。
 3. 阅读 `lib/json_ui/interpreter.dart` 确认所有可用的 @内置函数。
 4. 查看 `templates/` 目录下有哪些模板 APP。
-5. 阅读至少一个与用户需求最相似的模板文件，学习正确写法。
+5. 阅读至少一个与用户需求最相似的模板文件，学习正确写法。普通记录 / 管理 / CRM / 列表工具类 APP 可阅读 `templates/native_quality_notes.json`、`templates/native_quality_crm.json`、`templates/native_quality_budget.json`、`templates/native_quality_habits.json`、`templates/native_quality_workout.json`，学习首屏信息密度、摘要卡、搜索、筛选、列表卡片、详情/表单结构。**非 CRUD 应用不要套这些列表模板**，应优先阅读 `templates/framework_quality_smart_home.json`、`templates/framework_quality_ops_dashboard.json`、`templates/framework_quality_travel_pass.json`、`templates/framework_quality_course_player.json`、`templates/framework_quality_camera_inspection.json`，学习 `switch/slider/grid/chart/map/qr_code/video/image_picker/tab_view/progress` 等框架控件如何组合成完全不同的应用形态；IM/聊天类可参考 `templates/demo_im.json`。
 6. 如果需求涉及游戏、角色、地图、图标、背景、图片素材等视觉内容，必须按下文"官方 CC0 素材库"流程选择素材。
 7. 如有不确定的组件属性或行为，阅读 `lib/json_ui/widgets/` 下的 Dart 源码确认。
+
+**研究范围要收敛**：普通记录 / 管理 / 工具类 APP 不要反复全仓库 `Grep` 或深读大量 runtime 源码。读完规范、避坑、一个相近模板、`widget_builder` / `interpreter` 的必要片段后，应尽快写生成器或 JSON；只有 validator 报具体路径、或某个 widget 属性不确定时，再按问题点查源码。把时间花在首屏结构和交互闭环上，而不是无边界源码考古。
 
 **只有完成上述步骤后，你才可以开始生成 JSON。**
 **如果你跳过了这些步骤，很可能会生成错误的 JSON，导致用户白屏或崩溃！**
@@ -347,6 +345,7 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 
 - 绝对禁止使用 `entry`、`pages` 等不属于 DSL 3.3 的顶级字段！
 - 必须把页面写在 `ui.screens` 里！
+- 每个 screen 的可渲染内容必须写在 `children` 数组里，例如 `"children": [{...}]`。不要使用 Flutter/React 习惯里的 `body` 字段；`screen.body` 不是生成目标，容易导致页面空白或只显示 AppBar。
 - JSON 必须包含 meta（name/version/type:"app"/description/icon_url）
 - 只使用你通过阅读源码确认存在的 @函数和组件类型
 - 不要自创框架中不存在的函数或属性
@@ -421,13 +420,63 @@ curl -fsSL https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/
 
 ## 布局与样式规则（极其重要！）
 
+### 原生 App 质感基线（普通工具 / 记录 / 管理类 APP 必须遵守）
+
+这类 APP 的目标不是"网页 demo"，而是像手机上的原生应用。功能完成后还必须做一次视觉审查：
+
+1. **首屏必须像一个可用的移动端工具**：有清晰的 app bar / 标题区、主要操作按钮、列表或内容区、空状态；不要只堆输入框和按钮。
+2. **优先使用框架已有原生控件**：`app_bar`、`card`、`checkbox`、`chip`、`badge`、`avatar`、`icon`、`progress`、`tab_view`、底部 tabs 等。不要用一堆裸 `container + text` 临时拼出粗糙 UI。
+3. **层级要克制**：页面背景、卡片、列表项、按钮、辅助文字要有明确层级；避免整页同一种浅灰 / 米色 / 棕色，避免大面积渐变、emoji 堆砌、网页落地页式 hero。
+4. **移动端密度**：按 360-430px 宽手机设计。外边距通常 16-20，卡片内边距 14-18，列表项高度 56-88；不要把标题写到 32px 以上，除非是真正的封面页。
+5. **列表项必须像 native list item**：左侧图标/状态，中间主标题+副标题，右侧状态/操作；点击、编辑、删除、空列表提示都要有反馈。
+6. **表单必须完整**：label/hint、校验提示、保存/取消、编辑态回填、删除确认都要齐全；输入框不要没有上下文地孤立在页面里。
+7. **颜色必须服务信息结构**：主色只用于主要动作和选中态；危险动作红色；完成/成功绿色；辅助信息灰色。不要每个区块随机上色。
+8. **emoji 不能当结构控件**：不要用 emoji 充当 app 标题图标、主按钮图标、列表左侧状态图标或空状态主视觉。优先用 `icon` 或按钮 `icon` 字段；emoji 只能作为内容数据本身（例如心情文本）或极少量辅助文案。
+9. **空状态要克制**：空列表时仍然要让首屏像完整应用：保留搜索/筛选/统计/主要操作，空状态高度不要占满大半屏，不要只在页面中央放一个大图标和一句话。空状态文案必须中文、准确指向真实按钮，不要出现 `Pull to refresh` 等英文调试文案。
+10. **最终回答前自检**：用一句内部标准检查"如果这是手机应用商店里的一个小工具，首屏会不会显得潦草？"如果答案是会，先改 UI 再上传。
+
+### 常见 APP 首屏配方（优先照此落地）
+
+生成普通工具 / 记录 / 管理类 APP 时，先选一个配方，再写 JSON。不要只说"像 native"，必须把下面的结构真实落到 `children`。
+如果页面超过 30 个 widget，必须用临时 Python 生成器调用 `native_app_bar`、`native_search_bar`、`native_metric_card`、`native_empty_state`、`card`、`button` 等 helper 拼出首屏骨架，再补业务字段。
+
+**记录 / 笔记 / 日记类**：
+- `screen.appBar`：短标题 + 右侧新增按钮（`icon: "add"` 或 `"edit"`，不要把 emoji 写进标题）。
+- 首屏顺序：搜索栏（可选）、横向筛选 chip、统计/排序行、主列表、紧凑空状态。列表为空时也要保留前三块。
+- 列表项：`card` 或 native list 风格；左侧 `icon` / `badge` / 状态色块，中间标题 + 2 行摘要 + 日期，右侧更多/编辑；点击进入详情。
+- 写入页：独立 screen，分组表单，保存按钮固定在表单尾部，取消/返回明确。
+
+**预算 / 清单 / 任务 / 习惯类**：
+- 首屏必须有今日/本月摘要卡或进度条，再接 tab/chip 筛选和列表，不能只显示一堆输入框。即使没有数据，也要展示 0 值摘要卡 / 进度框架 / 快捷分类入口；不要把统计卡、列表标题、筛选区全部藏起来，只留下中心空状态。
+- 金额、完成率、剩余天数等关键数字要有层级，主数字 24-28px 即可；不要做巨型 hero。
+- 列表项使用图标/类别/状态/时间/金额/进度组成，危险操作收进详情页或确认弹窗。
+
+**联系人 / 健康 / 药品 / 资料库类**：
+- 首屏使用搜索 + 分组/标签 + 列表；列表项至少包含头像/图标、主标题、副标题、状态。
+- 详情页用信息分组，不要把所有字段堆成无边框文本。
+
+这些配方是 UI 质量下限：如果用户没有特别要求，不要生成只有一个表单页、只有中心空状态、或只有标题+按钮的 APP。
+
+### 首屏视觉验收（上传前必须自查）
+
+按标准 iPhone 17 逻辑视口 402x874 想象最终渲染效果，iPhone 13 mini 逻辑视口 360x780 只作为兼容回归下限。必须同时满足：
+
+- AppBar 下面的第一屏至少有两个有用结构区：例如摘要/统计卡、搜索/筛选、列表标题、最近记录、快捷入口。不能只有搜索框 + 空状态。
+- 空数据时也要保留 0 值摘要 / 进度 / 分类入口；空状态只是列表区域的一部分，不应占据大半屏。
+- 不要同时使用默认 screen title AppBar 和自定义大 header 造成重复标题；二选一。
+- 主要按钮和标题不要用 emoji 装饰；用 `icon` / button `icon` 字段。
+- validator 已无 ERROR 后，不要继续大改 UI。若只有冗余 `action.type` 等机械 WARN，运行 `repair_json_app.py` 后重新校验；无 ERROR 就完成。
+
 1. **Container 默认是横向排列 (layout: "row")！** 如果你需要上下排列，必须显式加上 `"layout": "column"`！否则内部放入 list 会直接导致 Flutter 布局崩溃（白屏）！
-2. **禁用 Map 字典作为静态 UI 样式！** `color`, `border`, `width` 等必须是明确的字符串或数字，绝不能传入包含 JSONLogic（例如 `{"if": ...}`）的字典，否则直接强转异常！
-3. **List `source` 限制！** 列表的数据源只接受字符串插值 `{{ global.xxx }}`，如果需要排序必须在逻辑层提前用 `@list_sort` 处理，不可在 UI 中直接手写 `{ "sort": ... }`。
-4. **Container 绝对没有 `style` 字段！** 其样式（`color`, `padding`, `margin`, `borderRadius` 等）直接平铺写在 Container 节点上！
-5. **禁止臆造 Web CSS 属性！** 框架不支持 `transform`、`transition`、`marginBottom`、`shadow` 等属性！如需间距，请使用 `margin` 或者直接插入 `{"type": "spacer", "height": 20}`。
-6. **List 的高度是无限的！** 如果要在一个竖直排列的地方放入 `list`，其父节点或者它所在的直接 Container 必须是 `layout: "column"`。
-7. **Button 的 action 推荐写成简洁对象**：推荐 `"action": { "call": "@global.xxx", "args": {} }`。框架兼容旧写法 `"action": { "type": "call", "call": "@global.xxx", "args": {} }`，但新生成 JSON 不需要写这个冗余 `type`。
+2. **Screen 内容字段只能用 `children`！** `ui.screens[]` 和底部 tabs 的每个 tab 都应写 `"children": [...]`。不要写 `"body": {...}` 或 `"body": [...]`，那是 Flutter 的概念，不是本 DSL 的标准屏幕结构。
+3. **禁用 Map 字典作为静态 UI 样式！** `color`, `border`, `width` 等必须是明确的字符串或数字，绝不能传入包含 JSONLogic（例如 `{"if": ...}`）的字典，否则直接强转异常！
+4. **List `source` 限制！** 列表的数据源只接受字符串插值 `{{ global.xxx }}`，如果需要排序必须在逻辑层提前用 `@list_sort` 处理，不可在 UI 中直接手写 `{ "sort": ... }`。
+5. **Container 绝对没有 `style` 字段！** 其样式（`color`, `padding`, `margin`, `borderRadius` 等）直接平铺写在 Container 节点上！
+6. **禁止臆造 Web CSS 属性！** 框架不支持 `transform`、`transition`、`marginTop`、`marginBottom`、`marginLeft`、`marginRight`、`shadow` 等属性！如需间距，请使用 `margin` 或者直接插入 `{"type": "spacer", "height": 20}`。
+7. **数值字段只能是数字标量**：`margin`、`padding`、`height`、`width`、`fontSize`、`borderRadius`、`elevation`、`flex` 等都必须是 `12` 这类数字，不能写 `{top,bottom,left,right}`，也不能写 `"12"` 或 `{{ ... }}`。需要局部间距就插入 `spacer`，不要写 Flutter/React 风格 edge object。
+8. **List 的高度是无限的！** 如果要在一个竖直排列的地方放入 `list`，其父节点或者它所在的直接 Container 必须是 `layout: "column"`。
+9. **Button 的 action 推荐写成简洁对象**：推荐 `"action": { "call": "@global.xxx", "args": {} }`。框架兼容旧写法 `"action": { "type": "call", "call": "@global.xxx", "args": {} }`，但新生成 JSON 不需要写这个冗余 `type`。
+10. **完成前 grep 禁忌字段**：上传 / 最终回复前必须执行一次等价检查，确认 JSON 内不存在 `"body"`（screen/tab 内容）、`"marginTop"`、`"marginBottom"`、`"marginLeft"`、`"marginRight"`、`"shadow"`、`"transform"`、`"transition"`。如果存在，修复后重新校验。
 
 ## 输出要求
 

@@ -22,6 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 强制校验 JSON-APP。提示词会要求 AI 先本地跑一遍，但上传脚本是最后一道闸：
 # 只要 validate_json_app.py 报 ERROR，就不能把坏配置发给客户端。
+python3 "$SCRIPT_DIR/repair_json_app.py" "$FILE_PATH" >&2
 python3 "$SCRIPT_DIR/validate_json_app.py" "$FILE_PATH" >&2
 
 # 加载环境变量

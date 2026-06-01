@@ -1,0 +1,504 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "framework-quality-smart-home",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "框架能力模板：智能家居控制台，展示 switch、slider、grid、progress、chip。",
+    "author": "fish",
+    "displayName": "Framework Smart Home"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "awayMode": false,
+      "livingLight": true,
+      "nightMode": false,
+      "brightness": 68,
+      "temperature": 24,
+      "airQuality": 0.82,
+      "roomTiles": [
+        {
+          "name": "客厅",
+          "device": "灯光 · 空调 · 窗帘",
+          "icon": "home",
+          "accent": "#2563EB",
+          "tint": "#EAF1FF"
+        },
+        {
+          "name": "卧室",
+          "device": "睡眠模式 · 加湿器",
+          "icon": "dark_mode",
+          "accent": "#7C3AED",
+          "tint": "#F1EAFF"
+        },
+        {
+          "name": "厨房",
+          "device": "烟感 · 净水器",
+          "icon": "warning",
+          "accent": "#D97706",
+          "tint": "#FFF4DE"
+        },
+        {
+          "name": "门厅",
+          "device": "门锁 · 摄像头",
+          "icon": "lock",
+          "accent": "#059669",
+          "tint": "#E8F7F0"
+        }
+      ]
+    },
+    "functions": {
+      "sync": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已同步 12 台设备"
+            }
+          }
+        ]
+      },
+      "scene": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "场景已下发"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "全屋控制",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "晚上好，客厅已进入舒适区",
+                "style": {
+                  "fontSize": 19,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "温度、灯光和安防在同一页完成控制，不需要进入列表详情。",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#6B7280",
+                  "lineHeight": 1.35
+                }
+              }
+            ],
+            "margin": 12
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "wifi",
+                      "size": 20,
+                      "color": "#2563EB"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "12",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "在线设备",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "light_mode",
+                      "size": 20,
+                      "color": "#D97706"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ global.temperature }}°",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "室温",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "check_circle",
+                      "size": 20,
+                      "color": "#059669"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "82%",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "空气质量",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "场景",
+                    "style": {
+                      "fontSize": 17,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "一键离家",
+                    "variant": "filled",
+                    "action": {
+                      "call": "@global.scene",
+                      "args": {}
+                    },
+                    "icon": "lock",
+                    "style": {
+                      "backgroundColor": "#111827",
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 16
+                    }
+                  }
+                ],
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "回家",
+                    "icon": "home",
+                    "color": "#EAF1FF"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "观影",
+                    "icon": "video",
+                    "color": "#F1EAFF"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "睡眠",
+                    "icon": "dark_mode",
+                    "color": "#EEF2FF"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "清洁",
+                    "icon": "refresh",
+                    "color": "#E8F7F0"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "switch",
+                "label": "离家模式",
+                "bind": "global.awayMode"
+              },
+              {
+                "type": "switch",
+                "label": "客厅主灯",
+                "bind": "global.livingLight"
+              },
+              {
+                "type": "switch",
+                "label": "夜间勿扰",
+                "bind": "global.nightMode"
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "灯光亮度 {{ global.brightness }}%",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#4B5563"
+                }
+              },
+              {
+                "type": "slider",
+                "bind": "global.brightness",
+                "min": 0,
+                "max": 100,
+                "divisions": 20,
+                "color": "#2563EB"
+              },
+              {
+                "type": "text",
+                "value": "目标温度 {{ global.temperature }}°C",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#4B5563"
+                }
+              },
+              {
+                "type": "slider",
+                "bind": "global.temperature",
+                "min": 18,
+                "max": 30,
+                "divisions": 12,
+                "color": "#D97706"
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "text",
+                "value": "房间状态",
+                "style": {
+                  "fontSize": 17,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.roomTiles }}",
+                "crossAxisCount": 2,
+                "spacing": 10,
+                "childAspectRatio": 1.55,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "{{ loop.item.icon }}",
+                      "size": 22,
+                      "color": "{{ loop.item.accent }}"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.name }}",
+                      "style": {
+                        "fontSize": 15,
+                        "fontWeight": "bold",
+                        "color": "#111827"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.device }}",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280",
+                        "maxLines": 1,
+                        "overflow": "ellipsis"
+                      }
+                    }
+                  ],
+                  "padding": 12,
+                  "color": "{{ loop.item.tint }}",
+                  "borderRadius": 16
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F5F7FA",
+        "appBar": {
+          "title": "全屋控制",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.sync",
+                "args": {}
+              },
+              "icon": "sync",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "appid": "c8ce97f0-589f-4d27-9f7b-0dbb74ab45cb"
+}

@@ -25,9 +25,41 @@ from asset_manifest_metadata import (
 
 FORBIDDEN_UI_KEYS = {
     "marginBottom",
+    "marginLeft",
+    "marginRight",
+    "marginTop",
     "shadow",
     "transform",
     "transition",
+}
+
+NUMERIC_SCALAR_KEYS = {
+    "borderRadius",
+    "elevation",
+    "flex",
+    "fontSize",
+    "height",
+    "letterSpacing",
+    "lineHeight",
+    "margin",
+    "maxLines",
+    "minLines",
+    "padding",
+    "paddingBottom",
+    "paddingH",
+    "paddingLeft",
+    "paddingRight",
+    "paddingTop",
+    "paddingV",
+    "runSpacing",
+    "spacing",
+    "strokeWidth",
+    "width",
+}
+
+UNSUPPORTED_STYLE_KEYS = {
+    "margin",
+    "padding",
 }
 
 JSONLOGIC_SINGLE_KEYS = {
@@ -192,6 +224,159 @@ DEFAULT_BUILTIN_CALLS = {
     "@value_grid.spawn",
 }
 
+DEFAULT_ICON_NAMES = {
+    "account",
+    "ac_unit",
+    "add",
+    "air",
+    "analytics",
+    "attachment",
+    "audio",
+    "back",
+    "bathroom",
+    "bathtub",
+    "bed",
+    "blinds",
+    "block",
+    "bluetooth",
+    "bolt",
+    "bookmark",
+    "bookmark_outline",
+    "calendar",
+    "camera",
+    "chair",
+    "chevron_right",
+    "chat",
+    "check",
+    "check_circle",
+    "cleaning_services",
+    "clock",
+    "close",
+    "code",
+    "collapse",
+    "cooking",
+    "copy",
+    "curtains",
+    "dashboard",
+    "dark_mode",
+    "delete",
+    "devices",
+    "door_front",
+    "download",
+    "edit",
+    "electric_bolt",
+    "email",
+    "emoji",
+    "error",
+    "expand",
+    "favorite",
+    "favorite_outline",
+    "file",
+    "filter",
+    "fingerprint",
+    "folder",
+    "forward",
+    "fullscreen",
+    "garage",
+    "globe",
+    "grid",
+    "health_and_safety",
+    "help",
+    "history",
+    "home",
+    "image",
+    "info",
+    "insights",
+    "inventory_2",
+    "key",
+    "king_bed",
+    "kitchen",
+    "leaderboard",
+    "left",
+    "light_mode",
+    "lightbulb",
+    "link",
+    "list",
+    "local_laundry_service",
+    "local_pharmacy",
+    "location",
+    "lock",
+    "login",
+    "logout",
+    "map",
+    "medication",
+    "menu_book",
+    "menu",
+    "message",
+    "monitor_heart",
+    "more",
+    "more_horiz",
+    "notes",
+    "notification",
+    "palette",
+    "paste",
+    "pause",
+    "payment",
+    "payments",
+    "people",
+    "person",
+    "phone",
+    "photo",
+    "play",
+    "power",
+    "power_settings_new",
+    "print",
+    "qr_code",
+    "receipt",
+    "redo",
+    "refresh",
+    "remove",
+    "replay",
+    "restart",
+    "restaurant",
+    "right",
+    "room_preferences",
+    "router",
+    "save",
+    "schedule",
+    "search",
+    "security",
+    "send",
+    "sensors",
+    "settings",
+    "share",
+    "shopping_cart",
+    "single_bed",
+    "sort",
+    "spa",
+    "star",
+    "star_outline",
+    "stop",
+    "sync",
+    "tag",
+    "thermostat",
+    "thermostat_auto",
+    "theaters",
+    "timeline",
+    "today",
+    "trophy",
+    "tune",
+    "tv",
+    "undo",
+    "unlock",
+    "up",
+    "upload",
+    "video",
+    "visibility",
+    "visibility_off",
+    "warning",
+    "warning_amber",
+    "water_drop",
+    "wb_sunny",
+    "weekend",
+    "wifi",
+}
+
 
 @dataclass
 class Finding:
@@ -204,6 +389,7 @@ class Validator:
     def __init__(self, root: Any, builtin_calls: set[str]) -> None:
         self.root = root
         self.builtin_calls = builtin_calls
+        self.allowed_icon_names = load_allowed_icon_names()
         self.findings: list[Finding] = []
         self.dependencies: set[str] = set()
         self.self_package_names: set[str] = set()
@@ -291,15 +477,37 @@ class Validator:
     def _validate_dict(self, node: dict[str, Any], path: str, *, in_game_logic: bool) -> None:
         node_type = node.get("type")
 
+        if "body" in node and self._is_screen_or_tab_path(path):
+            self.error(
+                self._path(path, "body"),
+                "screen/tab content must use children:[...], not body; older clients render body-only screens blank",
+            )
+
         if node_type == "container" and "style" in node:
             self.error(self._path(path, "style"), "container has no style field; flatten style properties")
 
         if node_type == "ref":
             self._validate_ref_widget(node, path)
 
-        for key in node.keys():
-            if key in FORBIDDEN_UI_KEYS and not self._is_allowed_non_ui_key(node, key):
-                self.error(self._path(path, key), f"unsupported web/CSS-like field: {key}")
+        if self._is_ui_path(path):
+            self._validate_icon_fields(node, path)
+
+            for key in node.keys():
+                if key in FORBIDDEN_UI_KEYS and not self._is_allowed_non_ui_key(node, key):
+                    self.error(self._path(path, key), f"unsupported web/CSS-like field: {key}")
+
+            for key in NUMERIC_SCALAR_KEYS:
+                if key in node and not self._is_number(node[key]):
+                    self.error(self._path(path, key), f"{key} must be a number, not {type(node[key]).__name__}")
+
+            style = node.get("style")
+            if isinstance(style, dict):
+                for key in UNSUPPORTED_STYLE_KEYS:
+                    if key in style:
+                        self.error(self._path(self._path(path, "style"), key), f"style.{key} is unsupported; use widget-level spacing or spacer")
+                for key in NUMERIC_SCALAR_KEYS:
+                    if key in style and not self._is_number(style[key]):
+                        self.error(self._path(self._path(path, "style"), key), f"style.{key} must be a number, not {type(style[key]).__name__}")
 
         if node_type == "list" and isinstance(node.get("source"), dict):
             self.error(self._path(path, "source"), "list.source must be a string interpolation, not jsonlogic")
@@ -381,10 +589,57 @@ class Validator:
             elif "cond" in args and "condition" not in args:
                 self.error(self._path(path, "args.cond"), "main JSON-APP @if must use condition, not cond")
 
+        if call == "@set" and self._contains_op_args_expression(args.get("value")):
+            self.error(
+                self._path(path, "args.value"),
+                "@set value uses unsupported {op,args} expression shape; use standard jsonlogic such as {'if': [...]}",
+            )
+
         if call == "@entity.set":
             self._validate_entity_set(args, path)
         elif call == "@entity.add":
             self._validate_entity_add(args, path)
+
+    def _validate_icon_fields(self, node: dict[str, Any], path: str) -> None:
+        node_type = node.get("type")
+        if node_type == "icon" and "name" in node:
+            self._validate_icon_name(node.get("name"), self._path(path, "name"))
+
+        if node_type in {"button", "chip"} and "icon" in node:
+            self._validate_icon_name(node.get("icon"), self._path(path, "icon"))
+
+        if node_type in {"input", "dropdown", "date_picker", "time_picker"}:
+            for key in ("prefixIcon", "suffixIcon"):
+                if key in node:
+                    self._validate_icon_name(node.get(key), self._path(path, key))
+
+        if node_type == "app_bar" or self._is_app_bar_path(path):
+            leading = node.get("leading")
+            if isinstance(leading, dict) and "icon" in leading:
+                self._validate_icon_name(
+                    leading.get("icon"),
+                    self._path(self._path(path, "leading"), "icon"),
+                )
+            actions = node.get("actions")
+            if isinstance(actions, list):
+                for index, action in enumerate(actions):
+                    if isinstance(action, dict) and "icon" in action:
+                        self._validate_icon_name(
+                            action.get("icon"),
+                            self._path(f"{self._path(path, 'actions')}[{index}]", "icon"),
+                        )
+
+        if self._is_tab_path(path) and "icon" in node:
+            self._validate_icon_name(node.get("icon"), self._path(path, "icon"))
+
+    def _validate_icon_name(self, value: Any, path: str) -> None:
+        if not isinstance(value, str):
+            return
+        name = value.strip()
+        if not name or not self._is_static_icon_name(name):
+            return
+        if name not in self.allowed_icon_names:
+            self.error(path, f"unknown icon name: {name}; register it in IconRegistry or use an allowed icon")
 
     def _validate_flame_game_mounts(self) -> None:
         if not self.flame_games:
@@ -411,6 +666,10 @@ class Validator:
         # generic child slot, so widgets stored there are ignored unless the
         # template explicitly renders them.
         return ".props." not in path and ".props[" not in path
+
+    @staticmethod
+    def _is_screen_or_tab_path(path: str) -> bool:
+        return re.fullmatch(r"\$\.ui\.screens\[\d+\](?:\.tabs\[\d+\])?", path) is not None
 
     def _validate_entity_set(self, args: dict[str, Any], path: str) -> None:
         if "id" not in args:
@@ -458,6 +717,36 @@ class Validator:
         if key != "style":
             return False
         return node.get("format") == "tiled-json-v1"
+
+    @staticmethod
+    def _is_ui_path(path: str) -> bool:
+        return path == "$.ui" or path.startswith("$.ui.")
+
+    @staticmethod
+    def _is_app_bar_path(path: str) -> bool:
+        return path.endswith(".appBar") or path.endswith(".app_bar") or path.endswith(".appBar]")
+
+    @staticmethod
+    def _is_tab_path(path: str) -> bool:
+        return bool(re.search(r"\.tabs\[\d+\]$", path))
+
+    @staticmethod
+    def _is_static_icon_name(value: str) -> bool:
+        return re.fullmatch(r"[a-z][a-z0-9_]*", value) is not None
+
+    @classmethod
+    def _contains_op_args_expression(cls, value: Any) -> bool:
+        if isinstance(value, dict):
+            if set(value.keys()) == {"op", "args"} and isinstance(value.get("op"), str):
+                return True
+            return any(cls._contains_op_args_expression(child) for child in value.values())
+        if isinstance(value, list):
+            return any(cls._contains_op_args_expression(child) for child in value)
+        return False
+
+    @staticmethod
+    def _is_number(value: Any) -> bool:
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
 
     @staticmethod
     def _path(base: str, key: Any) -> str:
@@ -727,6 +1016,11 @@ class Validator:
                     self.error(
                         self._path(path, key),
                         "presentation text must be a string or string interpolation, not raw jsonlogic; use e.g. \"Score: {{ params.score }}\"",
+                    )
+                elif isinstance(value, (dict, list)):
+                    self.error(
+                        self._path(path, key),
+                        "presentation text must be a string or string interpolation, not a structured value; compute state first and display \"{{ global.someLabel }}\"",
                     )
 
     @staticmethod
@@ -1636,6 +1930,18 @@ def load_builtin_calls() -> set[str]:
         for match in pattern.finditer(path.read_text(encoding="utf-8")):
             calls.add(match.group(1))
     return calls
+
+
+def load_allowed_icon_names() -> set[str]:
+    repo = Path(__file__).resolve().parents[1]
+    names: set[str] = set(DEFAULT_ICON_NAMES)
+    path = repo / "lib/json_ui/widgets/icon_registry.dart"
+    if not path.exists():
+        return names
+    pattern = re.compile(r"'([a-z][a-z0-9_]*)'\s*:\s*Icons\.")
+    for match in pattern.finditer(path.read_text(encoding="utf-8")):
+        names.add(match.group(1))
+    return names
 
 
 def main(argv: list[str]) -> int:

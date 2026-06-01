@@ -159,6 +159,8 @@ def _tool_status_message(tool_name, tool_input):
         return "正在获取网页..."
     elif tool_name == "WebSearch":
         return "正在搜索网络..."
+    elif tool_name in ("Task", "TodoWrite", "TaskUpdate"):
+        return "正在更新执行计划..."
     return f"正在使用工具 {tool_name}..."
 
 
@@ -247,13 +249,11 @@ def chat():
     env.pop("ANTHROPIC_API_KEY", None)
     env["IS_SANDBOX"] = "1"
     try:
-        workspace, tasklist = ai_session._prepare_worker_workspace(session_id, "legacy")
+        workspace = ai_session._prepare_worker_workspace(session_id, "legacy")
         env["AI_APP_WORKSPACE"] = workspace
-        env["AI_APP_TASKLIST"] = tasklist
         env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
     except Exception as e:
         workspace = None
-        tasklist = None
         logger.warning(f"[CHAT] legacy workspace 初始化失败，将走 prompt fallback: {e}")
 
     logger.debug(f"[CHAT] CLI 环境变量: {list(cli_env.keys())}")
@@ -280,12 +280,14 @@ def chat():
                 f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>\n"
                 + (
                     "本轮后端已为你分配独立工作目录，必须使用它隔离所有临时文件："
-                    f"\nAI_APP_WORKSPACE={workspace}\nAI_APP_TASKLIST={tasklist}\n"
+                    f"\nAI_APP_WORKSPACE={workspace}\n"
                     "生成器、下载的 manifest、app.json、校验输出都放在 AI_APP_WORKSPACE 下；"
-                    "每完成一步更新 AI_APP_TASKLIST。不要写 /tmp/app.json 或 /tmp/generate_app.py。\n"
-                    if workspace and tasklist else ""
+                    "不要写 /tmp/app.json 或 /tmp/generate_app.py。\n"
+                    if workspace else ""
                 )
-                + f"请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户"
+                + f"请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
+                "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
+                "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
             )
         ]
 
