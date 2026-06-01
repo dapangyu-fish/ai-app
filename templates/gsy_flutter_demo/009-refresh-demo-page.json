@@ -3,7 +3,7 @@
   "appid": "f471e5d7-d569-515b-9a8a-1b4d960c8bef",
   "meta": {
     "name": "gsy_flutter_demo/009-refresh-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "简单上下刷新",
@@ -27,9 +27,135 @@
       "upstreamTitle": "简单上下刷新",
       "upstreamSource": "lib/widget/basic/refresh_demo_page.dart",
       "upstreamWidget": "RefreshDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "v1_json_port",
+      "items": [
+        {
+          "title": "Refresh row 1",
+          "subtitle": "index 0 · height 64",
+          "color": "#0B8E70",
+          "soft": "#F2F6FF"
+        },
+        {
+          "title": "Refresh row 2",
+          "subtitle": "index 1 · height 76",
+          "color": "#0B8E70",
+          "soft": "#FFFFFF"
+        },
+        {
+          "title": "Refresh row 3",
+          "subtitle": "index 2 · height 88",
+          "color": "#0B8E70",
+          "soft": "#F2F6FF"
+        },
+        {
+          "title": "Refresh row 4",
+          "subtitle": "index 3 · height 100",
+          "color": "#0B8E70",
+          "soft": "#FFFFFF"
+        },
+        {
+          "title": "Refresh row 5",
+          "subtitle": "index 4 · height 64",
+          "color": "#0B8E70",
+          "soft": "#F2F6FF"
+        },
+        {
+          "title": "Refresh row 6",
+          "subtitle": "index 5 · height 76",
+          "color": "#0B8E70",
+          "soft": "#FFFFFF"
+        }
+      ],
+      "refreshCount": 0
     },
-    "functions": {}
+    "functions": {
+      "refresh": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.refreshCount",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.refreshCount"
+                  },
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.items",
+              "value": [
+                {
+                  "title": "Refresh row 1",
+                  "subtitle": "index 0 · height 64",
+                  "color": "#0B8E70",
+                  "soft": "#F2F6FF"
+                },
+                {
+                  "title": "Refresh row 2",
+                  "subtitle": "index 1 · height 76",
+                  "color": "#0B8E70",
+                  "soft": "#FFFFFF"
+                },
+                {
+                  "title": "Refresh row 3",
+                  "subtitle": "index 2 · height 88",
+                  "color": "#0B8E70",
+                  "soft": "#F2F6FF"
+                },
+                {
+                  "title": "Refresh row 4",
+                  "subtitle": "index 3 · height 100",
+                  "color": "#0B8E70",
+                  "soft": "#FFFFFF"
+                },
+                {
+                  "title": "Refresh row 5",
+                  "subtitle": "index 4 · height 64",
+                  "color": "#0B8E70",
+                  "soft": "#F2F6FF"
+                },
+                {
+                  "title": "Refresh row 6",
+                  "subtitle": "index 5 · height 76",
+                  "color": "#0B8E70",
+                  "soft": "#FFFFFF"
+                }
+              ]
+            }
+          },
+          {
+            "call": "@show_snackbar",
+            "args": {
+              "message": "刷新完成"
+            }
+          }
+        ]
+      },
+      "loadMore": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.items",
+              "item": {
+                "title": "Loaded row",
+                "subtitle": "append by JSON action",
+                "color": "#0B8E70",
+                "soft": "#E7F6F1"
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
@@ -45,31 +171,302 @@
             "children": [
               {
                 "type": "container",
-                "layout": "column",
+                "layout": "row",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "dashboard",
+                        "size": 26,
+                        "color": "#1D7BCB"
+                      }
+                    ],
+                    "width": 56,
+                    "height": 56,
+                    "color": "#E8F2FD",
+                    "borderRadius": 16,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 12
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "简单上下刷新",
+                        "style": {
+                          "fontSize": 20,
+                          "fontWeight": "800",
+                          "color": "#111827"
+                        },
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "Simple pull refresh",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#667085"
+                        },
+                        "maxLines": 2
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "crossAxisAlignment": "start"
                   }
                 ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
                 "crossAxisAlignment": "center"
               },
               {
                 "type": "spacer",
-                "height": 16
+                "height": 12
+              },
+              {
+                "type": "wrap",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "009",
+                        "style": {
+                          "fontSize": 12,
+                          "fontWeight": "600",
+                          "color": "#1D7BCB"
+                        }
+                      }
+                    ],
+                    "padding": 8,
+                    "color": "#E8F2FD",
+                    "borderRadius": 12,
+                    "crossAxisAlignment": "center",
+                    "mainAxisAlignment": "center"
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "基础控件",
+                        "style": {
+                          "fontSize": 12,
+                          "fontWeight": "600",
+                          "color": "#374151"
+                        }
+                      }
+                    ],
+                    "padding": 8,
+                    "color": "#F8FAFC",
+                    "borderRadius": 12,
+                    "crossAxisAlignment": "center",
+                    "mainAxisAlignment": "center"
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "V1 JSON 移植",
+                        "style": {
+                          "fontSize": 12,
+                          "fontWeight": "600",
+                          "color": "#047857"
+                        }
+                      }
+                    ],
+                    "padding": 8,
+                    "color": "#ECFDF5",
+                    "borderRadius": 12,
+                    "crossAxisAlignment": "center",
+                    "mainAxisAlignment": "center"
+                  }
+                ],
+                "spacing": 8,
+                "runSpacing": 8
+              }
+            ],
+            "padding": 18,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 20,
+            "border": {
+              "color": "#E5ECF7",
+              "width": 1
+            },
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "refresh",
+                        "size": 17,
+                        "color": "#0B8E70"
+                      }
+                    ],
+                    "width": 32,
+                    "height": 32,
+                    "color": "#EEF6FF",
+                    "borderRadius": 10,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "下拉刷新 / 加载更多",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "800",
+                      "color": "#111827"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 10
               },
               {
                 "type": "text",
-                "value": "简单上下刷新",
+                "value": "刷新次数：{{ global.refreshCount }}",
                 "style": {
-                  "fontSize": 22,
+                  "fontSize": 13,
+                  "fontWeight": "700",
+                  "color": "#0B8E70"
+                }
+              },
+              {
+                "type": "list",
+                "source": "{{ global.items }}",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.index }}",
+                          "style": {
+                            "fontSize": 11,
+                            "fontWeight": "800",
+                            "color": "{{ loop.item.color }}"
+                          }
+                        }
+                      ],
+                      "width": 38,
+                      "height": 38,
+                      "color": "{{ loop.item.soft }}",
+                      "borderRadius": 11,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.title }}",
+                          "style": {
+                            "fontSize": 14,
+                            "fontWeight": "700",
+                            "color": "#1F2937"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.subtitle }}",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
+                      "crossAxisAlignment": "start"
+                    }
+                  ],
+                  "padding": 10,
+                  "margin": 4,
+                  "color": "{{ loop.item.soft }}",
+                  "borderRadius": 14,
+                  "crossAxisAlignment": "center"
+                },
+                "shrinkWrap": true,
+                "separator": "none",
+                "onRefresh": {
+                  "call": "@global.refresh",
+                  "args": {}
+                },
+                "onLoadMore": {
+                  "call": "@global.loadMore",
+                  "args": {}
+                }
+              }
+            ],
+            "padding": 14,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 18,
+            "border": {
+              "color": "#E5ECF7",
+              "width": 1
+            },
+            "crossAxisAlignment": "start"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "移植说明",
+                "style": {
+                  "fontSize": 15,
                   "fontWeight": "800",
                   "color": "#111827"
                 }
@@ -80,87 +477,72 @@
               },
               {
                 "type": "text",
-                "value": "Simple pull refresh",
+                "value": "此版本已从纯占位页推进为可运行 JSON 演示。复杂 CustomPainter、Shader、3D、Sliver 等能力在当前框架中仍以降级视觉或交互近似呈现。",
                 "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
+                  "fontSize": 12,
+                  "color": "#4B5563",
+                  "lineHeight": 1.35
                 }
               },
               {
                 "type": "spacer",
-                "height": 8
+                "height": 10
               },
               {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "warning_amber",
+                    "size": 16,
+                    "color": "#B45309"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 6
+                  },
+                  {
+                    "type": "text",
+                    "value": "CupertinoSliverRefreshControl 与程序化初始 overscroll 暂以标准 refresh/list 近似。",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#92400E"
+                    },
+                    "maxLines": 3
+                  }
+                ],
+                "crossAxisAlignment": "start"
               },
               {
                 "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
+                "height": 10
               },
               {
                 "type": "text",
                 "value": "Upstream：lib/widget/basic/refresh_demo_page.dart",
                 "style": {
-                  "fontSize": 12,
+                  "fontSize": 11,
                   "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
+                },
+                "maxLines": 1
               },
               {
                 "type": "text",
                 "value": "Widget：RefreshDemoPage",
                 "style": {
-                  "fontSize": 12,
+                  "fontSize": 11,
                   "color": "#6B7280"
-                }
+                },
+                "maxLines": 1
               }
             ],
-            "padding": 16,
+            "padding": 14,
             "margin": 12,
-            "color": "#FFFFFF",
+            "color": "#FFFBEB",
             "borderRadius": 16,
             "border": {
-              "color": "#E5E7EB",
+              "color": "#FDE68A",
               "width": 1
             },
             "crossAxisAlignment": "start"
@@ -169,8 +551,7 @@
             "type": "button",
             "label": "返回",
             "action": {
-              "call": "@back",
-              "args": {}
+              "type": "back"
             },
             "icon": "back",
             "variant": "outlined",
@@ -178,6 +559,10 @@
               "fontSize": 14,
               "borderRadius": 12
             }
+          },
+          {
+            "type": "spacer",
+            "height": 18
           }
         ],
         "padding": 0,
