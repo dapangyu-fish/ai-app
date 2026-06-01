@@ -979,6 +979,30 @@ class _ProceduralVisualPainter extends CustomPainter {
       case 'boomParticles':
         _drawBoom(canvas, size);
         break;
+      case 'discoSphere':
+        _drawDiscoSphere(canvas, size);
+        break;
+      case 'spatialGrid':
+        _drawSpatialGrid(canvas, size);
+        break;
+      case 'fire':
+        _drawFire(canvas, size);
+        break;
+      case 'particleTree':
+        _drawParticleTree(canvas, size);
+        break;
+      case 'mosaicScanner':
+        _drawMosaicScanner(canvas, size);
+        break;
+      case 'koiFish':
+        _drawKoiFish(canvas, size);
+        break;
+      case 'shockwave':
+        _drawShockwave(canvas, size);
+        break;
+      case 'jawControl':
+        _drawJawControl(canvas, size);
+        break;
       case 'galaxy':
       default:
         _drawGalaxy(canvas, size);
@@ -1167,6 +1191,215 @@ class _ProceduralVisualPainter extends CustomPainter {
       final y = math.sin(angle * 1.7) * (orbit * 0.6 + burst * math.cos(i));
       paint.color = secondary.withValues(alpha: 0.25 + 0.55 * (1 - f));
       canvas.drawCircle(center + Offset(x, y), pointSize, paint);
+    }
+  }
+
+  void _drawDiscoSphere(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.43);
+    final radius = math.min(size.width, size.height) * 0.34;
+    final paint = Paint()..blendMode = BlendMode.plus;
+    const goldenAngle = math.pi * (3 - 2.23606797749979);
+    for (var i = 0; i < particleCount; i++) {
+      final y = 1 - (i / (particleCount - 1)) * 2;
+      final r = math.sqrt(math.max(0, 1 - y * y));
+      final theta = goldenAngle * i;
+      final x = math.cos(theta) * r;
+      final z = math.sin(theta) * r;
+      final rx = x * math.cos(time * 0.35) - z * math.sin(time * 0.35);
+      final rz = x * math.sin(time * 0.35) + z * math.cos(time * 0.35);
+      if (rz < -0.7) continue;
+      final hue = (i * 37 + time * 80) % 360;
+      paint.color = HSVColor.fromAHSV(
+        0.35 + rz.clamp(0, 1) * 0.55,
+        hue.toDouble(),
+        0.85,
+        1,
+      ).toColor();
+      final p = center + Offset(rx * radius, y * radius);
+      canvas.drawRect(
+        Rect.fromCenter(center: p, width: pointSize * 4, height: pointSize * 4),
+        paint,
+      );
+    }
+  }
+
+  void _drawSpatialGrid(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.52);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = secondary.withValues(alpha: 0.55)
+      ..blendMode = BlendMode.plus;
+    for (var z = 1; z < 26; z++) {
+      final depth = z / 26;
+      final y = center.dy + 260 * (1 - depth) + math.sin(time + z) * 3;
+      final half = size.width * (0.08 + depth * 0.55);
+      final alpha = (1 - depth).clamp(0.05, 0.8);
+      paint.color = secondary.withValues(alpha: alpha);
+      canvas.drawLine(
+        Offset(center.dx - half, y),
+        Offset(center.dx + half, y),
+        paint,
+      );
+    }
+    for (var i = -9; i <= 9; i++) {
+      final x0 = center.dx + i * 12.0;
+      final x1 = center.dx + i * 42.0;
+      paint.color = primary.withValues(alpha: 0.25);
+      canvas.drawLine(
+        Offset(x0, center.dy + 260),
+        Offset(x1, center.dy - 220),
+        paint,
+      );
+    }
+  }
+
+  void _drawFire(Canvas canvas, Size size) {
+    final paint = Paint()..blendMode = BlendMode.plus;
+    for (var i = 0; i < particleCount; i++) {
+      final f = i / particleCount;
+      final seed = math.sin(i * 91.345) * 43758.5453;
+      final xSeed = seed - seed.floorToDouble();
+      final y = size.height * (0.92 - f * 0.78);
+      final width = size.width * (0.35 * (1 - f) + 0.04);
+      final x =
+          size.width / 2 +
+          (xSeed - 0.5) * width +
+          math.sin(time * 2 + i * 0.05) * 18 * (1 - f);
+      final hot = 1 - f;
+      paint.color = Color.lerp(
+        const Color(0xFFFFF59D),
+        const Color(0xFFFF3D00),
+        f,
+      )!.withValues(alpha: 0.08 + hot * 0.55);
+      canvas.drawCircle(Offset(x, y), pointSize * (1.2 + hot * 2.4), paint);
+    }
+  }
+
+  void _drawParticleTree(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.58);
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = pointSize
+      ..blendMode = BlendMode.plus;
+    for (var i = 0; i < particleCount; i++) {
+      final f = i / particleCount;
+      final h = f * 1.8 - 0.9;
+      final radius = (1 - f) * math.min(size.width, size.height) * 0.28;
+      final angle = i * 2.399963 + time * 0.3;
+      final x = math.cos(angle) * radius;
+      final y = -h * math.min(size.width, size.height) * 0.33;
+      paint.color = Color.lerp(
+        const Color(0xFF00E676),
+        const Color(0xFFFFFFFF),
+        f,
+      )!.withValues(alpha: 0.55);
+      canvas.drawCircle(
+        center + Offset(x, y),
+        pointSize * (1.4 - f * 0.5),
+        paint,
+      );
+    }
+    _drawTitle(canvas, size, '*', const Color(0xFFFFF176));
+  }
+
+  void _drawMosaicScanner(Canvas canvas, Size size) {
+    final cell = math.max(10.0, size.width / 22);
+    final scanY = (time * 80) % (size.height + cell * 4) - cell * 2;
+    final paint = Paint();
+    for (var y = 0.0; y < size.height; y += cell) {
+      for (var x = 0.0; x < size.width; x += cell) {
+        final v =
+            (math.sin(x * 0.03 + time) + math.cos(y * 0.04 - time)) * 0.5 + 0.5;
+        final nearScan = (y - scanY).abs() < cell * 2;
+        paint.color = Color.lerp(
+          primary,
+          secondary,
+          v,
+        )!.withValues(alpha: nearScan ? 0.85 : 0.25);
+        canvas.drawRect(Rect.fromLTWH(x + 1, y + 1, cell - 2, cell - 2), paint);
+      }
+    }
+    paint
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = secondary;
+    canvas.drawLine(Offset(0, scanY), Offset(size.width, scanY), paint);
+  }
+
+  void _drawKoiFish(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..blendMode = BlendMode.plus;
+    for (var fish = 0; fish < 3; fish++) {
+      final baseAngle = time * (0.25 + fish * 0.08) + fish * math.pi * 2 / 3;
+      final orbit = math.min(size.width, size.height) * (0.18 + fish * 0.06);
+      final head =
+          center +
+          Offset(math.cos(baseAngle) * orbit, math.sin(baseAngle) * orbit);
+      for (var i = 0; i < 90; i++) {
+        final t = i / 90;
+        final bend = math.sin(t * math.pi * 2 + time * 2 + fish) * 12;
+        final dir = baseAngle + math.pi + bend * 0.01;
+        final p =
+            head +
+            Offset(math.cos(dir) * t * 92, math.sin(dir) * t * 34 + bend * t);
+        paint.color = Color.lerp(
+          const Color(0xFFFFF8E1),
+          const Color(0xFFFF7043),
+          t,
+        )!.withValues(alpha: 0.75 * (1 - t * 0.45));
+        canvas.drawCircle(p, pointSize * (4 - t * 2.2), paint);
+      }
+    }
+  }
+
+  void _drawShockwave(Canvas canvas, Size size) {
+    final center = touch ?? Offset(size.width / 2, size.height * 0.62);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..blendMode = BlendMode.plus;
+    for (var i = 0; i < 8; i++) {
+      final r = ((time * 80 + i * 44) % 360).toDouble();
+      paint.color = secondary.withValues(alpha: (1 - r / 360).clamp(0, 0.65));
+      canvas.drawCircle(center, r, paint);
+    }
+  }
+
+  void _drawJawControl(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.52);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..color = primary;
+    final open = 0.35 + 0.25 * math.sin(time * 2);
+    final jaw = Path()
+      ..moveTo(center.dx - 88, center.dy)
+      ..quadraticBezierTo(
+        center.dx,
+        center.dy + 86 + open * 80,
+        center.dx + 88,
+        center.dy,
+      )
+      ..moveTo(center.dx - 78, center.dy - 6)
+      ..quadraticBezierTo(
+        center.dx,
+        center.dy - 55,
+        center.dx + 78,
+        center.dy - 6,
+      );
+    canvas.drawPath(jaw, paint);
+    paint.strokeWidth = 2;
+    for (var i = -4; i <= 4; i++) {
+      final x = center.dx + i * 18;
+      canvas.drawLine(
+        Offset(x, center.dy + 6),
+        Offset(x + i.sign * 2, center.dy + 32 + open * 34),
+        paint,
+      );
     }
   }
 

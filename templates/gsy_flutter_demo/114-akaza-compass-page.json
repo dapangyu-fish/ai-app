@@ -3,13 +3,13 @@
   "appid": "1dcbe0d8-fd15-5a56-a0c0-06ab56a04d18",
   "meta": {
     "name": "gsy_flutter_demo/114-akaza-compass-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "破坏杀·罗针",
       "en": "Destructive Compass Needle"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：破坏杀·罗针",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：破坏杀·罗针",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "akaza_page",
       "widgetClass": "AkazaCompassPage",
       "category": "basic",
-      "routeIndex": 114
+      "routeIndex": 114,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v7"
     }
   },
   "dependencies": {},
@@ -27,7 +29,8 @@
       "upstreamTitle": "破坏杀·罗针",
       "upstreamSource": "lib/widget/basic/akaza_page.dart",
       "upstreamWidget": "AkazaCompassPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v7"
     },
     "functions": {}
   },
@@ -36,152 +39,68 @@
     "screens": [
       {
         "id": "home",
-        "title": "破坏杀·罗针",
-        "layout": "column",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+            "type": "positioned",
+            "child": {
+              "type": "image",
+              "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/akaza.png",
+              "fit": "cover",
+              "heightFactor": 2.2
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "procedural_visual",
+              "mode": "radialLines",
+              "particleCount": 900,
+              "pointSize": 1,
+              "backgroundColor": "#00000000",
+              "color": "#4488FFFF",
+              "secondaryColor": "#FF4488FF"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "破坏杀 · 罗针",
+                  "style": {
+                    "fontSize": 24,
+                    "color": "#FFFFFFFF",
+                    "fontWeight": "bold",
+                    "textAlign": "center"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "破坏杀·罗针",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Destructive Compass Needle",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/akaza_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：AkazaCompassPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
+              ],
+              "padding": 16,
+              "borderRadius": 16,
+              "color": "#66000000"
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 24,
+            "right": 24,
+            "bottom": 34
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": ""
+        }
       }
     ]
   }

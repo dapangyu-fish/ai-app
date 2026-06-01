@@ -9,7 +9,7 @@
       "zh": "炫酷二维码",
       "en": "Cool QR code"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：炫酷二维码",
+    "description": "gsy_flutter_demo JSON 纯实现子示例：炫酷二维码",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,7 +18,9 @@
       "deferredAlias": "notion_qrcode_page",
       "widgetClass": "NotionFinalQRCodeEntryPage",
       "category": "visual",
-      "routeIndex": 118
+      "routeIndex": 118,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v7"
     }
   },
   "dependencies": {},
@@ -27,8 +29,8 @@
       "upstreamTitle": "炫酷二维码",
       "upstreamSource": "lib/widget/visual/notion_qrcode_page.dart",
       "upstreamWidget": "NotionFinalQRCodeEntryPage",
-      "portStatus": "v1_json_port",
-      "qrText": "https://github.com/CarGuo/gsy_flutter_demo"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v7"
     },
     "functions": {}
   },
@@ -37,337 +39,87 @@
     "screens": [
       {
         "id": "home",
-        "title": "炫酷二维码",
-        "layout": "column",
+        "title": "NotionFinalQRCodeEntryPage",
+        "layout": "stack",
+        "backgroundColor": "#050816",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "visibility",
-                        "size": 26,
-                        "color": "#4A74E8"
-                      }
-                    ],
-                    "width": 56,
-                    "height": 56,
-                    "color": "#EAEFFE",
-                    "borderRadius": 16,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 12
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "炫酷二维码",
-                        "style": {
-                          "fontSize": 20,
-                          "fontWeight": "800",
-                          "color": "#111827"
-                        },
-                        "maxLines": 2
-                      },
-                      {
-                        "type": "spacer",
-                        "height": 4
-                      },
-                      {
-                        "type": "text",
-                        "value": "Cool QR code",
-                        "style": {
-                          "fontSize": 12,
-                          "color": "#667085"
-                        },
-                        "maxLines": 2
-                      }
-                    ],
-                    "position": {
-                      "type": "flex",
-                      "flex": 1
-                    },
-                    "crossAxisAlignment": "start"
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Notion QR",
+                  "style": {
+                    "fontSize": 28,
+                    "color": "#FFFFFFFF",
+                    "fontWeight": "bold",
+                    "textAlign": "center"
                   }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 12
-              },
-              {
-                "type": "wrap",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "118",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#4A74E8"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#EAEFFE",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "3D与视觉",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#374151"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#F8FAFC",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "V1 JSON 移植",
-                        "style": {
-                          "fontSize": 12,
-                          "fontWeight": "600",
-                          "color": "#047857"
-                        }
-                      }
-                    ],
-                    "padding": 8,
-                    "color": "#ECFDF5",
-                    "borderRadius": 12,
-                    "crossAxisAlignment": "center",
-                    "mainAxisAlignment": "center"
-                  }
-                ],
-                "spacing": 8,
-                "runSpacing": 8
-              }
-            ],
-            "padding": 18,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "qr_code",
-                        "size": 17,
-                        "color": "#111827"
-                      }
-                    ],
-                    "width": 32,
-                    "height": 32,
-                    "color": "#EEF6FF",
-                    "borderRadius": 10,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 8
-                  },
-                  {
-                    "type": "text",
-                    "value": "QR Code",
-                    "style": {
-                      "fontSize": 16,
-                      "fontWeight": "800",
-                      "color": "#111827"
+                },
+                {
+                  "type": "spacer",
+                  "height": 22
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "qr_code",
+                      "data": "https://github.com/CarGuo/gsy_flutter_demo",
+                      "size": 230
                     }
-                  }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "input",
-                "bind": "global.qrText",
-                "placeholder": "输入二维码内容",
-                "prefixIcon": "qr_code"
-              },
-              {
-                "type": "qr_code",
-                "data": "{{ global.qrText }}",
-                "size": 220,
-                "backgroundColor": "#FFFFFF",
-                "color": "#111827"
-              }
-            ],
-            "padding": 14,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 18,
-            "border": {
-              "color": "#E5ECF7",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "移植说明",
-                "style": {
-                  "fontSize": 15,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "此版本已从纯占位页推进为可运行 JSON 演示。复杂 CustomPainter、Shader、3D、Sliver 等能力在当前框架中仍以降级视觉或交互近似呈现。",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#4B5563",
-                  "lineHeight": 1.35
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "warning_amber",
-                    "size": 16,
-                    "color": "#B45309"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 6
-                  },
-                  {
-                    "type": "text",
-                    "value": "原版粒子化 3D QR 动画需要 QR module 粒子系统和 3D 投影；当前普通二维码功能可用。",
-                    "style": {
-                      "fontSize": 12,
-                      "color": "#92400E"
-                    },
-                    "maxLines": 3
-                  }
-                ],
-                "crossAxisAlignment": "start"
-              },
-              {
-                "type": "spacer",
-                "height": 10
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/visual/notion_qrcode_page.dart",
-                "style": {
-                  "fontSize": 11,
-                  "color": "#6B7280"
+                  ],
+                  "padding": 18,
+                  "color": "#FFFFFFFF",
+                  "borderRadius": 18,
+                  "alignment": "center"
                 },
-                "maxLines": 1
-              },
-              {
-                "type": "text",
-                "value": "Widget：NotionFinalQRCodeEntryPage",
-                "style": {
-                  "fontSize": 11,
-                  "color": "#6B7280"
+                {
+                  "type": "spacer",
+                  "height": 18
                 },
-                "maxLines": 1
-              }
-            ],
-            "padding": 14,
-            "margin": 12,
-            "color": "#FFFBEB",
-            "borderRadius": 16,
-            "border": {
-              "color": "#FDE68A",
-              "width": 1
+                {
+                  "type": "text",
+                  "value": "Scan to open demo repository",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#B8C7E0",
+                    "textAlign": "center"
+                  }
+                }
+              ],
+              "alignment": "center",
+              "mainAxisAlignment": "center"
             },
-            "crossAxisAlignment": "start"
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "type": "back"
+            "type": "positioned",
+            "child": {
+              "type": "procedural_visual",
+              "mode": "spatialGrid",
+              "particleCount": 600,
+              "pointSize": 1,
+              "backgroundColor": "#00000000",
+              "color": "#3366FFFF",
+              "secondaryColor": "#33FFFFFF"
             },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
-          },
-          {
-            "type": "spacer",
-            "height": 18
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "NotionFinalQRCodeEntryPage"
+        }
       }
     ]
   }
