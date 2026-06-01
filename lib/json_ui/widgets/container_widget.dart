@@ -16,12 +16,14 @@ class JsonContainerWidget extends JsonBaseWidget {
   ) {
     final children = json['children'] as List<dynamic>? ?? [];
     final layout = json['layout'] ?? 'row';
-    final padding = _resolveDouble(interpreter, json['padding']) ?? 0;
-    final margin = _resolveDouble(interpreter, json['margin']) ?? 0;
+    final padding = _resolveInsets(interpreter, json['padding']);
+    final margin = _resolveInsets(interpreter, json['margin']);
     final borderRadius = _resolveDouble(interpreter, json['borderRadius']) ?? 0;
     final elevation = _resolveDouble(interpreter, json['elevation']) ?? 0;
     final width = _resolveDouble(interpreter, json['width']);
     final height = _resolveDouble(interpreter, json['height']);
+    final constraints = _parseConstraints(interpreter, json['constraints']);
+    final alignment = _parseAlignment(json['alignment']?.toString());
 
     // 背景色（支持 "{{ loop.item.bubble_color }}" 这类模板）
     final rawColor = json['color']?.toString();
@@ -106,7 +108,9 @@ class JsonContainerWidget extends JsonBaseWidget {
     Widget container = Container(
       width: width,
       height: height,
-      padding: padding > 0 ? EdgeInsets.all(padding) : null,
+      constraints: constraints,
+      alignment: alignment,
+      padding: padding,
       decoration: BoxDecoration(
         color: bgColor,
         shape: shape == 'circle' ? BoxShape.circle : BoxShape.rectangle,
@@ -128,7 +132,7 @@ class JsonContainerWidget extends JsonBaseWidget {
             : null,
         color: bgColor ?? Theme.of(context).colorScheme.surface,
         child: Padding(
-          padding: padding > 0 ? EdgeInsets.all(padding) : EdgeInsets.zero,
+          padding: padding ?? EdgeInsets.zero,
           child: _wrapWithContrastText(
             context,
             bgColor ?? Theme.of(context).colorScheme.surface,
@@ -138,10 +142,9 @@ class JsonContainerWidget extends JsonBaseWidget {
       );
     }
 
-    Widget finalWidget = Padding(
-      padding: EdgeInsets.all(margin),
-      child: container,
-    );
+    Widget finalWidget = margin == null
+        ? container
+        : Padding(padding: margin, child: container);
 
     // 点击事件 (onTap)
     // build 阶段预解析 action 中的 {{ }}：list / grid 的 item_template 在用户点击
@@ -197,5 +200,69 @@ class JsonContainerWidget extends JsonBaseWidget {
     final resolved = interpreter.resolveExpression(value);
     if (resolved is num) return resolved.toDouble();
     return double.tryParse(resolved?.toString() ?? '');
+  }
+
+  EdgeInsets? _resolveInsets(JsonInterpreter interpreter, dynamic value) {
+    if (value == null) return null;
+    if (value is num) {
+      final v = value.toDouble();
+      return v == 0 ? null : EdgeInsets.all(v);
+    }
+    if (value is String) {
+      final resolved = interpreter.resolveExpression(value);
+      if (resolved is num) {
+        final v = resolved.toDouble();
+        return v == 0 ? null : EdgeInsets.all(v);
+      }
+      final parsed = double.tryParse(resolved?.toString() ?? '');
+      return parsed == null || parsed == 0 ? null : EdgeInsets.all(parsed);
+    }
+    if (value is Map<String, dynamic>) {
+      final all = _resolveDouble(interpreter, value['all']);
+      if (all != null) return all == 0 ? null : EdgeInsets.all(all);
+      final horizontal = _resolveDouble(interpreter, value['horizontal']) ?? 0;
+      final vertical = _resolveDouble(interpreter, value['vertical']) ?? 0;
+      final left = _resolveDouble(interpreter, value['left']) ?? horizontal;
+      final right = _resolveDouble(interpreter, value['right']) ?? horizontal;
+      final top = _resolveDouble(interpreter, value['top']) ?? vertical;
+      final bottom = _resolveDouble(interpreter, value['bottom']) ?? vertical;
+      if (left == 0 && right == 0 && top == 0 && bottom == 0) return null;
+      return EdgeInsets.fromLTRB(left, top, right, bottom);
+    }
+    return null;
+  }
+
+  BoxConstraints? _parseConstraints(
+    JsonInterpreter interpreter,
+    dynamic value,
+  ) {
+    if (value is! Map<String, dynamic>) return null;
+    final minWidth = _resolveDouble(interpreter, value['minWidth']) ?? 0;
+    final minHeight = _resolveDouble(interpreter, value['minHeight']) ?? 0;
+    final maxWidth =
+        _resolveDouble(interpreter, value['maxWidth']) ?? double.infinity;
+    final maxHeight =
+        _resolveDouble(interpreter, value['maxHeight']) ?? double.infinity;
+    return BoxConstraints(
+      minWidth: minWidth,
+      minHeight: minHeight,
+      maxWidth: maxWidth,
+      maxHeight: maxHeight,
+    );
+  }
+
+  Alignment? _parseAlignment(String? value) {
+    return switch (value) {
+      'topLeft' => Alignment.topLeft,
+      'topCenter' => Alignment.topCenter,
+      'topRight' => Alignment.topRight,
+      'centerLeft' => Alignment.centerLeft,
+      'center' => Alignment.center,
+      'centerRight' => Alignment.centerRight,
+      'bottomLeft' => Alignment.bottomLeft,
+      'bottomCenter' => Alignment.bottomCenter,
+      'bottomRight' => Alignment.bottomRight,
+      _ => null,
+    };
   }
 }

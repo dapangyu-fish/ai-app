@@ -30,10 +30,17 @@ PreferredSizeWidget buildAppBar(
   final elevation = (json['elevation'] as num?)?.toDouble();
   final rawBg = json['backgroundColor']?.toString();
   final bg = _parseColor(
-      rawBg != null ? interpreter.resolveTemplate(rawBg) : null);
+    rawBg != null ? interpreter.resolveTemplate(rawBg) : null,
+  );
   final rawFg = json['color']?.toString();
   final fg = _parseColor(
-      rawFg != null ? interpreter.resolveTemplate(rawFg) : null);
+    rawFg != null ? interpreter.resolveTemplate(rawFg) : null,
+  );
+  final rawImage = json['backgroundImage']?.toString();
+  final backgroundImage = rawImage != null
+      ? interpreter.resolveTemplate(rawImage)
+      : null;
+  final height = (json['height'] as num?)?.toDouble();
 
   Widget? leading;
   final leadingDef = json['leading'];
@@ -57,14 +64,38 @@ PreferredSizeWidget buildAppBar(
         final iconName = a['icon']?.toString();
         final iconData = iconName != null ? IconRegistry.get(iconName) : null;
         final action = a['action'] as Map<String, dynamic>?;
-        actionWidgets.add(IconButton(
-          icon: Icon(iconData ?? Icons.more_vert),
-          onPressed: action != null
-              ? () => interpreter.executeAction(action, context)
-              : null,
-        ));
+        actionWidgets.add(
+          IconButton(
+            icon: Icon(iconData ?? Icons.more_vert),
+            onPressed: action != null
+                ? () => interpreter.executeAction(action, context)
+                : null,
+          ),
+        );
       }
     }
+  }
+
+  if (backgroundImage != null && backgroundImage.isNotEmpty) {
+    final appBarHeight = height ?? kToolbarHeight * 3;
+    return PreferredSize(
+      preferredSize: Size.fromHeight(appBarHeight),
+      child: Stack(
+        children: [
+          Positioned.fill(child: _buildImage(backgroundImage, appBarHeight)),
+          if (leadingDef != false)
+            SafeArea(
+              child:
+                  leading ??
+                  IconButton(
+                    color: fg ?? Colors.white,
+                    icon: const Icon(Icons.arrow_back_ios),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+            ),
+        ],
+      ),
+    );
   }
 
   return AppBar(
@@ -75,6 +106,23 @@ PreferredSizeWidget buildAppBar(
     foregroundColor: fg,
     leading: leading,
     actions: actionWidgets.isEmpty ? null : actionWidgets,
+  );
+}
+
+Widget _buildImage(String source, double height) {
+  if (source.startsWith('http://') || source.startsWith('https://')) {
+    return Image.network(
+      source,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: height,
+    );
+  }
+  return Image.asset(
+    source,
+    fit: BoxFit.cover,
+    width: double.infinity,
+    height: height,
   );
 }
 

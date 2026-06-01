@@ -115,6 +115,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   final Map<String, TextEditingController> _textControllers = {};
+  final Map<String, FocusNode> _focusNodes = {};
 
   /// 屏幕导航历史栈（不含当前页）。
   /// PopScope / Android 物理返回键 / iOS 边缘滑动 都会调 navigateBack 弹出栈顶。
@@ -498,6 +499,10 @@ class JsonInterpreter extends ChangeNotifier {
       c.dispose();
     }
     _textControllers.clear();
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    _focusNodes.clear();
 
     // 切 app 时清掉旧 IM 监听，避免老 app 的 inbox 还在写新 app 的 _variables
     _imInboxSub?.cancel();
@@ -548,6 +553,7 @@ class JsonInterpreter extends ChangeNotifier {
         textControllers: Map<String, TextEditingController>.of(
           _textControllers,
         ),
+        focusNodes: Map<String, FocusNode>.of(_focusNodes),
         loopContextStack: List<Map<String, dynamic>>.of(_loopContextStack),
         paramsStack: List<Map<String, dynamic>>.of(_paramsStack),
         eventContextStack: List<Map<String, dynamic>>.of(_eventContextStack),
@@ -559,6 +565,7 @@ class JsonInterpreter extends ChangeNotifier {
     // 填充。注意 _textControllers 这里**不能 dispose**——所有控件还活在父 app
     // widget tree 里持有引用，dispose 会让父 app 的输入框炸。
     _textControllers.clear();
+    _focusNodes.clear();
     _navigationHistory.clear();
     _loopContextStack.clear();
     _paramsStack.clear();
@@ -584,6 +591,12 @@ class JsonInterpreter extends ChangeNotifier {
     _textControllers
       ..clear()
       ..addAll(snapshot.textControllers);
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    _focusNodes
+      ..clear()
+      ..addAll(snapshot.focusNodes);
 
     // 子 app 自己开的 IM 订阅 cancel 掉，再恢复父的（之前是 pause，这里 resume）
     _imInboxSub?.cancel();
@@ -949,6 +962,23 @@ class JsonInterpreter extends ChangeNotifier {
     return controller;
   }
 
+  FocusNode getFocusNode(String id) {
+    return _focusNodes.putIfAbsent(id, FocusNode.new);
+  }
+
+  bool requestFocusNode(String id) {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted || id.isEmpty) return false;
+    FocusScope.of(ctx).requestFocus(getFocusNode(id));
+    return true;
+  }
+
+  void unfocus() {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return;
+    FocusScope.of(ctx).unfocus();
+  }
+
   // ============ Action 执行 ============
 
   Future<void> executeAction(
@@ -1238,6 +1268,11 @@ class JsonInterpreter extends ChangeNotifier {
           alignment: _toDouble(resolvedArgs['alignment'] ?? 0.0),
         );
         return true;
+      case '@focus_input':
+        return requestFocusNode(resolvedArgs['id']?.toString() ?? '');
+      case '@unfocus':
+        unfocus();
+        return null;
       case '@throw':
         // 主动抛错——用于测试 @try_catch / 业务侧主动失败
         throw Exception(
@@ -1381,6 +1416,14 @@ class JsonInterpreter extends ChangeNotifier {
           ThemeMode.dark => 'dark',
           ThemeMode.system => 'system',
         };
+      case '@set_system_ui_overlay':
+        final style = resolvedArgs['style']?.toString().toLowerCase();
+        if (style == 'light') {
+          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+        } else {
+          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+        }
+        return null;
       case '@biometric_auth':
         // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
         // 返回 bool：通过 / 失败（web 无生物识别，恒 false）
@@ -3727,6 +3770,7 @@ class _InterpreterStateSnapshot {
   final List<String> navigationHistory;
   final Map<String, LoadedModule> depModules;
   final Map<String, TextEditingController> textControllers;
+  final Map<String, FocusNode> focusNodes;
   final List<Map<String, dynamic>> loopContextStack;
   final List<Map<String, dynamic>> paramsStack;
   final List<Map<String, dynamic>> eventContextStack;
@@ -3741,6 +3785,7 @@ class _InterpreterStateSnapshot {
     required this.navigationHistory,
     required this.depModules,
     required this.textControllers,
+    required this.focusNodes,
     required this.loopContextStack,
     required this.paramsStack,
     required this.eventContextStack,

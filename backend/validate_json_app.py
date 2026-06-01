@@ -505,6 +505,8 @@ class Validator:
 
             for key in NUMERIC_SCALAR_KEYS:
                 if key in node and not self._is_number(node[key]):
+                    if key in {"margin", "padding"} and self._is_edge_insets(node[key]):
+                        continue
                     self.error(self._path(path, key), f"{key} must be a number, not {type(node[key]).__name__}")
 
             if "shrinkWrap" in node and not isinstance(node.get("shrinkWrap"), bool):
@@ -826,6 +828,15 @@ class Validator:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             return True
         return isinstance(value, str) and "{{" in value and "}}" in value
+
+    def _is_edge_insets(self, value: Any) -> bool:
+        if not isinstance(value, dict):
+            return False
+        allowed = {"all", "horizontal", "vertical", "left", "right", "top", "bottom"}
+        for key, raw in value.items():
+            if key not in allowed or not self._is_number(raw):
+                return False
+        return True
 
     @staticmethod
     def _path(base: str, key: Any) -> str:

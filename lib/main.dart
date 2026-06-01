@@ -2534,6 +2534,11 @@ class JsonScreenView extends ConsumerWidget {
               .map((childJson) => interpreter.buildWidget(context, childJson))
               .toList()
         : null;
+    final floatingActionButtonConfig = screenConfig['floatingActionButton'];
+    final floatingActionButton =
+        floatingActionButtonConfig is Map<String, dynamic>
+        ? interpreter.buildWidget(context, floatingActionButtonConfig)
+        : null;
 
     // screen.layout=stack 时，需要全屏 Stack（绝对定位才有参考系），
     // 不能再放进 SingleChildScrollView 里——否则 Stack 高度坍缩到子项最大尺寸
@@ -2582,6 +2587,7 @@ class JsonScreenView extends ConsumerWidget {
         appBar: appBar,
         drawer: drawer,
         persistentFooterButtons: footerButtons,
+        floatingActionButton: floatingActionButton,
         body: SafeArea(child: bodyContent),
       ),
     );

@@ -23,10 +23,20 @@ class JsonImageWidget extends JsonBaseWidget {
     // 支持 url 和 src 两种字段名
     final rawSrc = (json['url'] ?? json['src'] ?? '').toString();
     final src = interpreter.resolveTemplate(rawSrc);
-    final width = (json['width'] as num?)?.toDouble();
-    final height = (json['height'] as num?)?.toDouble();
+    final screenSize = MediaQuery.sizeOf(context);
+    final width =
+        (json['width'] as num?)?.toDouble() ??
+        ((json['widthFactor'] as num?)?.toDouble() == null
+            ? null
+            : screenSize.width * (json['widthFactor'] as num).toDouble());
+    final height =
+        (json['height'] as num?)?.toDouble() ??
+        ((json['heightFactor'] as num?)?.toDouble() == null
+            ? null
+            : screenSize.width * (json['heightFactor'] as num).toDouble());
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 0;
     final paddingV = (json['paddingV'] as num?)?.toDouble() ?? 4;
+    final heroTag = json['heroTag']?.toString();
 
     // fit
     BoxFit fit = BoxFit.cover;
@@ -77,6 +87,10 @@ class JsonImageWidget extends JsonBaseWidget {
     // 防止父级 Column/Row 的 CrossAxisAlignment.stretch 拉伸图片
     if (width != null && height != null) {
       image = SizedBox(width: width, height: height, child: image);
+    }
+
+    if (heroTag != null && heroTag.isNotEmpty) {
+      image = Hero(tag: heroTag, child: image);
     }
 
     if (paddingV <= 0) return image;

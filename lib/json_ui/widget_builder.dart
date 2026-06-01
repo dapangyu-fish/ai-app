@@ -59,6 +59,13 @@ import 'widgets/transform_widget.dart';
 import 'widgets/material_button_widget.dart';
 import 'widgets/positioned_widget.dart';
 import 'widgets/cupertino_refresh_list_widget.dart';
+import 'widgets/bubble_button_widget.dart';
+import 'widgets/keyboard_detector_widget.dart';
+import 'widgets/slide_verify_widget.dart';
+import 'widgets/gsy_animation_widgets.dart';
+import 'widgets/floating_touch_demo_widget.dart';
+import 'widgets/floating_action_button_widget.dart';
+import 'widgets/hero_image_viewer_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -119,6 +126,14 @@ class JsonWidgetBuilder {
     'material_button': JsonMaterialButtonWidget(),
     'positioned': JsonPositionedWidget(),
     'cupertino_refresh_list': JsonCupertinoRefreshListWidget(),
+    'bubble_button': JsonBubbleButtonWidget(),
+    'keyboard_detector': JsonKeyboardDetectorWidget(),
+    'slide_verify': JsonSlideVerifyWidget(),
+    'gsy_rotating_circle': JsonGsyRotatingCircleWidget(),
+    'gsy_circular_reveal': JsonGsyCircularRevealWidget(),
+    'floating_touch_demo': JsonFloatingTouchDemoWidget(),
+    'floating_action_button': JsonFloatingActionButtonWidget(),
+    'hero_image_viewer': JsonHeroImageViewerWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

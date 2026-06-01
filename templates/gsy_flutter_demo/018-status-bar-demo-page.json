@@ -3,13 +3,13 @@
   "appid": "95a82e03-bcec-5c4e-ae11-00cd40d2fd9c",
   "meta": {
     "name": "gsy_flutter_demo/018-status-bar-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "状态栏颜色修改（仅 App）",
       "en": "Status bar color update(App only)"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：状态栏颜色修改（仅 App）",
+    "description": "StatusBarDemoPage：状态栏颜色修改",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -23,12 +23,7 @@
   },
   "dependencies": {},
   "global": {
-    "variables": {
-      "upstreamTitle": "状态栏颜色修改（仅 App）",
-      "upstreamSource": "lib/widget/basic/statusbar_demo_page.dart",
-      "upstreamWidget": "StatusBarDemoPage",
-      "portStatus": "in_development"
-    },
+    "variables": {},
     "functions": {}
   },
   "steps": [],
@@ -36,152 +31,80 @@
     "screens": [
       {
         "id": "home",
-        "title": "状态栏颜色修改（仅 App）",
-        "layout": "column",
+        "title": "StatusBarDemoPage",
+        "layout": "stack",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "center",
+              "child": {
                 "type": "container",
-                "layout": "column",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
+                    "type": "button",
+                    "label": "Light",
+                    "variant": "text",
+                    "action": {
+                      "call": "@set_system_ui_overlay",
+                      "args": {
+                        "style": "light"
+                      }
+                    },
+                    "style": {
+                      "backgroundColor": "#FFFF00",
+                      "textColor": "#000000",
+                      "borderRadius": 4,
+                      "paddingH": 16,
+                      "paddingV": 10
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "button",
+                    "label": "Dart",
+                    "variant": "text",
+                    "action": {
+                      "call": "@set_system_ui_overlay",
+                      "args": {
+                        "style": "dark"
+                      }
+                    },
+                    "style": {
+                      "backgroundColor": "#69F0AE",
+                      "textColor": "#000000",
+                      "borderRadius": 4,
+                      "paddingH": 16,
+                      "paddingV": 10
+                    }
                   }
                 ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
+                "layout": "row",
                 "mainAxisAlignment": "center",
                 "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "状态栏颜色修改（仅 App）",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Status bar color update(App only)",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/statusbar_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：StatusBarDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "backgroundImage": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+          "height": 168,
+          "color": "#FFFFFF",
+          "leading": {
+            "icon": "back",
+            "action": {
+              "type": "back"
+            }
+          }
+        },
+        "backgroundColor": "#FFFFFF"
       }
     ]
   }

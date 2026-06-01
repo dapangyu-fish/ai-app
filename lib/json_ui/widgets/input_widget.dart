@@ -23,6 +23,7 @@ class JsonInputWidget extends JsonBaseWidget {
     final suffix = json['suffix']?.toString();
     final prefixIcon = json['prefixIcon']?.toString();
     final suffixIcon = json['suffixIcon']?.toString();
+    final focusId = json['focusId']?.toString();
     final rawLabel = json['label']?.toString();
     final label = rawLabel != null
         ? interpreter.resolveTemplate(rawLabel)
@@ -107,6 +108,9 @@ class JsonInputWidget extends JsonBaseWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextField(
         controller: interpreter.getTextController(bindPath ?? '', currentValue),
+        focusNode: focusId == null || focusId.isEmpty
+            ? null
+            : interpreter.getFocusNode(focusId),
         maxLines: obscureText ? 1 : maxLines,
         obscureText: obscureText,
         keyboardType: keyboardType,
