@@ -3,13 +3,13 @@
   "appid": "f365fe4a-3591-50a7-af05-4d8642a6a8d4",
   "meta": {
     "name": "gsy_flutter_demo/062-anim-button-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "动画按键例子",
       "en": "Animated button demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：动画按键例子",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：动画按键例子",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,190 @@
       "upstreamTitle": "动画按键例子",
       "upstreamSource": "lib/widget/animation/anim_button/anim_button_demo_page.dart",
       "upstreamWidget": "AnimButtonDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "playing": false,
+      "loadingState": 0
     },
-    "functions": {}
+    "functions": {
+      "togglePlay": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.playing",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.playing"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nextLoading": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.loadingState",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.loadingState"
+                      },
+                      1
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "动画按键例子",
+        "title": "AnimButtonDemoPage",
         "layout": "column",
+        "backgroundColor": "#448AFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
+            "type": "expanded",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "点击下方按键切换动画效果",
+                  "style": {
+                    "fontSize": 16,
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "动画按键例子",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "spacer",
+                  "height": 50
+                },
+                {
+                  "type": "gesture_detector",
+                  "onTap": {
+                    "call": "@global.togglePlay",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "animated_switcher",
+                    "switchKey": "{{ global.playing }}",
+                    "transitionType": "scale",
+                    "durationMs": 350,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "play",
+                          "size": 30,
+                          "color": "#FFFFFF",
+                          "visible": {
+                            "!": [
+                              {
+                                "var": "global.playing"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "icon",
+                          "name": "pause",
+                          "size": 30,
+                          "color": "#FFFFFF",
+                          "visible": {
+                            "var": "global.playing"
+                          }
+                        }
+                      ],
+                      "width": 50,
+                      "height": 50,
+                      "shape": "circle",
+                      "border": {
+                        "color": "#FFFFFF",
+                        "width": 4
+                      },
+                      "alignment": "center"
+                    }
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 50
+                },
+                {
+                  "type": "gesture_detector",
+                  "onTap": {
+                    "call": "@global.nextLoading",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "progress",
+                        "value": {
+                          "/": [
+                            {
+                              "+": [
+                                {
+                                  "var": "global.loadingState"
+                                },
+                                1
+                              ]
+                            },
+                            4
+                          ]
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.loadingState }}",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#FFFFFF",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "width": 50,
+                    "height": 50,
+                    "shape": "circle",
+                    "border": {
+                      "color": "#FFFFFF",
+                      "width": 4
+                    },
+                    "alignment": "center"
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Animated button demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/anim_button/anim_button_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：AnimButtonDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
-            },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
+              ],
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "center",
+              "color": "#448AFF"
             }
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

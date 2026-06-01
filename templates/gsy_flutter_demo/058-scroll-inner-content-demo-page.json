@@ -3,13 +3,13 @@
   "appid": "5411ee0e-fe00-515c-ba3e-9de03c3c2f82",
   "meta": {
     "name": "gsy_flutter_demo/058-scroll-inner-content-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "一个有趣的底部跟随和停靠例子",
       "en": "Bottom follow + sticky demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：一个有趣的底部跟随和停靠例子",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：一个有趣的底部跟随和停靠例子",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,186 @@
       "upstreamTitle": "一个有趣的底部跟随和停靠例子",
       "upstreamSource": "lib/widget/scroll/scroll_inner_content_demo_page.dart",
       "upstreamWidget": "ScrollInnerContentDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "content": "这是可滑动文本区域"
     },
-    "functions": {}
+    "functions": {
+      "addText": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.content",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.content"
+                  },
+                  "=｜-动态文本-｜="
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "removeText": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.content",
+              "value": {
+                "str_replace": [
+                  {
+                    "var": "global.content"
+                  },
+                  "=｜-动态文本-｜=",
+                  ""
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "一个有趣的底部跟随和停靠例子",
-        "layout": "column",
+        "title": "ScrollDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "list",
-                    "size": 26,
-                    "color": "#0B8E70"
+            "type": "positioned",
+            "child": {
+              "type": "custom_scroll_view",
+              "physics": "clamping",
+              "slivers": [
+                {
+                  "type": "sliver_box",
+                  "height": 120,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "点击右上角加减查看效果",
+                            "style": {
+                              "fontSize": 18,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "height": 60,
+                        "alignment": "centerLeft"
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "我是文本2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "height": 60,
+                        "alignment": "centerLeft"
+                      }
+                    ],
+                    "color": "#FF5252"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E7F6F1",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "一个有趣的底部跟随和停靠例子",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 760,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.content }}",
+                        "style": {
+                          "fontSize": 44,
+                          "color": "#000000"
+                        }
+                      }
+                    ],
+                    "color": "#F44336",
+                    "padding": {
+                      "bottom": 54
+                    }
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Bottom follow + sticky demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "#########",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
+                  }
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：列表滚动",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/scroll/scroll_inner_content_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：ScrollInnerContentDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
+              ],
+              "height": 40,
+              "color": "#2196F3",
+              "alignment": "center",
+              "margin": {
+                "horizontal": 20
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "right": 0,
+            "bottom": 0
           }
         ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        "appBar": {
+          "title": "ScrollDemoPage",
+          "actions": [
+            {
+              "icon": "add_circle_outline",
+              "action": {
+                "call": "@global.addText",
+                "args": {}
+              }
+            },
+            {
+              "icon": "remove_circle_outline",
+              "action": {
+                "call": "@global.removeText",
+                "args": {}
+              }
+            }
+          ]
+        }
       }
     ]
   }

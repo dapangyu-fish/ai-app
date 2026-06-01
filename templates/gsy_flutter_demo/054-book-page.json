@@ -3,13 +3,13 @@
   "appid": "8c20c716-f33c-5c76-9817-2c636013d77f",
   "meta": {
     "name": "gsy_flutter_demo/054-book-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "仿真书本翻页动画（仅APP）",
       "en": "Book page flip animation(仅APP)"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：仿真书本翻页动画（仅APP）",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：仿真书本翻页动画（仅APP）",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,241 @@
       "upstreamTitle": "仿真书本翻页动画（仅APP）",
       "upstreamSource": "lib/widget/animation/book_page/book_page.dart",
       "upstreamWidget": "BookPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "page": 0,
+      "flip": false,
+      "contentA": "林语堂\n\n一、腰有十文钱必振衣作响；\n\n二、每与人言必谈及贵戚；\n\n三、遇美人必急索登床；\n\n四、见到问路之人必作傲睨之态；\n\n五、与朋友相聚便喋喋高吟其酸腐诗文；",
+      "contentB": "林语堂\n\n1. 人本过客来无处，休说故里在何方。随遇而安无不可，人间到处有芳香。\n\n2. 人生不过如此，且行且珍惜。\n\n3. 最明亮时总是最迷茫，最繁华时也是最悲凉。"
     },
-    "functions": {}
+    "functions": {
+      "nextPage": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.flip",
+              "value": true
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.page",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.page"
+                      },
+                      0
+                    ]
+                  },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "resetFlip": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.flip",
+              "value": false
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "仿真书本翻页动画（仅APP）",
-        "layout": "column",
+        "title": "BookPage",
+        "layout": "stack",
+        "backgroundColor": "#64FFDA",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "gesture_detector",
+              "onTap": {
+                "call": "@global.nextPage",
+                "args": {}
+              },
+              "onSwipeLeft": {
+                "call": "@global.nextPage",
+                "args": {}
+              },
+              "onSwipeRight": {
+                "call": "@global.nextPage",
+                "args": {}
+              },
+              "child": {
                 "type": "container",
                 "layout": "column",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "林语堂",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#5D4500",
+                          "fontWeight": "bold"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 12
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.contentA }}",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#2B2100",
+                          "lineHeight": 1.35
+                        }
+                      }
+                    ],
+                    "color": "#FFEB3B",
+                    "borderRadius": 6,
+                    "padding": 22,
+                    "margin": {
+                      "horizontal": 18,
+                      "vertical": 20
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.page"
+                        },
+                        0
+                      ]
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "林语堂",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#5D4500",
+                          "fontWeight": "bold"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 12
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.contentB }}",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#2B2100",
+                          "lineHeight": 1.35
+                        }
+                      }
+                    ],
+                    "color": "#FFEB3B",
+                    "borderRadius": 6,
+                    "padding": 22,
+                    "margin": {
+                      "horizontal": 18,
+                      "vertical": 20
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.page"
+                        },
+                        1
+                      ]
+                    }
                   }
                 ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "仿真书本翻页动画（仅APP）",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Book page flip animation(仅APP)",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                "color": "#64FFDA"
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
+            "type": "positioned",
+            "child": {
+              "type": "animated_visibility",
+              "visibleWhen": {
+                "var": "global.flip"
               },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/book_page/book_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：BookPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
+              "durationMs": 300,
+              "hiddenOffsetX": 1,
+              "hiddenOffsetY": 0,
+              "child": {
+                "type": "transform",
+                "rotateZ": -8,
+                "translateX": 38,
+                "child": {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [],
+                  "color": "#FFF59D",
+                  "width": 150,
+                  "height": 620,
+                  "borderRadius": 6,
+                  "margin": {
+                    "top": 20,
+                    "right": 18
+                  }
                 }
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
+            "top": 0,
+            "right": 0
           },
           {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Tap / swipe to flip",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#00574B",
+                    "textAlign": "center"
+                  }
+                }
+              ],
+              "height": 36,
+              "color": "#33000000",
+              "alignment": "center"
             },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "right": 0,
+            "bottom": 0
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

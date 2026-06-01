@@ -3,13 +3,13 @@
   "appid": "ab79f566-a5eb-57a5-8fd7-333d4474a203",
   "meta": {
     "name": "gsy_flutter_demo/057-matrix-custom-painter-demo",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "手势效果",
       "en": "Gesture effect"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：手势效果",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：手势效果",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,159 @@
       "upstreamTitle": "手势效果",
       "upstreamSource": "lib/widget/canvas/matrix_custom_painter_page.dart",
       "upstreamWidget": "MatrixCustomPainterDemo",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "pose": 0
     },
-    "functions": {}
+    "functions": {
+      "nextPose": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.pose",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.pose"
+                      },
+                      1
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "手势效果",
-        "layout": "column",
+        "title": "MatrixCustomPainterDemo Demo",
+        "layout": "stack",
+        "backgroundColor": "#607D8B",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "gesture_detector",
+              "onTap": {
+                "call": "@global.nextPose",
+                "args": {}
+              },
+              "child": {
                 "type": "container",
-                "layout": "column",
+                "layout": "stack",
                 "children": [
                   {
-                    "type": "icon",
-                    "name": "palette",
-                    "size": 26,
-                    "color": "#7A57D1"
+                    "type": "transform",
+                    "rotateZ": {
+                      "*": [
+                        {
+                          "var": "global.pose"
+                        },
+                        12
+                      ]
+                    },
+                    "scale": {
+                      "+": [
+                        1,
+                        {
+                          "/": [
+                            {
+                              "var": "global.pose"
+                            },
+                            12
+                          ]
+                        }
+                      ]
+                    },
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [],
+                      "width": 220,
+                      "height": 220,
+                      "border": {
+                        "color": "#FFFFFFFF",
+                        "width": 8
+                      },
+                      "borderRadius": 12
+                    }
+                  },
+                  {
+                    "type": "transform",
+                    "rotateZ": {
+                      "*": [
+                        {
+                          "var": "global.pose"
+                        },
+                        -16
+                      ]
+                    },
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [],
+                      "width": 180,
+                      "height": 180,
+                      "shape": "circle",
+                      "border": {
+                        "color": "#CCFFFFFF",
+                        "width": 6
+                      }
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Matrix Gesture\nDetector Demo",
+                        "style": {
+                          "fontSize": 30,
+                          "color": "#FFFFFF",
+                          "fontWeight": "bold",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "alignment": "center"
                   }
                 ],
-                "width": 58,
-                "height": 58,
-                "color": "#F0ECFB",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "手势效果",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Gesture effect",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
+                "alignment": "center"
               }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           },
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：绘制与Shader",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/canvas/matrix_custom_painter_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：MatrixCustomPainterDemo",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
+            "type": "positioned",
+            "child": {
+              "type": "text",
+              "value": "Tap anywhere to transform",
+              "style": {
+                "fontSize": 14,
+                "color": "#E0F2F1",
+                "textAlign": "center"
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "right": 0,
+            "bottom": 28
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

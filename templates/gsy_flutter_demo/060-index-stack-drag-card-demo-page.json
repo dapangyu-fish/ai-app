@@ -3,13 +3,13 @@
   "appid": "eb834aae-d630-5de0-aa2c-db6a5353684e",
   "meta": {
     "name": "gsy_flutter_demo/060-index-stack-drag-card-demo-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "一个类似探探堆叠卡片例子",
       "en": "Stacked card demo"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：一个类似探探堆叠卡片例子",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：一个类似探探堆叠卡片例子",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,499 @@
       "upstreamTitle": "一个类似探探堆叠卡片例子",
       "upstreamSource": "lib/widget/basic/index_stack_drag_card_demo_page.dart",
       "upstreamWidget": "IndexStackDragCardDemoPage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "initialCards": [
+        {
+          "name": "GSY11111",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY22222",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY33333",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY44444",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        },
+        {
+          "name": "GSY555555",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_up.png"
+        },
+        {
+          "name": "GSY66666",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_down.png"
+        },
+        {
+          "name": "GSY77777",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY88888",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY99999",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY1010101010",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        }
+      ],
+      "cards": [
+        {
+          "name": "GSY11111",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY22222",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY33333",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY44444",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        },
+        {
+          "name": "GSY555555",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_up.png"
+        },
+        {
+          "name": "GSY66666",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_down.png"
+        },
+        {
+          "name": "GSY77777",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY88888",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY99999",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY1010101010",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        }
+      ]
     },
-    "functions": {}
+    "functions": {
+      "dismissTop": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@list_remove_at",
+            "args": {
+              "var": "global.cards",
+              "index": 0
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "length": [
+                      {
+                        "var": "global.cards"
+                      }
+                    ]
+                  },
+                  0
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.cards",
+                    "value": "{{ global.initialCards }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "一个类似探探堆叠卡片例子",
-        "layout": "column",
+        "title": "IndexStackDragCardDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "icon",
-                    "name": "dashboard",
-                    "size": 26,
-                    "color": "#1D7BCB"
-                  }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#E8F2FD",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "一个类似探探堆叠卡片例子",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Stacked card demo",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：基础控件",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/basic/index_stack_drag_card_demo_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：IndexStackDragCardDemoPage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 32,
+              "translateY": 40,
+              "child": {
+                "type": "gesture_detector",
+                "onSwipeLeft": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "onSwipeRight": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      4,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.4.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.4.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
                 }
               }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
             },
-            "crossAxisAlignment": "start"
+            "left": 45,
+            "top": 150
           },
           {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 24,
+              "translateY": 30,
+              "child": {
+                "type": "gesture_detector",
+                "onSwipeLeft": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "onSwipeRight": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      3,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.3.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.3.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
             },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 16,
+              "translateY": 20,
+              "child": {
+                "type": "gesture_detector",
+                "onSwipeLeft": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "onSwipeRight": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      2,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.2.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.2.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 8,
+              "translateY": 10,
+              "child": {
+                "type": "gesture_detector",
+                "onSwipeLeft": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "onSwipeRight": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      1,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.1.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.1.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 0,
+              "translateY": 0,
+              "child": {
+                "type": "gesture_detector",
+                "onSwipeLeft": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "onSwipeRight": {
+                  "call": "@global.dismissTop",
+                  "args": {}
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      0,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.0.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.0.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "text",
+              "value": "Swipe the front card",
+              "style": {
+                "fontSize": 14,
+                "color": "#666666",
+                "textAlign": "center"
+              }
+            },
+            "left": 0,
+            "right": 0,
+            "bottom": 28
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }

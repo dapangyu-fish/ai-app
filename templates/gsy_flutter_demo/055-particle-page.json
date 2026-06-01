@@ -3,13 +3,13 @@
   "appid": "26e541d9-2850-5f5c-b53f-4660d52d9c21",
   "meta": {
     "name": "gsy_flutter_demo/055-particle-page",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "app",
     "displayName": {
       "zh": "粒子动画效果",
       "en": "Particle animation effect"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例：粒子动画效果",
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：粒子动画效果",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -27,161 +27,1144 @@
       "upstreamTitle": "粒子动画效果",
       "upstreamSource": "lib/widget/animation/particle/particle_page.dart",
       "upstreamWidget": "ParticlePage",
-      "portStatus": "in_development"
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "tick": 0
     },
-    "functions": {}
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tick",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.tick"
+                      },
+                      1
+                    ]
+                  },
+                  12
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "粒子动画效果",
-        "layout": "column",
+        "title": "ParticlePage",
+        "layout": "stack",
+        "backgroundColor": "#000000",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 700,
+              "runImmediately": true,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
                 "type": "container",
                 "layout": "column",
-                "children": [
+                "children": [],
+                "color": "#0D47A1"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
                   {
-                    "type": "icon",
-                    "name": "play",
-                    "size": 26,
-                    "color": "#E66A00"
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          0
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 4,
+                "height": 4,
+                "shape": "circle",
+                "color": "#66FFFFFF"
+              }
+            },
+            "left": 12,
+            "top": 60
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          1
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 6,
+                "height": 6,
+                "shape": "circle",
+                "color": "#99FFFFFF"
+              }
+            },
+            "left": 49,
+            "top": 143
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          2
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 8,
+                "height": 8,
+                "shape": "circle",
+                "color": "#80BBDEFB"
+              }
+            },
+            "left": 86,
+            "top": 226
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          3
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 10,
+                "height": 10,
+                "shape": "circle",
+                "color": "#80FFD180"
+              }
+            },
+            "left": 123,
+            "top": 309
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          4
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 12,
+                "height": 12,
+                "shape": "circle",
+                "color": "#80CE93D8"
+              }
+            },
+            "left": 160,
+            "top": 392
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          5
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 4,
+                "height": 4,
+                "shape": "circle",
+                "color": "#66FFFFFF"
+              }
+            },
+            "left": 197,
+            "top": 475
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          6
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 6,
+                "height": 6,
+                "shape": "circle",
+                "color": "#99FFFFFF"
+              }
+            },
+            "left": 234,
+            "top": 558
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          7
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 8,
+                "height": 8,
+                "shape": "circle",
+                "color": "#80BBDEFB"
+              }
+            },
+            "left": 271,
+            "top": 641
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          8
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 10,
+                "height": 10,
+                "shape": "circle",
+                "color": "#80FFD180"
+              }
+            },
+            "left": 308,
+            "top": 74
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          9
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 12,
+                "height": 12,
+                "shape": "circle",
+                "color": "#80CE93D8"
+              }
+            },
+            "left": 345,
+            "top": 157
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          10
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 4,
+                "height": 4,
+                "shape": "circle",
+                "color": "#66FFFFFF"
+              }
+            },
+            "left": 22,
+            "top": 240
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          11
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 6,
+                "height": 6,
+                "shape": "circle",
+                "color": "#99FFFFFF"
+              }
+            },
+            "left": 59,
+            "top": 323
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          12
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 8,
+                "height": 8,
+                "shape": "circle",
+                "color": "#80BBDEFB"
+              }
+            },
+            "left": 96,
+            "top": 406
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          13
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 10,
+                "height": 10,
+                "shape": "circle",
+                "color": "#80FFD180"
+              }
+            },
+            "left": 133,
+            "top": 489
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          14
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 12,
+                "height": 12,
+                "shape": "circle",
+                "color": "#80CE93D8"
+              }
+            },
+            "left": 170,
+            "top": 572
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          15
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 4,
+                "height": 4,
+                "shape": "circle",
+                "color": "#66FFFFFF"
+              }
+            },
+            "left": 207,
+            "top": 655
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          16
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 6,
+                "height": 6,
+                "shape": "circle",
+                "color": "#99FFFFFF"
+              }
+            },
+            "left": 244,
+            "top": 88
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          17
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 8,
+                "height": 8,
+                "shape": "circle",
+                "color": "#80BBDEFB"
+              }
+            },
+            "left": 281,
+            "top": 171
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          18
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 10,
+                "height": 10,
+                "shape": "circle",
+                "color": "#80FFD180"
+              }
+            },
+            "left": 318,
+            "top": 254
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          19
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 12,
+                "height": 12,
+                "shape": "circle",
+                "color": "#80CE93D8"
+              }
+            },
+            "left": 355,
+            "top": 337
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          20
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 4,
+                "height": 4,
+                "shape": "circle",
+                "color": "#66FFFFFF"
+              }
+            },
+            "left": 32,
+            "top": 420
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          21
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 6,
+                "height": 6,
+                "shape": "circle",
+                "color": "#99FFFFFF"
+              }
+            },
+            "left": 69,
+            "top": 503
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          22
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 8,
+                "height": 8,
+                "shape": "circle",
+                "color": "#80BBDEFB"
+              }
+            },
+            "left": 106,
+            "top": 586
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          23
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 10,
+                "height": 10,
+                "shape": "circle",
+                "color": "#80FFD180"
+              }
+            },
+            "left": 143,
+            "top": 669
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          24
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 12,
+                "height": 12,
+                "shape": "circle",
+                "color": "#80CE93D8"
+              }
+            },
+            "left": 180,
+            "top": 102
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          25
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 4,
+                "height": 4,
+                "shape": "circle",
+                "color": "#66FFFFFF"
+              }
+            },
+            "left": 217,
+            "top": 185
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          26
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 6,
+                "height": 6,
+                "shape": "circle",
+                "color": "#99FFFFFF"
+              }
+            },
+            "left": 254,
+            "top": 268
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          27
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 8,
+                "height": 8,
+                "shape": "circle",
+                "color": "#80BBDEFB"
+              }
+            },
+            "left": 291,
+            "top": 351
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          28
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 10,
+                "height": 10,
+                "shape": "circle",
+                "color": "#80FFD180"
+              }
+            },
+            "left": 328,
+            "top": 434
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateY": {
+                "-": [
+                  {
+                    "%": [
+                      {
+                        "+": [
+                          {
+                            "var": "global.tick"
+                          },
+                          29
+                        ]
+                      },
+                      12
+                    ]
+                  },
+                  6
+                ]
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "width": 12,
+                "height": 12,
+                "shape": "circle",
+                "color": "#80CE93D8"
+              }
+            },
+            "left": 365,
+            "top": 517
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "GSY Flutter Demo",
+                  "style": {
+                    "fontSize": 30,
+                    "color": "#FFFFFF",
+                    "fontWeight": "bold",
+                    "textAlign": "center"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "#FFF2E5",
-                "borderRadius": 16,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 16
-              },
-              {
-                "type": "text",
-                "value": "粒子动画效果",
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "800",
-                  "color": "#111827"
                 }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Particle animation effect",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#667085"
-                }
-              }
-            ],
-            "padding": 20,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 20,
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "text",
-                "value": "JSON 移植状态",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "700",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "text",
-                "value": "正在开发中。该子 APP 已经可以独立运行，并且可以被 launcher 作为 lazy app dependency 启动；真实交互会按 upstream demo 逐项补齐。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#4B5563"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "分类：动画交互",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#374151"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Upstream：lib/widget/animation/particle/particle_page.dart",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 6
-              },
-              {
-                "type": "text",
-                "value": "Widget：ParticlePage",
-                "style": {
-                  "fontSize": 12,
-                  "color": "#6B7280"
-                }
-              }
-            ],
-            "padding": 16,
-            "margin": 12,
-            "color": "#FFFFFF",
-            "borderRadius": 16,
-            "border": {
-              "color": "#E5E7EB",
-              "width": 1
+              ],
+              "alignment": "center",
+              "color": "#00000000"
             },
-            "crossAxisAlignment": "start"
-          },
-          {
-            "type": "button",
-            "label": "返回",
-            "action": {
-              "call": "@back",
-              "args": {}
-            },
-            "icon": "back",
-            "variant": "outlined",
-            "style": {
-              "fontSize": 14,
-              "borderRadius": 12
-            }
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
           }
-        ],
-        "padding": 0,
-        "backgroundColor": "#F7F8FA"
+        ]
       }
     ]
   }
