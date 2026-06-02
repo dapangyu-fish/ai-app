@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   Smartphone,
   Sparkles,
-  Terminal,
   Workflow,
   Zap,
 } from 'lucide-react';
@@ -30,6 +29,7 @@ type Lang = 'zh' | 'en' | 'de' | 'es';
 type ThemeKey = 'orbit' | 'matrix' | 'prism' | 'slate';
 
 const WEB_APP_URL = 'https://myapp-web.dapangyu.work/';
+const TESTFLIGHT_URL = 'https://testflight.apple.com/join/3Fk5Exnn';
 
 const languageOptions: Array<{ key: Lang; label: string; flag: string }> = [
   { key: 'zh', label: '中文', flag: '🇨🇳' },
@@ -77,22 +77,22 @@ const copy = {
     navTry: '视频',
     navFeatures: '能力',
     navDownload: '下载',
-    badge: 'AI 造 App · 服务端驱动 · Web / iOS / Android',
-    titleA: '对 AI 说一句话',
-    titleB: '拿到一个能用的 App',
+    badge: 'UGC 应用构建工具 · AI 生成 · Web / iOS / Android',
+    titleA: '把想法变成',
+    titleB: '每个人都能发布的小应用',
     subtitle:
-      '描述你想要的应用，AI 生成 JSON App，立刻在 Web 预览和移动端运行；所有能力都运行在已编译好的客户端边界内。',
-    primaryCta: '打开在线 Demo',
-    secondaryCta: '查看部署命令',
+      'MyApp 是一个用户生成内容（UGC）式的应用构建工具。描述你想要的工具、游戏、社区页面或业务面板，AI 生成可运行应用，用户可以安装、分享并继续迭代。',
+    primaryCta: '打开 Web 版',
+    secondaryCta: '加入 TestFlight',
     phoneCaption: '线上 Web 客户端，嵌在手机外框里做快速演示。',
     heroConsoleTitle: '从提示词到可运行应用',
     heroConsoleLines: [
-      '$ tell ai "生成一个库存管理 App"',
-      '→ validate JSON DSL',
-      '→ publish package + assets',
-      '→ run on Web / iOS / Android',
+      '$ tell ai "生成一个露营装备打包 App"',
+      '→ AI builds a JSON App',
+      '→ publish to the app marketplace',
+      '→ users run it on Web / iOS / Android',
     ],
-    proofPoints: ['Apache-2.0 开源', 'JSON 不是动态代码', '可自部署完整后端'],
+    proofPoints: ['用户生成应用内容', 'AI 辅助构建和迭代', 'Web 与移动端同一生态'],
     playgroundTitle: '选择官网科技风格',
     playgroundSubtitle: '同一套内容，切换不同视觉方向，后续可以按你选中的风格继续打磨。',
     videosTitle: '演示视频',
@@ -136,11 +136,13 @@ const copy = {
       ['服务端驱动', 'UI 和业务配置可作为数据更新，但不能扩展客户端原生能力。'],
       ['可自部署', '测试环境 bootstrap 一条链路拉起核心服务。'],
     ],
-    downloadTitle: '移动端下载准备中',
-    downloadBody: '现在先用 Web 版体验完整流程，移动端上架后可以沿用同一套应用生态。',
+    downloadTitle: '开始体验 MyApp',
+    downloadBody: 'Web 版可直接打开；iOS 已开放 TestFlight Public Group 1（2500 人）；Google Play 和 APK 包正在准备中。',
     openWeb: '打开 Web 版',
-    appStore: 'App Store',
+    appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
+    apk: 'APK',
+    available: '可用',
     soon: '即将上线',
   },
   en: {
@@ -149,22 +151,22 @@ const copy = {
     navTry: 'Videos',
     navFeatures: 'Capabilities',
     navDownload: 'Download',
-    badge: 'AI-built apps · Server-driven · Web / iOS / Android',
-    titleA: 'Tell AI what you want',
-    titleB: 'get a working app',
+    badge: 'UGC app builder · AI-generated · Web / iOS / Android',
+    titleA: 'Turn ideas into',
+    titleB: 'apps anyone can publish',
     subtitle:
-      'Describe the app you want. AI generates a JSON App that runs immediately on the Web preview and mobile clients, inside the precompiled runtime boundary.',
-    primaryCta: 'Open live demo',
-    secondaryCta: 'View deploy command',
+      'MyApp is a user-generated app builder. Describe a tool, game, community screen or dashboard; AI builds a runnable app that users can install, share and keep improving.',
+    primaryCta: 'Open Web app',
+    secondaryCta: 'Join TestFlight',
     phoneCaption: 'Live Web client embedded in a phone frame for quick demos.',
     heroConsoleTitle: 'Prompt to runnable app',
     heroConsoleLines: [
-      '$ tell ai "build an inventory app"',
-      '→ validate JSON DSL',
-      '→ publish package + assets',
-      '→ run on Web / iOS / Android',
+      '$ tell ai "build a camping packing app"',
+      '→ AI builds a JSON App',
+      '→ publish to the app marketplace',
+      '→ users run it on Web / iOS / Android',
     ],
-    proofPoints: ['Apache-2.0 open source', 'JSON is not dynamic code', 'Self-host the full backend'],
+    proofPoints: ['User-generated app content', 'AI-assisted building and iteration', 'One ecosystem across Web and mobile'],
     playgroundTitle: 'Choose a tech visual direction',
     playgroundSubtitle: 'Same product content, multiple visual directions. Pick one and we can refine from there.',
     videosTitle: 'Demo videos',
@@ -208,11 +210,13 @@ const copy = {
       ['Server-driven', 'Ship UI and behavior data without extending native client capabilities.'],
       ['Self-hostable', 'The test-env bootstrap brings up the core services end to end.'],
     ],
-    downloadTitle: 'Mobile downloads coming soon',
-    downloadBody: 'Use the Web version now. Mobile clients will share the same app ecosystem.',
+    downloadTitle: 'Start using MyApp',
+    downloadBody: 'Open the Web app now. iOS is available through TestFlight Public Group 1 with 2,500 seats. Google Play and APK builds are coming soon.',
     openWeb: 'Open Web app',
-    appStore: 'App Store',
+    appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
+    apk: 'APK',
+    available: 'Available',
     soon: 'Coming soon',
   },
   de: {
@@ -280,11 +284,13 @@ const copy = {
       ['Server-driven', 'UI- und Verhaltensdaten ausliefern, ohne native Client-Faehigkeiten zu erweitern.'],
       ['Self-hostable', 'test-env bootstrap startet die Kernservices Ende zu Ende.'],
     ],
-    downloadTitle: 'Mobile Downloads folgen',
-    downloadBody: 'Nutze jetzt die Web-Version. Mobile Clients teilen dasselbe App-Ökosystem.',
+    downloadTitle: 'MyApp jetzt starten',
+    downloadBody: 'Die Web-App ist direkt verfügbar. iOS läuft über TestFlight Public Group 1 mit 2.500 Plätzen. Google Play und APK folgen.',
     openWeb: 'Web-App öffnen',
-    appStore: 'App Store',
+    appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
+    apk: 'APK',
+    available: 'Verfügbar',
     soon: 'Demnächst',
   },
   es: {
@@ -352,11 +358,13 @@ const copy = {
       ['Server-driven', 'Envía datos de UI y comportamiento sin ampliar las capacidades nativas del cliente.'],
       ['Autoalojable', 'test-env bootstrap levanta los servicios centrales de punta a punta.'],
     ],
-    downloadTitle: 'Descargas móviles próximamente',
-    downloadBody: 'Usa ahora la versión Web. Los clientes móviles compartirán el mismo ecosistema.',
+    downloadTitle: 'Empieza con MyApp',
+    downloadBody: 'La Web app está disponible ahora. iOS está en TestFlight Public Group 1 con 2.500 plazas. Google Play y APK llegarán pronto.',
     openWeb: 'Abrir Web app',
-    appStore: 'App Store',
+    appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
+    apk: 'APK',
+    available: 'Disponible',
     soon: 'Próximamente',
   },
 };
@@ -515,8 +523,8 @@ function App() {
                 <Play size={17} />
                 {t.primaryCta}
               </a>
-              <a className="button secondary" href="#deploy">
-                <Terminal size={17} />
+              <a className="button secondary" href={TESTFLIGHT_URL} target="_blank" rel="noreferrer">
+                <Smartphone size={17} />
                 {t.secondaryCta}
               </a>
             </div>
@@ -785,14 +793,19 @@ function App() {
               <Play size={17} />
               {t.openWeb}
             </a>
-            <a className="button secondary" href="#download">
-              <Download size={17} />
+            <a className="button secondary" href={TESTFLIGHT_URL} target="_blank" rel="noreferrer">
+              <Smartphone size={17} />
               {t.appStore}
-              <small>{t.soon}</small>
+              <small>{t.available}</small>
             </a>
-            <a className="button secondary" href="#download">
+            <a className="button secondary unavailable" href="#download" aria-disabled="true">
               <Download size={17} />
               {t.googlePlay}
+              <small>{t.soon}</small>
+            </a>
+            <a className="button secondary unavailable" href="#download" aria-disabled="true">
+              <Download size={17} />
+              {t.apk}
               <small>{t.soon}</small>
             </a>
           </div>

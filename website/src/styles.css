@@ -378,6 +378,15 @@ select {
   color: var(--text);
 }
 
+.button.unavailable {
+  cursor: default;
+  opacity: 0.68;
+}
+
+.button.unavailable:hover {
+  transform: none;
+}
+
 .button small {
   color: var(--faint);
   font-size: 11px;
