@@ -106,22 +106,55 @@ def load_prompt(env: dict[str, str]) -> str:
 
 def provider_env(env_file: Path) -> dict[str, str]:
     loaded = parse_env(env_file)
-    deepseek_key = loaded.get("DEEPSEEK_KEY", "")
+    provider_id = (
+        loaded.get("AI_PROVIDER")
+        or loaded.get("AI_DEFAULT_PROVIDER")
+        or os.environ.get("AI_PROVIDER")
+        or os.environ.get("AI_DEFAULT_PROVIDER")
+        or "deepseek"
+    ).strip().lower().replace("_", "-")
+    prefix = "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_id)
+
+    builtin_defaults = {
+        "deepseek": {
+            "base_url": "https://api.deepseek.com/anthropic",
+            "model": "deepseek-v4-pro[1m]",
+            "auth_fallbacks": (),
+        },
+        "minimax": {
+            "base_url": "https://api.minimaxi.com/anthropic",
+            "model": "MiniMax-M3",
+            "auth_fallbacks": (),
+        },
+    }
+    defaults = builtin_defaults.get(provider_id, {"base_url": "", "model": "", "auth_fallbacks": ()})
+
+    def value(name: str, default: str = "") -> str:
+        return loaded.get(f"{prefix}_{name}") or os.environ.get(f"{prefix}_{name}") or default
+
+    auth_token = value("ANTHROPIC_AUTH_TOKEN")
+    if not auth_token:
+        for fallback_name in defaults["auth_fallbacks"]:
+            auth_token = loaded.get(fallback_name) or os.environ.get(fallback_name) or ""
+            if auth_token:
+                break
+
+    model = value("ANTHROPIC_MODEL", defaults["model"])
     env = os.environ.copy()
     env.update(
         {
             "SERVER_PROJECT_PATH": str(ROOT),
             "AI_GENERATION_PROMPT_MODE": "indexed",
-            "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
-            "ANTHROPIC_AUTH_TOKEN": deepseek_key,
-            "ANTHROPIC_MODEL": "deepseek-v4-pro[1m]",
-            "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro[1m]",
-            "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-pro[1m]",
-            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-pro[1m]",
-            "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-pro[1m]",
-            "CLAUDE_CODE_EFFORT_LEVEL": "max",
-            "API_TIMEOUT_MS": "600000",
-            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+            "ANTHROPIC_BASE_URL": value("ANTHROPIC_BASE_URL", defaults["base_url"]),
+            "ANTHROPIC_AUTH_TOKEN": auth_token,
+            "ANTHROPIC_MODEL": model,
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": value("ANTHROPIC_DEFAULT_OPUS_MODEL", model),
+            "ANTHROPIC_DEFAULT_SONNET_MODEL": value("ANTHROPIC_DEFAULT_SONNET_MODEL", model),
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": value("ANTHROPIC_DEFAULT_HAIKU_MODEL", model),
+            "CLAUDE_CODE_SUBAGENT_MODEL": value("CLAUDE_CODE_SUBAGENT_MODEL", model),
+            "CLAUDE_CODE_EFFORT_LEVEL": value("CLAUDE_CODE_EFFORT_LEVEL", "max"),
+            "API_TIMEOUT_MS": value("API_TIMEOUT_MS", "600000"),
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": value("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1"),
             "IS_SANDBOX": "1",
         }
     )

@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from flask import request, jsonify
 
 from config import (
-    AI_PROVIDERS, CLAUDE_BIN,
+    AI_PROVIDERS, CLAUDE_BIN, DEFAULT_PROVIDER,
     SUMMARY_MAX_CONCURRENCY, SUMMARY_CLI_TIMEOUT,
 )
 
@@ -81,7 +81,7 @@ def _build_summary_prompt(input_path: str, output_path: str) -> str:
 
 def _run_summary_cli(json_content: dict) -> dict:
     """同步跑一次 summary CLI，返回结构化 dict。抛异常表示失败（调用方重试）。"""
-    provider = AI_PROVIDERS["deepseek"]  # summary 固定用 deepseek（便宜够用）
+    provider = AI_PROVIDERS.get("deepseek") or AI_PROVIDERS[DEFAULT_PROVIDER]
 
     cli_env = provider.get("cli_env", {})
     env = os.environ.copy()

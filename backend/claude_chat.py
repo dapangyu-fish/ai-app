@@ -130,6 +130,7 @@ def list_providers():
             "name": cfg["name"],
             "description": cfg.get("description", ""),
             "default_model": cfg["models"]["default"],
+            "configured": bool(cfg.get("configured", False)),
         })
     return jsonify({"providers": providers})
 

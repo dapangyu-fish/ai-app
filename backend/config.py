@@ -26,92 +26,180 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://myapp-auth.dapangyu.work"
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
-# DeepSeek 配置
-DEEPSEEK_KEY = os.environ.get("DEEPSEEK_KEY", "")
-
-# AI 供应商注册表
-AI_PROVIDERS = {
+# Anthropic-compatible Claude CLI provider 配置。
+#
+# 内置 provider 只放非敏感默认值；token 只从环境变量读取，不能进仓库。
+# 后续新增供应商优先用环境变量，不需要改代码：
+#   AI_PROVIDER_IDS=deepseek,minimax,my-provider
+#   MY_PROVIDER_ANTHROPIC_BASE_URL=https://example.com/anthropic
+#   MY_PROVIDER_ANTHROPIC_AUTH_TOKEN=...
+#   MY_PROVIDER_ANTHROPIC_MODEL=my-model
+#
+# 如果没有配置 AI_PROVIDER_IDS，系统默认保留 deepseek，并自动发现带有
+# <PREFIX>_ANTHROPIC_AUTH_TOKEN 的 provider。GLM/CC 是已下线旧 provider，即使
+# 旧环境文件里残留变量也不会被自动注册。
+_LEGACY_DISABLED_PROVIDER_IDS = {"glm", "cc"}
+_ANTHROPIC_PROVIDER_SUFFIXES = (
+    "_ANTHROPIC_BASE_URL",
+    "_ANTHROPIC_AUTH_TOKEN",
+    "_ANTHROPIC_MODEL",
+    "_ANTHROPIC_DEFAULT_OPUS_MODEL",
+    "_ANTHROPIC_DEFAULT_SONNET_MODEL",
+    "_ANTHROPIC_DEFAULT_HAIKU_MODEL",
+)
+_BUILTIN_ANTHROPIC_PROVIDERS = {
     "deepseek": {
-        "id": "deepseek",
-        "name": "DeepSeek",
-        "description": "DeepSeek AI — 通用对话模型",
-        "type": "anthropic",
+        "name": "DeepSeek V4 Pro",
+        "description": "DeepSeek Anthropic-compatible Claude Code provider",
         "base_url": "https://api.deepseek.com/anthropic",
-        "api_key": DEEPSEEK_KEY,
-        "models": {
-            "default": "deepseek-v4-pro[1m]",
-            "haiku": "deepseek-v4-pro[1m]",
-            "sonnet": "deepseek-v4-pro[1m]",
-            "opus": "deepseek-v4-pro[1m]",
-        },
-        "agent_model": "deepseek-v4-pro[1m]",
-        "cli_env": {
-            "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
-            "ANTHROPIC_AUTH_TOKEN": DEEPSEEK_KEY,
-            "ANTHROPIC_MODEL": "deepseek-v4-pro[1m]",
-            "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro[1m]",
-            "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-pro[1m]",
-            "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-pro[1m]",
-            "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-pro[1m]",
-            "CLAUDE_CODE_EFFORT_LEVEL": "max",
-            "API_TIMEOUT_MS": "600000",
-            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-        },
-        "cli_model": "deepseek-v4-pro[1m]",
+        "model": "deepseek-v4-pro[1m]",
+        "auth_env_fallbacks": (),
     },
-    "glm": {
-        "id": "glm",
-        "name": "GLM (智谱)",
-        "description": "智谱 GLM — 多模型系列",
-        "type": "anthropic",
-        "base_url": os.environ.get("GLM_ANTHROPIC_BASE_URL", ""),
-        "api_key": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", ""),
-        "models": {
-            "default": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
-            "haiku": os.environ.get("GLM_ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
-            "sonnet": os.environ.get("GLM_ANTHROPIC_DEFAULT_SONNET_MODEL", "glm-5-turbo"),
-            "opus": os.environ.get("GLM_ANTHROPIC_DEFAULT_OPUS_MODEL", "glm-5.1"),
-            "reasoning": os.environ.get("GLM_ANTHROPIC_REASONING_MODEL", "glm-5.1"),
-        },
-        "agent_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
-        "cli_env": {
-            "ANTHROPIC_BASE_URL": os.environ.get("GLM_ANTHROPIC_BASE_URL", ""),
-            "ANTHROPIC_AUTH_TOKEN": os.environ.get("GLM_ANTHROPIC_AUTH_TOKEN", ""),
-            "ANTHROPIC_MODEL": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
-            "ANTHROPIC_DEFAULT_HAIKU_MODEL": os.environ.get("GLM_ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.7"),
-            "API_TIMEOUT_MS": "600000",
-            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-        },
-        "cli_model": os.environ.get("GLM_ANTHROPIC_MODEL", "glm-5"),
-    },
-    "cc": {
-        "id": "cc",
-        "name": "CC-4.7",
-        "description": "CC Anthropic API Proxy",
-        "type": "anthropic",
-        "base_url": os.environ.get("CC_ANTHROPIC_BASE_URL", ""),
-        "api_key": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", ""),
-        "models": {
-            "default": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
-            "opus": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
-        },
-        "agent_model": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
-        "extra_body": {
-            "skipDangerousModePermissionPrompt": True
-        },
-        "cli_env": {
-            "ANTHROPIC_BASE_URL": os.environ.get("CC_ANTHROPIC_BASE_URL", ""),
-            "ANTHROPIC_AUTH_TOKEN": os.environ.get("CC_ANTHROPIC_AUTH_TOKEN", ""),
-            "ANTHROPIC_MODEL": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
-            "ANTHROPIC_DEFAULT_HAIKU_MODEL": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
-            "API_TIMEOUT_MS": "600000",
-            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-        },
-        "cli_model": os.environ.get("CC_ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-7"),
+    "minimax": {
+        "name": "MiniMax M3",
+        "description": "MiniMax Anthropic-compatible Claude Code provider",
+        "base_url": "https://api.minimaxi.com/anthropic",
+        "model": "MiniMax-M3",
+        "auth_env_fallbacks": (),
     },
 }
 
-DEFAULT_PROVIDER = "deepseek"
+
+def _split_csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _provider_prefix(provider_id: str) -> str:
+    return "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_id)
+
+
+def _provider_id_from_prefix(prefix: str) -> str:
+    return prefix.lower().replace("_", "-")
+
+
+def _env_for_prefix(prefix: str, key: str, default: str = "") -> str:
+    value = os.environ.get(f"{prefix}_{key}")
+    return value if value is not None else default
+
+
+def _provider_auth_token(provider_id: str, prefix: str, builtin: dict) -> str:
+    token = _env_for_prefix(prefix, "ANTHROPIC_AUTH_TOKEN")
+    if token:
+        return token
+    for env_name in builtin.get("auth_env_fallbacks", ()):
+        fallback = os.environ.get(env_name, "")
+        if fallback:
+            return fallback
+    return ""
+
+
+def _provider_has_auth_env(provider_id: str) -> bool:
+    prefix = _provider_prefix(provider_id)
+    if os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""):
+        return True
+    builtin = _BUILTIN_ANTHROPIC_PROVIDERS.get(provider_id, {})
+    return any(os.environ.get(env_name, "") for env_name in builtin.get("auth_env_fallbacks", ()))
+
+
+def _discover_anthropic_provider_ids() -> list[str]:
+    explicit_ids = _split_csv(os.environ.get("AI_PROVIDER_IDS", ""))
+    if explicit_ids:
+        provider_ids = explicit_ids
+    else:
+        provider_ids = ["deepseek"]
+        if _provider_has_auth_env("minimax"):
+            provider_ids.append("minimax")
+
+    for env_name in os.environ:
+        for suffix in _ANTHROPIC_PROVIDER_SUFFIXES:
+            if not env_name.endswith(suffix):
+                continue
+            prefix = env_name[: -len(suffix)]
+            if prefix in {"", "ANTHROPIC"}:
+                continue
+            provider_id = _provider_id_from_prefix(prefix)
+            if provider_id in _LEGACY_DISABLED_PROVIDER_IDS:
+                continue
+            if provider_id in provider_ids:
+                continue
+            # 自动发现只接受已配置 token 的供应商，避免仅有默认 base_url 时污染列表。
+            if os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""):
+                provider_ids.append(provider_id)
+            break
+
+    result = []
+    seen = set()
+    for provider_id in provider_ids:
+        normalized = provider_id.strip().lower().replace("_", "-")
+        if not normalized or normalized in _LEGACY_DISABLED_PROVIDER_IDS or normalized in seen:
+            continue
+        seen.add(normalized)
+        result.append(normalized)
+    return result or ["deepseek"]
+
+
+def _build_anthropic_provider(provider_id: str) -> dict:
+    prefix = _provider_prefix(provider_id)
+    builtin = _BUILTIN_ANTHROPIC_PROVIDERS.get(provider_id, {})
+    default_model = builtin.get("model", "")
+
+    base_url = _env_for_prefix(prefix, "ANTHROPIC_BASE_URL", builtin.get("base_url", ""))
+    auth_token = _provider_auth_token(provider_id, prefix, builtin)
+    model = _env_for_prefix(prefix, "ANTHROPIC_MODEL", default_model)
+    opus_model = _env_for_prefix(prefix, "ANTHROPIC_DEFAULT_OPUS_MODEL", model)
+    sonnet_model = _env_for_prefix(prefix, "ANTHROPIC_DEFAULT_SONNET_MODEL", model)
+    haiku_model = _env_for_prefix(prefix, "ANTHROPIC_DEFAULT_HAIKU_MODEL", model)
+    subagent_model = _env_for_prefix(prefix, "CLAUDE_CODE_SUBAGENT_MODEL", model)
+    effort_level = _env_for_prefix(prefix, "CLAUDE_CODE_EFFORT_LEVEL", "max")
+    timeout_ms = _env_for_prefix(prefix, "API_TIMEOUT_MS", "600000")
+
+    cli_env = {
+        "ANTHROPIC_BASE_URL": base_url,
+        "ANTHROPIC_AUTH_TOKEN": auth_token,
+        "ANTHROPIC_MODEL": model,
+        "ANTHROPIC_DEFAULT_OPUS_MODEL": opus_model,
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": sonnet_model,
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": haiku_model,
+        "CLAUDE_CODE_SUBAGENT_MODEL": subagent_model,
+        "CLAUDE_CODE_EFFORT_LEVEL": effort_level,
+        "API_TIMEOUT_MS": timeout_ms,
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": _env_for_prefix(
+            prefix, "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1"
+        ),
+    }
+
+    return {
+        "id": provider_id,
+        "name": _env_for_prefix(prefix, "PROVIDER_NAME", builtin.get("name", provider_id)),
+        "description": _env_for_prefix(
+            prefix,
+            "PROVIDER_DESCRIPTION",
+            builtin.get("description", "Anthropic-compatible Claude Code provider"),
+        ),
+        "type": "anthropic",
+        "base_url": base_url,
+        "api_key": auth_token,
+        "models": {
+            "default": model,
+            "haiku": haiku_model,
+            "sonnet": sonnet_model,
+            "opus": opus_model,
+        },
+        "agent_model": subagent_model,
+        "cli_env": cli_env,
+        "cli_model": model,
+        "configured": bool(base_url and auth_token and model),
+    }
+
+
+AI_PROVIDERS = {
+    provider_id: _build_anthropic_provider(provider_id)
+    for provider_id in _discover_anthropic_provider_ids()
+}
+
+DEFAULT_PROVIDER = os.environ.get("AI_DEFAULT_PROVIDER", "deepseek").strip().lower().replace("_", "-") or "deepseek"
+if DEFAULT_PROVIDER not in AI_PROVIDERS:
+    DEFAULT_PROVIDER = "deepseek" if "deepseek" in AI_PROVIDERS else next(iter(AI_PROVIDERS))
 
 # Registry 配置 —— 给 store.py 和 AI prompt 渲染用。
 # 测试环境 docker compose 会注入 http://IP:port 覆盖；生产保持默认即可。

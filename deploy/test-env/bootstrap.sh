@@ -4,7 +4,7 @@
 #
 # Usage:
 #   ./bootstrap.sh                       # interactive
-#   ./bootstrap.sh --yes                 # all defaults (DeepSeek key still required, from $DEEPSEEK_API_KEY)
+#   ./bootstrap.sh --yes                 # all defaults
 #   ./bootstrap.sh --lang en|zh|de|es    # preset language, skip the picker
 #
 # Re-run safe: running again brings services up from existing .env. To start fresh run ./teardown.sh first.
@@ -66,24 +66,44 @@ T_en[required]="required"
 T_zh[required]="必填"
 T_en[banner_title]="AI App test-env one-click deploy (test-env v1)"
 T_zh[banner_title]="AI App 测试环境一键部署 (test-env v1)"
-T_en[banner_sub]="Press Enter for defaults; only DeepSeek key + test account are required"
-T_zh[banner_sub]="按 Enter 接受默认；必填只有 DeepSeek key + 测试账号"
+T_en[banner_sub]="Press Enter for defaults; AI provider credentials can be configured now or later"
+T_zh[banner_sub]="按 Enter 接受默认；AI 供应商凭据可以现在配置，也可以之后配置"
 T_en[sec_ip]="[1/5] Client access IP"
 T_zh[sec_ip]="[1/5] 客户端访问 IP"
 T_en[ask_ip]="  IP the client uses (LAN testing: your machine's intranet IP)"
 T_zh[ask_ip]="  客户端访问的 IP（局域网测试就填本机内网 IP）"
-T_en[sec_ai]="[2/5] AI providers (backend/config.py recognizes these)"
-T_zh[sec_ai]="[2/5] AI 供应商（backend/config.py 实际识别这几个）"
-T_en[ask_deepseek]="  DeepSeek API Key (required)"
-T_zh[ask_deepseek]="  DeepSeek API Key（必填）"
-T_en[ask_glm_token]="  GLM (Anthropic-compatible) Auth Token (optional)"
-T_zh[ask_glm_token]="  GLM (Anthropic-compatible) Auth Token（可选）"
-T_en[ask_glm_url]="  GLM Base URL (optional)"
-T_zh[ask_glm_url]="  GLM Base URL（可选）"
-T_en[ask_cc_token]="  Claude Code Anthropic Token (optional)"
-T_zh[ask_cc_token]="  Claude Code Anthropic Token（可选）"
-T_en[ask_cc_url]="  Claude Code Base URL (optional)"
-T_zh[ask_cc_url]="  Claude Code Base URL（可选）"
+T_en[sec_ai]="[2/5] AI providers (Anthropic-compatible Claude CLI)"
+T_zh[sec_ai]="[2/5] AI 供应商（Anthropic-compatible Claude CLI）"
+T_en[ask_ai_provider]="  Provider: 1=DeepSeek, 2=MiniMax, 3=Custom, n=Next"
+T_zh[ask_ai_provider]="  供应商：1=DeepSeek，2=MiniMax，3=自定义，n=下一步"
+T_en[ask_custom_id]="  Custom provider id"
+T_zh[ask_custom_id]="  自定义供应商 id"
+T_en[ask_add_provider]="  Add another provider? y/N"
+T_zh[ask_add_provider]="  继续追加供应商？y/N"
+T_en[ask_deepseek]="  DeepSeek Anthropic Auth Token"
+T_zh[ask_deepseek]="  DeepSeek Anthropic Auth Token"
+T_en[ask_minimax_token]="  MiniMax Auth Token"
+T_zh[ask_minimax_token]="  MiniMax Auth Token"
+T_en[ask_minimax_url]="  MiniMax Base URL"
+T_zh[ask_minimax_url]="  MiniMax Base URL"
+T_en[ask_minimax_model]="  MiniMax Model"
+T_zh[ask_minimax_model]="  MiniMax Model"
+T_en[ask_custom_base_url]="  ANTHROPIC_BASE_URL"
+T_zh[ask_custom_base_url]="  ANTHROPIC_BASE_URL"
+T_en[ask_custom_auth_token]="  ANTHROPIC_AUTH_TOKEN"
+T_zh[ask_custom_auth_token]="  ANTHROPIC_AUTH_TOKEN"
+T_en[ask_custom_model]="  ANTHROPIC_MODEL"
+T_zh[ask_custom_model]="  ANTHROPIC_MODEL"
+T_en[ask_custom_opus]="  ANTHROPIC_DEFAULT_OPUS_MODEL"
+T_zh[ask_custom_opus]="  ANTHROPIC_DEFAULT_OPUS_MODEL"
+T_en[ask_custom_sonnet]="  ANTHROPIC_DEFAULT_SONNET_MODEL"
+T_zh[ask_custom_sonnet]="  ANTHROPIC_DEFAULT_SONNET_MODEL"
+T_en[ask_custom_haiku]="  ANTHROPIC_DEFAULT_HAIKU_MODEL"
+T_zh[ask_custom_haiku]="  ANTHROPIC_DEFAULT_HAIKU_MODEL"
+T_en[ask_custom_subagent]="  CLAUDE_CODE_SUBAGENT_MODEL"
+T_zh[ask_custom_subagent]="  CLAUDE_CODE_SUBAGENT_MODEL"
+T_en[ask_custom_effort]="  CLAUDE_CODE_EFFORT_LEVEL"
+T_zh[ask_custom_effort]="  CLAUDE_CODE_EFFORT_LEVEL"
 T_en[sec_account]="[3/5] Test account (used to log into the client after deploy)"
 T_zh[sec_account]="[3/5] 测试账号（部署完后用来登录客户端）"
 T_en[ask_email]="  Email"
@@ -205,24 +225,44 @@ T_de[required]="erforderlich"
 T_es[required]="obligatorio"
 T_de[banner_title]="AI App Testumgebung Ein-Klick-Deploy (test-env v1)"
 T_es[banner_title]="Despliegue de entorno de prueba AI App (test-env v1)"
-T_de[banner_sub]="Enter übernimmt Defaults; nur DeepSeek key + Testkonto sind erforderlich"
-T_es[banner_sub]="Enter usa valores por defecto; solo DeepSeek key + cuenta de prueba son obligatorios"
+T_de[banner_sub]="Enter übernimmt Defaults; AI-Anbieter-Zugangsdaten können jetzt oder später konfiguriert werden"
+T_es[banner_sub]="Enter usa valores por defecto; las credenciales del proveedor IA pueden configurarse ahora o después"
 T_de[sec_ip]="[1/5] Client-Zugriffs-IP"
 T_es[sec_ip]="[1/5] IP de acceso del cliente"
 T_de[ask_ip]="  IP für den Client (LAN-Test: interne IP dieses Rechners)"
 T_es[ask_ip]="  IP usada por el cliente (LAN: IP interna de esta máquina)"
-T_de[sec_ai]="[2/5] KI-Anbieter (backend/config.py kennt diese)"
-T_es[sec_ai]="[2/5] Proveedores de IA (backend/config.py reconoce estos)"
-T_de[ask_deepseek]="  DeepSeek API Key (erforderlich)"
-T_es[ask_deepseek]="  DeepSeek API Key (obligatorio)"
-T_de[ask_glm_token]="  GLM (Anthropic-kompatibel) Auth Token (optional)"
-T_es[ask_glm_token]="  GLM (compatible con Anthropic) Auth Token (opcional)"
-T_de[ask_glm_url]="  GLM Base URL (optional)"
-T_es[ask_glm_url]="  GLM Base URL (opcional)"
-T_de[ask_cc_token]="  Claude Code Anthropic Token (optional)"
-T_es[ask_cc_token]="  Claude Code Anthropic Token (opcional)"
-T_de[ask_cc_url]="  Claude Code Base URL (optional)"
-T_es[ask_cc_url]="  Claude Code Base URL (opcional)"
+T_de[sec_ai]="[2/5] KI-Anbieter (Anthropic-kompatible Claude CLI)"
+T_es[sec_ai]="[2/5] Proveedores de IA (Claude CLI compatible con Anthropic)"
+T_de[ask_ai_provider]="  Anbieter: 1=DeepSeek, 2=MiniMax, 3=Custom, n=Weiter"
+T_es[ask_ai_provider]="  Proveedor: 1=DeepSeek, 2=MiniMax, 3=Custom, n=Siguiente"
+T_de[ask_custom_id]="  Custom provider id"
+T_es[ask_custom_id]="  ID de proveedor custom"
+T_de[ask_add_provider]="  Weiteren Anbieter hinzufügen? y/N"
+T_es[ask_add_provider]="  ¿Agregar otro proveedor? y/N"
+T_de[ask_deepseek]="  DeepSeek Anthropic Auth Token"
+T_es[ask_deepseek]="  DeepSeek Anthropic Auth Token"
+T_de[ask_minimax_token]="  MiniMax Auth Token"
+T_es[ask_minimax_token]="  MiniMax Auth Token"
+T_de[ask_minimax_url]="  MiniMax Base URL"
+T_es[ask_minimax_url]="  MiniMax Base URL"
+T_de[ask_minimax_model]="  MiniMax Model"
+T_es[ask_minimax_model]="  MiniMax Model"
+T_de[ask_custom_base_url]="  ANTHROPIC_BASE_URL"
+T_es[ask_custom_base_url]="  ANTHROPIC_BASE_URL"
+T_de[ask_custom_auth_token]="  ANTHROPIC_AUTH_TOKEN"
+T_es[ask_custom_auth_token]="  ANTHROPIC_AUTH_TOKEN"
+T_de[ask_custom_model]="  ANTHROPIC_MODEL"
+T_es[ask_custom_model]="  ANTHROPIC_MODEL"
+T_de[ask_custom_opus]="  ANTHROPIC_DEFAULT_OPUS_MODEL"
+T_es[ask_custom_opus]="  ANTHROPIC_DEFAULT_OPUS_MODEL"
+T_de[ask_custom_sonnet]="  ANTHROPIC_DEFAULT_SONNET_MODEL"
+T_es[ask_custom_sonnet]="  ANTHROPIC_DEFAULT_SONNET_MODEL"
+T_de[ask_custom_haiku]="  ANTHROPIC_DEFAULT_HAIKU_MODEL"
+T_es[ask_custom_haiku]="  ANTHROPIC_DEFAULT_HAIKU_MODEL"
+T_de[ask_custom_subagent]="  CLAUDE_CODE_SUBAGENT_MODEL"
+T_es[ask_custom_subagent]="  CLAUDE_CODE_SUBAGENT_MODEL"
+T_de[ask_custom_effort]="  CLAUDE_CODE_EFFORT_LEVEL"
+T_es[ask_custom_effort]="  CLAUDE_CODE_EFFORT_LEVEL"
 T_de[sec_account]="[3/5] Testkonto (für Login im Client nach dem Deploy)"
 T_es[sec_account]="[3/5] Cuenta de prueba (para iniciar sesión en el cliente)"
 T_de[ask_email]="  E-Mail"
@@ -388,6 +428,62 @@ ask_secret() {
   local ans
   read -r -p "$(printf "${B}%s${N}${hint}: " "$prompt")" ans </dev/tty
   echo "${ans:-$default}"
+}
+
+normalize_provider_id() {
+  echo "$1" \
+    | tr '[:upper:]_' '[:lower:]-' \
+    | sed -E 's/[^a-z0-9-]+/-/g; s/-+/-/g; s/^-//; s/-$//'
+}
+
+provider_prefix() {
+  echo "$1" \
+    | tr '[:lower:]' '[:upper:]' \
+    | sed -E 's/[^A-Z0-9]+/_/g; s/_+/_/g; s/^_//; s/_$//'
+}
+
+csv_contains() {
+  local csv="$1"; local needle="$2"
+  [[ ",${csv}," == *",${needle},"* ]]
+}
+
+append_csv() {
+  local csv="$1"; local item="$2"
+  if [[ -z "$csv" ]]; then
+    echo "$item"
+  elif csv_contains "$csv" "$item"; then
+    echo "$csv"
+  else
+    echo "${csv},${item}"
+  fi
+}
+
+append_provider_line() {
+  local key="$1"; local value="${2:-}"
+  AI_PROVIDER_ENV_APPEND+="${key}=${value}"$'\n'
+}
+
+append_provider_env() {
+  local provider_id="$1"
+  local base_url="$2"
+  local auth_token="$3"
+  local model="$4"
+  local opus_model="$5"
+  local sonnet_model="$6"
+  local haiku_model="$7"
+  local subagent_model="$8"
+  local effort_level="$9"
+  local prefix
+  prefix="$(provider_prefix "$provider_id")"
+
+  append_provider_line "${prefix}_ANTHROPIC_BASE_URL" "$base_url"
+  append_provider_line "${prefix}_ANTHROPIC_AUTH_TOKEN" "$auth_token"
+  append_provider_line "${prefix}_ANTHROPIC_MODEL" "$model"
+  append_provider_line "${prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL" "$opus_model"
+  append_provider_line "${prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL" "$sonnet_model"
+  append_provider_line "${prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL" "$haiku_model"
+  append_provider_line "${prefix}_CLAUDE_CODE_SUBAGENT_MODEL" "$subagent_model"
+  append_provider_line "${prefix}_CLAUDE_CODE_EFFORT_LEVEL" "$effort_level"
 }
 
 # ───────── banner ─────────
@@ -617,11 +713,141 @@ HOST_IP=$(ask "$(t ask_ip)" "$DETECTED_IP")
 
 echo
 say "$(t sec_ai)"
-DEEPSEEK_KEY=$(ask_required "$(t ask_deepseek)" "${DEEPSEEK_KEY:-${DEEPSEEK_API_KEY:-}}")
-GLM_ANTHROPIC_AUTH_TOKEN=$(ask    "$(t ask_glm_token)" "")
-GLM_ANTHROPIC_BASE_URL=$(ask      "$(t ask_glm_url)" "")
-CC_ANTHROPIC_AUTH_TOKEN=$(ask     "$(t ask_cc_token)" "")
-CC_ANTHROPIC_BASE_URL=$(ask       "$(t ask_cc_url)" "")
+AI_PROVIDER_ENV_APPEND=""
+AI_PROVIDER_IDS="${AI_PROVIDER_IDS:-}"
+AI_DEFAULT_PROVIDER="${AI_DEFAULT_PROVIDER:-}"
+
+env_value() {
+  local key="$1"; local default="${2:-}"; local value="${!key-}"
+  echo "${value:-$default}"
+}
+
+add_provider_from_values() {
+  local provider_id="$1"
+  local base_url="$2"
+  local auth_token="$3"
+  local model="$4"
+  local opus_model="${5:-$4}"
+  local sonnet_model="${6:-$4}"
+  local haiku_model="${7:-$4}"
+  local subagent_model="${8:-$4}"
+  local effort_level="${9:-max}"
+
+  provider_id="$(normalize_provider_id "$provider_id")"
+  [[ -z "$provider_id" ]] && provider_id="custom"
+  AI_PROVIDER_IDS="$(append_csv "$AI_PROVIDER_IDS" "$provider_id")"
+  [[ -z "$AI_DEFAULT_PROVIDER" ]] && AI_DEFAULT_PROVIDER="$provider_id"
+  append_provider_env "$provider_id" "$base_url" "$auth_token" "$model" \
+    "$opus_model" "$sonnet_model" "$haiku_model" "$subagent_model" "$effort_level"
+}
+
+add_deepseek_provider() {
+  local model="${DEEPSEEK_ANTHROPIC_MODEL:-deepseek-v4-pro[1m]}"
+  add_provider_from_values \
+    "deepseek" \
+    "${DEEPSEEK_ANTHROPIC_BASE_URL:-https://api.deepseek.com/anthropic}" \
+    "$(ask "$(t ask_deepseek)" "${DEEPSEEK_ANTHROPIC_AUTH_TOKEN:-}")" \
+    "$model" \
+    "${DEEPSEEK_ANTHROPIC_DEFAULT_OPUS_MODEL:-$model}" \
+    "${DEEPSEEK_ANTHROPIC_DEFAULT_SONNET_MODEL:-$model}" \
+    "${DEEPSEEK_ANTHROPIC_DEFAULT_HAIKU_MODEL:-$model}" \
+    "${DEEPSEEK_CLAUDE_CODE_SUBAGENT_MODEL:-$model}" \
+    "${DEEPSEEK_CLAUDE_CODE_EFFORT_LEVEL:-max}"
+}
+
+add_minimax_provider() {
+  local model
+  model="$(ask "$(t ask_minimax_model)" "${MINIMAX_ANTHROPIC_MODEL:-MiniMax-M3}")"
+  add_provider_from_values \
+    "minimax" \
+    "$(ask "$(t ask_minimax_url)" "${MINIMAX_ANTHROPIC_BASE_URL:-https://api.minimaxi.com/anthropic}")" \
+    "$(ask "$(t ask_minimax_token)" "${MINIMAX_ANTHROPIC_AUTH_TOKEN:-}")" \
+    "$model" \
+    "${MINIMAX_ANTHROPIC_DEFAULT_OPUS_MODEL:-$model}" \
+    "${MINIMAX_ANTHROPIC_DEFAULT_SONNET_MODEL:-$model}" \
+    "${MINIMAX_ANTHROPIC_DEFAULT_HAIKU_MODEL:-$model}" \
+    "${MINIMAX_CLAUDE_CODE_SUBAGENT_MODEL:-$model}" \
+    "${MINIMAX_CLAUDE_CODE_EFFORT_LEVEL:-max}"
+}
+
+add_custom_provider() {
+  local provider_id prefix base_url auth_token model opus_model sonnet_model haiku_model subagent_model effort_level
+  local default_id="custom"
+  local custom_index=2
+  while csv_contains "$AI_PROVIDER_IDS" "$default_id"; do
+    default_id="custom${custom_index}"
+    custom_index=$((custom_index + 1))
+  done
+  provider_id="$(normalize_provider_id "$(ask_required "$(t ask_custom_id)" "$default_id")")"
+  [[ -z "$provider_id" ]] && provider_id="custom"
+  prefix="$(provider_prefix "$provider_id")"
+  base_url="$(ask_required "$(t ask_custom_base_url)" "$(env_value "${prefix}_ANTHROPIC_BASE_URL")")"
+  auth_token="$(ask_required "$(t ask_custom_auth_token)" "$(env_value "${prefix}_ANTHROPIC_AUTH_TOKEN")")"
+  model="$(ask_required "$(t ask_custom_model)" "$(env_value "${prefix}_ANTHROPIC_MODEL")")"
+  opus_model="$(ask "$(t ask_custom_opus)" "$(env_value "${prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL" "$model")")"
+  sonnet_model="$(ask "$(t ask_custom_sonnet)" "$(env_value "${prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL" "$model")")"
+  haiku_model="$(ask "$(t ask_custom_haiku)" "$(env_value "${prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL" "$model")")"
+  subagent_model="$(ask "$(t ask_custom_subagent)" "$(env_value "${prefix}_CLAUDE_CODE_SUBAGENT_MODEL" "$model")")"
+  effort_level="$(ask "$(t ask_custom_effort)" "$(env_value "${prefix}_CLAUDE_CODE_EFFORT_LEVEL" "max")")"
+  add_provider_from_values "$provider_id" "$base_url" "$auth_token" "$model" \
+    "$opus_model" "$sonnet_model" "$haiku_model" "$subagent_model" "$effort_level"
+}
+
+add_provider_from_env() {
+  local provider_id="$1" prefix model base_url auth_token
+  provider_id="$(normalize_provider_id "$provider_id")"
+  prefix="$(provider_prefix "$provider_id")"
+  case "$provider_id" in
+    deepseek)
+      model="$(env_value "${prefix}_ANTHROPIC_MODEL" "deepseek-v4-pro[1m]")"
+      base_url="$(env_value "${prefix}_ANTHROPIC_BASE_URL" "https://api.deepseek.com/anthropic")"
+      ;;
+    minimax)
+      model="$(env_value "${prefix}_ANTHROPIC_MODEL" "MiniMax-M3")"
+      base_url="$(env_value "${prefix}_ANTHROPIC_BASE_URL" "https://api.minimaxi.com/anthropic")"
+      ;;
+    *)
+      model="$(env_value "${prefix}_ANTHROPIC_MODEL")"
+      base_url="$(env_value "${prefix}_ANTHROPIC_BASE_URL")"
+      ;;
+  esac
+  auth_token="$(env_value "${prefix}_ANTHROPIC_AUTH_TOKEN")"
+  add_provider_from_values "$provider_id" "$base_url" "$auth_token" "$model" \
+    "$(env_value "${prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL" "$model")" \
+    "$(env_value "${prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL" "$model")" \
+    "$(env_value "${prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL" "$model")" \
+    "$(env_value "${prefix}_CLAUDE_CODE_SUBAGENT_MODEL" "$model")" \
+    "$(env_value "${prefix}_CLAUDE_CODE_EFFORT_LEVEL" "max")"
+}
+
+if [[ $NON_INTERACTIVE -eq 1 ]]; then
+  AI_PROVIDER_IDS="${AI_PROVIDER_IDS:-deepseek}"
+  _input_provider_ids="$AI_PROVIDER_IDS"
+  AI_PROVIDER_IDS=""
+  IFS=',' read -ra _provider_ids <<< "$_input_provider_ids"
+  for _provider_id in "${_provider_ids[@]}"; do
+    [[ -n "${_provider_id// /}" ]] && add_provider_from_env "$_provider_id"
+  done
+else
+  while :; do
+    _choice_default="1"
+    [[ -n "$AI_PROVIDER_IDS" ]] && _choice_default="n"
+    _choice="$(ask "$(t ask_ai_provider)" "$_choice_default")"
+    case "${_choice,,}" in
+      1|deepseek) add_deepseek_provider ;;
+      2|minimax) add_minimax_provider ;;
+      3|custom) add_custom_provider ;;
+      n|next|"") break ;;
+      *) warn "$(t unknown_arg "$_choice")"; continue ;;
+    esac
+    _more="$(ask "$(t ask_add_provider)" "n")"
+    [[ "${_more,,}" =~ ^(y|yes|1)$ ]] || break
+  done
+  if [[ -z "$AI_PROVIDER_IDS" ]]; then
+    add_provider_from_env "deepseek"
+  fi
+fi
+AI_DEFAULT_PROVIDER="${AI_DEFAULT_PROVIDER:-${AI_PROVIDER_IDS%%,*}}"
 
 echo
 say "$(t sec_account)"
@@ -729,7 +955,8 @@ ok "$(t keys_done)"
 say "$(t render_env)"
 export HOST_IP PORT_OFFSET
 export TEST_USER_EMAIL TEST_USER_PASSWORD TEST_USER_USERNAME
-export DEEPSEEK_KEY GLM_ANTHROPIC_AUTH_TOKEN GLM_ANTHROPIC_BASE_URL CC_ANTHROPIC_AUTH_TOKEN CC_ANTHROPIC_BASE_URL
+export AI_DEFAULT_PROVIDER AI_PROVIDER_IDS
+export DEEPSEEK_ANTHROPIC_AUTH_TOKEN MINIMAX_ANTHROPIC_AUTH_TOKEN MINIMAX_ANTHROPIC_BASE_URL MINIMAX_ANTHROPIC_MODEL
 export BYTEDANCE_ASR_APP_KEY BYTEDANCE_ASR_ACCESS_KEY BYTEDANCE_ASR_RESOURCE_ID
 export JSONAPP_DB_PASSWORD JSONAPP_DB_PORT
 export BACKEND_REDIS_PASSWORD
@@ -747,6 +974,11 @@ export REGISTRY_UPSTREAM REGISTRY_MIRROR_SYNC_INTERVAL_SEC
 envsubst < .env.template          > .env
 envsubst < supabase/.env.template > supabase/.env
 envsubst < openim/.env.template   > openim/.env
+{
+  echo
+  echo "# ===== AI provider runtime vars ====="
+  printf "%s" "$AI_PROVIDER_ENV_APPEND"
+} >> .env
 ok "$(t env_done)"
 
 # ───────── pull images ─────────

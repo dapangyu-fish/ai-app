@@ -78,6 +78,8 @@ services:
         condition: service_started
     working_dir: /app/backend
     command: ["python", "app.py"]
+    env_file:
+      - .env
     environment:
       # ── jsonapp Postgres ──
       DB_HOST: jsonapp-postgres
@@ -113,12 +115,7 @@ services:
       # ── Flask ──
       FLASK_SECRET_KEY: "${FLASK_SECRET_KEY}"
       PORT: "5566"
-      # ── AI 供应商：backend 只认 DEEPSEEK_KEY / GLM_ANTHROPIC_* / CC_ANTHROPIC_* ──
-      DEEPSEEK_KEY: "${DEEPSEEK_KEY}"
-      GLM_ANTHROPIC_AUTH_TOKEN: "${GLM_ANTHROPIC_AUTH_TOKEN}"
-      GLM_ANTHROPIC_BASE_URL: "${GLM_ANTHROPIC_BASE_URL}"
-      CC_ANTHROPIC_AUTH_TOKEN: "${CC_ANTHROPIC_AUTH_TOKEN}"
-      CC_ANTHROPIC_BASE_URL: "${CC_ANTHROPIC_BASE_URL}"
+      # ── AI provider variables come from env_file .env. ──
       # ── ByteDance ASR（空就不启用）──
       BYTEDANCE_ASR_APP_KEY: "${BYTEDANCE_ASR_APP_KEY}"
       BYTEDANCE_ASR_ACCESS_KEY: "${BYTEDANCE_ASR_ACCESS_KEY}"
@@ -149,6 +146,8 @@ services:
         condition: service_healthy
     working_dir: /app/backend
     command: ["python", "ai_worker_daemon.py"]
+    env_file:
+      - .env
     environment:
       AI_SESSION_REDIS_HOST: backend-redis
       AI_SESSION_REDIS_PORT: "6379"
@@ -160,11 +159,7 @@ services:
       AI_WORKER_HEARTBEAT_SECONDS: "10"
       REGISTRY_BASE_URL: "http://${HOST_IP}:${REGISTRY_PORT}"
       MINIO_PUBLIC_URL: "http://${HOST_IP}:${APP_MINIO_PORT}"
-      DEEPSEEK_KEY: "${DEEPSEEK_KEY}"
-      GLM_ANTHROPIC_AUTH_TOKEN: "${GLM_ANTHROPIC_AUTH_TOKEN}"
-      GLM_ANTHROPIC_BASE_URL: "${GLM_ANTHROPIC_BASE_URL}"
-      CC_ANTHROPIC_AUTH_TOKEN: "${CC_ANTHROPIC_AUTH_TOKEN}"
-      CC_ANTHROPIC_BASE_URL: "${CC_ANTHROPIC_BASE_URL}"
+      # AI provider variables come from env_file .env.
 
   registry:
     build:

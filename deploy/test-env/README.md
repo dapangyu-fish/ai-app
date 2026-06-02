@@ -19,7 +19,7 @@ cd deploy/test-env
 交互式先选择语言（支持 English / 中文 / Deutsch / Español），再询问配置；按 Enter 接受默认：
 
 1. 客户端访问 IP（自动探测）
-2. **DeepSeek API Key（必填）** + 可选 OpenAI/Anthropic/GLM/豆包
+2. AI provider：可添加 DeepSeek / MiniMax / 自定义 Anthropic-compatible provider，也可先跳过凭据后续再改 `.env`
 3. 测试账号邮箱 + 密码（默认 `test@example.com` / `qwe123`）
 4. Registry mirror（默认镜像生产应用市场；输入 `none` 才独立运行）
 5. 端口偏移（默认 0；改成 100 可在同机起第二套）
