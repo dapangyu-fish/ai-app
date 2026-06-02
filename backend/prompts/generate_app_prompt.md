@@ -30,9 +30,9 @@ curl -sS --max-time 30 -o "$TARGET" "<完整URL，从 [json_app_url]…[/json_ap
 - ❌ **不要省略 mktemp 自己编随机字符**：你不擅长生成真随机，会重复或可预测
 - ❌ **不要把整段 URL 拆开**：`?` `&` 必须保留并且整个 URL 用双引号包裹
 
-**如果用户没有提供 URL**，请在回复中包含以下标记：
-```
-[request_action]upload_current_app[/request_action]
+**如果用户没有提供 URL**，请先写入结构化客户端动作文件：
+```bash
+printf '%s\n' '{"client_actions":[{"type":"request_upload_current_app"}]}' > "$AI_APP_WORKSPACE/client_actions.json"
 ```
 
 客户端会显示一个"上传当前应用配置"按钮，用户点击后会将应用的 JSON 配置上传给你。
@@ -44,16 +44,16 @@ curl -sS --max-time 30 -o "$TARGET" "<完整URL，从 [json_app_url]…[/json_ap
 
 在这些情况下，你应该回复：
 ```
-我需要先查看当前应用的配置代码。[request_action]upload_current_app[/request_action]
+我需要先查看当前应用的配置代码。
 ```
 
 示范: 
 用户：帮我看一下这个APP按钮为什么点不动，请修复这个问题
-Agent(你)：我需要先查看当前应用的配置代码。[request_action]upload_current_app[/request_action]
+Agent(你)：（写入 client_actions.json 请求上传当前应用）我需要先查看当前应用的配置代码。
 用户：https://xx.xx.xx/xx/xx.json?Xxxx
-Agent(你)：（具体行为非会话，中间可能也和用户有几次讨论）1.下载json到临时目录 2.分析问题 3.修改json代码 4.使用bash backend/upload_with_signature.sh上传到临时目录 5.回答用户 [json_app_url]完整URL[/json_app_url]
+Agent(你)：（具体行为非会话，中间可能也和用户有几次讨论）1.下载json到临时目录 2.分析问题 3.修改json代码 4.使用bash backend/upload_with_signature.sh上传到临时目录 5.自然语言回答已修复
 用户：好的，看起来修复了这个问题，再帮我看一下另一个问题，现在这个xxx按钮位置不太对，帮我调整到左下方
-Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要有修改或者阅读代码的要求，都必须重新申请json app 的url）我需要先查看当前应用的配置代码。[request_action]upload_current_app[/request_action]
+Agent(你)：（由于你无法确定用户是不是切换了APP，因此只要有修改或者阅读代码的要求，都必须重新申请json app 的url；写入 client_actions.json 请求上传当前应用）我需要先查看当前应用的配置代码。
 
 
 ## ★ 自动上传机制（强制要求）
@@ -75,8 +75,8 @@ echo "TMPFILE=$TMPFILE"
 1. 使用工具把生成的 JSON 代码写入到 `$TMPFILE`。
 2. **强制：上传前过一遍合法性校验**（见下"上传前自检 checklist"），任何一条不通过，回去改 JSON，**重新过一遍**，再继续。
 3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh "$TMPFILE"`。该脚本会先运行 `repair_json_app.py` 清理常见机械错误，再运行 `validate_json_app.py`；如果校验失败，必须按错误路径修复后重跑，不能绕过上传。成功时命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
-4. **重要**：将完整的 URL（包括所有 `?` 和 `&` 后面的签名参数）原样复制，放入 `[json_app_url]URL[/json_app_url]` 标签中。
-5. 向用户回复一句话，例如：`我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]`
+4. `upload_with_signature.sh` 会自动写入 `$AI_APP_WORKSPACE/client_actions.json`，形如 `{"client_actions":[{"type":"json_app_ready","url":"https://..."}]}`。
+5. 向用户回复一句自然语言，例如：`我已经生成好了应用。` 禁止在聊天回复中输出 `[json_app_url]` 标签。
 
 ### 复杂 JSON 的 Python 生成器工作流（强制）
 
@@ -192,16 +192,11 @@ h2. **flame_game 必须真实挂载**：`flame_game` 必须作为 `ui.screens` �
 i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型（如平台跳跃、横版动作、横版射击、run-and-gun、跑酷、弹幕、塔防、解谜等），必须先在下方"游戏类型设计 Profile"中选择匹配项；暂无匹配 profile 时，也要先写出该类型最小玩法闭环再生成。上传前逐条检查，不能只做到"能启动"，必须符合该类型的基本玩法结构。
 
 **注意事项**：
-- URL 包含签名参数（如 `?X-Amz-Algorithm=...&X-Amz-Signature=...`），必须完整复制，不能截断！
-- 这是用户唯一能接收到应用配置的方式，绝对不能漏掉这个标签！
-- 最终交付标签是客户端协议，必须逐字符完整：起始标签必须正好是 `[json_app_url]`，结束标签必须正好是 `[/json_app_url]`，包括最后的右中括号 `]`。不能写成 `[/json_app_url`。
-- 成功时把 `[json_app_url]完整URL[/json_app_url]` 放在独立最后一行；发送前最后检查一次，最终文本必须同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。
-- 普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，禁止复述 `[json_app_url]` / `[/json_app_url]` / `[request_action]` / `[/request_action]` 这些协议标签字面量；只能用“上传后返回应用链接”“请求上传当前应用”这类自然语言描述。
+- 客户端动作必须写入 `$AI_APP_WORKSPACE/client_actions.json`，不要混入聊天文本。
+- 上传成功动作由 `backend/upload_with_signature.sh` 自动写入，不要手写 `[json_app_url]` 标签。
+- 请求上传当前应用时，写入 `{"client_actions":[{"type":"request_upload_current_app"}]}`，不要手写 `[request_action]` 标签。
+- 普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，只能用自然语言描述。
 - 不要在聊天框直接输出大段的 JSON 文本。
-- ❌ **绝对不要把 URL 包成 markdown 链接语法**：
-  - ❌ 错误：`[json_app_url](https://...)[/json_app_url]`  ← 多了一对括号，客户端会解析失败
-  - ❌ 错误：`[json_app_url][链接](https://...)[/json_app_url]`
-  - ✅ 正确：`[json_app_url]https://...[/json_app_url]`  ← URL 直接写，前后没有任何符号
 
 ## ⚠️ 禁止自动发布（极其重要！）
 
@@ -218,7 +213,7 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 
 **如果用户只是要求生成应用**：
 - ✅ 只生成 JSON 并上传到临时存储
-- ✅ 返回 `[json_app_url]URL[/json_app_url]` 标签
+- ✅ 让上传脚本写入 `json_app_ready` 结构化动作，最终回答只用自然语言
 - ❌ 不要发布到商店
 
 **错误示例**：
@@ -227,7 +222,7 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 
 **正确示例**：
 - 用户说："生成一个待办事项应用"
-- 你生成 JSON，上传到临时存储，返回 `[json_app_url]URL[/json_app_url]` ← 这是正确的！
+- 你生成 JSON，上传到临时存储，上传脚本写入 `json_app_ready` 动作，最终自然语言回复已生成 ← 这是正确的！
 - 用户说："把这个应用发布到商店"
 - 你再调用 publish_script.py 发布 ← 这才是正确的！
 

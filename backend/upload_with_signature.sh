@@ -47,10 +47,10 @@ if command -v mc &> /dev/null; then
     mc cp "$FILE_PATH" "myminio/${BUCKET}/${OBJECT_NAME}" &> /dev/null
 
     # 生成预签名 URL
-    mc share download --expire="${EXPIRY_HOURS}h" "myminio/${BUCKET}/${OBJECT_NAME}" 2>/dev/null | grep -o 'https://[^[:space:]]*'
+    SIGNED_URL="$(mc share download --expire="${EXPIRY_HOURS}h" "myminio/${BUCKET}/${OBJECT_NAME}" 2>/dev/null | grep -o 'https://[^[:space:]]*' | head -n 1)"
 else
     # 使用 Python 生成预签名 URL
-    python3 - "$FILE_PATH" "$BUCKET" "$OBJECT_NAME" "$EXPIRY_HOURS" <<'PYTHON'
+    SIGNED_URL="$(python3 - "$FILE_PATH" "$BUCKET" "$OBJECT_NAME" "$EXPIRY_HOURS" <<'PYTHON'
 import sys
 import os
 from datetime import timedelta
@@ -97,5 +97,50 @@ client.put_object(
 # 生成预签名 URL
 url = client.presigned_get_object(bucket, object_name, expires=timedelta(hours=expiry_hours))
 print(url)
+PYTHON
+)"
+fi
+
+if [ -z "${SIGNED_URL:-}" ]; then
+    echo "Error: failed to create signed URL" >&2
+    exit 1
+fi
+
+echo "$SIGNED_URL"
+
+# 新结构化客户端动作协议：Agent 原文不负责驱动客户端按钮。
+# 如果本脚本运行在 AI_APP_WORKSPACE 内，上传成功后自动写入动作文件；
+# 后端 worker 会在本轮结束后读取、校验，并追加 client_action SSE。
+if [ -n "${AI_APP_WORKSPACE:-}" ] && [ -d "$AI_APP_WORKSPACE" ]; then
+    python3 - "$AI_APP_WORKSPACE/client_actions.json" "$SIGNED_URL" <<'PYTHON'
+import json
+import os
+import sys
+
+path = sys.argv[1]
+url = sys.argv[2]
+payload = {"client_actions": []}
+
+if os.path.exists(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict) and isinstance(loaded.get("client_actions"), list):
+            payload = loaded
+        elif isinstance(loaded, list):
+            payload = {"client_actions": loaded}
+    except Exception:
+        payload = {"client_actions": []}
+
+action = {"type": "json_app_ready", "url": url}
+payload["client_actions"] = [
+    item for item in payload["client_actions"]
+    if not (isinstance(item, dict) and item.get("type") == "json_app_ready")
+]
+payload["client_actions"].append(action)
+
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(payload, f, ensure_ascii=False, indent=2)
+    f.write("\n")
 PYTHON
 fi

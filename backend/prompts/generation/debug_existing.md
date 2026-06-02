@@ -4,11 +4,13 @@
 
 ## 先取得 JSON
 
-如果用户没有提供 `[json_app_url]...[/json_app_url]` 或直接 JSON URL，先回复：
+如果用户没有提供 `[json_app_url]...[/json_app_url]` 或直接 JSON URL，先写入 `$AI_APP_WORKSPACE/client_actions.json`：
 
-```text
-我需要先查看当前应用的配置代码。[request_action]upload_current_app[/request_action]
+```json
+{"client_actions":[{"type":"request_upload_current_app"}]}
 ```
+
+然后自然语言回复：我需要先查看当前应用的配置代码。
 
 不要猜当前 APP 的内容。用户可能已经切换 APP。
 
@@ -52,4 +54,4 @@ python3 backend/validate_json_app.py "$TMPFILE"
 bash backend/upload_with_signature.sh "$TMPFILE"
 ```
 
-返回 `[json_app_url]完整URL[/json_app_url]`。
+不要在聊天回复中输出 `[json_app_url]` 标签。`upload_with_signature.sh` 上传成功后会自动写入 `$AI_APP_WORKSPACE/client_actions.json`，后端会把运行按钮作为结构化 `client_action` 事件发给客户端。

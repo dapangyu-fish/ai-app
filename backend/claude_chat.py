@@ -349,15 +349,13 @@ def chat():
             "如果用户只是问能力、使用方式、普通闲聊、澄清问题或解释错误，且没有要求新建/修改/修复/发布 APP，"
             "本轮不进入生成流程，不读取分层索引，不运行命令，不上传文件，只用自然语言直接回答。"
             "这类普通回答禁止出现任何客户端协议标签字面量。"
-            "如果本轮成功生成/修改并上传 JSON-APP，最终回答最后一行必须严格为 "
-            "`[json_app_url]完整URL[/json_app_url]`。"
-            "起始标签必须是 `[json_app_url]`；结束标签必须是 `[/json_app_url]`，"
-            "包括最后的右中括号 `]`。标签内只能放完整 http(s) URL；禁止 Markdown 链接、"
-            "括号、空格、省略号、换行拆分或截断签名参数。发送最终回答前，必须确认最终文本"
-            "同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。"
-            "如果需要请求用户上传当前应用，只能输出完整 `[request_action]upload_current_app[/request_action]`。"
-            "普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，禁止复述这些协议标签字面量；"
-            "如需描述工作方式，只用“上传后返回应用链接”这类自然语言。"
+            "如果本轮需要客户端执行动作，禁止在最终回答里写 `[json_app_url]` 或 `[request_action]` 标签；"
+            "必须写入 `$AI_APP_WORKSPACE/client_actions.json`，格式为 "
+            "`{\"client_actions\":[{\"type\":\"request_upload_current_app\"}]}` 或 "
+            "`{\"client_actions\":[{\"type\":\"json_app_ready\",\"url\":\"https://...\"}]}`。"
+            "上传 JSON-APP 时必须执行 `bash backend/upload_with_signature.sh \"$AI_APP_WORKSPACE/app.json\"`；"
+            "该脚本上传成功后会自动写入 `json_app_ready` 动作文件，你只需在自然语言中简短说明已生成。"
+            "如果需要请求用户上传当前应用，先写入 `request_upload_current_app` 动作文件，再用自然语言说明需要查看当前应用。"
         )
                     
         cmd = [
@@ -377,7 +375,7 @@ def chat():
                 )
                 + f"请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
                 "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
-                "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
+                "不要遗忘工作目录、repair/validate、上传和 client_actions 结构化动作规则。"
                 + final_protocol_note
             )
         ]
@@ -537,6 +535,12 @@ def chat():
                     logger.error(f"[STREAM] CLI 异常退出: {err}")
                     _append_cli_log(session_id, "stderr", err)
                     yield f'data: {json.dumps({"error": f"Claude CLI 异常退出: {err}"}, ensure_ascii=False)}\n\n'
+
+            try:
+                for action in ai_session._load_client_actions(workspace, session_id):
+                    yield f'data: {json.dumps({"client_action": action}, ensure_ascii=False)}\n\n'
+            except Exception as e:
+                logger.warning(f"[STREAM] 读取 client_actions 失败: {e}")
 
             logger.info(f"[STREAM] 发送配额信息和结束标记")
             yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
@@ -1010,11 +1014,21 @@ def chat_result(session_id):
     if meta.get("user_id") != request.supabase_user.get("id"):
         return jsonify({"error": "无权访问此 session"}), 403
 
+    client_actions = []
+    try:
+        raw_actions = meta.get("client_actions", "[]")
+        parsed_actions = json.loads(raw_actions) if raw_actions else []
+        if isinstance(parsed_actions, list):
+            client_actions = parsed_actions
+    except Exception:
+        client_actions = []
+
     return jsonify({
         "session_id": session_id,
         "status": meta.get("status"),
         "final_text": meta.get("final_text", ""),
         "final_thinking": meta.get("final_thinking", ""),
+        "client_actions": client_actions,
         "error": meta.get("error", ""),
         "started_at": meta.get("started_at"),
         "finished_at": meta.get("finished_at"),

@@ -59,14 +59,32 @@ class ResumeCompleted extends ResumeResult {
   final String userMessage;
   final String assistantText;
   final String? thinking;
-  final String? jsonUrl; // 解析 [json_app_url] 标签得到
-  final String? requestAction; // 解析 [request_action] 标签得到（如 upload_current_app）
+  final List<Map<String, dynamic>> clientActions;
+
+  String? get jsonUrl {
+    for (final action in clientActions.reversed) {
+      if (action['type'] == 'json_app_ready') {
+        final url = action['url'];
+        if (url is String && url.isNotEmpty) return url;
+      }
+    }
+    return null;
+  }
+
+  String? get requestAction {
+    for (final action in clientActions) {
+      if (action['type'] == 'request_upload_current_app') {
+        return 'upload_current_app';
+      }
+    }
+    return null;
+  }
+
   const ResumeCompleted({
     required this.userMessage,
     required this.assistantText,
     this.thinking,
-    this.jsonUrl,
-    this.requestAction,
+    this.clientActions = const [],
   });
 }
 
@@ -170,8 +188,32 @@ class AiChatService {
   static List<AiProvider> get providers => _providers;
   static List<AiAgent> get agents => _agents;
 
-  /// Assistant 文本必须原样展示；协议标签解析只用于额外动作，不改变展示文本。
+  /// Assistant 文本必须原样展示；客户端动作只来自后端结构化 client_action 事件。
   static String cleanAssistantDisplayText(String text) => text;
+
+  static ChatEvent? _eventFromClientAction(Map<String, dynamic> action) {
+    final type = action['type'] as String? ?? '';
+    switch (type) {
+      case 'request_upload_current_app':
+        return ChatEvent(requestAction: 'upload_current_app');
+      case 'json_app_ready':
+        final url = action['url'] as String? ?? '';
+        if (url.isEmpty) return null;
+        return ChatEvent(pendingJsonUrl: url);
+    }
+    debugPrint('[AI_CHAT] 忽略未知 client_action: $action');
+    return null;
+  }
+
+  static List<Map<String, dynamic>> _parseClientActions(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => item.map((key, value) => MapEntry(key.toString(), value)),
+        )
+        .toList(growable: false);
+  }
 
   static Future<void> loadProvider() async {
     final prefs = await SharedPreferences.getInstance();
@@ -906,11 +948,11 @@ class AiChatService {
         content: cleanAssistantDisplayText(completed.assistantText),
       );
     }
-    final state = _StreamState()
-      ..accumulated = completed.assistantText
-      ..accumulatedThinking = completed.thinking ?? '';
-    await for (final ev in _emitTrailingTags(state)) {
-      yield ev;
+    for (final action in completed.clientActions) {
+      final event = _eventFromClientAction(action);
+      if (event != null) {
+        yield event;
+      }
     }
   }
 
@@ -1089,9 +1131,6 @@ class AiChatService {
         final dataStr = message.data.trimLeft();
         if (dataStr == '[DONE]') {
           debugPrint('[AI_CHAT] <<< Web EventSource [DONE]');
-          await for (final ev in _emitTrailingTags(state)) {
-            yield ev;
-          }
           state.outcome = _StreamOutcome.done;
           return;
         }
@@ -1127,7 +1166,7 @@ class AiChatService {
     }
   }
 
-  /// 从 /result 拿到上一轮完成的最终文本，并解析其中的 [json_app_url] 标签
+  /// 从 /result 拿到上一轮完成的最终文本和结构化客户端动作。
   Future<ResumeResult> _fetchCompletedResult([String? sessionId]) async {
     final active = _active;
     if (active == null) return const ResumeNothing();
@@ -1147,28 +1186,11 @@ class AiChatService {
       final thinking = data['final_thinking'] as String? ?? '';
       if (finalText.isEmpty && thinking.isEmpty) return const ResumeNothing();
 
-      // 只接受逐字符正确的协议标签；格式不对就原样展示，不兜底抽取 URL。
-      String? jsonUrl;
-      final urlMatch = RegExp(
-        r'\[json_app_url\](https?://[^\s\]\[\)\(\<\>"]+)\[/json_app_url\]',
-      ).firstMatch(finalText);
-      if (urlMatch != null) {
-        jsonUrl = urlMatch.group(1)!;
-      }
-      // 只接受当前客户端真正支持的动作；其他动作名原样展示，不兜底执行。
-      String? requestAction;
-      final actionMatch = RegExp(
-        r'\[request_action\]upload_current_app\[/request_action\]',
-      ).firstMatch(finalText);
-      if (actionMatch != null) {
-        requestAction = 'upload_current_app';
-      }
       return ResumeCompleted(
         userMessage: active.lastUserMessage,
         assistantText: finalText,
         thinking: thinking.isEmpty ? null : thinking,
-        jsonUrl: jsonUrl,
-        requestAction: requestAction,
+        clientActions: _parseClientActions(data['client_actions']),
       );
     } catch (e) {
       debugPrint('[AI_CHAT] _fetchCompletedResult 异常: $e');
@@ -1271,10 +1293,6 @@ class AiChatService {
 
         if (dataStr == '[DONE]') {
           debugPrint('[AI_CHAT] <<< SSE [DONE]');
-          // 流结束后兜底解析累积文本里的标签
-          await for (final ev in _emitTrailingTags(state)) {
-            yield ev;
-          }
           state.outcome = _StreamOutcome.done;
           return;
         }
@@ -1328,7 +1346,7 @@ class AiChatService {
     }
   }
 
-  /// 处理单条业务事件（JSON shape 与老版本完全一致）
+  /// 处理单条业务事件。
   Stream<ChatEvent> _handleEvent(
     Map<String, dynamic> data,
     _StreamState state,
@@ -1342,8 +1360,17 @@ class AiChatService {
         data['generating_json'] == false) {
       return;
     }
-    if (data.containsKey('request_action')) {
-      yield ChatEvent(requestAction: data['request_action'] as String);
+    if (data.containsKey('client_action')) {
+      final raw = data['client_action'];
+      if (raw is Map<String, dynamic>) {
+        final event = _eventFromClientAction(raw);
+        if (event != null) yield event;
+      } else if (raw is Map) {
+        final event = _eventFromClientAction(
+          raw.map((key, value) => MapEntry(key.toString(), value)),
+        );
+        if (event != null) yield event;
+      }
       return;
     }
     if (data.containsKey('status')) {
@@ -1452,66 +1479,6 @@ class AiChatService {
     if (content.isNotEmpty) {
       state.accumulated += content;
       yield ChatEvent(content: cleanAssistantDisplayText(state.accumulated));
-    }
-  }
-
-  /// 流真的结束（[DONE]）后兜底解析累积文本里的 [json_app_url] / [request_action] / ```json``` 标签。
-  /// 这是设计上的唯一解析点 —— 等 Claude 完全输出完毕后再决定客户端要做什么，与下载按钮（[json_app_url]）
-  /// 走完全相同的路。
-  Stream<ChatEvent> _emitTrailingTags(_StreamState state) async* {
-    final accumulated = state.accumulated;
-    final tail = accumulated.length > 300
-        ? accumulated.substring(accumulated.length - 300)
-        : accumulated;
-    debugPrint(
-      '[AI_CHAT] _emitTrailingTags 入口, accumulated.len=${accumulated.length}, '
-      '末 300 字符: $tail',
-    );
-
-    // 1. [json_app_url]…[/json_app_url] - 等用户确认下载
-    final urlRegex = RegExp(
-      r'\[json_app_url\](https?://[^\s\]\[\)\(\<\>"]+)\[/json_app_url\]',
-    );
-    final urlMatch = urlRegex.firstMatch(accumulated);
-    if (urlMatch != null) {
-      final url = urlMatch.group(1)!;
-      debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
-      yield ChatEvent(pendingJsonUrl: url);
-    } else if (accumulated.contains('json_app_url')) {
-      debugPrint(
-        '[AI_CHAT] ⚠️ accumulated 里有 json_app_url 字样但 regex 未匹中，可能格式有变',
-      );
-    }
-
-    // 2. [request_action]upload_current_app[/request_action]
-    final actionRegex = RegExp(
-      r'\[request_action\]upload_current_app\[/request_action\]',
-    );
-    final actionMatch = actionRegex.firstMatch(accumulated);
-    if (actionMatch != null) {
-      debugPrint('[AI_CHAT] 流结束，检测到 request_action: upload_current_app');
-      yield ChatEvent(requestAction: 'upload_current_app');
-    } else if (accumulated.contains('request_action')) {
-      // 诊断：accumulated 里有 request_action 字样但正则没匹中，把闭合标签前后的 100 字节贴出来，方便排查
-      final idx = accumulated.lastIndexOf('request_action');
-      final from = (idx - 50).clamp(0, accumulated.length);
-      final to = (idx + 100).clamp(0, accumulated.length);
-      debugPrint(
-        '[AI_CHAT] ⚠️ accumulated 含 request_action 字样但正则没匹中，'
-        '上下文: "${accumulated.substring(from, to)}"',
-      );
-    }
-
-    // 3. 内联 ```json``` 块（仅当没有 url 时）
-    if (urlMatch == null) {
-      final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
-      final match = jsonBlockRegex.firstMatch(accumulated);
-      if (match != null) {
-        try {
-          final parsed = json.decode(match.group(1)!) as Map<String, dynamic>;
-          yield ChatEvent(jsonApp: parsed);
-        } catch (_) {}
-      }
     }
   }
 

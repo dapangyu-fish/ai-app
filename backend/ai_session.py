@@ -29,7 +29,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import redis
 
@@ -278,6 +278,7 @@ class SessionStore:
     def set_status(self, session_id: str, status: str, *,
                    final_text: Optional[str] = None,
                    final_thinking: Optional[str] = None,
+                   client_actions: Optional[List[dict]] = None,
                    error: Optional[str] = None) -> None:
         update = {
             "status": status,
@@ -287,6 +288,8 @@ class SessionStore:
             update["final_text"] = final_text
         if final_thinking is not None:
             update["final_thinking"] = final_thinking
+        if client_actions is not None:
+            update["client_actions"] = json.dumps(client_actions, ensure_ascii=False)
         if error is not None:
             update["error"] = error
         pipe = self.r.pipeline()
@@ -369,12 +372,9 @@ class SessionStore:
 
 # ────────────────────────────── CLI 输出解析 ──────────────────────────────
 
-_JSON_APP_URL_PROTOCOL_RE = re.compile(
-    r"\[json_app_url\]https?://[^\s\]\[\)\(\<>\"]+\[/json_app_url\]",
-    re.IGNORECASE,
-)
-_REQUEST_ACTION_PROTOCOL_RE = re.compile(
-    r"\[request_action\]upload_current_app\[/request_action\]",
+_CLIENT_ACTIONS_FILE = "client_actions.json"
+_CLIENT_ACTION_URL_RE = re.compile(
+    r"https?://[^\s\]\[\)\(\<>\"]+",
     re.IGNORECASE,
 )
 
@@ -384,11 +384,88 @@ def _final_protocol_warnings(final_text: Optional[str]) -> List[str]:
         return []
     warnings: List[str] = []
     lowered = final_text.lower()
-    if "json_app_url" in lowered and not _JSON_APP_URL_PROTOCOL_RE.search(final_text):
-        warnings.append("malformed_json_app_url_tag")
-    if "request_action" in lowered and not _REQUEST_ACTION_PROTOCOL_RE.search(final_text):
-        warnings.append("malformed_request_action_tag")
+    if "json_app_url" in lowered:
+        warnings.append("unexpected_json_app_url_text_tag")
+    if "request_action" in lowered:
+        warnings.append("unexpected_request_action_text_tag")
     return warnings
+
+
+def _client_action_warning(session_id: str, message: str, *, detail: Any = None) -> None:
+    logger.warning("[CLIENT_ACTION] sid=%s %s detail=%r", session_id, message, detail)
+    _append_cli_log(session_id, "meta", json.dumps({
+        "event": "client_action_warning",
+        "message": message,
+        "detail": detail,
+    }, ensure_ascii=False))
+
+
+def _normalize_client_action(raw: Any, session_id: str) -> Optional[dict]:
+    if not isinstance(raw, dict):
+        _client_action_warning(session_id, "client action 不是对象", detail=raw)
+        return None
+
+    action_type = str(raw.get("type") or "").strip()
+    if action_type == "request_upload_current_app":
+        return {"type": "request_upload_current_app"}
+
+    if action_type == "json_app_ready":
+        url = str(raw.get("url") or "").strip()
+        if not _CLIENT_ACTION_URL_RE.fullmatch(url):
+            _client_action_warning(session_id, "json_app_ready 缺少合法 url", detail=raw)
+            return None
+        return {"type": "json_app_ready", "url": url}
+
+    _client_action_warning(session_id, "未知 client action type", detail=raw)
+    return None
+
+
+def _load_client_actions(workspace: Optional[str], session_id: str) -> List[dict]:
+    if not workspace:
+        return []
+    path = os.path.join(workspace, _CLIENT_ACTIONS_FILE)
+    if not os.path.isfile(path):
+        return []
+
+    try:
+        if os.path.getsize(path) > 65536:
+            _client_action_warning(session_id, "client_actions.json 过大", detail=path)
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception as e:
+        _client_action_warning(session_id, "读取 client_actions.json 失败", detail=str(e))
+        return []
+
+    if isinstance(payload, dict):
+        raw_actions = payload.get("client_actions")
+    elif isinstance(payload, list):
+        raw_actions = payload
+    else:
+        _client_action_warning(session_id, "client_actions.json 顶层格式错误", detail=payload)
+        return []
+
+    if not isinstance(raw_actions, list):
+        _client_action_warning(session_id, "client_actions 不是数组", detail=payload)
+        return []
+
+    wants_upload_current_app = False
+    last_json_app_ready: Optional[dict] = None
+    for raw in raw_actions[:20]:
+        action = _normalize_client_action(raw, session_id)
+        if not action:
+            continue
+        if action["type"] == "request_upload_current_app":
+            wants_upload_current_app = True
+        elif action["type"] == "json_app_ready":
+            last_json_app_ready = action
+
+    out: List[dict] = []
+    if wants_upload_current_app:
+        out.append({"type": "request_upload_current_app"})
+    if last_json_app_ready:
+        out.append(last_json_app_ready)
+    return out
 
 
 def _tool_status_message(tool_name: str, tool_input: dict) -> str:
@@ -921,21 +998,19 @@ def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -
         "如果用户只是问能力、使用方式、普通闲聊、澄清问题或解释错误，且没有要求新建/修改/修复/发布 APP，"
         "本轮不进入生成流程，不读取分层索引，不运行命令，不上传文件，只用自然语言直接回答。"
         "这类普通回答禁止出现任何客户端协议标签字面量。"
-        "如果本轮成功生成/修改并上传 JSON-APP，最终回答最后一行必须严格为 "
-        "`[json_app_url]完整URL[/json_app_url]`。"
-        "起始标签必须是 `[json_app_url]`；结束标签必须是 `[/json_app_url]`，"
-        "包括最后的右中括号 `]`。标签内只能放完整 http(s) URL；禁止 Markdown 链接、"
-        "括号、空格、省略号、换行拆分或截断签名参数。发送最终回答前，必须确认最终文本"
-        "同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。"
-        "如果需要请求用户上传当前应用，只能输出完整 `[request_action]upload_current_app[/request_action]`。"
-        "普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，禁止复述这些协议标签字面量；"
-        "如需描述工作方式，只用“上传后返回应用链接”这类自然语言。"
+        "如果本轮需要客户端执行动作，禁止在最终回答里写 `[json_app_url]` 或 `[request_action]` 标签；"
+        "必须写入 `$AI_APP_WORKSPACE/client_actions.json`，格式为 "
+        "`{\"client_actions\":[{\"type\":\"request_upload_current_app\"}]}` 或 "
+        "`{\"client_actions\":[{\"type\":\"json_app_ready\",\"url\":\"https://...\"}]}`。"
+        "上传 JSON-APP 时必须执行 `bash backend/upload_with_signature.sh \"$AI_APP_WORKSPACE/app.json\"`；"
+        "该脚本上传成功后会自动写入 `json_app_ready` 动作文件，你只需在自然语言中简短说明已生成。"
+        "如果需要请求用户上传当前应用，先写入 `request_upload_current_app` 动作文件，再用自然语言说明需要查看当前应用。"
     )
     return (
         f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>"
         f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
         "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
-        "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
+        "不要遗忘工作目录、repair/validate、上传和 client_actions 结构化动作规则。"
         f"{final_protocol_note}"
     )
 
@@ -1354,11 +1429,6 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             return
 
         # ─── 6. 正常完成 ───
-        # 配额事件 + DONE 标记保留发到 stream（给老客户端兼容；新客户端从 meta 读）
-        append_event({"quota": {
-            "used": quota_used, "limit": quota_limit, "remaining": quota_remaining,
-        }})
-
         final_text, final_thinking = extract_final_texts(all_events)
         protocol_warnings = _final_protocol_warnings(final_text)
         if protocol_warnings:
@@ -1374,16 +1444,27 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 "warnings": protocol_warnings,
                 "tail": tail,
             }, ensure_ascii=False))
+        client_actions = _load_client_actions(workspace, session_id)
+        for action in client_actions:
+            if append_event({"client_action": action}):
+                all_events.append({"client_action": action})
+
+        # 配额事件 + DONE 标记保留发到 stream（给老客户端兼容；新客户端从 meta 读）
+        append_event({"quota": {
+            "used": quota_used, "limit": quota_limit, "remaining": quota_remaining,
+        }})
         set_status(
             STATUS_DONE,
             final_text=final_text or "",
             final_thinking=final_thinking or "",
+            client_actions=client_actions,
         )
         _append_cli_log(session_id, "meta", json.dumps({
             "event": "worker_done",
             "lines": line_count,
             "final_text_len": len(final_text or ""),
             "final_thinking_len": len(final_thinking or ""),
+            "client_actions": client_actions,
         }, ensure_ascii=False))
         logger.info(
             f"[WORKER] sid={session_id} 完成 lines={line_count} "

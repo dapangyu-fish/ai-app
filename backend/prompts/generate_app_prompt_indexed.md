@@ -16,18 +16,19 @@
 - `children` 字段永远必须是数组：`"children": [{...}]`。哪怕只有一个子控件也不能写成 `"children": {...}`；单子控件 wrapper 才使用 `child: {...}`。
 - 上传前必须通过 `python3 -m json.tool`、`python3 backend/repair_json_app.py`、`python3 backend/validate_json_app.py`。只要还有 validator `ERROR`，绝对不能回复“完成/通过/已生成”。
 - 图标名必须来自 `lib/json_ui/widgets/icon_registry.dart`；不确定时先查源码。未知静态图标会被 validator 拦截，也会在 UI 上显示成红色问号。
-- 交付必须使用 `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"` 输出的完整签名 URL，并原样放入 `[json_app_url]URL[/json_app_url]`。最终标签是客户端协议，不是自然语言装饰；起始标签和结束标签必须逐字符完整，结束标签必须包含最后的右中括号 `]`。
-- 普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，禁止复述 `[json_app_url]` / `[/json_app_url]` / `[request_action]` / `[/request_action]` 这些协议标签字面量；只能用“上传后返回应用链接”“请求上传当前应用”这类自然语言描述。
+- 客户端动作必须走结构化文件 `$AI_APP_WORKSPACE/client_actions.json`，禁止在聊天回复中写 `[json_app_url]` / `[/json_app_url]` / `[request_action]` / `[/request_action]` 标签。上传 JSON-APP 时执行 `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"`，脚本上传成功后会自动写入 `{"type":"json_app_ready","url":"https://..."}` 动作。请求用户上传当前应用时，手动写入 `{"client_actions":[{"type":"request_upload_current_app"}]}`，再用自然语言说明原因。
 
 ## 1. 当前应用修改/分析
 
 当用户询问“当前应用 / 这个应用 / 我的应用 / 修改当前应用 / 修复这个 APP”时，必须先取得当前 JSON。
 
-如果用户没有提供 `[json_app_url]...[/json_app_url]` 或直接 URL，先回复：
+如果用户没有提供 `[json_app_url]...[/json_app_url]` 或直接 URL，先写入 `$AI_APP_WORKSPACE/client_actions.json`：
 
-```text
-我需要先查看当前应用的配置代码。[request_action]upload_current_app[/request_action]
+```json
+{"client_actions":[{"type":"request_upload_current_app"}]}
 ```
+
+然后自然语言回复：我需要先查看当前应用的配置代码。
 
 如果用户提供了 URL，先阅读 `backend/prompts/generation/debug_existing.md`，按文档下载到本轮工作目录，再分析/修改。
 
@@ -62,22 +63,15 @@ bash backend/upload_with_signature.sh "$TMPFILE"
 
 - 禁止自动调用 `publish_script.py` 或任何 publish/store publish API。只有用户明确要求“发布/上架/publish”时才可发布。
 - 禁止自创 DSL 字段、widget、action。对不确定项读相关源码或模板确认。
-- 禁止把 URL 写成 Markdown 链接。正确格式是 `[json_app_url]https://...[/json_app_url]`。
+- 禁止在聊天回复里输出客户端协议标签。客户端动作只能写入 `$AI_APP_WORKSPACE/client_actions.json`。
 - 禁止在聊天框输出整份大 JSON。
 
 ## 5. 输出
 
-成功时只需要简短说明，并把完整标签放在独立最后一行：
+成功时只需要简短自然语言说明，不要输出客户端协议标签。上传成功动作由 `backend/upload_with_signature.sh` 自动写入 `$AI_APP_WORKSPACE/client_actions.json`：
 
-```text
-我已经生成好了应用。
-[json_app_url]完整URL[/json_app_url]
+```json
+{"client_actions":[{"type":"json_app_ready","url":"https://..."}]}
 ```
 
-最终交付协议必须逐字符满足：
-
-- 起始标签必须正好是 `[json_app_url]`。
-- 结束标签必须正好是 `[/json_app_url]`，包括最后的 `]`，不能写成 `[/json_app_url`。
-- 标签内部只能放完整 `http://` 或 `https://` URL；不要加 Markdown 链接、括号、空格、省略号或换行。
-- URL 的 `?`、`&`、签名参数必须完整复制，不能截断。
-- 发送前最后检查一次：最终文本必须同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。如果不满足，不要回复“已完成”。
+最终回答不要包含这段 JSON，也不要包含 URL 标签；只说明应用已生成或已修复。
