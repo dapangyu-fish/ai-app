@@ -98,13 +98,19 @@ python3 backend/validate_json_app.py "$TMPFILE"
 bash backend/upload_with_signature.sh "$TMPFILE"
 ```
 
-把脚本输出的完整 URL 原样放进：
+把脚本输出的完整 URL 原样放进独立最后一行：
 
 ```text
 [json_app_url]完整URL[/json_app_url]
 ```
 
-不要用 Markdown 链接，不要截断 `?` 和 `&` 后的签名参数。
+这是客户端协议，必须逐字符完整：
+
+- 起始标签必须正好是 `[json_app_url]`。
+- 结束标签必须正好是 `[/json_app_url]`，包括最后的 `]`；不能写成 `[/json_app_url`。
+- 标签内部只能是完整 `http://` 或 `https://` URL。
+- 不要用 Markdown 链接，不要加括号/空格/省略号，不要把 URL 换行，不要截断 `?` 和 `&` 后的签名参数。
+- 发送最终回答前必须确认最终文本同时包含 `[json_app_url]` 和 `[/json_app_url]`。
 
 ## 发布禁令
 

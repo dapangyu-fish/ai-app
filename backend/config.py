@@ -58,11 +58,11 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
     },
     "minimax": {
         "name": "MiniMax M3",
-        "description": "MiniMax Anthropic-compatible Claude Code provider (experimental)",
+        "description": "MiniMax Anthropic-compatible Claude Code provider",
         "base_url": "https://api.minimaxi.com/anthropic",
         "model": "MiniMax-M3",
         "auth_env_fallbacks": (),
-        "visible": "0",
+        "visible": "1",
     },
 }
 

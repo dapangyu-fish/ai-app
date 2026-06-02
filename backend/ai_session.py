@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -358,6 +359,28 @@ class SessionStore:
 
 
 # ────────────────────────────── CLI 输出解析 ──────────────────────────────
+
+_JSON_APP_URL_PROTOCOL_RE = re.compile(
+    r"\[json_app_url\]https?://[^\s\]\[\)\(\<>\"]+\[/json_app_url\]",
+    re.IGNORECASE,
+)
+_REQUEST_ACTION_PROTOCOL_RE = re.compile(
+    r"\[request_action\][A-Za-z0-9_.:-]+\[/request_action\]",
+    re.IGNORECASE,
+)
+
+
+def _final_protocol_warnings(final_text: Optional[str]) -> List[str]:
+    if not final_text:
+        return []
+    warnings: List[str] = []
+    lowered = final_text.lower()
+    if "json_app_url" in lowered and not _JSON_APP_URL_PROTOCOL_RE.search(final_text):
+        warnings.append("malformed_json_app_url_tag")
+    if "request_action" in lowered and not _REQUEST_ACTION_PROTOCOL_RE.search(final_text):
+        warnings.append("malformed_request_action_tag")
+    return warnings
+
 
 def _tool_status_message(tool_name: str, tool_input: dict) -> str:
     """工具调用 → 用户友好提示文案。和旧 claude_chat 行为一致。"""
@@ -814,6 +837,16 @@ def _build_cli_cmd(
             "\n生成器、下载的 manifest、app.json、校验输出都放在 AI_APP_WORKSPACE 下；"
             "不要写 /tmp/app.json 或 /tmp/generate_app.py。"
         )
+    final_protocol_note = (
+        "\n\n最终交付协议（本轮普通提示重复注入，必须逐字符遵守）："
+        "如果本轮成功生成/修改并上传 JSON-APP，最终回答最后一行必须严格为 "
+        "`[json_app_url]完整URL[/json_app_url]`。"
+        "起始标签必须是 `[json_app_url]`；结束标签必须是 `[/json_app_url]`，"
+        "包括最后的右中括号 `]`。标签内只能放完整 http(s) URL；禁止 Markdown 链接、"
+        "括号、空格、省略号、换行拆分或截断签名参数。发送最终回答前，必须确认最终文本"
+        "同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。"
+        "如果需要请求用户上传当前应用，只能输出完整 `[request_action]upload_current_app[/request_action]`。"
+    )
     cmd = [
         CLAUDE_BIN,
         "--dangerously-skip-permissions",
@@ -825,6 +858,7 @@ def _build_cli_cmd(
             f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
             "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
             "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
+            f"{final_protocol_note}"
         ),
     ]
     if is_resume:
@@ -1095,6 +1129,20 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         }})
 
         final_text, final_thinking = extract_final_texts(all_events)
+        protocol_warnings = _final_protocol_warnings(final_text)
+        if protocol_warnings:
+            tail = (final_text or "")[-500:]
+            logger.warning(
+                "[WORKER] sid=%s final protocol warnings=%s tail=%r",
+                session_id,
+                protocol_warnings,
+                tail,
+            )
+            _append_cli_log(session_id, "meta", json.dumps({
+                "event": "final_protocol_warning",
+                "warnings": protocol_warnings,
+                "tail": tail,
+            }, ensure_ascii=False))
         set_status(
             STATUS_DONE,
             final_text=final_text or "",

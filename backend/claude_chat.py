@@ -287,6 +287,16 @@ def chat():
         # 生产 URL（myapp-registry / myapp-oss-endpoint）替换成当前环境的 URL，
         # 否则测试环境跑出来的 JSON-APP 会嵌入生产域名
         sys_prompt = load_generate_prompt()
+        final_protocol_note = (
+            "\n\n最终交付协议（本轮普通提示重复注入，必须逐字符遵守）："
+            "如果本轮成功生成/修改并上传 JSON-APP，最终回答最后一行必须严格为 "
+            "`[json_app_url]完整URL[/json_app_url]`。"
+            "起始标签必须是 `[json_app_url]`；结束标签必须是 `[/json_app_url]`，"
+            "包括最后的右中括号 `]`。标签内只能放完整 http(s) URL；禁止 Markdown 链接、"
+            "括号、空格、省略号、换行拆分或截断签名参数。发送最终回答前，必须确认最终文本"
+            "同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。"
+            "如果需要请求用户上传当前应用，只能输出完整 `[request_action]upload_current_app[/request_action]`。"
+        )
                     
         cmd = [
             CLAUDE_BIN,
@@ -306,6 +316,7 @@ def chat():
                 + f"请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
                 "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
                 "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
+                + final_protocol_note
             )
         ]
 

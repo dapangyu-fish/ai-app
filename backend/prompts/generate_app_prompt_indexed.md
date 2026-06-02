@@ -15,7 +15,7 @@
 - `children` 字段永远必须是数组：`"children": [{...}]`。哪怕只有一个子控件也不能写成 `"children": {...}`；单子控件 wrapper 才使用 `child: {...}`。
 - 上传前必须通过 `python3 -m json.tool`、`python3 backend/repair_json_app.py`、`python3 backend/validate_json_app.py`。只要还有 validator `ERROR`，绝对不能回复“完成/通过/已生成”。
 - 图标名必须来自 `lib/json_ui/widgets/icon_registry.dart`；不确定时先查源码。未知静态图标会被 validator 拦截，也会在 UI 上显示成红色问号。
-- 交付必须使用 `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"` 输出的完整签名 URL，并原样放入 `[json_app_url]URL[/json_app_url]`。
+- 交付必须使用 `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"` 输出的完整签名 URL，并原样放入 `[json_app_url]URL[/json_app_url]`。最终标签是客户端协议，不是自然语言装饰；起始标签和结束标签必须逐字符完整，结束标签必须包含最后的右中括号 `]`。
 
 ## 1. 当前应用修改/分析
 
@@ -65,8 +65,17 @@ bash backend/upload_with_signature.sh "$TMPFILE"
 
 ## 5. 输出
 
-成功时只需要简短说明，并包含完整标签：
+成功时只需要简短说明，并把完整标签放在独立最后一行：
 
 ```text
-我已经生成好了应用，您可以点击加载：[json_app_url]完整URL[/json_app_url]
+我已经生成好了应用。
+[json_app_url]完整URL[/json_app_url]
 ```
+
+最终交付协议必须逐字符满足：
+
+- 起始标签必须正好是 `[json_app_url]`。
+- 结束标签必须正好是 `[/json_app_url]`，包括最后的 `]`，不能写成 `[/json_app_url`。
+- 标签内部只能放完整 `http://` 或 `https://` URL；不要加 Markdown 链接、括号、空格、省略号或换行。
+- URL 的 `?`、`&`、签名参数必须完整复制，不能截断。
+- 发送前最后检查一次：最终文本必须同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。如果不满足，不要回复“已完成”。

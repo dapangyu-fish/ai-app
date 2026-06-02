@@ -192,6 +192,8 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 **注意事项**：
 - URL 包含签名参数（如 `?X-Amz-Algorithm=...&X-Amz-Signature=...`），必须完整复制，不能截断！
 - 这是用户唯一能接收到应用配置的方式，绝对不能漏掉这个标签！
+- 最终交付标签是客户端协议，必须逐字符完整：起始标签必须正好是 `[json_app_url]`，结束标签必须正好是 `[/json_app_url]`，包括最后的右中括号 `]`。不能写成 `[/json_app_url`。
+- 成功时把 `[json_app_url]完整URL[/json_app_url]` 放在独立最后一行；发送前最后检查一次，最终文本必须同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。
 - 不要在聊天框直接输出大段的 JSON 文本。
 - ❌ **绝对不要把 URL 包成 markdown 链接语法**：
   - ❌ 错误：`[json_app_url](https://...)[/json_app_url]`  ← 多了一对括号，客户端会解析失败
