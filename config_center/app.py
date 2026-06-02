@@ -14,9 +14,11 @@ import importlib.util
 import json
 import os
 import secrets
+import shutil
 import sqlite3
 import tempfile
 import time
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import quote
@@ -26,6 +28,7 @@ from flask import (
     Response,
     abort,
     g,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -77,6 +80,13 @@ APK_SHA256_OBJECT = os.environ.get(
     "APK_SHA256_OBJECT", "android/apk/latest.apk.sha256"
 )
 APK_MAX_BYTES = int(os.environ.get("APK_MAX_BYTES", str(500 * 1024 * 1024)))
+APK_CHUNK_BYTES = int(os.environ.get("APK_CHUNK_BYTES", str(8 * 1024 * 1024)))
+APK_CHUNK_MAX_BYTES = int(
+    os.environ.get("APK_CHUNK_MAX_BYTES", str(16 * 1024 * 1024))
+)
+APK_UPLOAD_TMP_DIR = os.environ.get(
+    "APK_UPLOAD_TMP_DIR", "/var/lib/config-center/uploads"
+)
 
 if not ADMIN_PASSWORD:
     raise RuntimeError(
@@ -400,6 +410,131 @@ def _apk_release_state() -> dict:
     return state
 
 
+def _json_error(message: str, status: int = 400):
+    return jsonify({"ok": False, "error": message}), status
+
+
+def _clean_apk_filename(filename: str) -> str:
+    return Path((filename or "").replace("\\", "/")).name
+
+
+def _validate_apk_request(filename: str, size: int | None = None) -> str:
+    clean = _clean_apk_filename(filename)
+    if not clean:
+        raise ValueError("请选择 APK 文件")
+    if not clean.lower().endswith(".apk"):
+        raise ValueError("只允许上传 .apk 文件")
+    if size is not None:
+        if size <= 0:
+            raise ValueError("APK 文件为空")
+        if size > APK_MAX_BYTES:
+            raise ValueError(f"APK 超过上限 {APK_MAX_BYTES // (1024 * 1024)} MB")
+    return clean
+
+
+def _publish_apk_file(
+    *,
+    apk_path: str,
+    size: int,
+    sha256: str,
+    original_name: str,
+    version_name: str,
+    build_number: str,
+    release_notes: str,
+    user: str,
+) -> dict:
+    client = _minio_client()
+    _ensure_public_bucket(client)
+    with open(apk_path, "rb") as f:
+        client.put_object(
+            APK_RELEASE_BUCKET,
+            APK_LATEST_OBJECT,
+            f,
+            size,
+            content_type="application/vnd.android.package-archive",
+        )
+
+    uploaded_at = int(time.time())
+    metadata = {
+        "url": _apk_release_url(),
+        "bucket": APK_RELEASE_BUCKET,
+        "object": APK_LATEST_OBJECT,
+        "filename": original_name,
+        "size": size,
+        "sha256": sha256,
+        "version_name": version_name,
+        "build_number": build_number,
+        "release_notes": release_notes,
+        "uploaded_by": user,
+        "uploaded_at": uploaded_at,
+        "uploaded_at_iso": time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(uploaded_at)
+        ),
+    }
+    metadata_bytes = json.dumps(
+        metadata, ensure_ascii=False, indent=2, sort_keys=True
+    ).encode("utf-8")
+    sha_line = f"{sha256}  {Path(APK_LATEST_OBJECT).name}\n".encode("utf-8")
+    client.put_object(
+        APK_RELEASE_BUCKET,
+        APK_METADATA_OBJECT,
+        io.BytesIO(metadata_bytes),
+        len(metadata_bytes),
+        content_type="application/json",
+    )
+    client.put_object(
+        APK_RELEASE_BUCKET,
+        APK_SHA256_OBJECT,
+        io.BytesIO(sha_line),
+        len(sha_line),
+        content_type="text/plain; charset=utf-8",
+    )
+    with db_conn() as conn:
+        _audit(
+            conn,
+            "apk_release",
+            "upload",
+            None,
+            json.dumps(metadata, ensure_ascii=False, sort_keys=True),
+            user,
+        )
+    return metadata
+
+
+def _upload_root() -> Path:
+    root = Path(APK_UPLOAD_TMP_DIR)
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _upload_dir(upload_id: str) -> Path:
+    if not upload_id or any(ch not in "0123456789abcdef" for ch in upload_id):
+        abort(404)
+    if len(upload_id) != 32:
+        abort(404)
+    return _upload_root() / upload_id
+
+
+def _upload_meta_path(upload_id: str) -> Path:
+    return _upload_dir(upload_id) / "meta.json"
+
+
+def _read_upload_meta(upload_id: str) -> dict:
+    path = _upload_meta_path(upload_id)
+    if not path.is_file():
+        abort(404)
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_upload_meta(upload_id: str, meta: dict) -> None:
+    upload_dir = _upload_dir(upload_id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    path = upload_dir / "meta.json"
+    tmp = upload_dir / "meta.json.tmp"
+    tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
 def _copy_apk_to_temp(file_storage) -> tuple[str, int, str]:
     tmp = tempfile.NamedTemporaryFile(
         prefix="config-center-apk-", suffix=".apk", delete=False
@@ -641,12 +776,7 @@ def delete_config(key: str):
 def upload_apk_release():
     user = require_user()
     apk = request.files.get("apk")
-    if apk is None or not apk.filename:
-        return _flash("请选择 APK 文件", kind="err")
-
-    original_name = Path(apk.filename.replace("\\", "/")).name
-    if not original_name.lower().endswith(".apk"):
-        return _flash("只允许上传 .apk 文件", kind="err")
+    original_name = apk.filename if apk is not None else ""
 
     version_name = (request.form.get("version_name", "") or "").strip()
     build_number = (request.form.get("build_number", "") or "").strip()
@@ -654,62 +784,18 @@ def upload_apk_release():
 
     tmp_path = ""
     try:
+        original_name = _validate_apk_request(original_name)
         tmp_path, size, sha256 = _copy_apk_to_temp(apk)
-        client = _minio_client()
-        _ensure_public_bucket(client)
-        with open(tmp_path, "rb") as f:
-            client.put_object(
-                APK_RELEASE_BUCKET,
-                APK_LATEST_OBJECT,
-                f,
-                size,
-                content_type="application/vnd.android.package-archive",
-            )
-
-        uploaded_at = int(time.time())
-        metadata = {
-            "url": _apk_release_url(),
-            "bucket": APK_RELEASE_BUCKET,
-            "object": APK_LATEST_OBJECT,
-            "filename": original_name,
-            "size": size,
-            "sha256": sha256,
-            "version_name": version_name,
-            "build_number": build_number,
-            "release_notes": release_notes,
-            "uploaded_by": user,
-            "uploaded_at": uploaded_at,
-            "uploaded_at_iso": time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ", time.gmtime(uploaded_at)
-            ),
-        }
-        metadata_bytes = json.dumps(
-            metadata, ensure_ascii=False, indent=2, sort_keys=True
-        ).encode("utf-8")
-        sha_line = f"{sha256}  {Path(APK_LATEST_OBJECT).name}\n".encode("utf-8")
-        client.put_object(
-            APK_RELEASE_BUCKET,
-            APK_METADATA_OBJECT,
-            io.BytesIO(metadata_bytes),
-            len(metadata_bytes),
-            content_type="application/json",
+        _publish_apk_file(
+            apk_path=tmp_path,
+            size=size,
+            sha256=sha256,
+            original_name=original_name,
+            version_name=version_name,
+            build_number=build_number,
+            release_notes=release_notes,
+            user=user,
         )
-        client.put_object(
-            APK_RELEASE_BUCKET,
-            APK_SHA256_OBJECT,
-            io.BytesIO(sha_line),
-            len(sha_line),
-            content_type="text/plain; charset=utf-8",
-        )
-        with db_conn() as conn:
-            _audit(
-                conn,
-                "apk_release",
-                "upload",
-                None,
-                json.dumps(metadata, ensure_ascii=False, sort_keys=True),
-                user,
-            )
         return _flash(f"APK 已上传，固定链接已更新：{_apk_release_url()}")
     except Exception as e:
         return _flash(f"APK 上传失败：{e}", kind="err")
@@ -719,6 +805,164 @@ def upload_apk_release():
                 os.unlink(tmp_path)
             except OSError:
                 pass
+
+
+@app.route("/admin/apk/upload", methods=["GET"])
+def upload_apk_release_get():
+    return redirect(url_for("admin"))
+
+
+@app.route("/api/admin/apk/state", methods=["GET"])
+def api_apk_state():
+    require_user()
+    return jsonify({"ok": True, "release": _apk_release_state()})
+
+
+@app.route("/api/admin/apk/uploads", methods=["POST"])
+def api_create_apk_upload():
+    user = require_user()
+    payload = request.get_json(silent=True) or {}
+    try:
+        filename = _validate_apk_request(
+            str(payload.get("filename") or ""), int(payload.get("size") or 0)
+        )
+    except (TypeError, ValueError) as e:
+        return _json_error(str(e), 400)
+
+    upload_id = uuid.uuid4().hex
+    size = int(payload.get("size") or 0)
+    chunk_size = max(1024 * 1024, min(APK_CHUNK_BYTES, APK_CHUNK_MAX_BYTES))
+    total_parts = (size + chunk_size - 1) // chunk_size
+    now = int(time.time())
+    meta = {
+        "upload_id": upload_id,
+        "filename": filename,
+        "size": size,
+        "chunk_size": chunk_size,
+        "total_parts": total_parts,
+        "version_name": (payload.get("version_name") or "").strip(),
+        "build_number": (payload.get("build_number") or "").strip(),
+        "release_notes": (payload.get("release_notes") or "").strip(),
+        "created_by": user,
+        "created_at": now,
+        "updated_at": now,
+        "received": {},
+    }
+    _write_upload_meta(upload_id, meta)
+    return jsonify(
+        {
+            "ok": True,
+            "upload_id": upload_id,
+            "chunk_size": chunk_size,
+            "total_parts": total_parts,
+        }
+    )
+
+
+@app.route(
+    "/api/admin/apk/uploads/<upload_id>/chunks/<int:index>",
+    methods=["PUT", "POST"],
+)
+def api_upload_apk_chunk(upload_id: str, index: int):
+    user = require_user()
+    meta = _read_upload_meta(upload_id)
+    if meta.get("created_by") != user:
+        return _json_error("无权访问这个上传任务", 403)
+    total_parts = int(meta["total_parts"])
+    if index < 0 or index >= total_parts:
+        return _json_error("分片序号非法", 400)
+
+    data = request.get_data(cache=False)
+    if not data:
+        return _json_error("分片为空", 400)
+    if len(data) > APK_CHUNK_MAX_BYTES:
+        return _json_error(
+            f"单个分片超过上限 {APK_CHUNK_MAX_BYTES // (1024 * 1024)} MB", 413
+        )
+
+    size = int(meta["size"])
+    chunk_size = int(meta["chunk_size"])
+    expected_size = min(chunk_size, size - index * chunk_size)
+    if len(data) != expected_size:
+        return _json_error("分片大小不匹配，请重新上传", 400)
+
+    upload_dir = _upload_dir(upload_id)
+    part_path = upload_dir / f"{index:06d}.part"
+    tmp_path = upload_dir / f"{index:06d}.part.tmp"
+    tmp_path.write_bytes(data)
+    tmp_path.replace(part_path)
+    meta["received"][str(index)] = len(data)
+    meta["updated_at"] = int(time.time())
+    _write_upload_meta(upload_id, meta)
+    return jsonify({"ok": True, "index": index, "bytes": len(data)})
+
+
+@app.route("/api/admin/apk/uploads/<upload_id>/complete", methods=["POST"])
+def api_complete_apk_upload(upload_id: str):
+    user = require_user()
+    meta = _read_upload_meta(upload_id)
+    if meta.get("created_by") != user:
+        return _json_error("无权访问这个上传任务", 403)
+
+    upload_dir = _upload_dir(upload_id)
+    total_parts = int(meta["total_parts"])
+    size = int(meta["size"])
+    chunk_size = int(meta["chunk_size"])
+    merged_path = str(upload_dir / "merged.apk")
+    digest = hashlib.sha256()
+    total = 0
+    first_bytes = b""
+
+    try:
+        with open(merged_path, "wb") as out:
+            for index in range(total_parts):
+                part_path = upload_dir / f"{index:06d}.part"
+                if not part_path.is_file():
+                    return _json_error(f"缺少分片 {index + 1}/{total_parts}", 400)
+                expected_size = min(chunk_size, size - index * chunk_size)
+                actual_size = part_path.stat().st_size
+                if actual_size != expected_size:
+                    return _json_error(f"分片 {index + 1} 大小不匹配", 400)
+                with open(part_path, "rb") as part:
+                    while True:
+                        chunk = part.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        if not first_bytes:
+                            first_bytes = chunk[:4]
+                        digest.update(chunk)
+                        total += len(chunk)
+                        out.write(chunk)
+
+        if total != size:
+            return _json_error("合并后的 APK 大小不匹配", 400)
+        if not first_bytes.startswith(b"PK"):
+            return _json_error("文件内容不像有效 APK（APK 应为 ZIP 容器）", 400)
+
+        metadata = _publish_apk_file(
+            apk_path=merged_path,
+            size=size,
+            sha256=digest.hexdigest(),
+            original_name=meta["filename"],
+            version_name=meta.get("version_name", ""),
+            build_number=meta.get("build_number", ""),
+            release_notes=meta.get("release_notes", ""),
+            user=user,
+        )
+        shutil.rmtree(upload_dir, ignore_errors=True)
+        return jsonify({"ok": True, "metadata": metadata, "release": _apk_release_state()})
+    except Exception as e:
+        return _json_error(f"APK 发布失败：{e}", 500)
+
+
+@app.route("/api/admin/apk/uploads/<upload_id>", methods=["DELETE"])
+def api_abort_apk_upload(upload_id: str):
+    user = require_user()
+    meta = _read_upload_meta(upload_id)
+    if meta.get("created_by") != user:
+        return _json_error("无权访问这个上传任务", 403)
+    shutil.rmtree(_upload_dir(upload_id), ignore_errors=True)
+    return jsonify({"ok": True})
 
 
 def _flash(msg: str, kind: str = "ok"):
