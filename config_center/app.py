@@ -432,6 +432,15 @@ def _validate_apk_request(filename: str, size: int | None = None) -> str:
     return clean
 
 
+def _effective_chunk_max_bytes() -> int:
+    return max(1024 * 1024, APK_CHUNK_MAX_BYTES)
+
+
+def _effective_chunk_bytes() -> int:
+    preferred = max(1024 * 1024, APK_CHUNK_BYTES)
+    return min(preferred, _effective_chunk_max_bytes())
+
+
 def _publish_apk_file(
     *,
     apk_path: str,
@@ -831,7 +840,7 @@ def api_create_apk_upload():
 
     upload_id = uuid.uuid4().hex
     size = int(payload.get("size") or 0)
-    chunk_size = max(1024 * 1024, min(APK_CHUNK_BYTES, APK_CHUNK_MAX_BYTES))
+    chunk_size = _effective_chunk_bytes()
     total_parts = (size + chunk_size - 1) // chunk_size
     now = int(time.time())
     meta = {
@@ -875,9 +884,10 @@ def api_upload_apk_chunk(upload_id: str, index: int):
     data = request.get_data(cache=False)
     if not data:
         return _json_error("分片为空", 400)
-    if len(data) > APK_CHUNK_MAX_BYTES:
+    chunk_max_bytes = _effective_chunk_max_bytes()
+    if len(data) > chunk_max_bytes:
         return _json_error(
-            f"单个分片超过上限 {APK_CHUNK_MAX_BYTES // (1024 * 1024)} MB", 413
+            f"单个分片超过上限 {chunk_max_bytes // (1024 * 1024)} MB", 413
         )
 
     size = int(meta["size"])
