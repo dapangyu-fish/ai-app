@@ -838,8 +838,14 @@ def _build_cli_cmd(
 
 def _provider_env(provider_id: Optional[str]) -> Tuple[dict, dict]:
     """返回 (provider_dict, env_dict_for_subprocess)"""
-    pid = provider_id or DEFAULT_PROVIDER
-    provider = AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
+    pid = (provider_id or DEFAULT_PROVIDER).strip().lower().replace("_", "-")
+    provider = AI_PROVIDERS.get(pid)
+    if not provider:
+        raise ValueError(f"未知 AI 供应商: {pid}")
+    if not provider.get("configured"):
+        raise ValueError(f"AI 供应商未配置: {pid}")
+    if not provider.get("visible", True):
+        raise ValueError(f"AI 供应商当前不可用: {pid}")
     cli_env = provider.get("cli_env", {})
     env = os.environ.copy()
     for k, v in cli_env.items():

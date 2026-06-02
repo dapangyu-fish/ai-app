@@ -117,14 +117,27 @@ def _authenticate_stream_reader(session_id: str):
     return str(user.get("id", ""))
 
 
+def _normalize_provider_id(provider_id=None):
+    return (provider_id or DEFAULT_PROVIDER).strip().lower().replace("_", "-") or DEFAULT_PROVIDER
+
+
 def _get_provider(provider_id=None):
-    pid = provider_id or DEFAULT_PROVIDER
-    return AI_PROVIDERS.get(pid, AI_PROVIDERS[DEFAULT_PROVIDER])
+    pid = _normalize_provider_id(provider_id)
+    cfg = AI_PROVIDERS.get(pid)
+    if not cfg:
+        raise ValueError(f"未知 AI 供应商: {pid}")
+    if not cfg.get("configured"):
+        raise ValueError(f"AI 供应商未配置: {pid}")
+    if not cfg.get("visible", True):
+        raise ValueError(f"AI 供应商当前不可用: {pid}")
+    return cfg
 
 def list_providers():
     """获取所有可用的 AI 供应商列表"""
     providers = []
     for pid, cfg in AI_PROVIDERS.items():
+        if not cfg.get("visible", True):
+            continue
         providers.append({
             "id": cfg["id"],
             "name": cfg["name"],
@@ -240,7 +253,11 @@ def chat():
         logger.error(f"[CHAT] 未找到用户消息")
         return jsonify({"error": "未找到用户消息"}), 400
 
-    provider = _get_provider(provider_id)
+    try:
+        provider = _get_provider(provider_id)
+    except ValueError as e:
+        logger.warning(f"[CHAT] provider rejected: {e}")
+        return jsonify({"error": str(e), "code": "AI_PROVIDER_UNAVAILABLE"}), 400
     logger.info(f"[CHAT] 使用 AI 供应商: {provider.get('name', provider_id)}")
 
     cli_env = provider.get("cli_env", {})
@@ -655,6 +672,13 @@ def chat_start():
     if not last_msg:
         return jsonify({"error": "未找到用户消息"}), 400
 
+    try:
+        provider = _get_provider(provider_id)
+    except ValueError as e:
+        logger.warning(f"[CHAT_START] provider rejected: {e}")
+        return jsonify({"error": str(e), "code": "AI_PROVIDER_UNAVAILABLE"}), 400
+    provider_id = provider["id"]
+
     store = ai_session.SessionStore()
     existing = store.get_meta(session_id)
 
@@ -708,7 +732,7 @@ def chat_start():
     store.create_meta(
         session_id,
         user_id=user_id,
-        provider=provider_id or DEFAULT_PROVIDER,
+        provider=provider_id,
         quota_used=used + 1,
         quota_limit=limit,
         quota_remaining=new_remaining,

@@ -54,13 +54,15 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "base_url": "https://api.deepseek.com/anthropic",
         "model": "deepseek-v4-pro[1m]",
         "auth_env_fallbacks": (),
+        "visible": "1",
     },
     "minimax": {
         "name": "MiniMax M3",
-        "description": "MiniMax Anthropic-compatible Claude Code provider",
+        "description": "MiniMax Anthropic-compatible Claude Code provider (experimental)",
         "base_url": "https://api.minimaxi.com/anthropic",
         "model": "MiniMax-M3",
         "auth_env_fallbacks": (),
+        "visible": "0",
     },
 }
 
@@ -80,6 +82,16 @@ def _provider_id_from_prefix(prefix: str) -> str:
 def _env_for_prefix(prefix: str, key: str, default: str = "") -> str:
     value = os.environ.get(f"{prefix}_{key}")
     return value if value is not None else default
+
+
+def _env_bool_for_prefix(prefix: str, key: str, default: str = "1") -> bool:
+    value = os.environ.get(f"{prefix}_{key}")
+    if value is None and key == "PROVIDER_VISIBLE":
+        value = os.environ.get(f"{prefix}_VISIBLE")
+    if value is None:
+        value = default
+    value = value.strip().lower()
+    return value not in {"0", "false", "no", "off", "disabled", "hidden"}
 
 
 def _provider_auth_token(provider_id: str, prefix: str, builtin: dict) -> str:
@@ -189,6 +201,11 @@ def _build_anthropic_provider(provider_id: str) -> dict:
         "cli_env": cli_env,
         "cli_model": model,
         "configured": bool(base_url and auth_token and model),
+        "visible": _env_bool_for_prefix(
+            prefix,
+            "PROVIDER_VISIBLE",
+            builtin.get("visible", "1"),
+        ),
     }
 
 
@@ -198,8 +215,17 @@ AI_PROVIDERS = {
 }
 
 DEFAULT_PROVIDER = os.environ.get("AI_DEFAULT_PROVIDER", "deepseek").strip().lower().replace("_", "-") or "deepseek"
-if DEFAULT_PROVIDER not in AI_PROVIDERS:
-    DEFAULT_PROVIDER = "deepseek" if "deepseek" in AI_PROVIDERS else next(iter(AI_PROVIDERS))
+_VISIBLE_PROVIDER_IDS = [
+    provider_id for provider_id, provider in AI_PROVIDERS.items()
+    if provider.get("visible", True)
+]
+if DEFAULT_PROVIDER not in AI_PROVIDERS or not AI_PROVIDERS[DEFAULT_PROVIDER].get("visible", True):
+    if "deepseek" in _VISIBLE_PROVIDER_IDS:
+        DEFAULT_PROVIDER = "deepseek"
+    elif _VISIBLE_PROVIDER_IDS:
+        DEFAULT_PROVIDER = _VISIBLE_PROVIDER_IDS[0]
+    else:
+        DEFAULT_PROVIDER = "deepseek" if "deepseek" in AI_PROVIDERS else next(iter(AI_PROVIDERS))
 
 # Registry 配置 —— 给 store.py 和 AI prompt 渲染用。
 # 测试环境 docker compose 会注入 http://IP:port 覆盖；生产保持默认即可。

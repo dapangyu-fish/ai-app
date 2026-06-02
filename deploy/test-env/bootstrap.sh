@@ -484,6 +484,7 @@ append_provider_env() {
   append_provider_line "${prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL" "$haiku_model"
   append_provider_line "${prefix}_CLAUDE_CODE_SUBAGENT_MODEL" "$subagent_model"
   append_provider_line "${prefix}_CLAUDE_CODE_EFFORT_LEVEL" "$effort_level"
+  append_provider_line "${prefix}_PROVIDER_VISIBLE" "1"
 }
 
 # ───────── banner ─────────
