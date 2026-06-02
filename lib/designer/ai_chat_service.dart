@@ -170,24 +170,8 @@ class AiChatService {
   static List<AiProvider> get providers => _providers;
   static List<AiAgent> get agents => _agents;
 
-  /// AI 输出里允许夹带少量控制标签供客户端解析，但这些标签不应该直接展示给用户。
-  ///
-  /// 注意：这里只清理展示文本，不改变内部 accumulated 原文；原文仍用于
-  /// _emitTrailingTags 解析下载 URL / 请求动作。
-  static String cleanAssistantDisplayText(String text) {
-    var out = text;
-    out = out.replaceAll(
-      RegExp(r'\[json_app_url\][\s\S]*?(?:\[/json_app_url\]|$)'),
-      '',
-    );
-    out = out.replaceAll(
-      RegExp(r'\[request_action\][\s\S]*?(?:\[/request_action\]|$)'),
-      '',
-    );
-    out = out.replaceAll(RegExp(r'[ \t]+\n'), '\n');
-    out = out.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    return out.trim();
-  }
+  /// Assistant 文本必须原样展示；协议标签解析只用于额外动作，不改变展示文本。
+  static String cleanAssistantDisplayText(String text) => text;
 
   static Future<void> loadProvider() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1163,24 +1147,21 @@ class AiChatService {
       final thinking = data['final_thinking'] as String? ?? '';
       if (finalText.isEmpty && thinking.isEmpty) return const ResumeNothing();
 
-      // 解析 [json_app_url]…[/json_app_url]（与 _emitTrailingTags 同一份正则）
+      // 只接受逐字符正确的协议标签；格式不对就原样展示，不兜底抽取 URL。
       String? jsonUrl;
       final urlMatch = RegExp(
-        r'\[json_app_url\]([^\[]+?)\[/json_app_url\]',
+        r'\[json_app_url\](https?://[^\s\]\[\)\(\<\>"]+)\[/json_app_url\]',
       ).firstMatch(finalText);
       if (urlMatch != null) {
-        final raw = urlMatch.group(1)!.trim();
-        final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
-        jsonUrl = httpMatch?.group(0) ?? raw;
+        jsonUrl = urlMatch.group(1)!;
       }
-      // 解析 [request_action]xxx[/request_action]（之前漏了 → 杀进程后回来 UPLOAD 不出来 P0 bug）
+      // 只接受当前客户端真正支持的动作；其他动作名原样展示，不兜底执行。
       String? requestAction;
       final actionMatch = RegExp(
-        r'\[request_action\]([^\]]+)\[/request_action\]',
+        r'\[request_action\]upload_current_app\[/request_action\]',
       ).firstMatch(finalText);
       if (actionMatch != null) {
-        final action = actionMatch.group(1)!.trim();
-        if (action.isNotEmpty) requestAction = action;
+        requestAction = 'upload_current_app';
       }
       return ResumeCompleted(
         userMessage: active.lastUserMessage,
@@ -1488,12 +1469,12 @@ class AiChatService {
     );
 
     // 1. [json_app_url]…[/json_app_url] - 等用户确认下载
-    final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
+    final urlRegex = RegExp(
+      r'\[json_app_url\](https?://[^\s\]\[\)\(\<\>"]+)\[/json_app_url\]',
+    );
     final urlMatch = urlRegex.firstMatch(accumulated);
     if (urlMatch != null) {
-      final raw = urlMatch.group(1)!.trim();
-      final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
-      final url = httpMatch?.group(0) ?? raw;
+      final url = urlMatch.group(1)!;
       debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
       yield ChatEvent(pendingJsonUrl: url);
     } else if (accumulated.contains('json_app_url')) {
@@ -1502,22 +1483,14 @@ class AiChatService {
       );
     }
 
-    // 2. [request_action]xxx[/request_action]
-    // .trim() 防 AI 偶尔在 tag 内夹换行/空格，designer_ball 那边走 == 严格比较
+    // 2. [request_action]upload_current_app[/request_action]
     final actionRegex = RegExp(
-      r'\[request_action\]([^\]]+)\[/request_action\]',
+      r'\[request_action\]upload_current_app\[/request_action\]',
     );
     final actionMatch = actionRegex.firstMatch(accumulated);
     if (actionMatch != null) {
-      final action = actionMatch.group(1)!.trim();
-      if (action.isNotEmpty) {
-        debugPrint(
-          '[AI_CHAT] 流结束，检测到 request_action: "$action" (len=${action.length})',
-        );
-        yield ChatEvent(requestAction: action);
-      } else {
-        debugPrint('[AI_CHAT] ⚠️ request_action regex 匹中但 trim 后为空');
-      }
+      debugPrint('[AI_CHAT] 流结束，检测到 request_action: upload_current_app');
+      yield ChatEvent(requestAction: 'upload_current_app');
     } else if (accumulated.contains('request_action')) {
       // 诊断：accumulated 里有 request_action 字样但正则没匹中，把闭合标签前后的 100 字节贴出来，方便排查
       final idx = accumulated.lastIndexOf('request_action');
