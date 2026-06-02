@@ -89,20 +89,26 @@ class AiProvider {
   final String name;
   final String description;
   final String defaultModel;
+  final List<String> supportedAgentIds;
 
   AiProvider({
     required this.id,
     required this.name,
     required this.description,
     required this.defaultModel,
+    required this.supportedAgentIds,
   });
 
   factory AiProvider.fromJson(Map<String, dynamic> json) {
+    final supportedAgents = json['supported_agents'] as List<dynamic>?;
     return AiProvider(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
       defaultModel: json['default_model'] as String? ?? '',
+      supportedAgentIds:
+          supportedAgents?.map((e) => e.toString()).toList() ??
+          const ['claude'],
     );
   }
 }
@@ -137,6 +143,7 @@ class AiChatService {
   static String get _baseUrl => AppConfig.backendUrl;
   static const String _providerKey = 'ai_provider';
   static const String _agentKey = 'ai_agent';
+  static const String _agentByProviderKey = 'ai_agent_by_provider';
   // 多会话存储：列表 + 当前 active sid
   static const String _sessionsListKey = 'ai_sessions_list';
   static const String _activeSessionKey = 'ai_active_session_id';
@@ -146,7 +153,7 @@ class AiChatService {
   static const String _legacyLastUserMessageKey = 'ai_last_user_message';
 
   static String _selectedProvider = 'deepseek';
-  static String _selectedAgent = 'claude';
+  static final Map<String, String> _selectedAgentsByProvider = {};
   static List<AiProvider> _providers = [];
   static List<AiAgent> _agents = [
     AiAgent(
@@ -158,7 +165,8 @@ class AiChatService {
   ];
 
   static String get selectedProvider => _selectedProvider;
-  static String get selectedAgent => _selectedAgent;
+  static String get selectedAgent =>
+      selectedAgentForProvider(_selectedProvider);
   static List<AiProvider> get providers => _providers;
   static List<AiAgent> get agents => _agents;
 
@@ -184,7 +192,25 @@ class AiChatService {
   static Future<void> loadProvider() async {
     final prefs = await SharedPreferences.getInstance();
     _selectedProvider = prefs.getString(_providerKey) ?? 'deepseek';
-    _selectedAgent = prefs.getString(_agentKey) ?? 'claude';
+    _selectedAgentsByProvider.clear();
+    final byProviderJson = prefs.getString(_agentByProviderKey);
+    if (byProviderJson != null && byProviderJson.isNotEmpty) {
+      try {
+        final decoded = json.decode(byProviderJson) as Map<String, dynamic>;
+        decoded.forEach((key, value) {
+          if (key.isNotEmpty && value is String && value.isNotEmpty) {
+            _selectedAgentsByProvider[key] = value;
+          }
+        });
+      } catch (_) {}
+    }
+    final legacyAgent = prefs.getString(_agentKey);
+    if (legacyAgent != null && legacyAgent.isNotEmpty) {
+      _selectedAgentsByProvider.putIfAbsent(
+        _selectedProvider,
+        () => legacyAgent,
+      );
+    }
   }
 
   static Future<void> setProvider(String providerId) async {
@@ -194,9 +220,35 @@ class AiChatService {
   }
 
   static Future<void> setAgent(String agentId) async {
-    _selectedAgent = agentId;
+    await setAgentForProvider(_selectedProvider, agentId);
+  }
+
+  static Future<void> setAgentForProvider(
+    String providerId,
+    String agentId,
+  ) async {
+    _selectedAgentsByProvider[providerId] = agentId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_agentKey, agentId);
+    await prefs.setString(
+      _agentByProviderKey,
+      json.encode(_selectedAgentsByProvider),
+    );
+  }
+
+  static String selectedAgentForProvider(String providerId) {
+    AiProvider? provider;
+    for (final candidate in _providers) {
+      if (candidate.id == providerId) {
+        provider = candidate;
+        break;
+      }
+    }
+    final supported = provider?.supportedAgentIds ?? const ['claude'];
+    final saved = _selectedAgentsByProvider[providerId];
+    if (saved != null && supported.contains(saved)) return saved;
+    if (supported.contains('claude')) return 'claude';
+    return supported.isNotEmpty ? supported.first : 'claude';
   }
 
   static Future<List<AiProvider>> fetchProviders() async {
@@ -225,9 +277,6 @@ class AiChatService {
         _agents = (data['agents'] as List<dynamic>)
             .map((e) => AiAgent.fromJson(e as Map<String, dynamic>))
             .toList();
-        if (_agents.every((agent) => agent.id != _selectedAgent)) {
-          _selectedAgent = data['default_agent'] as String? ?? 'claude';
-        }
         return _agents;
       }
     } catch (_) {}
@@ -1515,7 +1564,7 @@ class AiChatService {
           ],
           'session_id': _activeSessionId,
           'provider': _selectedProvider,
-          'agent': _selectedAgent,
+          'agent': selectedAgent,
           'force_restart': forceRestart,
         });
         var resp = await http
@@ -1710,7 +1759,7 @@ class AiChatService {
         if (currentApp != null) 'current_app': currentApp,
         if (crashLog != null) 'crash_log': crashLog,
         'provider': _selectedProvider,
-        'agent': _selectedAgent,
+        'agent': selectedAgent,
       });
 
       final response = await client

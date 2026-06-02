@@ -172,12 +172,19 @@ def list_providers():
     for pid, cfg in AI_PROVIDERS.items():
         if not cfg.get("visible", True):
             continue
+        supported_agents = [
+            aid for aid, agent in AI_AGENTS.items()
+            if agent.get("visible", True)
+            and agent.get("configured", False)
+            and _provider_supports_agent(cfg, aid)
+        ]
         providers.append({
             "id": cfg["id"],
             "name": cfg["name"],
             "description": cfg.get("description", ""),
             "default_model": cfg["models"]["default"],
             "configured": bool(cfg.get("configured", False)),
+            "supported_agents": supported_agents or ["claude"],
         })
     return jsonify({"providers": providers})
 

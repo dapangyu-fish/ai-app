@@ -23,11 +23,9 @@ class _SettingsPageState extends State<SettingsPage> {
   AsrMode _asrMode = AsrMode.online;
   ThemeMode _themeMode = appThemeMode.value;
   String _selectedProvider = AiChatService.selectedProvider;
-  String _selectedAgent = AiChatService.selectedAgent;
   List<AiProvider> _providers = AiChatService.providers;
   List<AiAgent> _agents = AiChatService.agents;
   bool _loadingProviders = false;
-  bool _loadingAgents = false;
 
   // 默认启动 App 当前选择（subtitle 展示用，进选择页改完再 reload）
   DefaultStartupConfig _defaultStartup = const DefaultStartupConfig.none();
@@ -52,7 +50,6 @@ class _SettingsPageState extends State<SettingsPage> {
       _asrMode = AsrModePrefs.notifier.value;
       _themeMode = appThemeMode.value;
       _selectedProvider = AiChatService.selectedProvider;
-      _selectedAgent = AiChatService.selectedAgent;
     });
   }
 
@@ -68,13 +65,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _fetchAgents() async {
-    setState(() => _loadingAgents = true);
     final agents = await AiChatService.fetchAgents();
     if (mounted) {
       setState(() {
         _agents = agents;
-        _selectedAgent = AiChatService.selectedAgent;
-        _loadingAgents = false;
       });
     }
   }
@@ -103,10 +97,11 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  Future<void> _selectAgent(String agentId) async {
-    await AiChatService.setAgent(agentId);
+  Future<void> _selectProviderAgent(String providerId, String agentId) async {
+    await AiChatService.setProvider(providerId);
+    await AiChatService.setAgentForProvider(providerId, agentId);
     setState(() {
-      _selectedAgent = agentId;
+      _selectedProvider = providerId;
     });
   }
 
@@ -137,8 +132,6 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildSectionTitle(t.settingsAiProvider, cs),
             const SizedBox(height: 8.0),
             _buildProviderSelector(cs),
-            const SizedBox(height: 8.0),
-            _buildAgentSelector(cs),
             const SizedBox(height: 24.0),
             _buildSectionTitle(t.settingsSectionAsr, cs),
             const SizedBox(height: 8.0),
@@ -329,29 +322,85 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         children: _providers.map((provider) {
           final selected = provider.id == _selectedProvider;
-          return RadioListTile<String>(
-            value: provider.id,
-            groupValue: _selectedProvider,
-            onChanged: (value) {
-              if (value != null) _selectProvider(value);
-            },
-            title: Text(
-              provider.name,
-              style: TextStyle(
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          final agents = _agentsForProvider(provider);
+          final selectedAgent =
+              agents.any(
+                (agent) =>
+                    agent.id ==
+                    AiChatService.selectedAgentForProvider(provider.id),
+              )
+              ? AiChatService.selectedAgentForProvider(provider.id)
+              : agents.first.id;
+          return InkWell(
+            onTap: () => _selectProvider(provider.id),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+              child: Row(
+                children: [
+                  Icon(
+                    selected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: selected ? cs.primary : cs.outline,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          provider.name,
+                          style: TextStyle(
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          provider.description.isNotEmpty
+                              ? '${provider.description} (${provider.defaultModel})'
+                              : T.fmt(T.of(context).settingsModelWith, {
+                                  'model': provider.defaultModel,
+                                }),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 128,
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedAgent,
+                        isExpanded: true,
+                        items: agents.map((agent) {
+                          return DropdownMenuItem<String>(
+                            value: agent.id,
+                            child: Text(
+                              agent.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            _selectProviderAgent(provider.id, value);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            subtitle: Text(
-              provider.description.isNotEmpty
-                  ? '${provider.description} (${provider.defaultModel})'
-                  : T.fmt(T.of(context).settingsModelWith, {
-                      'model': provider.defaultModel,
-                    }),
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
-            ),
-            secondary: Icon(
-              Icons.smart_toy,
-              color: selected ? cs.primary : cs.outline,
             ),
           );
         }).toList(),
@@ -359,88 +408,23 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildAgentSelector(ColorScheme cs) {
-    final t = T.of(context);
-    if (_loadingAgents && _agents.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Center(child: CircularProgressIndicator()),
-        ),
+  List<AiAgent> _agentsForProvider(AiProvider provider) {
+    final ids = provider.supportedAgentIds.isEmpty
+        ? const ['claude']
+        : provider.supportedAgentIds;
+    final result = <AiAgent>[];
+    for (final id in ids) {
+      AiAgent? agent;
+      for (final candidate in _agents) {
+        if (candidate.id == id) {
+          agent = candidate;
+          break;
+        }
+      }
+      result.add(
+        agent ?? AiAgent(id: id, name: id, description: '', configured: true),
       );
     }
-
-    if (_agents.isEmpty) {
-      return Card(
-        child: ListTile(
-          leading: const Icon(Icons.psychology_alt_outlined),
-          title: Text(t.settingsAiAgent),
-          subtitle: Text(t.settingsAgentsFallback),
-          trailing: IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchAgents,
-          ),
-        ),
-      );
-    }
-
-    final selectedAgent = _agents.any((agent) => agent.id == _selectedAgent)
-        ? _selectedAgent
-        : _agents.first.id;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 16),
-        child: Row(
-          children: [
-            Icon(Icons.psychology_alt_outlined, color: cs.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: selectedAgent,
-                decoration: InputDecoration(
-                  labelText: t.settingsAiAgent,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                items: _agents.map((agent) {
-                  return DropdownMenuItem<String>(
-                    value: agent.id,
-                    enabled: agent.configured,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(agent.name),
-                        if (agent.description.isNotEmpty || !agent.configured)
-                          Text(
-                            agent.configured
-                                ? agent.description
-                                : '${agent.description} · ${t.settingsAgentUnavailable}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: cs.onSurfaceVariant,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) _selectAgent(value);
-                },
-                isExpanded: true,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _fetchAgents,
-            ),
-          ],
-        ),
-      ),
-    );
+    return result;
   }
 }
