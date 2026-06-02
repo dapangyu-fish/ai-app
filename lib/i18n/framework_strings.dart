@@ -43,12 +43,12 @@ class _Strings {
 
   // ── 登录 / 注册 ──
   final String authLoginTitle;
-  final String authLoginSubtitle;        // 登录页大标题下的副标题
+  final String authLoginSubtitle; // 登录页大标题下的副标题
   final String authRegisterTitle;
-  final String authRegisterSubtitle;     // 注册页大标题下的副标题
-  final String authVerifyTitle;          // AppBar title
-  final String authVerifyPageHeading;    // OTP 页大标题（页内 H1）
-  final String authVerifyCodeSentTo;     // "验证码已发送到 {email}" — 有 {email} 占位符
+  final String authRegisterSubtitle; // 注册页大标题下的副标题
+  final String authVerifyTitle; // AppBar title
+  final String authVerifyPageHeading; // OTP 页大标题（页内 H1）
+  final String authVerifyCodeSentTo; // "验证码已发送到 {email}" — 有 {email} 占位符
   final String authEmailHint;
   final String authPasswordHint;
   final String authPasswordConfirmHint;
@@ -59,9 +59,9 @@ class _Strings {
   final String authRegisterButton;
   final String authVerifyButton;
   final String authResendCodeButton;
-  final String authResendCodePrompt;     // "没收到？重新发送验证码"
-  final String authNoAccountPrompt;      // "还没有账户？"（前缀，跟独立按钮配合）
-  final String authHasAccountPrompt;     // "已有账户？"
+  final String authResendCodePrompt; // "没收到？重新发送验证码"
+  final String authNoAccountPrompt; // "还没有账户？"（前缀，跟独立按钮配合）
+  final String authHasAccountPrompt; // "已有账户？"
   final String authSwitchToRegister;
   final String authSwitchToLogin;
   final String authForgotPassword;
@@ -80,38 +80,38 @@ class _Strings {
 
   // ── 主页 ──
   final String homeAppTitle;
-  final String homeWelcome;          // "Hi, {name}"
-  final String homeSubtitle;         // 探索和运行你的应用
-  final String homeMarket;           // 应用市场
-  final String homeMarketSubtitle;   // 发现精彩应用
-  final String homeMyApps;           // 我的 APP
-  final String homeMyAppsSubtitle;   // 历史记录
-  final String homeMessages;         // 消息
+  final String homeWelcome; // "Hi, {name}"
+  final String homeSubtitle; // 探索和运行你的应用
+  final String homeMarket; // 应用市场
+  final String homeMarketSubtitle; // 发现精彩应用
+  final String homeMyApps; // 我的 APP
+  final String homeMyAppsSubtitle; // 历史记录
+  final String homeMessages; // 消息
   final String homeMessagesSubtitle; // 查看会话与好友消息
-  final String homeUnreadCount;      // "{n} 条未读"
-  final String homePickFile;         // 选择本地文件
+  final String homeUnreadCount; // "{n} 条未读"
+  final String homePickFile; // 选择本地文件
   final String homePickFileSubtitle; // 从设备导入 JSON 配置
-  final String homeImLoginFailed;    // IM 连接失败，请稍后重试
+  final String homeImLoginFailed; // IM 连接失败，请稍后重试
 
   // ── 新手引导（coachmark）──
-  final String onboardingNext;          // 下一步
-  final String onboardingDone;          // 完成
-  final String onboardingSkip;          // 跳过
-  final String onboardingReplayMenu;    // 用户菜单里"再看新手引导"
-  final String onboardingStep1Title;    // 设计师悬浮球
+  final String onboardingNext; // 下一步
+  final String onboardingDone; // 完成
+  final String onboardingSkip; // 跳过
+  final String onboardingReplayMenu; // 用户菜单里"再看新手引导"
+  final String onboardingStep1Title; // 设计师悬浮球
   final String onboardingStep1Body;
-  final String onboardingStep2Title;    // 用户菜单
+  final String onboardingStep2Title; // 用户菜单
   final String onboardingStep2Body;
-  final String onboardingStep3Title;    // 应用市场
+  final String onboardingStep3Title; // 应用市场
   final String onboardingStep3Body;
-  final String onboardingStep4Title;    // 我的 APP
+  final String onboardingStep4Title; // 我的 APP
   final String onboardingStep4Body;
-  final String onboardingStep5Title;    // 消息
+  final String onboardingStep5Title; // 消息
   final String onboardingStep5Body;
   // ── 配置中心熔断（remote config pause_*）──
-  final String errPauseLogin;        // 服务端压力过大，请稍后重试登录
-  final String errPauseRegister;     // 服务端压力过大，请稍后重试注册
-  final String errPauseRequest;      // 服务端压力过大，请稍后重试
+  final String errPauseLogin; // 服务端压力过大，请稍后重试登录
+  final String errPauseRegister; // 服务端压力过大，请稍后重试注册
+  final String errPauseRequest; // 服务端压力过大，请稍后重试
 
   // ── 用户菜单 ──
   final String userMenuProfile;
@@ -122,7 +122,7 @@ class _Strings {
   final String profileEditAvatar;
   final String profileSavedSuccess;
   final String profileSaveFailed;
-  final String profileSaveFailedWith;   // "失败：{msg}" — 有 {msg} 占位
+  final String profileSaveFailedWith; // "失败：{msg}" — 有 {msg} 占位
 
   // ── 用户角色徽章 ──
   final String roleUser;
@@ -158,6 +158,9 @@ class _Strings {
   final String settingsThemeLight;
   final String settingsThemeDark;
   final String settingsAiProvider;
+  final String settingsAiAgent;
+  final String settingsAgentUnavailable;
+  final String settingsAgentsFallback;
   final String settingsAbout;
   final String settingsVersion;
 
@@ -165,7 +168,7 @@ class _Strings {
   final String addToMyAppsTitle;
   final String addToMyAppsContent;
   final String addToMyAppsAdded;
-  final String saveFailedWith;          // "保存失败：{msg}"
+  final String saveFailedWith; // "保存失败：{msg}"
 
   // ── 市场删除 / 上架 / 作者 ──
   final String marketDeleteConfirmTitle;
@@ -173,12 +176,12 @@ class _Strings {
   final String marketDeleting;
   final String marketDeleteSuccess;
   final String marketDeleteFailed;
-  final String marketDeleteFailedWith;     // 含 {msg}
+  final String marketDeleteFailedWith; // 含 {msg}
   final String marketUnpublishTooltip;
-  final String marketAuthor;               // 含 {author}
+  final String marketAuthor; // 含 {author}
 
   // ── 我的 APP 收尾 ──
-  final String myAppsEmptyHint;            // 空态副提示
+  final String myAppsEmptyHint; // 空态副提示
   final String myAppsUploadTooltip;
   final String myAppsUploading;
   final String myAppsPublishSuccess;
@@ -204,8 +207,8 @@ class _Strings {
   final String publishVersionInvalid;
   final String publishNamespaceRequired;
   final String publishUuidConflictTitle;
-  final String publishUuidConflictContent;  // 含 {pkg}
-  final String publishFailedWithCode;        // 含 {code}
+  final String publishUuidConflictContent; // 含 {pkg}
+  final String publishFailedWithCode; // 含 {code}
 
   // ── 通用提示 ──
   final String create;
@@ -216,7 +219,7 @@ class _Strings {
 
   // ── 崩溃页 / 渲染错误 ──
   final String crashTitle;
-  final String crashSubtitle;          // "{file} 运行崩溃"
+  final String crashSubtitle; // "{file} 运行崩溃"
   final String crashCopied;
   final String crashAiFix;
   final String uiRenderCrash;
@@ -227,15 +230,15 @@ class _Strings {
   final String errorGeneric;
   final String errorNoNetwork;
   final String errorNotLoggedIn;
-  final String errorNetworkWith;        // "网络错误：{msg}"
-  final String errorServerWithCode;     // "服务器错误 ({code})"
+  final String errorNetworkWith; // "网络错误：{msg}"
+  final String errorServerWithCode; // "服务器错误 ({code})"
 
   // ── IM 消息预览 / 系统消息 fallback ──
   final String imPreviewImage;
   final String imPreviewVoice;
   final String imPreviewVideo;
   final String imPreviewFile;
-  final String imPreviewFileWithName;     // "[文件] {name}"
+  final String imPreviewFileWithName; // "[文件] {name}"
   final String imPreviewLocation;
   final String imPreviewCard;
   final String imPreviewMerger;
@@ -248,7 +251,7 @@ class _Strings {
   final String imPreviewSystem;
   final String imPreviewBurnAfterRead;
   final String imPreviewRevoked;
-  final String imPreviewUnknown;          // "[未知消息: {type}]"
+  final String imPreviewUnknown; // "[未知消息: {type}]"
 
   // ── IM 好友系统消息 ──
   final String imSysFriendApplyAccepted;
@@ -293,7 +296,7 @@ class _Strings {
   final String imEmptyMessagesHint;
   final String imUnknownPeer;
   final String imConfirmDeleteTitle;
-  final String imDeleteConversationContent;   // "删除与 {name} 的会话？"
+  final String imDeleteConversationContent; // "删除与 {name} 的会话？"
   final String imPin;
   final String imUnpin;
   final String imMarkRead;
@@ -301,9 +304,9 @@ class _Strings {
 
   // ── IM 时间相对 ──
   final String imTimeJustNow;
-  final String imTimeMinutesAgo;          // "{n}分钟前"
+  final String imTimeMinutesAgo; // "{n}分钟前"
   final String imTimeYesterday;
-  final String imTimeDaysAgo;             // "{n}天前"
+  final String imTimeDaysAgo; // "{n}天前"
 
   // ── IM 聊天页 ──
   final String imGroupChat;
@@ -337,11 +340,11 @@ class _Strings {
   final String ballMenuGoHome;
 
   // ── 默认启动 App 设置 ──
-  final String defaultStartupEntry;        // 设置页入口标题
+  final String defaultStartupEntry; // 设置页入口标题
   final String defaultStartupSubtitleNone; // subtitle 没选时的占位
-  final String defaultStartupTitle;        // 选择页标题
-  final String defaultStartupHint;         // 选择页顶部说明
-  final String defaultStartupNoneOption;   // "无（用 MyApp 首页）"
+  final String defaultStartupTitle; // 选择页标题
+  final String defaultStartupHint; // 选择页顶部说明
+  final String defaultStartupNoneOption; // "无（用 MyApp 首页）"
   final String defaultStartupTabMarket;
   final String defaultStartupTabLocal;
   final String defaultStartupEmptyMarket;
@@ -361,7 +364,7 @@ class _Strings {
   final String imEmptyFriends;
   final String imEmptyFriendsHint;
   final String imDeleteFriendTitle;
-  final String imDeleteFriendContent;     // "确定删除 {name}？"
+  final String imDeleteFriendContent; // "确定删除 {name}？"
   final String imApplyAccepted;
   final String imApplyRejected;
   final String imApplyPending;
@@ -381,7 +384,7 @@ class _Strings {
   final String imSearchHint;
   final String imSearchHelp;
   final String imSearchHelpMin;
-  final String imSearchNoMatch;            // 'No users matching "{q}"'
+  final String imSearchNoMatch; // 'No users matching "{q}"'
   final String imSearchNoMatchHint;
   final String imYouSelfBadge;
 
@@ -392,12 +395,12 @@ class _Strings {
   final String imGroupNameLabel;
   final String imGroupNameHint;
   final String imSelectMembers;
-  final String imSelectedCount;            // "已选 {n} 人"
+  final String imSelectedCount; // "已选 {n} 人"
   final String imEmptyFriendsForGroupHint;
 
   // ── IM 群聊管理 ──
   final String imGroupSettings;
-  final String imMemberCount;              // "{n} 名成员"
+  final String imMemberCount; // "{n} 名成员"
   final String imGroupNotice;
   final String imGroupMembers;
   final String imGroupOwnerLabel;
@@ -407,103 +410,103 @@ class _Strings {
   final String imUserIdLabel;
   final String imUserIdHint;
   final String imInviteSent;
-  final String imInviteFailedWith;         // "邀请失败: {err}"
+  final String imInviteFailedWith; // "邀请失败: {err}"
   final String imLeaveGroupConfirmContent; // "确定退出「{name}」？"
-  final String imLeaveFailedWith;          // "退出失败: {err}"
+  final String imLeaveFailedWith; // "退出失败: {err}"
   final String imConfirmLeave;
 
   // ── AI 对话浮层（多会话 / 状态消息）──
-  final String chatSessionDefaultTitle;     // chip / sheet 显示用："新会话"
-  final String chatSessionMenuNew;          // 下拉菜单顶部："新建会话"
-  final String chatSessionMenuEmpty;        // 下拉空态："暂无会话"
-  final String chatSessionRenameTitle;      // 重命名 dialog 标题
-  final String chatSessionRenameHint;       // 重命名 textfield hint："新标题"
-  final String chatSessionActionRename;     // action sheet item："重命名"
-  final String chatSessionDeleteTitle;      // 删除 dialog 标题
-  final String chatSessionDeleteContent;    // 删除确认正文，{title} 占位
-  final String chatStatusGenerating;        // "正在生成代码..."
-  final String chatStatusStartingAi;        // "正在启动 AI 引擎..."
-  final String chatStatusResumingLast;      // "正在恢复上次对话..."
-  final String chatActionUploadCurrentApp;  // "上传当前应用配置"
+  final String chatSessionDefaultTitle; // chip / sheet 显示用："新会话"
+  final String chatSessionMenuNew; // 下拉菜单顶部："新建会话"
+  final String chatSessionMenuEmpty; // 下拉空态："暂无会话"
+  final String chatSessionRenameTitle; // 重命名 dialog 标题
+  final String chatSessionRenameHint; // 重命名 textfield hint："新标题"
+  final String chatSessionActionRename; // action sheet item："重命名"
+  final String chatSessionDeleteTitle; // 删除 dialog 标题
+  final String chatSessionDeleteContent; // 删除确认正文，{title} 占位
+  final String chatStatusGenerating; // "正在生成代码..."
+  final String chatStatusStartingAi; // "正在启动 AI 引擎..."
+  final String chatStatusResumingLast; // "正在恢复上次对话..."
+  final String chatActionUploadCurrentApp; // "上传当前应用配置"
   final String chatActionRetryDownloadJson; // "重试下载 JSON"
-  final String chatTimeJustNow;             // "刚刚"
-  final String chatTimeMinutesAgo;          // "{n} 分钟前"
-  final String chatTimeHoursAgo;            // "{n} 小时前"
-  final String chatTimeDaysAgo;             // "{n} 天前"
+  final String chatTimeJustNow; // "刚刚"
+  final String chatTimeMinutesAgo; // "{n} 分钟前"
+  final String chatTimeHoursAgo; // "{n} 小时前"
+  final String chatTimeDaysAgo; // "{n} 天前"
   final String chatDownloadStateDownloading; // "下载中..."
-  final String chatDownloadStateRun;         // "下载并运行"
-  final String chatDownloadStateRetry;       // "重试下载并运行"
+  final String chatDownloadStateRun; // "下载并运行"
+  final String chatDownloadStateRetry; // "重试下载并运行"
 
   // ── AI 对话错误 / 编辑消息 ──
-  final String chatErrorWith;                // "出错了: {err}"
-  final String chatJsonDownloadFailed;       // "下载 JSON 失败"
-  final String chatNoActiveApp;              // "当前没有运行的应用配置"
-  final String chatUploadingApp;             // "正在上传当前应用配置..."
-  final String chatDownloadRetryFailedWith;  // "下载重试失败: {err}"
-  final String chatAnalysisFailedWith;       // "分析失败: {err}"
-  final String chatEditMessageTitle;         // "编辑消息"
-  final String chatEditMessageHint;          // "编辑你的消息..."
-  final String chatEditButton;               // "编辑"
-  final String chatSendButton;               // "发送"
+  final String chatErrorWith; // "出错了: {err}"
+  final String chatJsonDownloadFailed; // "下载 JSON 失败"
+  final String chatNoActiveApp; // "当前没有运行的应用配置"
+  final String chatUploadingApp; // "正在上传当前应用配置..."
+  final String chatDownloadRetryFailedWith; // "下载重试失败: {err}"
+  final String chatAnalysisFailedWith; // "分析失败: {err}"
+  final String chatEditMessageTitle; // "编辑消息"
+  final String chatEditMessageHint; // "编辑你的消息..."
+  final String chatEditButton; // "编辑"
+  final String chatSendButton; // "发送"
 
   // ── 语音识别（ASR）──
-  final String asrErrBytedanceWith;          // "豆包ASR错误: {err}"
-  final String asrErrNativeInitWithHint;     // 原生语音识别初始化失败 + 建议
-  final String asrConnectingBytedance;       // "正在连接豆包ASR..."
+  final String asrErrBytedanceWith; // "豆包ASR错误: {err}"
+  final String asrErrNativeInitWithHint; // 原生语音识别初始化失败 + 建议
+  final String asrConnectingBytedance; // "正在连接豆包ASR..."
   final String asrErrBytedanceTimeoutWithHint; // 豆包ASR连接超时 + 建议
-  final String asrErrNativeStartWithHint;    // 原生 ASR 启动失败 + 建议
+  final String asrErrNativeStartWithHint; // 原生 ASR 启动失败 + 建议
   final String asrErrMicPermissionDenied;
-  final String asrErrStartFailWith;          // "语音识别启动失败: {err}"
+  final String asrErrStartFailWith; // "语音识别启动失败: {err}"
   final String asrErrBytedanceNotConnected;
   final String asrErrBytedanceStartFailWith;
 
   // ── Auth：切换账号 + service 抛错 ──
-  final String authSwitchAccountCancelled;        // "已取消切换账号"
-  final String authClearLocalFailedWith;          // "清除本地数据失败：{err}"
-  final String authSwitchAccountTitle;            // "切换账号"
-  final String authSwitchAccountContent;          // 含 {newEmail}/{prevEmail} 插值
-  final String authSwitchAccountConfirm;          // "确认清除并继续"
-  final String authErrSignupFailed;               // "注册失败"
-  final String authErrLoginFailed;                // "登录失败"
-  final String authErrVerifyFailed;               // "验证失败"
-  final String authErrSendFailed;                 // "发送失败"
-  final String authErrNoRefreshToken;             // "无 refresh token"
-  final String authErrRefreshFailed;              // "刷新失败"
-  final String authErrGetUserInfoFailed;          // "获取用户信息失败"
-  final String authErrServerWith;                 // "服务器错误 ({code})"
-  final String authErrUpdateFailed;               // "更新失败"
-  final String authErrAvatarUploadFailed;         // "头像上传失败"
+  final String authSwitchAccountCancelled; // "已取消切换账号"
+  final String authClearLocalFailedWith; // "清除本地数据失败：{err}"
+  final String authSwitchAccountTitle; // "切换账号"
+  final String authSwitchAccountContent; // 含 {newEmail}/{prevEmail} 插值
+  final String authSwitchAccountConfirm; // "确认清除并继续"
+  final String authErrSignupFailed; // "注册失败"
+  final String authErrLoginFailed; // "登录失败"
+  final String authErrVerifyFailed; // "验证失败"
+  final String authErrSendFailed; // "发送失败"
+  final String authErrNoRefreshToken; // "无 refresh token"
+  final String authErrRefreshFailed; // "刷新失败"
+  final String authErrGetUserInfoFailed; // "获取用户信息失败"
+  final String authErrServerWith; // "服务器错误 ({code})"
+  final String authErrUpdateFailed; // "更新失败"
+  final String authErrAvatarUploadFailed; // "头像上传失败"
 
   // ── 设置页 ──
-  final String settingsSectionAsr;                 // "语音识别"
-  final String settingsAsrOnline;                  // "在线识别"
+  final String settingsSectionAsr; // "语音识别"
+  final String settingsAsrOnline; // "在线识别"
   final String settingsAsrOnlineSubtitle;
-  final String settingsAsrBytedance;               // "豆包 ASR"
+  final String settingsAsrBytedance; // "豆包 ASR"
   final String settingsAsrBytedanceSubtitle;
-  final String settingsProvidersFailed;            // "无法获取供应商列表"
-  final String settingsProvidersFallback;          // "使用默认供应商 DeepSeek"
-  final String settingsModelWith;                  // "模型: {model}"
+  final String settingsProvidersFailed; // "无法获取供应商列表"
+  final String settingsProvidersFallback; // "使用默认供应商 DeepSeek"
+  final String settingsModelWith; // "模型: {model}"
 
   // ── IM 剩余字符串（im_models / chat_page / im_service push 文案）──
-  final String imUserUnknown;                      // "未知"
-  final String imMessageRecalled;                  // "撤回了一条消息"
-  final String imAttachmentFile;                   // "文件"
+  final String imUserUnknown; // "未知"
+  final String imMessageRecalled; // "撤回了一条消息"
+  final String imAttachmentFile; // "文件"
   final String imImageQualityNormal;
   final String imImageQualityNormalSubtitle;
   final String imImageQualityHd;
   final String imImageQualityHdSubtitle;
-  final String imDownloadingMsg;                   // "正在下载..."
-  final String imDownloadFailedWith;               // "下载失败 {code}"
-  final String imOpenFailedWith;                   // "打开失败：{msg}"
-  final String imOpenExceptionWith;                // "打开异常：{err}"
-  final String imVideoLoadFailedWith;              // "视频加载失败: {err}"
-  final String imPushNewMessage;                   // "新消息"
-  final String imPushImagePreview;                 // "[图片]"
-  final String imMsgPreviewVideo;                  // "[视频]"
-  final String imMsgPreviewVoice;                  // "[语音]"
-  final String imMsgPreviewFile;                   // "[文件]"
-  final String imMsgPreviewLocation;               // "[位置]"
-  final String imMsgPreviewGeneric;                // "[消息]"
+  final String imDownloadingMsg; // "正在下载..."
+  final String imDownloadFailedWith; // "下载失败 {code}"
+  final String imOpenFailedWith; // "打开失败：{msg}"
+  final String imOpenExceptionWith; // "打开异常：{err}"
+  final String imVideoLoadFailedWith; // "视频加载失败: {err}"
+  final String imPushNewMessage; // "新消息"
+  final String imPushImagePreview; // "[图片]"
+  final String imMsgPreviewVideo; // "[视频]"
+  final String imMsgPreviewVoice; // "[语音]"
+  final String imMsgPreviewFile; // "[文件]"
+  final String imMsgPreviewLocation; // "[位置]"
+  final String imMsgPreviewGeneric; // "[消息]"
 
   // ── main 杂项 + JSON-UI 控件默认值 / 内置错误 ──
   final String mainCantResolveAppConfigError;
@@ -513,50 +516,50 @@ class _Strings {
   final String widgetDatePickerPlaceholder;
   final String widgetTimePickerPlaceholder;
   final String widgetButtonDefaultLabel;
-  final String widgetMissingItemTemplate;          // "缺少 item_template"
-  final String widgetDropdownPlaceholder;          // "请选择"
-  final String widgetPullToRefresh;                // "下拉刷新"
-  final String widgetVideoNoUrl;                   // "未配置视频地址"
+  final String widgetMissingItemTemplate; // "缺少 item_template"
+  final String widgetDropdownPlaceholder; // "请选择"
+  final String widgetPullToRefresh; // "下拉刷新"
+  final String widgetVideoNoUrl; // "未配置视频地址"
   final String widgetVideoUnsupportedSource;
-  final String widgetVideoPlaybackFailedWith;      // "播放失败: {err}"
-  final String widgetVideoLoadFailedWith;          // 多行 "视频加载失败\n{err}"
+  final String widgetVideoPlaybackFailedWith; // "播放失败: {err}"
+  final String widgetVideoLoadFailedWith; // 多行 "视频加载失败\n{err}"
   final String widgetVideoLoading;
-  final String widgetRefNotFoundWith;              // "未找到: {ref}"
-  final String widgetRefMissingFromOrName;         // "ref 控件需要 from 和 widget 字段"
-  final String widgetRefMissingRootWith;           // "{ref} 缺少 root 定义"
-  final String widgetUnknownTypeWith;              // "未知控件类型: {type}"
-  final String widgetHttpNetworkFailed;            // "网络请求失败"
+  final String widgetRefNotFoundWith; // "未找到: {ref}"
+  final String widgetRefMissingFromOrName; // "ref 控件需要 from 和 widget 字段"
+  final String widgetRefMissingRootWith; // "{ref} 缺少 root 定义"
+  final String widgetUnknownTypeWith; // "未知控件类型: {type}"
+  final String widgetHttpNetworkFailed; // "网络请求失败"
 
   // ── Phase 7：ai_chat_service / asr_service / game_engine / interpreter 杂项 ──
-  final String chatErrNoRetryMessage;              // "没有可重试的消息"
-  final String chatErrConnectionUnstableWith;      // "连接持续不稳定（已重试 {n} 次）"
-  final String chatErrPleaseLogin;                 // "请先登录"
-  final String chatErrServerWithBody;              // "服务器错误 ({code}): {body}"
-  final String chatErrDownloadGenJsonWith;         // "下载生成的 JSON 失败 (HTTP {code})"
+  final String chatErrNoRetryMessage; // "没有可重试的消息"
+  final String chatErrConnectionUnstableWith; // "连接持续不稳定（已重试 {n} 次）"
+  final String chatErrPleaseLogin; // "请先登录"
+  final String chatErrServerWithBody; // "服务器错误 ({code}): {body}"
+  final String chatErrDownloadGenJsonWith; // "下载生成的 JSON 失败 (HTTP {code})"
   final String chatErrDownloadJsonExceptionWith;
-  final String chatErrCancelled;                   // "已取消"
-  final String chatErrQuotaExceeded;               // "配额已用完"
-  final String chatErrConnectionTimeout;           // "连接超时"
-  final String chatErrNetworkWith;                 // "网络错误: {err}"
-  final String chatErrUploadFailedRetriesWith;     // "上传失败（已重试 {n} 次）：{err}"
-  final String chatUploadSuccessIntro;             // 上传成功后给 AI 的前置介绍语
-  final String asrBytedanceConnected;              // "已连接"
-  final String asrBytedanceDisconnected;           // "连接断开"
-  final String asrErrUnknown;                      // "未知错误"
-  final String asrBytedanceConnectFailedWith;      // "连接失败: {err}"
-  final String asrErrMicPermissionDeniedShort;     // "麦克风权限未授予"
-  final String asrRecordErrorWith;                 // "录音错误: {err}"
-  final String asrRecording;                       // "正在录音..."
-  final String asrRecordStartFailWith;             // "录音启动失败: {err}"
-  final String gameOver;                           // "游戏结束"
-  final String gameRestartHint;                    // "点击重新开始"
-  final String gameBestScoreWith;                  // "最佳 {score}"
-  final String gameScoreWith;                      // "得分 {score}"
-  final String builtinBiometricDefaultReason;      // "请验证身份"
-  final String builtinInputDialogDefaultTitle;     // "输入"
-  final String imSenderMe;                         // "我"
-  final String relativeDateYesterday;              // "昨天"
-  final String depErrConflictWith;                 // "已加载 {loaded}, 需要 {needed}"
+  final String chatErrCancelled; // "已取消"
+  final String chatErrQuotaExceeded; // "配额已用完"
+  final String chatErrConnectionTimeout; // "连接超时"
+  final String chatErrNetworkWith; // "网络错误: {err}"
+  final String chatErrUploadFailedRetriesWith; // "上传失败（已重试 {n} 次）：{err}"
+  final String chatUploadSuccessIntro; // 上传成功后给 AI 的前置介绍语
+  final String asrBytedanceConnected; // "已连接"
+  final String asrBytedanceDisconnected; // "连接断开"
+  final String asrErrUnknown; // "未知错误"
+  final String asrBytedanceConnectFailedWith; // "连接失败: {err}"
+  final String asrErrMicPermissionDeniedShort; // "麦克风权限未授予"
+  final String asrRecordErrorWith; // "录音错误: {err}"
+  final String asrRecording; // "正在录音..."
+  final String asrRecordStartFailWith; // "录音启动失败: {err}"
+  final String gameOver; // "游戏结束"
+  final String gameRestartHint; // "点击重新开始"
+  final String gameBestScoreWith; // "最佳 {score}"
+  final String gameScoreWith; // "得分 {score}"
+  final String builtinBiometricDefaultReason; // "请验证身份"
+  final String builtinInputDialogDefaultTitle; // "输入"
+  final String imSenderMe; // "我"
+  final String relativeDateYesterday; // "昨天"
+  final String depErrConflictWith; // "已加载 {loaded}, 需要 {needed}"
 
   const _Strings({
     required this.ok,
@@ -673,6 +676,9 @@ class _Strings {
     required this.settingsThemeLight,
     required this.settingsThemeDark,
     required this.settingsAiProvider,
+    required this.settingsAiAgent,
+    required this.settingsAgentUnavailable,
+    required this.settingsAgentsFallback,
     required this.settingsAbout,
     required this.settingsVersion,
     required this.addToMyAppsTitle,
@@ -1088,7 +1094,8 @@ const _Strings _zhCN = _Strings(
   onboardingSkip: '跳过',
   onboardingReplayMenu: '再看新手引导',
   onboardingStep1Title: '让 AI 帮你设计 APP',
-  onboardingStep1Body: '长按 3 秒进入 AI 对话——跟它说"做一个 todo list"就能生成完整 APP，还能反复改。可拖动到屏幕任意位置；双击回到上次对话。',
+  onboardingStep1Body:
+      '长按 3 秒进入 AI 对话——跟它说"做一个 todo list"就能生成完整 APP，还能反复改。可拖动到屏幕任意位置；双击回到上次对话。',
   onboardingStep2Title: '账号与语言',
   onboardingStep2Body: '在这里查看个人资料、切换语言，或退出登录。新手引导也能从这里再看一遍。',
   onboardingStep3Title: '应用市场',
@@ -1134,6 +1141,9 @@ const _Strings _zhCN = _Strings(
   settingsThemeLight: '日间模式',
   settingsThemeDark: '夜间模式',
   settingsAiProvider: 'AI 服务商',
+  settingsAiAgent: '执行 Agent',
+  settingsAgentUnavailable: '未配置',
+  settingsAgentsFallback: '使用默认 Agent Claude',
   settingsAbout: '关于',
   settingsVersion: '版本',
   addToMyAppsTitle: '添加到我的 APP',
@@ -1172,7 +1182,8 @@ const _Strings _zhCN = _Strings(
   publishVersionInvalid: '版本号必须是 x.y.z 格式',
   publishNamespaceRequired: '请选择命名空间或创建一个新空间',
   publishUuidConflictTitle: 'UUID 冲突',
-  publishUuidConflictContent: '该 UUID 已被包 "{pkg}" 使用。\n请点击「随机生成 🎲」获取新的 UUID 后重试。',
+  publishUuidConflictContent:
+      '该 UUID 已被包 "{pkg}" 使用。\n请点击「随机生成 🎲」获取新的 UUID 后重试。',
   publishFailedWithCode: '发布失败 ({code})',
   create: '创建',
   gotIt: '知道了',
@@ -1389,7 +1400,8 @@ const _Strings _zhCN = _Strings(
   authSwitchAccountCancelled: '已取消切换账号',
   authClearLocalFailedWith: '清除本地数据失败：{err}',
   authSwitchAccountTitle: '切换账号',
-  authSwitchAccountContent: '检测到本次登录的账号（{newEmail}）与上次（{prevEmail}）不一致。\n\n继续将清除本地所有聊天记录、通讯录与本地数据，是否继续？',
+  authSwitchAccountContent:
+      '检测到本次登录的账号（{newEmail}）与上次（{prevEmail}）不一致。\n\n继续将清除本地所有聊天记录、通讯录与本地数据，是否继续？',
   authSwitchAccountConfirm: '确认清除并继续',
   authErrSignupFailed: '注册失败',
   authErrLoginFailed: '登录失败',
@@ -1459,7 +1471,8 @@ const _Strings _zhCN = _Strings(
   chatErrConnectionTimeout: '连接超时',
   chatErrNetworkWith: '网络错误: {err}',
   chatErrUploadFailedRetriesWith: '上传失败（已重试 {n} 次）：{err}',
-  chatUploadSuccessIntro: '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），后续对话请基于这个配置进行修改或分析：\n\n',
+  chatUploadSuccessIntro:
+      '以下是我当前正在运行的 JSON-APP 完整配置（已上传至临时存储），后续对话请基于这个配置进行修改或分析：\n\n',
   asrBytedanceConnected: '已连接',
   asrBytedanceDisconnected: '连接断开',
   asrErrUnknown: '未知错误',
@@ -1548,15 +1561,19 @@ const _Strings _enUS = _Strings(
   onboardingSkip: 'Skip',
   onboardingReplayMenu: 'Replay onboarding',
   onboardingStep1Title: 'Design apps with AI',
-  onboardingStep1Body: 'Long-press for ~3s to open AI chat—say "make me a todo list" and get a working app you can keep iterating on. Drag anywhere to move; double-tap to resume the last conversation.',
+  onboardingStep1Body:
+      'Long-press for ~3s to open AI chat—say "make me a todo list" and get a working app you can keep iterating on. Drag anywhere to move; double-tap to resume the last conversation.',
   onboardingStep2Title: 'Account & language',
-  onboardingStep2Body: 'View your profile, switch language, or sign out here. You can also replay this onboarding from this menu.',
+  onboardingStep2Body:
+      'View your profile, switch language, or sign out here. You can also replay this onboarding from this menu.',
   onboardingStep3Title: 'App marketplace',
   onboardingStep3Body: 'Browse community JSON apps and try them in one tap.',
   onboardingStep4Title: 'My apps',
-  onboardingStep4Body: 'All your saved or AI-generated apps live here, also available offline.',
+  onboardingStep4Body:
+      'All your saved or AI-generated apps live here, also available offline.',
   onboardingStep5Title: 'Messages',
-  onboardingStep5Body: 'Chat with friends, support, or groups. Supports text, images and emoji.',
+  onboardingStep5Body:
+      'Chat with friends, support, or groups. Supports text, images and emoji.',
   errPauseLogin: 'Server is busy, please try signing in again later',
   errPauseRegister: 'Server is busy, please try signing up again later',
   errPauseRequest: 'Server is busy, please try again later',
@@ -1594,21 +1611,27 @@ const _Strings _enUS = _Strings(
   settingsThemeLight: 'Light',
   settingsThemeDark: 'Dark',
   settingsAiProvider: 'AI provider',
+  settingsAiAgent: 'Execution agent',
+  settingsAgentUnavailable: 'Not configured',
+  settingsAgentsFallback: 'Falling back to default agent Claude',
   settingsAbout: 'About',
   settingsVersion: 'Version',
   addToMyAppsTitle: 'Add to My Apps',
-  addToMyAppsContent: 'Add this app to "My Apps"?\n\nYou can then reuse it and publish it to the marketplace.',
+  addToMyAppsContent:
+      'Add this app to "My Apps"?\n\nYou can then reuse it and publish it to the marketplace.',
   addToMyAppsAdded: 'Added to My Apps',
   saveFailedWith: 'Save failed: {msg}',
   marketDeleteConfirmTitle: 'Confirm unpublish',
-  marketDeleteConfirmContent: 'Permanently delete package "{package}"?\n\nThis cannot be undone — all versions will be removed.',
+  marketDeleteConfirmContent:
+      'Permanently delete package "{package}"?\n\nThis cannot be undone — all versions will be removed.',
   marketDeleting: 'Deleting…',
   marketDeleteSuccess: 'Deleted',
   marketDeleteFailed: 'Delete failed',
   marketDeleteFailedWith: 'Delete failed: {msg}',
   marketUnpublishTooltip: 'Unpublish',
   marketAuthor: 'Author: {author}',
-  myAppsEmptyHint: 'Long-press the floating button and speak — AI will generate one',
+  myAppsEmptyHint:
+      'Long-press the floating button and speak — AI will generate one',
   myAppsUploadTooltip: 'Upload to marketplace',
   myAppsUploading: 'Uploading to marketplace…',
   myAppsPublishSuccess: 'Published 🎉',
@@ -1632,7 +1655,8 @@ const _Strings _enUS = _Strings(
   publishVersionInvalid: 'Version must follow x.y.z',
   publishNamespaceRequired: 'Pick or create a namespace',
   publishUuidConflictTitle: 'UUID conflict',
-  publishUuidConflictContent: 'This UUID is already used by package "{pkg}".\nClick "Random 🎲" to generate a new one and retry.',
+  publishUuidConflictContent:
+      'This UUID is already used by package "{pkg}".\nClick "Random 🎲" to generate a new one and retry.',
   publishFailedWithCode: 'Publish failed ({code})',
   create: 'Create',
   gotIt: 'Got it',
@@ -1744,7 +1768,8 @@ const _Strings _enUS = _Strings(
   defaultStartupEntry: 'Default startup app',
   defaultStartupSubtitleNone: 'Not set (open to MyApp home)',
   defaultStartupTitle: 'Default startup app',
-  defaultStartupHint: 'When set, the app launches directly into your chosen app. Use the floating ball menu "Back to home" to return to MyApp home.',
+  defaultStartupHint:
+      'When set, the app launches directly into your chosen app. Use the floating ball menu "Back to home" to return to MyApp home.',
   defaultStartupNoneOption: 'Unset (open to MyApp home)',
   defaultStartupTabMarket: 'Market',
   defaultStartupTabLocal: 'Local',
@@ -1814,7 +1839,8 @@ const _Strings _enUS = _Strings(
   chatSessionRenameHint: 'New title',
   chatSessionActionRename: 'Rename',
   chatSessionDeleteTitle: 'Delete chat',
-  chatSessionDeleteContent: 'Delete "{title}"? The reply still running in the background will be aborted.',
+  chatSessionDeleteContent:
+      'Delete "{title}"? The reply still running in the background will be aborted.',
   chatStatusGenerating: 'Generating code...',
   chatStatusStartingAi: 'Starting AI engine...',
   chatStatusResumingLast: 'Resuming last conversation...',
@@ -1838,18 +1864,24 @@ const _Strings _enUS = _Strings(
   chatEditButton: 'Edit',
   chatSendButton: 'Send',
   asrErrBytedanceWith: 'ByteDance ASR error: {err}',
-  asrErrNativeInitWithHint: 'Native speech recognition failed to initialize. Try switching to ByteDance ASR in settings.',
+  asrErrNativeInitWithHint:
+      'Native speech recognition failed to initialize. Try switching to ByteDance ASR in settings.',
   asrConnectingBytedance: 'Connecting to ByteDance ASR...',
-  asrErrBytedanceTimeoutWithHint: 'ByteDance ASR connection timeout. Check the network or switch to another recognizer.',
-  asrErrNativeStartWithHint: 'Native speech recognition failed to start. Try switching to ByteDance ASR in settings.',
-  asrErrMicPermissionDenied: 'Microphone permission denied. Enable it in Settings → Apps → Permissions and try again.',
+  asrErrBytedanceTimeoutWithHint:
+      'ByteDance ASR connection timeout. Check the network or switch to another recognizer.',
+  asrErrNativeStartWithHint:
+      'Native speech recognition failed to start. Try switching to ByteDance ASR in settings.',
+  asrErrMicPermissionDenied:
+      'Microphone permission denied. Enable it in Settings → Apps → Permissions and try again.',
   asrErrStartFailWith: 'Speech recognition failed to start: {err}',
-  asrErrBytedanceNotConnected: 'ByteDance ASR is not connected. Check the network.',
+  asrErrBytedanceNotConnected:
+      'ByteDance ASR is not connected. Check the network.',
   asrErrBytedanceStartFailWith: 'ByteDance ASR failed to start: {err}',
   authSwitchAccountCancelled: 'Account switch cancelled',
   authClearLocalFailedWith: 'Failed to clear local data: {err}',
   authSwitchAccountTitle: 'Switch account',
-  authSwitchAccountContent: 'The signed-in account ({newEmail}) differs from the previous one ({prevEmail}).\n\nContinuing will wipe all local chat history, contacts and local data. Continue?',
+  authSwitchAccountContent:
+      'The signed-in account ({newEmail}) differs from the previous one ({prevEmail}).\n\nContinuing will wipe all local chat history, contacts and local data. Continue?',
   authSwitchAccountConfirm: 'Wipe and continue',
   authErrSignupFailed: 'Sign-up failed',
   authErrLoginFailed: 'Login failed',
@@ -1865,7 +1897,8 @@ const _Strings _enUS = _Strings(
   settingsAsrOnline: 'Online recognition',
   settingsAsrOnlineSubtitle: 'Uses speech_to_text, requires network',
   settingsAsrBytedance: 'ByteDance ASR',
-  settingsAsrBytedanceSubtitle: 'ByteDance speech recognition, requires network and quota',
+  settingsAsrBytedanceSubtitle:
+      'ByteDance speech recognition, requires network and quota',
   settingsProvidersFailed: 'Failed to fetch providers',
   settingsProvidersFallback: 'Falling back to default provider DeepSeek',
   settingsModelWith: 'Model: {model}',
@@ -1873,7 +1906,8 @@ const _Strings _enUS = _Strings(
   imMessageRecalled: 'recalled a message',
   imAttachmentFile: 'File',
   imImageQualityNormal: 'Standard quality',
-  imImageQualityNormalSubtitle: 'Auto-compressed, long side 1920, faster to send',
+  imImageQualityNormalSubtitle:
+      'Auto-compressed, long side 1920, faster to send',
   imImageQualityHd: 'Original',
   imImageQualityHdSubtitle: 'Keep the original size and quality',
   imDownloadingMsg: 'Downloading...',
@@ -1888,7 +1922,8 @@ const _Strings _enUS = _Strings(
   imMsgPreviewFile: '[File]',
   imMsgPreviewLocation: '[Location]',
   imMsgPreviewGeneric: '[Message]',
-  mainCantResolveAppConfigError: 'Failed to resolve or download this app config',
+  mainCantResolveAppConfigError:
+      'Failed to resolve or download this app config',
   widgetImagePickerPlaceholder: 'Tap to pick an image',
   widgetImagePickerReselect: 'Tap to pick again',
   widgetCameraNoCamera: 'No camera available',
@@ -1909,7 +1944,8 @@ const _Strings _enUS = _Strings(
   widgetUnknownTypeWith: 'Unknown widget type: {type}',
   widgetHttpNetworkFailed: 'Network request failed',
   chatErrNoRetryMessage: 'No message to retry',
-  chatErrConnectionUnstableWith: 'Connection keeps dropping (already retried {n} times)',
+  chatErrConnectionUnstableWith:
+      'Connection keeps dropping (already retried {n} times)',
   chatErrPleaseLogin: 'Please sign in first',
   chatErrServerWithBody: 'Server error ({code}): {body}',
   chatErrDownloadGenJsonWith: 'Failed to download generated JSON (HTTP {code})',
@@ -1919,7 +1955,8 @@ const _Strings _enUS = _Strings(
   chatErrConnectionTimeout: 'Connection timeout',
   chatErrNetworkWith: 'Network error: {err}',
   chatErrUploadFailedRetriesWith: 'Upload failed (retried {n} times): {err}',
-  chatUploadSuccessIntro: 'Here is the full JSON-APP config currently running (already uploaded to temporary storage). Please base any further modifications or analysis on this config:\n\n',
+  chatUploadSuccessIntro:
+      'Here is the full JSON-APP config currently running (already uploaded to temporary storage). Please base any further modifications or analysis on this config:\n\n',
   asrBytedanceConnected: 'Connected',
   asrBytedanceDisconnected: 'Disconnected',
   asrErrUnknown: 'Unknown error',
@@ -2002,21 +2039,27 @@ const _Strings _deDE = _Strings(
   homeUnreadCount: '{n} ungelesen',
   homePickFile: 'Lokale Datei wählen',
   homePickFileSubtitle: 'JSON-Konfiguration vom Gerät importieren',
-  homeImLoginFailed: 'IM-Verbindung fehlgeschlagen, bitte später erneut versuchen',
+  homeImLoginFailed:
+      'IM-Verbindung fehlgeschlagen, bitte später erneut versuchen',
   onboardingNext: 'Weiter',
   onboardingDone: 'Fertig',
   onboardingSkip: 'Überspringen',
   onboardingReplayMenu: 'Einführung erneut anzeigen',
   onboardingStep1Title: 'Apps mit KI gestalten',
-  onboardingStep1Body: 'Halte ca. 3 s gedrückt, um den KI-Chat zu öffnen — sag z. B. „mach mir eine Todo-Liste" und du bekommst eine funktionierende App, die du weiter iterieren kannst. Verschiebe per Drag; doppeltippe, um das letzte Gespräch fortzusetzen.',
+  onboardingStep1Body:
+      'Halte ca. 3 s gedrückt, um den KI-Chat zu öffnen — sag z. B. „mach mir eine Todo-Liste" und du bekommst eine funktionierende App, die du weiter iterieren kannst. Verschiebe per Drag; doppeltippe, um das letzte Gespräch fortzusetzen.',
   onboardingStep2Title: 'Konto & Sprache',
-  onboardingStep2Body: 'Hier siehst du dein Profil, wechselst die Sprache oder meldest dich ab. Die Einführung kannst du von hier auch erneut starten.',
+  onboardingStep2Body:
+      'Hier siehst du dein Profil, wechselst die Sprache oder meldest dich ab. Die Einführung kannst du von hier auch erneut starten.',
   onboardingStep3Title: 'App-Marktplatz',
-  onboardingStep3Body: 'Stöbere durch Community-JSON-Apps und teste sie mit einem Tipp.',
+  onboardingStep3Body:
+      'Stöbere durch Community-JSON-Apps und teste sie mit einem Tipp.',
   onboardingStep4Title: 'Meine Apps',
-  onboardingStep4Body: 'Alle deine gespeicherten oder per KI generierten Apps findest du hier, auch offline.',
+  onboardingStep4Body:
+      'Alle deine gespeicherten oder per KI generierten Apps findest du hier, auch offline.',
   onboardingStep5Title: 'Nachrichten',
-  onboardingStep5Body: 'Chatte mit Freunden, Support oder Gruppen. Unterstützt Text, Bilder und Emojis.',
+  onboardingStep5Body:
+      'Chatte mit Freunden, Support oder Gruppen. Unterstützt Text, Bilder und Emojis.',
   errPauseLogin: 'Server ist überlastet, bitte später erneut anmelden',
   errPauseRegister: 'Server ist überlastet, bitte später erneut registrieren',
   errPauseRequest: 'Server ist überlastet, bitte später erneut versuchen',
@@ -2054,21 +2097,27 @@ const _Strings _deDE = _Strings(
   settingsThemeLight: 'Hell',
   settingsThemeDark: 'Dunkel',
   settingsAiProvider: 'KI-Anbieter',
+  settingsAiAgent: 'Ausführungs-Agent',
+  settingsAgentUnavailable: 'Nicht konfiguriert',
+  settingsAgentsFallback: 'Fallback auf Standard-Agent Claude',
   settingsAbout: 'Über',
   settingsVersion: 'Version',
   addToMyAppsTitle: 'Zu „Meine Apps" hinzufügen',
-  addToMyAppsContent: 'Diese App zu „Meine Apps" hinzufügen?\n\nDu kannst sie dann wiederverwenden und im Marktplatz veröffentlichen.',
+  addToMyAppsContent:
+      'Diese App zu „Meine Apps" hinzufügen?\n\nDu kannst sie dann wiederverwenden und im Marktplatz veröffentlichen.',
   addToMyAppsAdded: 'Zu „Meine Apps" hinzugefügt',
   saveFailedWith: 'Speichern fehlgeschlagen: {msg}',
   marketDeleteConfirmTitle: 'Veröffentlichung zurückziehen',
-  marketDeleteConfirmContent: 'Paket „{package}" dauerhaft löschen?\n\nDies kann nicht rückgängig gemacht werden — alle Versionen werden entfernt.',
+  marketDeleteConfirmContent:
+      'Paket „{package}" dauerhaft löschen?\n\nDies kann nicht rückgängig gemacht werden — alle Versionen werden entfernt.',
   marketDeleting: 'Wird gelöscht…',
   marketDeleteSuccess: 'Gelöscht',
   marketDeleteFailed: 'Löschen fehlgeschlagen',
   marketDeleteFailedWith: 'Löschen fehlgeschlagen: {msg}',
   marketUnpublishTooltip: 'Zurückziehen',
   marketAuthor: 'Autor: {author}',
-  myAppsEmptyHint: 'Halte den Floating-Button gedrückt und sprich — die KI generiert eine für dich',
+  myAppsEmptyHint:
+      'Halte den Floating-Button gedrückt und sprich — die KI generiert eine für dich',
   myAppsUploadTooltip: 'In den Marktplatz hochladen',
   myAppsUploading: 'Wird in den Marktplatz hochgeladen…',
   myAppsPublishSuccess: 'Veröffentlicht 🎉',
@@ -2092,7 +2141,8 @@ const _Strings _deDE = _Strings(
   publishVersionInvalid: 'Version muss dem Format x.y.z folgen',
   publishNamespaceRequired: 'Bitte Namespace wählen oder erstellen',
   publishUuidConflictTitle: 'UUID-Konflikt',
-  publishUuidConflictContent: 'Diese UUID wird bereits vom Paket „{pkg}" verwendet.\nKlicke auf „Zufällig 🎲", um eine neue zu generieren, und versuche es erneut.',
+  publishUuidConflictContent:
+      'Diese UUID wird bereits vom Paket „{pkg}" verwendet.\nKlicke auf „Zufällig 🎲", um eine neue zu generieren, und versuche es erneut.',
   publishFailedWithCode: 'Veröffentlichen fehlgeschlagen ({code})',
   create: 'Erstellen',
   gotIt: 'Verstanden',
@@ -2204,7 +2254,8 @@ const _Strings _deDE = _Strings(
   defaultStartupEntry: 'Standard-Start-App',
   defaultStartupSubtitleNone: 'Nicht festgelegt (öffnet MyApp-Startseite)',
   defaultStartupTitle: 'Standard-Start-App',
-  defaultStartupHint: 'Wenn festgelegt, startet die App direkt in der gewählten App. Nutze im Floating-Ball-Menü „Zur Startseite", um zur MyApp-Startseite zurückzukehren.',
+  defaultStartupHint:
+      'Wenn festgelegt, startet die App direkt in der gewählten App. Nutze im Floating-Ball-Menü „Zur Startseite", um zur MyApp-Startseite zurückzukehren.',
   defaultStartupNoneOption: 'Nicht festgelegt (öffnet MyApp-Startseite)',
   defaultStartupTabMarket: 'Markt',
   defaultStartupTabLocal: 'Lokal',
@@ -2244,7 +2295,8 @@ const _Strings _deDE = _Strings(
   imSearchNoMatch: 'Keine Nutzer gefunden für „{q}"',
   imSearchNoMatchHint: 'Sie müssen sich zuerst registrieren',
   imYouSelfBadge: '(du)',
-  imCreateGroupFailed: 'Gruppe konnte nicht erstellt werden. Bitte erneut versuchen.',
+  imCreateGroupFailed:
+      'Gruppe konnte nicht erstellt werden. Bitte erneut versuchen.',
   imCreateGroupTitle: 'Neue Gruppe',
   imCreate: 'Erstellen',
   imGroupNameLabel: 'Gruppenname',
@@ -2274,7 +2326,8 @@ const _Strings _deDE = _Strings(
   chatSessionRenameHint: 'Neuer Titel',
   chatSessionActionRename: 'Umbenennen',
   chatSessionDeleteTitle: 'Chat löschen',
-  chatSessionDeleteContent: '„{title}" löschen? Die im Hintergrund laufende Antwort wird abgebrochen.',
+  chatSessionDeleteContent:
+      '„{title}" löschen? Die im Hintergrund laufende Antwort wird abgebrochen.',
   chatStatusGenerating: 'Code wird generiert...',
   chatStatusStartingAi: 'KI-Modul wird gestartet...',
   chatStatusResumingLast: 'Letzte Unterhaltung wird wiederhergestellt...',
@@ -2298,18 +2351,25 @@ const _Strings _deDE = _Strings(
   chatEditButton: 'Bearbeiten',
   chatSendButton: 'Senden',
   asrErrBytedanceWith: 'ByteDance-ASR-Fehler: {err}',
-  asrErrNativeInitWithHint: 'Native Spracherkennung konnte nicht initialisiert werden. Wechseln Sie in den Einstellungen auf ByteDance ASR.',
+  asrErrNativeInitWithHint:
+      'Native Spracherkennung konnte nicht initialisiert werden. Wechseln Sie in den Einstellungen auf ByteDance ASR.',
   asrConnectingBytedance: 'Verbindung zu ByteDance ASR wird hergestellt...',
-  asrErrBytedanceTimeoutWithHint: 'Zeitüberschreitung bei der Verbindung zu ByteDance ASR. Netzwerk prüfen oder eine andere Erkennung wählen.',
-  asrErrNativeStartWithHint: 'Native Spracherkennung konnte nicht gestartet werden. Wechseln Sie in den Einstellungen auf ByteDance ASR.',
-  asrErrMicPermissionDenied: 'Mikrofonberechtigung nicht erteilt. Aktivieren Sie sie unter Einstellungen → Apps → Berechtigungen und versuchen Sie es erneut.',
+  asrErrBytedanceTimeoutWithHint:
+      'Zeitüberschreitung bei der Verbindung zu ByteDance ASR. Netzwerk prüfen oder eine andere Erkennung wählen.',
+  asrErrNativeStartWithHint:
+      'Native Spracherkennung konnte nicht gestartet werden. Wechseln Sie in den Einstellungen auf ByteDance ASR.',
+  asrErrMicPermissionDenied:
+      'Mikrofonberechtigung nicht erteilt. Aktivieren Sie sie unter Einstellungen → Apps → Berechtigungen und versuchen Sie es erneut.',
   asrErrStartFailWith: 'Spracherkennung konnte nicht gestartet werden: {err}',
-  asrErrBytedanceNotConnected: 'ByteDance ASR ist nicht verbunden. Bitte Netzwerk prüfen.',
-  asrErrBytedanceStartFailWith: 'ByteDance ASR konnte nicht gestartet werden: {err}',
+  asrErrBytedanceNotConnected:
+      'ByteDance ASR ist nicht verbunden. Bitte Netzwerk prüfen.',
+  asrErrBytedanceStartFailWith:
+      'ByteDance ASR konnte nicht gestartet werden: {err}',
   authSwitchAccountCancelled: 'Kontowechsel abgebrochen',
   authClearLocalFailedWith: 'Löschen der lokalen Daten fehlgeschlagen: {err}',
   authSwitchAccountTitle: 'Konto wechseln',
-  authSwitchAccountContent: 'Das angemeldete Konto ({newEmail}) unterscheidet sich vom vorherigen ({prevEmail}).\n\nBeim Fortfahren werden alle lokalen Chats, Kontakte und Daten gelöscht. Fortfahren?',
+  authSwitchAccountContent:
+      'Das angemeldete Konto ({newEmail}) unterscheidet sich vom vorherigen ({prevEmail}).\n\nBeim Fortfahren werden alle lokalen Chats, Kontakte und Daten gelöscht. Fortfahren?',
   authSwitchAccountConfirm: 'Löschen und fortfahren',
   authErrSignupFailed: 'Registrierung fehlgeschlagen',
   authErrLoginFailed: 'Anmeldung fehlgeschlagen',
@@ -2325,7 +2385,8 @@ const _Strings _deDE = _Strings(
   settingsAsrOnline: 'Online-Erkennung',
   settingsAsrOnlineSubtitle: 'Nutzt speech_to_text, Netzwerk erforderlich',
   settingsAsrBytedance: 'ByteDance ASR',
-  settingsAsrBytedanceSubtitle: 'ByteDance-Spracherkennung, benötigt Netzwerk und Kontingent',
+  settingsAsrBytedanceSubtitle:
+      'ByteDance-Spracherkennung, benötigt Netzwerk und Kontingent',
   settingsProvidersFailed: 'Anbieterliste konnte nicht geladen werden',
   settingsProvidersFallback: 'Fallback auf Standardanbieter DeepSeek',
   settingsModelWith: 'Modell: {model}',
@@ -2333,7 +2394,8 @@ const _Strings _deDE = _Strings(
   imMessageRecalled: 'hat eine Nachricht zurückgezogen',
   imAttachmentFile: 'Datei',
   imImageQualityNormal: 'Standardqualität',
-  imImageQualityNormalSubtitle: 'Automatisch komprimiert, Langseite 1920, schneller versandt',
+  imImageQualityNormalSubtitle:
+      'Automatisch komprimiert, Langseite 1920, schneller versandt',
   imImageQualityHd: 'Originalqualität',
   imImageQualityHdSubtitle: 'Originalgröße und Qualität beibehalten',
   imDownloadingMsg: 'Wird heruntergeladen...',
@@ -2348,7 +2410,8 @@ const _Strings _deDE = _Strings(
   imMsgPreviewFile: '[Datei]',
   imMsgPreviewLocation: '[Standort]',
   imMsgPreviewGeneric: '[Nachricht]',
-  mainCantResolveAppConfigError: 'App-Konfiguration konnte nicht aufgelöst oder heruntergeladen werden',
+  mainCantResolveAppConfigError:
+      'App-Konfiguration konnte nicht aufgelöst oder heruntergeladen werden',
   widgetImagePickerPlaceholder: 'Zum Auswählen tippen',
   widgetImagePickerReselect: 'Zum erneuten Auswählen tippen',
   widgetCameraNoCamera: 'Keine Kamera verfügbar',
@@ -2369,17 +2432,21 @@ const _Strings _deDE = _Strings(
   widgetUnknownTypeWith: 'Unbekannter Widget-Typ: {type}',
   widgetHttpNetworkFailed: 'Netzwerkanfrage fehlgeschlagen',
   chatErrNoRetryMessage: 'Keine Nachricht zum erneuten Versuchen',
-  chatErrConnectionUnstableWith: 'Verbindung bricht ständig ab (bereits {n} Mal versucht)',
+  chatErrConnectionUnstableWith:
+      'Verbindung bricht ständig ab (bereits {n} Mal versucht)',
   chatErrPleaseLogin: 'Bitte zuerst anmelden',
   chatErrServerWithBody: 'Serverfehler ({code}): {body}',
-  chatErrDownloadGenJsonWith: 'Generierte JSON konnte nicht heruntergeladen werden (HTTP {code})',
+  chatErrDownloadGenJsonWith:
+      'Generierte JSON konnte nicht heruntergeladen werden (HTTP {code})',
   chatErrDownloadJsonExceptionWith: 'Download-JSON-Fehler: {err}',
   chatErrCancelled: 'Abgebrochen',
   chatErrQuotaExceeded: 'Kontingent aufgebraucht',
   chatErrConnectionTimeout: 'Verbindungs-Zeitüberschreitung',
   chatErrNetworkWith: 'Netzwerkfehler: {err}',
-  chatErrUploadFailedRetriesWith: 'Upload fehlgeschlagen (bereits {n} Versuche): {err}',
-  chatUploadSuccessIntro: 'Hier ist die vollständige JSON-APP-Konfiguration, die gerade läuft (bereits in den temporären Speicher hochgeladen). Bitte basieren Sie weitere Änderungen oder Analysen auf dieser Konfiguration:\n\n',
+  chatErrUploadFailedRetriesWith:
+      'Upload fehlgeschlagen (bereits {n} Versuche): {err}',
+  chatUploadSuccessIntro:
+      'Hier ist die vollständige JSON-APP-Konfiguration, die gerade läuft (bereits in den temporären Speicher hochgeladen). Bitte basieren Sie weitere Änderungen oder Analysen auf dieser Konfiguration:\n\n',
   asrBytedanceConnected: 'Verbunden',
   asrBytedanceDisconnected: 'Verbindung getrennt',
   asrErrUnknown: 'Unbekannter Fehler',
@@ -2468,15 +2535,20 @@ const _Strings _esES = _Strings(
   onboardingSkip: 'Omitir',
   onboardingReplayMenu: 'Repetir tutorial',
   onboardingStep1Title: 'Diseña apps con IA',
-  onboardingStep1Body: 'Mantén pulsado ~3s para abrir el chat de IA — dile «hazme una lista de tareas» y obtendrás una app funcional que puedes seguir iterando. Arrastra para moverlo; toca dos veces para retomar la última conversación.',
+  onboardingStep1Body:
+      'Mantén pulsado ~3s para abrir el chat de IA — dile «hazme una lista de tareas» y obtendrás una app funcional que puedes seguir iterando. Arrastra para moverlo; toca dos veces para retomar la última conversación.',
   onboardingStep2Title: 'Cuenta e idioma',
-  onboardingStep2Body: 'Aquí puedes ver tu perfil, cambiar idioma o cerrar sesión. También puedes repetir el tutorial desde este menú.',
+  onboardingStep2Body:
+      'Aquí puedes ver tu perfil, cambiar idioma o cerrar sesión. También puedes repetir el tutorial desde este menú.',
   onboardingStep3Title: 'Tienda de apps',
-  onboardingStep3Body: 'Explora las apps JSON de la comunidad y pruébalas con un toque.',
+  onboardingStep3Body:
+      'Explora las apps JSON de la comunidad y pruébalas con un toque.',
   onboardingStep4Title: 'Mis apps',
-  onboardingStep4Body: 'Todas tus apps guardadas o generadas por IA están aquí, disponibles también sin conexión.',
+  onboardingStep4Body:
+      'Todas tus apps guardadas o generadas por IA están aquí, disponibles también sin conexión.',
   onboardingStep5Title: 'Mensajes',
-  onboardingStep5Body: 'Chatea con amigos, soporte o grupos. Admite texto, imágenes y emojis.',
+  onboardingStep5Body:
+      'Chatea con amigos, soporte o grupos. Admite texto, imágenes y emojis.',
   errPauseLogin: 'El servidor está ocupado, prueba a iniciar sesión más tarde',
   errPauseRegister: 'El servidor está ocupado, prueba a registrarte más tarde',
   errPauseRequest: 'El servidor está ocupado, inténtalo más tarde',
@@ -2514,21 +2586,27 @@ const _Strings _esES = _Strings(
   settingsThemeLight: 'Claro',
   settingsThemeDark: 'Oscuro',
   settingsAiProvider: 'Proveedor de IA',
+  settingsAiAgent: 'Agente de ejecución',
+  settingsAgentUnavailable: 'No configurado',
+  settingsAgentsFallback: 'Usando agente predeterminado Claude',
   settingsAbout: 'Acerca de',
   settingsVersion: 'Versión',
   addToMyAppsTitle: 'Añadir a Mis Apps',
-  addToMyAppsContent: '¿Añadir esta app a «Mis Apps»?\n\nPodrás reutilizarla y publicarla en la tienda.',
+  addToMyAppsContent:
+      '¿Añadir esta app a «Mis Apps»?\n\nPodrás reutilizarla y publicarla en la tienda.',
   addToMyAppsAdded: 'Añadida a Mis Apps',
   saveFailedWith: 'Error al guardar: {msg}',
   marketDeleteConfirmTitle: 'Confirmar retirada',
-  marketDeleteConfirmContent: '¿Eliminar permanentemente el paquete «{package}»?\n\nEsta acción no se puede deshacer — se eliminarán todas las versiones.',
+  marketDeleteConfirmContent:
+      '¿Eliminar permanentemente el paquete «{package}»?\n\nEsta acción no se puede deshacer — se eliminarán todas las versiones.',
   marketDeleting: 'Eliminando…',
   marketDeleteSuccess: 'Eliminado',
   marketDeleteFailed: 'Error al eliminar',
   marketDeleteFailedWith: 'Error al eliminar: {msg}',
   marketUnpublishTooltip: 'Retirar',
   marketAuthor: 'Autor: {author}',
-  myAppsEmptyHint: 'Mantén pulsado el botón flotante y habla — la IA generará una',
+  myAppsEmptyHint:
+      'Mantén pulsado el botón flotante y habla — la IA generará una',
   myAppsUploadTooltip: 'Subir a la tienda',
   myAppsUploading: 'Subiendo a la tienda…',
   myAppsPublishSuccess: 'Publicada 🎉',
@@ -2552,7 +2630,8 @@ const _Strings _esES = _Strings(
   publishVersionInvalid: 'La versión debe seguir el formato x.y.z',
   publishNamespaceRequired: 'Selecciona o crea un espacio',
   publishUuidConflictTitle: 'Conflicto de UUID',
-  publishUuidConflictContent: 'Este UUID ya lo usa el paquete «{pkg}».\nPulsa «Aleatorio 🎲» para generar uno nuevo e inténtalo de nuevo.',
+  publishUuidConflictContent:
+      'Este UUID ya lo usa el paquete «{pkg}».\nPulsa «Aleatorio 🎲» para generar uno nuevo e inténtalo de nuevo.',
   publishFailedWithCode: 'Error al publicar ({code})',
   create: 'Crear',
   gotIt: 'Entendido',
@@ -2664,7 +2743,8 @@ const _Strings _esES = _Strings(
   defaultStartupEntry: 'App de inicio predeterminada',
   defaultStartupSubtitleNone: 'Sin definir (abre la página de MyApp)',
   defaultStartupTitle: 'App de inicio predeterminada',
-  defaultStartupHint: 'Cuando se define, la app abre directamente la elegida. Usa «Volver al inicio» en el menú del botón flotante para volver a la página de MyApp.',
+  defaultStartupHint:
+      'Cuando se define, la app abre directamente la elegida. Usa «Volver al inicio» en el menú del botón flotante para volver a la página de MyApp.',
   defaultStartupNoneOption: 'Sin definir (abre la página de MyApp)',
   defaultStartupTabMarket: 'Mercado',
   defaultStartupTabLocal: 'Local',
@@ -2734,7 +2814,8 @@ const _Strings _esES = _Strings(
   chatSessionRenameHint: 'Nuevo título',
   chatSessionActionRename: 'Renombrar',
   chatSessionDeleteTitle: 'Eliminar chat',
-  chatSessionDeleteContent: '¿Eliminar «{title}»? La respuesta que se está ejecutando en segundo plano se cancelará.',
+  chatSessionDeleteContent:
+      '¿Eliminar «{title}»? La respuesta que se está ejecutando en segundo plano se cancelará.',
   chatStatusGenerating: 'Generando código...',
   chatStatusStartingAi: 'Iniciando motor de IA...',
   chatStatusResumingLast: 'Restaurando conversación anterior...',
@@ -2758,18 +2839,24 @@ const _Strings _esES = _Strings(
   chatEditButton: 'Editar',
   chatSendButton: 'Enviar',
   asrErrBytedanceWith: 'Error de ASR ByteDance: {err}',
-  asrErrNativeInitWithHint: 'No se pudo inicializar el reconocimiento nativo. Cambia a ASR ByteDance en Ajustes.',
+  asrErrNativeInitWithHint:
+      'No se pudo inicializar el reconocimiento nativo. Cambia a ASR ByteDance en Ajustes.',
   asrConnectingBytedance: 'Conectando con ASR ByteDance...',
-  asrErrBytedanceTimeoutWithHint: 'Tiempo agotado al conectar con ASR ByteDance. Revisa la red o cambia de reconocedor.',
-  asrErrNativeStartWithHint: 'El reconocimiento nativo no pudo iniciar. Cambia a ASR ByteDance en Ajustes.',
-  asrErrMicPermissionDenied: 'Permiso de micrófono denegado. Actívalo en Ajustes → Apps → Permisos e inténtalo de nuevo.',
+  asrErrBytedanceTimeoutWithHint:
+      'Tiempo agotado al conectar con ASR ByteDance. Revisa la red o cambia de reconocedor.',
+  asrErrNativeStartWithHint:
+      'El reconocimiento nativo no pudo iniciar. Cambia a ASR ByteDance en Ajustes.',
+  asrErrMicPermissionDenied:
+      'Permiso de micrófono denegado. Actívalo en Ajustes → Apps → Permisos e inténtalo de nuevo.',
   asrErrStartFailWith: 'El reconocimiento de voz no pudo iniciar: {err}',
-  asrErrBytedanceNotConnected: 'ASR ByteDance no está conectado. Revisa la red.',
+  asrErrBytedanceNotConnected:
+      'ASR ByteDance no está conectado. Revisa la red.',
   asrErrBytedanceStartFailWith: 'ASR ByteDance no pudo iniciar: {err}',
   authSwitchAccountCancelled: 'Cambio de cuenta cancelado',
   authClearLocalFailedWith: 'Error al borrar los datos locales: {err}',
   authSwitchAccountTitle: 'Cambiar de cuenta',
-  authSwitchAccountContent: 'La cuenta actual ({newEmail}) es distinta de la anterior ({prevEmail}).\n\nContinuar borrará todo el historial de chats, contactos y datos locales. ¿Continuar?',
+  authSwitchAccountContent:
+      'La cuenta actual ({newEmail}) es distinta de la anterior ({prevEmail}).\n\nContinuar borrará todo el historial de chats, contactos y datos locales. ¿Continuar?',
   authSwitchAccountConfirm: 'Borrar y continuar',
   authErrSignupFailed: 'Error al registrarse',
   authErrLoginFailed: 'Error al iniciar sesión',
@@ -2785,7 +2872,8 @@ const _Strings _esES = _Strings(
   settingsAsrOnline: 'Reconocimiento online',
   settingsAsrOnlineSubtitle: 'Usa speech_to_text, requiere red',
   settingsAsrBytedance: 'ASR ByteDance',
-  settingsAsrBytedanceSubtitle: 'Reconocimiento de voz de ByteDance, requiere red y cuota',
+  settingsAsrBytedanceSubtitle:
+      'Reconocimiento de voz de ByteDance, requiere red y cuota',
   settingsProvidersFailed: 'No se pudo obtener la lista de proveedores',
   settingsProvidersFallback: 'Usando proveedor predeterminado DeepSeek',
   settingsModelWith: 'Modelo: {model}',
@@ -2793,7 +2881,8 @@ const _Strings _esES = _Strings(
   imMessageRecalled: 'retiró un mensaje',
   imAttachmentFile: 'Archivo',
   imImageQualityNormal: 'Calidad normal',
-  imImageQualityNormalSubtitle: 'Compresión automática, lado largo 1920, envío más rápido',
+  imImageQualityNormalSubtitle:
+      'Compresión automática, lado largo 1920, envío más rápido',
   imImageQualityHd: 'Original',
   imImageQualityHdSubtitle: 'Mantener tamaño y calidad originales',
   imDownloadingMsg: 'Descargando...',
@@ -2808,7 +2897,8 @@ const _Strings _esES = _Strings(
   imMsgPreviewFile: '[Archivo]',
   imMsgPreviewLocation: '[Ubicación]',
   imMsgPreviewGeneric: '[Mensaje]',
-  mainCantResolveAppConfigError: 'No se pudo resolver o descargar la configuración de la app',
+  mainCantResolveAppConfigError:
+      'No se pudo resolver o descargar la configuración de la app',
   widgetImagePickerPlaceholder: 'Toca para elegir imagen',
   widgetImagePickerReselect: 'Toca para volver a elegir',
   widgetCameraNoCamera: 'No hay cámara disponible',
@@ -2824,22 +2914,27 @@ const _Strings _esES = _Strings(
   widgetVideoLoadFailedWith: 'Error al cargar el video\n{err}',
   widgetVideoLoading: 'Cargando video...',
   widgetRefNotFoundWith: 'No encontrado: {ref}',
-  widgetRefMissingFromOrName: 'El widget ref requiere los campos «from» y «widget»',
+  widgetRefMissingFromOrName:
+      'El widget ref requiere los campos «from» y «widget»',
   widgetRefMissingRootWith: 'A {ref} le falta la definición de root',
   widgetUnknownTypeWith: 'Tipo de widget desconocido: {type}',
   widgetHttpNetworkFailed: 'Solicitud de red fallida',
   chatErrNoRetryMessage: 'No hay mensaje para reintentar',
-  chatErrConnectionUnstableWith: 'La conexión sigue cayendo (ya se reintentó {n} veces)',
+  chatErrConnectionUnstableWith:
+      'La conexión sigue cayendo (ya se reintentó {n} veces)',
   chatErrPleaseLogin: 'Por favor inicia sesión primero',
   chatErrServerWithBody: 'Error del servidor ({code}): {body}',
-  chatErrDownloadGenJsonWith: 'Error al descargar el JSON generado (HTTP {code})',
+  chatErrDownloadGenJsonWith:
+      'Error al descargar el JSON generado (HTTP {code})',
   chatErrDownloadJsonExceptionWith: 'Error al descargar JSON: {err}',
   chatErrCancelled: 'Cancelado',
   chatErrQuotaExceeded: 'Cuota agotada',
   chatErrConnectionTimeout: 'Tiempo de conexión agotado',
   chatErrNetworkWith: 'Error de red: {err}',
-  chatErrUploadFailedRetriesWith: 'Subida fallida (ya reintentó {n} veces): {err}',
-  chatUploadSuccessIntro: 'Esta es la configuración completa de la JSON-APP actualmente en ejecución (ya subida al almacenamiento temporal). Por favor basa las modificaciones o el análisis en esta configuración:\n\n',
+  chatErrUploadFailedRetriesWith:
+      'Subida fallida (ya reintentó {n} veces): {err}',
+  chatUploadSuccessIntro:
+      'Esta es la configuración completa de la JSON-APP actualmente en ejecución (ya subida al almacenamiento temporal). Por favor basa las modificaciones o el análisis en esta configuración:\n\n',
   asrBytedanceConnected: 'Conectado',
   asrBytedanceDisconnected: 'Desconectado',
   asrErrUnknown: 'Error desconocido',

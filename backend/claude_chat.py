@@ -5,7 +5,16 @@ import logging
 import threading
 from flask import current_app, request, jsonify, Response, stream_with_context
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from config import AI_PROVIDERS, DEFAULT_PROVIDER, PROJECT_ROOT, GENERATE_PROMPT_PATH, CLAUDE_BIN, load_generate_prompt
+from config import (
+    AI_AGENTS,
+    AI_PROVIDERS,
+    DEFAULT_AGENT,
+    DEFAULT_PROVIDER,
+    PROJECT_ROOT,
+    GENERATE_PROMPT_PATH,
+    CLAUDE_BIN,
+    load_generate_prompt,
+)
 from auth import require_auth, verify_access_token
 from database import get_quota_info, increment_quota
 from config import ROLE_QUOTAS
@@ -132,6 +141,22 @@ def _get_provider(provider_id=None):
         raise ValueError(f"AI 供应商当前不可用: {pid}")
     return cfg
 
+
+def _normalize_agent_id(agent_id=None):
+    return (agent_id or DEFAULT_AGENT).strip().lower().replace("_", "-") or DEFAULT_AGENT
+
+
+def _get_agent(agent_id=None):
+    aid = _normalize_agent_id(agent_id)
+    cfg = AI_AGENTS.get(aid)
+    if not cfg:
+        raise ValueError(f"未知 AI Agent: {aid}")
+    if not cfg.get("configured"):
+        raise ValueError(f"AI Agent 未配置: {aid}")
+    if not cfg.get("visible", True):
+        raise ValueError(f"AI Agent 当前不可用: {aid}")
+    return cfg
+
 def list_providers():
     """获取所有可用的 AI 供应商列表"""
     providers = []
@@ -146,6 +171,22 @@ def list_providers():
             "configured": bool(cfg.get("configured", False)),
         })
     return jsonify({"providers": providers})
+
+
+def list_agents():
+    """获取所有可用的执行 Agent 列表"""
+    agents = []
+    for aid, cfg in AI_AGENTS.items():
+        if not cfg.get("visible", True):
+            continue
+        agents.append({
+            "id": cfg["id"],
+            "name": cfg["name"],
+            "description": cfg.get("description", ""),
+            "configured": bool(cfg.get("configured", False)),
+            "default": cfg["id"] == DEFAULT_AGENT,
+        })
+    return jsonify({"agents": agents, "default_agent": DEFAULT_AGENT})
 
 
 @require_auth
@@ -650,7 +691,7 @@ import ai_session
 def chat_start():
     """提交 AI 任务到 worker，立即返回 session_id。
 
-    Body: {messages, session_id, provider?}
+    Body: {messages, session_id, provider?, agent?}
     Resp: {session_id, status: "running"}
     """
     _cleanup_old_ai_uploads()
@@ -668,6 +709,7 @@ def chat_start():
     messages = body.get("messages", [])
     session_id = body.get("session_id")
     provider_id = body.get("provider")
+    agent_id = body.get("agent")
     # force_restart=true：用户输入新消息时用，先杀掉同 session 还在跑的 worker 再起新的
     # 默认 false：双击 send / 重连等场景幂等返回 resumed:true
     force_restart = bool(body.get("force_restart", False))
@@ -689,6 +731,13 @@ def chat_start():
         logger.warning(f"[CHAT_START] provider rejected: {e}")
         return jsonify({"error": str(e), "code": "AI_PROVIDER_UNAVAILABLE"}), 400
     provider_id = provider["id"]
+
+    try:
+        agent = _get_agent(agent_id)
+    except ValueError as e:
+        logger.warning(f"[CHAT_START] agent rejected: {e}")
+        return jsonify({"error": str(e), "code": "AI_AGENT_UNAVAILABLE"}), 400
+    agent_id = agent["id"]
 
     store = ai_session.SessionStore()
     existing = store.get_meta(session_id)
@@ -738,12 +787,21 @@ def chat_start():
             })
 
     new_remaining = remaining - 1
+    agent_resume_id = None
+    if (
+        agent_id == "codex"
+        and existing
+        and existing.get("agent") == "codex"
+        and existing.get("provider") == provider_id
+    ):
+        agent_resume_id = existing.get("agent_thread_id") or None
 
     # 写 meta + 提交到显式队列。只有接受入队后才扣配额。
     store.create_meta(
         session_id,
         user_id=user_id,
         provider=provider_id,
+        agent=agent_id,
         quota_used=used + 1,
         quota_limit=limit,
         quota_remaining=new_remaining,
@@ -751,6 +809,8 @@ def chat_start():
     )
     accepted, queue_position = ai_session.submit_worker(
         session_id, last_msg, provider_id,
+        agent_id=agent_id,
+        agent_resume_id=agent_resume_id,
         user_id=user_id,
         quota_used=used + 1,
         quota_limit=limit,
@@ -771,6 +831,7 @@ def chat_start():
         "session_id": session_id,
         "status": "queued",
         "queue_position": queue_position,
+        "agent": agent_id,
         "resumed": False,
     })
 
@@ -949,6 +1010,8 @@ def chat_status_v2(session_id):
     return jsonify({
         "session_id": session_id,
         "status": status,
+        "provider": meta.get("provider", ""),
+        "agent": meta.get("agent", ""),
         "event_count": int(meta.get("event_count", "0") or "0"),
         "started_at": meta.get("started_at"),
         "finished_at": meta.get("finished_at"),

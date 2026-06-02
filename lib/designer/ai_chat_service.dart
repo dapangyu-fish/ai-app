@@ -107,11 +107,36 @@ class AiProvider {
   }
 }
 
+/// AI 执行 Agent 信息
+class AiAgent {
+  final String id;
+  final String name;
+  final String description;
+  final bool configured;
+
+  AiAgent({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.configured,
+  });
+
+  factory AiAgent.fromJson(Map<String, dynamic> json) {
+    return AiAgent(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String? ?? '',
+      configured: json['configured'] as bool? ?? true,
+    );
+  }
+}
+
 /// 管理对话历史并与后端 AI 服务通信（SSE 流式，支持中断）
 class AiChatService {
   // 使用统一配置管理的后端地址
   static String get _baseUrl => AppConfig.backendUrl;
   static const String _providerKey = 'ai_provider';
+  static const String _agentKey = 'ai_agent';
   // 多会话存储：列表 + 当前 active sid
   static const String _sessionsListKey = 'ai_sessions_list';
   static const String _activeSessionKey = 'ai_active_session_id';
@@ -121,10 +146,21 @@ class AiChatService {
   static const String _legacyLastUserMessageKey = 'ai_last_user_message';
 
   static String _selectedProvider = 'deepseek';
+  static String _selectedAgent = 'claude';
   static List<AiProvider> _providers = [];
+  static List<AiAgent> _agents = [
+    AiAgent(
+      id: 'claude',
+      name: 'Claude Code',
+      description: 'Claude CLI runner',
+      configured: true,
+    ),
+  ];
 
   static String get selectedProvider => _selectedProvider;
+  static String get selectedAgent => _selectedAgent;
   static List<AiProvider> get providers => _providers;
+  static List<AiAgent> get agents => _agents;
 
   /// AI 输出里允许夹带少量控制标签供客户端解析，但这些标签不应该直接展示给用户。
   ///
@@ -148,12 +184,19 @@ class AiChatService {
   static Future<void> loadProvider() async {
     final prefs = await SharedPreferences.getInstance();
     _selectedProvider = prefs.getString(_providerKey) ?? 'deepseek';
+    _selectedAgent = prefs.getString(_agentKey) ?? 'claude';
   }
 
   static Future<void> setProvider(String providerId) async {
     _selectedProvider = providerId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_providerKey, providerId);
+  }
+
+  static Future<void> setAgent(String agentId) async {
+    _selectedAgent = agentId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_agentKey, agentId);
   }
 
   static Future<List<AiProvider>> fetchProviders() async {
@@ -170,6 +213,25 @@ class AiChatService {
       }
     } catch (_) {}
     return _providers;
+  }
+
+  static Future<List<AiAgent>> fetchAgents() async {
+    try {
+      final resp = await http
+          .get(Uri.parse('$_baseUrl/api/ai/agents'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        _agents = (data['agents'] as List<dynamic>)
+            .map((e) => AiAgent.fromJson(e as Map<String, dynamic>))
+            .toList();
+        if (_agents.every((agent) => agent.id != _selectedAgent)) {
+          _selectedAgent = data['default_agent'] as String? ?? 'claude';
+        }
+        return _agents;
+      }
+    } catch (_) {}
+    return _agents;
   }
 
   // ── 多会话状态 ──
@@ -1453,6 +1515,7 @@ class AiChatService {
           ],
           'session_id': _activeSessionId,
           'provider': _selectedProvider,
+          'agent': _selectedAgent,
           'force_restart': forceRestart,
         });
         var resp = await http
@@ -1647,6 +1710,7 @@ class AiChatService {
         if (currentApp != null) 'current_app': currentApp,
         if (crashLog != null) 'crash_log': crashLog,
         'provider': _selectedProvider,
+        'agent': _selectedAgent,
       });
 
       final response = await client

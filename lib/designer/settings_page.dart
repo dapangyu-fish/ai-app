@@ -23,8 +23,11 @@ class _SettingsPageState extends State<SettingsPage> {
   AsrMode _asrMode = AsrMode.online;
   ThemeMode _themeMode = appThemeMode.value;
   String _selectedProvider = AiChatService.selectedProvider;
+  String _selectedAgent = AiChatService.selectedAgent;
   List<AiProvider> _providers = AiChatService.providers;
+  List<AiAgent> _agents = AiChatService.agents;
   bool _loadingProviders = false;
+  bool _loadingAgents = false;
 
   // 默认启动 App 当前选择（subtitle 展示用，进选择页改完再 reload）
   DefaultStartupConfig _defaultStartup = const DefaultStartupConfig.none();
@@ -34,6 +37,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadSettings();
     _fetchProviders();
+    _fetchAgents();
     _loadDefaultStartup();
   }
 
@@ -48,6 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _asrMode = AsrModePrefs.notifier.value;
       _themeMode = appThemeMode.value;
       _selectedProvider = AiChatService.selectedProvider;
+      _selectedAgent = AiChatService.selectedAgent;
     });
   }
 
@@ -58,6 +63,18 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _providers = providers;
         _loadingProviders = false;
+      });
+    }
+  }
+
+  Future<void> _fetchAgents() async {
+    setState(() => _loadingAgents = true);
+    final agents = await AiChatService.fetchAgents();
+    if (mounted) {
+      setState(() {
+        _agents = agents;
+        _selectedAgent = AiChatService.selectedAgent;
+        _loadingAgents = false;
       });
     }
   }
@@ -83,6 +100,13 @@ class _SettingsPageState extends State<SettingsPage> {
     await AiChatService.setProvider(providerId);
     setState(() {
       _selectedProvider = providerId;
+    });
+  }
+
+  Future<void> _selectAgent(String agentId) async {
+    await AiChatService.setAgent(agentId);
+    setState(() {
+      _selectedAgent = agentId;
     });
   }
 
@@ -113,6 +137,8 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildSectionTitle(t.settingsAiProvider, cs),
             const SizedBox(height: 8.0),
             _buildProviderSelector(cs),
+            const SizedBox(height: 8.0),
+            _buildAgentSelector(cs),
             const SizedBox(height: 24.0),
             _buildSectionTitle(t.settingsSectionAsr, cs),
             const SizedBox(height: 8.0),
@@ -329,6 +355,91 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildAgentSelector(ColorScheme cs) {
+    final t = T.of(context);
+    if (_loadingAgents && _agents.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (_agents.isEmpty) {
+      return Card(
+        child: ListTile(
+          leading: const Icon(Icons.psychology_alt_outlined),
+          title: Text(t.settingsAiAgent),
+          subtitle: Text(t.settingsAgentsFallback),
+          trailing: IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchAgents,
+          ),
+        ),
+      );
+    }
+
+    final selectedAgent = _agents.any((agent) => agent.id == _selectedAgent)
+        ? _selectedAgent
+        : _agents.first.id;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 16),
+        child: Row(
+          children: [
+            Icon(Icons.psychology_alt_outlined, color: cs.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: selectedAgent,
+                decoration: InputDecoration(
+                  labelText: t.settingsAiAgent,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                items: _agents.map((agent) {
+                  return DropdownMenuItem<String>(
+                    value: agent.id,
+                    enabled: agent.configured,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(agent.name),
+                        if (agent.description.isNotEmpty || !agent.configured)
+                          Text(
+                            agent.configured
+                                ? agent.description
+                                : '${agent.description} · ${t.settingsAgentUnavailable}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: cs.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) _selectAgent(value);
+                },
+                isExpanded: true,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _fetchAgents,
+            ),
+          ],
+        ),
       ),
     );
   }

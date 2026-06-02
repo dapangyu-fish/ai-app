@@ -4,6 +4,7 @@
 """
 
 import os
+import shutil
 from dotenv import load_dotenv
 
 # .env 加载顺序（首个存在的文件生效）：
@@ -63,6 +64,14 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "model": "MiniMax-M3",
         "auth_env_fallbacks": (),
         "visible": "1",
+        "codex": {
+            "provider_name": "MiniMax",
+            "base_url": "https://api.minimaxi.com/v1",
+            "model": "MiniMax-M3",
+            "wire_api": "responses",
+            "env_key": "MINIMAX_ANTHROPIC_AUTH_TOKEN",
+            "context_window": 512000,
+        },
     },
 }
 
@@ -296,6 +305,105 @@ def load_generate_prompt() -> str:
 
 # Claude CLI 路径（可通过环境变量覆盖）
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "/root/.nvm/versions/node/v22.22.2/bin/claude")
+
+# Codex CLI 运行配置。生产默认使用 npx 固定版本，不写 config.toml；
+# token 通过 provider 的 CODEX_ENV_KEY 指向现有环境变量，不能出现在命令行参数里。
+CODEX_BIN = os.environ.get("CODEX_BIN", "npx")
+CODEX_NPX_PACKAGE = os.environ.get("CODEX_NPX_PACKAGE", "@openai/codex@0.136.0")
+CODEX_NODE_BIN_DIR = os.environ.get("CODEX_NODE_BIN_DIR", "/root/.nvm/versions/node/v22.22.2/bin")
+CODEX_NPM_CACHE = os.environ.get("CODEX_NPM_CACHE", "/var/lib/ai-app/codex-npm-cache")
+CODEX_HOME = os.environ.get("CODEX_HOME", "/var/lib/ai-app/codex-home")
+
+
+def _path_has_executable(exe: str, extra_dir: str = "") -> bool:
+    if os.path.isabs(exe):
+        return os.path.isfile(exe) and os.access(exe, os.X_OK)
+    search_path = os.environ.get("PATH", "")
+    if extra_dir:
+        search_path = f"{extra_dir}{os.pathsep}{search_path}"
+    return shutil.which(exe, path=search_path) is not None
+
+
+def _provider_codex_config(provider_id: str, prefix: str, builtin: dict) -> dict:
+    default_codex = builtin.get("codex", {})
+    model = _env_for_prefix(prefix, "CODEX_MODEL", default_codex.get("model", ""))
+    base_url = _env_for_prefix(prefix, "CODEX_BASE_URL", default_codex.get("base_url", ""))
+    env_key = _env_for_prefix(
+        prefix,
+        "CODEX_ENV_KEY",
+        default_codex.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+    )
+    wire_api = _env_for_prefix(prefix, "CODEX_WIRE_API", default_codex.get("wire_api", "responses"))
+    context_window = _env_for_prefix(
+        prefix,
+        "CODEX_CONTEXT_WINDOW",
+        str(default_codex.get("context_window", "")),
+    )
+    provider_name = _env_for_prefix(prefix, "CODEX_PROVIDER_NAME", default_codex.get("provider_name", provider_id))
+    auth_token = os.environ.get(env_key, "") if env_key else ""
+    return {
+        "provider_name": provider_name,
+        "base_url": base_url,
+        "model": model,
+        "wire_api": wire_api,
+        "env_key": env_key,
+        "context_window": context_window,
+        "configured": bool(base_url and model and env_key and auth_token),
+    }
+
+
+for _provider_id, _provider in AI_PROVIDERS.items():
+    _provider["codex"] = _provider_codex_config(
+        _provider_id,
+        _provider_prefix(_provider_id),
+        _BUILTIN_ANTHROPIC_PROVIDERS.get(_provider_id, {}),
+    )
+
+
+def _agent_ids() -> list[str]:
+    explicit = _split_csv(os.environ.get("AI_AGENT_IDS", ""))
+    return explicit or ["claude", "codex"]
+
+
+def _build_agent(agent_id: str) -> dict:
+    normalized = agent_id.strip().lower().replace("_", "-")
+    prefix = _provider_prefix(normalized)
+    if normalized == "claude":
+        return {
+            "id": "claude",
+            "name": _env_for_prefix(prefix, "AGENT_NAME", "Claude Code"),
+            "description": _env_for_prefix(prefix, "AGENT_DESCRIPTION", "Claude CLI runner"),
+            "configured": bool(CLAUDE_BIN),
+            "visible": _env_bool_for_prefix(prefix, "AGENT_VISIBLE", "1"),
+        }
+    if normalized == "codex":
+        return {
+            "id": "codex",
+            "name": _env_for_prefix(prefix, "AGENT_NAME", "Codex"),
+            "description": _env_for_prefix(prefix, "AGENT_DESCRIPTION", "Codex CLI runner"),
+            "configured": _path_has_executable(CODEX_BIN, CODEX_NODE_BIN_DIR),
+            "visible": _env_bool_for_prefix(prefix, "AGENT_VISIBLE", "1"),
+        }
+    return {
+        "id": normalized,
+        "name": _env_for_prefix(prefix, "AGENT_NAME", normalized),
+        "description": _env_for_prefix(prefix, "AGENT_DESCRIPTION", "AI execution agent"),
+        "configured": bool(os.environ.get(f"{prefix}_AGENT_CONFIGURED", "")),
+        "visible": _env_bool_for_prefix(prefix, "AGENT_VISIBLE", "0"),
+    }
+
+
+AI_AGENTS = {
+    agent_id: _build_agent(agent_id)
+    for agent_id in _agent_ids()
+}
+DEFAULT_AGENT = os.environ.get("AI_DEFAULT_AGENT", "claude").strip().lower().replace("_", "-") or "claude"
+_VISIBLE_AGENT_IDS = [
+    agent_id for agent_id, agent in AI_AGENTS.items()
+    if agent.get("visible", True)
+]
+if DEFAULT_AGENT not in AI_AGENTS or not AI_AGENTS[DEFAULT_AGENT].get("visible", True):
+    DEFAULT_AGENT = "claude" if "claude" in _VISIBLE_AGENT_IDS else (_VISIBLE_AGENT_IDS[0] if _VISIBLE_AGENT_IDS else "claude")
 
 # AI session Redis（独立部署的 ai-session-redis，与 OpenIM 那个 Redis 隔离）
 # 数据：24h TTL 的 AI session 状态 + SSE 事件序列。详见 ARCHITECTURE.md §3

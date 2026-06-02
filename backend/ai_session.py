@@ -34,6 +34,7 @@ from typing import List, Optional, Tuple
 import redis
 
 from config import (
+    AI_AGENTS,
     AI_PROVIDERS,
     AI_SESSION_REDIS_HOST,
     AI_SESSION_REDIS_PASSWORD,
@@ -42,6 +43,12 @@ from config import (
     AI_WORKER_MAX_CONCURRENCY,
     AI_WORKER_QUEUE_MAX,
     CLAUDE_BIN,
+    CODEX_BIN,
+    CODEX_HOME,
+    CODEX_NODE_BIN_DIR,
+    CODEX_NPM_CACHE,
+    CODEX_NPX_PACKAGE,
+    DEFAULT_AGENT,
     DEFAULT_PROVIDER,
     GENERATE_PROMPT_PATH,
     PROJECT_ROOT,
@@ -218,6 +225,7 @@ class SessionStore:
 
     # ─── meta ───
     def create_meta(self, session_id: str, *, user_id: str, provider: str,
+                    agent: str = DEFAULT_AGENT,
                     quota_used: int, quota_limit: int, quota_remaining: int,
                     status: str = STATUS_RUNNING) -> None:
         """新一轮 worker 起前调。会清掉旧 stream + 旧 meta（避免上一轮的 final_text /
@@ -234,6 +242,7 @@ class SessionStore:
             "session_id": session_id,
             "user_id": user_id,
             "provider": provider,
+            "agent": agent,
             "status": status,
             "started_at": str(int(time.time() * 1000)),
             "event_count": "0",
@@ -515,6 +524,77 @@ def parse_cli_line(line_str: str) -> List[dict]:
     return out
 
 
+def parse_codex_line(line_str: str) -> List[dict]:
+    """把 Codex CLI `exec --json` 的一行 JSONL 解析成现有业务事件。
+
+    对客户端保持同一套 SSE payload：
+    - agent_message.text -> assistant_content + final_content
+    - tool/command items -> status/message
+    - error/failure -> error
+    """
+    line_str = line_str.strip()
+    if not line_str:
+        return []
+
+    try:
+        event = json.loads(line_str)
+    except json.JSONDecodeError as e:
+        logger.warning(f"[CODEX_PARSE] JSON 解析失败: {e}, line: {line_str[:100]}...")
+        return []
+
+    out: List[dict] = []
+    evt_type = str(event.get("type") or "")
+
+    if evt_type == "thread.started":
+        out.append({"status": "init", "message": "AI 引擎已启动"})
+        return out
+
+    if evt_type == "turn.started":
+        out.append({"status": "thinking", "message": "AI 正在思考..."})
+        return out
+
+    if evt_type in {"error", "turn.failed"}:
+        message = event.get("message") or event.get("error") or event.get("detail") or "Codex 执行失败"
+        out.append({"error": str(message), "needs_retry": True})
+        return out
+
+    item = event.get("item")
+    if isinstance(item, dict):
+        item_type = str(item.get("type") or "")
+        if item_type in {"agent_message", "message"}:
+            text = item.get("text") or item.get("content") or ""
+            if isinstance(text, str) and text:
+                # Codex exec 当前不会像 Claude 一样稳定吐 text_delta；
+                # 同时发 assistant_content 和 final_content，兼容客户端显示与最终恢复。
+                out.append({"assistant_content": text})
+                out.append({"final_content": text})
+        elif item_type in {"reasoning", "thinking"}:
+            text = item.get("text") or item.get("summary") or item.get("content") or ""
+            if isinstance(text, str) and text:
+                out.append({"assistant_thinking": text})
+            else:
+                out.append({"status": "thinking", "message": "AI 正在思考..."})
+        elif item_type in {"tool_call", "function_call", "local_shell_call", "command_execution"}:
+            name = item.get("name") or item.get("command") or item_type
+            if isinstance(name, list):
+                name = " ".join(str(part) for part in name[:3])
+            out.append({
+                "status": item_type,
+                "message": f"正在执行 {str(name)[:80]}...",
+            })
+        elif item_type:
+            out.append({
+                "status": item_type,
+                "message": f"正在处理 {item_type}...",
+            })
+        return out
+
+    if evt_type == "item.completed":
+        out.append({"status": "working", "message": "AI 正在处理..."})
+
+    return out
+
+
 def extract_final_texts(events: List[dict]) -> Tuple[Optional[str], Optional[str]]:
     """从所有事件里提取最终文本和 thinking。给 worker 完工时落 meta 用。"""
     final_text = None
@@ -543,6 +623,8 @@ class _WorkerJob:
     session_id: str
     last_msg: str
     provider_id: Optional[str]
+    agent_id: str
+    agent_resume_id: Optional[str]
     user_id: str
     quota_used: int
     quota_limit: int
@@ -652,6 +734,8 @@ def _job_from_json(raw) -> _WorkerJob:
         session_id=data["session_id"],
         last_msg=data["last_msg"],
         provider_id=data.get("provider_id"),
+        agent_id=data.get("agent_id") or DEFAULT_AGENT,
+        agent_resume_id=data.get("agent_resume_id"),
         user_id=data["user_id"],
         quota_used=int(data["quota_used"]),
         quota_limit=int(data["quota_limit"]),
@@ -811,6 +895,8 @@ def _run_redis_job(job: _WorkerJob) -> None:
             job.session_id,
             job.last_msg,
             job.provider_id,
+            job.agent_id,
+            job.agent_resume_id,
             job.quota_used,
             job.quota_limit,
             job.quota_remaining,
@@ -821,14 +907,7 @@ def _run_redis_job(job: _WorkerJob) -> None:
         _complete_running(job.session_id)
 
 
-def _build_cli_cmd(
-    session_id: str,
-    last_msg: str,
-    sys_prompt: str,
-    is_resume: bool,
-    *,
-    workspace: Optional[str] = None,
-) -> list:
+def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -> str:
     workspace_note = ""
     if workspace:
         workspace_note = (
@@ -847,19 +926,30 @@ def _build_cli_cmd(
         "同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。"
         "如果需要请求用户上传当前应用，只能输出完整 `[request_action]upload_current_app[/request_action]`。"
     )
+    return (
+        f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>"
+        f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
+        "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
+        "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
+        f"{final_protocol_note}"
+    )
+
+
+def _build_cli_cmd(
+    session_id: str,
+    last_msg: str,
+    sys_prompt: str,
+    is_resume: bool,
+    *,
+    workspace: Optional[str] = None,
+) -> list:
     cmd = [
         CLAUDE_BIN,
         "--dangerously-skip-permissions",
         "--output-format", "stream-json",
         "--include-partial-messages",
         "--verbose",
-        "-p", (
-            f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>"
-            f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
-            "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
-            "不要遗忘工作目录、repair/validate、上传和最终标签规则。"
-            f"{final_protocol_note}"
-        ),
+        "-p", _build_user_turn_prompt(last_msg, workspace=workspace),
     ]
     if is_resume:
         cmd.extend(["-r", session_id])
@@ -889,7 +979,110 @@ def _provider_env(provider_id: Optional[str]) -> Tuple[dict, dict]:
     return provider, env
 
 
+def _agent_config(agent_id: Optional[str]) -> dict:
+    aid = (agent_id or DEFAULT_AGENT).strip().lower().replace("_", "-") or DEFAULT_AGENT
+    agent = AI_AGENTS.get(aid)
+    if not agent:
+        raise ValueError(f"未知 AI Agent: {aid}")
+    if not agent.get("configured"):
+        raise ValueError(f"AI Agent 未配置: {aid}")
+    if not agent.get("visible", True):
+        raise ValueError(f"AI Agent 当前不可用: {aid}")
+    return agent
+
+
+def _toml_string(value: object) -> str:
+    return json.dumps(str(value), ensure_ascii=False)
+
+
+def _codex_env(provider: dict, workspace: str) -> Tuple[dict, dict]:
+    codex = provider.get("codex") or {}
+    if not codex.get("configured"):
+        raise ValueError(f"供应商 {provider.get('id')} 未配置 Codex 运行参数")
+    env_key = str(codex.get("env_key") or "").strip()
+    if not env_key or not os.environ.get(env_key, ""):
+        raise ValueError(f"供应商 {provider.get('id')} 缺少 Codex 鉴权环境变量")
+
+    env = os.environ.copy()
+    env["IS_SANDBOX"] = "1"
+    env["AI_APP_WORKSPACE"] = workspace
+    env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
+    env["CODEX_HOME"] = CODEX_HOME
+    env["npm_config_cache"] = CODEX_NPM_CACHE
+    if CODEX_NODE_BIN_DIR:
+        env["PATH"] = f"{CODEX_NODE_BIN_DIR}{os.pathsep}{env.get('PATH', '')}"
+    os.makedirs(CODEX_HOME, exist_ok=True)
+    os.makedirs(CODEX_NPM_CACHE, exist_ok=True)
+    return codex, env
+
+
+def _codex_bin_prefix() -> List[str]:
+    if os.path.basename(CODEX_BIN) == "npx":
+        return [CODEX_BIN, "-y", CODEX_NPX_PACKAGE]
+    return [CODEX_BIN]
+
+
+def _build_codex_cmd(
+    provider: dict,
+    workspace: str,
+    *,
+    resume_id: Optional[str],
+) -> list:
+    codex = provider.get("codex") or {}
+    provider_key = str(codex.get("provider_id") or provider.get("id") or "custom").replace("-", "_")
+    provider_name = codex.get("provider_name") or provider_key
+    cmd = _codex_bin_prefix()
+    cmd.extend(["-C", PROJECT_ROOT, "exec"])
+    if resume_id:
+        cmd.append("resume")
+    cmd.extend([
+        "--json",
+        "--ignore-user-config",
+        "--skip-git-repo-check",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--output-last-message", os.path.join(workspace, "codex-last-message.txt"),
+        "-c", f"model_provider={_toml_string(provider_key)}",
+        "-c", f"model={_toml_string(codex.get('model', ''))}",
+        "-c", f"model_providers.{provider_key}.name={_toml_string(provider_name)}",
+        "-c", f"model_providers.{provider_key}.base_url={_toml_string(codex.get('base_url', ''))}",
+        "-c", f"model_providers.{provider_key}.env_key={_toml_string(codex.get('env_key', ''))}",
+        "-c", f"model_providers.{provider_key}.wire_api={_toml_string(codex.get('wire_api', 'responses'))}",
+    ])
+    context_window = str(codex.get("context_window") or "").strip()
+    if context_window.isdigit():
+        cmd.extend(["-c", f"model_context_window={context_window}"])
+    if resume_id:
+        cmd.extend([resume_id, "-"])
+    else:
+        cmd.append("-")
+    return cmd
+
+
+def _build_codex_prompt(last_msg: str, sys_prompt: str, *, workspace: Optional[str]) -> str:
+    system_block = ""
+    if sys_prompt:
+        system_block = (
+            "下面是本项目 JSON-APP 生成核心规则，必须作为最高优先级规则执行。\n"
+            "<core_generation_prompt>\n"
+            f"{sys_prompt}\n"
+            "</core_generation_prompt>\n\n"
+        )
+    return system_block + _build_user_turn_prompt(last_msg, workspace=workspace)
+
+
+def _extract_codex_thread_id(line_str: str) -> Optional[str]:
+    try:
+        event = json.loads(line_str)
+    except json.JSONDecodeError:
+        return None
+    if event.get("type") != "thread.started":
+        return None
+    thread_id = event.get("thread_id")
+    return str(thread_id) if thread_id else None
+
+
 def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
+                 agent_id: Optional[str], agent_resume_id: Optional[str],
                  quota_used: int, quota_limit: int, quota_remaining: int,
                  job_id: Optional[str] = None) -> None:
     """线程池 worker 入口。
@@ -934,115 +1127,143 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             logger.warning(f"[WORKER] 系统提示词文件未找到: {GENERATE_PROMPT_PATH}")
 
         provider, env = _provider_env(provider_id)
+        agent = _agent_config(agent_id)
+        runner = agent["id"]
         workspace = _prepare_worker_workspace(session_id, job_id)
         env["AI_APP_WORKSPACE"] = workspace
         env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
+        parse_line = parse_cli_line
 
         _append_cli_log(session_id, "meta", json.dumps({
             "event": "worker_start",
             "provider": provider.get("id"),
+            "agent": runner,
+            "agent_resume_id": agent_resume_id or "",
             "user_msg_len": len(last_msg),
             "workspace": workspace,
             "ts": int(time.time() * 1000),
         }, ensure_ascii=False))
 
-        # 先尝试 resume
-        cmd = _build_cli_cmd(
-            session_id,
-            last_msg,
-            sys_prompt,
-            is_resume=True,
-            workspace=workspace,
-        )
-        logger.info(f"[WORKER] sid={session_id} 起 CLI (resume): {cmd[0]}...")
+        if runner == "codex":
+            _, env = _codex_env(provider, workspace)
+            parse_line = parse_codex_line
+            prompt = _build_codex_prompt(last_msg, sys_prompt, workspace=workspace)
+            cmd = _build_codex_cmd(provider, workspace, resume_id=agent_resume_id)
+            logger.info(
+                f"[WORKER] sid={session_id} 起 Codex CLI "
+                f"({'resume' if agent_resume_id else 'new'}): {cmd[0]}..."
+            )
+            proc = subprocess.Popen(
+                cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE, env=env, bufsize=1,
+            )
+            _register_proc(session_id, proc)
+            assert proc.stdin is not None
+            proc.stdin.write(prompt.encode("utf-8"))
+            proc.stdin.close()
+            first_lines = []
+        else:
+            # Claude 先尝试 resume
+            cmd = _build_cli_cmd(
+                session_id,
+                last_msg,
+                sys_prompt,
+                is_resume=True,
+                workspace=workspace,
+            )
+            logger.info(f"[WORKER] sid={session_id} 起 Claude CLI (resume): {cmd[0]}...")
 
-        proc = subprocess.Popen(
-            cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            stdin=subprocess.DEVNULL, env=env, bufsize=1,
-        )
-        _register_proc(session_id, proc)
+            proc = subprocess.Popen(
+                cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                stdin=subprocess.DEVNULL, env=env, bufsize=1,
+            )
+            _register_proc(session_id, proc)
 
-        # ─── 2. 读首行 ───
-        first_lines = []
-        line = proc.stdout.readline()
-        if line:
-            first_lines.append(line)
+            # ─── 2. 读首行 ───
+            first_lines = []
+            line = proc.stdout.readline()
+            if line:
+                first_lines.append(line)
 
-        # ─── 3. 检查是否是"resume 不存在"错误 → fallback 创建新会话 ───
-        try:
-            proc.wait(timeout=0.1)
-        except subprocess.TimeoutExpired:
-            pass
+            # ─── 3. 检查是否是"resume 不存在"错误 → fallback 创建新会话 ───
+            try:
+                proc.wait(timeout=0.1)
+            except subprocess.TimeoutExpired:
+                pass
 
-        if proc.returncode is not None and proc.returncode != 0:
-            # 关键区分：
-            # - is_aborted=True：是我们自己 abort 的（force_restart 或客户端 /abort）
-            #   → 静默 ABORTED，不写 error 事件（避免下一轮 worker 复用 stream 时
-            #     把这条假错误当真错误重放给 client）
-            # - is_aborted=False 但 returncode 是信号 -15/-9：被外部 kill
-            #   （管理员手动 kill / OOM Killer / supervisor 杀进程等），
-            #   也不是我们自己干的 → 写 needs_retry 事件让客户端弹重试按钮
-            # - 其他非 0 退出：CLI 真正异常，同样写 needs_retry
-            if store.is_aborted(session_id):
-                logger.info(
-                    f"[WORKER] sid={session_id} 启动阶段 self-abort "
-                    f"(code {proc.returncode})，静默退出"
-                )
-                _append_cli_log(session_id, "meta", json.dumps({
-                    "event": "aborted_during_startup",
-                    "returncode": proc.returncode,
-                }, ensure_ascii=False))
-                set_status(STATUS_ABORTED)
-                return
+            if proc.returncode is not None and proc.returncode != 0:
+                # 关键区分：
+                # - is_aborted=True：是我们自己 abort 的（force_restart 或客户端 /abort）
+                #   → 静默 ABORTED，不写 error 事件（避免下一轮 worker 复用 stream 时
+                #     把这条假错误当真错误重放给 client）
+                # - is_aborted=False 但 returncode 是信号 -15/-9：被外部 kill
+                #   （管理员手动 kill / OOM Killer / supervisor 杀进程等），
+                #   也不是我们自己干的 → 写 needs_retry 事件让客户端弹重试按钮
+                # - 其他非 0 退出：CLI 真正异常，同样写 needs_retry
+                if store.is_aborted(session_id):
+                    logger.info(
+                        f"[WORKER] sid={session_id} 启动阶段 self-abort "
+                        f"(code {proc.returncode})，静默退出"
+                    )
+                    _append_cli_log(session_id, "meta", json.dumps({
+                        "event": "aborted_during_startup",
+                        "returncode": proc.returncode,
+                    }, ensure_ascii=False))
+                    set_status(STATUS_ABORTED)
+                    return
 
-            stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
-            stdout_text = b"".join(first_lines).decode("utf-8", errors="replace") + \
-                          proc.stdout.read().decode("utf-8", errors="replace")
-            full_err = stderr_text + "\n" + stdout_text
+                stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
+                stdout_text = b"".join(first_lines).decode("utf-8", errors="replace") + \
+                              proc.stdout.read().decode("utf-8", errors="replace")
+                full_err = stderr_text + "\n" + stdout_text
 
-            if "No conversation found" in full_err or "requires a valid session ID" in full_err:
-                logger.info(f"[WORKER] sid={session_id} resume 失败，fallback 新会话")
-                _unregister_proc(session_id, proc)
-                cmd = _build_cli_cmd(
-                    session_id,
-                    last_msg,
-                    sys_prompt,
-                    is_resume=False,
-                    workspace=workspace,
-                )
-                proc = subprocess.Popen(
-                    cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    stdin=subprocess.DEVNULL, env=env, bufsize=1,
-                )
-                _register_proc(session_id, proc)
-                first_lines = []
-            else:
-                # 信号 kill (-15/-9) 不是 self-abort 的话，那就是外部干的，按 retry 处理
-                killed_externally = proc.returncode in (-15, -9)
-                err_msg = (
-                    f"Claude CLI 被外部信号 {proc.returncode} 终止"
-                    if killed_externally
-                    else f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"
-                )
-                _append_cli_log(session_id, "stderr", stderr_text)
-                _append_cli_log(session_id, "meta", json.dumps({
-                    "event": "startup_failed_or_killed",
-                    "returncode": proc.returncode,
-                    "killed_externally": killed_externally,
-                }, ensure_ascii=False))
-                # needs_retry=True 让客户端 emit needsRetry → UI 弹重试按钮
-                # 启动失败基本都值得让用户重试一次（CLI 进程问题 / 临时网络等都是瞬态的）
-                err_evt = {"error": err_msg, "needs_retry": True}
-                append_event(err_evt)
-                set_status(STATUS_FAILED, error=err_msg)
-                return
+                if "No conversation found" in full_err or "requires a valid session ID" in full_err:
+                    logger.info(f"[WORKER] sid={session_id} resume 失败，fallback 新会话")
+                    _unregister_proc(session_id, proc)
+                    cmd = _build_cli_cmd(
+                        session_id,
+                        last_msg,
+                        sys_prompt,
+                        is_resume=False,
+                        workspace=workspace,
+                    )
+                    proc = subprocess.Popen(
+                        cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        stdin=subprocess.DEVNULL, env=env, bufsize=1,
+                    )
+                    _register_proc(session_id, proc)
+                    first_lines = []
+                else:
+                    # 信号 kill (-15/-9) 不是 self-abort 的话，那就是外部干的，按 retry 处理
+                    killed_externally = proc.returncode in (-15, -9)
+                    err_msg = (
+                        f"Claude CLI 被外部信号 {proc.returncode} 终止"
+                        if killed_externally
+                        else f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"
+                    )
+                    _append_cli_log(session_id, "stderr", stderr_text)
+                    _append_cli_log(session_id, "meta", json.dumps({
+                        "event": "startup_failed_or_killed",
+                        "returncode": proc.returncode,
+                        "killed_externally": killed_externally,
+                    }, ensure_ascii=False))
+                    # needs_retry=True 让客户端 emit needsRetry → UI 弹重试按钮
+                    # 启动失败基本都值得让用户重试一次（CLI 进程问题 / 临时网络等都是瞬态的）
+                    err_evt = {"error": err_msg, "needs_retry": True}
+                    append_event(err_evt)
+                    set_status(STATUS_FAILED, error=err_msg)
+                    return
 
         # ─── 4. 主循环：读 CLI 输出 → 解析 → 写 Redis ───
         line_count = 0
         for buffered in first_lines:
             _append_cli_log(session_id, "stdout", buffered)
             line_str = buffered.decode("utf-8", errors="replace")
-            for ev in parse_cli_line(line_str):
+            if runner == "codex":
+                thread_id = _extract_codex_thread_id(line_str)
+                if thread_id:
+                    store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+            for ev in parse_line(line_str):
                 if not append_event(ev):
                     try:
                         proc.terminate()
@@ -1074,7 +1295,11 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 
             _append_cli_log(session_id, "stdout", line)
             line_str = line.decode("utf-8", errors="replace")
-            for ev in parse_cli_line(line_str):
+            if runner == "codex":
+                thread_id = _extract_codex_thread_id(line_str)
+                if thread_id:
+                    store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+            for ev in parse_line(line_str):
                 if not append_event(ev):
                     try:
                         proc.terminate()
@@ -1103,11 +1328,12 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         # ─── 5. 退出码 != 0 → 失败（含外部 kill） ───
         if proc.returncode != 0:
             killed_externally = proc.returncode in (-15, -9)
+            runner_name = "Codex CLI" if runner == "codex" else "Claude CLI"
             err_text = proc.stderr.read().decode("utf-8", errors="replace")
             err_msg = (
-                f"Claude CLI 被外部信号 {proc.returncode} 终止"
+                f"{runner_name} 被外部信号 {proc.returncode} 终止"
                 if killed_externally
-                else f"Claude CLI 异常退出 (code {proc.returncode}): {err_text}"
+                else f"{runner_name} 异常退出 (code {proc.returncode}): {err_text}"
             )
             _append_cli_log(session_id, "stderr", err_text)
             _append_cli_log(session_id, "meta", json.dumps({
@@ -1183,7 +1409,9 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 
 
 def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
-                  *, user_id: str, quota_used: int, quota_limit: int,
+                  *, agent_id: str = DEFAULT_AGENT,
+                  agent_resume_id: Optional[str] = None,
+                  user_id: str, quota_used: int, quota_limit: int,
                   quota_remaining: int) -> Tuple[bool, Optional[int]]:
     """提交 worker 到 Redis 显式等待队列。立刻返回，不等任务完成。
 
@@ -1195,6 +1423,8 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
         session_id=session_id,
         last_msg=last_msg,
         provider_id=provider_id,
+        agent_id=agent_id,
+        agent_resume_id=agent_resume_id,
         user_id=user_id,
         quota_used=quota_used,
         quota_limit=quota_limit,
