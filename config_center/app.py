@@ -1,7 +1,7 @@
 """Config Center — 客户端公共配置下发服务
 
-设计要点（与同仓库 backend/ 完全独立）：
-- 跑在和主后端不同的物理机/路径上，主后端挂了它仍然可用
+设计要点（与同仓库 backend/ 代码独立，可同机或独立部署）：
+- 可和主后端同机运行，也可以迁移到独立机器；运行时配置不进仓库
 - SQLite 单文件存储；轻量 KV + 类型 + 注释 + 修改审计
 - 公开 endpoint /api/v1/public 不需鉴权，返回整包 JSON + ETag
 - Admin UI 用签名 cookie session（itsdangerous），密码明文存在 /etc/config-center/.env
@@ -9,17 +9,36 @@
 """
 
 import hashlib
+import io
 import json
 import os
 import secrets
 import sqlite3
+import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from urllib.parse import quote
 
-from flask import Flask, Response, abort, g, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    Response,
+    abort,
+    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_caching import Cache
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+try:
+    from minio import Minio
+    from minio.error import S3Error
+except ImportError:  # pragma: no cover - production venv includes minio
+    Minio = None
+    S3Error = Exception
 
 # ── 启动期：读 env ──
 # supervisor 通过 environment= 注入 CONFIG_CENTER_ENV_PATH 指向 /etc/config-center/.env
@@ -42,6 +61,28 @@ SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
 DB_PATH = os.environ.get("DB_PATH", "/var/lib/config-center/config.db")
 LISTEN_HOST = os.environ.get("LISTEN_HOST", "127.0.0.1")
 LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "8088"))
+
+MINIO_PUBLIC_URL = os.environ.get(
+    "MINIO_PUBLIC_URL", "https://myapp-oss-endpoint.dapangyu.work"
+).rstrip("/")
+_minio_url_parts = MINIO_PUBLIC_URL.split("://", 1)
+_minio_default_secure = (
+    _minio_url_parts[0] == "https" if len(_minio_url_parts) > 1 else True
+)
+MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", _minio_url_parts[-1])
+MINIO_SECURE = os.environ.get(
+    "MINIO_SECURE", "true" if _minio_default_secure else "false"
+).lower() in ("1", "true", "yes", "on")
+MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "")
+MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
+
+APK_RELEASE_BUCKET = os.environ.get("APK_RELEASE_BUCKET", "myapp-releases")
+APK_LATEST_OBJECT = os.environ.get("APK_LATEST_OBJECT", "android/apk/latest.apk")
+APK_METADATA_OBJECT = os.environ.get("APK_METADATA_OBJECT", "android/apk/latest.json")
+APK_SHA256_OBJECT = os.environ.get(
+    "APK_SHA256_OBJECT", "android/apk/latest.apk.sha256"
+)
+APK_MAX_BYTES = int(os.environ.get("APK_MAX_BYTES", str(500 * 1024 * 1024)))
 
 if not ADMIN_PASSWORD:
     raise RuntimeError(
@@ -203,6 +244,7 @@ app = Flask(
     __name__,
     template_folder=str(Path(__file__).parent / "templates"),
 )
+app.config["MAX_CONTENT_LENGTH"] = APK_MAX_BYTES + 1024 * 1024
 
 # 进程内 LRU 缓存。关键不变量：缓存 key 拼了 SQLite 文件 mtime（含 -wal/-shm），
 # admin 一改 → mtime 变 → 所有 worker 同步看到新 key 自动 miss → 重载，不需 Redis。
@@ -258,6 +300,130 @@ def get_public_payload_cached() -> tuple[bytes, str]:
     return cached
 
 
+def _public_object_url(bucket: str, object_name: str) -> str:
+    return f"{MINIO_PUBLIC_URL}/{quote(bucket)}/{quote(object_name, safe='/')}"
+
+
+def _apk_release_url() -> str:
+    return _public_object_url(APK_RELEASE_BUCKET, APK_LATEST_OBJECT)
+
+
+def _apk_metadata_url() -> str:
+    return _public_object_url(APK_RELEASE_BUCKET, APK_METADATA_OBJECT)
+
+
+def _minio_client():
+    if Minio is None:
+        raise RuntimeError("当前 Python 环境缺少 minio 包")
+    if not MINIO_ACCESS_KEY or not MINIO_SECRET_KEY:
+        raise RuntimeError("MINIO_ACCESS_KEY / MINIO_SECRET_KEY 未配置")
+    return Minio(
+        MINIO_ENDPOINT,
+        access_key=MINIO_ACCESS_KEY,
+        secret_key=MINIO_SECRET_KEY,
+        secure=MINIO_SECURE,
+    )
+
+
+def _ensure_public_bucket(client) -> None:
+    if not client.bucket_exists(APK_RELEASE_BUCKET):
+        client.make_bucket(APK_RELEASE_BUCKET)
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{APK_RELEASE_BUCKET}/*"],
+            }
+        ],
+    }
+    client.set_bucket_policy(APK_RELEASE_BUCKET, json.dumps(policy))
+
+
+def _read_object_json(client, bucket: str, object_name: str) -> dict | None:
+    resp = None
+    try:
+        resp = client.get_object(bucket, object_name)
+        return json.loads(resp.data.decode("utf-8"))
+    except S3Error:
+        return None
+    except Exception:
+        return None
+    finally:
+        if resp is not None:
+            resp.close()
+            resp.release_conn()
+
+
+def _apk_release_state() -> dict:
+    state = {
+        "enabled": bool(MINIO_ACCESS_KEY and MINIO_SECRET_KEY and Minio is not None),
+        "bucket": APK_RELEASE_BUCKET,
+        "object": APK_LATEST_OBJECT,
+        "url": _apk_release_url(),
+        "metadata_url": _apk_metadata_url(),
+        "max_mb": APK_MAX_BYTES // (1024 * 1024),
+        "exists": False,
+        "error": "",
+        "metadata": None,
+    }
+    if not state["enabled"]:
+        state["error"] = "未配置 MinIO 凭据，上传功能不可用"
+        return state
+    try:
+        client = _minio_client()
+        meta = _read_object_json(client, APK_RELEASE_BUCKET, APK_METADATA_OBJECT)
+        state["metadata"] = meta
+        stat = client.stat_object(APK_RELEASE_BUCKET, APK_LATEST_OBJECT)
+        state["exists"] = True
+        state["size"] = stat.size
+        state["last_modified"] = stat.last_modified
+        state["etag"] = stat.etag
+    except S3Error as e:
+        code = getattr(e, "code", "")
+        if code not in ("NoSuchBucket", "NoSuchKey", "NoSuchObject"):
+            state["error"] = str(e)
+    except Exception as e:
+        state["error"] = str(e)
+    return state
+
+
+def _copy_apk_to_temp(file_storage) -> tuple[str, int, str]:
+    tmp = tempfile.NamedTemporaryFile(
+        prefix="config-center-apk-", suffix=".apk", delete=False
+    )
+    tmp_path = tmp.name
+    size = 0
+    first_bytes = b""
+    digest = hashlib.sha256()
+    try:
+        with tmp:
+            while True:
+                chunk = file_storage.stream.read(1024 * 1024)
+                if not chunk:
+                    break
+                if not first_bytes:
+                    first_bytes = chunk[:4]
+                size += len(chunk)
+                if size > APK_MAX_BYTES:
+                    raise ValueError(f"APK 超过上限 {APK_MAX_BYTES // (1024 * 1024)} MB")
+                digest.update(chunk)
+                tmp.write(chunk)
+        if size <= 0:
+            raise ValueError("APK 文件为空")
+        if not first_bytes.startswith(b"PK"):
+            raise ValueError("文件内容不像有效 APK（APK 应为 ZIP 容器）")
+        return tmp_path, size, digest.hexdigest()
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 @app.template_filter("ts_local")
 def ts_local(ts: int | None) -> str:
     if not ts:
@@ -268,6 +434,11 @@ def ts_local(ts: int | None) -> str:
 @app.errorhandler(401)
 def _unauth(_e):
     return redirect(url_for("login_get"))
+
+
+@app.errorhandler(413)
+def _payload_too_large(_e):
+    return _flash(f"上传文件超过上限 {APK_MAX_BYTES // (1024 * 1024)} MB", kind="err")
 
 
 @app.after_request
@@ -368,6 +539,7 @@ def admin():
         user=user,
         configs=configs,
         logs=[dict(r) for r in log_rows],
+        apk_release=_apk_release_state(),
         flash=request.args.get("flash"),
         flash_kind=request.args.get("flash_kind", "ok"),
     )
@@ -453,6 +625,90 @@ def delete_config(key: str):
         conn.execute("DELETE FROM configs WHERE key=?", (key,))
         _audit(conn, key, "delete", old["value"], None, user)
     return _flash(f"已删除 {key}")
+
+
+@app.route("/admin/apk/upload", methods=["POST"])
+def upload_apk_release():
+    user = require_user()
+    apk = request.files.get("apk")
+    if apk is None or not apk.filename:
+        return _flash("请选择 APK 文件", kind="err")
+
+    original_name = Path(apk.filename.replace("\\", "/")).name
+    if not original_name.lower().endswith(".apk"):
+        return _flash("只允许上传 .apk 文件", kind="err")
+
+    version_name = (request.form.get("version_name", "") or "").strip()
+    build_number = (request.form.get("build_number", "") or "").strip()
+    release_notes = (request.form.get("release_notes", "") or "").strip()
+
+    tmp_path = ""
+    try:
+        tmp_path, size, sha256 = _copy_apk_to_temp(apk)
+        client = _minio_client()
+        _ensure_public_bucket(client)
+        with open(tmp_path, "rb") as f:
+            client.put_object(
+                APK_RELEASE_BUCKET,
+                APK_LATEST_OBJECT,
+                f,
+                size,
+                content_type="application/vnd.android.package-archive",
+            )
+
+        uploaded_at = int(time.time())
+        metadata = {
+            "url": _apk_release_url(),
+            "bucket": APK_RELEASE_BUCKET,
+            "object": APK_LATEST_OBJECT,
+            "filename": original_name,
+            "size": size,
+            "sha256": sha256,
+            "version_name": version_name,
+            "build_number": build_number,
+            "release_notes": release_notes,
+            "uploaded_by": user,
+            "uploaded_at": uploaded_at,
+            "uploaded_at_iso": time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime(uploaded_at)
+            ),
+        }
+        metadata_bytes = json.dumps(
+            metadata, ensure_ascii=False, indent=2, sort_keys=True
+        ).encode("utf-8")
+        sha_line = f"{sha256}  {Path(APK_LATEST_OBJECT).name}\n".encode("utf-8")
+        client.put_object(
+            APK_RELEASE_BUCKET,
+            APK_METADATA_OBJECT,
+            io.BytesIO(metadata_bytes),
+            len(metadata_bytes),
+            content_type="application/json",
+        )
+        client.put_object(
+            APK_RELEASE_BUCKET,
+            APK_SHA256_OBJECT,
+            io.BytesIO(sha_line),
+            len(sha_line),
+            content_type="text/plain; charset=utf-8",
+        )
+        with db_conn() as conn:
+            _audit(
+                conn,
+                "apk_release",
+                "upload",
+                None,
+                json.dumps(metadata, ensure_ascii=False, sort_keys=True),
+                user,
+            )
+        return _flash(f"APK 已上传，固定链接已更新：{_apk_release_url()}")
+    except Exception as e:
+        return _flash(f"APK 上传失败：{e}", kind="err")
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 def _flash(msg: str, kind: str = "ok"):

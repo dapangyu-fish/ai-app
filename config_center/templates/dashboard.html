@@ -40,7 +40,7 @@
       grid-template-columns: 100px 1fr 280px auto;
       gap: 10px; align-items: center;
     }
-    select, input[type="text"], textarea {
+    select, input[type="text"], input[type="file"], textarea {
       font-family: inherit; font-size: 13px;
       padding: 7px 10px; border: 1px solid #d2d2d7; border-radius: 6px;
       background: #fff; transition: border-color .12s;
@@ -52,12 +52,54 @@
       font-family: inherit; font-size: 13px; padding: 7px 14px;
       border: none; border-radius: 6px; cursor: pointer; font-weight: 500;
     }
+    a.btn-ghost { display: inline-flex; align-items: center; padding: 7px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; }
     .btn-primary { background: #0071e3; color: #fff; }
     .btn-primary:hover { background: #0058b3; }
     .btn-danger  { background: #ffece9; color: #b00020; }
     .btn-danger:hover { background: #ffd6d2; }
     .btn-ghost   { background: #f0f0f3; color: #1d1d1f; }
     .btn-ghost:hover { background: #e6e6eb; }
+
+    .release-card {
+      background: #fff; border: 1px solid #ececef; border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04); padding: 18px;
+    }
+    .release-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; margin-bottom: 14px;
+    }
+    .release-head h3 { margin: 0 0 6px; font-size: 16px; }
+    .release-head p { margin: 0; color: #86868b; font-size: 13px; line-height: 1.5; }
+    .release-url {
+      display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center;
+      padding: 10px 12px; background: #f5f5f7; border-radius: 8px; margin-bottom: 14px;
+      font-size: 13px;
+    }
+    .release-url code {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      overflow-wrap: anywhere; color: #0071e3;
+    }
+    .release-meta {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+      margin-bottom: 14px;
+    }
+    .release-stat {
+      background: #fafbfc; border: 1px solid #f0f0f3; border-radius: 8px; padding: 10px;
+      min-height: 58px;
+    }
+    .release-stat span { display: block; color: #86868b; font-size: 11px; margin-bottom: 5px; }
+    .release-stat strong {
+      display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .release-form {
+      display: grid; gap: 10px;
+      grid-template-columns: 1.5fr .8fr .8fr 1.4fr auto;
+      align-items: center;
+    }
+    .release-disabled {
+      color: #b00020; background: #fff1f0; border: 1px solid #f5bcbc;
+      padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 12px;
+    }
 
     /* 新增表单 */
     .new-form {
@@ -84,6 +126,7 @@
     .badge.create { background: #e6fff0; color: #0a7a36; }
     .badge.update { background: #e8f1ff; color: #0058b3; }
     .badge.delete { background: #ffece9; color: #b00020; }
+    .badge.upload { background: #fff7d6; color: #8a5a00; }
 
     /* Flash */
     .flash {
@@ -96,6 +139,11 @@
     .flash.err { background: #fff1f0; color: #b00020; border: 1px solid #f5bcbc; }
     @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: none; opacity: 1; } }
     @keyframes fadeOut { to { opacity: 0; transform: translateX(20px); pointer-events: none; } }
+    @media (max-width: 900px) {
+      .row2, .new-form .grid, .release-form, .release-meta, .release-url {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -115,6 +163,63 @@
 {% endif %}
 
 <main>
+
+  <h2>Android APK 发布</h2>
+  <section class="release-card">
+    <div class="release-head">
+      <div>
+        <h3>固定下载链接</h3>
+        <p>上传后会覆盖永久 bucket 中的 latest.apk；官网使用这个固定地址，不需要重新改代码。</p>
+      </div>
+      {% if apk_release.exists %}
+      <a class="btn-ghost" href="{{ apk_release.url }}" target="_blank" rel="noreferrer">打开链接</a>
+      {% endif %}
+    </div>
+    <div class="release-url">
+      <strong>APK URL</strong>
+      <code>{{ apk_release.url }}</code>
+    </div>
+
+    {% if apk_release.metadata %}
+    <div class="release-meta">
+      <div class="release-stat">
+        <span>版本</span>
+        <strong>{{ apk_release.metadata.version_name or '未填写' }}</strong>
+      </div>
+      <div class="release-stat">
+        <span>Build</span>
+        <strong>{{ apk_release.metadata.build_number or '未填写' }}</strong>
+      </div>
+      <div class="release-stat">
+        <span>大小</span>
+        <strong>{{ (apk_release.metadata.size / 1024 / 1024) | round(1) }} MB</strong>
+      </div>
+      <div class="release-stat">
+        <span>上传时间</span>
+        <strong>{{ apk_release.metadata.uploaded_at_iso or '未知' }}</strong>
+      </div>
+    </div>
+    <div class="release-url">
+      <strong>SHA-256</strong>
+      <code>{{ apk_release.metadata.sha256 }}</code>
+    </div>
+    {% endif %}
+
+    {% if not apk_release.enabled %}
+    <div class="release-disabled">{{ apk_release.error }}</div>
+    {% else %}
+    <form class="release-form" method="post" action="/admin/apk/upload" enctype="multipart/form-data">
+      <input type="file" name="apk" accept=".apk,application/vnd.android.package-archive" required>
+      <input type="text" name="version_name" placeholder="版本号，例如 1.0.0">
+      <input type="text" name="build_number" placeholder="Build，例如 42">
+      <input type="text" name="release_notes" placeholder="发布说明（可选）">
+      <button class="btn-primary" type="submit">上传 APK</button>
+    </form>
+    {% if apk_release.error %}
+    <div class="release-disabled">{{ apk_release.error }}</div>
+    {% endif %}
+    {% endif %}
+  </section>
 
   <h2>所有配置项（{{ configs|length }}）</h2>
 

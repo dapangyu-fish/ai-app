@@ -30,6 +30,7 @@ type ThemeKey = 'orbit' | 'matrix' | 'prism' | 'slate';
 
 const WEB_APP_URL = 'https://myapp-web.dapangyu.work/';
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/3Fk5Exnn';
+const APK_URL = 'https://myapp-oss-endpoint.dapangyu.work/myapp-releases/android/apk/latest.apk';
 
 const languageOptions: Array<{ key: Lang; label: string; flag: string }> = [
   { key: 'zh', label: '中文', flag: '🇨🇳' },
@@ -137,7 +138,7 @@ const copy = {
       ['可自部署', '测试环境 bootstrap 一条链路拉起核心服务。'],
     ],
     downloadTitle: '开始体验 MyApp',
-    downloadBody: 'Web 版可直接打开；iOS 已开放 TestFlight Public Group 1（2500 人）；Google Play 和 APK 包正在准备中。',
+    downloadBody: 'Web 版可直接打开；iOS 已开放 TestFlight Public Group 1（2500 人）；Android 可下载 APK，Google Play 正在准备中。',
     openWeb: '打开 Web 版',
     appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
@@ -211,7 +212,7 @@ const copy = {
       ['Self-hostable', 'The test-env bootstrap brings up the core services end to end.'],
     ],
     downloadTitle: 'Start using MyApp',
-    downloadBody: 'Open the Web app now. iOS is available through TestFlight Public Group 1 with 2,500 seats. Google Play and APK builds are coming soon.',
+    downloadBody: 'Open the Web app now. iOS is available through TestFlight Public Group 1 with 2,500 seats. Android APK download is available while Google Play is being prepared.',
     openWeb: 'Open Web app',
     appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
@@ -285,7 +286,7 @@ const copy = {
       ['Self-hostable', 'test-env bootstrap startet die Kernservices Ende zu Ende.'],
     ],
     downloadTitle: 'MyApp jetzt starten',
-    downloadBody: 'Die Web-App ist direkt verfügbar. iOS läuft über TestFlight Public Group 1 mit 2.500 Plätzen. Google Play und APK folgen.',
+    downloadBody: 'Die Web-App ist direkt verfügbar. iOS läuft über TestFlight Public Group 1 mit 2.500 Plätzen. Der Android-APK-Download ist verfügbar, Google Play folgt.',
     openWeb: 'Web-App öffnen',
     appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
@@ -359,7 +360,7 @@ const copy = {
       ['Autoalojable', 'test-env bootstrap levanta los servicios centrales de punta a punta.'],
     ],
     downloadTitle: 'Empieza con MyApp',
-    downloadBody: 'La Web app está disponible ahora. iOS está en TestFlight Public Group 1 con 2.500 plazas. Google Play y APK llegarán pronto.',
+    downloadBody: 'La Web app está disponible ahora. iOS está en TestFlight Public Group 1 con 2.500 plazas. La descarga APK de Android está disponible mientras Google Play se prepara.',
     openWeb: 'Abrir Web app',
     appStore: 'TestFlight Public Group 1',
     googlePlay: 'Google Play',
@@ -819,10 +820,10 @@ function App() {
               {t.googlePlay}
               <small>{t.soon}</small>
             </a>
-            <a className="button secondary unavailable" href="#download" aria-disabled="true">
+            <a className="button secondary" href={APK_URL} target="_blank" rel="noreferrer">
               <Download size={17} />
               {t.apk}
-              <small>{t.soon}</small>
+              <small>{t.available}</small>
             </a>
           </div>
         </div>
