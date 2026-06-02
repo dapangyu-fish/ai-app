@@ -12,7 +12,7 @@ WORKDIR /app
 # - procps 给 ai-worker/backend 容器里排查 Claude 进程（ps/top）
 # - gcc + portaudio19-dev + libasound2-dev  给 pyaudio 编译
 # - build-essential 给其他 C-extension
-# - nodejs + npm  给装 claude CLI（backend/claude_chat.py 调用它转发 LLM 请求）
+# - nodejs + npm  给装 claude CLI / npx Codex runner
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
@@ -26,10 +26,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install -g @anthropic-ai/claude-code \
     && ln -sf "$(which claude)" /usr/local/bin/claude \
+    && mkdir -p /var/lib/ai-app/codex-npm-cache /var/lib/ai-app/codex-home \
+    && npm_config_cache=/var/lib/ai-app/codex-npm-cache npx -y @openai/codex@0.136.0 --version \
     && rm -rf /var/lib/apt/lists/* /root/.npm
 
-# 让 backend/config.py 默认 CLAUDE_BIN 路径能命中
-ENV CLAUDE_BIN=/usr/local/bin/claude
+# 让 backend/config.py 在测试镜像里命中 CLI runner，不依赖宿主机路径。
+ENV CLAUDE_BIN=/usr/local/bin/claude \
+    CODEX_BIN=npx \
+    CODEX_NPX_PACKAGE=@openai/codex@0.136.0 \
+    CODEX_NODE_BIN_DIR=/usr/bin \
+    CODEX_NPM_CACHE=/var/lib/ai-app/codex-npm-cache \
+    CODEX_HOME=/var/lib/ai-app/codex-home
 
 # 依赖先装，命中缓存
 COPY backend/requirements.txt /tmp/requirements.txt

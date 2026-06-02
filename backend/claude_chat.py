@@ -157,6 +157,15 @@ def _get_agent(agent_id=None):
         raise ValueError(f"AI Agent 当前不可用: {aid}")
     return cfg
 
+
+def _provider_supports_agent(provider: dict, agent_id: str) -> bool:
+    if agent_id == "claude":
+        return True
+    if agent_id == "codex":
+        return bool((provider.get("codex") or {}).get("configured"))
+    return False
+
+
 def list_providers():
     """获取所有可用的 AI 供应商列表"""
     providers = []
@@ -738,6 +747,11 @@ def chat_start():
         logger.warning(f"[CHAT_START] agent rejected: {e}")
         return jsonify({"error": str(e), "code": "AI_AGENT_UNAVAILABLE"}), 400
     agent_id = agent["id"]
+    if not _provider_supports_agent(provider, agent_id):
+        return jsonify({
+            "error": f"供应商 {provider_id} 不支持 Agent {agent_id}",
+            "code": "AI_AGENT_PROVIDER_UNAVAILABLE",
+        }), 400
 
     store = ai_session.SessionStore()
     existing = store.get_meta(session_id)
