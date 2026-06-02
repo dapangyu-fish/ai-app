@@ -10,6 +10,7 @@
 
 import hashlib
 import io
+import importlib.util
 import json
 import os
 import secrets
@@ -32,13 +33,6 @@ from flask import (
 )
 from flask_caching import Cache
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-
-try:
-    from minio import Minio
-    from minio.error import S3Error
-except ImportError:  # pragma: no cover - production venv includes minio
-    Minio = None
-    S3Error = Exception
 
 # ── 启动期：读 env ──
 # supervisor 通过 environment= 注入 CONFIG_CENTER_ENV_PATH 指向 /etc/config-center/.env
@@ -313,16 +307,30 @@ def _apk_metadata_url() -> str:
 
 
 def _minio_client():
-    if Minio is None:
+    minio_cls, _s3_error = _load_minio()
+    if minio_cls is None:
         raise RuntimeError("当前 Python 环境缺少 minio 包")
     if not MINIO_ACCESS_KEY or not MINIO_SECRET_KEY:
         raise RuntimeError("MINIO_ACCESS_KEY / MINIO_SECRET_KEY 未配置")
-    return Minio(
+    return minio_cls(
         MINIO_ENDPOINT,
         access_key=MINIO_ACCESS_KEY,
         secret_key=MINIO_SECRET_KEY,
         secure=MINIO_SECURE,
     )
+
+
+def _minio_available() -> bool:
+    return importlib.util.find_spec("minio") is not None
+
+
+def _load_minio():
+    try:
+        from minio import Minio as MinioClient
+        from minio.error import S3Error as MinioS3Error
+    except ImportError:
+        return None, Exception
+    return MinioClient, MinioS3Error
 
 
 def _ensure_public_bucket(client) -> None:
@@ -343,11 +351,12 @@ def _ensure_public_bucket(client) -> None:
 
 
 def _read_object_json(client, bucket: str, object_name: str) -> dict | None:
+    _minio_cls, s3_error = _load_minio()
     resp = None
     try:
         resp = client.get_object(bucket, object_name)
         return json.loads(resp.data.decode("utf-8"))
-    except S3Error:
+    except s3_error:
         return None
     except Exception:
         return None
@@ -359,7 +368,7 @@ def _read_object_json(client, bucket: str, object_name: str) -> dict | None:
 
 def _apk_release_state() -> dict:
     state = {
-        "enabled": bool(MINIO_ACCESS_KEY and MINIO_SECRET_KEY and Minio is not None),
+        "enabled": bool(MINIO_ACCESS_KEY and MINIO_SECRET_KEY and _minio_available()),
         "bucket": APK_RELEASE_BUCKET,
         "object": APK_LATEST_OBJECT,
         "url": _apk_release_url(),
@@ -372,6 +381,7 @@ def _apk_release_state() -> dict:
     if not state["enabled"]:
         state["error"] = "未配置 MinIO 凭据，上传功能不可用"
         return state
+    _minio_cls, s3_error = _load_minio()
     try:
         client = _minio_client()
         meta = _read_object_json(client, APK_RELEASE_BUCKET, APK_METADATA_OBJECT)
@@ -381,7 +391,7 @@ def _apk_release_state() -> dict:
         state["size"] = stat.size
         state["last_modified"] = stat.last_modified
         state["etag"] = stat.etag
-    except S3Error as e:
+    except s3_error as e:
         code = getattr(e, "code", "")
         if code not in ("NoSuchBucket", "NoSuchKey", "NoSuchObject"):
             state["error"] = str(e)
