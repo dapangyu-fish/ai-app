@@ -2354,6 +2354,15 @@ List<dynamic> _screenChildren(Map<String, dynamic> screenConfig) {
   return const [];
 }
 
+void _handleJsonScreenBack(BuildContext context, JsonInterpreter interpreter) {
+  if (interpreter.canNavigateBack) {
+    interpreter.navigateBack();
+  } else {
+    interpreter.dismissAllModals();
+    Navigator.of(context).maybePop();
+  }
+}
+
 Map<String, dynamic> _screenContentConfig(Map<String, dynamic> screenConfig) {
   if (screenConfig['children'] is List<dynamic>) return screenConfig;
 
@@ -2368,6 +2377,53 @@ Map<String, dynamic> _screenContentConfig(Map<String, dynamic> screenConfig) {
     return merged;
   }
   return screenConfig;
+}
+
+bool _shouldShowWebJsonBackButton({
+  required BuildContext context,
+  required JsonInterpreter interpreter,
+  required bool isStartupRoot,
+  required bool hasFrameworkBackButton,
+}) {
+  if (!kIsWeb || hasFrameworkBackButton) return false;
+  if (interpreter.canNavigateBack) return true;
+  if (isStartupRoot) return false;
+  final route = ModalRoute.of(context);
+  return route?.canPop ?? Navigator.of(context).canPop();
+}
+
+class _WebJsonBackOverlay extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onBack;
+
+  const _WebJsonBackOverlay({required this.child, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        Positioned.fill(child: child),
+        PositionedDirectional(
+          top: 12,
+          start: 12,
+          child: Material(
+            color: cs.surface.withValues(alpha: 0.86),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.22),
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: cs.onSurface,
+              onPressed: onBack,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// 根据当前 screen ID 渲染对应的 JSON 页面
@@ -2483,9 +2539,13 @@ class JsonScreenView extends ConsumerWidget {
     // 自定义 appBar（screen.appBar Map 配置时启用）
     final customAppBarConfig = screenConfig['appBar'];
     PreferredSizeWidget? appBar;
+    var hasFrameworkBackButton = false;
     if (customAppBarConfig == false) {
       appBar = null;
     } else if (customAppBarConfig is Map<String, dynamic>) {
+      final leading = customAppBarConfig['leading'];
+      hasFrameworkBackButton =
+          leading is Map<String, dynamic> && leading['action'] is Map;
       appBar = appbar_helper.buildAppBar(
         context,
         customAppBarConfig,
@@ -2501,6 +2561,7 @@ class JsonScreenView extends ConsumerWidget {
       // 否则 Navigator 会自动塞 BackButton 进来）。
       // JSON-APP 内部 navigate 出来的子 screen，canNavigateBack=true 时正常显示返回。
       final hideLeading = isStartupRoot && !interpreter.canNavigateBack;
+      hasFrameworkBackButton = !hideLeading;
       appBar = AppBar(
         title: Text(titleText),
         centerTitle: true,
@@ -2509,14 +2570,7 @@ class JsonScreenView extends ConsumerWidget {
             ? null
             : IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  // 优先回退到上一屏；历史栈空时退出整个 JSON-APP
-                  if (interpreter.canNavigateBack) {
-                    interpreter.navigateBack();
-                  } else {
-                    Navigator.of(context).maybePop();
-                  }
-                },
+                onPressed: () => _handleJsonScreenBack(context, interpreter),
               ),
       );
     }
@@ -2557,6 +2611,18 @@ class JsonScreenView extends ConsumerWidget {
     }
 
     final onLoad = screenConfig['onLoad'];
+    final body =
+        _shouldShowWebJsonBackButton(
+          context: context,
+          interpreter: interpreter,
+          isStartupRoot: isStartupRoot,
+          hasFrameworkBackButton: hasFrameworkBackButton,
+        )
+        ? _WebJsonBackOverlay(
+            onBack: () => _handleJsonScreenBack(context, interpreter),
+            child: bodyContent,
+          )
+        : bodyContent;
     final screen = PopScope(
       // 拦截系统返回手势（iOS edge swipe / Android 返回键）：
       //   - 内部 JSON 历史栈非空 → 拦下来走 navigateBack
@@ -2581,7 +2647,7 @@ class JsonScreenView extends ConsumerWidget {
         drawer: drawer,
         persistentFooterButtons: footerButtons,
         floatingActionButton: floatingActionButton,
-        body: SafeArea(child: bodyContent),
+        body: SafeArea(child: body),
       ),
     );
 
@@ -2919,13 +2985,7 @@ class _TabScreenViewState extends State<_TabScreenView> {
               ? null
               : IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    if (interpreter.canNavigateBack) {
-                      interpreter.navigateBack();
-                    } else {
-                      Navigator.of(context).maybePop();
-                    }
-                  },
+                  onPressed: () => _handleJsonScreenBack(context, interpreter),
                 ),
         ),
         body: SafeArea(child: body),

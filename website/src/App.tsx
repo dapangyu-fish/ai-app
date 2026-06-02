@@ -23,7 +23,7 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react';
-import { type PointerEvent as ReactPointerEvent, useMemo, useState } from 'react';
+import { type CSSProperties, type PointerEvent as ReactPointerEvent, useMemo, useState } from 'react';
 
 type Lang = 'zh' | 'en' | 'de' | 'es';
 type ThemeKey = 'orbit' | 'matrix' | 'prism' | 'slate';
@@ -374,19 +374,31 @@ type PhoneSize = {
   height: number;
 };
 
+const PHONE_ASPECT_RATIO = 390 / 844;
+const PHONE_MIN_WIDTH = 320;
+const PHONE_MAX_WIDTH = 430;
+
+function phoneSizeFromWidth(width: number): PhoneSize {
+  const clampedWidth = Math.max(PHONE_MIN_WIDTH, Math.min(PHONE_MAX_WIDTH, Math.round(width)));
+  return { width: clampedWidth, height: Math.round(clampedWidth / PHONE_ASPECT_RATIO) };
+}
+
 function initialPhoneSize(compact: boolean): PhoneSize {
   if (compact) {
-    return { width: 318, height: 664 };
+    return phoneSizeFromWidth(320);
   }
-  const viewportHeight = typeof window === 'undefined' ? 800 : window.innerHeight;
-  const height = Math.min(Math.max(viewportHeight - 132, 680), 860);
-  return { width: Math.round((height * 9) / 18.8), height };
+  return phoneSizeFromWidth(390);
 }
 
 type ResizeHandle = 'n' | 'e' | 's' | 'w' | 'nw' | 'ne' | 'sw' | 'se';
 
 function PhonePreview({ compact = false }: { compact?: boolean }) {
   const [size, setSize] = useState<PhoneSize>(() => initialPhoneSize(compact));
+  const stageStyle = {
+    '--phone-width': `${size.width}px`,
+    '--phone-height': `${size.height}px`,
+    '--phone-ratio': `${size.width} / ${size.height}`,
+  } as CSSProperties;
 
   function startResize(handle: ResizeHandle, event: ReactPointerEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -399,21 +411,21 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
     const onMove = (moveEvent: PointerEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
-      let width = start.width;
-      let height = start.height;
+      const candidates: number[] = [];
       if (handle.includes('e')) {
-        width = start.width + dx;
+        candidates.push(start.width + dx);
       } else if (handle.includes('w')) {
-        width = start.width - dx;
+        candidates.push(start.width - dx);
       }
       if (handle.includes('s')) {
-        height = start.height + dy;
+        candidates.push(start.width + dy * PHONE_ASPECT_RATIO);
       } else if (handle.includes('n')) {
-        height = start.height - dy;
+        candidates.push(start.width - dy * PHONE_ASPECT_RATIO);
       }
-      width = Math.max(260, Math.min(520, width));
-      height = Math.max(540, Math.min(920, height));
-      setSize({ width, height });
+      const nextWidth = candidates.reduce((current, candidate) => {
+        return Math.abs(candidate - start.width) > Math.abs(current - start.width) ? candidate : current;
+      }, start.width);
+      setSize(phoneSizeFromWidth(nextWidth));
     };
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
@@ -425,9 +437,13 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp Web live preview">
+    <div
+      className={`phoneStage ${compact ? 'compact' : ''}`}
+      style={stageStyle}
+      aria-label="MyApp Web live preview"
+    >
       <div className="phoneGlow" />
-      <div className="phoneShell" style={{ width: size.width, height: size.height }}>
+      <div className="phoneShell">
         <div className="sideButton sideButtonPower" />
         <div className="sideButton sideButtonVolumeUp" />
         <div className="sideButton sideButtonVolumeDown" />

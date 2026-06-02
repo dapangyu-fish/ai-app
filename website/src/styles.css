@@ -207,9 +207,9 @@ select {
 .heroGrid {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(390px, 44vw);
-  align-items: start;
-  gap: 52px;
+  grid-template-columns: minmax(0, 1fr) minmax(430px, 470px);
+  align-items: center;
+  gap: 56px;
 }
 
 .heroGrid > *,
@@ -425,7 +425,7 @@ select {
 
 .phoneStage {
   position: relative;
-  width: min(100%, 520px);
+  width: min(100%, calc(var(--phone-width, 390px) + 36px));
   justify-self: center;
   padding: 18px;
 }
@@ -433,10 +433,11 @@ select {
 .heroAside {
   width: 100%;
   min-width: 0;
+  justify-self: end;
 }
 
 .phoneStage.compact {
-  width: min(100%, 420px);
+  width: min(100%, calc(var(--phone-width, 320px) + 36px));
 }
 
 .phoneGlow {
@@ -445,14 +446,15 @@ select {
   border: 1px solid color-mix(in srgb, var(--primary) 46%, transparent);
   border-radius: 34px;
   transform: rotate(-4deg);
+  pointer-events: none;
 }
 
 .phoneShell {
   position: relative;
   margin: 0 auto;
-  width: 360px;
-  height: 752px;
-  max-width: 100%;
+  width: min(var(--phone-width, 390px), 100%);
+  height: auto;
+  aspect-ratio: var(--phone-ratio, 390 / 844);
   border: 1px solid rgba(190, 199, 214, 0.74);
   border-radius: 42px;
   padding: 7px;
@@ -477,6 +479,7 @@ select {
   transform: translateX(-50%);
   border-radius: 0 0 16px 16px;
   background: #080a0e;
+  pointer-events: none;
 }
 
 .sideButton {
@@ -486,6 +489,7 @@ select {
   border-radius: 999px;
   background: linear-gradient(180deg, #202633, #0a0d12);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
 }
 
 .sideButtonPower {
@@ -533,6 +537,7 @@ select {
 
 .resizeHandle {
   position: absolute;
+  display: none;
   z-index: 4;
   border: 0;
   background: transparent;
@@ -1127,6 +1132,18 @@ section {
   }
 }
 
+@media (min-width: 941px) and (max-width: 1080px) {
+  .heroGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(390px, 420px);
+    gap: 36px;
+  }
+
+  .phoneStage {
+    width: min(100%, calc(var(--phone-width, 390px) + 28px));
+    padding: 14px;
+  }
+}
+
 @media (max-width: 720px) {
   .shell {
     width: min(100% - 28px, 1160px);
@@ -1184,9 +1201,9 @@ section {
     width: min(100%, 280px);
   }
 
-  .phoneShell {
-    width: min(100%, 300px) !important;
-    height: 626px !important;
+  .phoneStage {
+    width: min(100%, 336px);
+    padding: 14px;
   }
 
   .resizeHandle {
