@@ -373,8 +373,20 @@ _JSON_APP_URL_PROTOCOL_RE = re.compile(
     r"\[json_app_url\]https?://[^\s\]\[\)\(\<>\"]+\[/json_app_url\]",
     re.IGNORECASE,
 )
+_JSON_APP_URL_TAG_RE = re.compile(
+    r"\[json_app_url\]([\s\S]*?)\[/json_app_url\]",
+    re.IGNORECASE,
+)
+_JSON_APP_URL_VALUE_RE = re.compile(
+    r"https?://[^\s\]\[\)\(\<>\"]+",
+    re.IGNORECASE,
+)
 _REQUEST_ACTION_PROTOCOL_RE = re.compile(
-    r"\[request_action\][A-Za-z0-9_.:-]+\[/request_action\]",
+    r"\[request_action\]upload_current_app\[/request_action\]",
+    re.IGNORECASE,
+)
+_REQUEST_ACTION_TAG_RE = re.compile(
+    r"\[request_action\]([\s\S]*?)\[/request_action\]",
     re.IGNORECASE,
 )
 
@@ -389,6 +401,36 @@ def _final_protocol_warnings(final_text: Optional[str]) -> List[str]:
     if "request_action" in lowered and not _REQUEST_ACTION_PROTOCOL_RE.search(final_text):
         warnings.append("malformed_request_action_tag")
     return warnings
+
+
+def _sanitize_client_protocol_text(text: str) -> str:
+    """只把真实可执行协议交给客户端，避免模型把协议示例当普通文本输出。"""
+    if not text:
+        return text
+    lowered = text.lower()
+    if "json_app_url" not in lowered and "request_action" not in lowered:
+        return text
+
+    def replace_json_app_url(match: re.Match) -> str:
+        raw = match.group(1).strip()
+        if _JSON_APP_URL_VALUE_RE.fullmatch(raw):
+            return f"[json_app_url]{raw}[/json_app_url]"
+        return "JSON APP 链接"
+
+    def replace_request_action(match: re.Match) -> str:
+        raw = match.group(1).strip()
+        if raw == "upload_current_app":
+            return f"[request_action]{raw}[/request_action]"
+        return "客户端动作"
+
+    out = _JSON_APP_URL_TAG_RE.sub(replace_json_app_url, text)
+    out = _REQUEST_ACTION_TAG_RE.sub(replace_request_action, out)
+    lowered = out.lower()
+    if "json_app_url" in lowered and not _JSON_APP_URL_PROTOCOL_RE.search(out):
+        out = re.sub(r"\[/?json_app_url\]?", "JSON APP 链接", out, flags=re.IGNORECASE)
+    if "request_action" in lowered and not _REQUEST_ACTION_PROTOCOL_RE.search(out):
+        out = re.sub(r"\[/?request_action\]?", "客户端动作", out, flags=re.IGNORECASE)
+    return out
 
 
 def _tool_status_message(tool_name: str, tool_input: dict) -> str:
@@ -464,7 +506,7 @@ def parse_cli_line(line_str: str) -> List[dict]:
             if delta_type == "text_delta":
                 text_chunk = delta.get("text", "")
                 if text_chunk:
-                    out.append({"content": text_chunk})
+                    out.append({"content": _sanitize_client_protocol_text(text_chunk)})
             elif delta_type == "thinking_delta":
                 think_chunk = delta.get("thinking", "")
                 if think_chunk:
@@ -490,7 +532,7 @@ def parse_cli_line(line_str: str) -> List[dict]:
             elif btype == "text":
                 text_value = block.get("text", "")
                 if text_value:
-                    out.append({"assistant_content": text_value})
+                    out.append({"assistant_content": _sanitize_client_protocol_text(text_value)})
             elif btype == "thinking":
                 think_value = block.get("thinking", "")
                 if think_value:
@@ -508,14 +550,14 @@ def parse_cli_line(line_str: str) -> List[dict]:
             # 优先读 result 字段（CLI 实际行为）；message.content 兜底（防止 CLI 升级换 schema）
             result_text = event.get("result", "")
             if isinstance(result_text, str) and result_text:
-                out.append({"final_content": result_text})
+                out.append({"final_content": _sanitize_client_protocol_text(result_text)})
             else:
                 msg = event.get("message", {})
                 for block in msg.get("content", []):
                     if block.get("type") == "text":
                         ft = block.get("text", "")
                         if ft:
-                            out.append({"final_content": ft})
+                            out.append({"final_content": _sanitize_client_protocol_text(ft)})
                     elif block.get("type") == "thinking":
                         fth = block.get("thinking", "")
                         if fth:
@@ -566,8 +608,9 @@ def parse_codex_line(line_str: str) -> List[dict]:
             if isinstance(text, str) and text:
                 # Codex exec 当前不会像 Claude 一样稳定吐 text_delta；
                 # 同时发 assistant_content 和 final_content，兼容客户端显示与最终恢复。
-                out.append({"assistant_content": text})
-                out.append({"final_content": text})
+                clean_text = _sanitize_client_protocol_text(text)
+                out.append({"assistant_content": clean_text})
+                out.append({"final_content": clean_text})
         elif item_type in {"reasoning", "thinking"}:
             text = item.get("text") or item.get("summary") or item.get("content") or ""
             if isinstance(text, str) and text:
@@ -925,6 +968,8 @@ def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -
         "括号、空格、省略号、换行拆分或截断签名参数。发送最终回答前，必须确认最终文本"
         "同时包含完整 `[json_app_url]` 和完整 `[/json_app_url]`。"
         "如果需要请求用户上传当前应用，只能输出完整 `[request_action]upload_current_app[/request_action]`。"
+        "普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，禁止复述这些协议标签字面量；"
+        "如需描述工作方式，只用“上传后返回应用链接”这类自然语言。"
     )
     return (
         f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>"

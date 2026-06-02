@@ -16,6 +16,7 @@
 - 上传前必须通过 `python3 -m json.tool`、`python3 backend/repair_json_app.py`、`python3 backend/validate_json_app.py`。只要还有 validator `ERROR`，绝对不能回复“完成/通过/已生成”。
 - 图标名必须来自 `lib/json_ui/widgets/icon_registry.dart`；不确定时先查源码。未知静态图标会被 validator 拦截，也会在 UI 上显示成红色问号。
 - 交付必须使用 `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"` 输出的完整签名 URL，并原样放入 `[json_app_url]URL[/json_app_url]`。最终标签是客户端协议，不是自然语言装饰；起始标签和结束标签必须逐字符完整，结束标签必须包含最后的右中括号 `]`。
+- 普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，禁止复述 `[json_app_url]` / `[/json_app_url]` / `[request_action]` / `[/request_action]` 这些协议标签字面量；只能用“上传后返回应用链接”“请求上传当前应用”这类自然语言描述。
 
 ## 1. 当前应用修改/分析
 
