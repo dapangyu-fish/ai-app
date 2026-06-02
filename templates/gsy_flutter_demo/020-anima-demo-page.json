@@ -3,7 +3,7 @@
   "appid": "cb08d3aa-b8cd-5808-8997-fd2b0b2ec3b3",
   "meta": {
     "name": "gsy_flutter_demo/020-anima-demo-page",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "type": "app",
     "displayName": {
       "zh": "控件动画组合展示（旋转加放大圆）",
@@ -20,16 +20,42 @@
       "category": "animation",
       "routeIndex": 20,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-primitives-v2"
     }
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "portVersion": "json-dsl-clean-v1",
+      "angle": 0,
+      "portVersion": "json-dsl-primitives-v2",
       "portStatus": "ported_json"
     },
-    "functions": {}
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.angle",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.angle"
+                      },
+                      4
+                    ]
+                  },
+                  360
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
@@ -42,44 +68,59 @@
           {
             "type": "positioned",
             "child": {
-              "type": "center",
+              "type": "interval_action",
+              "intervalMs": 33,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
               "child": {
-                "type": "container",
-                "width": 200,
-                "height": 200,
-                "children": [
-                  {
-                    "type": "animated_canvas",
-                    "backgroundColor": "#69F0AE",
-                    "durationMs": 3000,
-                    "layers": [
+                "type": "center",
+                "child": {
+                  "type": "transform",
+                  "rotateZ": "{{ global.angle }}",
+                  "child": {
+                    "type": "container",
+                    "width": 200,
+                    "height": 200,
+                    "clipBehavior": "hardEdge",
+                    "color": "#69F0AE",
+                    "children": [
                       {
-                        "kind": "circle",
-                        "x": {
-                          "/": [
-                            "w",
-                            2
-                          ]
-                        },
-                        "y": {
-                          "/": [
-                            "h",
-                            2
-                          ]
-                        },
-                        "radius": {
-                          "*": [
-                            "progress",
-                            150
-                          ]
-                        },
-                        "color": "#FF5252",
-                        "style": "stroke",
-                        "strokeWidth": 4
+                        "type": "animated_canvas",
+                        "width": 200,
+                        "height": 200,
+                        "durationMs": 3000,
+                        "layers": [
+                          {
+                            "kind": "circle",
+                            "x": {
+                              "/": [
+                                "w",
+                                2
+                              ]
+                            },
+                            "y": {
+                              "/": [
+                                "h",
+                                2
+                              ]
+                            },
+                            "radius": {
+                              "*": [
+                                "progress",
+                                300
+                              ]
+                            },
+                            "color": "#FF5252",
+                            "style": "stroke",
+                            "strokeWidth": 4
+                          }
+                        ]
                       }
                     ]
                   }
-                ]
+                }
               }
             },
             "left": 0,

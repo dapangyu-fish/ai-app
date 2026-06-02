@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 78,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-scroll-drag-handoff-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
       "upstreamWidget": "VPNestListView",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1",
+      "portVersion": "json-dsl-scroll-drag-handoff-v1",
       "items": [
         {
           "index": 0
@@ -138,58 +138,74 @@
           {
             "type": "expanded",
             "child": {
-              "type": "page_view",
-              "scrollDirection": "vertical",
-              "children": [
+              "type": "scroll_drag_handoff",
+              "axis": "vertical",
+              "defaultController": "vpnest.list",
+              "switches": [
                 {
-                  "type": "container",
-                  "children": [
-                    {
-                      "type": "list",
-                      "source": "{{ global.items }}",
-                      "allowNestedScroll": true,
-                      "item_template": {
-                        "type": "container",
-                        "children": [
-                          {
-                            "type": "text",
-                            "value": "List Item {{ loop.item.index }}",
-                            "style": {
-                              "fontSize": 16,
-                              "color": "#212121"
-                            }
-                          }
-                        ],
-                        "layout": "column",
-                        "height": 48,
-                        "padding": {
-                          "left": 16
-                        },
-                        "alignment": "centerLeft"
-                      }
-                    }
-                  ],
-                  "layout": "column"
-                },
-                {
-                  "type": "container",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "Page View",
-                      "style": {
-                        "fontSize": 50,
-                        "color": "#000000",
-                        "textAlign": "center"
-                      }
-                    }
-                  ],
-                  "layout": "column",
-                  "color": "#4CAF50",
-                  "alignment": "center",
-                  "mainAxisAlignment": "center"
+                  "from": "vpnest.list",
+                  "to": "vpnest.page",
+                  "when": "fromAtMaxAndForward"
                 }
-              ]
+              ],
+              "child": {
+                "type": "page_view",
+                "scrollDirection": "vertical",
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "list",
+                        "source": "{{ global.items }}",
+                        "allowNestedScroll": true,
+                        "item_template": {
+                          "type": "container",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "List Item {{ loop.item.index }}",
+                              "style": {
+                                "fontSize": 16,
+                                "color": "#212121"
+                              }
+                            }
+                          ],
+                          "layout": "column",
+                          "height": 48,
+                          "padding": {
+                            "left": 16
+                          },
+                          "alignment": "centerLeft"
+                        },
+                        "controller": "vpnest.list",
+                        "physics": "never"
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Page View",
+                        "style": {
+                          "fontSize": 50,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column",
+                    "color": "#4CAF50",
+                    "alignment": "center",
+                    "mainAxisAlignment": "center"
+                  }
+                ],
+                "controller": "vpnest.page",
+                "physics": "never"
+              }
             }
           }
         ],

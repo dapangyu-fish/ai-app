@@ -3,7 +3,7 @@
   "appid": "ae5472ea-9f4a-5ef0-bbde-8c2f4924063c",
   "meta": {
     "name": "gsy_flutter_demo/109-boom-particle-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "炫酷爆炸粒子",
@@ -20,7 +20,7 @@
       "category": "animation",
       "routeIndex": 109,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-boom-particles-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/animation/boom_particle_page.dart",
       "upstreamWidget": "BoomParticlePage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-boom-particles-v1"
     },
     "functions": {}
   },
@@ -71,12 +71,12 @@
             "type": "positioned",
             "child": {
               "type": "animated_canvas",
-              "backgroundColor": "#000000",
+              "backgroundColor": "#00000000",
               "speed": 1,
               "layers": [
                 {
                   "kind": "particles",
-                  "count": 1200,
+                  "count": 5200,
                   "x": {
                     "+": [
                       "touchX",
@@ -137,7 +137,7 @@
                       }
                     ]
                   },
-                  "radius": 1.6,
+                  "radius": 1.2,
                   "color": "#00E5FF",
                   "alpha": {
                     "+": [

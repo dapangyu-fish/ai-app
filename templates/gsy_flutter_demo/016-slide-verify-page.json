@@ -27,30 +27,10 @@
   "global": {
     "variables": {
       "verified": false,
-      "slideValue": 0,
       "portStatus": "ported_json",
       "portVersion": "json-dsl-clean-v1"
     },
-    "functions": {},
-    "computed": {
-      "slideProgress": {
-        "/": [
-          {
-            "var": "global.slideValue"
-          },
-          100
-        ]
-      },
-      "slideText": {
-        "if": [
-          {
-            "var": "global.verified"
-          },
-          "验证成功",
-          "滑动验证"
-        ]
-      }
-    }
+    "functions": {}
   },
   "steps": [],
   "ui": {
@@ -65,100 +45,18 @@
             "child": {
               "type": "center",
               "child": {
-                "type": "container",
-                "layout": "stack",
+                "type": "slide_verify",
                 "width": 250,
                 "height": 60,
-                "borderRadius": 30,
-                "clipBehavior": "hardEdge",
-                "color": "#9E9E9E",
-                "border": {
-                  "color": "#448AFF",
-                  "width": 1
-                },
-                "children": [
-                  {
-                    "type": "positioned",
-                    "left": 0,
-                    "right": 0,
-                    "top": 0,
-                    "bottom": 0,
-                    "child": {
-                      "type": "progress",
-                      "value": "{{ global.slideProgress }}",
-                      "height": 60,
-                      "color": "#2196F3",
-                      "backgroundColor": "#9E9E9E"
-                    }
-                  },
-                  {
-                    "type": "positioned",
-                    "left": 0,
-                    "right": 0,
-                    "top": 4,
-                    "bottom": 4,
-                    "child": {
-                      "type": "slider",
-                      "bind": "global.slideValue",
-                      "min": 0,
-                      "max": 100,
-                      "divisions": 100,
-                      "showLabel": false,
-                      "color": "#FFFFFF",
-                      "action": {
-                        "call": "@if",
-                        "args": {
-                          "condition": {
-                            ">=": [
-                              {
-                                "var": "global.slideValue"
-                              },
-                              100
-                            ]
-                          },
-                          "then": [
-                            {
-                              "call": "@set",
-                              "args": {
-                                "var": "global.verified",
-                                "value": true
-                              }
-                            }
-                          ],
-                          "else": [
-                            {
-                              "call": "@set",
-                              "args": {
-                                "var": "global.verified",
-                                "value": false
-                              }
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "type": "positioned",
-                    "left": 0,
-                    "right": 0,
-                    "top": 0,
-                    "bottom": 0,
-                    "child": {
-                      "type": "center",
-                      "child": {
-                        "type": "text",
-                        "value": "{{ global.slideText }}",
-                        "style": {
-                          "fontSize": 14,
-                          "color": "#FFFFFFFF",
-                          "fontWeight": "bold",
-                          "textAlign": "center"
-                        }
-                      }
-                    }
-                  }
-                ]
+                "bind": "global.verified",
+                "initialText": "滑动验证",
+                "successText": "验证成功",
+                "thumbImage": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                "backgroundColor": "#9E9E9E",
+                "fillColor": "#2196F3",
+                "borderColor": "#448AFF",
+                "initialTextColor": "#1F000000",
+                "successTextColor": "#FFFFFFFF"
               }
             },
             "left": 0,

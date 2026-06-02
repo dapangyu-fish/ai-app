@@ -87,6 +87,7 @@ class JsonTextWidget extends JsonBaseWidget {
     final lineHeight = _resolveDouble(interpreter, style['lineHeight']);
     final foreground = _buildForegroundPaint(style);
     final strutStyle = _buildStrutStyle(style);
+    final shadows = _buildShadows(style);
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -108,6 +109,7 @@ class JsonTextWidget extends JsonBaseWidget {
           decoration: decoration,
           letterSpacing: letterSpacing,
           height: lineHeight,
+          shadows: shadows,
         ),
       ),
     );
@@ -173,6 +175,37 @@ class JsonTextWidget extends JsonBaseWidget {
         end: Alignment.topRight,
         colors: colors,
       ).createShader(Rect.fromLTWH(0, 0, width, height));
+  }
+
+  List<Shadow>? _buildShadows(Map<String, dynamic> style) {
+    final rawShadows = style['shadows'];
+    if (rawShadows is List) {
+      final shadows = rawShadows.whereType<Map>().map((raw) {
+        final shadow = raw.cast<String, dynamic>();
+        return Shadow(
+          color: _parseColor(shadow['color']?.toString()) ?? Colors.black,
+          blurRadius: (shadow['blurRadius'] as num?)?.toDouble() ?? 0,
+          offset: Offset(
+            (shadow['offsetX'] as num?)?.toDouble() ?? 0,
+            (shadow['offsetY'] as num?)?.toDouble() ?? 0,
+          ),
+        );
+      }).toList();
+      return shadows.isEmpty ? null : shadows;
+    }
+    final shadowColor = _parseColor(style['shadowColor']?.toString());
+    final shadowBlur = (style['shadowBlurRadius'] as num?)?.toDouble();
+    if (shadowColor == null && shadowBlur == null) return null;
+    return [
+      Shadow(
+        color: shadowColor ?? Colors.black54,
+        blurRadius: shadowBlur ?? 0,
+        offset: Offset(
+          (style['shadowOffsetX'] as num?)?.toDouble() ?? 0,
+          (style['shadowOffsetY'] as num?)?.toDouble() ?? 0,
+        ),
+      ),
+    ];
   }
 
   StrutStyle? _buildStrutStyle(Map<String, dynamic> style) {

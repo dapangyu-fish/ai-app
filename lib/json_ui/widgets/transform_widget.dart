@@ -69,7 +69,7 @@ class JsonTransformWidget extends JsonBaseWidget {
   double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
-    final resolved = interpreter.resolveExpression(value);
+    final resolved = interpreter.evaluateExpression(value);
     if (resolved is num) return resolved.toDouble();
     return double.tryParse(resolved?.toString() ?? '');
   }

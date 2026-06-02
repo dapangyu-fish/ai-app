@@ -3,7 +3,7 @@
   "appid": "d9d78e45-88c3-5e5e-85aa-14c7f2f01914",
   "meta": {
     "name": "gsy_flutter_demo/075-shader-canvas-demo-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "测试 canvas 阴影",
@@ -20,7 +20,7 @@
       "category": "canvas",
       "routeIndex": 75,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-static-wave-shadow-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/canvas/shader_canvas_demo_page.dart",
       "upstreamWidget": "ShaderCanvasDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-static-wave-shadow-v1"
     },
     "functions": {}
   },
@@ -45,18 +45,17 @@
         "children": [
           {
             "type": "container",
-            "width": 9999,
             "height": 100,
             "children": [
               {
                 "type": "animated_canvas",
                 "backgroundColor": "#00000000",
-                "speed": 0.2,
+                "speed": 0,
                 "layers": [
                   {
                     "kind": "path",
                     "style": "fill",
-                    "color": "#3C2196F3",
+                    "color": "#44333333",
                     "alpha": 1,
                     "commands": [
                       {
@@ -70,9 +69,9 @@
                                 0.5,
                                 {
                                   "*": [
-                                    0.28,
+                                    0.4,
                                     {
-                                      "sin": "t"
+                                      "sin": "v"
                                     }
                                   ]
                                 }
@@ -97,9 +96,14 @@
                                 0.5,
                                 {
                                   "*": [
-                                    0.34,
+                                    0.4,
                                     {
-                                      "cos": "t"
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          1.5707963267948966
+                                        ]
+                                      }
                                     }
                                   ]
                                 }
@@ -116,12 +120,118 @@
                                 0.5,
                                 {
                                   "*": [
-                                    0.28,
+                                    0.4,
                                     {
                                       "sin": {
                                         "+": [
-                                          "t",
-                                          3.14159
+                                          "v",
+                                          3.141592653589793
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": "w",
+                        "y": "h"
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": 0,
+                        "y": "h"
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ],
+                    "locals": {
+                      "v": 50
+                    },
+                    "blurRadius": 5
+                  },
+                  {
+                    "kind": "path",
+                    "style": "fill",
+                    "color": "#3C2196F3",
+                    "alpha": 1,
+                    "locals": {
+                      "v": 50
+                    },
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": 0,
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": "v"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "quadTo",
+                        "x1": {
+                          "*": [
+                            "w",
+                            0.5
+                          ]
+                        },
+                        "y1": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          1.5707963267948966
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "x": "w",
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          3.141592653589793
                                         ]
                                       }
                                     }
@@ -147,9 +257,13 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "durationMs": 1000
               }
-            ]
+            ],
+            "constraints": {
+              "minWidth": 390
+            }
           },
           {
             "type": "spacer",
@@ -157,13 +271,12 @@
           },
           {
             "type": "container",
-            "width": 9999,
             "height": 100,
             "children": [
               {
                 "type": "animated_canvas",
                 "backgroundColor": "#00000000",
-                "speed": 0.2,
+                "speed": 0,
                 "layers": [
                   {
                     "kind": "path",
@@ -182,9 +295,9 @@
                                 0.5,
                                 {
                                   "*": [
-                                    0.28,
+                                    0.4,
                                     {
-                                      "sin": "t"
+                                      "sin": "v"
                                     }
                                   ]
                                 }
@@ -209,9 +322,14 @@
                                 0.5,
                                 {
                                   "*": [
-                                    0.34,
+                                    0.4,
                                     {
-                                      "cos": "t"
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          1.5707963267948966
+                                        ]
+                                      }
                                     }
                                   ]
                                 }
@@ -228,12 +346,12 @@
                                 0.5,
                                 {
                                   "*": [
-                                    0.28,
+                                    0.4,
                                     {
                                       "sin": {
                                         "+": [
-                                          "t",
-                                          3.14159
+                                          "v",
+                                          3.141592653589793
                                         ]
                                       }
                                     }
@@ -257,11 +375,19 @@
                       {
                         "op": "close"
                       }
-                    ]
+                    ],
+                    "locals": {
+                      "v": 50
+                    },
+                    "blurRadius": 2
                   }
-                ]
+                ],
+                "durationMs": 1000
               }
-            ]
+            ],
+            "constraints": {
+              "minWidth": 390
+            }
           }
         ],
         "appBar": {

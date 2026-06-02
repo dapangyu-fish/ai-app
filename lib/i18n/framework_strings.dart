@@ -153,6 +153,10 @@ class _Strings {
   final String settingsLanguageDe;
   final String settingsLanguageEs;
   final String settingsLanguageSystem;
+  final String settingsTheme;
+  final String settingsThemeSystem;
+  final String settingsThemeLight;
+  final String settingsThemeDark;
   final String settingsAiProvider;
   final String settingsAbout;
   final String settingsVersion;
@@ -664,6 +668,10 @@ class _Strings {
     required this.settingsLanguageDe,
     required this.settingsLanguageEs,
     required this.settingsLanguageSystem,
+    required this.settingsTheme,
+    required this.settingsThemeSystem,
+    required this.settingsThemeLight,
+    required this.settingsThemeDark,
     required this.settingsAiProvider,
     required this.settingsAbout,
     required this.settingsVersion,
@@ -1121,6 +1129,10 @@ const _Strings _zhCN = _Strings(
   settingsLanguageDe: 'Deutsch',
   settingsLanguageEs: 'Español',
   settingsLanguageSystem: '跟随系统',
+  settingsTheme: '外观',
+  settingsThemeSystem: '跟随系统',
+  settingsThemeLight: '日间模式',
+  settingsThemeDark: '夜间模式',
   settingsAiProvider: 'AI 服务商',
   settingsAbout: '关于',
   settingsVersion: '版本',
@@ -1577,6 +1589,10 @@ const _Strings _enUS = _Strings(
   settingsLanguageDe: 'Deutsch',
   settingsLanguageEs: 'Español',
   settingsLanguageSystem: 'System',
+  settingsTheme: 'Appearance',
+  settingsThemeSystem: 'System',
+  settingsThemeLight: 'Light',
+  settingsThemeDark: 'Dark',
   settingsAiProvider: 'AI provider',
   settingsAbout: 'About',
   settingsVersion: 'Version',
@@ -2033,6 +2049,10 @@ const _Strings _deDE = _Strings(
   settingsLanguageDe: 'Deutsch',
   settingsLanguageEs: 'Español',
   settingsLanguageSystem: 'System',
+  settingsTheme: 'Darstellung',
+  settingsThemeSystem: 'System',
+  settingsThemeLight: 'Hell',
+  settingsThemeDark: 'Dunkel',
   settingsAiProvider: 'KI-Anbieter',
   settingsAbout: 'Über',
   settingsVersion: 'Version',
@@ -2489,6 +2509,10 @@ const _Strings _esES = _Strings(
   settingsLanguageDe: 'Deutsch',
   settingsLanguageEs: 'Español',
   settingsLanguageSystem: 'Sistema',
+  settingsTheme: 'Apariencia',
+  settingsThemeSystem: 'Sistema',
+  settingsThemeLight: 'Claro',
+  settingsThemeDark: 'Oscuro',
   settingsAiProvider: 'Proveedor de IA',
   settingsAbout: 'Acerca de',
   settingsVersion: 'Versión',

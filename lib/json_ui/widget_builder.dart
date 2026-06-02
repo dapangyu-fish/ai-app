@@ -62,6 +62,13 @@ import 'widgets/keyboard_detector_widget.dart';
 import 'widgets/floating_action_button_widget.dart';
 import 'widgets/scroll_primitives_widget.dart';
 import 'widgets/visual_primitives_widget.dart';
+import 'widgets/animated_text_widget.dart';
+import 'widgets/gesture_password_widget.dart';
+import 'widgets/form_primitives_widget.dart';
+import 'widgets/layout_primitives_widget.dart';
+import 'widgets/overlay_primitives_widget.dart';
+import 'widgets/cross_axis_sizing_list_widget.dart';
+import 'widgets/rive_animation_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -101,8 +108,10 @@ class JsonWidgetBuilder {
     'avatar': JsonAvatarWidget(),
     'rich_text': JsonRichTextWidget(),
     'progress': JsonProgressWidget(),
+    'gradient_progress': JsonGradientProgressWidget(),
     'inkwell': JsonInkWellWidget(),
     'gesture_detector': JsonGestureDetectorWidget(),
+    'transform_gesture': JsonTransformGestureWidget(),
     'dismissible': JsonDismissibleWidget(),
     'draggable': JsonDraggableWidget(),
     'refresh': JsonRefreshWidget(),
@@ -124,9 +133,13 @@ class JsonWidgetBuilder {
     'keyboard_detector': JsonKeyboardDetectorWidget(),
     'floating_action_button': JsonFloatingActionButtonWidget(),
     'page_view': JsonPageViewWidget(),
+    'scroll_drag_handoff': JsonScrollDragHandoffWidget(),
     'custom_scroll_view': JsonCustomScrollViewWidget(),
+    'cross_axis_sizing_list': JsonCrossAxisSizingListWidget(),
+    'rive_animation': JsonRiveAnimationWidget(),
     'radial_layout': JsonRadialLayoutWidget(),
     'backdrop_blur': JsonBackdropBlurWidget(),
+    'image_filter': JsonImageFilterWidget(),
     'animated_container': JsonAnimatedContainerWidget(),
     'animated_visibility': JsonAnimatedVisibilityWidget(),
     'animated_switcher': JsonAnimatedSwitcherWidget(),
@@ -136,6 +149,21 @@ class JsonWidgetBuilder {
     'interval_action': JsonIntervalActionWidget(),
     'animated_positioned': JsonAnimatedPositionedWidget(),
     'animated_canvas': JsonAnimatedCanvasWidget(),
+    'particle_stream_canvas': JsonParticleStreamCanvasWidget(),
+    'projected_scene': JsonProjectedSceneWidget(),
+    'animated_text': JsonAnimatedTextWidget(),
+    'gesture_password': JsonGesturePasswordWidget(),
+    'circular_reveal': JsonCircularRevealWidget(),
+    'clip_path': JsonClipPathWidget(),
+    'image_shader_path': JsonImageShaderPathWidget(),
+    'slide_verify': JsonSlideVerifyWidget(),
+    'code_input': JsonCodeInputWidget(),
+    'text_scale_scope': JsonTextScaleScopeWidget(),
+    'gesture_settings_scope': JsonGestureSettingsScopeWidget(),
+    'measured_box': JsonMeasuredBoxWidget(),
+    'spiral_flow': JsonSpiralFlowWidget(),
+    'anchored_popover': JsonAnchoredPopoverWidget(),
+    'overlay_spawner': JsonOverlaySpawnerWidget(),
   };
 
   /// 根据 JSON 配置构建对应的 Flutter Widget

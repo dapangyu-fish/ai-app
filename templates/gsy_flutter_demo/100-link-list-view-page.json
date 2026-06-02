@@ -3,7 +3,7 @@
   "appid": "8b4f11d6-2cb1-5c64-b7a8-c5f022baba1b",
   "meta": {
     "name": "gsy_flutter_demo/100-link-list-view-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "link scroll",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 100,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5"
+      "portVersion": "json-dsl-linked-scroll-action-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/link_scroll_page.dart",
       "upstreamWidget": "LinkListViewPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1",
+      "portVersion": "json-dsl-linked-scroll-action-v1",
       "selected": 0,
       "items": [
         {
@@ -133,7 +133,30 @@
           "height": 300,
           "bg": "#F5F5F5"
         }
-      ]
+      ],
+      "offsets": [
+        0,
+        100,
+        250,
+        450,
+        700,
+        1000,
+        1100,
+        1250,
+        1450,
+        1700,
+        2000,
+        2100,
+        2250,
+        2450,
+        2700,
+        3000,
+        3100,
+        3250,
+        3450,
+        3700
+      ],
+      "isSelecting": false
     },
     "functions": {
       "select": {
@@ -144,17 +167,265 @@
           {
             "call": "@set",
             "args": {
-              "var": "global.selected",
-              "value": "{{ params.idx }}"
+              "var": "global.isSelecting",
+              "value": true
             }
           },
           {
-            "call": "@scroll_to_index",
+            "call": "@set",
+            "args": {
+              "var": "global.selected",
+              "value": {
+                "var": "params.idx"
+              }
+            }
+          },
+          {
+            "call": "@scroll_to_offset",
             "args": {
               "controller": "rightList",
-              "index": "{{ params.idx }}",
+              "offset": {
+                "at": [
+                  {
+                    "var": "global.offsets"
+                  },
+                  {
+                    "var": "params.idx"
+                  }
+                ]
+              },
               "durationMs": 300,
-              "alignment": 0
+              "curve": "easeInOut"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.isSelecting",
+              "value": false
+            }
+          }
+        ]
+      },
+      "syncSelectionFromRight": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.isSelecting"
+              },
+              "then": [],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.selected",
+                    "value": {
+                      "if": [
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            3700
+                          ]
+                        },
+                        19,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            3450
+                          ]
+                        },
+                        18,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            3250
+                          ]
+                        },
+                        17,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            3100
+                          ]
+                        },
+                        16,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            3000
+                          ]
+                        },
+                        15,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            2700
+                          ]
+                        },
+                        14,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            2450
+                          ]
+                        },
+                        13,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            2250
+                          ]
+                        },
+                        12,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            2100
+                          ]
+                        },
+                        11,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            2000
+                          ]
+                        },
+                        10,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            1700
+                          ]
+                        },
+                        9,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            1450
+                          ]
+                        },
+                        8,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            1250
+                          ]
+                        },
+                        7,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            1100
+                          ]
+                        },
+                        6,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            1000
+                          ]
+                        },
+                        5,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            700
+                          ]
+                        },
+                        4,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            450
+                          ]
+                        },
+                        3,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            250
+                          ]
+                        },
+                        2,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            100
+                          ]
+                        },
+                        1,
+                        {
+                          ">=": [
+                            {
+                              "var": "event.offset"
+                            },
+                            0
+                          ]
+                        },
+                        0,
+                        0
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@scroll_to_offset",
+                  "args": {
+                    "controller": "leftList",
+                    "offset": {
+                      "*": [
+                        {
+                          "var": "global.selected"
+                        },
+                        60
+                      ]
+                    },
+                    "durationMs": 300,
+                    "curve": "easeInOut"
+                  }
+                }
+              ]
             }
           }
         ]
@@ -171,94 +442,98 @@
         "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "container",
-            "layout": "column",
-            "children": [
-              {
-                "type": "list",
-                "source": "{{ global.items }}",
-                "allowNestedScroll": true,
-                "controller": "leftList",
-                "separator": "none",
-                "item_template": {
-                  "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "container",
-                      "layout": "column",
-                      "children": [
-                        {
-                          "type": "text",
-                          "value": "Item {{ loop.item.index }}",
-                          "style": {
-                            "fontSize": 14,
-                            "color": "#111111",
-                            "fontWeight": "bold",
-                            "textAlign": "center"
-                          }
-                        }
-                      ],
-                      "visible": {
-                        "==": [
+            "type": "expanded",
+            "flex": 1,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "list",
+                  "source": "{{ global.items }}",
+                  "allowNestedScroll": true,
+                  "controller": "leftList",
+                  "separator": "none",
+                  "item_template": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
                           {
-                            "var": "loop.item.index"
-                          },
-                          {
-                            "var": "global.selected"
+                            "type": "text",
+                            "value": "Item {{ loop.item.index }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#111111",
+                              "fontWeight": "bold",
+                              "textAlign": "center"
+                            }
                           }
-                        ]
+                        ],
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.index"
+                            },
+                            {
+                              "var": "global.selected"
+                            }
+                          ]
+                        },
+                        "height": 60,
+                        "color": "#BBDEFB",
+                        "alignment": "center",
+                        "mainAxisAlignment": "center"
                       },
-                      "height": 60,
-                      "color": "#BBDEFB",
-                      "alignment": "center",
-                      "mainAxisAlignment": "center"
-                    },
-                    {
-                      "type": "container",
-                      "layout": "column",
-                      "children": [
-                        {
-                          "type": "text",
-                          "value": "Item {{ loop.item.index }}",
-                          "style": {
-                            "fontSize": 14,
-                            "color": "#111111",
-                            "textAlign": "center"
-                          }
-                        }
-                      ],
-                      "visible": {
-                        "!=": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
                           {
-                            "var": "loop.item.index"
-                          },
-                          {
-                            "var": "global.selected"
+                            "type": "text",
+                            "value": "Item {{ loop.item.index }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#111111",
+                              "textAlign": "center"
+                            }
                           }
-                        ]
-                      },
-                      "height": 60,
-                      "color": "#00000000",
-                      "alignment": "center",
-                      "mainAxisAlignment": "center"
-                    }
-                  ],
-                  "height": 60,
-                  "onTap": {
-                    "call": "@global.select",
-                    "args": {
-                      "idx": "{{ loop.item.index }}"
+                        ],
+                        "visible": {
+                          "!=": [
+                            {
+                              "var": "loop.item.index"
+                            },
+                            {
+                              "var": "global.selected"
+                            }
+                          ]
+                        },
+                        "height": 60,
+                        "color": "#00000000",
+                        "alignment": "center",
+                        "mainAxisAlignment": "center"
+                      }
+                    ],
+                    "height": 60,
+                    "onTap": {
+                      "call": "@global.select",
+                      "args": {
+                        "idx": "{{ loop.item.index }}"
+                      }
                     }
                   }
                 }
-              }
-            ],
-            "width": 130,
-            "color": "#EEEEEE"
+              ],
+              "color": "#EEEEEE"
+            }
           },
           {
             "type": "expanded",
+            "flex": 2,
             "child": {
               "type": "container",
               "layout": "column",
@@ -287,6 +562,10 @@
                     "color": "{{ loop.item.bg }}",
                     "alignment": "center",
                     "mainAxisAlignment": "center"
+                  },
+                  "onScroll": {
+                    "call": "@global.syncSelectionFromRight",
+                    "args": {}
                   }
                 }
               ]

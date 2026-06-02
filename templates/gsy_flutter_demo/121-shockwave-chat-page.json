@@ -3,7 +3,7 @@
   "appid": "c1849b64-5665-54f7-a387-e4c24a209973",
   "meta": {
     "name": "gsy_flutter_demo/121-shockwave-chat-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "Shock Wave Chat",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 121,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-web-fallback-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/shock_wave_chat_page.dart",
       "upstreamWidget": "ShockwaveChatPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1",
+      "portVersion": "json-dsl-web-fallback-v1",
       "messages": [
         {
           "me": false,
@@ -57,185 +57,64 @@
     "screens": [
       {
         "id": "home",
-        "title": "ShockwaveChatPage",
+        "title": "Elastic Bounce",
         "layout": "stack",
-        "backgroundColor": "#05050A",
+        "backgroundColor": "#DD000000",
         "children": [
           {
             "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "height": 56,
             "child": {
-              "type": "animated_canvas",
-              "backgroundColor": "#05050A",
-              "speed": 1,
-              "layers": [
+              "type": "container",
+              "height": 56,
+              "color": "#2196F3",
+              "alignment": "center",
+              "children": [
                 {
-                  "kind": "particles",
-                  "count": 768,
-                  "x": {
-                    "+": [
-                      "touchX",
-                      {
-                        "*": [
-                          {
-                            "cos": "angle"
-                          },
-                          "r"
-                        ]
-                      }
-                    ]
-                  },
-                  "y": {
-                    "+": [
-                      "touchY",
-                      {
-                        "*": [
-                          {
-                            "sin": "angle"
-                          },
-                          "r"
-                        ]
-                      }
-                    ]
-                  },
-                  "radius": 1.4,
-                  "color": "#00E5FF",
-                  "alpha": "a",
-                  "blendMode": "plus",
-                  "locals": {
-                    "ring": {
-                      "floor": {
-                        "/": [
-                          "i",
-                          96
-                        ]
-                      }
-                    },
-                    "p": {
-                      "%": [
-                        "i",
-                        96
-                      ]
-                    },
-                    "r": {
-                      "%": [
-                        {
-                          "+": [
-                            {
-                              "*": [
-                                "progress",
-                                360
-                              ]
-                            },
-                            {
-                              "*": [
-                                "ring",
-                                44
-                              ]
-                            }
-                          ]
-                        },
-                        360
-                      ]
-                    },
-                    "angle": {
-                      "*": [
-                        "p",
-                        {
-                          "/": [
-                            6.283185307179586,
-                            96
-                          ]
-                        }
-                      ]
-                    },
-                    "a": {
-                      "clamp": [
-                        {
-                          "-": [
-                            1,
-                            {
-                              "/": [
-                                "r",
-                                360
-                              ]
-                            }
-                          ]
-                        },
-                        0,
-                        0.65
-                      ]
-                    }
+                  "type": "text",
+                  "value": "Elastic Bounce",
+                  "style": {
+                    "fontSize": 20,
+                    "fontWeight": "w500",
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
                   }
                 }
-              ],
-              "interactive": true
-            },
-            "left": 0,
-            "top": 0,
-            "right": 0,
-            "bottom": 0
+              ]
+            }
           },
           {
             "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 56,
+            "bottom": 0,
             "child": {
               "type": "container",
               "layout": "column",
+              "crossAxisAlignment": "center",
+              "padding": {
+                "top": 30
+              },
               "children": [
                 {
-                  "type": "list",
-                  "source": "{{ global.messages }}",
-                  "shrinkWrap": true,
-                  "separator": "none",
-                  "item_template": {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "{{ loop.item.text }}",
-                        "style": {
-                          "fontSize": 15,
-                          "color": "#FFFFFFFF",
-                          "textAlign": "left"
-                        }
-                      }
-                    ],
-                    "padding": 14,
-                    "margin": {
-                      "left": 18,
-                      "right": 18,
-                      "top": 8,
-                      "bottom": 8
-                    },
-                    "borderRadius": 18,
-                    "gradient": {
-                      "colors": [
-                        "#334FC3F7",
-                        "#335B6CFF"
-                      ],
-                      "begin": "topLeft",
-                      "end": "bottomRight"
-                    },
-                    "border": {
-                      "color": "#3355FFFF",
-                      "width": 1
-                    }
+                  "type": "text",
+                  "value": "当前效果不支持 Web ，请在 App 查看",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
                   }
                 }
-              ],
-              "padding": {
-                "top": 120
-              },
-              "alignment": "center"
-            },
-            "left": 0,
-            "top": 0,
-            "right": 0,
-            "bottom": 0
+              ]
+            }
           }
         ],
         "appBar": {
-          "title": "ShockwaveChatPage"
+          "title": "Elastic Bounce"
         }
       }
     ]

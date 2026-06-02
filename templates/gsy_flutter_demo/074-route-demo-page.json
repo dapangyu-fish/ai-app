@@ -20,7 +20,7 @@
       "category": "basic",
       "routeIndex": 74,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-route-stack-v1"
     }
   },
   "dependencies": {},
@@ -30,9 +30,11 @@
       "upstreamSource": "lib/widget/basic/route_demo_page.dart",
       "upstreamWidget": "RouteDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4",
+      "portVersion": "json-dsl-route-stack-v1",
       "currentRoute": 0,
-      "previousRoute": 0
+      "routeStack": [
+        0
+      ]
     },
     "functions": {
       "openRoute": {
@@ -41,11 +43,11 @@
         ],
         "logic": [
           {
-            "call": "@set",
+            "call": "@list_add",
             "args": {
-              "var": "global.previousRoute",
-              "value": {
-                "var": "global.currentRoute"
+              "var": "global.routeStack",
+              "item": {
+                "var": "params.index"
               }
             }
           },
@@ -66,9 +68,70 @@
           {
             "call": "@set",
             "args": {
+              "var": "global.routeStack",
+              "value": {
+                "if": [
+                  {
+                    ">": [
+                      {
+                        "length": [
+                          {
+                            "var": "global.routeStack"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "slice": [
+                      {
+                        "var": "global.routeStack"
+                      },
+                      0,
+                      {
+                        "-": [
+                          {
+                            "length": [
+                              {
+                                "var": "global.routeStack"
+                              }
+                            ]
+                          },
+                          1
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "var": "global.routeStack"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
               "var": "global.currentRoute",
               "value": {
-                "var": "global.previousRoute"
+                "at": [
+                  {
+                    "var": "global.routeStack"
+                  },
+                  {
+                    "-": [
+                      {
+                        "length": [
+                          {
+                            "var": "global.routeStack"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                ]
               }
             }
           }

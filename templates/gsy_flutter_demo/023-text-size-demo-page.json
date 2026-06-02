@@ -29,7 +29,7 @@
       "upstreamWidget": "TextSizeDemoPage",
       "portStatus": "ported_json",
       "portVersion": "json-dsl-primitives-v1",
-      "textScale": 1.0
+      "textScale": 1
     },
     "functions": {}
   },
@@ -54,18 +54,17 @@
               "color": "#607D8B",
               "children": [
                 {
-                  "type": "text",
-                  "value": "This document describes the rationale for and changes to the slots syntax proposed for Vue 2.6.0. It is based on the discussions in the RFC issue and tries to balance explicitness, readability, and backwards compatibility with existing slot usage.",
-                  "style": {
-                    "fontSize": {
-                      "*": [
-                        14,
-                        {
-                          "var": "global.textScale"
-                        }
-                      ]
-                    },
-                    "color": "#000000"
+                  "type": "text_scale_scope",
+                  "scale": {
+                    "var": "global.textScale"
+                  },
+                  "child": {
+                    "type": "text",
+                    "value": "Today I was amazed to see the usually positive and friendly VueJS community descend into a bitter war. Two weeks ago Vue creator Evan You released a Request for Comment (RFC) for a new function-based way of writing Vue components in the upcoming Vue 3.0. Today a critical Reddit thread followed by similarly critical comments in a Hacker News thread caused a flood of developers to flock to the original RFC to voice their outrage, some of which were borderline abusive. It was claimed in various places that",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#000000"
+                    }
                   }
                 }
               ],
@@ -98,13 +97,13 @@
                       "var": "global.textScale",
                       "value": {
                         "max": [
-                          0.5,
+                          1,
                           {
                             "-": [
                               {
                                 "var": "global.textScale"
                               },
-                              0.2
+                              1
                             ]
                           }
                         ]
@@ -131,16 +130,11 @@
                     "args": {
                       "var": "global.textScale",
                       "value": {
-                        "min": [
-                          3,
+                        "+": [
                           {
-                            "+": [
-                              {
-                                "var": "global.textScale"
-                              },
-                              0.2
-                            ]
-                          }
+                            "var": "global.textScale"
+                          },
+                          1
                         ]
                       }
                     }

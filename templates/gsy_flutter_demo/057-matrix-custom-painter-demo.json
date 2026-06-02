@@ -3,7 +3,7 @@
   "appid": "ab79f566-a5eb-57a5-8fd7-333d4474a203",
   "meta": {
     "name": "gsy_flutter_demo/057-matrix-custom-painter-demo",
-    "version": "0.1.1",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "手势效果",
@@ -18,7 +18,9 @@
       "deferredAlias": "matrix_custom_painter_page",
       "widgetClass": "MatrixCustomPainterDemo",
       "category": "canvas",
-      "routeIndex": 57
+      "routeIndex": 57,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-formula-canvas-transform-v1"
     }
   },
   "dependencies": {},
@@ -28,30 +30,117 @@
       "upstreamSource": "lib/widget/canvas/matrix_custom_painter_page.dart",
       "upstreamWidget": "MatrixCustomPainterDemo",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v3",
-      "pose": 0
+      "portVersion": "json-dsl-formula-canvas-transform-v1",
+      "tx": 0,
+      "ty": 0,
+      "scale": 1,
+      "rotDeg": 0
     },
     "functions": {
-      "nextPose": {
+      "dragMatrix": {
         "params": [],
         "logic": [
           {
             "call": "@set",
             "args": {
-              "var": "global.pose",
+              "var": "global.tx",
               "value": {
-                "%": [
+                "+": [
                   {
-                    "+": [
-                      {
-                        "var": "global.pose"
-                      },
-                      1
-                    ]
+                    "var": "global.tx"
                   },
-                  4
+                  {
+                    "var": "event.translationDeltaX"
+                  }
                 ]
               }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ty",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.ty"
+                  },
+                  {
+                    "var": "event.translationDeltaY"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rotDeg",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.rotDeg"
+                  },
+                  {
+                    "var": "event.rotationDeltaDegrees"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.scale",
+              "value": {
+                "clamp": [
+                  {
+                    "*": [
+                      {
+                        "var": "global.scale"
+                      },
+                      {
+                        "var": "event.scaleDelta"
+                      }
+                    ]
+                  },
+                  0.65,
+                  1.8
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "resetMatrix": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tx",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ty",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.scale",
+              "value": 1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rotDeg",
+              "value": 0
             }
           }
         ]
@@ -69,115 +158,4135 @@
         "children": [
           {
             "type": "positioned",
-            "child": {
-              "type": "gesture_detector",
-              "onTap": {
-                "call": "@global.nextPose",
-                "args": {}
-              },
-              "child": {
-                "type": "container",
-                "layout": "stack",
-                "children": [
-                  {
-                    "type": "transform",
-                    "rotateZ": {
-                      "*": [
-                        {
-                          "var": "global.pose"
-                        },
-                        12
-                      ]
-                    },
-                    "scale": {
-                      "+": [
-                        1,
-                        {
-                          "/": [
-                            {
-                              "var": "global.pose"
-                            },
-                            12
-                          ]
-                        }
-                      ]
-                    },
-                    "child": {
-                      "type": "container",
-                      "layout": "column",
-                      "children": [],
-                      "width": 220,
-                      "height": 220,
-                      "border": {
-                        "color": "#FFFFFFFF",
-                        "width": 8
-                      },
-                      "borderRadius": 12
-                    }
-                  },
-                  {
-                    "type": "transform",
-                    "rotateZ": {
-                      "*": [
-                        {
-                          "var": "global.pose"
-                        },
-                        -16
-                      ]
-                    },
-                    "child": {
-                      "type": "container",
-                      "layout": "column",
-                      "children": [],
-                      "width": 180,
-                      "height": 180,
-                      "shape": "circle",
-                      "border": {
-                        "color": "#CCFFFFFF",
-                        "width": 6
-                      }
-                    }
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "Matrix Gesture\nDetector Demo",
-                        "style": {
-                          "fontSize": 30,
-                          "color": "#FFFFFF",
-                          "fontWeight": "bold",
-                          "textAlign": "center"
-                        }
-                      }
-                    ],
-                    "alignment": "center"
-                  }
-                ],
-                "alignment": "center"
-              }
-            },
             "left": 0,
             "top": 0,
             "right": 0,
-            "bottom": 0
+            "bottom": 0,
+            "child": {
+              "type": "transform_gesture",
+              "onDoubleTap": {
+                "call": "@global.resetMatrix",
+                "args": {}
+              },
+              "child": {
+                "type": "animated_canvas",
+                "durationMs": 1000,
+                "variables": {
+                  "matrixTx": {
+                    "var": "global.tx"
+                  },
+                  "matrixTy": {
+                    "var": "global.ty"
+                  },
+                  "matrixScale": {
+                    "var": "global.scale"
+                  },
+                  "matrixRotDeg": {
+                    "var": "global.rotDeg"
+                  }
+                },
+                "layers": [
+                  {
+                    "kind": "linear_gradient",
+                    "colors": [
+                      "#000044",
+                      "#000022"
+                    ],
+                    "stops": [
+                      0.5,
+                      1.0
+                    ],
+                    "begin": "topCenter",
+                    "end": "bottomCenter"
+                  },
+                  {
+                    "kind": "path",
+                    "style": "stroke",
+                    "color": "#880000",
+                    "strokeWidth": {
+                      "/": [
+                        "min",
+                        40
+                      ]
+                    },
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.2
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            100,
+                            {
+                              "*": [
+                                0,
+                                {
+                                  "+": [
+                                    100,
+                                    {
+                                      "/": [
+                                        "h",
+                                        3
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.8
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            100,
+                            {
+                              "*": [
+                                0,
+                                {
+                                  "+": [
+                                    100,
+                                    {
+                                      "/": [
+                                        "h",
+                                        3
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.8
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            {
+                              "+": [
+                                100,
+                                {
+                                  "*": [
+                                    0,
+                                    {
+                                      "+": [
+                                        100,
+                                        {
+                                          "/": [
+                                            "h",
+                                            3
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "/": [
+                                "h",
+                                3
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.2
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            {
+                              "+": [
+                                100,
+                                {
+                                  "*": [
+                                    0,
+                                    {
+                                      "+": [
+                                        100,
+                                        {
+                                          "/": [
+                                            "h",
+                                            3
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "/": [
+                                "h",
+                                3
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      },
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.2
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            100,
+                            {
+                              "*": [
+                                1,
+                                {
+                                  "+": [
+                                    100,
+                                    {
+                                      "/": [
+                                        "h",
+                                        3
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.8
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            100,
+                            {
+                              "*": [
+                                1,
+                                {
+                                  "+": [
+                                    100,
+                                    {
+                                      "/": [
+                                        "h",
+                                        3
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.8
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            {
+                              "+": [
+                                100,
+                                {
+                                  "*": [
+                                    1,
+                                    {
+                                      "+": [
+                                        100,
+                                        {
+                                          "/": [
+                                            "h",
+                                            3
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "/": [
+                                "h",
+                                3
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.2
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            {
+                              "+": [
+                                100,
+                                {
+                                  "*": [
+                                    1,
+                                    {
+                                      "+": [
+                                        100,
+                                        {
+                                          "/": [
+                                            "h",
+                                            3
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "/": [
+                                "h",
+                                3
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      },
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.2
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            100,
+                            {
+                              "*": [
+                                2,
+                                {
+                                  "+": [
+                                    100,
+                                    {
+                                      "/": [
+                                        "h",
+                                        3
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.8
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            100,
+                            {
+                              "*": [
+                                2,
+                                {
+                                  "+": [
+                                    100,
+                                    {
+                                      "/": [
+                                        "h",
+                                        3
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.8
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            {
+                              "+": [
+                                100,
+                                {
+                                  "*": [
+                                    2,
+                                    {
+                                      "+": [
+                                        100,
+                                        {
+                                          "/": [
+                                            "h",
+                                            3
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "/": [
+                                "h",
+                                3
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "*": [
+                            "w",
+                            0.2
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            {
+                              "+": [
+                                100,
+                                {
+                                  "*": [
+                                    2,
+                                    {
+                                      "+": [
+                                        100,
+                                        {
+                                          "/": [
+                                            "h",
+                                            3
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "/": [
+                                "h",
+                                3
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "path",
+                    "style": "stroke",
+                    "color": "#BB6600",
+                    "strokeWidth": {
+                      "/": [
+                        "min",
+                        40
+                      ]
+                    },
+                    "locals": {
+                      "cx": {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "cy": {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      "mTx": "matrixTx",
+                      "mTy": "matrixTy",
+                      "mScale": "matrixScale",
+                      "r": {
+                        "*": [
+                          "matrixRotDeg",
+                          {
+                            "/": [
+                              "pi",
+                              180
+                            ]
+                          }
+                        ]
+                      },
+                      "cosR": {
+                        "cos": [
+                          "r"
+                        ]
+                      },
+                      "sinR": {
+                        "sin": [
+                          "r"
+                        ]
+                      }
+                    },
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            0,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            0,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            0,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            0,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      },
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            1,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            1,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            1,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            1,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      },
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.8
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "/": [
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "+": [
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            {
+                                                              "+": [
+                                                                100,
+                                                                {
+                                                                  "/": [
+                                                                    "h",
+                                                                    3
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "/": [
+                                                        "h",
+                                                        3
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                "cy"
+                                              ]
+                                            },
+                                            "mTy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "-": [
+                                                {
+                                                  "*": [
+                                                    "w",
+                                                    0.2
+                                                  ]
+                                                },
+                                                "cx"
+                                              ]
+                                            },
+                                            "mTx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "mScale"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "path",
+                    "style": "stroke",
+                    "color": "#008800",
+                    "strokeWidth": {
+                      "/": [
+                        "min",
+                        40
+                      ]
+                    },
+                    "locals": {
+                      "cx": {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "cy": {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      "mTx": "matrixTx",
+                      "mTy": "matrixTy",
+                      "mScale": "matrixScale",
+                      "r": {
+                        "*": [
+                          "matrixRotDeg",
+                          {
+                            "/": [
+                              "pi",
+                              180
+                            ]
+                          }
+                        ]
+                      },
+                      "cosR": {
+                        "cos": [
+                          "r"
+                        ]
+                      },
+                      "sinR": {
+                        "sin": [
+                          "r"
+                        ]
+                      }
+                    },
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    0,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    0,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    0,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    0,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        0,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      },
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    1,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    1,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    1,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    1,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        1,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      },
+                      {
+                        "op": "moveTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    2,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    2,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    2,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                100,
+                                                {
+                                                  "*": [
+                                                    2,
+                                                    {
+                                                      "+": [
+                                                        100,
+                                                        {
+                                                          "/": [
+                                                            "h",
+                                                            3
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.8
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": {
+                          "+": [
+                            "cx",
+                            "mTx",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "-": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            "mTy",
+                            {
+                              "*": [
+                                "mScale",
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "*": [
+                                                "w",
+                                                0.2
+                                              ]
+                                            },
+                                            "cx"
+                                          ]
+                                        },
+                                        "sinR"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        {
+                                          "-": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "+": [
+                                                    100,
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        {
+                                                          "+": [
+                                                            100,
+                                                            {
+                                                              "/": [
+                                                                "h",
+                                                                3
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "h",
+                                                    3
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            "cy"
+                                          ]
+                                        },
+                                        "cosR"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "onTransformUpdate": {
+                "call": "@global.dragMatrix",
+                "args": {}
+              }
+            }
           },
           {
             "type": "positioned",
+            "left": 32,
+            "right": 32,
+            "top": 260,
             "child": {
               "type": "text",
-              "value": "Tap anywhere to transform",
+              "value": "use your two fingers to translate / rotate / scale ...",
               "style": {
-                "fontSize": 14,
-                "color": "#E0F2F1",
+                "fontSize": 28,
+                "color": "#FFFFFF",
                 "textAlign": "center"
               }
-            },
-            "left": 0,
-            "right": 0,
-            "bottom": 28
+            }
           }
         ]
       }

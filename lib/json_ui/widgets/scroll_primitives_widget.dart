@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../interpreter.dart';
@@ -18,6 +19,7 @@ class JsonPageViewWidget extends JsonBaseWidget {
         .toList();
     return _JsonPageView(
       children: children,
+      controllerId: json['controller']?.toString(),
       transformer: json['transformer']?.toString() ?? 'none',
       scrollDirection: _parseAxis(json['scrollDirection']?.toString()),
       pageSnapping: json['pageSnapping'] != false,
@@ -31,6 +33,7 @@ class JsonPageViewWidget extends JsonBaseWidget {
 
 class _JsonPageView extends StatefulWidget {
   final List<Map<String, dynamic>> children;
+  final String? controllerId;
   final String transformer;
   final Axis scrollDirection;
   final bool pageSnapping;
@@ -40,6 +43,7 @@ class _JsonPageView extends StatefulWidget {
 
   const _JsonPageView({
     required this.children,
+    required this.controllerId,
     required this.transformer,
     required this.scrollDirection,
     required this.pageSnapping,
@@ -58,18 +62,44 @@ class _JsonPageViewState extends State<_JsonPageView> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _register();
+  }
+
+  @override
   void didUpdateWidget(covariant _JsonPageView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controllerId != widget.controllerId) {
+      _unregister(oldWidget.controllerId);
+      _register();
+    }
     if (oldWidget.viewportFraction != widget.viewportFraction) {
+      _unregister(widget.controllerId);
       _controller.dispose();
       _controller = PageController(viewportFraction: widget.viewportFraction);
+      _register();
     }
   }
 
   @override
   void dispose() {
+    _unregister(widget.controllerId);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _register() {
+    final id = widget.controllerId;
+    if (id != null && id.isNotEmpty) {
+      widget.interpreter.registerScrollController(id, _controller);
+    }
+  }
+
+  void _unregister(String? id) {
+    if (id != null && id.isNotEmpty) {
+      widget.interpreter.unregisterScrollController(id, _controller);
+    }
   }
 
   @override
@@ -130,6 +160,233 @@ class _JsonPageViewState extends State<_JsonPageView> {
   }
 }
 
+class JsonScrollDragHandoffWidget extends JsonBaseWidget {
+  @override
+  Widget build(
+    BuildContext context,
+    Map<String, dynamic> json,
+    JsonInterpreter interpreter,
+  ) {
+    final childJson = json['child'];
+    final child = childJson is Map<String, dynamic>
+        ? interpreter.buildWidget(context, childJson)
+        : const SizedBox.shrink();
+    return _ScrollDragHandoff(
+      axis: _parseAxis(json['axis']?.toString()),
+      defaultControllerId: json['defaultController']?.toString() ?? '',
+      touchControllerId: json['touchController']?.toString(),
+      touchStart: _resolveDouble(interpreter, json['touchStart']) ?? 0,
+      touchEnd: _resolveDouble(interpreter, json['touchEnd']),
+      touchRequiresDefaultAtMin: json['touchRequiresDefaultAtMin'] == true,
+      switches: (json['switches'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((raw) => _HandoffSwitch.fromJson(raw))
+          .toList(),
+      interpreter: interpreter,
+      child: child,
+    );
+  }
+}
+
+class _ScrollDragHandoff extends StatefulWidget {
+  final Axis axis;
+  final String defaultControllerId;
+  final String? touchControllerId;
+  final double touchStart;
+  final double? touchEnd;
+  final bool touchRequiresDefaultAtMin;
+  final List<_HandoffSwitch> switches;
+  final JsonInterpreter interpreter;
+  final Widget child;
+
+  const _ScrollDragHandoff({
+    required this.axis,
+    required this.defaultControllerId,
+    required this.touchControllerId,
+    required this.touchStart,
+    required this.touchEnd,
+    required this.touchRequiresDefaultAtMin,
+    required this.switches,
+    required this.interpreter,
+    required this.child,
+  });
+
+  @override
+  State<_ScrollDragHandoff> createState() => _ScrollDragHandoffState();
+}
+
+class _ScrollDragHandoffState extends State<_ScrollDragHandoff> {
+  String? _activeControllerId;
+  Drag? _drag;
+
+  @override
+  Widget build(BuildContext context) {
+    final gestures = <Type, GestureRecognizerFactory>{};
+    if (widget.axis == Axis.vertical) {
+      gestures[VerticalDragGestureRecognizer] =
+          GestureRecognizerFactoryWithHandlers<VerticalDragGestureRecognizer>(
+            VerticalDragGestureRecognizer.new,
+            (recognizer) {
+              recognizer
+                ..onStart = _handleStart
+                ..onUpdate = _handleUpdate
+                ..onEnd = _handleEnd
+                ..onCancel = _handleCancel;
+            },
+          );
+    } else {
+      gestures[HorizontalDragGestureRecognizer] =
+          GestureRecognizerFactoryWithHandlers<HorizontalDragGestureRecognizer>(
+            HorizontalDragGestureRecognizer.new,
+            (recognizer) {
+              recognizer
+                ..onStart = _handleStart
+                ..onUpdate = _handleUpdate
+                ..onEnd = _handleEnd
+                ..onCancel = _handleCancel;
+            },
+          );
+    }
+    return RawGestureDetector(
+      gestures: gestures,
+      behavior: HitTestBehavior.opaque,
+      child: widget.child,
+    );
+  }
+
+  void _handleStart(DragStartDetails details) {
+    final controllerId = _selectStartController(details);
+    _startDrag(controllerId, details);
+  }
+
+  void _handleUpdate(DragUpdateDetails details) {
+    final switchRule = _matchingSwitch(details);
+    if (switchRule != null) {
+      _drag?.cancel();
+      _startDrag(
+        switchRule.to,
+        DragStartDetails(
+          sourceTimeStamp: details.sourceTimeStamp,
+          globalPosition: details.globalPosition,
+          localPosition: details.localPosition,
+        ),
+      );
+    }
+    _drag?.update(details);
+  }
+
+  void _handleEnd(DragEndDetails details) {
+    _drag?.end(details);
+    _drag = null;
+    _activeControllerId = null;
+  }
+
+  void _handleCancel() {
+    _drag?.cancel();
+    _drag = null;
+    _activeControllerId = null;
+  }
+
+  String _selectStartController(DragStartDetails details) {
+    final touchId = widget.touchControllerId;
+    if (touchId != null && touchId.isNotEmpty) {
+      final coordinate = widget.axis == Axis.vertical
+          ? details.localPosition.dy
+          : details.localPosition.dx;
+      final end = widget.touchEnd ?? double.infinity;
+      final inTouchBand =
+          coordinate >= widget.touchStart && coordinate <= end;
+      final defaultAtMin =
+          !widget.touchRequiresDefaultAtMin ||
+          _isAtMin(widget.defaultControllerId);
+      if (inTouchBand && defaultAtMin && _hasController(touchId)) {
+        return touchId;
+      }
+    }
+    if (_hasController(widget.defaultControllerId)) {
+      return widget.defaultControllerId;
+    }
+    if (touchId != null && _hasController(touchId)) return touchId;
+    return widget.defaultControllerId;
+  }
+
+  void _startDrag(String controllerId, DragStartDetails details) {
+    _activeControllerId = controllerId;
+    final controller = widget.interpreter.scrollController(controllerId);
+    if (controller == null || !controller.hasClients) {
+      _drag = null;
+      return;
+    }
+    _drag = controller.position.drag(details, _disposeDrag);
+  }
+
+  _HandoffSwitch? _matchingSwitch(DragUpdateDetails details) {
+    final activeId = _activeControllerId;
+    if (activeId == null) return null;
+    for (final rule in widget.switches) {
+      if (rule.from != activeId) continue;
+      if (_matchesCondition(rule.when, details)) return rule;
+    }
+    return null;
+  }
+
+  bool _matchesCondition(String when, DragUpdateDetails details) {
+    final activeId = _activeControllerId;
+    if (activeId == null) return false;
+    final controller = widget.interpreter.scrollController(activeId);
+    if (controller == null || !controller.hasClients) return false;
+    final delta = details.primaryDelta ?? 0;
+    final forward = delta < 0;
+    final backward = delta > 0;
+    final position = controller.position;
+    const epsilon = 0.5;
+    final atMax = position.pixels >= position.maxScrollExtent - epsilon;
+    final atMin = position.pixels <= position.minScrollExtent + epsilon;
+    return switch (when) {
+      'fromAtMaxAndForward' => atMax && forward,
+      'fromAtMinAndBackward' => atMin && backward,
+      'fromAtBoundaryAndForward' => (atMax || atMin) && forward,
+      'fromAtBoundaryAndBackward' => (atMax || atMin) && backward,
+      _ => false,
+    };
+  }
+
+  bool _hasController(String id) {
+    final controller = widget.interpreter.scrollController(id);
+    return controller != null && controller.hasClients;
+  }
+
+  bool _isAtMin(String id) {
+    final controller = widget.interpreter.scrollController(id);
+    if (controller == null || !controller.hasClients) return false;
+    return controller.position.pixels <= controller.position.minScrollExtent + 0.5;
+  }
+
+  void _disposeDrag() {
+    _drag = null;
+  }
+}
+
+class _HandoffSwitch {
+  final String from;
+  final String to;
+  final String when;
+
+  const _HandoffSwitch({
+    required this.from,
+    required this.to,
+    required this.when,
+  });
+
+  factory _HandoffSwitch.fromJson(Map<dynamic, dynamic> json) {
+    return _HandoffSwitch(
+      from: json['from']?.toString() ?? '',
+      to: json['to']?.toString() ?? '',
+      when: json['when']?.toString() ?? '',
+    );
+  }
+}
+
 Axis _parseAxis(String? value) {
   return value == 'vertical' ? Axis.vertical : Axis.horizontal;
 }
@@ -170,6 +427,7 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
           ? null
           : controllerId,
       physics: _parsePhysics(json['physics']?.toString()),
+      reverse: _resolveBool(interpreter, json['reverse']),
       onScroll: onScroll is Map<String, dynamic> ? onScroll : null,
       interpreter: interpreter,
       slivers: slivers,
@@ -183,7 +441,7 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     final visible = json['visible'];
-    if (visible != null && interpreter.resolveExpression(visible) != true) {
+    if (visible != null && !interpreter.evaluateBool(visible)) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     switch (json['kind']?.toString() ?? json['type']?.toString()) {
@@ -298,6 +556,7 @@ class JsonCustomScrollViewWidget extends JsonBaseWidget {
 class _JsonCustomScrollViewHost extends StatefulWidget {
   final String? controllerId;
   final ScrollPhysics? physics;
+  final bool reverse;
   final Map<String, dynamic>? onScroll;
   final JsonInterpreter interpreter;
   final List<Widget> slivers;
@@ -306,6 +565,7 @@ class _JsonCustomScrollViewHost extends StatefulWidget {
   const _JsonCustomScrollViewHost({
     required this.controllerId,
     required this.physics,
+    required this.reverse,
     required this.onScroll,
     required this.interpreter,
     required this.slivers,
@@ -377,6 +637,7 @@ class _JsonCustomScrollViewHostState extends State<_JsonCustomScrollViewHost> {
     return CustomScrollView(
       controller: _controller,
       physics: widget.physics,
+      reverse: widget.reverse,
       center: widget.centerKey,
       slivers: widget.slivers,
     );
@@ -500,11 +761,8 @@ ScrollPhysics? _parsePhysics(String? value) {
 }
 
 List<dynamic>? _resolveSource(JsonInterpreter interpreter, dynamic sourceRaw) {
-  if (sourceRaw is List) return sourceRaw;
-  if (sourceRaw is String) {
-    final resolved = interpreter.resolveExpression(sourceRaw);
-    if (resolved is List) return resolved;
-  }
+  final resolved = interpreter.evaluateExpression(sourceRaw);
+  if (resolved is List) return resolved;
   return null;
 }
 
@@ -531,7 +789,7 @@ EdgeInsets? _resolveInsets(JsonInterpreter interpreter, dynamic value) {
 
 bool _resolveBool(JsonInterpreter interpreter, dynamic value) {
   if (value == null) return false;
-  final resolved = interpreter.resolveExpression(value);
+  final resolved = interpreter.evaluateExpression(value);
   if (resolved is bool) return resolved;
   if (resolved is num) return resolved != 0;
   if (resolved is String) {
@@ -544,7 +802,7 @@ bool _resolveBool(JsonInterpreter interpreter, dynamic value) {
 double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
   if (value == null) return null;
   if (value is num) return value.toDouble();
-  final resolved = interpreter.resolveExpression(value);
+  final resolved = interpreter.evaluateExpression(value);
   if (resolved is num) return resolved.toDouble();
   return double.tryParse(resolved?.toString() ?? '');
 }

@@ -3,7 +3,7 @@
   "appid": "1a3b2a8e-09f1-5a83-90d6-6f577806bb86",
   "meta": {
     "name": "gsy_flutter_demo/056-anim-bg-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "动画背景效果",
@@ -28,35 +28,9 @@
       "upstreamSource": "lib/widget/animation/anim_bg_demo_page.dart",
       "upstreamWidget": "AnimBgDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v3",
-      "phase": 0
+      "portVersion": "json-dsl-primitives-v4"
     },
-    "functions": {
-      "tick": {
-        "params": [],
-        "logic": [
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.phase",
-              "value": {
-                "%": [
-                  {
-                    "+": [
-                      {
-                        "var": "global.phase"
-                      },
-                      1
-                    ]
-                  },
-                  4
-                ]
-              }
-            }
-          }
-        ]
-      }
-    }
+    "functions": {}
   },
   "steps": [],
   "ui": {
@@ -69,142 +43,562 @@
         "children": [
           {
             "type": "positioned",
-            "child": {
-              "type": "interval_action",
-              "intervalMs": 900,
-              "runImmediately": true,
-              "action": {
-                "call": "@global.tick",
-                "args": {}
-              },
-              "child": {
-                "type": "container",
-                "layout": "column",
-                "children": [],
-                "color": "#0D47A1"
-              }
-            },
             "left": 0,
             "top": 0,
             "right": 0,
-            "bottom": 0
-          },
-          {
-            "type": "positioned",
+            "bottom": 0,
             "child": {
-              "type": "transform",
-              "translateY": {
-                "if": [
-                  {
-                    "<": [
-                      {
-                        "var": "global.phase"
-                      },
-                      2
-                    ]
-                  },
-                  0,
-                  -18
-                ]
-              },
-              "child": {
-                "type": "container",
-                "layout": "column",
-                "children": [],
-                "width": 620,
-                "height": 210,
-                "shape": "circle",
-                "color": "#40FFFFFF"
-              }
-            },
-            "left": -110,
-            "bottom": -70
-          },
-          {
-            "type": "positioned",
-            "child": {
-              "type": "transform",
-              "translateY": {
-                "if": [
-                  {
-                    ">=": [
-                      {
-                        "var": "global.phase"
-                      },
-                      2
-                    ]
-                  },
-                  0,
-                  -24
-                ]
-              },
-              "child": {
-                "type": "container",
-                "layout": "column",
-                "children": [],
-                "width": 700,
-                "height": 260,
-                "shape": "circle",
-                "color": "#33FFFFFF"
-              }
-            },
-            "left": -180,
-            "bottom": -120
-          },
-          {
-            "type": "positioned",
-            "child": {
-              "type": "transform",
-              "translateY": {
-                "if": [
-                  {
-                    "==": [
-                      {
-                        "var": "global.phase"
-                      },
-                      1
-                    ]
-                  },
-                  -12,
-                  8
-                ]
-              },
-              "child": {
-                "type": "container",
-                "layout": "column",
-                "children": [],
-                "width": 560,
-                "height": 160,
-                "shape": "circle",
-                "color": "#26FFFFFF"
-              }
-            },
-            "left": -80,
-            "bottom": 10
-          },
-          {
-            "type": "positioned",
-            "child": {
-              "type": "container",
-              "layout": "column",
-              "children": [
+              "type": "animated_canvas",
+              "durationMs": 6000,
+              "layers": [
                 {
-                  "type": "text",
-                  "value": "GSY Flutter Demo",
-                  "style": {
-                    "fontSize": 30,
-                    "color": "#FFFFFF",
-                    "fontWeight": "bold",
-                    "textAlign": "center"
-                  }
+                  "kind": "linear_gradient",
+                  "locals": {
+                    "mirror": {
+                      "if": [
+                        {
+                          "<": [
+                            "progress",
+                            0.5
+                          ]
+                        },
+                        {
+                          "*": [
+                            "progress",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "-": [
+                                1,
+                                "progress"
+                              ]
+                            },
+                            2
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "colors": [
+                    {
+                      "color": "#D38312",
+                      "color2": "#0D47A1",
+                      "mix": "mirror"
+                    },
+                    {
+                      "color": "#A83279",
+                      "color2": "#2196F3",
+                      "mix": "mirror"
+                    }
+                  ],
+                  "begin": "topCenter",
+                  "end": "bottomCenter"
+                },
+                {
+                  "kind": "path",
+                  "style": "fill",
+                  "color": "#FFFFFF",
+                  "alpha": 0.23529411764705882,
+                  "locals": {
+                    "waveH": 180,
+                    "phase": {
+                      "+": [
+                        {
+                          "*": [
+                            "t",
+                            1.0
+                          ]
+                        },
+                        0
+                      ]
+                    },
+                    "y1": {
+                      "sin": [
+                        "phase"
+                      ]
+                    },
+                    "y2": {
+                      "sin": [
+                        {
+                          "+": [
+                            "phase",
+                            {
+                              "/": [
+                                "pi",
+                                2
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y3": {
+                      "sin": [
+                        {
+                          "+": [
+                            "phase",
+                            "pi"
+                          ]
+                        }
+                      ]
+                    },
+                    "startY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y1"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "controlY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y2"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "endY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y3"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "commands": [
+                    {
+                      "op": "moveTo",
+                      "x": 0,
+                      "y": "startY"
+                    },
+                    {
+                      "op": "quadTo",
+                      "x1": {
+                        "*": [
+                          "w",
+                          0.5
+                        ]
+                      },
+                      "y1": "controlY",
+                      "x": "w",
+                      "y": "endY"
+                    },
+                    {
+                      "op": "lineTo",
+                      "x": "w",
+                      "y": "h"
+                    },
+                    {
+                      "op": "lineTo",
+                      "x": 0,
+                      "y": "h"
+                    },
+                    {
+                      "op": "close"
+                    }
+                  ]
+                },
+                {
+                  "kind": "path",
+                  "style": "fill",
+                  "color": "#FFFFFF",
+                  "alpha": 0.23529411764705882,
+                  "locals": {
+                    "waveH": 120,
+                    "phase": {
+                      "+": [
+                        {
+                          "*": [
+                            "t",
+                            0.9
+                          ]
+                        },
+                        3.141592653589793
+                      ]
+                    },
+                    "y1": {
+                      "sin": [
+                        "phase"
+                      ]
+                    },
+                    "y2": {
+                      "sin": [
+                        {
+                          "+": [
+                            "phase",
+                            {
+                              "/": [
+                                "pi",
+                                2
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y3": {
+                      "sin": [
+                        {
+                          "+": [
+                            "phase",
+                            "pi"
+                          ]
+                        }
+                      ]
+                    },
+                    "startY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y1"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "controlY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y2"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "endY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y3"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "commands": [
+                    {
+                      "op": "moveTo",
+                      "x": 0,
+                      "y": "startY"
+                    },
+                    {
+                      "op": "quadTo",
+                      "x1": {
+                        "*": [
+                          "w",
+                          0.5
+                        ]
+                      },
+                      "y1": "controlY",
+                      "x": "w",
+                      "y": "endY"
+                    },
+                    {
+                      "op": "lineTo",
+                      "x": "w",
+                      "y": "h"
+                    },
+                    {
+                      "op": "lineTo",
+                      "x": 0,
+                      "y": "h"
+                    },
+                    {
+                      "op": "close"
+                    }
+                  ]
+                },
+                {
+                  "kind": "path",
+                  "style": "fill",
+                  "color": "#FFFFFF",
+                  "alpha": 0.23529411764705882,
+                  "locals": {
+                    "waveH": 220,
+                    "phase": {
+                      "+": [
+                        {
+                          "*": [
+                            "t",
+                            1.2
+                          ]
+                        },
+                        1.5707963267948966
+                      ]
+                    },
+                    "y1": {
+                      "sin": [
+                        "phase"
+                      ]
+                    },
+                    "y2": {
+                      "sin": [
+                        {
+                          "+": [
+                            "phase",
+                            {
+                              "/": [
+                                "pi",
+                                2
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y3": {
+                      "sin": [
+                        {
+                          "+": [
+                            "phase",
+                            "pi"
+                          ]
+                        }
+                      ]
+                    },
+                    "startY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y1"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "controlY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y2"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "endY": {
+                      "+": [
+                        {
+                          "-": [
+                            "h",
+                            "waveH"
+                          ]
+                        },
+                        {
+                          "*": [
+                            "waveH",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    "y3"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "commands": [
+                    {
+                      "op": "moveTo",
+                      "x": 0,
+                      "y": "startY"
+                    },
+                    {
+                      "op": "quadTo",
+                      "x1": {
+                        "*": [
+                          "w",
+                          0.5
+                        ]
+                      },
+                      "y1": "controlY",
+                      "x": "w",
+                      "y": "endY"
+                    },
+                    {
+                      "op": "lineTo",
+                      "x": "w",
+                      "y": "h"
+                    },
+                    {
+                      "op": "lineTo",
+                      "x": 0,
+                      "y": "h"
+                    },
+                    {
+                      "op": "close"
+                    }
+                  ]
                 }
-              ],
-              "alignment": "center"
-            },
+              ]
+            }
+          },
+          {
+            "type": "positioned",
             "left": 0,
             "top": 0,
             "right": 0,
-            "bottom": 0
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "text",
+                "value": "GSY Flutter Demo",
+                "style": {
+                  "fontSize": 30,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF",
+                  "textAlign": "center"
+                }
+              }
+            }
           }
         ]
       }

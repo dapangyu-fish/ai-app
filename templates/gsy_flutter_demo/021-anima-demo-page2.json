@@ -43,7 +43,7 @@
           {
             "type": "positioned",
             "child": {
-              "type": "animated_visibility",
+              "type": "circular_reveal",
               "visibleWhen": {
                 "!": [
                   {
@@ -52,6 +52,11 @@
                 ]
               },
               "durationMs": 500,
+              "curve": "easeInSine",
+              "centerXFactor": 0.5,
+              "centerYFactor": 0.5,
+              "minRadius": 0,
+              "maxRadius": 250,
               "child": {
                 "type": "center",
                 "child": {

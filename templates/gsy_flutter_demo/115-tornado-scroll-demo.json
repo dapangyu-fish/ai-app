@@ -3,7 +3,7 @@
   "appid": "9c8d931e-af2e-55d6-b8c9-e6e2c10f083f",
   "meta": {
     "name": "gsy_flutter_demo/115-tornado-scroll-demo",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "骚气滑动列表",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 115,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7"
+      "portVersion": "json-dsl-tornado-controls-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/tornado_scroll_demo.dart",
       "upstreamWidget": "TornadoScrollDemo",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v7",
+      "portVersion": "json-dsl-tornado-controls-v1",
       "items": [
         {
           "index": 0,
@@ -172,7 +172,8 @@
           "title": "Item 27",
           "color": "#D1C4E9"
         }
-      ]
+      ],
+      "twistIntensity": 0.5
     },
     "functions": {}
   },
@@ -182,39 +183,84 @@
       {
         "id": "home",
         "title": "TornadoScrollDemo",
-        "layout": "column",
-        "backgroundColor": "#101014",
+        "layout": "stack",
+        "backgroundColor": "#000000",
         "children": [
           {
-            "type": "list",
-            "source": "{{ global.items }}",
-            "separator": "none",
-            "item_template": {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 128,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "alignment": "center",
+              "mainAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "list",
+                  "source": "{{ global.items }}",
+                  "separator": "none",
+                  "item_template": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ loop.item.title }}",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#111111",
+                          "fontWeight": "bold",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "height": 72,
+                    "margin": {
+                      "left": 28,
+                      "right": 28,
+                      "top": 8,
+                      "bottom": 8
+                    },
+                    "borderRadius": 18,
+                    "color": "{{ loop.item.color }}",
+                    "alignment": "center",
+                    "mainAxisAlignment": "center"
+                  },
+                  "allowNestedScroll": true
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 20,
+            "right": 20,
+            "bottom": 50,
+            "child": {
               "type": "container",
               "layout": "column",
               "children": [
                 {
                   "type": "text",
-                  "value": "{{ loop.item.title }}",
+                  "value": "Twist Intensity (Zoom)",
                   "style": {
-                    "fontSize": 20,
-                    "color": "#111111",
-                    "fontWeight": "bold",
+                    "fontSize": 14,
+                    "color": "#FFFFFF",
                     "textAlign": "center"
                   }
+                },
+                {
+                  "type": "slider",
+                  "bind": "global.twistIntensity",
+                  "min": 0,
+                  "max": 1.5,
+                  "showLabel": false,
+                  "color": "#FFFFFFFF"
                 }
-              ],
-              "height": 72,
-              "margin": {
-                "left": 28,
-                "right": 28,
-                "top": 8,
-                "bottom": 8
-              },
-              "borderRadius": 18,
-              "color": "{{ loop.item.color }}",
-              "alignment": "center",
-              "mainAxisAlignment": "center"
+              ]
             }
           }
         ],

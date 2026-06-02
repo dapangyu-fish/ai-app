@@ -3,13 +3,13 @@
   "appid": "7e58c78a-f1b4-58db-8950-871ba0639e01",
   "meta": {
     "name": "gsy_flutter_demo/028-verification-code-input-demo-page",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "type": "app",
     "displayName": {
       "zh": "验证码输入框",
       "en": "Verification code input"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：验证码输入框",
+    "description": "VerificationCodeInputDemoPage：验证码输入框",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -20,178 +20,17 @@
       "category": "basic",
       "routeIndex": 28,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-clean-v2"
     }
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "upstreamTitle": "验证码输入框",
-      "upstreamSource": "lib/widget/basic/verification_code_input_demo_page.dart",
-      "upstreamWidget": "VerificationCodeInputDemoPage",
+      "code": "",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1",
-      "code": ""
+      "portVersion": "json-dsl-clean-v2"
     },
-    "functions": {},
-    "computed": {
-      "d0": {
-        "if": [
-          {
-            ">": [
-              {
-                "str_len": [
-                  {
-                    "var": "global.code"
-                  }
-                ]
-              },
-              0
-            ]
-          },
-          {
-            "substr": [
-              {
-                "var": "global.code"
-              },
-              0,
-              1
-            ]
-          },
-          ""
-        ]
-      },
-      "d1": {
-        "if": [
-          {
-            ">": [
-              {
-                "str_len": [
-                  {
-                    "var": "global.code"
-                  }
-                ]
-              },
-              1
-            ]
-          },
-          {
-            "substr": [
-              {
-                "var": "global.code"
-              },
-              1,
-              1
-            ]
-          },
-          ""
-        ]
-      },
-      "d2": {
-        "if": [
-          {
-            ">": [
-              {
-                "str_len": [
-                  {
-                    "var": "global.code"
-                  }
-                ]
-              },
-              2
-            ]
-          },
-          {
-            "substr": [
-              {
-                "var": "global.code"
-              },
-              2,
-              1
-            ]
-          },
-          ""
-        ]
-      },
-      "d3": {
-        "if": [
-          {
-            ">": [
-              {
-                "str_len": [
-                  {
-                    "var": "global.code"
-                  }
-                ]
-              },
-              3
-            ]
-          },
-          {
-            "substr": [
-              {
-                "var": "global.code"
-              },
-              3,
-              1
-            ]
-          },
-          ""
-        ]
-      },
-      "d4": {
-        "if": [
-          {
-            ">": [
-              {
-                "str_len": [
-                  {
-                    "var": "global.code"
-                  }
-                ]
-              },
-              4
-            ]
-          },
-          {
-            "substr": [
-              {
-                "var": "global.code"
-              },
-              4,
-              1
-            ]
-          },
-          ""
-        ]
-      },
-      "d5": {
-        "if": [
-          {
-            ">": [
-              {
-                "str_len": [
-                  {
-                    "var": "global.code"
-                  }
-                ]
-              },
-              5
-            ]
-          },
-          {
-            "substr": [
-              {
-                "var": "global.code"
-              },
-              5,
-              1
-            ]
-          },
-          ""
-        ]
-      }
-    }
+    "functions": {}
   },
   "steps": [],
   "ui": {
@@ -203,181 +42,24 @@
         "children": [
           {
             "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
             "child": {
               "type": "center",
               "child": {
-                "type": "container",
-                "layout": "column",
-                "alignment": "center",
-                "mainAxisAlignment": "center",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "row",
-                    "mainAxisAlignment": "center",
-                    "children": [
-                      {
-                        "type": "container",
-                        "width": 42,
-                        "height": 48,
-                        "alignment": "center",
-                        "border": {
-                          "color": "#979797",
-                          "width": 1
-                        },
-                        "children": [
-                          {
-                            "type": "text",
-                            "value": "{{ global.d0 }}",
-                            "style": {
-                              "fontSize": 18,
-                              "fontWeight": "bold",
-                              "color": "#212121",
-                              "textAlign": "center"
-                            }
-                          }
-                        ]
-                      },
-                      {
-                        "type": "container",
-                        "width": 42,
-                        "height": 48,
-                        "alignment": "center",
-                        "border": {
-                          "color": "#979797",
-                          "width": 1
-                        },
-                        "children": [
-                          {
-                            "type": "text",
-                            "value": "{{ global.d1 }}",
-                            "style": {
-                              "fontSize": 18,
-                              "fontWeight": "bold",
-                              "color": "#212121",
-                              "textAlign": "center"
-                            }
-                          }
-                        ]
-                      },
-                      {
-                        "type": "container",
-                        "width": 42,
-                        "height": 48,
-                        "alignment": "center",
-                        "border": {
-                          "color": "#979797",
-                          "width": 1
-                        },
-                        "children": [
-                          {
-                            "type": "text",
-                            "value": "{{ global.d2 }}",
-                            "style": {
-                              "fontSize": 18,
-                              "fontWeight": "bold",
-                              "color": "#212121",
-                              "textAlign": "center"
-                            }
-                          }
-                        ]
-                      },
-                      {
-                        "type": "container",
-                        "width": 42,
-                        "height": 48,
-                        "alignment": "center",
-                        "border": {
-                          "color": "#979797",
-                          "width": 1
-                        },
-                        "children": [
-                          {
-                            "type": "text",
-                            "value": "{{ global.d3 }}",
-                            "style": {
-                              "fontSize": 18,
-                              "fontWeight": "bold",
-                              "color": "#212121",
-                              "textAlign": "center"
-                            }
-                          }
-                        ]
-                      },
-                      {
-                        "type": "container",
-                        "width": 42,
-                        "height": 48,
-                        "alignment": "center",
-                        "border": {
-                          "color": "#979797",
-                          "width": 1
-                        },
-                        "children": [
-                          {
-                            "type": "text",
-                            "value": "{{ global.d4 }}",
-                            "style": {
-                              "fontSize": 18,
-                              "fontWeight": "bold",
-                              "color": "#212121",
-                              "textAlign": "center"
-                            }
-                          }
-                        ]
-                      },
-                      {
-                        "type": "container",
-                        "width": 42,
-                        "height": 48,
-                        "alignment": "center",
-                        "border": {
-                          "color": "#979797",
-                          "width": 1
-                        },
-                        "children": [
-                          {
-                            "type": "text",
-                            "value": "{{ global.d5 }}",
-                            "style": {
-                              "fontSize": 18,
-                              "fontWeight": "bold",
-                              "color": "#212121",
-                              "textAlign": "center"
-                            }
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "type": "spacer",
-                    "height": 18
-                  },
-                  {
-                    "type": "container",
-                    "width": 260,
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "input",
-                        "bind": "global.code",
-                        "keyboardType": "number",
-                        "placeholder": "输入验证码",
-                        "style": {
-                          "borderRadius": 4,
-                          "fontSize": 16
-                        }
-                      }
-                    ]
-                  }
-                ]
+                "type": "code_input",
+                "bind": "global.code",
+                "length": 6,
+                "keyboardType": "number",
+                "style": "rectangle",
+                "horizontalPadding": 16,
+                "innerInset": 10,
+                "borderColor": "#2196F3",
+                "textColor": "#2196F3"
               }
-            },
-            "left": 0,
-            "top": 0,
-            "right": 0,
-            "bottom": 0
+            }
           }
         ],
         "padding": 0,

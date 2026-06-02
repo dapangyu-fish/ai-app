@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 79,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-scroll-drag-handoff-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
       "upstreamWidget": "ListViewNestVP",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4",
+      "portVersion": "json-dsl-scroll-drag-handoff-v1",
       "items": [
         {
           "index": 0
@@ -61,141 +61,166 @@
         "backgroundColor": "#FFFFFF",
         "children": [
           {
-            "type": "list",
-            "source": "{{ global.items }}",
-            "separator": "none",
-            "item_template": {
-              "type": "container",
-              "children": [
+            "type": "expanded",
+            "child": {
+              "type": "scroll_drag_handoff",
+              "axis": "vertical",
+              "defaultController": "listvp.list",
+              "touchController": "listvp.page",
+              "touchStart": 0,
+              "touchEnd": 300,
+              "touchRequiresDefaultAtMin": true,
+              "switches": [
                 {
+                  "from": "listvp.page",
+                  "to": "listvp.list",
+                  "when": "fromAtMaxAndForward"
+                }
+              ],
+              "child": {
+                "type": "list",
+                "source": "{{ global.items }}",
+                "separator": "none",
+                "item_template": {
                   "type": "container",
                   "children": [
                     {
-                      "type": "positioned",
-                      "child": {
-                        "type": "page_view",
-                        "scrollDirection": "vertical",
-                        "children": [
-                          {
-                            "type": "container",
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "positioned",
+                          "child": {
+                            "type": "page_view",
+                            "scrollDirection": "vertical",
                             "children": [
                               {
-                                "type": "text",
-                                "value": "0",
-                                "style": {
-                                  "fontSize": 40,
-                                  "color": "#FFFF8D",
-                                  "textAlign": "center"
-                                }
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "0",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
+                              },
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "1",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
+                              },
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "2",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
+                              },
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "3",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
                               }
                             ],
-                            "layout": "column",
-                            "color": "#FF5252",
-                            "alignment": "center",
-                            "mainAxisAlignment": "center"
+                            "controller": "listvp.page",
+                            "physics": "never"
                           },
+                          "left": 0,
+                          "top": 0,
+                          "right": 0,
+                          "bottom": 0
+                        }
+                      ],
+                      "layout": "stack",
+                      "height": 300,
+                      "visible": {
+                        "==": [
                           {
-                            "type": "container",
-                            "children": [
-                              {
-                                "type": "text",
-                                "value": "1",
-                                "style": {
-                                  "fontSize": 40,
-                                  "color": "#FFFF8D",
-                                  "textAlign": "center"
-                                }
-                              }
-                            ],
-                            "layout": "column",
-                            "color": "#FF5252",
-                            "alignment": "center",
-                            "mainAxisAlignment": "center"
+                            "var": "loop.index"
                           },
-                          {
-                            "type": "container",
-                            "children": [
-                              {
-                                "type": "text",
-                                "value": "2",
-                                "style": {
-                                  "fontSize": 40,
-                                  "color": "#FFFF8D",
-                                  "textAlign": "center"
-                                }
-                              }
-                            ],
-                            "layout": "column",
-                            "color": "#FF5252",
-                            "alignment": "center",
-                            "mainAxisAlignment": "center"
-                          },
-                          {
-                            "type": "container",
-                            "children": [
-                              {
-                                "type": "text",
-                                "value": "3",
-                                "style": {
-                                  "fontSize": 40,
-                                  "color": "#FFFF8D",
-                                  "textAlign": "center"
-                                }
-                              }
-                            ],
-                            "layout": "column",
-                            "color": "#FF5252",
-                            "alignment": "center",
-                            "mainAxisAlignment": "center"
-                          }
+                          0
                         ]
-                      },
-                      "left": 0,
-                      "top": 0,
-                      "right": 0,
-                      "bottom": 0
-                    }
-                  ],
-                  "layout": "stack",
-                  "height": 300,
-                  "visible": {
-                    "==": [
-                      {
-                        "var": "loop.index"
-                      },
-                      0
-                    ]
-                  }
-                },
-                {
-                  "type": "container",
-                  "children": [
+                      }
+                    },
                     {
-                      "type": "text",
-                      "value": "Item {{ loop.index }}",
-                      "style": {
-                        "fontSize": 40,
-                        "color": "#2196F3",
-                        "textAlign": "center"
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "Item {{ loop.index }}",
+                          "style": {
+                            "fontSize": 40,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "layout": "column",
+                      "height": 300,
+                      "color": "#69F0AE",
+                      "alignment": "center",
+                      "mainAxisAlignment": "center",
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "loop.index"
+                          },
+                          0
+                        ]
                       }
                     }
                   ],
-                  "layout": "column",
-                  "height": 300,
-                  "color": "#69F0AE",
-                  "alignment": "center",
-                  "mainAxisAlignment": "center",
-                  "visible": {
-                    "!=": [
-                      {
-                        "var": "loop.index"
-                      },
-                      0
-                    ]
-                  }
-                }
-              ],
-              "layout": "column"
+                  "layout": "column"
+                },
+                "controller": "listvp.list",
+                "physics": "never",
+                "expand": false,
+                "allowNestedScroll": true
+              }
             }
           }
         ],

@@ -3,7 +3,7 @@
   "appid": "d3134589-617a-5135-a3b4-6041fedfded2",
   "meta": {
     "name": "gsy_flutter_demo/119-disco-sphere-final-fusion-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "Cool Disco Sphere",
@@ -20,7 +20,7 @@
       "category": "visual",
       "routeIndex": 119,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-disco-mode-v1"
     }
   },
   "dependencies": {},
@@ -30,9 +30,49 @@
       "upstreamSource": "lib/widget/visual/disco_sphere_page.dart",
       "upstreamWidget": "DiscoSphereFinalFusionPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-disco-mode-v1",
+      "paperMode": true
     },
-    "functions": {}
+    "functions": {
+      "toggleMode": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.paperMode",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.paperMode"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "paperModeLabel": {
+        "if": [
+          {
+            "var": "global.paperMode"
+          },
+          "模式: 纸张铺开",
+          "模式: 随机破碎"
+        ]
+      },
+      "paperModeIcon": {
+        "if": [
+          {
+            "var": "global.paperMode"
+          },
+          "layers",
+          "grain"
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
@@ -91,28 +131,15 @@
                       2
                     ]
                   },
-                  "color": "#FFFFFF",
-                  "alpha": "a",
-                  "blendMode": "plus",
-                  "shape": "square",
-                  "hue": {
-                    "+": [
-                      {
-                        "*": [
-                          "i",
-                          37
-                        ]
-                      },
-                      {
-                        "*": [
-                          "t",
-                          80
-                        ]
-                      }
+                  "color": "#F5F5F5",
+                  "alpha": {
+                    "*": [
+                      "a",
+                      0.95
                     ]
                   },
-                  "saturation": 0.85,
-                  "valueBrightness": 1,
+                  "blendMode": "plus",
+                  "shape": "square",
                   "locals": {
                     "sphereR": {
                       "*": [
@@ -255,6 +282,31 @@
                       "rz",
                       -0.7
                     ]
+                  },
+                  "color2": "#673AB7",
+                  "mix": {
+                    "clamp": [
+                      {
+                        "+": [
+                          0.45,
+                          {
+                            "*": [
+                              0.45,
+                              {
+                                "sin": {
+                                  "*": [
+                                    "i",
+                                    12.9898
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      0,
+                      1
+                    ]
                   }
                 }
               ]
@@ -263,6 +315,47 @@
             "top": 0,
             "right": 0,
             "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "right": 16,
+            "bottom": 24,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "mainAxisAlignment": "center",
+              "alignment": "center",
+              "padding": {
+                "horizontal": 18,
+                "vertical": 14
+              },
+              "color": "#26FFFFFF",
+              "borderRadius": 28,
+              "onTap": {
+                "call": "@global.toggleMode",
+                "args": {}
+              },
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "{{ global.paperModeIcon }}",
+                  "size": 20,
+                  "color": "#FFFFFF"
+                },
+                {
+                  "type": "spacer",
+                  "width": 8
+                },
+                {
+                  "type": "text",
+                  "value": "{{ global.paperModeLabel }}",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF"
+                  }
+                }
+              ]
+            }
           }
         ],
         "appBar": {

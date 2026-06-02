@@ -3,7 +3,7 @@
   "appid": "00b2b0a4-298b-5284-a185-ee9f2da85ae0",
   "meta": {
     "name": "gsy_flutter_demo/072-chat-list-scroll-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "首尾添加数据不会抖动",
@@ -28,7 +28,7 @@
       "upstreamSource": "lib/widget/basic/chat_list_scroll_demo_page.dart",
       "upstreamWidget": "ChatListScrollDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v3",
+      "portVersion": "json-dsl-primitives-v4",
       "oldData": [
         {
           "txt": "aaa11",
@@ -81,6 +81,10 @@
                 ]
               }
             }
+          },
+          {
+            "call": "@global.scrollToStart",
+            "args": {}
           }
         ]
       },
@@ -88,34 +92,45 @@
         "params": [],
         "logic": [
           {
-            "call": "@list_add",
+            "call": "@loop_by_num",
             "args": {
-              "var": "global.newData",
-              "item": {
-                "txt": {
-                  "cat": [
-                    "New ",
-                    {
-                      "var": "global.newCount"
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.newData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "New ",
+                          {
+                            "var": "global.newCount"
+                          },
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": "Left"
                     }
-                  ]
+                  }
                 },
-                "type": "Left"
-              }
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.newCount",
-              "value": {
-                "+": [
-                  {
-                    "var": "global.newCount"
-                  },
-                  1
-                ]
-              }
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.newCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
             }
           }
         ]
@@ -124,34 +139,63 @@
         "params": [],
         "logic": [
           {
-            "call": "@list_add",
+            "call": "@loop_by_num",
             "args": {
-              "var": "global.oldData",
-              "item": {
-                "txt": {
-                  "cat": [
-                    "Old ",
-                    {
-                      "var": "global.oldCount"
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.oldData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "Old ",
+                          {
+                            "var": "global.oldCount"
+                          },
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": "Right"
                     }
-                  ]
+                  }
                 },
-                "type": "Right"
-              }
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.oldCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.oldCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "scrollToStart": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 1000
             }
           },
           {
-            "call": "@set",
+            "call": "@scroll_to_top",
             "args": {
-              "var": "global.oldCount",
-              "value": {
-                "+": [
-                  {
-                    "var": "global.oldCount"
-                  },
-                  1
-                ]
-              }
+              "controller": "chat1",
+              "durationMs": 1
             }
           }
         ]
@@ -335,26 +379,15 @@
                     ]
                   }
                 }
-              ]
+              ],
+              "controller": "chat1",
+              "reverse": true,
+              "centerIndex": 1
             },
             "left": 0,
             "top": 0,
             "right": 0,
             "bottom": 0
-          },
-          {
-            "type": "positioned",
-            "child": {
-              "type": "button",
-              "label": "Send",
-              "variant": "filled",
-              "action": {
-                "call": "@global.send",
-                "args": {}
-              }
-            },
-            "right": 24,
-            "bottom": 24
           }
         ],
         "appBar": {
@@ -362,19 +395,31 @@
           "actions": [
             {
               "icon": "add",
+              "label": "add old",
+              "color": "#F44336",
               "action": {
                 "call": "@global.addOld",
                 "args": {}
               }
             },
             {
-              "icon": "add_circle_outline",
+              "icon": "add",
+              "label": "add new",
+              "color": "#FFFF00",
               "action": {
                 "call": "@global.addNew",
                 "args": {}
               }
             }
           ]
+        },
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "label": "Send",
+          "action": {
+            "call": "@global.send",
+            "args": {}
+          }
         }
       }
     ]

@@ -3,7 +3,7 @@
   "appid": "69a3a112-f2e7-5211-8687-ffe04f3ccf55",
   "meta": {
     "name": "gsy_flutter_demo/124-koi-fish-animation-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "Koi Fish",
@@ -20,7 +20,7 @@
       "category": "visual",
       "routeIndex": 124,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-koi-point-formula-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/visual/koi_fish_animation.dart",
       "upstreamWidget": "KoiFishAnimationPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-koi-point-formula-v1"
     },
     "functions": {}
   },
@@ -41,229 +41,259 @@
         "id": "home",
         "title": "",
         "layout": "stack",
-        "backgroundColor": "#061D24",
+        "backgroundColor": "#090909",
         "children": [
           {
             "type": "positioned",
             "child": {
               "type": "animated_canvas",
-              "backgroundColor": "#061D24",
+              "backgroundColor": "#090909",
               "speed": 1,
+              "durationMs": 6000,
               "layers": [
                 {
                   "kind": "particles",
-                  "count": 270,
+                  "count": 10000,
                   "x": {
                     "+": [
-                      "headX",
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
                       {
                         "*": [
+                          "q",
                           {
-                            "cos": "dir"
-                          },
-                          "u",
-                          92
+                            "cos": "c"
+                          }
                         ]
                       }
                     ]
                   },
                   "y": {
                     "+": [
-                      "headY",
                       {
                         "*": [
-                          {
-                            "sin": "dir"
-                          },
-                          "u",
-                          34
+                          "h",
+                          0.08
                         ]
                       },
                       {
                         "*": [
-                          "bend",
-                          "u"
+                          "d",
+                          9
                         ]
-                      }
-                    ]
-                  },
-                  "radius": {
-                    "*": [
-                      1.6,
+                      },
                       {
-                        "-": [
-                          4,
+                        "*": [
+                          "q",
                           {
-                            "*": [
-                              "u",
-                              2.2
-                            ]
+                            "sin": "c"
                           }
                         ]
                       }
                     ]
                   },
-                  "color": "#FFF8E1",
-                  "alpha": {
-                    "*": [
-                      0.75,
-                      {
-                        "-": [
-                          1,
-                          {
-                            "*": [
-                              "u",
-                              0.45
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  "blendMode": "plus",
-                  "color2": "#FF7043",
-                  "mix": "u",
+                  "radius": 0.55,
+                  "color": "#FFFFFF",
+                  "alpha": 0.45,
+                  "blendMode": "screen",
                   "locals": {
-                    "fish": {
-                      "floor": {
-                        "/": [
-                          "i",
-                          90
-                        ]
-                      }
-                    },
-                    "j": {
-                      "%": [
-                        "i",
-                        90
+                    "src": {
+                      "-": [
+                        "n",
+                        "i"
                       ]
                     },
-                    "u": {
+                    "ySource": {
                       "/": [
-                        "j",
-                        90
+                        "src",
+                        790
                       ]
                     },
-                    "baseAngle": {
-                      "+": [
+                    "baseK": {
+                      "if": [
                         {
-                          "*": [
-                            "t",
-                            {
-                              "+": [
-                                0.25,
-                                {
-                                  "*": [
-                                    "fish",
-                                    0.08
-                                  ]
-                                }
-                              ]
-                            }
+                          "<": [
+                            "ySource",
+                            8
                           ]
                         },
-                        {
-                          "*": [
-                            "fish",
-                            {
-                              "/": [
-                                {
-                                  "*": [
-                                    3.141592653589793,
-                                    2
-                                  ]
-                                },
-                                3
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    "orbit": {
-                      "*": [
-                        "min",
                         {
                           "+": [
-                            0.18,
+                            9,
                             {
                               "*": [
-                                "fish",
-                                0.06
+                                {
+                                  "sin": {
+                                    "bitxor": [
+                                      {
+                                        "floor": "ySource"
+                                      },
+                                      9
+                                    ]
+                                  }
+                                },
+                                6
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "+": [
+                            4,
+                            {
+                              "cos": "ySource"
                             }
                           ]
                         }
                       ]
                     },
-                    "headX": {
-                      "+": [
-                        {
-                          "/": [
-                            "w",
-                            2
-                          ]
-                        },
-                        {
-                          "*": [
-                            {
-                              "cos": "baseAngle"
-                            },
-                            "orbit"
-                          ]
-                        }
-                      ]
-                    },
-                    "headY": {
-                      "+": [
-                        {
-                          "/": [
-                            "h",
-                            2
-                          ]
-                        },
-                        {
-                          "*": [
-                            {
-                              "sin": "baseAngle"
-                            },
-                            "orbit"
-                          ]
-                        }
-                      ]
-                    },
-                    "bend": {
+                    "k": {
                       "*": [
+                        "baseK",
                         {
-                          "sin": {
+                          "cos": {
                             "+": [
+                              "src",
                               {
-                                "*": [
-                                  "u",
-                                  6.283185307179586
+                                "/": [
+                                  "t",
+                                  4
                                 ]
-                              },
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "e": {
+                      "-": [
+                        {
+                          "/": [
+                            "ySource",
+                            3
+                          ]
+                        },
+                        13
+                      ]
+                    },
+                    "mag": {
+                      "sqrt": {
+                        "+": [
+                          {
+                            "*": [
+                              "k",
+                              "k"
+                            ]
+                          },
+                          {
+                            "*": [
+                              "e",
+                              "e"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "d": {
+                      "+": [
+                        "mag",
+                        {
+                          "cos": {
+                            "+": [
+                              "e",
                               {
                                 "*": [
                                   "t",
                                   2
                                 ]
                               },
-                              "fish"
+                              {
+                                "*": [
+                                  {
+                                    "%": [
+                                      "src",
+                                      2
+                                    ]
+                                  },
+                                  4
+                                ]
+                              }
                             ]
                           }
-                        },
-                        12
+                        }
                       ]
                     },
-                    "dir": {
+                    "q": {
                       "+": [
-                        "baseAngle",
-                        3.141592653589793,
                         {
                           "*": [
-                            "bend",
-                            0.01
+                            {
+                              "/": [
+                                {
+                                  "*": [
+                                    "ySource",
+                                    "k"
+                                  ]
+                                },
+                                5
+                              ]
+                            },
+                            {
+                              "+": [
+                                2,
+                                {
+                                  "sin": {
+                                    "+": [
+                                      {
+                                        "*": [
+                                          "d",
+                                          2
+                                        ]
+                                      },
+                                      "ySource",
+                                      {
+                                        "*": [
+                                          "t",
+                                          -4
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        80
+                      ]
+                    },
+                    "c": {
+                      "+": [
+                        {
+                          "/": [
+                            "d",
+                            4
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            -0.5
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "%": [
+                                "src",
+                                2
+                              ]
+                            },
+                            3
                           ]
                         }
                       ]

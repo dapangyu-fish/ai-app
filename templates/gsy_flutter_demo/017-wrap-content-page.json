@@ -32,11 +32,17 @@
       {
         "id": "home",
         "title": "WrapContentPage",
-        "layout": "column",
+        "layout": "stack",
         "children": [
           {
-            "type": "container",
-            "children": [
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "children": [
               {
                 "type": "container",
                 "children": [
@@ -106,8 +112,10 @@
               }
             ],
             "layout": "column",
-            "constraints": {
-              "minHeight": 100
+            "scrollDirection": "vertical",
+              "constraints": {
+                "minHeight": 100
+              }
             }
           }
         ],

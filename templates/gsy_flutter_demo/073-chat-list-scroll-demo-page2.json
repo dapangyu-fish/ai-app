@@ -3,7 +3,7 @@
   "appid": "cecf1c7e-dfc0-5cb5-9dc3-384caf9974ca",
   "meta": {
     "name": "gsy_flutter_demo/073-chat-list-scroll-demo-page2",
-    "version": "0.1.1",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "首尾添加数据不会抖动2",
@@ -528,27 +528,6 @@
             "top": 0,
             "right": 0,
             "bottom": 0
-          },
-          {
-            "type": "positioned",
-            "child": {
-              "type": "button",
-              "label": "Send",
-              "action": {
-                "call": "@global.send",
-                "args": {}
-              },
-              "variant": "filled",
-              "style": {
-                "backgroundColor": "#2196F3",
-                "textColor": "#FFFF00",
-                "borderRadius": 28,
-                "paddingH": 18,
-                "paddingV": 14
-              }
-            },
-            "right": 24,
-            "bottom": 24
           }
         ],
         "appBar": {
@@ -556,19 +535,31 @@
           "actions": [
             {
               "icon": "add",
+              "label": "add old",
+              "color": "#F44336",
               "action": {
                 "call": "@global.addOld",
                 "args": {}
               }
             },
             {
-              "icon": "add_circle_outline",
+              "icon": "add",
+              "label": "add new",
+              "color": "#FFFF00",
               "action": {
                 "call": "@global.addNew",
                 "args": {}
               }
             }
           ]
+        },
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "label": "Send",
+          "action": {
+            "call": "@global.send",
+            "args": {}
+          }
         }
       }
     ]

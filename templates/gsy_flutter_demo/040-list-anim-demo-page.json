@@ -3,7 +3,7 @@
   "appid": "e9dcf2c9-ffda-5742-a6df-ebacdd16f8c0",
   "meta": {
     "name": "gsy_flutter_demo/040-list-anim-demo-page",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "列表滑动过程 item 停靠动画效果",
@@ -517,10 +517,24 @@
                   "layout": "row",
                   "children": [
                     {
-                      "type": "icon",
-                      "name": "back",
-                      "size": 22,
-                      "color": "#FFFFFF"
+                      "type": "container",
+                      "width": 36,
+                      "height": 36,
+                      "alignment": "center",
+                      "margin": {
+                        "left": 10,
+                        "right": 10
+                      },
+                      "color": "#7DFFFFFF",
+                      "borderRadius": 18,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "back",
+                          "size": 22,
+                          "color": "#FFFFFF"
+                        }
+                      ]
                     },
                     {
                       "type": "expanded",
@@ -531,7 +545,7 @@
                           "left": 20,
                           "right": 20
                         },
-                        "color": "#80FFFFFF",
+                        "color": "#7DFFFFFF",
                         "borderRadius": 10,
                         "children": []
                       }

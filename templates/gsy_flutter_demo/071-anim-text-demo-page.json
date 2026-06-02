@@ -3,7 +3,7 @@
   "appid": "9deb1473-3f24-5c10-9b65-53a5dc3fbfb0",
   "meta": {
     "name": "gsy_flutter_demo/071-anim-text-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "第三方的动画字体",
@@ -28,7 +28,7 @@
       "upstreamSource": "lib/widget/animation/anim_text_demo_page.dart",
       "upstreamWidget": "AnimTextDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v3",
+      "portVersion": "json-dsl-animated-text-v1",
       "index": 0,
       "tapCount": 0
     },
@@ -50,7 +50,7 @@
                       1
                     ]
                   },
-                  6
+                  9
                 ]
               }
             }
@@ -96,28 +96,254 @@
         "children": [
           {
             "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "height": 56,
             "child": {
               "type": "container",
-              "layout": "column",
+              "height": 56,
+              "color": "#2196F3",
+              "layout": "stack",
+              "children": [
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Rotate",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        0
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Fade",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Typer",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        2
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Typewriter",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        3
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Scale",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        4
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Colorize",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        5
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "TextLiquidFill",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        6
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Wavy Text",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        7
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "right": 0,
+                  "top": 9,
+                  "child": {
+                    "type": "text",
+                    "value": "Combination",
+                    "style": {
+                      "fontSize": 30,
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold",
+                      "textAlign": "center"
+                    },
+                    "visible": {
+                      "==": [
+                        {
+                          "var": "global.index"
+                        },
+                        8
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 45,
+            "right": 45,
+            "top": 185,
+            "height": 300,
+            "child": {
+              "type": "container",
+              "height": 300,
+              "layout": "stack",
               "children": [
                 {
                   "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "Be AWESOME",
-                      "style": {
-                        "fontSize": 30,
-                        "color": "#FFFFFF",
-                        "fontWeight": "bold",
-                        "textAlign": "center"
-                      }
-                    }
-                  ],
                   "width": 300,
                   "height": 300,
                   "color": "#EF6C00",
+                  "layout": "row",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
                   "alignment": "center",
                   "visible": {
                     "==": [
@@ -127,29 +353,67 @@
                       0
                     ]
                   },
-                  "onTap": {
-                    "call": "@global.tap",
-                    "args": {}
-                  }
+                  "children": [
+                    {
+                      "type": "spacer",
+                      "width": 20,
+                      "height": 100
+                    },
+                    {
+                      "type": "text",
+                      "value": "Be",
+                      "style": {
+                        "fontSize": 43,
+                        "color": "#000000",
+                        "fontWeight": "normal",
+                        "textAlign": "center"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 20,
+                      "height": 100
+                    },
+                    {
+                      "type": "animated_text",
+                      "effect": "rotate",
+                      "texts": [
+                        {
+                          "text": "AWESOME"
+                        },
+                        {
+                          "text": "OPTIMISTIC"
+                        },
+                        {
+                          "text": "DIFFERENT",
+                          "style": {
+                            "decoration": "underline"
+                          }
+                        }
+                      ],
+                      "itemDurationMs": 1500,
+                      "style": {
+                        "fontSize": 40,
+                        "color": "#000000"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      },
+                      "width": 190,
+                      "height": 100
+                    }
+                  ],
+                  "scrollDirection": "horizontal"
                 },
                 {
                   "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "do it RIGHT NOW!!!",
-                      "style": {
-                        "fontSize": 30,
-                        "color": "#FFFFFF",
-                        "fontWeight": "bold",
-                        "textAlign": "center"
-                      }
-                    }
-                  ],
                   "width": 300,
                   "height": 300,
                   "color": "#6D4C41",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
                   "alignment": "center",
                   "visible": {
                     "==": [
@@ -159,29 +423,36 @@
                       1
                     ]
                   },
-                  "onTap": {
-                    "call": "@global.tap",
-                    "args": {}
-                  }
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "fade",
+                      "texts": [
+                        "do IT!",
+                        "do it RIGHT!!",
+                        "do it RIGHT NOW!!!"
+                      ],
+                      "itemDurationMs": 1500,
+                      "style": {
+                        "fontSize": 32,
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      }
+                    }
+                  ]
                 },
                 {
                   "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "you must know what to do,",
-                      "style": {
-                        "fontSize": 30,
-                        "color": "#FFFFFF",
-                        "fontWeight": "bold",
-                        "textAlign": "center"
-                      }
-                    }
-                  ],
                   "width": 300,
                   "height": 300,
                   "color": "#558B2F",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
                   "alignment": "center",
                   "visible": {
                     "==": [
@@ -191,29 +462,38 @@
                       2
                     ]
                   },
-                  "onTap": {
-                    "call": "@global.tap",
-                    "args": {}
-                  }
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "typer",
+                      "texts": [
+                        "It is not enough to do your best,",
+                        "you must know what to do,",
+                        "and then do your best",
+                        "- W.Edwards Deming"
+                      ],
+                      "itemDurationMs": 1700,
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#FFFFFF"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      },
+                      "width": 250,
+                      "height": 180
+                    }
+                  ]
                 },
                 {
                   "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "Design first, then code |",
-                      "style": {
-                        "fontSize": 30,
-                        "color": "#FFFFFF",
-                        "fontWeight": "bold",
-                        "textAlign": "center"
-                      }
-                    }
-                  ],
                   "width": 300,
                   "height": 300,
                   "color": "#00796B",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
                   "alignment": "center",
                   "visible": {
                     "==": [
@@ -223,29 +503,50 @@
                       3
                     ]
                   },
-                  "onTap": {
-                    "call": "@global.tap",
-                    "args": {}
-                  }
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "typewriter",
+                      "texts": [
+                        {
+                          "text": "Discipline is the best tool",
+                          "cursor": ""
+                        },
+                        {
+                          "text": "Design first, then code",
+                          "cursor": "|"
+                        },
+                        {
+                          "text": "Do not patch bugs out, rewrite them",
+                          "cursor": "<|>"
+                        },
+                        {
+                          "text": "Do not test bugs out, design them out",
+                          "cursor": "💡"
+                        }
+                      ],
+                      "itemDurationMs": 1800,
+                      "style": {
+                        "fontSize": 30,
+                        "color": "#FFFFFF"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      },
+                      "width": 250,
+                      "height": 180
+                    }
+                  ]
                 },
                 {
                   "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "Think Build Ship",
-                      "style": {
-                        "fontSize": 30,
-                        "color": "#FFFFFF",
-                        "fontWeight": "bold",
-                        "textAlign": "center"
-                      }
-                    }
-                  ],
                   "width": 300,
                   "height": 300,
                   "color": "#1976D2",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
                   "alignment": "center",
                   "visible": {
                     "==": [
@@ -255,29 +556,35 @@
                       4
                     ]
                   },
-                  "onTap": {
-                    "call": "@global.tap",
-                    "args": {}
-                  }
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "scale",
+                      "texts": [
+                        "Think",
+                        "Build",
+                        "Ship"
+                      ],
+                      "itemDurationMs": 1200,
+                      "style": {
+                        "fontSize": 70,
+                        "color": "#FFFFFF"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      }
+                    }
+                  ]
                 },
                 {
                   "type": "container",
-                  "layout": "column",
-                  "children": [
-                    {
-                      "type": "text",
-                      "value": "GSY Flutter Demo",
-                      "style": {
-                        "fontSize": 30,
-                        "color": "#673AB7",
-                        "fontWeight": "bold",
-                        "textAlign": "center"
-                      }
-                    }
-                  ],
                   "width": 300,
                   "height": 300,
                   "color": "#ECEFF1",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
                   "alignment": "center",
                   "visible": {
                     "==": [
@@ -287,47 +594,218 @@
                       5
                     ]
                   },
-                  "onTap": {
-                    "call": "@global.tap",
-                    "args": {}
-                  }
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "colorize",
+                      "texts": [
+                        "Larry Page",
+                        "Bill Gates",
+                        "Steve Jobs"
+                      ],
+                      "itemDurationMs": 1400,
+                      "style": {
+                        "fontSize": 50,
+                        "fontFamily": "Horizon"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      },
+                      "colors": [
+                        "#9C27B0",
+                        "#2196F3",
+                        "#FFEB3B",
+                        "#F44336"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "width": 300,
+                  "height": 300,
+                  "color": "#FFFFFF",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      6
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "liquid",
+                      "texts": [
+                        "LIQUIDY"
+                      ],
+                      "itemDurationMs": 2400,
+                      "style": {
+                        "fontSize": 70,
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      },
+                      "width": 300,
+                      "height": 300
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "width": 300,
+                  "height": 300,
+                  "color": "#9C27B0",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      7
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "wavy",
+                      "texts": [
+                        {
+                          "text": "Hello World",
+                          "style": {
+                            "fontSize": 24,
+                            "fontWeight": "bold"
+                          }
+                        },
+                        {
+                          "text": "Look at the waves"
+                        },
+                        {
+                          "text": "They look so Amazing"
+                        }
+                      ],
+                      "itemDurationMs": 1400,
+                      "style": {
+                        "fontSize": 20,
+                        "color": "#FFFFFF"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      },
+                      "width": 280,
+                      "height": 100
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "width": 300,
+                  "height": 300,
+                  "color": "#E91E63",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
+                  "alignment": "center",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.index"
+                      },
+                      8
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "animated_text",
+                      "effect": "sequence",
+                      "texts": [
+                        {
+                          "text": "On Your Marks",
+                          "effect": "wavy",
+                          "style": {
+                            "fontSize": 24
+                          }
+                        },
+                        {
+                          "text": "Get Set",
+                          "effect": "fade",
+                          "style": {
+                            "fontSize": 32,
+                            "fontWeight": "bold"
+                          }
+                        },
+                        {
+                          "text": "Ready",
+                          "effect": "scale",
+                          "style": {
+                            "fontSize": 48,
+                            "fontWeight": "bold"
+                          }
+                        },
+                        {
+                          "text": "Go!",
+                          "effect": "rotate",
+                          "style": {
+                            "fontSize": 64
+                          }
+                        }
+                      ],
+                      "itemDurationMs": 850,
+                      "style": {
+                        "color": "#FFFFFF"
+                      },
+                      "onTap": {
+                        "call": "@global.tap",
+                        "args": {}
+                      }
+                    }
+                  ]
                 }
-              ],
-              "height": 300,
-              "alignment": "center"
-            },
-            "left": 45,
-            "top": 190,
-            "right": 45
+              ]
+            }
           },
           {
             "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "bottom": 130,
             "child": {
               "type": "text",
               "value": "Taps: {{ global.tapCount }}",
               "style": {
                 "fontSize": 16,
                 "color": "#333333",
+                "fontWeight": "normal",
                 "textAlign": "center"
               }
-            },
-            "left": 0,
-            "right": 0,
-            "bottom": 110
+            }
           },
           {
             "type": "positioned",
+            "right": 24,
+            "bottom": 24,
             "child": {
-              "type": "button",
-              "label": "▶",
-              "variant": "filled",
+              "type": "floating_action_button",
+              "icon": "play",
+              "label": "",
               "action": {
                 "call": "@global.next",
                 "args": {}
               }
-            },
-            "right": 24,
-            "bottom": 24
+            }
           }
         ]
       }

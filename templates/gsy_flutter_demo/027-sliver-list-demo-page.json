@@ -3,7 +3,7 @@
   "appid": "19bfd81e-93f8-53e0-8609-144cf4ca3c8a",
   "meta": {
     "name": "gsy_flutter_demo/027-sliver-list-demo-page",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "列表滑动过程控件停靠效果",
@@ -66,36 +66,55 @@
                   "child": {
                     "type": "container",
                     "layout": "row",
-                    "color": "#FFD740",
+                    "padding": {
+                      "left": 10,
+                      "right": 10,
+                      "top": 10,
+                      "bottom": 10
+                    },
                     "children": [
                       {
                         "type": "expanded",
                         "child": {
-                          "type": "button",
-                          "label": "按键1",
-                          "variant": "text",
-                          "action": {
-                            "call": "@set",
-                            "args": {
-                              "var": "global.listCount",
-                              "value": 30
+                          "type": "container",
+                          "color": "#FFAB40",
+                          "alignment": "center",
+                          "children": [
+                            {
+                              "type": "button",
+                              "label": "按键1",
+                              "variant": "text",
+                              "action": {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.listCount",
+                                  "value": 30
+                                }
+                              }
                             }
-                          }
+                          ]
                         }
                       },
                       {
                         "type": "expanded",
                         "child": {
-                          "type": "button",
-                          "label": "按键2",
-                          "variant": "text",
-                          "action": {
-                            "call": "@set",
-                            "args": {
-                              "var": "global.listCount",
-                              "value": 4
+                          "type": "container",
+                          "color": "#FFAB40",
+                          "alignment": "center",
+                          "children": [
+                            {
+                              "type": "button",
+                              "label": "按键2",
+                              "variant": "text",
+                              "action": {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.listCount",
+                                  "value": 4
+                                }
+                              }
                             }
-                          }
+                          ]
                         }
                       }
                     ]
@@ -106,25 +125,32 @@
                   "count": 100,
                   "itemTemplate": {
                     "type": "card",
-                    "child": {
-                      "type": "container",
-                      "height": 60,
-                      "padding": {
-                        "left": 10
-                      },
-                      "layout": "column",
-                      "mainAxisAlignment": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "value": "Item {{ loop.index }}",
-                          "style": {
-                            "fontSize": 14,
-                            "color": "#000000"
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "padding": {
+                          "left": 10
+                        },
+                        "layout": "column",
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "start",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item {{ loop.index }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
                           }
-                        }
-                      ]
-                    }
+                        ]
+                      }
+                    ]
                   }
                 }
               ]

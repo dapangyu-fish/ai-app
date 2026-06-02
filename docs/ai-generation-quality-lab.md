@@ -311,6 +311,20 @@ Use a 1-5 score for each category:
   budget, habit, workout, and notes apps, 0-state summary/progress cards should
   remain visible.
 
+### Next Regression Set
+
+Use the three fresh requests defined in
+`docs/deepseek-generation-optimization-playbook.md` after the current runtime
+and template changes are committed. These are intentionally not template apps:
+
+- camping gear packing utility
+- home plant care control dashboard
+- vertical diving collection game
+
+For each run, record the artifact path, validation result, `402x874` and
+`360x780` screenshots, visible defects, and whether the fix belongs in prompt
+docs, examples, validator, repair, builder helpers, or runtime primitives.
+
 ## Runner
 
 ```bash

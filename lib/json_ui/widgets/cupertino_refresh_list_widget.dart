@@ -23,7 +23,7 @@ class JsonCupertinoRefreshListWidget extends JsonBaseWidget {
       items = sourceRaw;
     }
 
-    return _CupertinoRefreshListView(
+    final listView = _CupertinoRefreshListView(
       items: items,
       itemTemplate: json['item_template'] as Map<String, dynamic>?,
       onRefreshAction: json['onRefresh'] as Map<String, dynamic>?,
@@ -32,9 +32,12 @@ class JsonCupertinoRefreshListWidget extends JsonBaseWidget {
       initialOverscroll: (json['initialOverscroll'] as num?)?.toDouble() ?? 0,
       initialDelayMs: (json['initialDelayMs'] as num?)?.toInt() ?? 500,
       initialDurationMs: (json['initialDurationMs'] as num?)?.toInt() ?? 600,
+      initialRefresh: json['initialRefresh'] == true,
       customIndicator: json['customIndicator'] == true,
       pageSize: (json['pageSize'] as num?)?.toInt() ?? 30,
     );
+    if (json['expand'] == false) return listView;
+    return Expanded(child: listView);
   }
 }
 
@@ -47,6 +50,7 @@ class _CupertinoRefreshListView extends StatefulWidget {
   final double initialOverscroll;
   final int initialDelayMs;
   final int initialDurationMs;
+  final bool initialRefresh;
   final bool customIndicator;
   final int pageSize;
 
@@ -59,6 +63,7 @@ class _CupertinoRefreshListView extends StatefulWidget {
     required this.initialOverscroll,
     required this.initialDelayMs,
     required this.initialDurationMs,
+    required this.initialRefresh,
     required this.customIndicator,
     required this.pageSize,
   });
@@ -71,12 +76,14 @@ class _CupertinoRefreshListView extends StatefulWidget {
 class _CupertinoRefreshListViewState extends State<_CupertinoRefreshListView> {
   final ScrollController _controller = ScrollController();
   bool _didInitialOverscroll = false;
+  bool _didInitialRefresh = false;
   bool _loadingMore = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scheduleInitialOverscroll();
+    _scheduleInitialRefresh();
   }
 
   void _scheduleInitialOverscroll() {
@@ -90,6 +97,15 @@ class _CupertinoRefreshListViewState extends State<_CupertinoRefreshListView> {
         duration: Duration(milliseconds: widget.initialDurationMs),
         curve: Curves.linear,
       );
+    });
+  }
+
+  void _scheduleInitialRefresh() {
+    if (_didInitialRefresh || !widget.initialRefresh) return;
+    _didInitialRefresh = true;
+    Future.delayed(Duration(milliseconds: widget.initialDelayMs), () {
+      if (!mounted) return;
+      _refresh();
     });
   }
 

@@ -28,7 +28,7 @@
       "upstreamSource": "lib/widget/animation/anima_demo_page5.dart",
       "upstreamWidget": "AnimaDemoPage5",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v2",
+      "portVersion": "json-dsl-primitives-v3",
       "played": false,
       "char_0": false,
       "char_1": false,
@@ -45,7 +45,8 @@
       "char_12": false,
       "char_13": false,
       "char_14": false,
-      "char_15": false
+      "char_15": false,
+      "playing": false
     },
     "functions": {
       "playText": {
@@ -55,69 +56,362 @@
             "call": "@if",
             "args": {
               "condition": {
-                "var": "global.played"
+                "var": "global.playing"
               },
-              "then": [
+              "then": [],
+              "else": [
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global.played",
-                    "value": false
+                    "var": "global.playing",
+                    "value": true
                   }
                 },
                 {
-                  "call": "@loop_by_num",
+                  "call": "@if",
                   "args": {
-                    "count": 16,
-                    "body": [
+                    "condition": {
+                      "var": "global.played"
+                    },
+                    "then": [
                       {
                         "call": "@set",
                         "args": {
-                          "var": "global.char_{{ loop.index }}",
+                          "var": "global.played",
+                          "value": false
+                        }
+                      },
+                      {
+                        "call": "@parallel",
+                        "args": {
+                          "steps": [
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 0,
+                                "visible": false,
+                                "delay": 0
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 1,
+                                "visible": false,
+                                "delay": 80
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 2,
+                                "visible": false,
+                                "delay": 160
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 3,
+                                "visible": false,
+                                "delay": 240
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 4,
+                                "visible": false,
+                                "delay": 320
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 5,
+                                "visible": false,
+                                "delay": 400
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 6,
+                                "visible": false,
+                                "delay": 480
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 7,
+                                "visible": false,
+                                "delay": 560
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 8,
+                                "visible": false,
+                                "delay": 640
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 9,
+                                "visible": false,
+                                "delay": 720
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 10,
+                                "visible": false,
+                                "delay": 800
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 11,
+                                "visible": false,
+                                "delay": 880
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 12,
+                                "visible": false,
+                                "delay": 960
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 13,
+                                "visible": false,
+                                "delay": 1040
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 14,
+                                "visible": false,
+                                "delay": 1120
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 15,
+                                "visible": false,
+                                "delay": 1200
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "call": "@delay",
+                        "args": {
+                          "ms": 600
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.playing",
+                          "value": false
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.played",
+                          "value": true
+                        }
+                      },
+                      {
+                        "call": "@parallel",
+                        "args": {
+                          "steps": [
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 0,
+                                "visible": true,
+                                "delay": 0
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 1,
+                                "visible": true,
+                                "delay": 80
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 2,
+                                "visible": true,
+                                "delay": 160
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 3,
+                                "visible": true,
+                                "delay": 240
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 4,
+                                "visible": true,
+                                "delay": 320
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 5,
+                                "visible": true,
+                                "delay": 400
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 6,
+                                "visible": true,
+                                "delay": 480
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 7,
+                                "visible": true,
+                                "delay": 560
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 8,
+                                "visible": true,
+                                "delay": 640
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 9,
+                                "visible": true,
+                                "delay": 720
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 10,
+                                "visible": true,
+                                "delay": 800
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 11,
+                                "visible": true,
+                                "delay": 880
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 12,
+                                "visible": true,
+                                "delay": 960
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 13,
+                                "visible": true,
+                                "delay": 1040
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 14,
+                                "visible": true,
+                                "delay": 1120
+                              }
+                            },
+                            {
+                              "call": "@global.setCharAfter",
+                              "args": {
+                                "index": 15,
+                                "visible": true,
+                                "delay": 1200
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "call": "@delay",
+                        "args": {
+                          "ms": 600
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.playing",
                           "value": false
                         }
                       }
                     ]
                   }
                 }
-              ],
-              "else": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.played",
-                    "value": true
-                  }
-                },
-                {
-                  "call": "@loop_by_num",
-                  "args": {
-                    "count": 16,
-                    "body": [
-                      {
-                        "call": "@delay",
-                        "args": {
-                          "ms": {
-                            "*": [
-                              {
-                                "var": "loop.index"
-                              },
-                              80
-                            ]
-                          }
-                        }
-                      },
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global.char_{{ loop.index }}",
-                          "value": true
-                        }
-                      }
-                    ]
-                  }
-                }
               ]
+            }
+          }
+        ]
+      },
+      "setCharAfter": {
+        "params": [
+          "index",
+          "visible",
+          "delay"
+        ],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": "{{ params.delay }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.char_{{ params.index }}",
+              "value": "{{ params.visible }}"
             }
           }
         ]

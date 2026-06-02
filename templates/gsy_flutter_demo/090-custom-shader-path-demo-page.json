@@ -3,7 +3,7 @@
   "appid": "c2711d86-44b0-5043-b226-6b521ad7fce5",
   "meta": {
     "name": "gsy_flutter_demo/090-custom-shader-path-demo-page",
-    "version": "0.1.2",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "path 路径 png 效果",
@@ -20,7 +20,7 @@
       "category": "canvas",
       "routeIndex": 90,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-image-shader-path-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/canvas/custom_shader_path_demo_page.dart",
       "upstreamWidget": "CustomShaderPathDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-image-shader-path-v1"
     },
     "functions": {}
   },
@@ -45,137 +45,69 @@
         "children": [
           {
             "type": "positioned",
-            "child": {
-              "type": "container",
-              "children": [
-                {
-                  "type": "container",
-                  "children": [
-                    {
-                      "type": "image",
-                      "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
-                      "width": 200,
-                      "height": 200,
-                      "fit": "cover",
-                      "paddingV": 0
-                    },
-                    {
-                      "type": "animated_canvas",
-                      "backgroundColor": "#00000000",
-                      "speed": 0.2,
-                      "layers": [
-                        {
-                          "kind": "path",
-                          "style": "fill",
-                          "color": "#66000000",
-                          "alpha": 1,
-                          "commands": [
-                            {
-                              "op": "moveTo",
-                              "x": 0,
-                              "y": {
-                                "*": [
-                                  "h",
-                                  {
-                                    "+": [
-                                      0.5,
-                                      {
-                                        "*": [
-                                          0.28,
-                                          {
-                                            "sin": "t"
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              }
-                            },
-                            {
-                              "op": "quadTo",
-                              "x1": {
-                                "*": [
-                                  "w",
-                                  0.5
-                                ]
-                              },
-                              "y1": {
-                                "*": [
-                                  "h",
-                                  {
-                                    "+": [
-                                      0.5,
-                                      {
-                                        "*": [
-                                          0.34,
-                                          {
-                                            "cos": "t"
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              "x": "w",
-                              "y": {
-                                "*": [
-                                  "h",
-                                  {
-                                    "+": [
-                                      0.5,
-                                      {
-                                        "*": [
-                                          0.28,
-                                          {
-                                            "sin": {
-                                              "+": [
-                                                "t",
-                                                3.14159
-                                              ]
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              }
-                            },
-                            {
-                              "op": "lineTo",
-                              "x": "w",
-                              "y": "h"
-                            },
-                            {
-                              "op": "lineTo",
-                              "x": 0,
-                              "y": "h"
-                            },
-                            {
-                              "op": "close"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ],
-                  "layout": "stack",
-                  "width": 200,
-                  "height": 200,
-                  "color": "#69F0AE",
-                  "clipBehavior": "hardEdge"
-                }
-              ],
-              "layout": "column",
-              "alignment": "center",
-              "mainAxisAlignment": "center"
-            },
             "left": 0,
             "top": 0,
             "right": 0,
-            "bottom": 0
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "container",
+                "layout": "stack",
+                "width": 200,
+                "height": 200,
+                "color": "#69F0AE",
+                "clipBehavior": "hardEdge",
+                "children": [
+                  {
+                    "type": "image_shader_path",
+                    "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                    "width": 200,
+                    "height": 200,
+                    "mode": "path",
+                    "tileModeX": "repeated",
+                    "tileModeY": "repeated",
+                    "shaderScaleX": 0.2,
+                    "shaderScaleY": 0.2,
+                    "style": "stroke",
+                    "strokeWidth": 20,
+                    "strokeCap": "butt",
+                    "fallbackColor": "#000000",
+                    "drawGrid": true,
+                    "gridStep": 1,
+                    "gridStrokeWidth": 0,
+                    "gridColor": "#000000",
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "xFactor": 0,
+                        "yFactor": 0.3950500585184285
+                      },
+                      {
+                        "op": "quadTo",
+                        "x1Factor": 0.5,
+                        "y1Factor": 0.8859864113968455,
+                        "xFactor": 1,
+                        "yFactor": 0.6049499414815702
+                      },
+                      {
+                        "op": "lineTo",
+                        "xFactor": 1,
+                        "yFactor": 1
+                      },
+                      {
+                        "op": "lineTo",
+                        "xFactor": 0,
+                        "yFactor": 1
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
           }
         ],
         "appBar": {

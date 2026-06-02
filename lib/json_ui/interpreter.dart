@@ -26,7 +26,8 @@ import '../auth/auth_service.dart';
 import '../designer/app_storage.dart';
 import '../im/im_service.dart';
 import 'drift_database.dart';
-import '../main.dart' show appThemeMode, appLifecycleEvent;
+import '../main.dart' show appLifecycleEvent;
+import '../theme/theme_controller.dart';
 import '../i18n/locale_controller.dart' show LocaleController;
 import '../i18n/framework_strings.dart';
 
@@ -204,6 +205,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   Jsonlogic _createJsonLogic() {
     final jl = Jsonlogic(); // 已包含标准操作符
+    double numAt(
+      List<dynamic> params,
+      Map<String, dynamic> data,
+      dynamic Function(dynamic rule, Map<String, dynamic> data) applier,
+      int index, [
+      double fallback = 0,
+    ]) {
+      if (index >= params.length) return fallback;
+      final value = applier(params[index], data);
+      if (value is num && value.isFinite) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? fallback;
+    }
 
     // ── 字符串扩展 ──
     jl.add('str_len', (applier, data, params) {
@@ -234,6 +247,13 @@ class JsonInterpreter extends ChangeNotifier {
       final from = applier(params[1], data)?.toString() ?? '';
       final to = applier(params[2], data)?.toString() ?? '';
       return str.replaceAll(from, to);
+    });
+    jl.add('str_replace_first', (applier, data, params) {
+      if (params.length < 3) return applier(params[0], data)?.toString() ?? '';
+      final str = applier(params[0], data)?.toString() ?? '';
+      final from = applier(params[1], data)?.toString() ?? '';
+      final to = applier(params[2], data)?.toString() ?? '';
+      return str.replaceFirst(from, to);
     });
     jl.add('str_split', (applier, data, params) {
       if (params.length < 2) {
@@ -321,6 +341,49 @@ class JsonInterpreter extends ChangeNotifier {
       if (v is num) return v.abs();
       return 0;
     });
+    jl.add('sin', (applier, data, params) {
+      return sin(numAt(params, data, applier, 0));
+    });
+    jl.add('cos', (applier, data, params) {
+      return cos(numAt(params, data, applier, 0));
+    });
+    jl.add('tan', (applier, data, params) {
+      return tan(numAt(params, data, applier, 0));
+    });
+    jl.add('atan2', (applier, data, params) {
+      return atan2(
+        numAt(params, data, applier, 0),
+        numAt(params, data, applier, 1),
+      );
+    });
+    jl.add('sqrt', (applier, data, params) {
+      return sqrt(max(0, numAt(params, data, applier, 0)));
+    });
+    jl.add('pow', (applier, data, params) {
+      return pow(
+        numAt(params, data, applier, 0),
+        numAt(params, data, applier, 1),
+      ).toDouble();
+    });
+    jl.add('clamp', (applier, data, params) {
+      return numAt(params, data, applier, 0)
+          .clamp(
+            numAt(params, data, applier, 1),
+            numAt(params, data, applier, 2),
+          )
+          .toDouble();
+    });
+    jl.add('lerp', (applier, data, params) {
+      final start = numAt(params, data, applier, 0);
+      final end = numAt(params, data, applier, 1);
+      final t = numAt(params, data, applier, 2);
+      return start + (end - start) * t;
+    });
+    jl.add('seed', (applier, data, params) {
+      final raw = sin(numAt(params, data, applier, 0) * 12.9898) * 43758.5453;
+      return raw - raw.floorToDouble();
+    });
+    jl.add('pi', (applier, data, params) => pi);
 
     return jl;
   }
@@ -418,6 +481,10 @@ class JsonInterpreter extends ChangeNotifier {
   bool looksLikeJsonLogic(Map<String, dynamic> value) =>
       _looksLikeJsonLogic(value);
 
+  dynamic evaluateExpression(dynamic value) => _evaluateExpression(value);
+
+  bool evaluateBool(dynamic condition) => _evaluateBool(condition);
+
   dynamic evaluateJsonLogicWithLocals(
     Map<String, dynamic> rule,
     Map<String, dynamic> locals,
@@ -444,10 +511,11 @@ class JsonInterpreter extends ChangeNotifier {
     'log',
     // 本文件自定义
     'str_len', 'str_upper', 'str_lower', 'str_trim', 'str_contains',
-    'str_replace', 'str_split', 'str_join',
+    'str_replace', 'str_replace_first', 'str_split', 'str_join',
     'length', 'at', 'slice', 'sort', 'reverse',
     'to_string', 'to_int', 'to_double',
-    'abs',
+    'abs', 'sin', 'cos', 'tan', 'atan2', 'sqrt', 'pow', 'clamp', 'lerp',
+    'seed', 'pi',
   };
 
   /// 求值为布尔
@@ -1267,6 +1335,28 @@ class JsonInterpreter extends ChangeNotifier {
           curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
         );
         return true;
+      case '@scroll_to_offset':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final controller = _scrollControllers[id];
+        if (controller == null || !controller.hasClients) return false;
+        final position = controller.position;
+        final offsetValue = args['offset'] is Map<String, dynamic>
+            ? _evaluateExpression(args['offset'])
+            : resolvedArgs['offset'];
+        final target = _toDouble(
+          offsetValue ?? 0,
+        ).clamp(position.minScrollExtent, position.maxScrollExtent);
+        final durationMs = _toInt(resolvedArgs['durationMs'] ?? 0);
+        if (durationMs <= 0) {
+          controller.jumpTo(target);
+        } else {
+          await controller.animateTo(
+            target,
+            duration: Duration(milliseconds: durationMs),
+            curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+          );
+        }
+        return true;
       case '@scroll_to_index':
         final id = resolvedArgs['controller']?.toString() ?? '';
         final index = _toInt(resolvedArgs['index'] ?? 0);
@@ -1417,19 +1507,11 @@ class JsonInterpreter extends ChangeNotifier {
       case '@set_theme':
         // mode: light / dark / system
         final mode = resolvedArgs['mode']?.toString() ?? 'system';
-        appThemeMode.value = switch (mode) {
-          'light' => ThemeMode.light,
-          'dark' => ThemeMode.dark,
-          _ => ThemeMode.system,
-        };
+        await ThemeController.setThemeMode(ThemeController.parseMode(mode));
         return null;
       case '@get_theme':
         // 返回当前 mode（system 时返回 'system'，由调用方再决定怎么显示当前实际亮度）
-        return switch (appThemeMode.value) {
-          ThemeMode.light => 'light',
-          ThemeMode.dark => 'dark',
-          ThemeMode.system => 'system',
-        };
+        return ThemeController.modeTag(appThemeMode.value);
       case '@set_system_ui_overlay':
         final style = resolvedArgs['style']?.toString().toLowerCase();
         if (style == 'light') {
@@ -1645,7 +1727,8 @@ class JsonInterpreter extends ChangeNotifier {
 
       case '@show_bottom_sheet':
         // 底部弹窗
-        // args: { content: { ...widget... }, isDismissible?, enableDrag?, backgroundColor? }
+        // args: { content: { ...widget... }, isDismissible?, enableDrag?,
+        //         backgroundColor?, padding?, borderRadius?, useSafeArea? }
         // 返回值：系统关闭返回 null；未来如增加带 result 的关闭 action 可透传结果。
         return await _showBottomSheet(resolvedArgs);
 
@@ -3290,6 +3373,10 @@ class JsonInterpreter extends ChangeNotifier {
     final isDismissible = args['isDismissible'] != false;
     final enableDrag = args['enableDrag'] != false;
     final bg = _parseColorHex(args['backgroundColor']?.toString());
+    final padding =
+        _parseInsetsArg(args['padding']) ?? const EdgeInsets.all(16);
+    final radius = _toDouble(args['borderRadius'] ?? 16);
+    final useSafeArea = args['useSafeArea'] != false;
 
     _activeModalCount++;
     try {
@@ -3299,19 +3386,46 @@ class JsonInterpreter extends ChangeNotifier {
         enableDrag: enableDrag,
         backgroundColor: bg,
         isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (sheetCtx) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: buildWidget(sheetCtx, content),
-          ),
-        ),
+        shape: radius > 0
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(radius),
+                ),
+              )
+            : null,
+        builder: (sheetCtx) {
+          Widget sheet = buildWidget(sheetCtx, content);
+          if (padding != EdgeInsets.zero) {
+            sheet = Padding(padding: padding, child: sheet);
+          }
+          return useSafeArea ? SafeArea(child: sheet) : sheet;
+        },
       );
     } finally {
       _activeModalCount--;
     }
+  }
+
+  EdgeInsets? _parseInsetsArg(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return EdgeInsets.all(value.toDouble());
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      return parsed == null ? null : EdgeInsets.all(parsed);
+    }
+    if (value is Map<String, dynamic>) {
+      final all = _toDouble(value['all']);
+      if (value.containsKey('all')) return EdgeInsets.all(all);
+      final horizontal = _toDouble(value['horizontal']);
+      final vertical = _toDouble(value['vertical']);
+      return EdgeInsets.fromLTRB(
+        value.containsKey('left') ? _toDouble(value['left']) : horizontal,
+        value.containsKey('top') ? _toDouble(value['top']) : vertical,
+        value.containsKey('right') ? _toDouble(value['right']) : horizontal,
+        value.containsKey('bottom') ? _toDouble(value['bottom']) : vertical,
+      );
+    }
+    return null;
   }
 
   /// 解析 #RRGGBB / #AARRGGBB 颜色字符串

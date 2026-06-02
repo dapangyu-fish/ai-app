@@ -3,7 +3,7 @@
   "appid": "5a29c045-99c0-5d24-9c93-eb8a111a1bc4",
   "meta": {
     "name": "gsy_flutter_demo/069-drag-img-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "结合 Matrix 的拖拽",
@@ -18,7 +18,9 @@
       "deferredAlias": "drag_img_demo_page",
       "widgetClass": "DragImgDemoPage",
       "category": "canvas",
-      "routeIndex": 69
+      "routeIndex": 69,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-transform-gesture-v1"
     }
   },
   "dependencies": {},
@@ -28,30 +30,117 @@
       "upstreamSource": "lib/widget/canvas/drag_img_demo_page.dart",
       "upstreamWidget": "DragImgDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v3",
-      "pose": 0
+      "portVersion": "json-dsl-transform-gesture-v1",
+      "tx": 0,
+      "ty": 0,
+      "scale": 1,
+      "rotDeg": 0
     },
     "functions": {
-      "nextPose": {
+      "updateTransform": {
         "params": [],
         "logic": [
           {
             "call": "@set",
             "args": {
-              "var": "global.pose",
+              "var": "global.tx",
               "value": {
-                "%": [
+                "+": [
                   {
-                    "+": [
-                      {
-                        "var": "global.pose"
-                      },
-                      1
-                    ]
+                    "var": "global.tx"
                   },
-                  4
+                  {
+                    "var": "event.translationDeltaX"
+                  }
                 ]
               }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ty",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.ty"
+                  },
+                  {
+                    "var": "event.translationDeltaY"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.scale",
+              "value": {
+                "clamp": [
+                  {
+                    "*": [
+                      {
+                        "var": "global.scale"
+                      },
+                      {
+                        "var": "event.scaleDelta"
+                      }
+                    ]
+                  },
+                  0.4,
+                  3.5
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rotDeg",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.rotDeg"
+                  },
+                  {
+                    "var": "event.rotationDeltaDegrees"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "resetTransform": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tx",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ty",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.scale",
+              "value": 1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rotDeg",
+              "value": 0
             }
           }
         ]
@@ -69,80 +158,44 @@
         "children": [
           {
             "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
             "child": {
-              "type": "gesture_detector",
-              "onTap": {
-                "call": "@global.nextPose",
+              "type": "transform_gesture",
+              "onTransformUpdate": {
+                "call": "@global.updateTransform",
                 "args": {}
               },
-              "onSwipeLeft": {
-                "call": "@global.nextPose",
-                "args": {}
-              },
-              "onSwipeRight": {
-                "call": "@global.nextPose",
+              "onDoubleTap": {
+                "call": "@global.resetTransform",
                 "args": {}
               },
               "child": {
                 "type": "transform",
+                "translateX": {
+                  "var": "global.tx"
+                },
+                "translateY": {
+                  "var": "global.ty"
+                },
                 "scale": {
-                  "+": [
-                    1,
-                    {
-                      "/": [
-                        {
-                          "var": "global.pose"
-                        },
-                        10
-                      ]
-                    }
-                  ]
+                  "var": "global.scale"
                 },
                 "rotateZ": {
-                  "*": [
-                    {
-                      "var": "global.pose"
-                    },
-                    4
-                  ]
-                },
-                "translateX": {
-                  "*": [
-                    {
-                      "var": "global.pose"
-                    },
-                    12
-                  ]
+                  "var": "global.rotDeg"
                 },
                 "child": {
                   "type": "image",
                   "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
                   "fit": "fitWidth",
                   "width": 390,
-                  "height": 700,
+                  "height": 844,
                   "paddingV": 0
                 }
               }
-            },
-            "left": 0,
-            "top": 0,
-            "right": 0,
-            "bottom": 0
-          },
-          {
-            "type": "positioned",
-            "child": {
-              "type": "text",
-              "value": "Tap or swipe to transform image",
-              "style": {
-                "fontSize": 14,
-                "color": "#FFFFFF",
-                "textAlign": "center"
-              }
-            },
-            "left": 0,
-            "right": 0,
-            "bottom": 24
+            }
           }
         ]
       }

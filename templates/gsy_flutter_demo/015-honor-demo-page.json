@@ -3,7 +3,7 @@
   "appid": "5ef7f7cb-a80d-5253-8e74-eb568a83307e",
   "meta": {
     "name": "gsy_flutter_demo/015-honor-demo-page",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "共享元素跳转效果",
@@ -20,14 +20,14 @@
       "category": "basic",
       "routeIndex": 15,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-primitives-v2"
     }
   },
   "dependencies": {},
   "global": {
     "variables": {
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-primitives-v2"
     },
     "functions": {}
   },
@@ -62,9 +62,13 @@
                     "width": 100,
                     "height": 100,
                     "fit": "cover",
-                    "paddingV": 0
+                    "paddingV": 0,
+                    "heroTag": "image"
                   }
-                ]
+                ],
+                "layout": "column",
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
               }
             },
             "left": 0,
@@ -79,7 +83,7 @@
         "id": "detail",
         "title": "HonorDemoPage",
         "layout": "stack",
-        "backgroundColor": "#000000",
+        "backgroundColor": "#FFFFFF",
         "children": [
           {
             "type": "positioned",
@@ -88,21 +92,23 @@
               "child": {
                 "type": "container",
                 "onTap": {
-                  "call": "@navigate",
-                  "args": {
-                    "screen": "home"
-                  }
+                  "type": "back"
                 },
                 "children": [
                   {
                     "type": "image",
                     "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
-                    "width": 320,
-                    "height": 320,
-                    "fit": "contain",
-                    "paddingV": 0
+                    "fit": "cover",
+                    "paddingV": 0,
+                    "widthFactor": 1,
+                    "heightFactor": 1,
+                    "heroTag": "image"
                   }
-                ]
+                ],
+                "layout": "column",
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center",
+                "alignment": "center"
               }
             },
             "left": 0,
@@ -110,7 +116,8 @@
             "right": 0,
             "bottom": 0
           }
-        ]
+        ],
+        "appBar": false
       }
     ]
   }

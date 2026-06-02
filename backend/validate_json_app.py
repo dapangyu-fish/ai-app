@@ -511,6 +511,10 @@ class Validator:
 
             if "shrinkWrap" in node and not isinstance(node.get("shrinkWrap"), bool):
                 self.error(self._path(path, "shrinkWrap"), "shrinkWrap must be a boolean")
+            if "intrinsicHeight" in node and not isinstance(node.get("intrinsicHeight"), bool):
+                self.error(self._path(path, "intrinsicHeight"), "intrinsicHeight must be a boolean")
+            if "reverse" in node and not isinstance(node.get("reverse"), bool):
+                self.error(self._path(path, "reverse"), "reverse must be a boolean")
             if "allowNestedScroll" in node and not isinstance(node.get("allowNestedScroll"), bool):
                 self.error(self._path(path, "allowNestedScroll"), "allowNestedScroll must be a boolean")
 

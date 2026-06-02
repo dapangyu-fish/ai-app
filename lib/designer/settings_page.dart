@@ -10,6 +10,7 @@ import 'hidden_env_entry.dart';
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
 import '../im/im_cache_manage_entry.dart';
+import '../theme/theme_controller.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -20,6 +21,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   AsrMode _asrMode = AsrMode.online;
+  ThemeMode _themeMode = appThemeMode.value;
   String _selectedProvider = AiChatService.selectedProvider;
   List<AiProvider> _providers = AiChatService.providers;
   bool _loadingProviders = false;
@@ -44,6 +46,7 @@ class _SettingsPageState extends State<SettingsPage> {
     // ASR 模式从 notifier 拿（DesignerBall 也用同一个），保证三处一致
     setState(() {
       _asrMode = AsrModePrefs.notifier.value;
+      _themeMode = appThemeMode.value;
       _selectedProvider = AiChatService.selectedProvider;
     });
   }
@@ -67,6 +70,15 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
+  Future<void> _selectThemeMode(ThemeMode mode) async {
+    await ThemeController.setThemeMode(mode);
+    if (mounted) {
+      setState(() {
+        _themeMode = mode;
+      });
+    }
+  }
+
   Future<void> _selectProvider(String providerId) async {
     await AiChatService.setProvider(providerId);
     setState(() {
@@ -83,7 +95,10 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: HiddenEnvEntry(
-          child: Text(t.settingsTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          child: Text(
+            t.settingsTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
         ),
         centerTitle: true,
       ),
@@ -91,9 +106,9 @@ class _SettingsPageState extends State<SettingsPage> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            Card(
-              child: LanguageSwitcher.tile(context),
-            ),
+            Card(child: LanguageSwitcher.tile(context)),
+            const SizedBox(height: 8.0),
+            _buildThemeModeSelector(cs),
             const SizedBox(height: 24.0),
             _buildSectionTitle(t.settingsAiProvider, cs),
             const SizedBox(height: 8.0),
@@ -108,14 +123,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: const Icon(Icons.rocket_launch_outlined),
                 title: Text(t.defaultStartupEntry),
                 subtitle: Text(
-                  _defaultStartup.displaySummary(noneLabel: t.defaultStartupSubtitleNone),
+                  _defaultStartup.displaySummary(
+                    noneLabel: t.defaultStartupSubtitleNone,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const DefaultStartupPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const DefaultStartupPage(),
+                    ),
                   );
                   await _loadDefaultStartup(); // 回来后刷新 subtitle
                 },
@@ -148,6 +167,71 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildThemeModeSelector(ColorScheme cs) {
+    final t = T.of(context);
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: Text(t.settingsTheme),
+          ),
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: cs.outline.withValues(alpha: 0.2),
+          ),
+          _buildThemeModeTile(
+            mode: ThemeMode.system,
+            label: t.settingsThemeSystem,
+            icon: Icons.brightness_auto_outlined,
+            cs: cs,
+          ),
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: cs.outline.withValues(alpha: 0.2),
+          ),
+          _buildThemeModeTile(
+            mode: ThemeMode.light,
+            label: t.settingsThemeLight,
+            icon: Icons.light_mode_outlined,
+            cs: cs,
+          ),
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: cs.outline.withValues(alpha: 0.2),
+          ),
+          _buildThemeModeTile(
+            mode: ThemeMode.dark,
+            label: t.settingsThemeDark,
+            icon: Icons.dark_mode_outlined,
+            cs: cs,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemeModeTile({
+    required ThemeMode mode,
+    required String label,
+    required IconData icon,
+    required ColorScheme cs,
+  }) {
+    final selected = _themeMode == mode;
+    return ListTile(
+      leading: Icon(icon, color: selected ? cs.primary : cs.outline),
+      title: Text(label),
+      trailing: selected ? Icon(Icons.check, color: cs.primary) : null,
+      onTap: () => _selectThemeMode(mode),
+    );
+  }
+
   Widget _buildAsrModeSelector(ColorScheme cs) {
     final t = T.of(context);
     return Card(
@@ -166,7 +250,12 @@ class _SettingsPageState extends State<SettingsPage> {
               color: _asrMode == AsrMode.online ? cs.primary : cs.outline,
             ),
           ),
-          Divider(height: 1, indent: 16, endIndent: 16, color: cs.outline.withValues(alpha: 0.2)),
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: cs.outline.withValues(alpha: 0.2),
+          ),
           RadioListTile<AsrMode>(
             value: AsrMode.bytedance,
             groupValue: _asrMode,
@@ -229,12 +318,10 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: Text(
               provider.description.isNotEmpty
                   ? '${provider.description} (${provider.defaultModel})'
-                  : T.fmt(T.of(context).settingsModelWith,
-                      {'model': provider.defaultModel}),
-              style: TextStyle(
-                color: cs.onSurfaceVariant,
-                fontSize: 12,
-              ),
+                  : T.fmt(T.of(context).settingsModelWith, {
+                      'model': provider.defaultModel,
+                    }),
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
             ),
             secondary: Icon(
               Icons.smart_toy,

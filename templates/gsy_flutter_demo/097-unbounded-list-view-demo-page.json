@@ -3,7 +3,7 @@
   "appid": "76a1f79d-6421-5bd4-9e97-fbb275416917",
   "meta": {
     "name": "gsy_flutter_demo/097-unbounded-list-view-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "自适应横竖列表",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 97,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5"
+      "portVersion": "json-dsl-cross-axis-sizing-list-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/unbounded_listview.dart",
       "upstreamWidget": "UnboundedListViewDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5",
+      "portVersion": "json-dsl-cross-axis-sizing-list-v1",
       "bars": [
         {
           "index": 0,
@@ -452,10 +452,8 @@
               "slivers": [
                 {
                   "kind": "sliver_box",
-                  "height": 340,
                   "child": {
-                    "type": "container",
-                    "layout": "row",
+                    "type": "cross_axis_sizing_list",
                     "children": [
                       {
                         "type": "container",
@@ -1663,10 +1661,8 @@
                 },
                 {
                   "kind": "sliver_box",
-                  "height": 140,
                   "child": {
-                    "type": "container",
-                    "layout": "row",
+                    "type": "cross_axis_sizing_list",
                     "children": [
                       {
                         "type": "container",
@@ -3069,9 +3065,7 @@
                         }
                       }
                     ],
-                    "scrollDirection": "horizontal",
-                    "height": 126,
-                    "alignment": "bottomLeft"
+                    "scrollDirection": "horizontal"
                   }
                 },
                 {

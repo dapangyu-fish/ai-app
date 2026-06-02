@@ -107,11 +107,15 @@ class JsonRichTextWidget extends JsonBaseWidget {
     }
     if (type == 'widget') {
       final childJson = span['child'];
+      Widget child = childJson is Map<String, dynamic>
+          ? interpreter.buildWidget(context, childJson)
+          : const SizedBox.shrink();
+      if (span['selectable'] == false) {
+        child = SelectionContainer.disabled(child: child);
+      }
       return WidgetSpan(
         alignment: _parsePlaceholderAlignment(span['alignment']?.toString()),
-        child: childJson is Map<String, dynamic>
-            ? interpreter.buildWidget(context, childJson)
-            : const SizedBox.shrink(),
+        child: child,
       );
     }
     if (!span.containsKey('onTap')) return null;

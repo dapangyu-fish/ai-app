@@ -3,7 +3,7 @@
   "appid": "8693fba5-7ca8-5719-ad95-b68e5575bbdd",
   "meta": {
     "name": "gsy_flutter_demo/080-list-view-link-list-view",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "type": "app",
     "displayName": {
       "zh": "垂直  ListView 联动  ListView",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 80,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4"
+      "portVersion": "json-dsl-linked-scroll-action-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
       "upstreamWidget": "ListViewLinkListView",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4",
+      "portVersion": "json-dsl-linked-scroll-action-v1",
       "items": [
         {
           "index": 0
@@ -232,6 +232,22 @@
               "color": "#69F0AE",
               "alignment": "center",
               "mainAxisAlignment": "center"
+            },
+            "controller": "primary",
+            "onScroll": {
+              "call": "@scroll_to_offset",
+              "args": {
+                "controller": "sub",
+                "offset": {
+                  "/": [
+                    {
+                      "var": "event.offset"
+                    },
+                    30
+                  ]
+                },
+                "durationMs": 0
+              }
             }
           },
           {
@@ -260,7 +276,9 @@
               "color": "#FF5722",
               "alignment": "center",
               "mainAxisAlignment": "center"
-            }
+            },
+            "controller": "sub",
+            "physics": "never"
           }
         ],
         "appBar": {

@@ -3,7 +3,7 @@
   "appid": "3272d7d8-2d44-5e14-996d-48e413a9a468",
   "meta": {
     "name": "gsy_flutter_demo/104-attractor-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "粒子动画",
@@ -20,7 +20,7 @@
       "category": "animation",
       "routeIndex": 104,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-attractor-modes-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,8 @@
       "upstreamSource": "lib/widget/animation/attractor_page.dart",
       "upstreamWidget": "AttractorPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1",
+      "portVersion": "json-dsl-attractor-modes-v1",
+      "typeIndex": 0,
       "label": "HALVORSEN"
     },
     "functions": {
@@ -40,8 +41,99 @@
           {
             "call": "@set",
             "args": {
-              "var": "global.label",
-              "value": "LORENZ"
+              "var": "global.typeIndex",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.typeIndex"
+                      },
+                      1
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.typeIndex"
+                  },
+                  0
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.label",
+                    "value": "HALVORSEN"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global.typeIndex"
+                        },
+                        1
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.label",
+                          "value": "LORENZ"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "==": [
+                              {
+                                "var": "global.typeIndex"
+                              },
+                              2
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.label",
+                                "value": "AIZAWA"
+                              }
+                            }
+                          ],
+                          "else": [
+                            {
+                              "call": "@set",
+                              "args": {
+                                "var": "global.label",
+                                "value": "SPROTTB"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           }
         ]
@@ -59,14 +151,28 @@
         "children": [
           {
             "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
             "child": {
               "type": "animated_canvas",
               "backgroundColor": "#000000",
               "speed": 1,
+              "durationMs": 22000,
+              "variables": {
+                "typeIndex": "{{ global.typeIndex }}"
+              },
               "layers": [
                 {
                   "kind": "particles",
-                  "count": 2200,
+                  "count": 2600,
+                  "skipWhen": {
+                    "!=": [
+                      "mode",
+                      0
+                    ]
+                  },
                   "x": {
                     "+": [
                       {
@@ -100,22 +206,25 @@
                     ]
                   },
                   "radius": 1.5,
-                  "color": "#00FF7F",
-                  "alpha": 0.65,
+                  "color": "#FFD700",
+                  "alpha": 0.62,
                   "blendMode": "plus",
                   "locals": {
+                    "mode": {
+                      "var": "typeIndex"
+                    },
                     "q": {
                       "+": [
                         {
                           "*": [
                             "i",
-                            0.018
+                            0.0075
                           ]
                         },
                         {
                           "*": [
                             "t",
-                            0.3
+                            0.28
                           ]
                         }
                       ]
@@ -123,7 +232,7 @@
                     "scale": {
                       "*": [
                         "min",
-                        0.18
+                        0.13
                       ]
                     },
                     "xv": {
@@ -132,19 +241,24 @@
                           "sin": {
                             "*": [
                               "q",
-                              1.7
+                              1.41
                             ]
                           }
                         },
                         {
-                          "cos": {
-                            "*": [
-                              "q",
-                              0.41
-                            ]
-                          }
+                          "+": [
+                            1.1,
+                            {
+                              "cos": {
+                                "*": [
+                                  "q",
+                                  0.73
+                                ]
+                              }
+                            }
+                          ]
                         },
-                        2.1
+                        1.4
                       ]
                     },
                     "yv": {
@@ -155,21 +269,21 @@
                               {
                                 "*": [
                                   "q",
-                                  1.13
+                                  1.17
                                 ]
                               },
                               {
                                 "sin": {
                                   "*": [
                                     "q",
-                                    0.23
+                                    0.31
                                   ]
                                 }
                               }
                             ]
                           }
                         },
-                        2.0
+                        1.7
                       ]
                     },
                     "zv": {
@@ -178,11 +292,17 @@
                           "cos": {
                             "*": [
                               "q",
-                              0.71
+                              0.91
                             ]
                           }
                         },
-                        1.3
+                        1.35
+                      ]
+                    },
+                    "rot": {
+                      "*": [
+                        "t",
+                        0.32
                       ]
                     },
                     "rx": {
@@ -191,12 +311,7 @@
                           "*": [
                             "xv",
                             {
-                              "cos": {
-                                "*": [
-                                  "t",
-                                  0.3
-                                ]
-                              }
+                              "cos": "rot"
                             }
                           ]
                         },
@@ -204,12 +319,7 @@
                           "*": [
                             "zv",
                             {
-                              "sin": {
-                                "*": [
-                                  "t",
-                                  0.3
-                                ]
-                              }
+                              "sin": "rot"
                             }
                           ]
                         }
@@ -218,8 +328,14 @@
                   }
                 },
                 {
-                  "kind": "text",
-                  "value": "HALVORSEN",
+                  "kind": "particles",
+                  "count": 2600,
+                  "skipWhen": {
+                    "!=": [
+                      "mode",
+                      1
+                    ]
+                  },
                   "x": {
                     "+": [
                       {
@@ -228,62 +344,432 @@
                           2
                         ]
                       },
-                      -92
+                      {
+                        "*": [
+                          "rx",
+                          "scale"
+                        ]
+                      }
                     ]
                   },
-                  "y": 28,
-                  "color": "#FFD700",
-                  "fontSize": 28,
-                  "fontWeight": "bold"
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "ry",
+                          "scale"
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.5,
+                  "color": "#00FF7F",
+                  "alpha": 0.62,
+                  "blendMode": "plus",
+                  "locals": {
+                    "mode": {
+                      "var": "typeIndex"
+                    },
+                    "side": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "i",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        -1,
+                        1
+                      ]
+                    },
+                    "q": {
+                      "+": [
+                        {
+                          "*": [
+                            "f",
+                            6.283185307179586
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.45
+                          ]
+                        }
+                      ]
+                    },
+                    "scale": {
+                      "*": [
+                        "min",
+                        0.18
+                      ]
+                    },
+                    "wing": {
+                      "+": [
+                        0.35,
+                        {
+                          "*": [
+                            {
+                              "abs": {
+                                "sin": {
+                                  "*": [
+                                    "q",
+                                    1.7
+                                  ]
+                                }
+                              }
+                            },
+                            1.2
+                          ]
+                        }
+                      ]
+                    },
+                    "rx": {
+                      "*": [
+                        "side",
+                        "wing",
+                        {
+                          "cos": {
+                            "*": [
+                              "q",
+                              0.7
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "ry": {
+                      "-": [
+                        {
+                          "*": [
+                            {
+                              "sin": "q"
+                            },
+                            1.4
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "cos": {
+                                "*": [
+                                  "q",
+                                  2.1
+                                ]
+                              }
+                            },
+                            0.25
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "particles",
+                  "count": 2600,
+                  "skipWhen": {
+                    "!=": [
+                      "mode",
+                      2
+                    ]
+                  },
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "q"
+                          },
+                          "r",
+                          "scale"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      80,
+                      {
+                        "*": [
+                          "ring",
+                          "scale",
+                          0.7
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.4,
+                  "color": "#E0FFFF",
+                  "alpha": 0.58,
+                  "blendMode": "plus",
+                  "locals": {
+                    "mode": {
+                      "var": "typeIndex"
+                    },
+                    "q": {
+                      "+": [
+                        {
+                          "*": [
+                            "f",
+                            25.132741228718345
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.55
+                          ]
+                        }
+                      ]
+                    },
+                    "scale": {
+                      "*": [
+                        "min",
+                        0.28
+                      ]
+                    },
+                    "r": {
+                      "+": [
+                        0.18,
+                        {
+                          "*": [
+                            {
+                              "seed": "i"
+                            },
+                            0.75
+                          ]
+                        }
+                      ]
+                    },
+                    "ring": {
+                      "+": [
+                        {
+                          "sin": {
+                            "*": [
+                              "q",
+                              0.55
+                            ]
+                          }
+                        },
+                        {
+                          "*": [
+                            {
+                              "cos": {
+                                "*": [
+                                  "q",
+                                  1.7
+                                ]
+                              }
+                            },
+                            0.35
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "particles",
+                  "count": 2600,
+                  "skipWhen": {
+                    "!=": [
+                      "mode",
+                      3
+                    ]
+                  },
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "rx",
+                          "scale"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "ry",
+                          "scale"
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.5,
+                  "color": "#FF4040",
+                  "alpha": 0.62,
+                  "blendMode": "plus",
+                  "locals": {
+                    "mode": {
+                      "var": "typeIndex"
+                    },
+                    "q": {
+                      "+": [
+                        {
+                          "*": [
+                            "f",
+                            18.84955592153876
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.5
+                          ]
+                        }
+                      ]
+                    },
+                    "scale": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "r": {
+                      "+": [
+                        0.22,
+                        {
+                          "*": [
+                            {
+                              "sin": {
+                                "*": [
+                                  "q",
+                                  0.9
+                                ]
+                              }
+                            },
+                            0.28
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "seed": "i"
+                            },
+                            0.42
+                          ]
+                        }
+                      ]
+                    },
+                    "rx": {
+                      "*": [
+                        {
+                          "sin": "q"
+                        },
+                        "r"
+                      ]
+                    },
+                    "ry": {
+                      "+": [
+                        {
+                          "*": [
+                            {
+                              "cos": {
+                                "*": [
+                                  "q",
+                                  0.52
+                                ]
+                              }
+                            },
+                            1.2
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "sin": {
+                                "*": [
+                                  "q",
+                                  1.7
+                                ]
+                              }
+                            },
+                            0.4
+                          ]
+                        }
+                      ]
+                    }
+                  }
                 }
               ]
-            },
-            "left": 0,
-            "top": 0,
-            "right": 0,
-            "bottom": 0
+            }
           },
           {
             "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 34,
             "child": {
-              "type": "container",
-              "layout": "row",
-              "children": [
-                {
-                  "type": "icon",
-                  "name": "sync",
-                  "size": 22,
-                  "color": "#111111"
-                },
-                {
-                  "type": "spacer",
-                  "width": 8
-                },
-                {
-                  "type": "text",
-                  "value": "Switch: {{ global.label }}",
-                  "style": {
-                    "fontSize": 14,
-                    "color": "#111111",
-                    "fontWeight": "bold"
-                  }
-                }
-              ],
-              "height": 52,
-              "padding": {
-                "left": 16,
-                "right": 16
+              "type": "text",
+              "value": "{{ global.label }}",
+              "style": {
+                "fontSize": 30,
+                "fontWeight": "bold",
+                "color": "#FFD700",
+                "textAlign": "center",
+                "letterSpacing": 2
+              }
+            }
+          },
+          {
+            "type": "positioned",
+            "right": 18,
+            "bottom": 24,
+            "child": {
+              "type": "button",
+              "label": "Switch: {{ global.label }}",
+              "icon": "swap_calls",
+              "style": {
+                "backgroundColor": "#FFFFFFFF",
+                "textColor": "#111111",
+                "borderRadius": 16,
+                "fontSize": 14,
+                "paddingH": 18,
+                "paddingV": 12
               },
-              "color": "#FFFFFFFF",
-              "borderRadius": 16,
-              "onTap": {
+              "action": {
                 "call": "@global.switch",
                 "args": {}
-              },
-              "alignment": "center"
-            },
-            "right": 20,
-            "bottom": 24
+              }
+            }
           }
         ],
         "appBar": {

@@ -43,6 +43,10 @@
 - 读 `backend/prompts/generation/validation.md`
 - 查 `lib/json_ui/widget_builder.dart` 和对应 widget 源码确认字段。
 
+视觉/动画控件：
+- 需要验证码、滑动验证、文字缩放、气泡提示、弧形滑块、复合渐变进度、星形爆炸、云词/径向布局等效果时，先查 `lib/json_ui/widget_builder.dart`，再按类型读 `lib/json_ui/widgets/form_primitives_widget.dart`、`progress_widget.dart`、`visual_primitives_widget.dart`、`layout_primitives_widget.dart`、`overlay_primitives_widget.dart` 的字段。
+- 这些是通用原子能力，只能按功能使用，不能假设它们是某个模板或项目的专用桥。
+
 `mixed`：
 - 先选主类型文档，再补读最相关的一个能力文档。
 - 如果是“游戏 + 资料管理”，以 `game` 为主，补读 `native_app` 的表单/列表部分。

@@ -130,6 +130,7 @@
             "type": "cupertino_refresh_list",
             "source": "{{ global.dataList }}",
             "pageSize": 30,
+            "initialRefresh": true,
             "initialOverscroll": -141,
             "initialDelayMs": 500,
             "initialDurationMs": 600,

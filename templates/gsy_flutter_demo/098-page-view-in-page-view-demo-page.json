@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 98,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5"
+      "portVersion": "json-dsl-page-handoff-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/pageview_in_pageview_demo_page.dart",
       "upstreamWidget": "PageViewInPageViewDemoPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v5"
+      "portVersion": "json-dsl-page-handoff-v1"
     },
     "functions": {}
   },
@@ -47,7 +47,7 @@
             "type": "positioned",
             "child": {
               "type": "page_view",
-              "physics": "clamping",
+              "physics": "never",
               "children": [
                 {
                   "type": "container",
@@ -73,46 +73,64 @@
                           "right": 0,
                           "bottom": 0,
                           "child": {
-                            "type": "page_view",
-                            "physics": "clamping",
-                            "children": [
+                            "type": "scroll_drag_handoff",
+                            "axis": "horizontal",
+                            "defaultController": "pvp.inner1",
+                            "switches": [
                               {
-                                "type": "container",
-                                "layout": "column",
-                                "children": [
-                                  {
-                                    "type": "text",
-                                    "value": "Inner PageView Item",
-                                    "style": {
-                                      "fontSize": 16,
-                                      "color": "#111111",
-                                      "textAlign": "center"
-                                    }
-                                  }
-                                ],
-                                "color": "#EA80FC",
-                                "alignment": "center",
-                                "mainAxisAlignment": "center"
+                                "from": "pvp.inner1",
+                                "to": "pvp.outer",
+                                "when": "fromAtMaxAndForward"
                               },
                               {
-                                "type": "container",
-                                "layout": "column",
-                                "children": [
-                                  {
-                                    "type": "text",
-                                    "value": "Inner PageView Item",
-                                    "style": {
-                                      "fontSize": 16,
-                                      "color": "#111111",
-                                      "textAlign": "center"
-                                    }
-                                  }
-                                ],
-                                "color": "#009688",
-                                "alignment": "center",
-                                "mainAxisAlignment": "center"
+                                "from": "pvp.inner1",
+                                "to": "pvp.outer",
+                                "when": "fromAtMinAndBackward"
                               }
-                            ]
+                            ],
+                            "child": {
+                              "type": "page_view",
+                              "physics": "never",
+                              "children": [
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#EA80FC",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                },
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#009688",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                }
+                              ],
+                              "controller": "pvp.inner1"
+                            }
                           }
                         }
                       ],
@@ -144,46 +162,64 @@
                           "right": 0,
                           "bottom": 0,
                           "child": {
-                            "type": "page_view",
-                            "physics": "clamping",
-                            "children": [
+                            "type": "scroll_drag_handoff",
+                            "axis": "horizontal",
+                            "defaultController": "pvp.inner2",
+                            "switches": [
                               {
-                                "type": "container",
-                                "layout": "column",
-                                "children": [
-                                  {
-                                    "type": "text",
-                                    "value": "Inner PageView Item",
-                                    "style": {
-                                      "fontSize": 16,
-                                      "color": "#111111",
-                                      "textAlign": "center"
-                                    }
-                                  }
-                                ],
-                                "color": "#69F0AE",
-                                "alignment": "center",
-                                "mainAxisAlignment": "center"
+                                "from": "pvp.inner2",
+                                "to": "pvp.outer",
+                                "when": "fromAtMaxAndForward"
                               },
                               {
-                                "type": "container",
-                                "layout": "column",
-                                "children": [
-                                  {
-                                    "type": "text",
-                                    "value": "Inner PageView Item",
-                                    "style": {
-                                      "fontSize": 16,
-                                      "color": "#111111",
-                                      "textAlign": "center"
-                                    }
-                                  }
-                                ],
-                                "color": "#FFFF8D",
-                                "alignment": "center",
-                                "mainAxisAlignment": "center"
+                                "from": "pvp.inner2",
+                                "to": "pvp.outer",
+                                "when": "fromAtMinAndBackward"
                               }
-                            ]
+                            ],
+                            "child": {
+                              "type": "page_view",
+                              "physics": "never",
+                              "children": [
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#69F0AE",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                },
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#FFFF8D",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                }
+                              ],
+                              "controller": "pvp.inner2"
+                            }
                           }
                         }
                       ],
@@ -209,7 +245,8 @@
                   "alignment": "center",
                   "mainAxisAlignment": "center"
                 }
-              ]
+              ],
+              "controller": "pvp.outer"
             },
             "left": 0,
             "top": 0,

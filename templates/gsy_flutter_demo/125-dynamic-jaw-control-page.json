@@ -3,7 +3,7 @@
   "appid": "b8c184d8-41a0-5ccd-9b90-ed045de37dd0",
   "meta": {
     "name": "gsy_flutter_demo/125-dynamic-jaw-control-page",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "Jaw Control",
@@ -20,7 +20,7 @@
       "category": "canvas",
       "routeIndex": 125,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-jaw-controls-v1"
     }
   },
   "dependencies": {},
@@ -30,9 +30,99 @@
       "upstreamSource": "lib/widget/canvas/dynamic_jaw_control_page.dart",
       "upstreamWidget": "DynamicJawControlPage",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-jaw-controls-v1",
+      "mode": "bite",
+      "modeIndex": 0,
+      "uiSize": 350,
+      "durationSec": 3,
+      "triggerCount": 0
     },
-    "functions": {}
+    "functions": {
+      "setBite": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.modeIndex",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.mode",
+              "value": "bite"
+            }
+          }
+        ]
+      },
+      "setChew": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.modeIndex",
+              "value": 1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.mode",
+              "value": "chew"
+            }
+          }
+        ]
+      },
+      "trigger": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.triggerCount",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.triggerCount"
+                  },
+                  1
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "modeLabel": {
+        "if": [
+          {
+            "==": [
+              {
+                "var": "global.modeIndex"
+              },
+              0
+            ]
+          },
+          "用力咬紧",
+          "连续咀嚼"
+        ]
+      },
+      "modeNumber": {
+        "var": "global.modeIndex"
+      },
+      "durationSpeed": {
+        "/": [
+          3,
+          {
+            "var": "global.durationSec"
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
@@ -40,253 +130,833 @@
       {
         "id": "home",
         "title": "",
-        "layout": "stack",
-        "backgroundColor": "#111217",
+        "layout": "column",
+        "backgroundColor": "#0B1120",
         "children": [
           {
-            "type": "positioned",
+            "type": "expanded",
             "child": {
-              "type": "animated_canvas",
-              "backgroundColor": "#111217",
-              "speed": 1,
-              "layers": [
-                {
-                  "kind": "path",
-                  "commands": [
-                    {
-                      "op": "moveTo",
-                      "x": {
-                        "-": [
-                          "cx",
-                          88
-                        ]
-                      },
-                      "y": "cy"
-                    },
-                    {
-                      "op": "quadTo",
-                      "x1": "cx",
-                      "y1": {
-                        "+": [
-                          "cy",
-                          86,
-                          {
-                            "*": [
-                              "open",
-                              80
-                            ]
-                          }
-                        ]
-                      },
-                      "x": {
-                        "+": [
-                          "cx",
-                          88
-                        ]
-                      },
-                      "y": "cy"
-                    },
-                    {
-                      "op": "moveTo",
-                      "x": {
-                        "-": [
-                          "cx",
-                          78
-                        ]
-                      },
-                      "y": {
-                        "-": [
-                          "cy",
-                          6
-                        ]
-                      }
-                    },
-                    {
-                      "op": "quadTo",
-                      "x1": "cx",
-                      "y1": {
-                        "-": [
-                          "cy",
-                          55
-                        ]
-                      },
-                      "x": {
-                        "+": [
-                          "cx",
-                          78
-                        ]
-                      },
-                      "y": {
-                        "-": [
-                          "cy",
-                          6
-                        ]
-                      }
-                    }
-                  ],
-                  "color": "#E0F7FA",
-                  "alpha": 1,
-                  "style": "stroke",
-                  "strokeWidth": 4,
-                  "strokeCap": "round",
-                  "locals": {
-                    "cx": {
-                      "/": [
-                        "w",
-                        2
-                      ]
-                    },
-                    "cy": {
-                      "*": [
-                        "h",
-                        0.52
-                      ]
-                    },
-                    "open": {
-                      "+": [
-                        0.35,
-                        {
-                          "*": [
-                            0.25,
-                            {
-                              "sin": {
-                                "*": [
-                                  "t",
-                                  2
-                                ]
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  }
+              "type": "center",
+              "child": {
+                "type": "container",
+                "width": "{{ global.uiSize }}",
+                "height": "{{ global.uiSize }}",
+                "borderRadius": 20,
+                "color": "#05FFFFFF",
+                "border": {
+                  "color": "#1FFFFFFF",
+                  "width": 1
                 },
-                {
-                  "kind": "segments",
-                  "count": 9,
-                  "x1": {
-                    "+": [
-                      "cx",
+                "clipBehavior": "hardEdge",
+                "children": [
+                  {
+                    "type": "animated_canvas",
+                    "backgroundColor": "#00000000",
+                    "durationMs": {
+                      "*": [
+                        {
+                          "var": "global.durationSec"
+                        },
+                        1000
+                      ]
+                    },
+                    "speed": "{{ global.durationSpeed }}",
+                    "variables": {
+                      "modeNumber": "{{ global.modeNumber }}"
+                    },
+                    "layers": [
                       {
-                        "*": [
-                          "k",
-                          18
-                        ]
-                      }
-                    ]
-                  },
-                  "y1": {
-                    "+": [
-                      "cy",
-                      6
-                    ]
-                  },
-                  "x2": {
-                    "+": [
-                      "cx",
-                      {
-                        "*": [
-                          "k",
-                          18
-                        ]
+                        "kind": "circle",
+                        "x": {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        "y": {
+                          "*": [
+                            "h",
+                            0.48
+                          ]
+                        },
+                        "radius": {
+                          "*": [
+                            "min",
+                            0.34
+                          ]
+                        },
+                        "color": "#FFFFFF",
+                        "alpha": 0.03
                       },
                       {
-                        "*": [
+                        "kind": "path",
+                        "commands": [
                           {
+                            "op": "moveTo",
+                            "x": {
+                              "-": [
+                                "cx",
+                                112
+                              ]
+                            },
+                            "y": {
+                              "-": [
+                                "cy",
+                                10
+                              ]
+                            }
+                          },
+                          {
+                            "op": "quadTo",
+                            "x1": "cx",
+                            "y1": {
+                              "-": [
+                                "cy",
+                                84
+                              ]
+                            },
+                            "x": {
+                              "+": [
+                                "cx",
+                                112
+                              ]
+                            },
+                            "y": {
+                              "-": [
+                                "cy",
+                                10
+                              ]
+                            }
+                          },
+                          {
+                            "op": "moveTo",
+                            "x": {
+                              "-": [
+                                "cx",
+                                122
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "open",
+                                    76
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "quadTo",
+                            "x1": "cx",
+                            "y1": {
+                              "+": [
+                                "cy",
+                                70,
+                                {
+                                  "*": [
+                                    "open",
+                                    120
+                                  ]
+                                }
+                              ]
+                            },
+                            "x": {
+                              "+": [
+                                "cx",
+                                122
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "open",
+                                    76
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "color": "#94A3B8",
+                        "alpha": 0.9,
+                        "style": "stroke",
+                        "strokeWidth": 3,
+                        "strokeCap": "round",
+                        "locals": {
+                          "cx": {
+                            "/": [
+                              "w",
+                              2
+                            ]
+                          },
+                          "cy": {
+                            "*": [
+                              "h",
+                              0.45
+                            ]
+                          },
+                          "open": {
                             "if": [
                               {
-                                ">": [
-                                  "k",
+                                "==": [
+                                  "modeNumber",
                                   0
                                 ]
                               },
-                              1,
                               {
-                                "if": [
+                                "+": [
+                                  0.18,
                                   {
-                                    "<": [
-                                      "k",
-                                      0
+                                    "*": [
+                                      0.42,
+                                      {
+                                        "abs": {
+                                          "sin": {
+                                            "*": [
+                                              "t",
+                                              0.9
+                                            ]
+                                          }
+                                        }
+                                      }
                                     ]
-                                  },
-                                  -1,
+                                  }
+                                ]
+                              },
+                              {
+                                "+": [
+                                  0.12,
+                                  {
+                                    "*": [
+                                      0.5,
+                                      {
+                                        "*": [
+                                          0.5,
+                                          {
+                                            "+": [
+                                              1,
+                                              {
+                                                "cos": {
+                                                  "*": [
+                                                    "t",
+                                                    2.2
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "kind": "particles",
+                        "count": 28,
+                        "shape": "rect",
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "*": [
+                                "side",
+                                "archX"
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "if": [
+                                "upperNum",
+                                {
+                                  "-": [
+                                    0,
+                                    "archY",
+                                    22
+                                  ]
+                                },
+                                {
+                                  "+": [
+                                    "archY",
+                                    {
+                                      "*": [
+                                        "open",
+                                        80
+                                      ]
+                                    },
+                                    16
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "width": {
+                          "*": [
+                            "toothW",
+                            "depthScale"
+                          ]
+                        },
+                        "height": {
+                          "*": [
+                            "toothH",
+                            "depthScale"
+                          ]
+                        },
+                        "borderRadius": 4,
+                        "color": "#F8FAFC",
+                        "color2": "#475569",
+                        "mix": "depth",
+                        "alpha": 1,
+                        "locals": {
+                          "cx": {
+                            "/": [
+                              "w",
+                              2
+                            ]
+                          },
+                          "cy": {
+                            "*": [
+                              "h",
+                              0.45
+                            ]
+                          },
+                          "open": {
+                            "if": [
+                              {
+                                "==": [
+                                  "modeNumber",
                                   0
+                                ]
+                              },
+                              {
+                                "+": [
+                                  0.18,
+                                  {
+                                    "*": [
+                                      0.42,
+                                      {
+                                        "abs": {
+                                          "sin": {
+                                            "*": [
+                                              "t",
+                                              0.9
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "+": [
+                                  0.12,
+                                  {
+                                    "*": [
+                                      0.5,
+                                      {
+                                        "*": [
+                                          0.5,
+                                          {
+                                            "+": [
+                                              1,
+                                              {
+                                                "cos": {
+                                                  "*": [
+                                                    "t",
+                                                    2.2
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
                                 ]
                               }
                             ]
                           },
-                          2
-                        ]
-                      }
-                    ]
-                  },
-                  "y2": {
-                    "+": [
-                      "cy",
-                      32,
-                      {
-                        "*": [
-                          "open",
-                          34
-                        ]
-                      }
-                    ]
-                  },
-                  "color": "#E0F7FA",
-                  "alpha": 1,
-                  "strokeWidth": 2,
-                  "strokeCap": "round",
-                  "locals": {
-                    "k": {
-                      "-": [
-                        "i",
-                        4
-                      ]
-                    },
-                    "cx": {
-                      "/": [
-                        "w",
-                        2
-                      ]
-                    },
-                    "cy": {
-                      "*": [
-                        "h",
-                        0.52
-                      ]
-                    },
-                    "open": {
-                      "+": [
-                        0.35,
-                        {
-                          "*": [
-                            0.25,
-                            {
-                              "sin": {
-                                "*": [
-                                  "t",
-                                  2
+                          "modeNumber": {
+                            "var": "modeNumber"
+                          },
+                          "upperNum": {
+                            "if": [
+                              {
+                                "<": [
+                                  "i",
+                                  14
+                                ]
+                              },
+                              1,
+                              0
+                            ]
+                          },
+                          "j": {
+                            "if": [
+                              "upperNum",
+                              "i",
+                              {
+                                "-": [
+                                  "i",
+                                  14
                                 ]
                               }
+                            ]
+                          },
+                          "pair": {
+                            "floor": {
+                              "/": [
+                                "j",
+                                2
+                              ]
+                            }
+                          },
+                          "side": {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      "j",
+                                      2
+                                    ]
+                                  },
+                                  0
+                                ]
+                              },
+                              -1,
+                              1
+                            ]
+                          },
+                          "baseX": {
+                            "+": [
+                              10,
+                              {
+                                "*": [
+                                  "pair",
+                                  17
+                                ]
+                              }
+                            ]
+                          },
+                          "archX": "baseX",
+                          "archY": {
+                            "/": [
+                              {
+                                "pow": [
+                                  "baseX",
+                                  2
+                                ]
+                              },
+                              190
+                            ]
+                          },
+                          "depth": {
+                            "clamp": [
+                              {
+                                "/": [
+                                  "archY",
+                                  36
+                                ]
+                              },
+                              0,
+                              1
+                            ]
+                          },
+                          "depthScale": {
+                            "-": [
+                              1.08,
+                              {
+                                "*": [
+                                  "depth",
+                                  0.34
+                                ]
+                              }
+                            ]
+                          },
+                          "toothW": {
+                            "+": [
+                              14,
+                              {
+                                "*": [
+                                  {
+                                    "seed": "pair"
+                                  },
+                                  8
+                                ]
+                              }
+                            ]
+                          },
+                          "toothH": {
+                            "+": [
+                              23,
+                              {
+                                "*": [
+                                  {
+                                    "seed": {
+                                      "+": [
+                                        "pair",
+                                        20
+                                      ]
+                                    }
+                                  },
+                                  13
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "kind": "segments",
+                        "count": 14,
+                        "x1": {
+                          "+": [
+                            "cx",
+                            {
+                              "*": [
+                                "side",
+                                "baseX"
+                              ]
+                            },
+                            -4
+                          ]
+                        },
+                        "y1": {
+                          "+": [
+                            "cy",
+                            {
+                              "if": [
+                                "upperNum",
+                                -22,
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        "open",
+                                        80
+                                      ]
+                                    },
+                                    16
+                                  ]
+                                }
+                              ]
                             }
                           ]
+                        },
+                        "x2": {
+                          "+": [
+                            "cx",
+                            {
+                              "*": [
+                                "side",
+                                "baseX"
+                              ]
+                            },
+                            4
+                          ]
+                        },
+                        "y2": {
+                          "+": [
+                            "cy",
+                            {
+                              "if": [
+                                "upperNum",
+                                -22,
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        "open",
+                                        80
+                                      ]
+                                    },
+                                    16
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "color": "#0F172A",
+                        "alpha": 0.22,
+                        "strokeWidth": 1.4,
+                        "locals": {
+                          "cx": {
+                            "/": [
+                              "w",
+                              2
+                            ]
+                          },
+                          "cy": {
+                            "*": [
+                              "h",
+                              0.45
+                            ]
+                          },
+                          "open": {
+                            "if": [
+                              {
+                                "==": [
+                                  "modeNumber",
+                                  0
+                                ]
+                              },
+                              {
+                                "+": [
+                                  0.18,
+                                  {
+                                    "*": [
+                                      0.42,
+                                      {
+                                        "abs": {
+                                          "sin": {
+                                            "*": [
+                                              "t",
+                                              0.9
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "+": [
+                                  0.12,
+                                  {
+                                    "*": [
+                                      0.5,
+                                      {
+                                        "*": [
+                                          0.5,
+                                          {
+                                            "+": [
+                                              1,
+                                              {
+                                                "cos": {
+                                                  "*": [
+                                                    "t",
+                                                    2.2
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          "upperNum": {
+                            "if": [
+                              {
+                                "<": [
+                                  "i",
+                                  7
+                                ]
+                              },
+                              1,
+                              0
+                            ]
+                          },
+                          "pair": {
+                            "if": [
+                              "upperNum",
+                              "i",
+                              {
+                                "-": [
+                                  "i",
+                                  7
+                                ]
+                              }
+                            ]
+                          },
+                          "side": {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      "pair",
+                                      2
+                                    ]
+                                  },
+                                  0
+                                ]
+                              },
+                              -1,
+                              1
+                            ]
+                          },
+                          "baseX": {
+                            "+": [
+                              10,
+                              {
+                                "*": [
+                                  "pair",
+                                  17
+                                ]
+                              }
+                            ]
+                          }
                         }
-                      ]
-                    }
+                      }
+                    ]
                   }
+                ]
+              }
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 24,
+            "borderRadius": 30,
+            "color": "#1E293B",
+            "crossAxisAlignment": "stretch",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "运动模式",
+                    "style": {
+                      "fontSize": 16,
+                      "color": "#B9C4D6"
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "button",
+                        "label": "用力咬紧",
+                        "variant": "filled",
+                        "style": {
+                          "backgroundColor": "#6366F1",
+                          "textColor": "#FFFFFF",
+                          "borderRadius": 14,
+                          "paddingH": 14,
+                          "paddingV": 8
+                        },
+                        "action": {
+                          "call": "@global.setBite",
+                          "args": {}
+                        }
+                      },
+                      {
+                        "type": "button",
+                        "label": "连续咀嚼",
+                        "variant": "outlined",
+                        "style": {
+                          "textColor": "#FFFFFF",
+                          "borderRadius": 14,
+                          "paddingH": 14,
+                          "paddingV": 8
+                        },
+                        "action": {
+                          "call": "@global.setChew",
+                          "args": {}
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "UI 缩放尺寸 ({{ global.uiSize }}px)",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#B9C4D6"
                 }
-              ]
-            },
-            "left": 0,
-            "top": 0,
-            "right": 0,
-            "bottom": 0
+              },
+              {
+                "type": "slider",
+                "bind": "global.uiSize",
+                "min": 150,
+                "max": 500,
+                "showLabel": false,
+                "color": "#818CF8"
+              },
+              {
+                "type": "text",
+                "value": "持续时间 ({{ global.durationSec }}s)",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#B9C4D6"
+                }
+              },
+              {
+                "type": "slider",
+                "bind": "global.durationSec",
+                "min": 1,
+                "max": 8,
+                "showLabel": false,
+                "color": "#818CF8"
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "button",
+                "label": "触发动画",
+                "icon": "bolt",
+                "style": {
+                  "backgroundColor": "#6366F1",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 16,
+                  "fontSize": 18,
+                  "paddingH": 16,
+                  "paddingV": 14
+                },
+                "action": {
+                  "call": "@global.trigger",
+                  "args": {}
+                }
+              },
+              {
+                "type": "text",
+                "value": "当前: {{ global.modeLabel }} · #{{ global.triggerCount }}",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#94A3B8",
+                  "textAlign": "center"
+                }
+              }
+            ]
           }
-        ],
-        "appBar": {
-          "title": ""
-        }
+        ]
       }
     ]
   }

@@ -3,7 +3,7 @@
   "appid": "779a2902-3af6-58ef-91d1-22c59c53f7a4",
   "meta": {
     "name": "gsy_flutter_demo/077-vp-list-view",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "ListView 嵌套 ViewPager 解决斜着滑动问题",
@@ -20,7 +20,7 @@
       "category": "scroll",
       "routeIndex": 77,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-clean-v1"
+      "portVersion": "json-dsl-gesture-settings-v1"
     }
   },
   "dependencies": {},
@@ -30,7 +30,7 @@
       "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
       "upstreamWidget": "VPListView",
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v4",
+      "portVersion": "json-dsl-gesture-settings-v1",
       "items": [
         {
           "index": 0
@@ -93,97 +93,109 @@
           {
             "type": "expanded",
             "child": {
-              "type": "page_view",
-              "scrollDirection": "horizontal",
-              "pageSnapping": true,
-              "children": [
-                {
-                  "type": "container",
-                  "children": [
-                    {
-                      "type": "list",
-                      "source": "{{ global.items }}",
-                      "allowNestedScroll": true,
-                      "separator": "none",
-                      "item_template": {
-                        "type": "container",
-                        "children": [
-                          {
+              "type": "gesture_settings_scope",
+              "touchSlop": 50,
+              "child": {
+                "type": "page_view",
+                "scrollDirection": "horizontal",
+                "pageSnapping": true,
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "gesture_settings_scope",
+                        "touchSlop": 18,
+                        "child": {
+                          "type": "list",
+                          "source": "{{ global.items }}",
+                          "allowNestedScroll": true,
+                          "separator": "none",
+                          "item_template": {
                             "type": "container",
                             "children": [
                               {
-                                "type": "text",
-                                "value": "Item {{ loop.item.index }}",
-                                "style": {
-                                  "fontSize": 16,
-                                  "color": "#212121"
-                                }
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Item {{ loop.item.index }}",
+                                    "style": {
+                                      "fontSize": 16,
+                                      "color": "#212121"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "height": 48,
+                                "padding": {
+                                  "left": 16
+                                },
+                                "alignment": "centerLeft"
+                              },
+                              {
+                                "type": "container",
+                                "children": [],
+                                "height": 3,
+                                "color": "#E0E0E0"
                               }
                             ],
-                            "layout": "column",
-                            "height": 48,
-                            "padding": {
-                              "left": 16
-                            },
-                            "alignment": "centerLeft"
-                          },
-                          {
-                            "type": "container",
-                            "children": [],
-                            "height": 3,
-                            "color": "#E0E0E0"
+                            "layout": "column"
                           }
-                        ],
-                        "layout": "column"
+                        }
                       }
-                    }
-                  ],
-                  "layout": "column"
-                },
-                {
-                  "type": "container",
-                  "children": [
-                    {
-                      "type": "list",
-                      "source": "{{ global.items }}",
-                      "allowNestedScroll": true,
-                      "separator": "none",
-                      "item_template": {
-                        "type": "container",
-                        "children": [
-                          {
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "gesture_settings_scope",
+                        "touchSlop": 18,
+                        "child": {
+                          "type": "list",
+                          "source": "{{ global.items }}",
+                          "allowNestedScroll": true,
+                          "separator": "none",
+                          "item_template": {
                             "type": "container",
                             "children": [
                               {
-                                "type": "text",
-                                "value": "Item {{ loop.item.index }}",
-                                "style": {
-                                  "fontSize": 16,
-                                  "color": "#212121"
-                                }
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Item {{ loop.item.index }}",
+                                    "style": {
+                                      "fontSize": 16,
+                                      "color": "#212121"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "height": 48,
+                                "padding": {
+                                  "left": 16
+                                },
+                                "alignment": "centerLeft"
+                              },
+                              {
+                                "type": "container",
+                                "children": [],
+                                "height": 3,
+                                "color": "#E0E0E0"
                               }
                             ],
-                            "layout": "column",
-                            "height": 48,
-                            "padding": {
-                              "left": 16
-                            },
-                            "alignment": "centerLeft"
-                          },
-                          {
-                            "type": "container",
-                            "children": [],
-                            "height": 3,
-                            "color": "#E0E0E0"
+                            "layout": "column"
                           }
-                        ],
-                        "layout": "column"
+                        }
                       }
-                    }
-                  ],
-                  "layout": "column"
-                }
-              ]
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              }
             }
           }
         ],

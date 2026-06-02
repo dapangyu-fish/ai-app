@@ -13,6 +13,7 @@
 #include <local_auth_windows/local_auth_plugin.h>
 #include <permission_handler_windows/permission_handler_windows_plugin.h>
 #include <record_windows/record_windows_plugin_c_api.h>
+#include <rive_native/rive_native_plugin.h>
 #include <share_plus/share_plus_windows_plugin_c_api.h>
 #include <speech_to_text_windows/speech_to_text_windows.h>
 #include <sqlite3_flutter_libs/sqlite3_flutter_libs_plugin.h>
@@ -33,6 +34,8 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("PermissionHandlerWindowsPlugin"));
   RecordWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("RecordWindowsPluginCApi"));
+  RiveNativePluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("RiveNativePlugin"));
   SharePlusWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("SharePlusWindowsPluginCApi"));
   SpeechToTextWindowsRegisterWithRegistrar(

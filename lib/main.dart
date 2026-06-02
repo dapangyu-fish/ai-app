@@ -19,6 +19,7 @@ import 'i18n/framework_strings.dart';
 import 'i18n/locale_controller.dart';
 import 'i18n/language_switcher.dart';
 import 'i18n/meta_helper.dart';
+import 'theme/theme_controller.dart';
 import 'platform/native_fs.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/cache_manager.dart';
@@ -50,12 +51,6 @@ import 'onboarding/onboarding_service.dart';
 final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
   return JsonInterpreter();
 });
-
-/// 全局主题模式（light/dark/system）。被 MaterialApp 监听用于运行时切主题。
-/// JSON-APP 通过 @set_theme 写它，框架自动重建。
-final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier<ThemeMode>(
-  ThemeMode.system,
-);
 
 /// 全局 App 生命周期事件总线（resume / pause / inactive / detached / hidden）。
 /// JSON-APP 在 global.lifecycle.onResume 等字段声明步骤，
@@ -317,6 +312,9 @@ void main() async {
 
   // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
   await LocaleController.loadFromPrefs();
+
+  // 加载用户主题偏好（SharedPreferences app_theme_mode；未设置则跟随系统）
+  await ThemeController.loadFromPrefs();
 
   // 注册 app 生命周期监听（resume / pause / inactive / detached / hidden）
   WidgetsBinding.instance.addObserver(_AppLifecycleObserver());
@@ -2291,6 +2289,9 @@ bool _needsBoundedVerticalParent(
 }) {
   final type = child['type'];
   if (type == 'list' && child['shrinkWrap'] != true) return true;
+  if (type == 'cupertino_refresh_list' && child['shrinkWrap'] != true) {
+    return true;
+  }
   if (type == 'reorderable_list') return true;
   if (type == 'grid' && child['shrinkWrap'] != true) return true;
   if (type == 'refresh') return true;
@@ -2548,15 +2549,7 @@ class JsonScreenView extends ConsumerWidget {
     if (isStackLayout) {
       bodyContent = buildScreenLayout(screenConfig, childWidgets);
     } else if (hasListWidget) {
-      bodyContent = Padding(
-        padding: EdgeInsets.all(
-          (contentConfig['padding'] as num?)?.toDouble() ?? 0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: childWidgets,
-        ),
-      );
+      bodyContent = buildScreenLayout(contentConfig, childWidgets);
     } else {
       bodyContent = SingleChildScrollView(
         child: buildScreenLayout(contentConfig, childWidgets),

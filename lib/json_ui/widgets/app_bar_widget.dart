@@ -52,7 +52,7 @@ PreferredSizeWidget buildAppBar(
     final iconData = iconName != null ? IconRegistry.get(iconName) : null;
     final action = leadingDef['action'] as Map<String, dynamic>?;
     leading = IconButton(
-      icon: Icon(iconData ?? Icons.arrow_back),
+      icon: Icon(iconData ?? Icons.arrow_back, color: fg),
       onPressed: action != null
           ? () => interpreter.executeAction(action, context)
           : null,
@@ -71,15 +71,37 @@ PreferredSizeWidget buildAppBar(
         final iconData = resolvedIconName != null
             ? IconRegistry.get(resolvedIconName)
             : null;
-        final action = a['action'] as Map<String, dynamic>?;
-        actionWidgets.add(
-          IconButton(
-            icon: Icon(iconData ?? Icons.more_vert),
-            onPressed: action != null
-                ? () => interpreter.executeAction(action, context)
-                : null,
-          ),
+        final rawLabel = a['label']?.toString();
+        final label = rawLabel == null
+            ? null
+            : interpreter.resolveTemplate(rawLabel);
+        final rawColor = a['color']?.toString();
+        final color = _parseColor(
+          rawColor != null ? interpreter.resolveTemplate(rawColor) : null,
         );
+        final action = a['action'] as Map<String, dynamic>?;
+        final onPressed = action != null
+            ? () => interpreter.executeAction(action, context)
+            : null;
+        if (label != null && label.isNotEmpty) {
+          final text = Text(label, style: TextStyle(color: color));
+          actionWidgets.add(
+            iconData == null
+                ? TextButton(onPressed: onPressed, child: text)
+                : TextButton.icon(
+                    onPressed: onPressed,
+                    icon: Icon(iconData, color: color),
+                    label: text,
+                  ),
+          );
+        } else {
+          actionWidgets.add(
+            IconButton(
+              icon: Icon(iconData ?? Icons.more_vert, color: color),
+              onPressed: onPressed,
+            ),
+          );
+        }
       }
     }
   }

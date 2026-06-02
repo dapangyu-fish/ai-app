@@ -43,6 +43,8 @@ class JsonPositionedWidget extends JsonBaseWidget {
       top: top == null ? null : top - adjustTop - adjustToolbar,
       right: _resolveDouble(interpreter, json['right']),
       bottom: _resolveDouble(interpreter, json['bottom']),
+      width: _resolveDouble(interpreter, json['width']),
+      height: _resolveDouble(interpreter, json['height']),
       child: child,
     );
   }
@@ -64,7 +66,7 @@ class JsonPositionedWidget extends JsonBaseWidget {
   double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
-    final resolved = interpreter.resolveExpression(value);
+    final resolved = interpreter.evaluateExpression(value);
     if (resolved is num) return resolved.toDouble();
     return double.tryParse(resolved?.toString() ?? '');
   }

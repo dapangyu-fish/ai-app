@@ -3,7 +3,7 @@
   "appid": "21502662-0338-57b2-ad5f-1e976f1d3317",
   "meta": {
     "name": "gsy_flutter_demo/053-sliver-tab-demo-page3",
-    "version": "0.1.1",
+    "version": "0.1.4",
     "type": "app",
     "displayName": {
       "zh": "多列表+顶部Tab效果展示3",
@@ -111,45 +111,6 @@
                         "child": {
                           "type": "container",
                           "layout": "column",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "name": "map",
-                              "size": {
-                                "max": [
-                                  18,
-                                  {
-                                    "-": [
-                                      30,
-                                      {
-                                        "min": [
-                                          30,
-                                          {
-                                            "/": [
-                                              {
-                                                "var": "global.scrollOffset"
-                                              },
-                                              2
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              "color": "#FFFFFF"
-                            },
-                            {
-                              "type": "text",
-                              "value": "Tab0",
-                              "style": {
-                                "fontSize": 14,
-                                "color": "#FFFFFF",
-                                "textAlign": "center"
-                              }
-                            }
-                          ],
                           "height": 56,
                           "mainAxisAlignment": "center",
                           "crossAxisAlignment": "center",
@@ -158,14 +119,7 @@
                             "args": {
                               "i": 0
                             }
-                          }
-                        }
-                      },
-                      {
-                        "type": "expanded",
-                        "child": {
-                          "type": "container",
-                          "layout": "column",
+                          },
                           "children": [
                             {
                               "type": "icon",
@@ -193,18 +147,133 @@
                                   }
                                 ]
                               },
-                              "color": "#FFFFFF"
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  0
+                                ]
+                              }
                             },
                             {
-                              "type": "text",
-                              "value": "Tab1",
-                              "style": {
-                                "fontSize": 14,
-                                "color": "#FFFFFF",
-                                "textAlign": "center"
+                              "type": "icon",
+                              "name": "map",
+                              "size": {
+                                "max": [
+                                  18,
+                                  {
+                                    "-": [
+                                      30,
+                                      {
+                                        "min": [
+                                          30,
+                                          {
+                                            "/": [
+                                              {
+                                                "var": "global.scrollOffset"
+                                              },
+                                              2
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              "color": "#64FFFFFF",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  0
+                                ]
                               }
+                            },
+                            {
+                              "type": "expanded",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "mainAxisAlignment": "center",
+                                "crossAxisAlignment": "center",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Tab0",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#18FFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "==": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        0
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "Tab0",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#64FFFFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "!=": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        0
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  0
+                                ]
+                              },
+                              "children": []
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#00000000",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  0
+                                ]
+                              },
+                              "children": []
                             }
-                          ],
+                          ]
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "layout": "column",
                           "height": 56,
                           "mainAxisAlignment": "center",
                           "crossAxisAlignment": "center",
@@ -213,14 +282,7 @@
                             "args": {
                               "i": 1
                             }
-                          }
-                        }
-                      },
-                      {
-                        "type": "expanded",
-                        "child": {
-                          "type": "container",
-                          "layout": "column",
+                          },
                           "children": [
                             {
                               "type": "icon",
@@ -248,18 +310,133 @@
                                   }
                                 ]
                               },
-                              "color": "#FFFFFF"
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  1
+                                ]
+                              }
                             },
                             {
-                              "type": "text",
-                              "value": "Tab2",
-                              "style": {
-                                "fontSize": 14,
-                                "color": "#FFFFFF",
-                                "textAlign": "center"
+                              "type": "icon",
+                              "name": "map",
+                              "size": {
+                                "max": [
+                                  18,
+                                  {
+                                    "-": [
+                                      30,
+                                      {
+                                        "min": [
+                                          30,
+                                          {
+                                            "/": [
+                                              {
+                                                "var": "global.scrollOffset"
+                                              },
+                                              2
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              "color": "#64FFFFFF",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  1
+                                ]
                               }
+                            },
+                            {
+                              "type": "expanded",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "mainAxisAlignment": "center",
+                                "crossAxisAlignment": "center",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Tab1",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#18FFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "==": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        1
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "Tab1",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#64FFFFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "!=": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        1
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  1
+                                ]
+                              },
+                              "children": []
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#00000000",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  1
+                                ]
+                              },
+                              "children": []
                             }
-                          ],
+                          ]
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "layout": "column",
                           "height": 56,
                           "mainAxisAlignment": "center",
                           "crossAxisAlignment": "center",
@@ -268,14 +445,7 @@
                             "args": {
                               "i": 2
                             }
-                          }
-                        }
-                      },
-                      {
-                        "type": "expanded",
-                        "child": {
-                          "type": "container",
-                          "layout": "column",
+                          },
                           "children": [
                             {
                               "type": "icon",
@@ -303,18 +473,133 @@
                                   }
                                 ]
                               },
-                              "color": "#FFFFFF"
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  2
+                                ]
+                              }
                             },
                             {
-                              "type": "text",
-                              "value": "Tab3",
-                              "style": {
-                                "fontSize": 14,
-                                "color": "#FFFFFF",
-                                "textAlign": "center"
+                              "type": "icon",
+                              "name": "map",
+                              "size": {
+                                "max": [
+                                  18,
+                                  {
+                                    "-": [
+                                      30,
+                                      {
+                                        "min": [
+                                          30,
+                                          {
+                                            "/": [
+                                              {
+                                                "var": "global.scrollOffset"
+                                              },
+                                              2
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              "color": "#64FFFFFF",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  2
+                                ]
                               }
+                            },
+                            {
+                              "type": "expanded",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "mainAxisAlignment": "center",
+                                "crossAxisAlignment": "center",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Tab2",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#18FFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "==": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        2
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "Tab2",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#64FFFFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "!=": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        2
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  2
+                                ]
+                              },
+                              "children": []
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#00000000",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  2
+                                ]
+                              },
+                              "children": []
                             }
-                          ],
+                          ]
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "layout": "column",
                           "height": 56,
                           "mainAxisAlignment": "center",
                           "crossAxisAlignment": "center",
@@ -323,7 +608,154 @@
                             "args": {
                               "i": 3
                             }
-                          }
+                          },
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "map",
+                              "size": {
+                                "max": [
+                                  18,
+                                  {
+                                    "-": [
+                                      30,
+                                      {
+                                        "min": [
+                                          30,
+                                          {
+                                            "/": [
+                                              {
+                                                "var": "global.scrollOffset"
+                                              },
+                                              2
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  3
+                                ]
+                              }
+                            },
+                            {
+                              "type": "icon",
+                              "name": "map",
+                              "size": {
+                                "max": [
+                                  18,
+                                  {
+                                    "-": [
+                                      30,
+                                      {
+                                        "min": [
+                                          30,
+                                          {
+                                            "/": [
+                                              {
+                                                "var": "global.scrollOffset"
+                                              },
+                                              2
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              "color": "#64FFFFFF",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  3
+                                ]
+                              }
+                            },
+                            {
+                              "type": "expanded",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "mainAxisAlignment": "center",
+                                "crossAxisAlignment": "center",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Tab3",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#18FFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "==": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        3
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "Tab3",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "color": "#64FFFFFF",
+                                      "textAlign": "center"
+                                    },
+                                    "visible": {
+                                      "!=": [
+                                        {
+                                          "var": "global.activeTab"
+                                        },
+                                        3
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#18FFFF",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  3
+                                ]
+                              },
+                              "children": []
+                            },
+                            {
+                              "type": "container",
+                              "height": 2,
+                              "color": "#00000000",
+                              "visible": {
+                                "!=": [
+                                  {
+                                    "var": "global.activeTab"
+                                  },
+                                  3
+                                ]
+                              },
+                              "children": []
+                            }
+                          ]
                         }
                       }
                     ],

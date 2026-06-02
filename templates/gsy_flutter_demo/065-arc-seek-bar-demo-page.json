@@ -3,13 +3,13 @@
   "appid": "77f85ecd-350a-5b19-ae55-6f999730eaae",
   "meta": {
     "name": "gsy_flutter_demo/065-arc-seek-bar-demo-page",
-    "version": "0.1.1",
+    "version": "0.1.3",
     "type": "app",
     "displayName": {
       "zh": "圆弧形的 SeekBar（仅APP）",
       "en": "Arc SeekBar(仅APP)"
     },
-    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：圆弧形的 SeekBar（仅APP）",
+    "description": "ArcSeekBarDemoPage：圆弧形的 SeekBar",
     "author": "fish",
     "upstream": {
       "repository": "https://github.com/CarGuo/gsy_flutter_demo",
@@ -18,20 +18,160 @@
       "deferredAlias": "arc_seek_bar_demo_page",
       "widgetClass": "ArcSeekBarDemoPage",
       "category": "animation",
-      "routeIndex": 65
+      "routeIndex": 65,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-formula-canvas-v1"
     }
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "upstreamTitle": "圆弧形的 SeekBar（仅APP）",
-      "upstreamSource": "lib/widget/animation/arc_seek_bar_demo_page.dart",
-      "upstreamWidget": "ArcSeekBarDemoPage",
+      "progress": 0,
       "portStatus": "ported_json",
-      "portVersion": "json-dsl-primitives-v3",
-      "progress": 0.45
+      "portVersion": "json-dsl-formula-canvas-v1",
+      "arcAngle": 0,
+      "arcAngle360": 0,
+      "arcDiff": 0
     },
-    "functions": {}
+    "functions": {
+      "updateProgress": {
+        "params": [],
+        "logic": [
+          {
+            "expression": {
+              "*": [
+                {
+                  "/": [
+                    {
+                      "atan2": [
+                        {
+                          "-": [
+                            {
+                              "var": "event.localY"
+                            },
+                            150
+                          ]
+                        },
+                        {
+                          "-": [
+                            {
+                              "var": "event.localX"
+                            },
+                            150
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "pi": []
+                    }
+                  ]
+                },
+                180
+              ]
+            },
+            "assign": "global.arcAngle"
+          },
+          {
+            "expression": {
+              "if": [
+                {
+                  "<": [
+                    {
+                      "var": "global.arcAngle"
+                    },
+                    0
+                  ]
+                },
+                {
+                  "+": [
+                    {
+                      "var": "global.arcAngle"
+                    },
+                    360
+                  ]
+                },
+                {
+                  "var": "global.arcAngle"
+                }
+              ]
+            },
+            "assign": "global.arcAngle360"
+          },
+          {
+            "expression": {
+              "if": [
+                {
+                  "<": [
+                    {
+                      "-": [
+                        {
+                          "var": "global.arcAngle360"
+                        },
+                        90
+                      ]
+                    },
+                    0
+                  ]
+                },
+                {
+                  "%": [
+                    {
+                      "+": [
+                        {
+                          "-": [
+                            {
+                              "var": "global.arcAngle360"
+                            },
+                            90
+                          ]
+                        },
+                        360
+                      ]
+                    },
+                    360
+                  ]
+                },
+                {
+                  "-": [
+                    {
+                      "var": "global.arcAngle360"
+                    },
+                    90
+                  ]
+                }
+              ]
+            },
+            "assign": "global.arcDiff"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.progress",
+              "value": {
+                "clamp": [
+                  {
+                    "/": [
+                      {
+                        "-": [
+                          {
+                            "var": "global.arcDiff"
+                          },
+                          60
+                        ]
+                      },
+                      240
+                    ]
+                  },
+                  0,
+                  1
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
   },
   "steps": [],
   "ui": {
@@ -39,87 +179,595 @@
       {
         "id": "home",
         "title": "ArcSeekBarDemoPage",
-        "layout": "column",
-        "backgroundColor": "#FFFFFF",
+        "layout": "stack",
         "children": [
           {
-            "type": "expanded",
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
             "child": {
-              "type": "container",
-              "layout": "column",
-              "children": [
-                {
-                  "type": "container",
-                  "layout": "stack",
-                  "children": [
-                    {
-                      "type": "container",
-                      "layout": "column",
-                      "children": [],
-                      "width": 260,
-                      "height": 260,
-                      "shape": "circle",
-                      "border": {
-                        "color": "#E0E0E0",
-                        "width": 40
-                      }
-                    },
-                    {
-                      "type": "transform",
-                      "rotateZ": -120,
-                      "child": {
-                        "type": "container",
-                        "layout": "column",
-                        "children": [],
-                        "width": 220,
-                        "height": 220,
-                        "shape": "circle",
-                        "border": {
-                          "color": "#448AFF",
-                          "width": 24
-                        }
-                      }
-                    },
-                    {
-                      "type": "container",
-                      "layout": "column",
-                      "children": [
-                        {
-                          "type": "text",
-                          "value": "{{ global.progress }}",
-                          "style": {
-                            "fontSize": 28,
-                            "color": "#222222",
-                            "fontWeight": "bold",
-                            "textAlign": "center"
-                          }
-                        }
-                      ],
-                      "width": 140,
-                      "height": 140,
-                      "shape": "circle",
-                      "color": "#FFFFFF",
-                      "alignment": "center"
-                    }
-                  ],
+              "type": "center",
+              "child": {
+                "type": "gesture_detector",
+                "onPanStart": {
+                  "call": "@global.updateProgress",
+                  "args": {}
+                },
+                "onPanUpdate": {
+                  "call": "@global.updateProgress",
+                  "args": {}
+                },
+                "child": {
+                  "type": "animated_canvas",
                   "width": 300,
                   "height": 300,
-                  "alignment": "center"
-                },
-                {
-                  "type": "slider",
-                  "bind": "global.progress",
-                  "min": 0,
-                  "max": 1,
-                  "divisions": 100,
-                  "color": "#448AFF"
+                  "durationMs": 1000,
+                  "variables": {
+                    "p": {
+                      "var": "global.progress"
+                    }
+                  },
+                  "layers": [
+                    {
+                      "kind": "segments",
+                      "count": 96,
+                      "strokeCap": "round",
+                      "locals": {
+                        "cx": {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        "cy": {
+                          "/": [
+                            "h",
+                            2
+                          ]
+                        },
+                        "arcWidth": 40,
+                        "borderWidth": 2,
+                        "fix": {
+                          "+": [
+                            {
+                              "/": [
+                                "arcWidth",
+                                2
+                              ]
+                            },
+                            "borderWidth"
+                          ]
+                        },
+                        "radius": {
+                          "/": [
+                            {
+                              "-": [
+                                "min",
+                                {
+                                  "*": [
+                                    "fix",
+                                    2
+                                  ]
+                                }
+                              ]
+                            },
+                            2
+                          ]
+                        },
+                        "openDeg": 120,
+                        "rotateDeg": 90,
+                        "sweepDeg": {
+                          "-": [
+                            360,
+                            "openDeg"
+                          ]
+                        },
+                        "startDeg": {
+                          "+": [
+                            {
+                              "/": [
+                                "openDeg",
+                                2
+                              ]
+                            },
+                            "rotateDeg"
+                          ]
+                        },
+                        "f2": {
+                          "min": [
+                            1,
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    "i",
+                                    1
+                                  ]
+                                },
+                                {
+                                  "-": [
+                                    "n",
+                                    1
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "deg1": {
+                          "+": [
+                            "startDeg",
+                            {
+                              "*": [
+                                "sweepDeg",
+                                "f"
+                              ]
+                            }
+                          ]
+                        },
+                        "deg2": {
+                          "+": [
+                            "startDeg",
+                            {
+                              "*": [
+                                "sweepDeg",
+                                "f2"
+                              ]
+                            }
+                          ]
+                        },
+                        "a1": {
+                          "*": [
+                            {
+                              "/": [
+                                "deg1",
+                                180
+                              ]
+                            },
+                            "pi"
+                          ]
+                        },
+                        "a2": {
+                          "*": [
+                            {
+                              "/": [
+                                "deg2",
+                                180
+                              ]
+                            },
+                            "pi"
+                          ]
+                        }
+                      },
+                      "x1": {
+                        "+": [
+                          "cx",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "cos": [
+                                  "a1"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "y1": {
+                        "+": [
+                          "cy",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "sin": [
+                                  "a1"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "x2": {
+                        "+": [
+                          "cx",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "cos": [
+                                  "a2"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "y2": {
+                        "+": [
+                          "cy",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "sin": [
+                                  "a2"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "color": "#000000",
+                      "alpha": 0.3,
+                      "strokeWidth": 44,
+                      "blurRadius": 2
+                    },
+                    {
+                      "kind": "segments",
+                      "count": 96,
+                      "strokeCap": "round",
+                      "locals": {
+                        "cx": {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        "cy": {
+                          "/": [
+                            "h",
+                            2
+                          ]
+                        },
+                        "arcWidth": 40,
+                        "borderWidth": 2,
+                        "fix": {
+                          "+": [
+                            {
+                              "/": [
+                                "arcWidth",
+                                2
+                              ]
+                            },
+                            "borderWidth"
+                          ]
+                        },
+                        "radius": {
+                          "/": [
+                            {
+                              "-": [
+                                "min",
+                                {
+                                  "*": [
+                                    "fix",
+                                    2
+                                  ]
+                                }
+                              ]
+                            },
+                            2
+                          ]
+                        },
+                        "openDeg": 120,
+                        "rotateDeg": 90,
+                        "sweepDeg": {
+                          "-": [
+                            360,
+                            "openDeg"
+                          ]
+                        },
+                        "startDeg": {
+                          "+": [
+                            {
+                              "/": [
+                                "openDeg",
+                                2
+                              ]
+                            },
+                            "rotateDeg"
+                          ]
+                        },
+                        "f2": {
+                          "min": [
+                            1,
+                            {
+                              "/": [
+                                {
+                                  "+": [
+                                    "i",
+                                    1
+                                  ]
+                                },
+                                {
+                                  "-": [
+                                    "n",
+                                    1
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "deg1": {
+                          "+": [
+                            "startDeg",
+                            {
+                              "*": [
+                                "sweepDeg",
+                                "f"
+                              ]
+                            }
+                          ]
+                        },
+                        "deg2": {
+                          "+": [
+                            "startDeg",
+                            {
+                              "*": [
+                                "sweepDeg",
+                                "f2"
+                              ]
+                            }
+                          ]
+                        },
+                        "a1": {
+                          "*": [
+                            {
+                              "/": [
+                                "deg1",
+                                180
+                              ]
+                            },
+                            "pi"
+                          ]
+                        },
+                        "a2": {
+                          "*": [
+                            {
+                              "/": [
+                                "deg2",
+                                180
+                              ]
+                            },
+                            "pi"
+                          ]
+                        }
+                      },
+                      "x1": {
+                        "+": [
+                          "cx",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "cos": [
+                                  "a1"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "y1": {
+                        "+": [
+                          "cy",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "sin": [
+                                  "a1"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "x2": {
+                        "+": [
+                          "cx",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "cos": [
+                                  "a2"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "y2": {
+                        "+": [
+                          "cy",
+                          {
+                            "*": [
+                              "radius",
+                              {
+                                "sin": [
+                                  "a2"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "hue": {
+                        "lerp": [
+                          220,
+                          45,
+                          "f"
+                        ]
+                      },
+                      "saturation": 0.9,
+                      "valueBrightness": 1,
+                      "strokeWidth": 40
+                    },
+                    {
+                      "kind": "circle",
+                      "x": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              128,
+                              {
+                                "cos": [
+                                  {
+                                    "*": [
+                                      {
+                                        "/": [
+                                          {
+                                            "+": [
+                                              150,
+                                              {
+                                                "*": [
+                                                  240,
+                                                  "p"
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          180
+                                        ]
+                                      },
+                                      "pi"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "y": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              128,
+                              {
+                                "sin": [
+                                  {
+                                    "*": [
+                                      {
+                                        "/": [
+                                          {
+                                            "+": [
+                                              150,
+                                              {
+                                                "*": [
+                                                  240,
+                                                  "p"
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          180
+                                        ]
+                                      },
+                                      "pi"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "radius": 18,
+                      "color": "#000000",
+                      "alpha": 0.3,
+                      "blurRadius": 2
+                    },
+                    {
+                      "kind": "circle",
+                      "x": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              128,
+                              {
+                                "cos": [
+                                  {
+                                    "*": [
+                                      {
+                                        "/": [
+                                          {
+                                            "+": [
+                                              150,
+                                              {
+                                                "*": [
+                                                  240,
+                                                  "p"
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          180
+                                        ]
+                                      },
+                                      "pi"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "y": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              128,
+                              {
+                                "sin": [
+                                  {
+                                    "*": [
+                                      {
+                                        "/": [
+                                          {
+                                            "+": [
+                                              150,
+                                              {
+                                                "*": [
+                                                  240,
+                                                  "p"
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          180
+                                        ]
+                                      },
+                                      "pi"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "radius": 15,
+                      "color": "#FFFFFF"
+                    }
+                  ]
                 }
-              ],
-              "mainAxisAlignment": "center",
-              "crossAxisAlignment": "center"
+              }
             }
           }
-        ]
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
       }
     ]
   }

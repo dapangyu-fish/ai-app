@@ -9,6 +9,8 @@ class IconRegistry {
     'insights': Icons.insights,
     'auto_awesome': Icons.auto_awesome,
     'auto_awesome_mosaic': Icons.auto_awesome_mosaic,
+    'layers': Icons.layers,
+    'grain': Icons.grain,
     'back': Icons.arrow_back,
     'forward': Icons.arrow_forward,
     'menu': Icons.menu,
@@ -32,6 +34,7 @@ class IconRegistry {
     'download': Icons.download,
     'refresh': Icons.refresh,
     'sync': Icons.sync,
+    'swap_calls': Icons.swap_calls,
     'undo': Icons.undo,
     'redo': Icons.redo,
 
@@ -94,6 +97,10 @@ class IconRegistry {
     'lock': Icons.lock,
     'unlock': Icons.lock_open,
     'key': Icons.vpn_key,
+    'radar': Icons.radar,
+    'filter_drama': Icons.filter_drama,
+    'grid_3x3': Icons.grid_3x3,
+    'blur_on': Icons.blur_on,
 
     // 方向
     'up': Icons.arrow_upward,

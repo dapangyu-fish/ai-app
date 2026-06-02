@@ -96,6 +96,9 @@ class JsonContainerWidget extends JsonBaseWidget {
         mainAxisSize: MainAxisSize.min,
         children: childWidgets,
       );
+      if (json['scrollDirection'] == 'vertical') {
+        layoutWidget = SingleChildScrollView(child: layoutWidget);
+      }
     }
 
     final shape = json['shape']?.toString();
@@ -250,7 +253,7 @@ class JsonContainerWidget extends JsonBaseWidget {
   double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
-    final resolved = interpreter.resolveExpression(value);
+    final resolved = interpreter.evaluateExpression(value);
     if (resolved is num) return resolved.toDouble();
     return double.tryParse(resolved?.toString() ?? '');
   }

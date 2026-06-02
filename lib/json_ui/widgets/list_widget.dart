@@ -2,6 +2,7 @@
 // 支持：source(数据源)、item_template(列表项模板)、
 //       onRefresh(下拉刷新)、onLoadMore(上拉加载更多)、
 //       emptyText(空状态文案)、shrinkWrap(嵌入外层滚动页)
+//       expand:false 时不自动包 Expanded，适合外层已有手势/布局包装器。
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
@@ -48,6 +49,11 @@ class JsonListWidget extends JsonBaseWidget {
     // shrinkWrap: true 时 list 不再占满剩余高度，适合放在可滚动详情页 /
     // 仪表盘页里。长列表、聊天页仍应保持默认 Expanded(ListView)。
     final shrinkWrap = json['shrinkWrap'] == true;
+    final expand = json['expand'] != false;
+    // 某些复杂 item 内部会嵌入 shrinkWrap grid / list。Flutter 不允许
+    // IntrinsicHeight 测量 viewport，这类场景由 JSON 显式关闭。
+    final intrinsicHeight = json['intrinsicHeight'] != false;
+    final physics = _parsePhysics(json['physics']?.toString());
     // 跨屏导航时保留滚动位置：JSON 里给 list 设 "key": "唯一名"，
     // 框架包成 PageStorageKey，Flutter 的 PageStorage 自动存/取 scroll offset
     final keyStr = json['key']?.toString();
@@ -70,10 +76,12 @@ class JsonListWidget extends JsonBaseWidget {
             onRefresh: () => interpreter.executeAction(onRefresh, context),
             child: emptyList,
           );
-          return shrinkWrap ? refreshWidget : Expanded(child: refreshWidget);
+          return shrinkWrap || !expand
+              ? refreshWidget
+              : Expanded(child: refreshWidget);
         }
 
-        return shrinkWrap ? emptyList : Expanded(child: emptyList);
+        return shrinkWrap || !expand ? emptyList : Expanded(child: emptyList);
       }
 
       final emptyContent = Center(
@@ -100,7 +108,7 @@ class JsonListWidget extends JsonBaseWidget {
           ],
         ),
       );
-      Widget emptyWidget = shrinkWrap
+      Widget emptyWidget = shrinkWrap || !expand
           ? SizedBox(height: 160, child: emptyContent)
           : Expanded(child: emptyContent);
 
@@ -152,7 +160,9 @@ class JsonListWidget extends JsonBaseWidget {
           onRefresh: () => interpreter.executeAction(onRefresh, context),
           child: refreshChild,
         );
-        return shrinkWrap ? refreshWidget : Expanded(child: refreshWidget);
+        return shrinkWrap || !expand
+            ? refreshWidget
+            : Expanded(child: refreshWidget);
       }
 
       return emptyWidget;
@@ -172,7 +182,9 @@ class JsonListWidget extends JsonBaseWidget {
         loopItem: items[index],
         loopIndex: index,
       );
-      final wrapped = IntrinsicHeight(child: itemWidget);
+      final wrapped = intrinsicHeight
+          ? IntrinsicHeight(child: itemWidget)
+          : itemWidget;
       if (controllerId != null && controllerId.isNotEmpty) {
         return KeyedSubtree(
           key: interpreter.scrollTargetKey(controllerId, index),
@@ -194,6 +206,7 @@ class JsonListWidget extends JsonBaseWidget {
       interpreter: interpreter,
       onScroll: onScroll,
       onScrollNotification: onScrollNotification,
+      physics: physics,
     );
 
     // 下拉刷新包裹
@@ -205,7 +218,7 @@ class JsonListWidget extends JsonBaseWidget {
       );
     }
 
-    return shrinkWrap ? listView : Expanded(child: listView);
+    return shrinkWrap || !expand ? listView : Expanded(child: listView);
   }
 }
 
@@ -276,6 +289,7 @@ class _AutoScrollListView extends StatefulWidget {
   final JsonInterpreter interpreter;
   final Map<String, dynamic>? onScroll;
   final Map<String, dynamic>? onScrollNotification;
+  final ScrollPhysics? physics;
 
   const _AutoScrollListView({
     this.pageKey,
@@ -288,6 +302,7 @@ class _AutoScrollListView extends StatefulWidget {
     required this.interpreter,
     required this.onScroll,
     required this.onScrollNotification,
+    required this.physics,
   });
 
   @override
@@ -388,9 +403,7 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
         key: widget.pageKey,
         controller: _controller,
         shrinkWrap: widget.shrinkWrap,
-        physics: widget.shrinkWrap
-            ? const NeverScrollableScrollPhysics()
-            : null,
+        physics: _effectivePhysics(widget.shrinkWrap, widget.physics),
         itemCount: widget.itemCount,
         itemBuilder: widget.itemBuilder,
       );
@@ -399,9 +412,7 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
         key: widget.pageKey,
         controller: _controller,
         shrinkWrap: widget.shrinkWrap,
-        physics: widget.shrinkWrap
-            ? const NeverScrollableScrollPhysics()
-            : null,
+        physics: _effectivePhysics(widget.shrinkWrap, widget.physics),
         itemCount: widget.itemCount,
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: widget.itemBuilder,
@@ -415,6 +426,21 @@ class _AutoScrollListViewState extends State<_AutoScrollListView> {
     }
     return list;
   }
+}
+
+ScrollPhysics? _effectivePhysics(bool shrinkWrap, ScrollPhysics? physics) {
+  if (shrinkWrap) return const NeverScrollableScrollPhysics();
+  return physics;
+}
+
+ScrollPhysics? _parsePhysics(String? value) {
+  return switch (value) {
+    'never' => const NeverScrollableScrollPhysics(),
+    'clamping' => const ClampingScrollPhysics(),
+    'bouncing' => const BouncingScrollPhysics(),
+    'always' => const AlwaysScrollableScrollPhysics(),
+    _ => null,
+  };
 }
 
 class _LoadMoreTrigger extends StatefulWidget {

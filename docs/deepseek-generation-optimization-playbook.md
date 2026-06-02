@@ -132,6 +132,55 @@ controls must not be clipped horizontally.
    - concrete fix applied
    - next case to test
 
+## Three-Case Regression Set
+
+After any prompt architecture, validator, repair, template, or runtime change
+that may affect generation quality, run three fresh requests that are not
+already represented by the bundled templates. The goal is to catch copying,
+template overfitting, non-scrollable long pages, and weak first-screen density.
+
+Use production-equivalent generation unless explicitly A/B testing a strategy.
+
+1. **Native utility, not notes/CRM/list-only**
+
+   Request:
+
+   ```text
+   生成一个露营装备打包 APP：按行程自动分组装备、支持勾选已打包、按重量/重要性筛选、显示总重量和遗漏风险、可新增/编辑装备和行程。手机原生质感，首屏必须直接看到摘要、筛选和真实装备列表，不能只是空状态。
+   ```
+
+   Watch for: copied notes/CRM structure, emoji icons, summary-only screen,
+   list embedded in a non-scrollable wrapper, missing add/edit/delete loop.
+
+2. **Media/device/control app**
+
+   Request:
+
+   ```text
+   生成一个家庭植物养护控制台：每盆植物有光照、湿度、浇水计划和健康状态；支持切换房间、调节提醒频率、记录浇水、查看趋势和待办。首屏要像原生控制面板，控件要真实可操作。
+   ```
+
+   Watch for: dashboard with no controls, clipped sliders/chips, dynamic labels
+   rendering JsonLogic maps, one-note green palette, details below the fold but
+   unreachable.
+
+3. **Non-template game**
+
+   Request:
+
+   ```text
+   生成一个竖屏潜水收集小游戏：玩家在海底左右移动和上浮下潜，收集珍珠，躲避水母和暗流，有生命、分数、暂停、重开、难度随时间提高；玩家和道具必须像游戏资产，不能用 emoji。
+   ```
+
+   Watch for: static scene without gameplay loop, controls not connected to
+   entity movement, emoji/text placeholders, one-screen arena when progression
+   is requested, no collision/life/restart loop.
+
+Record each run in `docs/ai-generation-quality-lab.md` with screenshots at
+`402x874` and `360x780`. If all three pass validation but one still looks weak,
+classify whether the durable fix belongs in prompt docs, examples, validator,
+repair, JSON builder helpers, or runtime primitives.
+
 ## Current Prompt Architecture
 
 The default backend mode is indexed prompt loading:

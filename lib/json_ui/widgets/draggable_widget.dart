@@ -36,8 +36,9 @@ class JsonDraggableWidget extends JsonBaseWidget {
     // Draggable<T extends Object> 不接受 dynamic / null，给个空字符串兜底
     final Object data = interpreter.resolveExpression(json['data']) ?? '';
 
-    final onStart = resolveActionAtBuildTime(json['onDragStarted'], interpreter)
-        as Map<String, dynamic>?;
+    final onStart =
+        resolveActionAtBuildTime(json['onDragStarted'], interpreter)
+            as Map<String, dynamic>?;
     final onComplete =
         resolveActionAtBuildTime(json['onDragCompleted'], interpreter)
             as Map<String, dynamic>?;
@@ -65,7 +66,13 @@ class JsonDraggableWidget extends JsonBaseWidget {
           ? () => interpreter.executeAction(onComplete, context)
           : null,
       onDraggableCanceled: onCancel != null
-          ? (_, __) => interpreter.executeAction(onCancel, context)
+          ? (velocity, offset) =>
+                interpreter.executeActionWithEvent(onCancel, context, {
+                  'velocityX': velocity.pixelsPerSecond.dx,
+                  'velocityY': velocity.pixelsPerSecond.dy,
+                  'offsetX': offset.dx,
+                  'offsetY': offset.dy,
+                })
           : null,
       child: child,
     );
