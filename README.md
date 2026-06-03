@@ -80,13 +80,14 @@ assets are checked first and regenerated when needed:
 ```bash
 cd deploy/production
 ./install_ctl.sh
-myapp-ctl secret set ai-providers DEEPSEEK_ANTHROPIC_AUTH_TOKEN
+myapp-ctl setup --host <public-ip-or-domain>
 myapp-ctl deploy --pull
 ```
 
 For a development/test host that builds images from this checkout:
 
 ```bash
+myapp-ctl setup --host <public-ip-or-domain>
 myapp-ctl deploy --build
 ```
 

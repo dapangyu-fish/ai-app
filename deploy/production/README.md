@@ -42,7 +42,7 @@ cd /opt/myapp/current-agent-control-plane
 export PUBLIC_HOST=77.237.233.229
 export MYAPP_IMAGE_TAG=agent-control-plane
 
-myapp-ctl secret init-stack --host "$PUBLIC_HOST"
+myapp-ctl setup --host "$PUBLIC_HOST"
 myapp-ctl status
 myapp-ctl deploy --plan
 myapp-ctl deploy --build
@@ -59,15 +59,25 @@ This writes `/var/lib/myapp/client-environment.json`, generates
 `/var/lib/myapp/client-environment.png` when `qrencode` is installed, and prints
 the copyable JSON. The payload contains URLs only, no secrets.
 
-AI provider and push services need real host-local secrets before they should be
-used:
+`myapp-ctl setup` generates local stack secrets, then interactively configures
+the required AI provider credentials. DeepSeek and MiniMax are built-in choices;
+custom Anthropic-compatible providers can be added without code changes.
+ByteDance ASR, APNs, FCM, and GeTui are optional channels. If you skip them, the
+core app and AI generation path still deploy; only speech recognition or push
+delivery is unavailable.
+
+You can also run setup separately at any time:
 
 ```bash
-myapp-ctl secret set ai-providers DEEPSEEK_ANTHROPIC_AUTH_TOKEN MINIMAX_ANTHROPIC_AUTH_TOKEN
-myapp-ctl secret set push APNS_KEY_ID APNS_TEAM_ID FCM_PROJECT_ID
+myapp-ctl setup --host "$PUBLIC_HOST"
+myapp-ctl setup --no-ai       # only revisit optional ASR/push config
+myapp-ctl setup --no-asr      # skip optional speech recognition config
+myapp-ctl setup --no-asr --no-push  # only revisit AI provider config
 ```
 
 Secret values are stored under `/etc/myapp/secrets.d/*.env` with mode `600`.
+Pasted APNs `.p8` and FCM service-account JSON are stored under
+`/etc/myapp/secrets.d/files/` and mounted read-only into backend containers.
 `myapp-ctl secret ls` prints only redacted digests.
 
 ## Deployment Commands
@@ -80,10 +90,11 @@ myapp-ctl uninstall --yes --purge
 ./deploy/production/install_ctl.sh
 ```
 
-Generate host-local random secrets:
+Run the first-run setup wizard. It generates local random secrets, asks for AI
+provider credentials, and optionally accepts APNs, FCM, and GeTui push config:
 
 ```bash
-myapp-ctl secret init-stack --host <public-ip-or-domain>
+myapp-ctl setup --host <public-ip-or-domain>
 ```
 
 One-command local-source deployment on a test host:
@@ -91,6 +102,10 @@ One-command local-source deployment on a test host:
 ```bash
 myapp-ctl deploy --build
 ```
+
+If AI provider config is missing, `deploy` starts the same setup wizard when run
+from an interactive terminal. In non-interactive shells it fails with a clear
+message instead of silently starting without an AI provider.
 
 One-command Docker Hub deployment on a clean host:
 

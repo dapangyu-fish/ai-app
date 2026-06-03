@@ -107,6 +107,8 @@ services:
       OPENIM_WEBHOOK_SECRET: "${OPENIM_WEBHOOK_SECRET:-}"
       FLASK_SECRET_KEY: "${FLASK_SECRET_KEY:-}"
       PORT: "5566"
+    volumes:
+      - /etc/myapp/secrets.d/files:/etc/myapp/secret-files:ro
     ports:
       - "${BACKEND_PORT:-5566}:5566"
     healthcheck:

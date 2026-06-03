@@ -35,16 +35,17 @@ myapp-ctl uninstall --yes --purge
 ./deploy/production/install_ctl.sh
 ```
 
-Generate host-local secrets that do not need human-provided values:
+Run the first-run setup wizard:
 
 ```bash
-myapp-ctl secret init-stack --host <public-ip-or-domain>
+myapp-ctl setup --host <public-ip-or-domain>
 ```
 
-Import or set human-provided production secrets into these groups:
+The wizard generates local stack secrets, then asks for human-provided
+production secrets:
 
 - `ai-providers.env`: `AI_PROVIDER_IDS`, `AI_DEFAULT_PROVIDER`,
-  `AI_DEFAULT_AGENT`, `DEEPSEEK_*`, `MINIMAX_*`.
+  `AI_DEFAULT_AGENT`, `DEEPSEEK_*`, `MINIMAX_*`, or custom provider keys.
 - `backend.env`: `BYTEDANCE_ASR_*`. Supabase/OpenIM URLs and keys are generated
   by `secret init-stack` for the local managed stack unless you intentionally
   override them.
@@ -52,13 +53,16 @@ Import or set human-provided production secrets into these groups:
   `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`, `FCM_SERVICE_ACCOUNT_PATH`,
   `FCM_PROJECT_ID`, `GETUI_*`.
 
-Install push credential files outside Git:
+AI provider config is required for the generation path. ByteDance ASR, APNs,
+FCM, and GeTui are optional; skip them on hosts that do not need speech
+recognition or push delivery. For APNs and FCM, paste the `.p8` private key or
+Firebase service-account JSON directly into the wizard. `myapp-ctl` stores
+those files under `/etc/myapp/secrets.d/files/` and writes the
+container-visible paths into `push.env`.
 
-```bash
-install -d -m 700 /etc/apns /etc/fcm
-install -m 600 AuthKey_<key-id>.p8 /etc/apns/AuthKey_<key-id>.p8
-install -m 600 service-account.json /etc/fcm/service-account.json
-```
+If you skip setup and run `myapp-ctl deploy --build` from an interactive fresh
+host, deploy launches the same wizard when AI provider config is missing. In
+non-interactive shells it fails and asks you to run `myapp-ctl setup`.
 
 Inspect configured keys without revealing values:
 

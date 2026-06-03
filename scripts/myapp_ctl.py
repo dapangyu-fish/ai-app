@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets as py_secrets
 import shutil
 import signal
@@ -80,6 +81,8 @@ COMPOSE_ENV_FILE_NAMES = [
     "config-center.env",
     "user-center.env",
 ]
+_SETUP_SECRET_FILE_CONTAINER_ROOT = "/etc/myapp/secret-files"
+_SETUP_SECRET_FILE_HOST_DIR = "files"
 
 
 def _load_json(path: Path, default: dict) -> dict:
@@ -701,6 +704,9 @@ def cmd_deploy(args) -> int:
         if docker_names:
             print("  docker containers: " + ", ".join(docker_names))
         return 0
+    rc = _ensure_human_config_for_deploy(args, names)
+    if rc != 0:
+        return rc
     if args.build:
         rc = _deploy_images(image_targets, action="build", dry_run=args.dry_run)
         if rc != 0:
@@ -719,6 +725,19 @@ def cmd_deploy(args) -> int:
     if rc != 0:
         return rc
     return _deploy_compose_services(names, dry_run=args.dry_run)
+
+
+def cmd_setup(args) -> int:
+    if args.no_ai and args.no_asr and args.no_push:
+        print("nothing to configure: --no-ai, --no-asr, and --no-push were all passed", file=sys.stderr)
+        return 2
+    return _run_setup_wizard(
+        host=args.host,
+        force=args.force,
+        include_ai=not args.no_ai,
+        include_asr=not args.no_asr,
+        include_push=not args.no_push,
+    )
 
 
 def cmd_restart(args) -> int:
@@ -806,6 +825,519 @@ def _write_env(path: Path, data: dict[str, str]) -> None:
     os.chmod(tmp, 0o600)
     tmp.replace(path)
     os.chmod(path, 0o600)
+
+
+def _setup_secret_host_root() -> Path:
+    return _secret_dir() / _SETUP_SECRET_FILE_HOST_DIR
+
+
+def _setup_secret_container_path(*parts: str) -> str:
+    safe_parts = [part.strip("/").replace("..", "") for part in parts if part]
+    return "/".join([_SETUP_SECRET_FILE_CONTAINER_ROOT.rstrip("/"), *safe_parts])
+
+
+def _write_secret_file(*, subdir: str, filename: str, content: str) -> str:
+    safe_name = Path(filename).name
+    if not safe_name:
+        raise ValueError("secret filename is empty")
+    host_dir = _setup_secret_host_root() / subdir
+    host_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(host_dir, 0o700)
+    host_path = host_dir / safe_name
+    body = content if content.endswith("\n") else content + "\n"
+    tmp = host_path.with_suffix(host_path.suffix + ".tmp")
+    tmp.write_text(body, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(host_path)
+    os.chmod(host_path, 0o600)
+    return _setup_secret_container_path(subdir, safe_name)
+
+
+def _truthy_env(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _prompt_line(prompt: str, *, default: str = "", required: bool = False, secret: bool = False) -> str:
+    suffix = ""
+    if default and secret:
+        suffix = " [keep existing]"
+    elif default:
+        suffix = f" [{default}]"
+    while True:
+        label = f"{prompt}{suffix}: "
+        if secret and sys.stdin.isatty():
+            value = getpass.getpass(label)
+        else:
+            value = input(label)
+        value = value.strip()
+        if value:
+            return value
+        if default:
+            return default
+        if not required:
+            return ""
+        print("required; please enter a value", file=sys.stderr)
+
+
+def _prompt_bool(prompt: str, *, default: bool = False) -> bool:
+    suffix = "Y/n" if default else "y/N"
+    while True:
+        value = input(f"{prompt} [{suffix}]: ").strip().lower()
+        if not value:
+            return default
+        if value in {"y", "yes", "1", "true"}:
+            return True
+        if value in {"n", "no", "0", "false"}:
+            return False
+        print("enter y or n", file=sys.stderr)
+
+
+def _prompt_multiline(prompt: str, *, default: str = "", required: bool = False) -> str:
+    print(prompt)
+    if default:
+        print("Paste new content and end with a single line 'EOF'. Press Enter on the first line to keep existing.")
+    elif required:
+        print("Paste content and end with a single line 'EOF'.")
+    else:
+        print("Paste content and end with a single line 'EOF'. Press Enter on the first line to skip.")
+    while True:
+        lines: list[str] = []
+        while True:
+            try:
+                line = input()
+            except EOFError:
+                line = "EOF"
+            if line == "EOF":
+                break
+            if not lines and line == "" and (default or not required):
+                return default
+            lines.append(line)
+        value = "\n".join(lines).strip()
+        if value:
+            return value
+        if default:
+            return default
+        if not required:
+            return ""
+        print("required; paste content and finish with EOF", file=sys.stderr)
+
+
+def _normalize_provider_id(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", value.strip().lower()).strip("-")
+    return normalized or "custom"
+
+
+def _provider_prefix(provider_id: str) -> str:
+    return "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_id)
+
+
+def _split_csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
+    ids = [_normalize_provider_id(item) for item in _split_csv(env.get("AI_PROVIDER_IDS", ""))]
+    seen = set()
+    out: list[str] = []
+    for provider_id in ids:
+        if provider_id not in seen:
+            out.append(provider_id)
+            seen.add(provider_id)
+    if out:
+        return out
+    for key, value in env.items():
+        if key.endswith("_ANTHROPIC_AUTH_TOKEN") and value:
+            out.append(_normalize_provider_id(key[: -len("_ANTHROPIC_AUTH_TOKEN")]))
+    return out
+
+
+def _ai_providers_configured() -> bool:
+    env = _parse_env(_secret_path("ai-providers"))
+    for provider_id in _ai_provider_ids_from_env(env):
+        prefix = _provider_prefix(provider_id)
+        if env.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN"):
+            return True
+    return False
+
+
+def _base_provider_env(
+    *,
+    prefix: str,
+    name: str,
+    description: str,
+    base_url: str,
+    token: str,
+    model: str,
+    effort: str = "max",
+    visible: str = "1",
+) -> dict[str, str]:
+    return {
+        f"{prefix}_PROVIDER_NAME": name,
+        f"{prefix}_PROVIDER_DESCRIPTION": description,
+        f"{prefix}_PROVIDER_VISIBLE": visible,
+        f"{prefix}_ANTHROPIC_BASE_URL": base_url,
+        f"{prefix}_ANTHROPIC_AUTH_TOKEN": token,
+        f"{prefix}_ANTHROPIC_MODEL": model,
+        f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL": model,
+        f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL": model,
+        f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL": model,
+        f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL": model,
+        f"{prefix}_CLAUDE_CODE_EFFORT_LEVEL": effort,
+    }
+
+
+def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = "deepseek"
+    prefix = _provider_prefix(provider_id)
+    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", "deepseek-v4-pro[1m]"))
+    base_url = _prompt_line(
+        f"{provider_id} Anthropic base URL",
+        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", "https://api.deepseek.com/anthropic"),
+    )
+    token = _prompt_line(
+        f"{provider_id} Anthropic auth token",
+        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+    data = _base_provider_env(
+        prefix=prefix,
+        name="DeepSeek V4 Pro",
+        description="DeepSeek Anthropic-compatible Claude Code provider",
+        base_url=base_url,
+        token=token,
+        model=model,
+    )
+    data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "20")
+    data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "100")
+    return provider_id, data
+
+
+def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = "minimax"
+    prefix = _provider_prefix(provider_id)
+    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", "MiniMax-M3"))
+    base_url = _prompt_line(
+        f"{provider_id} Anthropic base URL",
+        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", "https://api.minimaxi.com/anthropic"),
+    )
+    token = _prompt_line(
+        f"{provider_id} Anthropic auth token",
+        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+    data = _base_provider_env(
+        prefix=prefix,
+        name="MiniMax M3",
+        description="MiniMax Anthropic-compatible Claude Code provider",
+        base_url=base_url,
+        token=token,
+        model=model,
+    )
+    data.update(
+        {
+            f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "5"),
+            f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "20"),
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "MiniMax"),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", "https://api.minimaxi.com/v1"),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", model),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "512000"),
+        }
+    )
+    return provider_id, data
+
+
+def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = _normalize_provider_id(_prompt_line("custom provider id", required=True))
+    prefix = _provider_prefix(provider_id)
+    model = _prompt_line(f"{provider_id} ANTHROPIC_MODEL", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", ""), required=True)
+    base_url = _prompt_line(
+        f"{provider_id} ANTHROPIC_BASE_URL",
+        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", ""),
+        required=True,
+    )
+    token = _prompt_line(
+        f"{provider_id} ANTHROPIC_AUTH_TOKEN",
+        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+    data = _base_provider_env(
+        prefix=prefix,
+        name=_prompt_line(f"{provider_id} display name", default=existing.get(f"{prefix}_PROVIDER_NAME", provider_id)),
+        description=_prompt_line(
+            f"{provider_id} description",
+            default=existing.get(f"{prefix}_PROVIDER_DESCRIPTION", "Anthropic-compatible Claude Code provider"),
+        ),
+        base_url=base_url,
+        token=token,
+        model=model,
+        effort=_prompt_line(f"{provider_id} CLAUDE_CODE_EFFORT_LEVEL", default=existing.get(f"{prefix}_CLAUDE_CODE_EFFORT_LEVEL", "max")),
+    )
+    data[f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL"] = _prompt_line(
+        f"{provider_id} ANTHROPIC_DEFAULT_OPUS_MODEL",
+        default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL", model),
+        required=True,
+    )
+    data[f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL"] = _prompt_line(
+        f"{provider_id} ANTHROPIC_DEFAULT_SONNET_MODEL",
+        default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL", model),
+        required=True,
+    )
+    data[f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL"] = _prompt_line(
+        f"{provider_id} ANTHROPIC_DEFAULT_HAIKU_MODEL",
+        default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL", model),
+        required=True,
+    )
+    data[f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL"] = _prompt_line(
+        f"{provider_id} CLAUDE_CODE_SUBAGENT_MODEL",
+        default=existing.get(f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL", model),
+        required=True,
+    )
+    data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = _prompt_line(
+        f"{provider_id} worker max concurrency",
+        default=existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "3"),
+    )
+    data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = _prompt_line(
+        f"{provider_id} worker queue max",
+        default=existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "50"),
+    )
+    if _prompt_bool(f"Add Codex support for {provider_id}?", default=bool(existing.get(f"{prefix}_CODEX_MODEL"))):
+        data[f"{prefix}_CODEX_PROVIDER_NAME"] = _prompt_line(
+            f"{provider_id} CODEX provider name",
+            default=existing.get(f"{prefix}_CODEX_PROVIDER_NAME", provider_id),
+        )
+        data[f"{prefix}_CODEX_BASE_URL"] = _prompt_line(
+            f"{provider_id} CODEX base URL",
+            default=existing.get(f"{prefix}_CODEX_BASE_URL", ""),
+            required=True,
+        )
+        data[f"{prefix}_CODEX_MODEL"] = _prompt_line(
+            f"{provider_id} CODEX model",
+            default=existing.get(f"{prefix}_CODEX_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_CODEX_ENV_KEY"] = _prompt_line(
+            f"{provider_id} CODEX token env key",
+            default=existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+        )
+        data[f"{prefix}_CODEX_WIRE_API"] = _prompt_line(
+            f"{provider_id} CODEX wire api",
+            default=existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
+        )
+        data[f"{prefix}_CODEX_CONTEXT_WINDOW"] = _prompt_line(
+            f"{provider_id} CODEX context window",
+            default=existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "200000"),
+        )
+    return provider_id, data
+
+
+def _setup_ai_providers(*, force: bool = False) -> int:
+    path = _secret_path("ai-providers")
+    existing = _parse_env(path)
+    if existing and not force and _ai_providers_configured():
+        if _prompt_bool("AI providers are already configured. Keep current provider config?", default=True):
+            print("kept existing AI provider config")
+            return 0
+    data = dict(existing) if not force else {}
+    provider_ids: list[str] = []
+    print("AI provider setup")
+    while True:
+        print("  1) deepseek")
+        print("  2) minimax")
+        print("  3) custom")
+        choice = _prompt_line("select provider", default="1" if not provider_ids else "n")
+        if choice.lower() in {"n", "next", "done", "q", "quit"} and provider_ids:
+            break
+        if choice == "1" or choice.lower() == "deepseek":
+            provider_id, values = _prompt_deepseek_provider(existing)
+        elif choice == "2" or choice.lower() == "minimax":
+            provider_id, values = _prompt_minimax_provider(existing)
+        elif choice == "3" or choice.lower() in {"custom", "other"}:
+            provider_id, values = _prompt_custom_provider(existing)
+        else:
+            print("unknown provider choice", file=sys.stderr)
+            continue
+        data.update(values)
+        if provider_id not in provider_ids:
+            provider_ids.append(provider_id)
+        if not _prompt_bool("add another provider?", default=False):
+            break
+    if not provider_ids:
+        print("no AI provider configured", file=sys.stderr)
+        return 1
+    data["AI_PROVIDER_IDS"] = ",".join(provider_ids)
+    default_provider = _prompt_line("default provider", default=provider_ids[0])
+    data["AI_DEFAULT_PROVIDER"] = default_provider if default_provider in provider_ids else provider_ids[0]
+    data["AI_DEFAULT_AGENT"] = _prompt_line("default agent", default=data.get("AI_DEFAULT_AGENT", "claude"))
+    _write_env(path, data)
+    print(f"updated AI providers: {', '.join(provider_ids)}")
+    return 0
+
+
+def _setup_apns_push(existing: dict[str, str], data: dict[str, str]) -> None:
+    key_id = _prompt_line("APNs Key ID", default=existing.get("APNS_KEY_ID", ""), required=True)
+    team_id = _prompt_line("APNs Team ID", default=existing.get("APNS_TEAM_ID", ""), required=True)
+    bundle_id = _prompt_line("APNs Bundle ID", default=existing.get("APNS_BUNDLE_ID", ""), required=True)
+    use_sandbox = _prompt_bool("APNs use sandbox by default?", default=_truthy_env(existing.get("APNS_USE_SANDBOX", "true")))
+    current_path = existing.get("APNS_KEY_PATH", "")
+    p8 = _prompt_multiline("APNs .p8 private key", default="" if not current_path else "__KEEP__", required=not bool(current_path))
+    key_path = current_path
+    if p8 and p8 != "__KEEP__":
+        key_path = _write_secret_file(subdir="apns", filename=f"AuthKey_{key_id}.p8", content=p8)
+    data.update(
+        {
+            "APNS_KEY_ID": key_id,
+            "APNS_TEAM_ID": team_id,
+            "APNS_BUNDLE_ID": bundle_id,
+            "APNS_USE_SANDBOX": "true" if use_sandbox else "false",
+        }
+    )
+    if key_path:
+        data["APNS_KEY_PATH"] = key_path
+
+
+def _setup_fcm_push(existing: dict[str, str], data: dict[str, str]) -> None:
+    current_path = existing.get("FCM_SERVICE_ACCOUNT_PATH", "")
+    raw_json = _prompt_multiline("FCM service account JSON", default="" if not current_path else "__KEEP__", required=not bool(current_path))
+    service_account_path = current_path
+    parsed: dict | None = None
+    if raw_json and raw_json != "__KEEP__":
+        try:
+            parsed = json.loads(raw_json)
+        except json.JSONDecodeError as exc:
+            print(f"invalid FCM service account JSON: {exc}", file=sys.stderr)
+            raise SystemExit(1)
+        service_account_path = _write_secret_file(
+            subdir="fcm",
+            filename="service-account.json",
+            content=json.dumps(parsed, indent=2, ensure_ascii=False),
+        )
+    default_project = existing.get("FCM_PROJECT_ID", "") or (str(parsed.get("project_id")) if parsed and parsed.get("project_id") else "")
+    project_id = _prompt_line("FCM project id", default=default_project, required=True)
+    data["FCM_PROJECT_ID"] = project_id
+    if service_account_path:
+        data["FCM_SERVICE_ACCOUNT_PATH"] = service_account_path
+
+
+def _setup_getui_push(existing: dict[str, str], data: dict[str, str]) -> None:
+    data["GETUI_BASE_URL"] = _prompt_line("GeTui base URL", default=existing.get("GETUI_BASE_URL", "https://restapi.getui.com/v2"))
+    data["GETUI_APP_ID"] = _prompt_line("GeTui App ID", default=existing.get("GETUI_APP_ID", ""), required=True)
+    data["GETUI_APP_KEY"] = _prompt_line("GeTui App Key", default=existing.get("GETUI_APP_KEY", ""), required=True, secret=True)
+    app_secret = _prompt_line("GeTui App Secret (optional)", default=existing.get("GETUI_APP_SECRET", ""), secret=True)
+    if app_secret:
+        data["GETUI_APP_SECRET"] = app_secret
+    data["GETUI_MASTER_SECRET"] = _prompt_line(
+        "GeTui Master Secret",
+        default=existing.get("GETUI_MASTER_SECRET", ""),
+        required=True,
+        secret=True,
+    )
+    data["GETUI_TTL_MS"] = _prompt_line("GeTui TTL ms", default=existing.get("GETUI_TTL_MS", "7200000"))
+
+
+def _setup_push_providers(*, force: bool = False) -> int:
+    path = _secret_path("push")
+    existing = _parse_env(path)
+    data = {} if force else dict(existing)
+    print("Optional push setup. Skip a channel if it is not needed now.")
+    if _prompt_bool("configure APNs?", default=bool(existing.get("APNS_KEY_PATH") and existing.get("APNS_KEY_ID"))):
+        _setup_apns_push(existing, data)
+    if _prompt_bool("configure FCM?", default=bool(existing.get("FCM_SERVICE_ACCOUNT_PATH") and existing.get("FCM_PROJECT_ID"))):
+        _setup_fcm_push(existing, data)
+    if _prompt_bool("configure GeTui?", default=bool(existing.get("GETUI_APP_ID") and existing.get("GETUI_MASTER_SECRET"))):
+        _setup_getui_push(existing, data)
+    if data:
+        _write_env(path, data)
+        print("updated optional push config")
+    else:
+        print("push config skipped")
+    return 0
+
+
+def _setup_asr_provider(*, force: bool = False) -> int:
+    path = _secret_path("backend")
+    existing = _parse_env(path)
+    data = dict(existing)
+    default_enabled = bool(existing.get("BYTEDANCE_ASR_APP_KEY") and existing.get("BYTEDANCE_ASR_ACCESS_KEY"))
+    print("Optional speech recognition setup.")
+    if not _prompt_bool("configure ByteDance ASR?", default=default_enabled):
+        print("ASR config skipped")
+        return 0
+    data["BYTEDANCE_ASR_APP_KEY"] = _prompt_line(
+        "ByteDance ASR App Key",
+        default=existing.get("BYTEDANCE_ASR_APP_KEY", ""),
+        required=True,
+        secret=True,
+    )
+    data["BYTEDANCE_ASR_ACCESS_KEY"] = _prompt_line(
+        "ByteDance ASR Access Key",
+        default=existing.get("BYTEDANCE_ASR_ACCESS_KEY", ""),
+        required=True,
+        secret=True,
+    )
+    data["BYTEDANCE_ASR_RESOURCE_ID"] = _prompt_line(
+        "ByteDance ASR Resource ID",
+        default=existing.get("BYTEDANCE_ASR_RESOURCE_ID", "volc.bigasr.sauc.duration"),
+    )
+    data["BYTEDANCE_ASR_WS_URL"] = _prompt_line(
+        "ByteDance ASR WebSocket URL",
+        default=existing.get("BYTEDANCE_ASR_WS_URL", "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"),
+    )
+    _write_env(path, data)
+    print("updated optional ASR config")
+    return 0
+
+
+def _run_setup_wizard(
+    *,
+    host: str | None = None,
+    force: bool = False,
+    include_ai: bool = True,
+    include_asr: bool = True,
+    include_push: bool = True,
+) -> int:
+    rc = _init_stack_secrets(host=host, force=False, quiet=True)
+    if rc != 0:
+        return rc
+    if include_ai:
+        rc = _setup_ai_providers(force=force)
+        if rc != 0:
+            return rc
+    if include_asr:
+        rc = _setup_asr_provider(force=force)
+        if rc != 0:
+            return rc
+    if include_push:
+        rc = _setup_push_providers(force=force)
+        if rc != 0:
+            return rc
+    return 0
+
+
+def _deploy_requires_ai_config(names: list[str]) -> bool:
+    return any(name in {"backend", "ai-worker", "agent-node"} for name in names)
+
+
+def _ensure_human_config_for_deploy(args, names: list[str]) -> int:
+    if args.dry_run:
+        return 0
+    rc = _init_stack_secrets(host=getattr(args, "host", None), quiet=True)
+    if rc != 0:
+        return rc
+    if not _deploy_requires_ai_config(names) or _ai_providers_configured():
+        return 0
+    if getattr(args, "no_setup", False):
+        print("AI provider config is missing; run: myapp-ctl setup", file=sys.stderr)
+        return 1
+    if not sys.stdin.isatty():
+        print("AI provider config is missing and stdin is not interactive; run: myapp-ctl setup", file=sys.stderr)
+        return 1
+    print("AI provider config is missing; starting first-run setup.")
+    return _run_setup_wizard(host=getattr(args, "host", None), include_ai=True, include_push=True)
 
 
 def _rand_hex(bytes_len: int) -> str:
@@ -1467,7 +1999,16 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--pull", action="store_true", help="pull required images before deploy")
     deploy.add_argument("--plan", action="store_true", help="print deployment plan only")
     deploy.add_argument("--dry-run", action="store_true")
+    deploy.add_argument("--host", help="public host/IP used when first-run stack secrets must be generated")
+    deploy.add_argument("--no-setup", action="store_true", help="fail instead of launching first-run interactive setup")
     deploy.set_defaults(func=cmd_deploy)
+    setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional push channels")
+    setup.add_argument("--host", help="public host/IP used in generated local service URLs")
+    setup.add_argument("--force", action="store_true", help="replace existing AI/push config instead of offering to keep it")
+    setup.add_argument("--no-ai", action="store_true", help="skip AI provider setup")
+    setup.add_argument("--no-asr", action="store_true", help="skip optional ByteDance ASR setup")
+    setup.add_argument("--no-push", action="store_true", help="skip optional APNs/FCM/GeTui setup")
+    setup.set_defaults(func=cmd_setup)
     uninstall = sub.add_parser("uninstall")
     uninstall.add_argument("--yes", action="store_true", help="required confirmation for destructive cleanup")
     uninstall.add_argument("--purge", action="store_true", help="remove containers, compose volumes, state, logs, secrets, install config, and app images")
