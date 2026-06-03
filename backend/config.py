@@ -259,8 +259,12 @@ REGISTRY_MIRROR_SYNC_INTERVAL_SEC = int(os.environ.get("REGISTRY_MIRROR_SYNC_INT
 # MinIO 配置
 MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "https://myapp-oss-endpoint.dapangyu.work")
 _minio_url_parts = MINIO_PUBLIC_URL.split("://")
-MINIO_SECURE = _minio_url_parts[0] == "https" if len(_minio_url_parts) > 1 else True
-MINIO_ENDPOINT = _minio_url_parts[-1]
+_minio_default_secure = _minio_url_parts[0] == "https" if len(_minio_url_parts) > 1 else True
+MINIO_SECURE = os.environ.get(
+    "MINIO_SECURE",
+    "true" if _minio_default_secure else "false",
+).lower() in ("1", "true", "yes", "on")
+MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", _minio_url_parts[-1])
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "")
 MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
 

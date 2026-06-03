@@ -36,8 +36,8 @@ services:
     container_name: myapp-app-minio
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: "${APP_MINIO_ROOT_USER:-myappminio}"
-      MINIO_ROOT_PASSWORD: "${APP_MINIO_ROOT_PASSWORD:-myapp-minio-dev-password}"
+      MINIO_ROOT_USER: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_ROOT_PASSWORD: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
       MINIO_SERVER_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
       MINIO_BROWSER_REDIRECT_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_CONSOLE_PORT:-9090}"
     command: server /data --console-address ":9090"
@@ -96,6 +96,8 @@ services:
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-}"
       SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_KEY:-}"
       MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
       REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${REGISTRY_PORT:-3254}"
@@ -150,6 +152,10 @@ services:
       MINIMAX_AI_WORKER_QUEUE_MAX: "${MINIMAX_AI_WORKER_QUEUE_MAX:-20}"
       REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${REGISTRY_PORT:-3254}"
       MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
+      MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
 
   registry:
     image: "dapangyufish/myapp-backend:${MYAPP_IMAGE_TAG:-agent-control-plane}"
@@ -172,6 +178,8 @@ services:
       DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
       DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
       MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
       REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${REGISTRY_PORT:-3254}"
@@ -199,6 +207,11 @@ services:
       ADMIN_USERNAME: "${CONFIG_CENTER_ADMIN_USERNAME:-admin}"
       ADMIN_PASSWORD: "${CONFIG_CENTER_ADMIN_PASSWORD:-}"
       SESSION_SECRET: "${CONFIG_CENTER_SESSION_SECRET:-}"
+      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
+      MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
       LISTEN_HOST: "0.0.0.0"
       LISTEN_PORT: "5000"
       DB_PATH: "/data/config.db"

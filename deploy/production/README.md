@@ -61,6 +61,21 @@ Secret values are stored under `/etc/myapp/secrets.d/*.env` with mode `600`.
 
 ## Deployment Commands
 
+Clean all managed services, volumes, state, logs, host-local secrets, installed
+compose/config files, and MyApp images:
+
+```bash
+myapp-ctl uninstall --yes --purge
+./deploy/production/install_ctl.sh
+```
+
+Generate host-local random secrets:
+
+```bash
+myapp-ctl secret generate backend JSONAPP_DB_PASSWORD BACKEND_REDIS_PASSWORD APP_MINIO_ACCESS_KEY APP_MINIO_SECRET_KEY REGISTRY_ADMIN_TOKEN FLASK_SECRET_KEY
+myapp-ctl secret generate agent AGENT_NODE_TOKEN AGENT_NODE_REGISTRATION_TOKEN
+```
+
 One-command local-source deployment on a test host:
 
 ```bash
@@ -99,6 +114,9 @@ myapp-ctl image build
 myapp-ctl image push
 myapp-ctl image pull backend
 ```
+
+For a full clean source deployment checklist, see
+[`SOURCE_DEPLOY_RUNBOOK.md`](SOURCE_DEPLOY_RUNBOOK.md).
 
 ## Multi-Host Direction
 

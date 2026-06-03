@@ -13,6 +13,8 @@ import getpass
 import hashlib
 import json
 import os
+import secrets as py_secrets
+import shutil
 import signal
 import subprocess
 import sys
@@ -43,6 +45,7 @@ IMAGE_TARGETS = {
     "backend": ("backend", "deploy/production/Dockerfile.backend"),
 }
 BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center"}
+DEFAULT_NETWORKS = ["myapp_default", "myapp_agent_runtime"]
 
 
 def _load_json(path: Path, default: dict) -> dict:
@@ -204,10 +207,25 @@ def _compose_command(spec: dict, command: list[str]) -> list[str]:
     project_dir = Path(spec.get("project_dir", "."))
     files = spec.get("compose_files") or []
     cmd = ["docker", "compose"]
+    for env_file in _compose_env_files():
+        cmd.extend(["--env-file", str(env_file)])
     for name in files:
         cmd.extend(["-f", str(project_dir / name)])
     cmd.extend(command)
     return [part for part in cmd if part]
+
+
+def _compose_env_files() -> list[Path]:
+    names = [
+        "backend.env",
+        "ai-providers.env",
+        "agent.env",
+        "push.env",
+        "config-center.env",
+        "user-center.env",
+    ]
+    secret_dir = _secret_dir()
+    return [secret_dir / name for name in names if (secret_dir / name).exists()]
 
 
 def _run_or_print(cmd: list[str], *, dry_run: bool) -> int:
@@ -395,6 +413,124 @@ def _deploy_compose_services(names: list[str], *, dry_run: bool) -> int:
     return 0
 
 
+def _compose_specs_for_names(names: list[str]) -> list[dict]:
+    services = _services()
+    seen: set[tuple[str, tuple[str, ...]]] = set()
+    specs: list[dict] = []
+    for name in names:
+        spec = services[name]
+        if spec.get("kind") != "compose":
+            continue
+        key = (str(spec.get("project_dir", ".")), tuple(spec.get("compose_files") or []))
+        if key in seen:
+            continue
+        seen.add(key)
+        specs.append(spec)
+    return specs
+
+
+def _remove_path(path: Path, *, dry_run: bool) -> int:
+    print(f"+ rm -rf {path}")
+    if dry_run or not path.exists():
+        return 0
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+    return 0
+
+
+def _remove_installed_config_path(path: Path, *, dry_run: bool) -> int:
+    if not path.is_absolute():
+        print(f"# skip non-installed config path: {path}")
+        return 0
+    return _remove_path(path, dry_run=dry_run)
+
+
+def _docker_container_names(pattern: str) -> list[str]:
+    proc = _run(["docker", "ps", "-a", "--filter", f"name={pattern}", "--format", "{{.Names}}"])
+    if proc.returncode != 0:
+        return []
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def _docker_network_exists(name: str) -> bool:
+    return _run(["docker", "network", "inspect", name]).returncode == 0
+
+
+def cmd_uninstall(args) -> int:
+    if not args.yes:
+        print("refusing to uninstall without --yes", file=sys.stderr)
+        return 2
+    services = _services()
+    names = _ordered_service_names(list(services))
+    purge = bool(args.purge)
+    remove_images = bool(args.images or purge)
+    dry_run = bool(args.dry_run)
+
+    for spec in _compose_specs_for_names(names):
+        project_dir = Path(spec.get("project_dir", "."))
+        compose_files = [project_dir / name for name in (spec.get("compose_files") or [])]
+        if not dry_run and (not project_dir.exists() or any(not path.exists() for path in compose_files)):
+            continue
+        cmd = _compose_command(spec, ["down", "--remove-orphans"])
+        if purge or args.volumes:
+            cmd.append("--volumes")
+        rc = _run_or_print(cmd, dry_run=dry_run)
+        if rc != 0:
+            return rc
+
+    docker_names = []
+    for name in names:
+        spec = services[name]
+        if spec.get("kind") == "docker":
+            docker_names.append(spec.get("container") or name)
+    docker_names.extend(name for name in _docker_container_names("myapp-agent-") if name != "myapp-agent-node")
+    seen_containers: set[str] = set()
+    for container in docker_names:
+        if container in seen_containers:
+            continue
+        seen_containers.add(container)
+        if not dry_run and not _docker_inspect(container):
+            continue
+        rc = _run_or_print(["docker", "rm", "-f", container], dry_run=dry_run)
+        if rc != 0:
+            return rc
+
+    for network in DEFAULT_NETWORKS:
+        if not dry_run and not _docker_network_exists(network):
+            continue
+        rc = _run_or_print(["docker", "network", "rm", network], dry_run=dry_run)
+        if rc != 0:
+            return rc
+
+    if remove_images:
+        for target in IMAGE_TARGETS:
+            if not dry_run and not _image_exists(_configured_image(target)):
+                continue
+            rc = _run_or_print(["docker", "rmi", "-f", _configured_image(target)], dry_run=dry_run)
+            if rc != 0:
+                return rc
+
+    if purge or args.state:
+        _remove_path(Path(_cfg().get("paths", {}).get("state", "/var/lib/myapp")), dry_run=dry_run)
+    if purge or args.logs:
+        _remove_path(Path(_cfg().get("paths", {}).get("logs", "/var/log/myapp")), dry_run=dry_run)
+    if purge or args.secrets:
+        _remove_path(_secret_dir(), dry_run=dry_run)
+    if purge or args.install_files:
+        cfg = _cfg()
+        root = Path(cfg.get("paths", {}).get("root", "/opt/myapp"))
+        _remove_path(root / "deploy/production", dry_run=dry_run)
+        _remove_installed_config_path(CONFIG_PATH, dry_run=dry_run)
+        _remove_installed_config_path(SERVICES_PATH, dry_run=dry_run)
+    if args.remove_ctl:
+        _remove_path(Path("/usr/local/bin/myapp-ctl"), dry_run=dry_run)
+        _remove_path(Path("/opt/myapp/bin/myapp-ctl"), dry_run=dry_run)
+    print("uninstall completed" if not dry_run else "uninstall dry-run completed")
+    return 0
+
+
 def cmd_deploy(args) -> int:
     if args.build and args.pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
@@ -521,7 +657,7 @@ def _write_env(path: Path, data: dict[str, str]) -> None:
 
 def _redact(value: str) -> str:
     digest = hashlib.sha256(value.encode()).hexdigest()[:8]
-    return f"***{value[-4:] if len(value) >= 4 else ''} sha256:{digest}"
+    return f"<redacted len={len(value)} sha256:{digest}>"
 
 
 def cmd_secret(args) -> int:
@@ -547,6 +683,14 @@ def cmd_secret(args) -> int:
             changed.append(key)
         _write_env(path, data)
         print(f"updated {args.group}: {', '.join(changed)}")
+        return 0
+    if args.secret_cmd == "generate":
+        changed = []
+        for key in args.keys:
+            data[key] = py_secrets.token_urlsafe(args.bytes)
+            changed.append(key)
+        _write_env(path, data)
+        print(f"generated {args.group}: {', '.join(changed)}")
         return 0
     if args.secret_cmd == "get":
         if args.key not in data:
@@ -799,6 +943,18 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--plan", action="store_true", help="print deployment plan only")
     deploy.add_argument("--dry-run", action="store_true")
     deploy.set_defaults(func=cmd_deploy)
+    uninstall = sub.add_parser("uninstall")
+    uninstall.add_argument("--yes", action="store_true", help="required confirmation for destructive cleanup")
+    uninstall.add_argument("--purge", action="store_true", help="remove containers, compose volumes, state, logs, secrets, install config, and app images")
+    uninstall.add_argument("--volumes", action="store_true", help="remove compose volumes while stopping services")
+    uninstall.add_argument("--state", action="store_true", help="remove state directory")
+    uninstall.add_argument("--logs", action="store_true", help="remove log directory")
+    uninstall.add_argument("--secrets", action="store_true", help="remove /etc/myapp/secrets.d")
+    uninstall.add_argument("--install-files", action="store_true", help="remove installed compose/config files")
+    uninstall.add_argument("--images", action="store_true", help="remove configured MyApp Docker images")
+    uninstall.add_argument("--remove-ctl", action="store_true", help="remove the myapp-ctl executable after cleanup")
+    uninstall.add_argument("--dry-run", action="store_true")
+    uninstall.set_defaults(func=cmd_uninstall)
     restart = sub.add_parser("restart")
     restart.add_argument("target", nargs="?", default="all", help="service, group, or all")
     restart.add_argument("--group", choices=["infra", "agent", "core", "openim", "supabase"])
@@ -810,6 +966,11 @@ def build_parser() -> argparse.ArgumentParser:
     secret_set.add_argument("group")
     secret_set.add_argument("items", nargs="+")
     secret_set.set_defaults(func=cmd_secret)
+    secret_generate = secret_sub.add_parser("generate")
+    secret_generate.add_argument("group")
+    secret_generate.add_argument("keys", nargs="+")
+    secret_generate.add_argument("--bytes", type=int, default=32)
+    secret_generate.set_defaults(func=cmd_secret)
     secret_get = secret_sub.add_parser("get")
     secret_get.add_argument("group")
     secret_get.add_argument("key")
