@@ -26,10 +26,13 @@ CATEGORY_CONFIG = UPSTREAM / "lib/home/demo_category_config.dart"
 LOCALIZER = UPSTREAM / "lib/l10n/route_title_localizer.dart"
 
 CHILD_VERSION = "0.1.0"
-LAUNCHER_VERSION = "0.1.1"
+LAUNCHER_VERSION = "0.1.2"
 LAUNCHER_NAME = "gsy_flutter_demo_launcher"
 CHILD_NAMESPACE = "gsy_flutter_demo"
 UUID_NS = uuid.UUID("b7c1f247-47df-4a66-9b9e-7ad47ef57e14")
+UPSTREAM_REPOSITORY = "https://github.com/CarGuo/gsy_flutter_demo"
+UPSTREAM_LICENSE_NAME = "MIT License"
+UPSTREAM_LICENSE_COPYRIGHT = "Copyright (c) 2019 Shuyu Guo"
 
 
 CATEGORY_META = {
@@ -527,6 +530,14 @@ def launcher_i18n(entries: list[DemoEntry]) -> dict[str, Any]:
     return {
         "zh": {
             "appTitle": "GSY Flutter Demo",
+            "noticeTitle": "开源仓库与许可声明",
+            "noticeIntro": "这个 JSON-APP 启动器是对 GSY Flutter Demo 的 JSON 层移植与索引展示。原 Flutter 项目、示例思想和源代码归上游作者所有。",
+            "noticeRepoLabel": "上游仓库",
+            "noticeLicenseLabel": "许可",
+            "noticeLicense": f"{UPSTREAM_LICENSE_NAME}，{UPSTREAM_LICENSE_COPYRIGHT}。许可信息请以上游仓库根目录 LICENSE 文件为准。",
+            "noticeConfirm": "点击进入表示你已阅读该声明。",
+            "openRepository": "查看 GitHub",
+            "enterLauncher": "进入启动器",
             "homeSubtitle": "分组浏览、快速检索，一键进入示例。",
             "allExamples": "全部示例",
             "currentShown": "当前显示",
@@ -539,6 +550,14 @@ def launcher_i18n(entries: list[DemoEntry]) -> dict[str, Any]:
         },
         "en": {
             "appTitle": "GSY Flutter Demo",
+            "noticeTitle": "Repository and License Notice",
+            "noticeIntro": "This JSON-APP launcher is a JSON-layer port and index for GSY Flutter Demo. The original Flutter project, demo ideas, and source code belong to the upstream author.",
+            "noticeRepoLabel": "Upstream repository",
+            "noticeLicenseLabel": "License",
+            "noticeLicense": f"{UPSTREAM_LICENSE_NAME}, {UPSTREAM_LICENSE_COPYRIGHT}. Please treat the upstream LICENSE file as authoritative.",
+            "noticeConfirm": "Continue only after reading this notice.",
+            "openRepository": "Open GitHub",
+            "enterLauncher": "Enter launcher",
             "homeSubtitle": "Browse by category, search quickly, and open examples in one tap.",
             "allExamples": "All examples",
             "currentShown": "Shown",
@@ -569,6 +588,91 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
     chips = [
         category_chip(category, len(by_category[category]))
         for category in CATEGORY_ORDER
+    ]
+
+    notice_children = [
+        container(
+            [
+                container(
+                    [icon("code", size=30, color="#FFFFFF")],
+                    layout="column",
+                    width=58,
+                    height=58,
+                    color="#0B4D88",
+                    borderRadius=16,
+                    mainAxisAlignment="center",
+                    crossAxisAlignment="center",
+                ),
+                spacer(height=18),
+                text(
+                    "{{ t('appTitle') }}",
+                    style={"fontSize": 24, "fontWeight": "800", "color": "#0F172A"},
+                ),
+                spacer(height=8),
+                text(
+                    "{{ t('noticeTitle') }}",
+                    style={"fontSize": 18, "fontWeight": "700", "color": "#1E3A5F"},
+                ),
+                spacer(height=14),
+                text(
+                    "{{ t('noticeIntro') }}",
+                    style={"fontSize": 14, "color": "#334155", "height": 1.35},
+                ),
+                spacer(height=18),
+                container(
+                    [
+                        text("{{ t('noticeRepoLabel') }}", style={"fontSize": 13, "fontWeight": "700", "color": "#475569"}),
+                        spacer(height=6),
+                        text(UPSTREAM_REPOSITORY, style={"fontSize": 13, "color": "#1D7BCB"}),
+                    ],
+                    layout="column",
+                    padding=14,
+                    color="#F8FAFC",
+                    borderRadius=14,
+                    border={"color": "#E2E8F0", "width": 1},
+                    crossAxisAlignment="start",
+                ),
+                spacer(height=10),
+                container(
+                    [
+                        text("{{ t('noticeLicenseLabel') }}", style={"fontSize": 13, "fontWeight": "700", "color": "#475569"}),
+                        spacer(height=6),
+                        text("{{ t('noticeLicense') }}", style={"fontSize": 13, "color": "#334155", "height": 1.35}),
+                    ],
+                    layout="column",
+                    padding=14,
+                    color="#F8FAFC",
+                    borderRadius=14,
+                    border={"color": "#E2E8F0", "width": 1},
+                    crossAxisAlignment="start",
+                ),
+                spacer(height=16),
+                text("{{ t('noticeConfirm') }}", style={"fontSize": 12, "color": "#64748B"}),
+                spacer(height=18),
+                button(
+                    "{{ t('openRepository') }}",
+                    icon_name="link",
+                    variant="outlined",
+                    action=action("@launch_url", {"url": UPSTREAM_REPOSITORY}),
+                    style={"fontSize": 14, "borderRadius": 12},
+                ),
+                spacer(height=10),
+                button(
+                    "{{ t('enterLauncher') }}",
+                    icon_name="forward",
+                    variant="filled",
+                    action=action("@navigate", {"screen": "home"}),
+                    style={"fontSize": 15, "fontWeight": "700", "borderRadius": 12},
+                ),
+            ],
+            layout="column",
+            padding=22,
+            margin=16,
+            color="#FFFFFF",
+            borderRadius=20,
+            border={"color": "#D7E2F0", "width": 1},
+            crossAxisAlignment="start",
+        ),
     ]
 
     children = [
@@ -681,7 +785,9 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
         variables={
             "query": "",
             "selectedCategory": None,
-            "source": "https://github.com/CarGuo/gsy_flutter_demo",
+            "source": UPSTREAM_REPOSITORY,
+            "licenseName": UPSTREAM_LICENSE_NAME,
+            "licenseCopyright": UPSTREAM_LICENSE_COPYRIGHT,
             "total": len(entries),
         },
         functions={
@@ -711,6 +817,13 @@ def launcher_app(entries: list[DemoEntry]) -> dict[str, Any]:
         },
         i18n=launcher_i18n(entries),
         screens=[
+            screen(
+                "notice",
+                title="{{ t('noticeTitle') }}",
+                children=notice_children,
+                padding=0,
+                backgroundColor="#F2F6FF",
+            ),
             screen(
                 "home",
                 title="{{ t('appTitle') }}",
