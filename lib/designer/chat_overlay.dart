@@ -116,7 +116,10 @@ class _ChatOverlayState extends State<ChatOverlay> {
   // 不再用 showMenu (它走 root navigator overlay，物理位置在 chat overlay 下方)。
   bool _menuOpen = false;
   Future<Set<String>>? _statusProbeFuture;
+  SessionMeta? _actionsSession;
   SessionMeta? _deleteConfirmSession;
+  SessionMeta? _renameSession;
+  TextEditingController? _renameController;
 
   String _currentSessionTitle() {
     final defaultTitle = T.of(context).chatSessionDefaultTitle;
@@ -142,97 +145,63 @@ class _ChatOverlayState extends State<ChatOverlay> {
     if (_menuOpen) setState(() => _menuOpen = false);
   }
 
-  /// 二级 action 菜单：重命名 / 删除（从 ⋮ 进入）
-  Future<void> _openSessionActions(BuildContext navCtx, String sid) async {
+  void _openSessionActions(String sid) {
     final s = widget.getSessions().firstWhere(
       (x) => x.id == sid,
       orElse: () => SessionMeta(id: ''),
     );
     if (s.id.isEmpty) return;
+    setState(() => _actionsSession = s);
+  }
 
-    final action = await showModalBottomSheet<String>(
-      context: navCtx,
-      backgroundColor: const Color(0xFF2C2C2E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                s.displayTitle(maxVisualWidth: 22),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined, color: Colors.white),
-              title: Text(
-                T.of(ctx).chatSessionActionRename,
-                style: const TextStyle(color: Colors.white),
-              ),
-              onTap: () => Navigator.of(ctx).pop('rename'),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-              ),
-              title: Text(
-                T.of(ctx).chatSessionDeleteTitle,
-                style: const TextStyle(color: Colors.redAccent),
-              ),
-              onTap: () => Navigator.of(ctx).pop('delete'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-
-    if (action == 'rename') {
-      // ignore: use_build_context_synchronously — navCtx 来自 JsonDslApp.navigatorKey，永远有效
-      await _promptRename(navCtx, s);
-    } else if (action == 'delete') {
-      if (!mounted) return;
-      setState(() => _deleteConfirmSession = s);
+  void _closeSessionActions() {
+    if (_actionsSession != null) {
+      setState(() => _actionsSession = null);
     }
   }
 
-  Future<void> _promptRename(BuildContext navCtx, SessionMeta s) async {
-    final controller = TextEditingController(
-      text: s.customTitle ?? s.firstMessage,
+  void _openRenameFromActions() {
+    final session = _actionsSession;
+    if (session == null) return;
+    _renameController?.dispose();
+    _renameController = TextEditingController(
+      text: session.customTitle ?? session.firstMessage,
     );
-    final newTitle = await showDialog<String>(
-      context: navCtx,
-      builder: (ctx) {
-        final t = T.of(ctx);
-        return AlertDialog(
-          title: Text(t.chatSessionRenameTitle),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: InputDecoration(hintText: t.chatSessionRenameHint),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(t.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text),
-              child: Text(t.save),
-            ),
-          ],
-        );
-      },
-    );
-    if (newTitle != null) {
-      await widget.onRenameSession?.call(s.id, newTitle);
+    setState(() {
+      _actionsSession = null;
+      _renameSession = session;
+    });
+  }
+
+  void _openDeleteFromActions() {
+    final session = _actionsSession;
+    if (session == null) return;
+    setState(() {
+      _actionsSession = null;
+      _deleteConfirmSession = session;
+    });
+  }
+
+  void _closeRename() {
+    if (_renameSession != null) {
+      setState(() => _renameSession = null);
     }
+    _renameController?.dispose();
+    _renameController = null;
+  }
+
+  Future<void> _confirmRename() async {
+    final session = _renameSession;
+    final newTitle = _renameController?.text;
+    if (session == null || newTitle == null) return;
+    _closeRename();
+    await widget.onRenameSession?.call(session.id, newTitle);
+  }
+
+  @override
+  void dispose() {
+    _renameController?.dispose();
+    super.dispose();
   }
 
   void _closeDeleteConfirmation() {
@@ -490,14 +459,25 @@ class _ChatOverlayState extends State<ChatOverlay> {
                 },
                 onMoreTap: (sid) async {
                   _closeMenu();
-                  final navCtx = widget.getNavigatorContext?.call();
-                  if (navCtx != null) {
-                    await _openSessionActions(navCtx, sid);
-                  }
+                  _openSessionActions(sid);
                 },
               ),
             ),
           ],
+          if (_actionsSession != null)
+            _SessionActionsLayer(
+              session: _actionsSession!,
+              onCancel: _closeSessionActions,
+              onRename: _openRenameFromActions,
+              onDelete: _openDeleteFromActions,
+            ),
+          if (_renameSession != null && _renameController != null)
+            _RenameSessionLayer(
+              session: _renameSession!,
+              controller: _renameController!,
+              onCancel: _closeRename,
+              onConfirm: _confirmRename,
+            ),
           if (_deleteConfirmSession != null)
             _DeleteSessionConfirmLayer(
               session: _deleteConfirmSession!,
@@ -819,6 +799,260 @@ class _SessionChip extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionActionsLayer extends StatelessWidget {
+  final SessionMeta session;
+  final VoidCallback onCancel;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+
+  const _SessionActionsLayer({
+    required this.session,
+    required this.onCancel,
+    required this.onRename,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = T.of(context);
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onCancel,
+                child: Container(color: Colors.black.withValues(alpha: 0.42)),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C2C2E),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Text(
+                          session.displayTitle(maxVisualWidth: 22),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      _SessionActionTile(
+                        icon: Icons.edit_outlined,
+                        label: t.chatSessionActionRename,
+                        color: Colors.white,
+                        onTap: onRename,
+                      ),
+                      _SessionActionTile(
+                        icon: Icons.delete_outline,
+                        label: t.chatSessionDeleteTitle,
+                        color: Colors.redAccent,
+                        onTap: onDelete,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SessionActionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 21),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RenameSessionLayer extends StatelessWidget {
+  final SessionMeta session;
+  final TextEditingController controller;
+  final VoidCallback onCancel;
+  final Future<void> Function() onConfirm;
+
+  const _RenameSessionLayer({
+    required this.session,
+    required this.controller,
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = T.of(context);
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onCancel,
+                child: Container(color: Colors.black.withValues(alpha: 0.48)),
+              ),
+            ),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 340),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C2C2E),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t.chatSessionRenameTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: t.chatSessionRenameHint,
+                            hintStyle: const TextStyle(color: Colors.white38),
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.08),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.16),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.16),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Colors.purpleAccent,
+                              ),
+                            ),
+                          ),
+                          onSubmitted: (_) => onConfirm(),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: onCancel,
+                              child: Text(
+                                t.cancel,
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton(
+                              onPressed: onConfirm,
+                              child: Text(t.save),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
