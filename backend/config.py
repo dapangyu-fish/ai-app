@@ -103,6 +103,16 @@ def _env_bool_for_prefix(prefix: str, key: str, default: str = "1") -> bool:
     return value not in {"0", "false", "no", "off", "disabled", "hidden"}
 
 
+def _env_int(name: str, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None or value.strip() == "":
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
 def _provider_auth_token(provider_id: str, prefix: str, builtin: dict) -> str:
     token = _env_for_prefix(prefix, "ANTHROPIC_AUTH_TOKEN")
     if token:
@@ -412,14 +422,64 @@ AI_SESSION_REDIS_PORT = int(os.environ.get("AI_SESSION_REDIS_PORT", "16379"))
 AI_SESSION_REDIS_PASSWORD = os.environ.get("AI_SESSION_REDIS_PASSWORD", "")
 AI_SESSION_REDIS_TTL_SECONDS = int(os.environ.get("AI_SESSION_REDIS_TTL_SECONDS", "86400"))
 
-# AI worker 并发上限（线程池大小）
-# eventlet monkey_patch 后 thread 实际是 greenlet，开销低；瓶颈是同时跑的 claude CLI 进程数 + RAM
-AI_WORKER_MAX_CONCURRENCY = int(os.environ.get("AI_WORKER_MAX_CONCURRENCY", "200"))
-AI_WORKER_QUEUE_MAX = int(os.environ.get("AI_WORKER_QUEUE_MAX", "200"))
+# AI worker 并发上限。
+# - AI_WORKER_MAX_CONCURRENCY / AI_WORKER_QUEUE_MAX 保留为全局总上限和默认队列上限。
+# - <PROVIDER>_AI_WORKER_MAX_CONCURRENCY / <PROVIDER>_AI_WORKER_QUEUE_MAX 用于供应商级限流。
+#   例：DEEPSEEK_AI_WORKER_MAX_CONCURRENCY=3，MINIMAX_AI_WORKER_QUEUE_MAX=20。
+# - AI_WORKER_PROVIDER_DEFAULT_* 可给所有未显式配置的 provider 设置默认值。
+# 瓶颈是同时跑的 Claude/Codex CLI 进程数、provider 限速和机器内存，不是 Redis 队列本身。
+AI_WORKER_MAX_CONCURRENCY = max(1, _env_int("AI_WORKER_MAX_CONCURRENCY", 3))
+AI_WORKER_QUEUE_MAX = max(0, _env_int("AI_WORKER_QUEUE_MAX", 50))
+AI_WORKER_PROVIDER_DEFAULT_MAX_CONCURRENCY = max(
+    1,
+    _env_int("AI_WORKER_PROVIDER_DEFAULT_MAX_CONCURRENCY", AI_WORKER_MAX_CONCURRENCY),
+)
+AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX = max(
+    0,
+    _env_int("AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX", AI_WORKER_QUEUE_MAX),
+)
+
+
+def _provider_worker_env_int(provider_id: str, key: str, default: int) -> int:
+    prefix = _provider_prefix(provider_id)
+    value = os.environ.get(f"{prefix}_{key}")
+    if value is None and key.startswith("AI_WORKER_"):
+        value = os.environ.get(f"{prefix}_{key.removeprefix('AI_')}")
+    if value is None or value.strip() == "":
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+AI_PROVIDER_WORKER_LIMITS = {}
+for _provider_id in AI_PROVIDERS:
+    _max_concurrency = max(
+        0,
+        _provider_worker_env_int(
+            _provider_id,
+            "AI_WORKER_MAX_CONCURRENCY",
+            AI_WORKER_PROVIDER_DEFAULT_MAX_CONCURRENCY,
+        ),
+    )
+    _queue_max = max(
+        0,
+        _provider_worker_env_int(
+            _provider_id,
+            "AI_WORKER_QUEUE_MAX",
+            AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX,
+        ),
+    )
+    AI_PROVIDER_WORKER_LIMITS[_provider_id] = {
+        "max_concurrency": _max_concurrency,
+        "queue_max": _queue_max,
+    }
+    AI_PROVIDERS[_provider_id]["worker"] = AI_PROVIDER_WORKER_LIMITS[_provider_id]
 
 # Registry summary 富化：后台批量摘要的 CLI 小池（跟生成的大池隔离，饿不死用户生成）
-SUMMARY_MAX_CONCURRENCY = int(os.environ.get("SUMMARY_MAX_CONCURRENCY", "3"))
-SUMMARY_CLI_TIMEOUT = int(os.environ.get("SUMMARY_CLI_TIMEOUT", "120"))
+SUMMARY_MAX_CONCURRENCY = _env_int("SUMMARY_MAX_CONCURRENCY", 3)
+SUMMARY_CLI_TIMEOUT = _env_int("SUMMARY_CLI_TIMEOUT", 120)
 
 
 # 角色配额

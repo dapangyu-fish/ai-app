@@ -10,8 +10,9 @@ Redis 数据：
     ai:session:<id>:meta    Hash    元信息（status / 起止时间 / 配额 / final_text）
     ai:session:<id>:stream  Stream  SSE 事件序列；entry id 即"位置"
     ai:session:<id>:abort   String  存在 = 已请求取消（SETEX 300s 自动失效）
-    ai:queue:pending        List    等待中的 AI 任务
-    ai:queue:running:*      Hash/ZSet 运行中租约与 heartbeat
+    ai:queue:pending:<provider>            List    供应商独立等待队列
+    ai:queue:running / running:leases      Hash/ZSet 全局运行租约，用于机器总并发
+    ai:queue:running:<provider> / ...      Hash/ZSet 供应商运行租约，用于供应商级并发
 
 详见 backend/ARCHITECTURE.md §3。
 """
@@ -36,6 +37,7 @@ import redis
 from config import (
     AI_AGENTS,
     AI_PROVIDERS,
+    AI_PROVIDER_WORKER_LIMITS,
     AI_SESSION_REDIS_HOST,
     AI_SESSION_REDIS_PASSWORD,
     AI_SESSION_REDIS_PORT,
@@ -192,8 +194,28 @@ def _abort_key(session_id: str) -> str:
     return f"ai:session:{session_id}:abort"
 
 
-def _pending_queue_key() -> str:
-    return "ai:queue:pending"
+def _normalize_provider_id(provider_id: Optional[str]) -> str:
+    pid = (provider_id or DEFAULT_PROVIDER).strip().lower().replace("_", "-")
+    return pid if pid in AI_PROVIDERS else DEFAULT_PROVIDER
+
+
+def _provider_queue_suffix(provider_id: Optional[str]) -> str:
+    pid = _normalize_provider_id(provider_id)
+    return re.sub(r"[^a-z0-9-]+", "-", pid).strip("-") or "default"
+
+
+def _provider_worker_limits(provider_id: Optional[str]) -> dict:
+    pid = _normalize_provider_id(provider_id)
+    return AI_PROVIDER_WORKER_LIMITS.get(
+        pid,
+        {"max_concurrency": AI_WORKER_MAX_CONCURRENCY, "queue_max": AI_WORKER_QUEUE_MAX},
+    )
+
+
+def _pending_queue_key(provider_id: Optional[str] = None) -> str:
+    if provider_id is None:
+        return "ai:queue:pending"
+    return f"ai:queue:pending:{_provider_queue_suffix(provider_id)}"
 
 
 def _running_hash_key() -> str:
@@ -202,6 +224,14 @@ def _running_hash_key() -> str:
 
 def _running_lease_key() -> str:
     return "ai:queue:running:leases"
+
+
+def _provider_running_hash_key(provider_id: Optional[str]) -> str:
+    return f"ai:queue:running:{_provider_queue_suffix(provider_id)}"
+
+
+def _provider_running_lease_key(provider_id: Optional[str]) -> str:
+    return f"ai:queue:running:leases:{_provider_queue_suffix(provider_id)}"
 
 
 # ────────────────────────────── 状态枚举 ──────────────────────────────
@@ -763,6 +793,14 @@ def _queue_status_message(position: Optional[int]) -> str:
     return f"排队中，前面还有 {ahead} 个任务..."
 
 
+def _job_provider_from_json(job_text: str, fallback: Optional[str] = None) -> str:
+    try:
+        data = json.loads(job_text)
+        return _normalize_provider_id(data.get("provider_id") or fallback)
+    except Exception:
+        return _normalize_provider_id(fallback)
+
+
 def get_queue_position(session_id: str) -> Optional[int]:
     """返回 1-based 排队位置；不在等待队列则返回 None。"""
     r = get_redis()
@@ -770,10 +808,11 @@ def get_queue_position(session_id: str) -> Optional[int]:
     queued_job = meta.get("queued_job")
     if not queued_job:
         return None
+    provider_id = _job_provider_from_json(queued_job, meta.get("provider"))
     try:
-        raw_jobs = r.lrange(_pending_queue_key(), 0, -1)
+        raw_jobs = r.lrange(_pending_queue_key(provider_id), 0, -1)
     except redis.exceptions.RedisError as e:
-        logger.warning(f"[WORKER_QUEUE] 读取 pending queue 失败 sid={session_id}: {e}")
+        logger.warning(f"[WORKER_QUEUE] 读取 pending queue 失败 sid={session_id} provider={provider_id}: {e}")
         return None
     position = 0
     for raw in raw_jobs:
@@ -810,7 +849,7 @@ def _job_from_json(raw) -> _WorkerJob:
         job_id=data["job_id"],
         session_id=data["session_id"],
         last_msg=data["last_msg"],
-        provider_id=data.get("provider_id"),
+        provider_id=_normalize_provider_id(data.get("provider_id")),
         agent_id=data.get("agent_id") or DEFAULT_AGENT,
         agent_resume_id=data.get("agent_resume_id"),
         user_id=data["user_id"],
@@ -842,10 +881,14 @@ _ACQUIRE_SCRIPT = """
 local pending_key = KEYS[1]
 local running_hash_key = KEYS[2]
 local running_lease_key = KEYS[3]
+local provider_running_hash_key = KEYS[4]
+local provider_running_lease_key = KEYS[5]
 local now_ms = tonumber(ARGV[1])
 local lease_until_ms = tonumber(ARGV[2])
-local max_running = tonumber(ARGV[3])
-local worker_id = ARGV[4]
+local max_total_running = tonumber(ARGV[3])
+local max_provider_running = tonumber(ARGV[4])
+local worker_id = ARGV[5]
+local provider_id = ARGV[6]
 local expired = redis.call('ZRANGEBYSCORE', running_lease_key, '-inf', now_ms)
 for _, sid in ipairs(expired) do
   redis.call('HDEL', running_hash_key, sid)
@@ -853,7 +896,17 @@ end
 if #expired > 0 then
   redis.call('ZREMRANGEBYSCORE', running_lease_key, '-inf', now_ms)
 end
-if redis.call('ZCARD', running_lease_key) >= max_running then
+local provider_expired = redis.call('ZRANGEBYSCORE', provider_running_lease_key, '-inf', now_ms)
+for _, sid in ipairs(provider_expired) do
+  redis.call('HDEL', provider_running_hash_key, sid)
+end
+if #provider_expired > 0 then
+  redis.call('ZREMRANGEBYSCORE', provider_running_lease_key, '-inf', now_ms)
+end
+if max_total_running <= 0 or redis.call('ZCARD', running_lease_key) >= max_total_running then
+  return nil
+end
+if max_provider_running <= 0 or redis.call('ZCARD', provider_running_lease_key) >= max_provider_running then
   return nil
 end
 local job_json = redis.call('LPOP', pending_key)
@@ -863,35 +916,43 @@ end
 local job = cjson.decode(job_json)
 local running = cjson.encode({
   job_id = job['job_id'],
+  provider_id = provider_id,
   worker_id = worker_id,
   started_at = now_ms,
   lease_until = lease_until_ms
 })
 redis.call('HSET', running_hash_key, job['session_id'], running)
 redis.call('ZADD', running_lease_key, lease_until_ms, job['session_id'])
+redis.call('HSET', provider_running_hash_key, job['session_id'], running)
+redis.call('ZADD', provider_running_lease_key, lease_until_ms, job['session_id'])
 return job_json
 """
 
 
-def _acquire_redis_job(timeout_seconds: int = 2) -> Optional[_WorkerJob]:
+def _acquire_redis_job(provider_id: str, timeout_seconds: int = 0) -> Optional[_WorkerJob]:
     r = get_redis()
     deadline = time.time() + timeout_seconds
+    limits = _provider_worker_limits(provider_id)
     while True:
         now_ms = int(time.time() * 1000)
         try:
             raw = r.eval(
                 _ACQUIRE_SCRIPT,
-                3,
-                _pending_queue_key(),
+                5,
+                _pending_queue_key(provider_id),
                 _running_hash_key(),
                 _running_lease_key(),
+                _provider_running_hash_key(provider_id),
+                _provider_running_lease_key(provider_id),
                 now_ms,
                 now_ms + _WORKER_LEASE_MS,
                 AI_WORKER_MAX_CONCURRENCY,
+                limits["max_concurrency"],
                 _WORKER_ID,
+                provider_id,
             )
         except redis.exceptions.RedisError as e:
-            logger.warning(f"[WORKER_QUEUE] acquire 失败: {e}")
+            logger.warning(f"[WORKER_QUEUE] acquire 失败 provider={provider_id}: {e}")
             time.sleep(1)
             return None
         if raw:
@@ -901,31 +962,35 @@ def _acquire_redis_job(timeout_seconds: int = 2) -> Optional[_WorkerJob]:
         time.sleep(0.2)
 
 
-def _refresh_running_lease(session_id: str) -> None:
+def _refresh_running_lease(session_id: str, provider_id: Optional[str]) -> None:
     now_ms = int(time.time() * 1000)
     lease_until = now_ms + _WORKER_LEASE_MS
+    provider_id = _normalize_provider_id(provider_id)
+    running_payload = json.dumps(
+        {
+            "worker_id": _WORKER_ID,
+            "provider_id": provider_id,
+            "lease_until": lease_until,
+            "updated_at": now_ms,
+        },
+        separators=(",", ":"),
+    )
     r = get_redis()
     pipe = r.pipeline()
     pipe.zadd(_running_lease_key(), {session_id: lease_until})
-    pipe.hset(
-        _running_hash_key(),
-        session_id,
-        json.dumps(
-            {
-                "worker_id": _WORKER_ID,
-                "lease_until": lease_until,
-                "updated_at": now_ms,
-            },
-            separators=(",", ":"),
-        ),
-    )
+    pipe.hset(_running_hash_key(), session_id, running_payload)
+    pipe.zadd(_provider_running_lease_key(provider_id), {session_id: lease_until})
+    pipe.hset(_provider_running_hash_key(provider_id), session_id, running_payload)
     pipe.execute()
 
 
-def _complete_running(session_id: str) -> None:
+def _complete_running(session_id: str, provider_id: Optional[str]) -> None:
+    provider_id = _normalize_provider_id(provider_id)
     pipe = get_redis().pipeline()
     pipe.hdel(_running_hash_key(), session_id)
     pipe.zrem(_running_lease_key(), session_id)
+    pipe.hdel(_provider_running_hash_key(provider_id), session_id)
+    pipe.zrem(_provider_running_lease_key(provider_id), session_id)
     pipe.execute()
 
 
@@ -935,7 +1000,7 @@ def _run_redis_job(job: _WorkerJob) -> None:
     def heartbeat_loop() -> None:
         while not stop_heartbeat.wait(_WORKER_HEARTBEAT_SECONDS):
             try:
-                _refresh_running_lease(job.session_id)
+                _refresh_running_lease(job.session_id, job.provider_id)
             except Exception as e:
                 logger.warning(f"[WORKER_QUEUE] heartbeat 失败 sid={job.session_id}: {e}")
 
@@ -981,7 +1046,7 @@ def _run_redis_job(job: _WorkerJob) -> None:
         )
     finally:
         stop_heartbeat.set()
-        _complete_running(job.session_id)
+        _complete_running(job.session_id, job.provider_id)
 
 
 def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -> str:
@@ -1504,6 +1569,16 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
     调用前应先 SessionStore.create_meta(status=queued)；这里只负责排队。
     返回 (accepted, queue_position)。
     """
+    provider_id = _normalize_provider_id(provider_id)
+    limits = _provider_worker_limits(provider_id)
+    if limits["max_concurrency"] <= 0 or limits["queue_max"] <= 0:
+        logger.warning(
+            "[WORKER_QUEUE] provider disabled or queue closed sid=%s provider=%s limits=%s",
+            session_id,
+            provider_id,
+            limits,
+        )
+        return False, None
     job = _WorkerJob(
         job_id=uuid.uuid4().hex,
         session_id=session_id,
@@ -1521,14 +1596,14 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
         queued_len = get_redis().eval(
             _ENQUEUE_SCRIPT,
             2,
-            _pending_queue_key(),
+            _pending_queue_key(provider_id),
             _meta_key(session_id),
             job_json,
-            AI_WORKER_QUEUE_MAX,
+            limits["queue_max"],
             AI_SESSION_REDIS_TTL_SECONDS,
         )
     except redis.exceptions.RedisError as e:
-        logger.exception(f"[WORKER_QUEUE] enqueue 失败 sid={session_id}: {e}")
+        logger.exception(f"[WORKER_QUEUE] enqueue 失败 sid={session_id} provider={provider_id}: {e}")
         return False, None
     if int(queued_len) < 0:
         return False, None
@@ -1555,8 +1630,14 @@ def abort_session(session_id: str) -> None:
     meta = store.get_meta(session_id)
     queued_job = meta.get("queued_job")
     if queued_job:
+        provider_id = _job_provider_from_json(queued_job, meta.get("provider"))
+        queue_keys = [_pending_queue_key(provider_id), _pending_queue_key()]
         try:
-            removed = get_redis().lrem(_pending_queue_key(), 1, queued_job)
+            pipe = get_redis().pipeline()
+            for queue_key in queue_keys:
+                pipe.lrem(queue_key, 1, queued_job)
+            removed_values = pipe.execute()
+            removed = sum(int(value or 0) for value in removed_values)
         except redis.exceptions.RedisError as e:
             logger.warning(f"[WORKER_QUEUE] pending 移除失败 sid={session_id}: {e}")
             removed = 0
@@ -1568,6 +1649,14 @@ def abort_session(session_id: str) -> None:
 def clear_abort(session_id: str) -> None:
     """擦掉 abort 标记。force_restart 重启 worker 时用。"""
     SessionStore().clear_abort(session_id)
+
+
+def _provider_ids_for_scheduler() -> list[str]:
+    provider_ids = [
+        pid for pid in AI_PROVIDERS
+        if _provider_worker_limits(pid).get("max_concurrency", 0) > 0
+    ]
+    return provider_ids or [_normalize_provider_id(DEFAULT_PROVIDER)]
 
 
 def run_worker_daemon() -> None:
@@ -1582,14 +1671,29 @@ def run_worker_daemon() -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     logger.info(
-        "[WORKER_DAEMON] start worker_id=%s max_concurrency=%s queue_max=%s",
+        "[WORKER_DAEMON] start worker_id=%s total_max_concurrency=%s default_queue_max=%s provider_limits=%s",
         _WORKER_ID,
         AI_WORKER_MAX_CONCURRENCY,
         AI_WORKER_QUEUE_MAX,
+        AI_PROVIDER_WORKER_LIMITS,
     )
+    provider_ids = _provider_ids_for_scheduler()
+    provider_index = 0
     while True:
-        job = _acquire_redis_job(timeout_seconds=2)
+        job = None
+        for _ in range(len(provider_ids)):
+            provider_id = provider_ids[provider_index % len(provider_ids)]
+            provider_index += 1
+            job = _acquire_redis_job(provider_id, timeout_seconds=0)
+            if job is not None:
+                break
         if job is None:
+            time.sleep(0.2)
             continue
-        logger.info("[WORKER_DAEMON] acquired sid=%s job=%s", job.session_id, job.job_id)
+        logger.info(
+            "[WORKER_DAEMON] acquired sid=%s job=%s provider=%s",
+            job.session_id,
+            job.job_id,
+            job.provider_id,
+        )
         _executor.submit(_run_redis_job, job)

@@ -113,9 +113,11 @@ AI session 和全局调度在 Redis 里映射为这些 key：
 ai:session:<session_id>:meta      Hash    元信息（status / quota / provider / 起止时间）
 ai:session:<session_id>:stream    Stream  SSE 事件序列（worker append，客户端按 entry id 续读）
 ai:session:<session_id>:abort     String  取消标记，短 TTL
-ai:queue:pending                  List    等待中的 AI 任务，FIFO
-ai:queue:running                  Hash    运行中任务的 worker/lease 元信息
-ai:queue:running:leases           ZSet    session_id → lease_until_ms，用于全局并发和存活判断
+ai:queue:pending:<provider>       List    等待中的 AI 任务，按供应商隔离 FIFO
+ai:queue:running                  Hash    全局运行中任务的 worker/lease 元信息
+ai:queue:running:leases           ZSet    session_id → lease_until_ms，用于机器总并发和存活判断
+ai:queue:running:<provider>       Hash    供应商运行中任务的 worker/lease 元信息
+ai:queue:running:leases:<provider> ZSet   session_id → lease_until_ms，用于供应商级并发
 
 session meta / stream 都设 TTL 86400s（24h），完工后自动清。
 ```
@@ -138,10 +140,11 @@ session meta / stream 都设 TTL 86400s（24h），完工后自动清。
 ```
 [1] POST /api/ai/chat/start        鉴权 + 配额检查
                                    Redis Lua 原子判断 pending 是否满
-                                   未满：写 meta status=queued + RPUSH ai:queue:pending
+                                   未满：写 meta status=queued + RPUSH ai:queue:pending:<provider>
                                    已满：返回 429 AI_QUEUE_FULL
 
-[2] ai_worker_daemon.py            Redis Lua 原子判断 running lease 是否低于 AI_WORKER_MAX_CONCURRENCY
+[2] ai_worker_daemon.py            Redis Lua 原子判断全局 running lease 是否低于 AI_WORKER_MAX_CONCURRENCY，
+                                   且供应商 running lease 是否低于 <PROVIDER>_AI_WORKER_MAX_CONCURRENCY
                                    有空位：LPOP pending + 写 running lease
                                    daemon 线程池启动 Claude CLI
                                    CLI 输出每行 → Redis stream
@@ -179,9 +182,11 @@ sendMessage(text):
 
 ### 3.6 并发控制
 
-- worker 用 `concurrent.futures.ThreadPoolExecutor(max_workers=N)`
-- N 由 `.env` 配（建议 4-8，看服务器内存与 claude CLI 占用）
-- 队列满时新请求直接 429 + 提示"服务繁忙"
+- worker 用 `concurrent.futures.ThreadPoolExecutor(max_workers=N)`，N 是机器总上限。
+- `AI_WORKER_MAX_CONCURRENCY` / `AI_WORKER_QUEUE_MAX` 保留为全局总并发和默认队列上限。
+- `AI_WORKER_PROVIDER_DEFAULT_MAX_CONCURRENCY` / `AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX` 给未单独配置的供应商设置默认值。
+- `<PROVIDER>_AI_WORKER_MAX_CONCURRENCY` / `<PROVIDER>_AI_WORKER_QUEUE_MAX` 覆盖单个供应商，例如 `DEEPSEEK_AI_WORKER_MAX_CONCURRENCY=3`、`MINIMAX_AI_WORKER_QUEUE_MAX=20`。
+- `ai_worker_daemon.py` round-robin 轮询各供应商队列；某个供应商队列满时，只拒绝该供应商的新请求。
 
 ### 3.7 关键风险点
 
@@ -235,7 +240,7 @@ BACKEND_ENV_PATH=/etc/ai-app/backend.env /opt/ai-app-venv/bin/python ai_worker_d
 ```
 
 确认 daemon 已经启动后，`ai-app` 的 gunicorn worker 数可以按普通 API 吞吐调整。
-AI 并发由 Redis lease 上的 `AI_WORKER_MAX_CONCURRENCY` 全局控制，不再乘以 gunicorn worker 数。
+AI 总并发由 Redis 全局 lease 上的 `AI_WORKER_MAX_CONCURRENCY` 控制，供应商并发由各自 provider lease 控制，不再乘以 gunicorn worker 数。
 
 ## 5. 后续阶段（不在本次范围）
 

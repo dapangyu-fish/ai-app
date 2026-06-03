@@ -185,6 +185,7 @@ def list_providers():
             "default_model": cfg["models"]["default"],
             "configured": bool(cfg.get("configured", False)),
             "supported_agents": supported_agents or ["claude"],
+            "worker": cfg.get("worker", {}),
         })
     return jsonify({"providers": providers})
 
