@@ -23,6 +23,7 @@ class AuthService {
   static const String _tokenKey = 'auth_access_token';
   static const String _refreshKey = 'auth_refresh_token';
   static const String _userKey = 'auth_user';
+  static const String _guestKey = 'auth_guest_mode';
   // 上一次成功登录的 email；切账号检测的依据。
   // 复用历史上 AuthPage 用来"prefill 上次邮箱"的同名 key（值语义一致：上次登录成功的 email）。
   static const String _lastEmailKey = 'auth_last_email';
@@ -30,6 +31,7 @@ class AuthService {
   static String? _accessToken;
   static String? _refreshToken;
   static Map<String, dynamic>? _user;
+  static bool _guestMode = false;
 
   // 检测到切换账号时缓存的 pending 数据。等用户确认/取消后才落地。
   // 不变量：_pendingAuthData != null 时，prefs 里**没有**对应的 token；
@@ -38,10 +40,12 @@ class AuthService {
   static String? _pendingEmail;
   static AccountSwitchInfo? _pendingAccountSwitch;
 
-  static String avatarCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+  static String avatarCacheBuster = DateTime.now().millisecondsSinceEpoch
+      .toString();
 
   // 通知监听者
   static final ValueNotifier<bool> authNotifier = ValueNotifier(false);
+  static final ValueNotifier<bool> guestNotifier = ValueNotifier(false);
 
   /// 上次成功登录的 email；首次登录返回 null。
   static Future<String?> getLastLoginEmail() async {
@@ -53,6 +57,7 @@ class AuthService {
   static AccountSwitchInfo? get pendingAccountSwitch => _pendingAccountSwitch;
 
   static bool get isLoggedIn => _accessToken != null;
+  static bool get isGuestMode => _guestMode && !isLoggedIn;
   static Map<String, dynamic>? get currentUser {
     if (_user == null) return null;
     final u = Map<String, dynamic>.from(_user!);
@@ -60,17 +65,22 @@ class AuthService {
       String url = u['avatar_url'];
       if (url.contains('127.0.0.1')) {
         // 使用统一配置管理的Supabase地址
-        url = url.replaceAll(RegExp(r'http://127\.0\.0\.1:\d+'), AppConfig.supabaseUrl);
+        url = url.replaceAll(
+          RegExp(r'http://127\.0\.0\.1:\d+'),
+          AppConfig.supabaseUrl,
+        );
       }
       u['avatar_url'] = url;
     }
     return u;
   }
+
   static String? get token => _accessToken;
 
   /// 从本地存储恢复登录状态（App 启动时调用）
   static Future<void> restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
+    _guestMode = prefs.getBool(_guestKey) ?? false;
     _accessToken = prefs.getString(_tokenKey);
     _refreshToken = prefs.getString(_refreshKey);
     final userJson = prefs.getString(_userKey);
@@ -79,6 +89,8 @@ class AuthService {
     }
 
     if (_accessToken != null) {
+      _guestMode = false;
+      await prefs.remove(_guestKey);
       // 尝试刷新 token 确保有效
       try {
         await refreshSession();
@@ -93,11 +105,14 @@ class AuthService {
       }
     }
     authNotifier.value = isLoggedIn;
+    guestNotifier.value = isGuestMode;
   }
 
   /// 持久化 token 到本地
   static Future<void> _saveLocal() async {
     final prefs = await SharedPreferences.getInstance();
+    _guestMode = false;
+    await prefs.remove(_guestKey);
     if (_accessToken != null) {
       await prefs.setString(_tokenKey, _accessToken!);
     }
@@ -108,6 +123,7 @@ class AuthService {
       await prefs.setString(_userKey, json.encode(_user));
     }
     authNotifier.value = isLoggedIn;
+    guestNotifier.value = isGuestMode;
   }
 
   static Future<void> _clearLocal() async {
@@ -118,7 +134,31 @@ class AuthService {
     _accessToken = null;
     _refreshToken = null;
     _user = null;
+    _guestMode = false;
+    await prefs.remove(_guestKey);
     authNotifier.value = false;
+    guestNotifier.value = false;
+  }
+
+  static Future<void> continueAsGuest() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+    await prefs.remove(_refreshKey);
+    await prefs.remove(_userKey);
+    await prefs.setBool(_guestKey, true);
+    _accessToken = null;
+    _refreshToken = null;
+    _user = null;
+    _guestMode = true;
+    authNotifier.value = false;
+    guestNotifier.value = true;
+  }
+
+  static Future<void> exitGuestMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    _guestMode = false;
+    await prefs.remove(_guestKey);
+    guestNotifier.value = false;
   }
 
   /// 注册
@@ -134,15 +174,17 @@ class AuthService {
     if (RemoteConfigService.instance.pauseRegister) {
       throw Exception(T.current.errPauseRegister);
     }
-    final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'email': email,
-        'password': password,
-        'username': username ?? email.split('@')[0],
-      }),
-    ).timeout(const Duration(seconds: 15));
+    final resp = await http
+        .post(
+          Uri.parse('$_baseUrl/api/auth/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'email': email,
+            'password': password,
+            'username': username ?? email.split('@')[0],
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -168,11 +210,13 @@ class AuthService {
     if (RemoteConfigService.instance.pauseLogin) {
       throw Exception(T.current.errPauseLogin);
     }
-    final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': email, 'password': password}),
-    ).timeout(const Duration(seconds: 15));
+    final resp = await http
+        .post(
+          Uri.parse('$_baseUrl/api/auth/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({'email': email, 'password': password}),
+        )
+        .timeout(const Duration(seconds: 15));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -191,11 +235,13 @@ class AuthService {
     if (RemoteConfigService.instance.pauseLogin) {
       throw Exception(T.current.errPauseLogin);
     }
-    final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/verify'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': email, 'token': token}),
-    ).timeout(const Duration(seconds: 15));
+    final resp = await http
+        .post(
+          Uri.parse('$_baseUrl/api/auth/verify'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({'email': email, 'token': token}),
+        )
+        .timeout(const Duration(seconds: 15));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -214,7 +260,9 @@ class AuthService {
   ///
   /// 调用前会先把上一次悬挂着的 pending 清掉（避免不同登录路径互相干扰）。
   static Future<void> _commitOrStashAuth(
-      Map<String, dynamic> data, String email) async {
+    Map<String, dynamic> data,
+    String email,
+  ) async {
     // 复位老 pending（保护：例如先 register 拿到 pending，又走 signIn 成功覆盖）
     _pendingAuthData = null;
     _pendingEmail = null;
@@ -222,7 +270,8 @@ class AuthService {
 
     final prefs = await SharedPreferences.getInstance();
     final prevEmail = prefs.getString(_lastEmailKey);
-    final isSwitch = prevEmail != null &&
+    final isSwitch =
+        prevEmail != null &&
         prevEmail.isNotEmpty &&
         prevEmail.toLowerCase() != email.toLowerCase();
 
@@ -230,8 +279,10 @@ class AuthService {
       // 不写 prefs / 不动 _accessToken。等 UI 弹完确认框再决定
       _pendingAuthData = data;
       _pendingEmail = email;
-      _pendingAccountSwitch =
-          AccountSwitchInfo(prevEmail: prevEmail, newEmail: email);
+      _pendingAccountSwitch = AccountSwitchInfo(
+        prevEmail: prevEmail,
+        newEmail: email,
+      );
       return;
     }
 
@@ -279,11 +330,13 @@ class AuthService {
 
   /// 重新发送验证邮件
   static Future<void> resendVerification(String email) async {
-    final resp = await http.post(
-      Uri.parse('$_baseUrl/api/auth/resend'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': email}),
-    ).timeout(const Duration(seconds: 15));
+    final resp = await http
+        .post(
+          Uri.parse('$_baseUrl/api/auth/resend'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({'email': email}),
+        )
+        .timeout(const Duration(seconds: 15));
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -296,11 +349,13 @@ class AuthService {
     if (_refreshToken == null) throw Exception(T.current.authErrNoRefreshToken);
 
     try {
-      final resp = await http.post(
-        Uri.parse('$_baseUrl/api/auth/refresh'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'refresh_token': _refreshToken}),
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/refresh'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'refresh_token': _refreshToken}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       final data = json.decode(resp.body);
       if (resp.statusCode >= 400) {
@@ -327,13 +382,15 @@ class AuthService {
       await ApnsService.instance.unregister();
     } catch (_) {}
     try {
-      await http.post(
-        Uri.parse('$_baseUrl/api/auth/logout'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_accessToken',
-        },
-      ).timeout(const Duration(seconds: 5));
+      await http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/logout'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_accessToken',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
     } catch (_) {}
     await _clearLocal();
   }
@@ -357,10 +414,14 @@ class AuthService {
 
   /// 获取最新用户信息
   static Future<Map<String, dynamic>> fetchUser() async {
-    final resp = await _authRequest(() => http.get(
-      Uri.parse('$_baseUrl/api/auth/user'),
-      headers: {'Authorization': 'Bearer $_accessToken'},
-    ).timeout(const Duration(seconds: 10)));
+    final resp = await _authRequest(
+      () => http
+          .get(
+            Uri.parse('$_baseUrl/api/auth/user'),
+            headers: {'Authorization': 'Bearer $_accessToken'},
+          )
+          .timeout(const Duration(seconds: 10)),
+    );
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -381,17 +442,23 @@ class AuthService {
     if (username != null) body['username'] = username;
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;
 
-    final resp = await _authRequest(() => http.put(
-      Uri.parse('$_baseUrl/api/auth/user'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_accessToken',
-      },
-      body: json.encode(body),
-    ).timeout(const Duration(seconds: 10)));
+    final resp = await _authRequest(
+      () => http
+          .put(
+            Uri.parse('$_baseUrl/api/auth/user'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_accessToken',
+            },
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10)),
+    );
 
     if (resp.statusCode >= 400 && !resp.body.trimLeft().startsWith('{')) {
-      throw Exception(T.fmt(T.current.authErrServerWith, {'code': resp.statusCode}));
+      throw Exception(
+        T.fmt(T.current.authErrServerWith, {'code': resp.statusCode}),
+      );
     }
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {
@@ -405,14 +472,18 @@ class AuthService {
 
   /// 上传头像 (base64)
   static Future<String> uploadAvatar(String base64Data) async {
-    final resp = await _authRequest(() => http.post(
-      Uri.parse('$_baseUrl/api/auth/avatar'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_accessToken',
-      },
-      body: json.encode({'avatar_base64': base64Data}),
-    ).timeout(const Duration(seconds: 15)));
+    final resp = await _authRequest(
+      () => http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/avatar'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_accessToken',
+            },
+            body: json.encode({'avatar_base64': base64Data}),
+          )
+          .timeout(const Duration(seconds: 15)),
+    );
 
     final data = json.decode(resp.body);
     if (resp.statusCode >= 400) {

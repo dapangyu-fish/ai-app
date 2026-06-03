@@ -60,6 +60,8 @@ class _Strings {
   final String authVerifyButton;
   final String authResendCodeButton;
   final String authResendCodePrompt; // "没收到？重新发送验证码"
+  final String authContinueAsGuest;
+  final String authGuestModeHint;
   final String authNoAccountPrompt; // "还没有账户？"（前缀，跟独立按钮配合）
   final String authHasAccountPrompt; // "已有账户？"
   final String authSwitchToRegister;
@@ -595,6 +597,8 @@ class _Strings {
     required this.authVerifyButton,
     required this.authResendCodeButton,
     required this.authResendCodePrompt,
+    required this.authContinueAsGuest,
+    required this.authGuestModeHint,
     required this.authNoAccountPrompt,
     required this.authHasAccountPrompt,
     required this.authSwitchToRegister,
@@ -1059,6 +1063,8 @@ const _Strings _zhCN = _Strings(
   authVerifyButton: '验证',
   authResendCodeButton: '重新发送',
   authResendCodePrompt: '没收到？重新发送验证码',
+  authContinueAsGuest: '先不登录，直接体验',
+  authGuestModeHint: '可运行和探索公开应用；聊天、AI 构造应用和个人能力需要登录。',
   authNoAccountPrompt: '还没有账户？',
   authHasAccountPrompt: '已有账户？',
   authSwitchToRegister: '没有账号？去注册',
@@ -1526,6 +1532,9 @@ const _Strings _enUS = _Strings(
   authVerifyButton: 'Verify',
   authResendCodeButton: 'Resend',
   authResendCodePrompt: "Didn't get it? Resend code",
+  authContinueAsGuest: 'Continue without signing in',
+  authGuestModeHint:
+      'Run and explore public apps. Chat, AI creation, and profile features require sign-in.',
   authNoAccountPrompt: "Don't have an account?",
   authHasAccountPrompt: 'Already have an account?',
   authSwitchToRegister: "No account? Sign up",
@@ -2011,6 +2020,9 @@ const _Strings _deDE = _Strings(
   authVerifyButton: 'Bestätigen',
   authResendCodeButton: 'Erneut senden',
   authResendCodePrompt: 'Nicht erhalten? Code erneut senden',
+  authContinueAsGuest: 'Ohne Anmeldung fortfahren',
+  authGuestModeHint:
+      'Öffentliche Apps ausführen und erkunden. Chat, KI-Erstellung und Profilfunktionen erfordern eine Anmeldung.',
   authNoAccountPrompt: 'Noch kein Konto?',
   authHasAccountPrompt: 'Schon ein Konto?',
   authSwitchToRegister: 'Kein Konto? Registrieren',
@@ -2501,6 +2513,9 @@ const _Strings _esES = _Strings(
   authVerifyButton: 'Verificar',
   authResendCodeButton: 'Reenviar',
   authResendCodePrompt: '¿No lo recibiste? Reenviar código',
+  authContinueAsGuest: 'Continuar sin iniciar sesión',
+  authGuestModeHint:
+      'Ejecuta y explora apps públicas. El chat, la creación con IA y el perfil requieren iniciar sesión.',
   authNoAccountPrompt: '¿No tienes cuenta?',
   authHasAccountPrompt: '¿Ya tienes cuenta?',
   authSwitchToRegister: '¿Sin cuenta? Regístrate',

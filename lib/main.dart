@@ -1057,11 +1057,17 @@ class _AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('auth_gate');
-    return ValueListenableBuilder<bool>(
-      valueListenable: AuthService.authNotifier,
-      builder: (context, loggedIn, _) {
-        if (loggedIn) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AuthService.authNotifier,
+        AuthService.guestNotifier,
+      ]),
+      builder: (context, _) {
+        if (AuthService.isLoggedIn) {
           IMService.instance.login();
+          return const FilePickerPage();
+        }
+        if (AuthService.isGuestMode) {
           return const FilePickerPage();
         }
         return AuthPage(onAuthSuccess: () {});
@@ -1549,6 +1555,17 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           ),
                         ),
                       ],
+                    )
+                  else
+                    IconButton(
+                      tooltip: t.authLoginButton,
+                      icon: Icon(
+                        Icons.account_circle_outlined,
+                        color: cs.onSurface,
+                      ),
+                      onPressed: () {
+                        AuthService.exitGuestMode();
+                      },
                     ),
                 ],
               ),
@@ -1622,6 +1639,14 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                                 'IM 仅支持 iOS / Android（OpenIM SDK 限制）。请在 iOS 模拟器或真机上运行。',
                               ),
                               duration: Duration(seconds: 3),
+                            ),
+                          );
+                          return;
+                        }
+                        if (!AuthService.isLoggedIn) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(T.of(context).chatErrPleaseLogin),
                             ),
                           );
                           return;
