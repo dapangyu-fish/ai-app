@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bot,
   Boxes,
   ChevronRight,
@@ -7,15 +8,14 @@ import {
   Code2,
   Database,
   Download,
-  Film,
-  GitBranch,
+  Github,
   Globe2,
   Layers3,
   LockKeyhole,
   MessageCircle,
+  Network,
   PackageSearch,
   Play,
-  Rocket,
   Server,
   ShieldCheck,
   Smartphone,
@@ -23,14 +23,19 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react';
-import { type CSSProperties, type PointerEvent as ReactPointerEvent, useMemo, useState } from 'react';
+import {
+  type MouseEvent as ReactMouseEvent,
+  useEffect,
+  useState,
+} from 'react';
 
 type Lang = 'zh' | 'en' | 'de' | 'es';
-type ThemeKey = 'orbit' | 'matrix' | 'prism' | 'slate';
+type Page = 'home' | 'docs';
 
 const WEB_APP_URL = 'https://myapp-web.dapangyu.work/';
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/3Fk5Exnn';
 const APK_URL = 'https://myapp-oss-endpoint.dapangyu.work/myapp-releases/android/apk/latest.apk';
+const GITHUB_URL = 'https://github.com/dapangyu-fish/ai-app';
 
 const languageOptions: Array<{ key: Lang; label: string; flag: string }> = [
   { key: 'zh', label: '中文', flag: '🇨🇳' },
@@ -39,53 +44,21 @@ const languageOptions: Array<{ key: Lang; label: string; flag: string }> = [
   { key: 'es', label: 'Español', flag: '🇪🇸' },
 ];
 
-const themes: Array<{
-  key: ThemeKey;
-  label: string;
-  tone: string;
-  description: string;
-}> = [
-  {
-    key: 'orbit',
-    label: 'Orbit Lab',
-    tone: 'Blue / Cyan',
-    description: '深色实验室风格，适合默认官网和技术产品主页。',
-  },
-  {
-    key: 'matrix',
-    label: 'Command Deck',
-    tone: 'Green / Graphite',
-    description: '偏 CLI 和部署文档风格，开局强调自部署能力。',
-  },
-  {
-    key: 'prism',
-    label: 'Neon Studio',
-    tone: 'Violet / Amber',
-    description: '更强的展示感，适合演示、活动和社交传播。',
-  },
-  {
-    key: 'slate',
-    label: 'Systems UI',
-    tone: 'Slate / White',
-    description: '克制、产品化，更像成熟开发者工具。',
-  },
-];
-
 const copy = {
   zh: {
     navHow: '部署',
     navStack: '架构',
-    navTry: '视频',
+    navTry: '演示',
     navFeatures: '能力',
     navDownload: '下载',
-    badge: 'UGC 应用构建工具 · AI 生成 · Web / iOS / Android',
-    titleA: '把想法变成',
-    titleB: '每个人都能 DIY 的应用体验',
+    badge: 'AI 生成应用 · Web / iOS / Android 已可体验',
+    titleA: '一句话生成',
+    titleB: '可运行的应用体验',
     subtitle:
-      'MyApp 是一个用户生成内容（UGC）式的应用构建工具。描述你想要的工具、游戏、社区页面或业务面板，AI 生成可运行体验，你可以在自己的设备上试用、调整并继续迭代。',
+      'MyApp 让用户用自然语言创建工具、小游戏、社区页面和业务面板。AI 生成声明式 JSON App，直接在 Web、TestFlight 或 Android APK 中运行，再通过对话继续迭代。',
     primaryCta: '打开 Web 版',
     secondaryCta: '加入 TestFlight',
-    phoneCaption: '线上 Web 客户端，嵌在手机外框里做快速演示。',
+    phoneCaption: '真实客户端同一套运行时：Web 立即打开，移动端可接入自部署后端。',
     heroConsoleTitle: '从提示词到可运行应用',
     heroConsoleLines: [
       '$ tell ai "生成一个露营装备打包 App"',
@@ -94,15 +67,20 @@ const copy = {
       '→ run it on Web / iOS / Android',
     ],
     proofPoints: ['用户生成应用内容', 'AI 辅助构建和迭代', 'Web 与移动端同一生态'],
-    playgroundTitle: '选择官网科技风格',
-    playgroundSubtitle: '同一套内容，切换不同视觉方向，后续可以按你选中的风格继续打磨。',
-    videosTitle: '演示视频',
-    videosSubtitle: '这里先放占位卡片，后续把视频链接补进去即可。',
-    videoCards: [
-      ['AI 生成 App', '从一句话开始生成可运行 JSON App。'],
-      ['应用库', '安装、搜索、运行 JSON App 和组件。'],
-      ['切换环境', '扫码或粘贴 bootstrap JSON，连接你的后端。'],
+    trustTitle: '产品可信边界',
+    trustPoints: [
+      ['声明式 JSON', 'AI 不下发原生代码或二进制'],
+      ['自部署后端', '测试环境 bootstrap 一键拉起核心服务'],
+      ['跨端运行时', 'Flutter Web、iOS、Android 共用能力层'],
     ],
+    docsTitle: '开发者入口',
+    docsLinks: [
+      ['部署文档', '从 bootstrap 到客户端切换环境'],
+      ['架构图', '理解运行时、AI Worker 与 Registry'],
+      ['GitHub', '查看仓库、部署脚本和合规边界'],
+    ],
+    videosTitle: '真实生成案例',
+    videosSubtitle: '展示 AI 可以生成的不同应用形态：工具、小游戏和社区页面，而不是同一套界面的换壳。',
     deployTitle: '私有部署与客户端接入',
     deployHint: '私有部署主要是后端；客户端可以使用线上 Web，也可以自己 build iOS / Android / Web，然后在客户端切换环境。',
     backendDeployTitle: '1. 部署后端测试环境',
@@ -149,17 +127,17 @@ const copy = {
   en: {
     navHow: 'Deploy',
     navStack: 'Stack',
-    navTry: 'Videos',
+    navTry: 'Tour',
     navFeatures: 'Capabilities',
     navDownload: 'Download',
-    badge: 'UGC app builder · AI-generated · Web / iOS / Android',
-    titleA: 'Turn ideas into',
-    titleB: 'app experiences anyone can DIY',
+    badge: 'AI-generated apps · Web / iOS / Android ready',
+    titleA: 'Generate runnable',
+    titleB: 'app experiences from one prompt',
     subtitle:
-      'MyApp is a user-generated app builder. Describe a tool, game, community screen or dashboard; AI builds a runnable experience you can try, personalize and keep improving on your own devices.',
+      'MyApp lets users create tools, mini-games, community screens and dashboards with natural language. AI generates declarative JSON Apps that run in Web, TestFlight or Android APK, then keep improving through chat.',
     primaryCta: 'Open Web app',
     secondaryCta: 'Join TestFlight',
-    phoneCaption: 'Live Web client embedded in a phone frame for quick demos.',
+    phoneCaption: 'One real runtime across clients: open Web now, or connect mobile builds to your backend.',
     heroConsoleTitle: 'Prompt to runnable app',
     heroConsoleLines: [
       '$ tell ai "build a camping packing app"',
@@ -168,15 +146,20 @@ const copy = {
       '→ run it on Web / iOS / Android',
     ],
     proofPoints: ['User-generated app content', 'AI-assisted building and iteration', 'One ecosystem across Web and mobile'],
-    playgroundTitle: 'Choose a tech visual direction',
-    playgroundSubtitle: 'Same product content, multiple visual directions. Pick one and we can refine from there.',
-    videosTitle: 'Demo videos',
-    videosSubtitle: 'Placeholder cards for now. Drop in real video links later.',
-    videoCards: [
-      ['AI app generation', 'Generate a runnable JSON App from one prompt.'],
-      ['App library', 'Search, install and run JSON Apps and components.'],
-      ['Environment switch', 'Scan or paste bootstrap JSON to connect your backend.'],
+    trustTitle: 'Trust boundary',
+    trustPoints: [
+      ['Declarative JSON', 'AI does not ship native code or binaries'],
+      ['Self-hostable backend', 'test-env bootstrap starts the core services'],
+      ['Cross-client runtime', 'Flutter Web, iOS and Android share one capability layer'],
     ],
+    docsTitle: 'Developer entry points',
+    docsLinks: [
+      ['Deployment docs', 'Bootstrap backend, then switch client environment'],
+      ['Architecture diagram', 'Runtime, AI Worker and Registry in one view'],
+      ['GitHub', 'Inspect repo, scripts and review boundary'],
+    ],
+    videosTitle: 'Generated app examples',
+    videosSubtitle: 'Three different app shapes show tools, mini-games and community screens instead of one repeated shell.',
     deployTitle: 'Private backend and client setup',
     deployHint: 'Private deployment mainly means the backend. The client can use the hosted Web app, or you can build iOS / Android / Web yourself and switch environments in the client.',
     backendDeployTitle: '1. Deploy backend test environment',
@@ -223,7 +206,7 @@ const copy = {
   de: {
     navHow: 'Deployment',
     navStack: 'Stack',
-    navTry: 'Videos',
+    navTry: 'Demo',
     navFeatures: 'Funktionen',
     navDownload: 'Download',
     badge: 'AI-App-Erstellung · Server-driven · Web / iOS / Android',
@@ -233,7 +216,7 @@ const copy = {
       'Beschreibe deine App. Die KI erzeugt eine JSON App, die sofort in der Web-Vorschau und auf mobilen Clients innerhalb der vorkompilierten Runtime laeuft.',
     primaryCta: 'Live-Demo öffnen',
     secondaryCta: 'Deployment ansehen',
-    phoneCaption: 'Live-Web-Client im Smartphone-Rahmen für schnelle Demos.',
+    phoneCaption: 'Web-Client-Vorschau. Für die echte Nutzung die gehostete Web-App öffnen.',
     heroConsoleTitle: 'Vom Prompt zur laufenden App',
     heroConsoleLines: [
       '$ tell ai "build an inventory app"',
@@ -241,16 +224,9 @@ const copy = {
       '→ prepare config + assets',
       '→ run on Web / iOS / Android',
     ],
-    proofPoints: ['Apache-2.0 Open Source', 'JSON ist kein dynamischer Code', 'Backend voll selbst hosten'],
-    playgroundTitle: 'Technischen Look wählen',
-    playgroundSubtitle: 'Gleicher Inhalt, mehrere visuelle Richtungen. Wähle eine aus und wir feilen daran weiter.',
-    videosTitle: 'Demo-Videos',
-    videosSubtitle: 'Noch Platzhalter. Später können hier echte Videolinks ergänzt werden.',
-    videoCards: [
-      ['KI generiert Apps', 'Aus einem Prompt entsteht eine lauffähige JSON App.'],
-      ['App-Bibliothek', 'JSON Apps und Komponenten suchen, installieren und starten.'],
-      ['Umgebung wechseln', 'QR-Code scannen oder bootstrap JSON einfügen.'],
-    ],
+    proofPoints: ['GitHub als Open-Source-Einstieg', 'JSON ist kein dynamischer Code', 'Backend voll selbst hosten'],
+    videosTitle: 'Generierte App-Beispiele',
+    videosSubtitle: 'Drei unterschiedliche App-Formen zeigen Tools, Mini-Games und Community-Screens statt einer wiederholten Hülle.',
     deployTitle: 'Private Backend-Bereitstellung und Client-Setup',
     deployHint: 'Privates Deployment betrifft vor allem das Backend. Den Client kannst du als gehostete Web-App nutzen oder iOS / Android / Web selbst bauen.',
     backendDeployTitle: '1. Backend-Testumgebung starten',
@@ -297,7 +273,7 @@ const copy = {
   es: {
     navHow: 'Despliegue',
     navStack: 'Stack',
-    navTry: 'Videos',
+    navTry: 'Demo',
     navFeatures: 'Capacidades',
     navDownload: 'Descargar',
     badge: 'Apps con IA · Server-driven · Web / iOS / Android',
@@ -307,7 +283,7 @@ const copy = {
       'Describe la app que necesitas. La IA genera una JSON App que corre al instante en la vista Web y en clientes móviles, dentro del runtime precompilado.',
     primaryCta: 'Abrir demo',
     secondaryCta: 'Ver despliegue',
-    phoneCaption: 'Cliente Web en vivo dentro de un marco de teléfono para demos rápidas.',
+    phoneCaption: 'Vista previa del cliente Web. Abre la Web hospedada para usarlo.',
     heroConsoleTitle: 'De prompt a app ejecutable',
     heroConsoleLines: [
       '$ tell ai "build an inventory app"',
@@ -315,16 +291,9 @@ const copy = {
       '→ prepare config + assets',
       '→ run on Web / iOS / Android',
     ],
-    proofPoints: ['Apache-2.0 open source', 'JSON no es código dinámico', 'Backend completo autoalojable'],
-    playgroundTitle: 'Elige un estilo tecnológico',
-    playgroundSubtitle: 'Mismo contenido, varias direcciones visuales. Elige una y seguimos puliéndola.',
-    videosTitle: 'Videos demo',
-    videosSubtitle: 'Tarjetas de marcador por ahora. Luego puedes agregar enlaces reales.',
-    videoCards: [
-      ['Generación con IA', 'Crea una JSON App ejecutable desde un prompt.'],
-      ['Biblioteca de apps', 'Busca, instala y ejecuta JSON Apps y componentes.'],
-      ['Cambio de entorno', 'Escanea o pega el JSON de bootstrap para conectar tu backend.'],
-    ],
+    proofPoints: ['GitHub como ruta open source', 'JSON no es código dinámico', 'Backend completo autoalojable'],
+    videosTitle: 'Ejemplos de apps generadas',
+    videosSubtitle: 'Tres formas distintas muestran herramientas, mini-juegos y pantallas de comunidad, no una misma carcasa repetida.',
     deployTitle: 'Backend privado y configuración del cliente',
     deployHint: 'El despliegue privado es principalmente el backend. Puedes usar la Web hospedada o compilar iOS / Android / Web por tu cuenta.',
     backendDeployTitle: '1. Desplegar backend de prueba',
@@ -370,79 +339,9 @@ const copy = {
   },
 };
 
-type PhoneSize = {
-  width: number;
-  height: number;
-};
-
-const PHONE_ASPECT_RATIO = 390 / 844;
-const PHONE_MIN_WIDTH = 320;
-const PHONE_MAX_WIDTH = 430;
-
-function phoneSizeFromWidth(width: number): PhoneSize {
-  const clampedWidth = Math.max(PHONE_MIN_WIDTH, Math.min(PHONE_MAX_WIDTH, Math.round(width)));
-  return { width: clampedWidth, height: Math.round(clampedWidth / PHONE_ASPECT_RATIO) };
-}
-
-function initialPhoneSize(compact: boolean): PhoneSize {
-  if (compact) {
-    return phoneSizeFromWidth(320);
-  }
-  return phoneSizeFromWidth(390);
-}
-
-type ResizeHandle = 'n' | 'e' | 's' | 'w' | 'nw' | 'ne' | 'sw' | 'se';
-
 function PhonePreview({ compact = false }: { compact?: boolean }) {
-  const [size, setSize] = useState<PhoneSize>(() => initialPhoneSize(compact));
-  const stageStyle = {
-    '--phone-width': `${size.width}px`,
-    '--phone-height': `${size.height}px`,
-    '--phone-ratio': `${size.width} / ${size.height}`,
-  } as CSSProperties;
-
-  function startResize(handle: ResizeHandle, event: ReactPointerEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const start = size;
-
-    const onMove = (moveEvent: PointerEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-      const candidates: number[] = [];
-      if (handle.includes('e')) {
-        candidates.push(start.width + dx);
-      } else if (handle.includes('w')) {
-        candidates.push(start.width - dx);
-      }
-      if (handle.includes('s')) {
-        candidates.push(start.width + dy * PHONE_ASPECT_RATIO);
-      } else if (handle.includes('n')) {
-        candidates.push(start.width - dy * PHONE_ASPECT_RATIO);
-      }
-      const nextWidth = candidates.reduce((current, candidate) => {
-        return Math.abs(candidate - start.width) > Math.abs(current - start.width) ? candidate : current;
-      }, start.width);
-      setSize(phoneSizeFromWidth(nextWidth));
-    };
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }
-
   return (
-    <div
-      className={`phoneStage ${compact ? 'compact' : ''}`}
-      style={stageStyle}
-      aria-label="MyApp Web live preview"
-    >
+    <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp generated app preview">
       <div className="phoneGlow" />
       <div className="phoneShell">
         <div className="sideButton sideButtonPower" />
@@ -450,23 +349,45 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
         <div className="sideButton sideButtonVolumeDown" />
         <div className="phoneSpeaker" />
         <div className="phoneScreen">
-          <iframe
-            src={WEB_APP_URL}
-            title="MyApp Web demo"
-            loading={compact ? 'lazy' : 'eager'}
-            allow="clipboard-read; clipboard-write; microphone; camera"
-            scrolling="no"
-          />
+          <div className="generatedAppMock" aria-hidden="true">
+            <div className="mockStatusBar">
+              <span>9:41</span>
+              <span>JSON App</span>
+            </div>
+            <div className="mockHeroCard">
+              <div>
+                <small>AI generated</small>
+                <strong>Camping Kit</strong>
+                <span>18 items · 3 trips</span>
+              </div>
+              <Sparkles size={24} />
+            </div>
+            <div className="mockPromptBubble">
+              <small>Prompt</small>
+              <span>“Build a camping packing app with checklist, weather and shared notes.”</span>
+            </div>
+            <div className="mockSegment">
+              <span className="active">Checklist</span>
+              <span>Weather</span>
+              <span>Notes</span>
+            </div>
+            <div className="mockChecklist">
+              {['Tent packed', 'Food planned', 'First aid checked'].map((item) => (
+                <div key={item}>
+                  <CheckCircle2 size={16} />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mockBottomSheet">
+              <div>
+                <strong>Runs on Web, iOS, Android</strong>
+                <span>Declarative JSON · precompiled runtime</span>
+              </div>
+              <ChevronRight size={18} />
+            </div>
+          </div>
         </div>
-        {(['n', 'e', 's', 'w', 'nw', 'ne', 'sw', 'se'] as const).map((handle) => (
-          <button
-            aria-label={`Resize phone ${handle}`}
-            className={`resizeHandle resizeHandle-${handle}`}
-            key={handle}
-            type="button"
-            onPointerDown={(event) => startResize(handle, event)}
-          />
-        ))}
       </div>
     </div>
   );
@@ -485,43 +406,474 @@ function TerminalBox({ lines }: { lines: string[] }) {
   );
 }
 
+function ArchitectureDiagram({ lang }: { lang: Lang }) {
+  const zh = lang === 'zh';
+  const groups = [
+    {
+      title: zh ? '入口' : 'Entry',
+      icon: Smartphone,
+      nodes: [
+        [zh ? 'Web 客户端' : 'Web client', 'Cloudflare Pages / Flutter Web'],
+        [zh ? 'iOS / Android' : 'iOS / Android', 'TestFlight / APK / Play'],
+      ],
+    },
+    {
+      title: zh ? '运行时' : 'Runtime',
+      icon: Layers3,
+      nodes: [
+        [zh ? 'JSON DSL 解释器' : 'JSON DSL interpreter', zh ? '只组合已编译能力' : 'compiled capabilities only'],
+        [zh ? 'IM / 游戏 / 媒体 atoms' : 'IM / game / media atoms', zh ? '通用能力层' : 'general capability layer'],
+      ],
+    },
+    {
+      title: zh ? '后端' : 'Backend',
+      icon: Server,
+      nodes: [
+        [zh ? 'Flask API + SSE' : 'Flask API + SSE', zh ? '会话、鉴权、恢复' : 'sessions, auth, recovery'],
+        [zh ? 'AI Worker Queue' : 'AI worker queue', zh ? 'Redis 队列 + Agent 执行' : 'Redis queue + agents'],
+      ],
+    },
+    {
+      title: zh ? '平台服务' : 'Platform services',
+      icon: Network,
+      nodes: [
+        [zh ? 'Registry / Config Center' : 'Registry / config center', zh ? 'JSON App、版本、APK' : 'JSON Apps, versions, APK'],
+        [zh ? 'User Center / OpenIM' : 'User center / OpenIM', zh ? '用户、好友、消息' : 'users, friends, messages'],
+      ],
+    },
+    {
+      title: zh ? '数据与资产' : 'Data and assets',
+      icon: Database,
+      nodes: [
+        ['Postgres / Redis', zh ? '业务数据、队列、会话' : 'business data, queues, sessions'],
+        ['OSS / MinIO', zh ? 'JSON、图片、安装包' : 'JSON, media, release files'],
+      ],
+    },
+  ];
+
+  return (
+    <div className="architecturePanel">
+      <div className="archHeader">
+        <div>
+          <p className="eyebrow">{zh ? '系统架构' : 'System architecture'}</p>
+          <h3>{zh ? '客户端解释 JSON，后端负责生成、分发和恢复任务' : 'Clients interpret JSON; backend generates, distributes and resumes work'}</h3>
+        </div>
+        <a className="inlineLink" href={GITHUB_URL} target="_blank" rel="noreferrer">
+          <Github size={16} />
+          GitHub
+        </a>
+      </div>
+      <div className="archDiagram" aria-label={zh ? 'MyApp 系统架构图' : 'MyApp system architecture diagram'}>
+        {groups.map((group, index) => {
+          const Icon = group.icon;
+          return (
+            <div className="archColumn" key={group.title}>
+              <div className="archColumnTitle">
+                <Icon size={18} />
+                <span>{group.title}</span>
+              </div>
+              <div className="archNodes">
+                {group.nodes.map(([title, body]) => (
+                  <div className="archNode" key={title}>
+                    <strong>{title}</strong>
+                    <span>{body}</span>
+                  </div>
+                ))}
+              </div>
+              {index < groups.length - 1 ? (
+                <div className="archArrow" aria-hidden="true">
+                  <ChevronRight size={18} />
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <div className="archLegend">
+        <span>{zh ? '声明式 JSON App' : 'Declarative JSON Apps'}</span>
+        <span>{zh ? '通用 Flutter 能力层' : 'General Flutter capability layer'}</span>
+        <span>{zh ? '可私有部署后端' : 'Self-hostable backend'}</span>
+      </div>
+    </div>
+  );
+}
+
+function ValueArchitecture({ lang }: { lang: Lang }) {
+  const zh = lang === 'zh';
+  const steps = [
+    [zh ? '描述需求' : 'Describe an idea', zh ? '用户说清楚要什么工具、游戏或页面。' : 'User describes a tool, game or screen.'],
+    [zh ? '生成 JSON App' : 'Generate JSON App', zh ? 'AI 输出声明式 JSON，并通过校验。' : 'AI produces declarative JSON and validation passes.'],
+    [zh ? '跨端运行' : 'Run everywhere', zh ? '同一份 JSON 在 Web、iOS、Android 运行时中渲染。' : 'One JSON renders in Web, iOS and Android runtimes.'],
+  ];
+
+  return (
+    <div className="valueArchPanel">
+      <div className="valueArchFlow">
+        {steps.map(([title, body], index) => (
+          <article key={title}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <h3>{title}</h3>
+            <p>{body}</p>
+          </article>
+        ))}
+      </div>
+      <div className="valueArchProof">
+        <ShieldCheck size={22} />
+        <div>
+          <strong>{zh ? '审核友好的边界' : 'Review-friendly boundary'}</strong>
+          <span>
+            {zh
+              ? 'AI 只能组合已编译进客户端的通用控件和动作，不能下发原生代码、插件或二进制。'
+              : 'AI can only compose compiled widgets and actions. It cannot ship native code, plugins or binaries.'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DocsPage({ lang }: { lang: Lang }) {
+  const zh = lang === 'zh';
+  const docs = {
+    badge: zh ? '部署文档' : 'Deployment docs',
+    title: zh ? '部署、接入和发布 MyApp' : 'Deploy, connect and release MyApp',
+    subtitle: zh
+      ? '这页记录官网推荐的部署路径。当前 GitHub 入口先固定挂出，仓库会作为未来开源和协作入口持续整理。'
+      : 'This page documents the recommended deployment path. The GitHub entry is already linked and will be the future open-source and collaboration entry.',
+    quickTitle: zh ? '最快路径' : 'Fast path',
+    quickBody: zh
+      ? '本地或测试环境先启动后端，再用线上 Web、TestFlight 或 APK 客户端切换到这套后端。'
+      : 'Start the backend first, then point the hosted Web app, TestFlight build or APK client to that backend.',
+    backendTitle: zh ? '1. 启动后端测试环境' : '1. Start the backend test environment',
+    backendBody: zh
+      ? 'bootstrap 会生成服务地址、测试账号、环境 JSON 和二维码。生产密钥、供应商 token、OSS 凭证都放在服务器环境变量或专用 env 文件中，不进入 Git。'
+      : 'bootstrap prints service URLs, a test account, environment JSON and a QR code. Production tokens, provider keys and OSS credentials stay in server env files, not Git.',
+    clientTitle: zh ? '2. 接入客户端' : '2. Connect clients',
+    clientBody: zh
+      ? '打开客户端的 Service Environment 页面，扫码或粘贴 bootstrap 输出的整段 JSON，保存后重新登录。Web 版、iOS TestFlight 和 Android APK 都走同一套环境切换逻辑。'
+      : 'Open Service Environment in the client, scan or paste the full bootstrap JSON, save it and sign in again. Web, iOS TestFlight and Android APK use the same environment switch flow.',
+    buildTitle: zh ? '3. 构建客户端' : '3. Build clients',
+    websiteTitle: zh ? '官网发布' : 'Website deployment',
+    releaseTitle: zh ? '4. 发布和分发' : '4. Release and distribution',
+    releaseBody: zh
+      ? 'JSON App 通过 Registry 发布并存到 OSS/MinIO；Android APK 走配置中心上传到固定对象路径；Flutter Web 客户端构建到 build/web；官网是 website 目录下的 Vite 站点。iOS 通过 TestFlight 分发。'
+      : 'JSON Apps are published through Registry and stored in OSS/MinIO. Android APK uploads through config center to a fixed object path. Flutter Web client builds to build/web; this marketing website is the Vite app under website. iOS is distributed through TestFlight.',
+    configTitle: zh ? '配置和安全边界' : 'Configuration and security boundary',
+    configBody: zh
+      ? 'AI 生成的是声明式 JSON，不下发 Dart、Swift、Kotlin、插件或二进制。运行时只解释客户端已经编译进包内的通用控件、动作和媒体能力。'
+      : 'AI produces declarative JSON, not Dart, Swift, Kotlin, plugins or binaries. The runtime only interprets generic widgets, actions and media capabilities already compiled into the client.',
+  };
+
+  return (
+    <>
+      <section className="docsHero" id="docs">
+        <div className="shell docsHeroGrid">
+          <div>
+            <div className="badge">
+              <BookOpen size={15} />
+              <span>{docs.badge}</span>
+            </div>
+            <h1>{docs.title}</h1>
+            <p className="lead">{docs.subtitle}</p>
+            <div className="actions">
+              <a className="button primary" href={GITHUB_URL} target="_blank" rel="noreferrer">
+                <Github size={17} />
+                GitHub
+              </a>
+              <a className="button secondary" href={WEB_APP_URL} target="_blank" rel="noreferrer">
+                <Play size={17} />
+                {zh ? '打开 Web 版' : 'Open Web app'}
+              </a>
+            </div>
+          </div>
+          <TerminalBox
+            lines={[
+              '$ git clone https://github.com/dapangyu-fish/ai-app.git',
+              '$ cd ai-app/deploy/test-env',
+              '$ ./bootstrap.sh',
+              '# scan Service Environment QR in the client',
+            ]}
+          />
+        </div>
+      </section>
+
+      <section className="docsSection" id="quick-start">
+        <div className="shell docsLayout">
+          <aside className="docsToc">
+            <a href="#quick-start">{docs.quickTitle}</a>
+            <a href="#architecture-docs">{zh ? '架构图' : 'Architecture'}</a>
+            <a href="#commands">{zh ? '部署命令' : 'Commands'}</a>
+            <a href="#release">{docs.releaseTitle}</a>
+          </aside>
+          <div className="docsContent">
+            <article className="docsBlock">
+              <p className="eyebrow">{zh ? '推荐流程' : 'Recommended flow'}</p>
+              <h2>{docs.quickTitle}</h2>
+              <p>{docs.quickBody}</p>
+              <div className="docsSteps">
+                {[docs.backendTitle, docs.clientTitle, docs.buildTitle, docs.releaseTitle].map((title, index) => (
+                  <div className="docsStep" key={title}>
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <strong>{title}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="docsBoundaryNote">
+                <ShieldCheck size={18} />
+                <p>
+                  {zh
+                    ? '官网、Flutter Web 客户端和后端是三条不同发布路径：官网构建 website/dist，Flutter Web 客户端构建 build/web，后端通过 deploy/test-env 或生产服务部署。'
+                    : 'The website, Flutter Web client and backend are three separate release paths: website builds website/dist, Flutter Web client builds build/web, and backend deployment runs through deploy/test-env or production services.'}
+                </p>
+              </div>
+            </article>
+
+            <article className="docsBlock architectureDocs" id="architecture-docs">
+              <ArchitectureDiagram lang={lang} />
+            </article>
+
+            <article className="docsBlock" id="commands">
+              <div className="docsGrid">
+                <div>
+                  <h2>{docs.backendTitle}</h2>
+                  <p>{docs.backendBody}</p>
+                  <TerminalBox
+                    lines={[
+                      '$ git clone https://github.com/dapangyu-fish/ai-app.git',
+                      '$ cd ai-app/deploy/test-env',
+                      '$ ./bootstrap.sh',
+                    ]}
+                  />
+                </div>
+                <div>
+                  <h2>{docs.clientTitle}</h2>
+                  <p>{docs.clientBody}</p>
+                  <TerminalBox
+                    lines={[
+                      '$ flutter pub get',
+                      '$ flutter run -d chrome',
+                      '$ flutter build apk --release',
+                      '$ ./scripts/build_cloudflare_pages.sh',
+                    ]}
+                  />
+                </div>
+                <div>
+                  <h2>{docs.websiteTitle}</h2>
+                  <p>
+                    {zh
+                      ? '官网是 website 目录下的 Vite 项目。发布到 Cloudflare Pages 时应构建 website/dist，不要和 Flutter Web 客户端的 build/web 混用。'
+                      : 'The website is the Vite project under website. Deploy website/dist to Cloudflare Pages; do not confuse it with the Flutter Web client build/web output.'}
+                  </p>
+                  <TerminalBox
+                    lines={[
+                      '$ cd website',
+                      '$ PATH=/home/fish/ai-app/.tools/node/bin:$PATH npm run build',
+                      '# deploy website/dist with your Pages workflow',
+                    ]}
+                  />
+                </div>
+              </div>
+            </article>
+
+            <article className="docsBlock" id="release">
+              <div className="docsGrid">
+                <div>
+                  <h2>{docs.releaseTitle}</h2>
+                  <p>{docs.releaseBody}</p>
+                </div>
+                <div>
+                  <h2>{docs.configTitle}</h2>
+                  <p>{docs.configBody}</p>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
 function App() {
   const [lang, setLang] = useState<Lang>(() =>
     navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en',
   );
-  const [theme, setTheme] = useState<ThemeKey>('orbit');
+  const [page, setPage] = useState<Page>(() => (window.location.pathname === '/docs' ? 'docs' : 'home'));
   const t = copy[lang];
-  const activeTheme = useMemo(() => themes.find((item) => item.key === theme)!, [theme]);
   const activeLanguage = languageOptions.find((item) => item.key === lang) ?? languageOptions[1];
+  const docsLabel = lang === 'zh' ? '文档' : 'Docs';
+  const zh = lang === 'zh';
+  const trustTitle = 'trustTitle' in t ? t.trustTitle : lang === 'de' ? 'Vertrauensgrenze' : 'Límite de confianza';
+  const trustPoints =
+    'trustPoints' in t
+      ? t.trustPoints
+      : [
+          [lang === 'de' ? 'Deklaratives JSON' : 'JSON declarativo', lang === 'de' ? 'Keine nativen Code- oder Binär-Downloads' : 'Sin código nativo ni binarios enviados por IA'],
+          [lang === 'de' ? 'Self-hostable Backend' : 'Backend autoalojable', lang === 'de' ? 'test-env bootstrap startet Kernservices' : 'test-env bootstrap inicia los servicios centrales'],
+          [lang === 'de' ? 'Cross-client Runtime' : 'Runtime multiplataforma', lang === 'de' ? 'Web, iOS und Android teilen Fähigkeiten' : 'Web, iOS y Android comparten capacidades'],
+        ];
+  const docsTitle = 'docsTitle' in t ? t.docsTitle : docsLabel;
+  const docsLinks =
+    'docsLinks' in t
+      ? t.docsLinks
+      : [
+          [docsLabel, lang === 'de' ? 'Backend starten und Client verbinden' : 'Desplegar backend y conectar cliente'],
+          [lang === 'de' ? 'Architekturdiagramm' : 'Diagrama de arquitectura', lang === 'de' ? 'Runtime, Worker und Registry' : 'Runtime, Worker y Registry'],
+          ['GitHub', lang === 'de' ? 'Repository und Skripte ansehen' : 'Ver repositorio y scripts'],
+        ];
+  const showcaseCards = zh
+    ? [
+        {
+          title: '露营装备管家',
+          prompt: '生成一个露营装备打包 App，支持清单、天气、共享备注',
+          body: 'AI 生成清单、状态统计、团队备注和跨端运行界面。',
+          tags: ['工具', '清单', '共享'],
+        },
+        {
+          title: '星际跑酷小游戏',
+          prompt: '横版星际跑酷：跳跃躲障碍，收集星星，分数和生命完整',
+          body: 'JSON App 组合游戏 atoms、状态栏、暂停和重开流程。',
+          tags: ['游戏', '状态', '动画'],
+        },
+        {
+          title: '小型社区空间',
+          prompt: '做一个小红书风格的内容社区，有首页、发布、收藏、个人页',
+          body: '用预编译运行时渲染多 tab、内容流和个人资料体验。',
+          tags: ['社区', '内容流', '个人页'],
+        },
+      ]
+    : [
+        {
+          title: 'Camping kit planner',
+          prompt: 'Build a camping packing app with checklist, weather and shared notes',
+          body: 'AI creates checklist states, trip summary, team notes and a cross-client UI.',
+          tags: ['Tool', 'Checklist', 'Shared'],
+        },
+        {
+          title: 'Star runner mini-game',
+          prompt: 'Create a side-scrolling space runner with jump, obstacles, stars and lives',
+          body: 'JSON App composes game atoms, score/life HUD, pause and restart flows.',
+          tags: ['Game', 'State', 'Motion'],
+        },
+        {
+          title: 'Creator community',
+          prompt: 'Make a lifestyle content app with feed, publish, favorites and profile',
+          body: 'The precompiled runtime renders tabs, feeds and profile screens from JSON.',
+          tags: ['Community', 'Feed', 'Profile'],
+        },
+      ];
+  const downloadOptions = [
+    {
+      title: zh ? 'Web 立即体验' : 'Web app',
+      body: zh ? '无需安装，直接打开线上 Web 客户端。' : 'No install required. Open the hosted Web client.',
+      href: WEB_APP_URL,
+      icon: Play,
+      status: zh ? '可用' : 'Available',
+      primary: true,
+    },
+    {
+      title: 'iOS TestFlight',
+      body: zh ? 'Public Group 1 已开放，适合真实手机体验。' : 'Public Group 1 is open for real-device testing.',
+      href: TESTFLIGHT_URL,
+      icon: Smartphone,
+      status: zh ? '2500 人公开组' : 'Public group',
+      primary: false,
+    },
+    {
+      title: zh ? 'Android APK' : 'Android APK',
+      body: zh ? '固定链接下载最新版 APK；Google Play 正在准备。' : 'Download the latest APK from a fixed link. Google Play is preparing.',
+      href: APK_URL,
+      icon: Download,
+      status: zh ? '直接下载' : 'Direct download',
+      primary: false,
+    },
+    {
+      title: zh ? '自部署后端' : 'Self-host backend',
+      body: zh ? '用自己的后端连接 Web、iOS 或 Android 客户端。' : 'Connect Web, iOS or Android clients to your backend.',
+      href: '/docs',
+      icon: Server,
+      status: zh ? '文档' : 'Docs',
+      primary: false,
+    },
+  ];
+
+  useEffect(() => {
+    const onPopState = () => {
+      setPage(window.location.pathname === '/docs' ? 'docs' : 'home');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  function goHome(event: ReactMouseEvent<HTMLAnchorElement>, hash = '#top') {
+    event.preventDefault();
+    setPage('home');
+    window.history.pushState(null, '', hash === '#top' ? '/' : `/${hash}`);
+    requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' }));
+  }
+
+  function goDocs(event: ReactMouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    setPage('docs');
+    window.history.pushState(null, '', '/docs');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   return (
-    <main className={`site theme-${theme}`}>
+    <main className="site">
       <nav className="nav">
         <div className="shell navInner">
-          <a className="brand" href="#top" aria-label="MyApp">
+          <a className="brand" href="/" aria-label="MyApp" onClick={(event) => goHome(event)}>
             My<span>App</span>
           </a>
           <div className="navLinks">
-            <a href="#deploy">{t.navHow}</a>
-            <a href="#stack">{t.navStack}</a>
-            <a href="#videos">{t.navTry}</a>
-            <a href="#features">{t.navFeatures}</a>
-            <a href="#download">{t.navDownload}</a>
+            <a href="/#deploy" onClick={(event) => goHome(event, '#deploy')}>
+              {t.navHow}
+            </a>
+            <a href="/#stack" onClick={(event) => goHome(event, '#stack')}>
+              {t.navStack}
+            </a>
+            <a href="/#videos" onClick={(event) => goHome(event, '#videos')}>
+              {t.navTry}
+            </a>
+            <a href="/#features" onClick={(event) => goHome(event, '#features')}>
+              {t.navFeatures}
+            </a>
+            <a href="/#download" onClick={(event) => goHome(event, '#download')}>
+              {t.navDownload}
+            </a>
+            <a href="/docs" onClick={goDocs}>
+              {docsLabel}
+            </a>
           </div>
-          <label className="languageSelect" aria-label="Language">
-            <Globe2 size={16} />
-            <span>{activeLanguage.flag}</span>
-            <select value={lang} onChange={(event) => setLang(event.target.value as Lang)}>
-              {languageOptions.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="navActions">
+            <a className="navIconLink mobileDocsLink" href="/docs" onClick={goDocs} aria-label={docsLabel}>
+              <BookOpen size={17} />
+              <span>{docsLabel}</span>
+            </a>
+            <a className="navIconLink" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
+              <Github size={17} />
+              <span>GitHub</span>
+            </a>
+            <label className="languageSelect" aria-label="Language">
+              <Globe2 size={16} />
+              <span>{activeLanguage.flag}</span>
+              <select value={lang} onChange={(event) => setLang(event.target.value as Lang)}>
+                {languageOptions.map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </nav>
 
+      {page === 'docs' ? (
+        <DocsPage lang={lang} />
+      ) : (
+        <>
       <section className="hero" id="top">
         <div className="gridFx" />
         <div className="shell heroGrid">
@@ -544,6 +896,24 @@ function App() {
                 <Smartphone size={17} />
                 {t.secondaryCta}
               </a>
+              <a className="button quiet" href={APK_URL} target="_blank" rel="noreferrer">
+                <Download size={17} />
+                APK
+              </a>
+            </div>
+            <div className="heroLinkRow" aria-label={zh ? '快速入口' : 'Quick links'}>
+              <a href="/docs" onClick={goDocs}>
+                <BookOpen size={15} />
+                {docsLabel}
+              </a>
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+                <Github size={15} />
+                GitHub
+              </a>
+              <a href="https://github.com/dapangyu-fish/ai-app/blob/alpha/v1000/docs/APP_STORE_COMPLIANCE.md" target="_blank" rel="noreferrer">
+                <ShieldCheck size={15} />
+                {zh ? '合规边界' : 'Review boundary'}
+              </a>
             </div>
             <div className="heroConsole">
               <div className="heroConsoleHeader">
@@ -562,16 +932,16 @@ function App() {
             </div>
             <div className="metricRow">
               <div>
-                <strong>6+</strong>
-                <span>client targets</span>
+                <strong>Web</strong>
+                <span>{zh ? '即开即用' : 'open now'}</span>
               </div>
               <div>
-                <strong>30+</strong>
-                <span>runtime atoms</span>
+                <strong>iOS</strong>
+                <span>TestFlight</span>
               </div>
               <div>
-                <strong>26</strong>
-                <span>test-env services</span>
+                <strong>APK</strong>
+                <span>{zh ? '直接下载' : 'direct download'}</span>
               </div>
             </div>
           </div>
@@ -580,34 +950,112 @@ function App() {
             <p className="phoneCaption">{t.phoneCaption}</p>
           </div>
         </div>
+        <div className="shell heroTrustGrid">
+          <div className="trustPanel" aria-labelledby="trust-title">
+            <p className="eyebrow">{zh ? '为什么可信' : 'Why it is credible'}</p>
+            <h2 id="trust-title">{trustTitle}</h2>
+            <div className="trustItems">
+              {trustPoints.map(([title, body]) => (
+                <article key={title}>
+                  <CheckCircle2 size={18} />
+                  <strong>{title}</strong>
+                  <span>{body}</span>
+                </article>
+              ))}
+            </div>
+          </div>
+          <div className="docsEntryPanel" aria-labelledby="docs-entry-title">
+            <p className="eyebrow">{zh ? '继续了解' : 'Keep exploring'}</p>
+            <h2 id="docs-entry-title">{docsTitle}</h2>
+            <div className="docsEntryLinks">
+              {docsLinks.map(([title, body], index) => {
+                const href = index === 2 ? GITHUB_URL : index === 1 ? '/#stack' : '/docs';
+                const Icon = index === 2 ? Github : index === 1 ? Network : BookOpen;
+                const external = index === 2;
+                const onClick = index === 0 ? goDocs : index === 1 ? (event: ReactMouseEvent<HTMLAnchorElement>) => goHome(event, '#stack') : undefined;
+                return (
+                  <a href={href} key={title} onClick={onClick} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
+                    <Icon size={18} />
+                    <span>
+                      <strong>{title}</strong>
+                      <small>{body}</small>
+                    </span>
+                    <ChevronRight size={16} />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="playground">
+      <section className="videosSection" id="videos">
         <div className="shell">
           <div className="sectionHeader split">
             <div>
-              <p className="eyebrow">Style playground</p>
-              <h2>{t.playgroundTitle}</h2>
-              <p>{t.playgroundSubtitle}</p>
+              <p className="eyebrow">{lang === 'zh' ? '生成案例' : 'Generated examples'}</p>
+              <h2>{t.videosTitle}</h2>
+              <p>{t.videosSubtitle}</p>
             </div>
-            <div className="selectedTheme">
-              <span>{activeTheme.label}</span>
-              <small>{activeTheme.tone}</small>
-            </div>
+            <a className="button secondary" href={WEB_APP_URL} target="_blank" rel="noreferrer">
+              <Play size={17} />
+              {zh ? '直接试用' : 'Try it live'}
+            </a>
           </div>
-          <div className="themeGrid">
-            {themes.map((item) => (
-              <button
-                className={`themeCard ${theme === item.key ? 'active' : ''}`}
-                type="button"
-                key={item.key}
-                onClick={() => setTheme(item.key)}
-              >
-                <span className={`swatch swatch-${item.key}`} />
-                <strong>{item.label}</strong>
-                <em>{item.tone}</em>
-                <p>{item.description}</p>
-              </button>
+          <div className="showcaseGrid">
+            {showcaseCards.map((item, index) => (
+              <article className="showcaseCard" key={item.title}>
+                <div className={`showcasePreview showcasePreview-${index + 1}`}>
+                  <div className="previewTop">
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <small>JSON App</small>
+                  </div>
+                  <div className="previewScreen">
+                    {index === 0 ? (
+                      <div className="previewChecklist">
+                        <strong>{item.title}</strong>
+                        <span><CheckCircle2 size={13} /> Tent packed</span>
+                        <span><CheckCircle2 size={13} /> Water checked</span>
+                        <span><CheckCircle2 size={13} /> Route shared</span>
+                      </div>
+                    ) : index === 1 ? (
+                      <div className="previewGame">
+                        <div className="gameHud">
+                          <span>Score 420</span>
+                          <span>Life 3</span>
+                        </div>
+                        <div className="gameScene">
+                          <i className="planet" />
+                          <i className="runner" />
+                          <i className="star starA" />
+                          <i className="star starB" />
+                          <i className="block" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="previewFeed">
+                        <strong>{item.title}</strong>
+                        <span className="feedHero" />
+                        <span className="feedLine wide" />
+                        <span className="feedLine" />
+                        <div className="feedActions">
+                          <small />
+                          <small />
+                          <small />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className="showcasePrompt">{item.prompt}</span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+                <div className="showcaseTags">
+                  {item.tags.map((tag) => (
+                    <small key={tag}>{tag}</small>
+                  ))}
+                </div>
+              </article>
             ))}
           </div>
         </div>
@@ -651,55 +1099,7 @@ function App() {
               );
             })}
           </div>
-          <div className="architectureBand">
-            <div>
-              <Smartphone size={19} />
-              <span>Client runtime</span>
-            </div>
-            <ChevronRight size={18} />
-            <div>
-              <Rocket size={19} />
-              <span>AI generation</span>
-            </div>
-            <ChevronRight size={18} />
-            <div>
-              <Database size={19} />
-              <span>Registry + Redis + OSS</span>
-            </div>
-            <ChevronRight size={18} />
-            <div>
-              <GitBranch size={19} />
-              <span>JSON Apps</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="videosSection" id="videos">
-        <div className="shell">
-          <div className="sectionHeader split">
-            <div>
-              <p className="eyebrow">Demo library</p>
-              <h2>{t.videosTitle}</h2>
-              <p>{t.videosSubtitle}</p>
-            </div>
-            <a className="button secondary" href="#videos">
-              <Film size={17} />
-              Video slots
-            </a>
-          </div>
-          <div className="videoGrid">
-            {t.videoCards.map(([title, body], index) => (
-              <article className="videoCard" key={title}>
-                <div className="videoThumb">
-                  <Play size={28} />
-                </div>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <h3>{title}</h3>
-                <p>{body}</p>
-              </article>
-            ))}
-          </div>
+          <ValueArchitecture lang={lang} />
         </div>
       </section>
 
@@ -712,36 +1112,33 @@ function App() {
           </div>
           <div className="deployCards">
             <article className="deployCard">
+              <div className="deployIcon"><Server size={20} /></div>
               <h3>{t.backendDeployTitle}</h3>
-              <TerminalBox
-                lines={[
-                  '$ cd deploy/test-env',
-                  '$ ./bootstrap.sh',
-                  '# save the QR / JSON / test account from output',
-                ]}
-              />
+              <p>{zh ? '用 bootstrap 拉起测试环境，获得服务地址、测试账号和环境 JSON。' : 'Run bootstrap to start the test environment and get service URLs, a test account and environment JSON.'}</p>
+              <span className="deployMeta">{zh ? '后端优先' : 'Backend first'}</span>
             </article>
             <article className="deployCard">
+              <div className="deployIcon"><Smartphone size={20} /></div>
               <h3>{t.clientBuildTitle}</h3>
-              <TerminalBox
-                lines={[
-                  '$ flutter pub get',
-                  '$ flutter run -d chrome',
-                  '$ flutter build apk --release',
-                  '$ flutter build ios --release',
-                  '$ ./scripts/build_cloudflare_pages.sh',
-                ]}
-              />
+              <p>{zh ? '可以直接用线上 Web，也可以自行构建 Flutter Web、iOS 或 Android 客户端。' : 'Use the hosted Web app directly, or build Flutter Web, iOS or Android yourself.'}</p>
+              <span className="deployMeta">{zh ? '客户端可替换' : 'Replaceable clients'}</span>
             </article>
             <article className="deployCard">
+              <div className="deployIcon"><Network size={20} /></div>
               <h3>{t.switchEnvTitle}</h3>
               <p>{t.switchEnvBody}</p>
+              <span className="deployMeta">{zh ? '扫码或粘贴' : 'Scan or paste'}</span>
             </article>
             <article className="deployCard">
+              <div className="deployIcon"><Bot size={20} /></div>
               <h3>{t.usageTitle}</h3>
               <p>{t.usageBody}</p>
               <a className="inlineLink" href={WEB_APP_URL} target="_blank" rel="noreferrer">
                 {t.openWeb}
+                <ChevronRight size={16} />
+              </a>
+              <a className="inlineLink" href="/docs" onClick={goDocs}>
+                {docsLabel}
                 <ChevronRight size={16} />
               </a>
             </article>
@@ -805,34 +1202,47 @@ function App() {
             <h2>{t.downloadTitle}</h2>
             <p>{t.downloadBody}</p>
           </div>
-          <div className="actions">
-            <a className="button primary" href={WEB_APP_URL} target="_blank" rel="noreferrer">
-              <Play size={17} />
-              {t.openWeb}
-            </a>
-            <a className="button secondary" href={TESTFLIGHT_URL} target="_blank" rel="noreferrer">
-              <Smartphone size={17} />
-              {t.appStore}
-              <small>{t.available}</small>
-            </a>
-            <a className="button secondary unavailable" href="#download" aria-disabled="true">
-              <Download size={17} />
-              {t.googlePlay}
-              <small>{t.soon}</small>
-            </a>
-            <a className="button secondary" href={APK_URL} target="_blank" rel="noreferrer">
-              <Download size={17} />
-              {t.apk}
-              <small>{t.available}</small>
-            </a>
+          <div className="downloadGrid">
+            {downloadOptions.map((item) => {
+              const Icon = item.icon;
+              const isDocs = item.href === '/docs';
+              return (
+                <a
+                  className={`downloadCard ${item.primary ? 'primary' : ''}`}
+                  href={item.href}
+                  key={item.title}
+                  onClick={isDocs ? goDocs : undefined}
+                  target={isDocs ? undefined : '_blank'}
+                  rel={isDocs ? undefined : 'noreferrer'}
+                >
+                  <div>
+                    <Icon size={20} />
+                    <span>{item.status}</span>
+                  </div>
+                  <strong>{item.title}</strong>
+                  <p>{item.body}</p>
+                  <small>
+                    {zh ? '继续' : 'Continue'}
+                    <ChevronRight size={14} />
+                  </small>
+                </a>
+              );
+            })}
           </div>
         </div>
       </section>
+        </>
+      )}
 
       <footer className="footer">
         <div className="shell">
           <span>MyApp</span>
-          <a href="mailto:2501808198@qq.com">fish</a>
+          <div className="footerLinks">
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+              GitHub
+            </a>
+            <a href="mailto:2501808198@qq.com">fish</a>
+          </div>
         </div>
       </footer>
     </main>

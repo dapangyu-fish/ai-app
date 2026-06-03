@@ -116,6 +116,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
   // 不再用 showMenu (它走 root navigator overlay，物理位置在 chat overlay 下方)。
   bool _menuOpen = false;
   Future<Set<String>>? _statusProbeFuture;
+  SessionMeta? _deleteConfirmSession;
 
   String _currentSessionTitle() {
     final defaultTitle = T.of(context).chatSessionDefaultTitle;
@@ -196,9 +197,8 @@ class _ChatOverlayState extends State<ChatOverlay> {
       // ignore: use_build_context_synchronously — navCtx 来自 JsonDslApp.navigatorKey，永远有效
       await _promptRename(navCtx, s);
     } else if (action == 'delete') {
-      // ignore: use_build_context_synchronously — 同上
-      final ok = await _confirmDelete(navCtx, s);
-      if (ok == true) await widget.onDeleteSession?.call(sid);
+      if (!mounted) return;
+      setState(() => _deleteConfirmSession = s);
     }
   }
 
@@ -235,32 +235,17 @@ class _ChatOverlayState extends State<ChatOverlay> {
     }
   }
 
-  Future<bool?> _confirmDelete(BuildContext navCtx, SessionMeta s) async {
-    return await showDialog<bool>(
-      context: navCtx,
-      builder: (ctx) {
-        final t = T.of(ctx);
-        return AlertDialog(
-          title: Text(t.chatSessionDeleteTitle),
-          content: Text(
-            T.fmt(t.chatSessionDeleteContent, {
-              'title': s.displayTitle(maxVisualWidth: 16),
-            }),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(t.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: Text(t.delete),
-            ),
-          ],
-        );
-      },
-    );
+  void _closeDeleteConfirmation() {
+    if (_deleteConfirmSession != null) {
+      setState(() => _deleteConfirmSession = null);
+    }
+  }
+
+  Future<void> _confirmDeleteSession() async {
+    final session = _deleteConfirmSession;
+    if (session == null) return;
+    setState(() => _deleteConfirmSession = null);
+    await widget.onDeleteSession?.call(session.id);
   }
 
   @override
@@ -513,6 +498,12 @@ class _ChatOverlayState extends State<ChatOverlay> {
               ),
             ),
           ],
+          if (_deleteConfirmSession != null)
+            _DeleteSessionConfirmLayer(
+              session: _deleteConfirmSession!,
+              onCancel: _closeDeleteConfirmation,
+              onConfirm: _confirmDeleteSession,
+            ),
         ],
       ),
     );
@@ -828,6 +819,123 @@ class _SessionChip extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DeleteSessionConfirmLayer extends StatelessWidget {
+  final SessionMeta session;
+  final VoidCallback onCancel;
+  final Future<void> Function() onConfirm;
+
+  const _DeleteSessionConfirmLayer({
+    required this.session,
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = T.of(context);
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onCancel,
+                child: Container(color: Colors.black.withValues(alpha: 0.48)),
+              ),
+            ),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C2C2E),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.delete_outline,
+                              color: Colors.redAccent,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                t.chatSessionDeleteTitle,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          T.fmt(t.chatSessionDeleteContent, {
+                            'title': session.displayTitle(maxVisualWidth: 16),
+                          }),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.76),
+                            fontSize: 14,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: onCancel,
+                              child: Text(
+                                t.cancel,
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton(
+                              onPressed: onConfirm,
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.redAccent,
+                              ),
+                              child: Text(t.delete),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
