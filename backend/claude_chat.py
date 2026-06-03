@@ -355,7 +355,8 @@ def chat():
             "`{\"client_actions\":[{\"type\":\"request_upload_current_app\"}]}` 或 "
             "`{\"client_actions\":[{\"type\":\"json_app_ready\",\"url\":\"https://...\"}]}`。"
             "上传 JSON-APP 时必须执行 `bash backend/upload_with_signature.sh \"$AI_APP_WORKSPACE/app.json\"`；"
-            "该脚本上传成功后会自动写入 `json_app_ready` 动作文件，你只需在自然语言中简短说明已生成。"
+            "该脚本成功后会自动写入结构化动作文件；隔离运行时可能先请求后端代上传，"
+            "后端会转换成客户端可用的 `json_app_ready` 事件。你只需在自然语言中简短说明已生成。"
             "如果需要请求用户上传当前应用，先写入 `request_upload_current_app` 动作文件，再用自然语言说明需要查看当前应用。"
         )
                     

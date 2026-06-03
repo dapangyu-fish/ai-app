@@ -16,7 +16,7 @@
 - `children` 字段永远必须是数组：`"children": [{...}]`。哪怕只有一个子控件也不能写成 `"children": {...}`；单子控件 wrapper 才使用 `child: {...}`。
 - 上传前必须通过 `python3 -m json.tool`、`python3 backend/repair_json_app.py`、`python3 backend/validate_json_app.py`。只要还有 validator `ERROR`，绝对不能回复“完成/通过/已生成”。
 - 图标名必须来自 `lib/json_ui/widgets/icon_registry.dart`；不确定时先查源码。未知静态图标会被 validator 拦截，也会在 UI 上显示成红色问号。
-- 客户端动作必须走结构化文件 `$AI_APP_WORKSPACE/client_actions.json`，禁止在聊天回复中写 `[json_app_url]` / `[/json_app_url]` / `[request_action]` / `[/request_action]` 标签。上传 JSON-APP 时执行 `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"`，脚本上传成功后会自动写入 `{"type":"json_app_ready","url":"https://..."}` 动作。请求用户上传当前应用时，手动写入 `{"client_actions":[{"type":"request_upload_current_app"}]}`，再用自然语言说明原因。
+- 客户端动作必须走结构化文件 `$AI_APP_WORKSPACE/client_actions.json`，禁止在聊天回复中写 `[json_app_url]` / `[/json_app_url]` / `[request_action]` / `[/request_action]` 标签。上传 JSON-APP 时执行 `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"`；脚本成功后会自动写入结构化动作。隔离运行时可能写入后端代上传动作，后端会转换成客户端可用的 `json_app_ready` 事件。请求用户上传当前应用时，手动写入 `{"client_actions":[{"type":"request_upload_current_app"}]}`，再用自然语言说明原因。
 
 ## 1. 当前应用修改/分析
 
@@ -68,7 +68,7 @@ bash backend/upload_with_signature.sh "$TMPFILE"
 
 ## 5. 输出
 
-成功时只需要简短自然语言说明，不要输出客户端协议标签。上传成功动作由 `backend/upload_with_signature.sh` 自动写入 `$AI_APP_WORKSPACE/client_actions.json`：
+成功时只需要简短自然语言说明，不要输出客户端协议标签。上传结构化动作由 `backend/upload_with_signature.sh` 自动写入 `$AI_APP_WORKSPACE/client_actions.json`；隔离运行时会由后端完成代上传并转换成客户端可用的 `json_app_ready`：
 
 ```json
 {"client_actions":[{"type":"json_app_ready","url":"https://..."}]}

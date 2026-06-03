@@ -21,7 +21,7 @@ from typing import Optional
 from urllib.parse import urljoin
 
 import requests
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import Flask, Response, jsonify, request, send_file, stream_with_context
 
 
 APP = Flask(__name__)
@@ -372,6 +372,25 @@ def _load_run_from_log(run_id: str) -> dict:
     return state
 
 
+def _run_workspace(run_id: str) -> Optional[Path]:
+    with _RUNS_LOCK:
+        run = _RUNS.get(run_id) or {}
+    raw = run.get("workspace_path")
+    return Path(str(raw)) if raw else None
+
+
+def _safe_artifact_path(workspace: Path, relative_path: str) -> Optional[Path]:
+    relative_path = str(relative_path or "app.json").strip() or "app.json"
+    candidate = (workspace / relative_path).resolve()
+    try:
+        candidate.relative_to(workspace.resolve())
+    except ValueError:
+        return None
+    if not candidate.is_file():
+        return None
+    return candidate
+
+
 @APP.get("/health")
 def health():
     with _RUNS_LOCK:
@@ -449,6 +468,7 @@ def provider_proxy(token: str, subpath: str):
     proxy = _proxy_lookup(token)
     if not proxy:
         return jsonify({"error": "provider proxy token expired or invalid"}), 401
+    run_id = str(proxy.get("run_id") or "")
     upstream_base = str(proxy.get("upstream_base_url") or "").rstrip("/")
     upstream_token = str(proxy.get("upstream_token") or "")
     if not upstream_base or not upstream_token:
@@ -466,7 +486,32 @@ def provider_proxy(token: str, subpath: str):
             timeout=(PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS, PROVIDER_PROXY_READ_TIMEOUT_SECONDS),
         )
     except requests.RequestException as exc:
+        if run_id:
+            _json_line(
+                _run_log_path(run_id),
+                {
+                    "type": "proxy_error",
+                    "method": request.method,
+                    "subpath": subpath,
+                    "upstream_url": upstream_url,
+                    "message": str(exc),
+                    "ts": _now_ms(),
+                },
+            )
         return jsonify({"error": "provider proxy upstream request failed", "detail": str(exc)}), 502
+    if run_id:
+        _json_line(
+            _run_log_path(run_id),
+            {
+                "type": "proxy_response",
+                "method": request.method,
+                "subpath": subpath,
+                "upstream_url": upstream_url,
+                "status_code": upstream.status_code,
+                "content_type": upstream.headers.get("content-type", ""),
+                "ts": _now_ms(),
+            },
+        )
 
     def generate():
         try:
@@ -523,6 +568,7 @@ def create_run():
             "status": "starting",
             "created_at": _now_ms(),
             "log_path": str(log_path),
+            "workspace_path": str(paths["workspace"]),
             "proxy_tokens": len(proxy_tokens),
         }
     _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths, proxy_tokens)
@@ -549,6 +595,18 @@ def get_run(run_id: str):
         if run_id in _RUNS:
             return jsonify(_RUNS[run_id])
     return jsonify(_load_run_from_log(run_id))
+
+
+@APP.get("/v1/runs/<run_id>/artifact")
+def get_run_artifact(run_id: str):
+    run_id = _safe_part(run_id, "run")
+    workspace = _run_workspace(run_id)
+    if not workspace:
+        return jsonify({"error": "workspace not found"}), 404
+    path = _safe_artifact_path(workspace, request.args.get("path", "app.json"))
+    if not path:
+        return jsonify({"error": "artifact not found"}), 404
+    return send_file(path, mimetype="application/json", as_attachment=False)
 
 
 @APP.post("/v1/runs/<run_id>/abort")

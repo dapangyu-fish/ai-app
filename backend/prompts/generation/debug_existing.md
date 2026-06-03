@@ -54,4 +54,4 @@ python3 backend/validate_json_app.py "$TMPFILE"
 bash backend/upload_with_signature.sh "$TMPFILE"
 ```
 
-不要在聊天回复中输出 `[json_app_url]` 标签。`upload_with_signature.sh` 上传成功后会自动写入 `$AI_APP_WORKSPACE/client_actions.json`，后端会把运行按钮作为结构化 `client_action` 事件发给客户端。
+不要在聊天回复中输出 `[json_app_url]` 标签。`upload_with_signature.sh` 成功后会自动写入 `$AI_APP_WORKSPACE/client_actions.json`，隔离运行时由后端代上传并把运行按钮作为结构化 `client_action` 事件发给客户端。

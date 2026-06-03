@@ -19,21 +19,26 @@ Redis 数据：
 
 from __future__ import annotations
 
-import json
 import hashlib
+import io
+import json
 import logging
 import os
 import re
 import requests
 import shutil
 import subprocess
+import sys
+import tempfile
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, List, Optional, Tuple
 
+from minio import Minio
 import redis
 
 from config import (
@@ -62,6 +67,11 @@ from config import (
     DEFAULT_AGENT,
     DEFAULT_PROVIDER,
     GENERATE_PROMPT_PATH,
+    MINIO_ACCESS_KEY,
+    MINIO_ENDPOINT,
+    MINIO_PUBLIC_URL,
+    MINIO_SECRET_KEY,
+    MINIO_SECURE,
     PROJECT_ROOT,
     load_generate_prompt,
 )
@@ -425,6 +435,9 @@ _CLIENT_ACTION_URL_RE = re.compile(
     r"https?://[^\s\]\[\)\(\<>\"]+",
     re.IGNORECASE,
 )
+_SERVER_UPLOAD_ACTION = "server_upload_app_json"
+_TEMP_JSON_BUCKET = os.environ.get("AI_CHAT_TEMP_JSON_BUCKET", "ai-chat-temp")
+_TEMP_JSON_EXPIRY_HOURS = int(os.environ.get("AI_CHAT_TEMP_JSON_EXPIRY_HOURS", "24"))
 
 
 def _final_protocol_warnings(final_text: Optional[str]) -> List[str]:
@@ -464,6 +477,17 @@ def _normalize_client_action(raw: Any, session_id: str) -> Optional[dict]:
             return None
         return {"type": "json_app_ready", "url": url}
 
+    if action_type == _SERVER_UPLOAD_ACTION:
+        path = str(raw.get("path") or "app.json").strip() or "app.json"
+        normalized = os.path.normpath(path).replace("\\", "/")
+        if normalized.startswith("../") or normalized == ".." or os.path.isabs(normalized):
+            _client_action_warning(session_id, "server_upload_app_json 路径非法", detail=raw)
+            return None
+        if normalized != "app.json" and not normalized.endswith(".json"):
+            _client_action_warning(session_id, "server_upload_app_json 只允许 JSON 文件", detail=raw)
+            return None
+        return {"type": _SERVER_UPLOAD_ACTION, "path": normalized}
+
     _client_action_warning(session_id, "未知 client action type", detail=raw)
     return None
 
@@ -499,6 +523,7 @@ def _load_client_actions(workspace: Optional[str], session_id: str) -> List[dict
 
     wants_upload_current_app = False
     last_json_app_ready: Optional[dict] = None
+    server_uploads: List[dict] = []
     for raw in raw_actions[:20]:
         action = _normalize_client_action(raw, session_id)
         if not action:
@@ -507,13 +532,134 @@ def _load_client_actions(workspace: Optional[str], session_id: str) -> List[dict
             wants_upload_current_app = True
         elif action["type"] == "json_app_ready":
             last_json_app_ready = action
+        elif action["type"] == _SERVER_UPLOAD_ACTION:
+            server_uploads.append(action)
 
     out: List[dict] = []
     if wants_upload_current_app:
         out.append({"type": "request_upload_current_app"})
     if last_json_app_ready:
         out.append(last_json_app_ready)
+    out.extend(server_uploads[-1:])
     return out
+
+
+def _artifact_from_local_workspace(workspace: Optional[str], relative_path: str, session_id: str) -> bytes:
+    if not workspace:
+        raise RuntimeError("server upload requires workspace")
+    root = os.path.abspath(workspace)
+    candidate = os.path.abspath(os.path.join(root, relative_path or "app.json"))
+    if os.path.commonpath([root, candidate]) != root:
+        raise RuntimeError("server upload path escapes workspace")
+    if not os.path.isfile(candidate):
+        raise RuntimeError(f"server upload artifact not found: {relative_path}")
+    with open(candidate, "rb") as f:
+        return f.read()
+
+
+def _artifact_from_agent_node(agent_node_url: str, run_id: str, relative_path: str) -> bytes:
+    if not agent_node_url or not run_id:
+        raise RuntimeError("server upload requires agent node url and run id")
+    response = requests.get(
+        f"{agent_node_url}/v1/runs/{run_id}/artifact",
+        headers=_agent_node_headers(),
+        params={"path": relative_path or "app.json"},
+        timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"agent-node artifact fetch failed {response.status_code}: {response.text[:500]}")
+    return response.content
+
+
+def _repair_validate_json_bytes(data: bytes, session_id: str) -> bytes:
+    with tempfile.NamedTemporaryFile("wb", suffix=".json", delete=False) as tmp:
+        tmp.write(data)
+        tmp_path = tmp.name
+    try:
+        for script in ("repair_json_app.py", "validate_json_app.py"):
+            proc = subprocess.run(
+                [sys.executable, os.path.join(PROJECT_ROOT, "backend", script), tmp_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=120,
+            )
+            if proc.returncode != 0:
+                detail = (proc.stdout + "\n" + proc.stderr)[-4000:]
+                _client_action_warning(session_id, f"{script} failed", detail=detail)
+                raise RuntimeError(f"{script} failed: {detail}")
+        with open(tmp_path, "rb") as f:
+            return f.read()
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+def _upload_temp_json_app(data: bytes) -> str:
+    if not MINIO_ACCESS_KEY or not MINIO_SECRET_KEY:
+        raise RuntimeError("backend MinIO credentials are not configured")
+    object_name = f"{uuid.uuid4().hex}.json"
+    client = Minio(
+        MINIO_ENDPOINT,
+        access_key=MINIO_ACCESS_KEY,
+        secret_key=MINIO_SECRET_KEY,
+        secure=MINIO_SECURE,
+    )
+    if not client.bucket_exists(_TEMP_JSON_BUCKET):
+        client.make_bucket(_TEMP_JSON_BUCKET)
+    client.put_object(
+        _TEMP_JSON_BUCKET,
+        object_name,
+        io.BytesIO(data),
+        len(data),
+        content_type="application/json",
+    )
+    url = client.presigned_get_object(
+        _TEMP_JSON_BUCKET,
+        object_name,
+        expires=timedelta(hours=_TEMP_JSON_EXPIRY_HOURS),
+    )
+    public_base = MINIO_PUBLIC_URL.rstrip("/")
+    if public_base:
+        # minio-python signs against MINIO_ENDPOINT; when the endpoint is an internal
+        # host, rewrite only the origin, preserving the signed path/query.
+        match = re.match(r"^https?://[^/]+", url)
+        if match:
+            url = public_base + url[match.end():]
+    return url
+
+
+def _resolve_server_upload_actions(
+    actions: List[dict],
+    session_id: str,
+    *,
+    workspace: Optional[str],
+    agent_node_url: str = "",
+    run_id: str = "",
+) -> List[dict]:
+    resolved: List[dict] = []
+    last_json_app_ready: Optional[dict] = None
+    for action in actions:
+        if action.get("type") != _SERVER_UPLOAD_ACTION:
+            resolved.append(action)
+            if action.get("type") == "json_app_ready":
+                last_json_app_ready = action
+            continue
+        if last_json_app_ready:
+            continue
+        relative_path = str(action.get("path") or "app.json")
+        raw = (
+            _artifact_from_agent_node(agent_node_url, run_id, relative_path)
+            if agent_node_url and run_id
+            else _artifact_from_local_workspace(workspace, relative_path, session_id)
+        )
+        repaired = _repair_validate_json_bytes(raw, session_id)
+        url = _upload_temp_json_app(repaired)
+        last_json_app_ready = {"type": "json_app_ready", "url": url}
+        resolved.append(last_json_app_ready)
+    return [action for action in resolved if action.get("type") != _SERVER_UPLOAD_ACTION]
 
 
 def _tool_status_message(tool_name: str, tool_input: dict) -> str:
@@ -1086,7 +1232,8 @@ def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -
         "`{\"client_actions\":[{\"type\":\"request_upload_current_app\"}]}` 或 "
         "`{\"client_actions\":[{\"type\":\"json_app_ready\",\"url\":\"https://...\"}]}`。"
         "上传 JSON-APP 时必须执行 `bash backend/upload_with_signature.sh \"$AI_APP_WORKSPACE/app.json\"`；"
-        "该脚本上传成功后会自动写入 `json_app_ready` 动作文件，你只需在自然语言中简短说明已生成。"
+        "该脚本成功后会自动写入结构化动作文件；隔离运行时可能先请求后端代上传，"
+        "后端会转换成客户端可用的 `json_app_ready` 事件。你只需在自然语言中简短说明已生成。"
         "如果需要请求用户上传当前应用，先写入 `request_upload_current_app` 动作文件，再用自然语言说明需要查看当前应用。"
     )
     return (
@@ -1466,6 +1613,7 @@ def _run_agent_node_worker(
                 if isinstance(raw_actions, list):
                     wants_upload_current_app = False
                     last_json_app_ready: Optional[dict] = None
+                    server_uploads: List[dict] = []
                     for raw_action in raw_actions[:20]:
                         action = _normalize_client_action(raw_action, session_id)
                         if not action:
@@ -1474,11 +1622,14 @@ def _run_agent_node_worker(
                             wants_upload_current_app = True
                         elif action["type"] == "json_app_ready":
                             last_json_app_ready = action
+                        elif action["type"] == _SERVER_UPLOAD_ACTION:
+                            server_uploads.append(action)
                     remote_client_actions = []
                     if wants_upload_current_app:
                         remote_client_actions.append({"type": "request_upload_current_app"})
                     if last_json_app_ready:
                         remote_client_actions.append(last_json_app_ready)
+                    remote_client_actions.extend(server_uploads[-1:])
             elif item_type == "stop":
                 returncode = item.get("returncode")
                 status = str(item.get("status") or "failed")
@@ -1505,6 +1656,13 @@ def _run_agent_node_worker(
             "tail": (final_text or "")[-500:],
         }, ensure_ascii=False))
     client_actions = remote_client_actions or _load_client_actions(workspace, session_id)
+    client_actions = _resolve_server_upload_actions(
+        client_actions,
+        session_id,
+        workspace=workspace,
+        agent_node_url=agent_node_url,
+        run_id=run_id,
+    )
     for action in client_actions:
         if append_event({"client_action": action}):
             all_events.append({"client_action": action})
@@ -1836,6 +1994,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 "tail": tail,
             }, ensure_ascii=False))
         client_actions = _load_client_actions(workspace, session_id)
+        client_actions = _resolve_server_upload_actions(client_actions, session_id, workspace=workspace)
         for action in client_actions:
             if append_event({"client_action": action}):
                 all_events.append({"client_action": action})

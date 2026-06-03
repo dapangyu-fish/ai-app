@@ -98,13 +98,13 @@ python3 backend/validate_json_app.py "$TMPFILE"
 bash backend/upload_with_signature.sh "$TMPFILE"
 ```
 
-脚本成功后会自动写入 `$AI_APP_WORKSPACE/client_actions.json`，形状如下：
+脚本成功后会自动写入 `$AI_APP_WORKSPACE/client_actions.json`。在有上传密钥的环境中形状如下：
 
 ```json
 {"client_actions":[{"type":"json_app_ready","url":"https://..."}]}
 ```
 
-这是结构化客户端动作文件，不是聊天文本。`backend/upload_with_signature.sh` 成功后会自动写入 `$AI_APP_WORKSPACE/client_actions.json`；最终回答只用自然语言说明已生成/已修复，禁止输出 `[json_app_url]` 标签。
+这是结构化客户端动作文件，不是聊天文本。隔离运行时没有上传密钥时，脚本会写入后端代上传动作，后端会转换成客户端可用的 `json_app_ready`。最终回答只用自然语言说明已生成/已修复，禁止输出 `[json_app_url]` 标签。
 
 ## 发布禁令
 

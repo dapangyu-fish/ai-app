@@ -66,8 +66,6 @@ def create_app():
     app.add_url_rule("/api/auth/quota", methods=["GET"], view_func=auth.get_quota)
 
     # 注册 Chat 路由
-    # 老路径（保留兼容老客户端）：单一 /chat 端点直推 SSE，client 断 = 任务断
-    app.add_url_rule("/chat", methods=["POST"], view_func=claude_chat.chat)
     app.add_url_rule("/api/ai/session_status", methods=["GET"], view_func=claude_chat.session_status)
     # 新路径（feat/ai-background-push）：worker 与 HTTP 解耦，支持后台续跑 + SSE 重连
     # 详见 backend/ARCHITECTURE.md §3

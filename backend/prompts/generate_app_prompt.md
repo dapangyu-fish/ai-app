@@ -74,8 +74,8 @@ echo "TMPFILE=$TMPFILE"
 
 1. 使用工具把生成的 JSON 代码写入到 `$TMPFILE`。
 2. **强制：上传前过一遍合法性校验**（见下"上传前自检 checklist"），任何一条不通过，回去改 JSON，**重新过一遍**，再继续。
-3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh "$TMPFILE"`。该脚本会先运行 `repair_json_app.py` 清理常见机械错误，再运行 `validate_json_app.py`；如果校验失败，必须按错误路径修复后重跑，不能绕过上传。成功时命令会输出一个带签名的 URL（有效期 24 小时；如需自定义，传第二个参数指定小时数）。
-4. `upload_with_signature.sh` 会自动写入 `$AI_APP_WORKSPACE/client_actions.json`，形如 `{"client_actions":[{"type":"json_app_ready","url":"https://..."}]}`。
+3. 使用 `Bash` 工具执行 `bash backend/upload_with_signature.sh "$TMPFILE"`。该脚本会先运行 `repair_json_app.py` 清理常见机械错误，再运行 `validate_json_app.py`；如果校验失败，必须按错误路径修复后重跑，不能绕过上传。成功时会写入结构化客户端动作；隔离运行时可能先请求后端代上传。
+4. `upload_with_signature.sh` 会自动写入 `$AI_APP_WORKSPACE/client_actions.json`。最终客户端会收到后端转换后的 `json_app_ready` 事件。
 5. 向用户回复一句自然语言，例如：`我已经生成好了应用。` 禁止在聊天回复中输出 `[json_app_url]` 标签。
 
 ### 复杂 JSON 的 Python 生成器工作流（强制）
@@ -193,7 +193,7 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 
 **注意事项**：
 - 客户端动作必须写入 `$AI_APP_WORKSPACE/client_actions.json`，不要混入聊天文本。
-- 上传成功动作由 `backend/upload_with_signature.sh` 自动写入，不要手写 `[json_app_url]` 标签。
+- 上传结构化动作由 `backend/upload_with_signature.sh` 自动写入，不要手写 `[json_app_url]` 标签。
 - 请求上传当前应用时，写入 `{"client_actions":[{"type":"request_upload_current_app"}]}`，不要手写 `[request_action]` 标签。
 - 普通问答、能力说明、澄清问题、错误解释或未真实上传成功时，只能用自然语言描述。
 - 不要在聊天框直接输出大段的 JSON 文本。
@@ -213,7 +213,7 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 
 **如果用户只是要求生成应用**：
 - ✅ 只生成 JSON 并上传到临时存储
-- ✅ 让上传脚本写入 `json_app_ready` 结构化动作，最终回答只用自然语言
+- ✅ 让上传脚本写入结构化动作，最终由后端转换成客户端可用的运行按钮，最终回答只用自然语言
 - ❌ 不要发布到商店
 
 **错误示例**：
@@ -222,7 +222,7 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 
 **正确示例**：
 - 用户说："生成一个待办事项应用"
-- 你生成 JSON，上传到临时存储，上传脚本写入 `json_app_ready` 动作，最终自然语言回复已生成 ← 这是正确的！
+- 你生成 JSON，执行上传脚本，脚本写入结构化动作，最终自然语言回复已生成 ← 这是正确的！
 - 用户说："把这个应用发布到商店"
 - 你再调用 publish_script.py 发布 ← 这才是正确的！
 

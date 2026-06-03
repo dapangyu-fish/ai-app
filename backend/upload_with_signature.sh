@@ -37,6 +37,50 @@ MINIO_ENDPOINT="${MINIO_ENDPOINT#http://}"
 BUCKET="ai-chat-temp"
 OBJECT_NAME="$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-').json"
 
+# 隔离 agent runtime 时不把 MinIO 真实密钥注入容器。此时本脚本仍然承担
+# repair/validate 的最后一道闸，上传动作交给后端 worker 用自己的密钥完成。
+if [ -z "${MINIO_ACCESS_KEY:-}" ] || [ -z "${MINIO_SECRET_KEY:-}" ]; then
+    if [ -n "${AI_APP_WORKSPACE:-}" ] && [ -d "$AI_APP_WORKSPACE" ]; then
+        python3 - "$AI_APP_WORKSPACE/client_actions.json" "$FILE_PATH" "$AI_APP_WORKSPACE" <<'PYTHON'
+import json
+import os
+import sys
+
+actions_path = sys.argv[1]
+file_path = os.path.abspath(sys.argv[2])
+workspace = os.path.abspath(sys.argv[3])
+payload = {"client_actions": []}
+
+if os.path.exists(actions_path):
+    try:
+        with open(actions_path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict) and isinstance(loaded.get("client_actions"), list):
+            payload = loaded
+        elif isinstance(loaded, list):
+            payload = {"client_actions": loaded}
+    except Exception:
+        payload = {"client_actions": []}
+
+rel_path = os.path.relpath(file_path, workspace)
+if rel_path.startswith("..") or os.path.isabs(rel_path):
+    rel_path = "app.json"
+
+payload["client_actions"] = [
+    item for item in payload["client_actions"]
+    if not (isinstance(item, dict) and item.get("type") == "server_upload_app_json")
+]
+payload["client_actions"].append({"type": "server_upload_app_json", "path": rel_path})
+
+with open(actions_path, "w", encoding="utf-8") as f:
+    json.dump(payload, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+PYTHON
+    fi
+    echo "server-side upload requested for $FILE_PATH"
+    exit 0
+fi
+
 # 使用 mc (MinIO Client) 上传文件并生成预签名 URL
 # 如果没有 mc，使用 Python 脚本
 if command -v mc &> /dev/null; then
