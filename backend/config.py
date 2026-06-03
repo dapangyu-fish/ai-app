@@ -439,6 +439,19 @@ AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX = max(
     _env_int("AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX", AI_WORKER_QUEUE_MAX),
 )
 
+# AI 执行后端：
+# - local：保持旧行为，在 ai-worker 容器/进程内直接启动 Claude/Codex CLI。
+# - agent-node：ai-worker 只提交结构化 run 到 agent-node，由 agent-node 拉起隔离容器。
+# 默认 local 是为了向前兼容；生产容器化后由 compose/env 显式切到 agent-node。
+AI_WORKER_EXECUTION_BACKEND = (
+    os.environ.get("AI_WORKER_EXECUTION_BACKEND", "local").strip().lower().replace("_", "-")
+    or "local"
+)
+AGENT_NODE_URL = os.environ.get("AGENT_NODE_URL", "").rstrip("/")
+AGENT_NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
+AGENT_NODE_CONNECT_TIMEOUT_SECONDS = _env_int("AGENT_NODE_CONNECT_TIMEOUT_SECONDS", 10)
+AGENT_NODE_EVENT_TIMEOUT_SECONDS = _env_int("AGENT_NODE_EVENT_TIMEOUT_SECONDS", 7200)
+
 
 def _provider_worker_env_int(provider_id: str, key: str, default: int) -> int:
     prefix = _provider_prefix(provider_id)

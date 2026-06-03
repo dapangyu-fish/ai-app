@@ -1,0 +1,35 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && . /etc/os-release \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends docker-ce-cli \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/backend
+
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir flask gunicorn requests
+
+COPY backend/agent_node_service.py /app/backend/agent_node_service.py
+
+ENV AGENT_NODE_HOST=0.0.0.0 \
+    AGENT_NODE_PORT=5590 \
+    AGENT_NODE_STATE_ROOT=/var/lib/myapp/agent-node/state \
+    AGENT_NODE_WORKSPACE_ROOT=/var/lib/myapp/agent-node/workspaces \
+    AGENT_NODE_LOG_DIR=/var/log/myapp/agent-node \
+    AGENT_NODE_RUNTIME_IMAGE=dapangyufish/myapp-agent-runtime:latest
+
+EXPOSE 5590
+
+CMD ["gunicorn", "-k", "gthread", "-w", "1", "--threads", "16", "-b", "0.0.0.0:5590", "agent_node_service:APP"]

@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "services": {
+    "backend": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "backend",
+      "container": "myapp-backend",
+      "health": {"type": "http", "url": "http://127.0.0.1:5566/api/ai/providers"}
+    },
+    "ai-worker": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "ai-worker",
+      "container": "myapp-ai-worker"
+    },
+    "registry": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "registry",
+      "container": "myapp-registry",
+      "health": {"type": "http", "url": "http://127.0.0.1:3254/health"}
+    },
+    "config-center": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "config-center",
+      "container": "myapp-config-center",
+      "health": {"type": "http", "url": "http://127.0.0.1:5000/api/v1/public"}
+    },
+    "user-center": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "user-center",
+      "container": "myapp-user-center"
+    },
+    "agent-node": {
+      "group": "agent",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "agent-node",
+      "container": "myapp-agent-node",
+      "health": {"type": "http", "url": "http://127.0.0.1:5590/health"}
+    },
+    "agent-runtime": {
+      "group": "agent",
+      "kind": "image",
+      "image": "dapangyufish/myapp-agent-runtime:agent-control-plane"
+    },
+    "ai-session-redis": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "ai-session-redis",
+      "container": "myapp-ai-session-redis"
+    },
+    "app-minio": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "app-minio",
+      "container": "myapp-app-minio"
+    },
+    "jsonapp-postgres": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "jsonapp-postgres",
+      "container": "myapp-jsonapp-postgres"
+    },
+    "supabase-auth": {"group": "supabase", "kind": "docker", "container": "supabase-auth"},
+    "supabase-db": {"group": "supabase", "kind": "docker", "container": "supabase-db"},
+    "supabase-kong": {"group": "supabase", "kind": "docker", "container": "supabase-kong"},
+    "supabase-rest": {"group": "supabase", "kind": "docker", "container": "supabase-rest"},
+    "supabase-storage": {"group": "supabase", "kind": "docker", "container": "supabase-storage"},
+    "supabase-realtime": {"group": "supabase", "kind": "docker", "container": "realtime-dev.supabase-realtime"},
+    "supabase-studio": {"group": "supabase", "kind": "docker", "container": "supabase-studio"},
+    "supabase-pooler": {"group": "supabase", "kind": "docker", "container": "supabase-pooler"},
+    "supabase-analytics": {"group": "supabase", "kind": "docker", "container": "supabase-analytics"},
+    "openim-server": {"group": "openim", "kind": "docker", "container": "openim-server"},
+    "openim-chat": {"group": "openim", "kind": "docker", "container": "openim-chat"},
+    "openim-web-front": {"group": "openim", "kind": "docker", "container": "openim-web-front"},
+    "openim-admin-front": {"group": "openim", "kind": "docker", "container": "openim-admin-front"},
+    "mongo": {"group": "openim", "kind": "docker", "container": "mongo"},
+    "redis": {"group": "openim", "kind": "docker", "container": "redis"},
+    "kafka": {"group": "openim", "kind": "docker", "container": "kafka"},
+    "etcd": {"group": "openim", "kind": "docker", "container": "etcd"},
+    "minio": {"group": "openim", "kind": "docker", "container": "minio"}
+  }
+}

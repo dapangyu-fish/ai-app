@@ -826,6 +826,15 @@ def chat_start():
         and existing.get("provider") == provider_id
     ):
         agent_resume_id = existing.get("agent_thread_id") or None
+    elif (
+        agent_id == "claude"
+        and existing
+        and existing.get("agent") == "claude"
+        and existing.get("provider") == provider_id
+    ):
+        # Claude Code uses the session id as its conversation id. First turns
+        # create a new CLI session; later turns resume the same id.
+        agent_resume_id = session_id
 
     # 写 meta + 提交到显式队列。只有接受入队后才扣配额。
     store.create_meta(

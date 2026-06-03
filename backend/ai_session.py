@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import requests
 import shutil
 import subprocess
 import threading
@@ -44,6 +45,11 @@ from config import (
     AI_SESSION_REDIS_TTL_SECONDS,
     AI_WORKER_MAX_CONCURRENCY,
     AI_WORKER_QUEUE_MAX,
+    AI_WORKER_EXECUTION_BACKEND,
+    AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
+    AGENT_NODE_EVENT_TIMEOUT_SECONDS,
+    AGENT_NODE_TOKEN,
+    AGENT_NODE_URL,
     CLAUDE_BIN,
     CODEX_BIN,
     CODEX_HOME,
@@ -1226,6 +1232,233 @@ def _extract_codex_thread_id(line_str: str) -> Optional[str]:
     return str(thread_id) if thread_id else None
 
 
+def _agent_node_headers() -> dict:
+    headers = {"Content-Type": "application/json"}
+    if AGENT_NODE_TOKEN:
+        headers["Authorization"] = f"Bearer {AGENT_NODE_TOKEN}"
+    return headers
+
+
+def _agent_node_provider_env(provider: dict) -> dict:
+    """Only send the agent CLI env, never the backend process env."""
+    env = dict(provider.get("cli_env") or {})
+    env["IS_SANDBOX"] = "1"
+    env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
+    env["REGISTRY_BASE_URL"] = os.environ.get("REGISTRY_BASE_URL", "")
+    env["MINIO_PUBLIC_URL"] = os.environ.get("MINIO_PUBLIC_URL", "")
+    return {k: v for k, v in env.items() if v is not None}
+
+
+def _agent_node_codex_config(provider: dict) -> dict:
+    codex = dict(provider.get("codex") or {})
+    if not codex:
+        return {}
+    # The token itself is passed through the env map with a runtime-only env key.
+    # Long term this should be a one-run token issued by the provider proxy.
+    env_key = str(codex.get("env_key") or "").strip()
+    token = os.environ.get(env_key, "") if env_key else ""
+    runtime_env_key = "MYAPP_CODEX_AUTH_TOKEN"
+    codex["env_key"] = runtime_env_key
+    codex["provider_id"] = str(provider.get("id") or "custom").replace("-", "_")
+    codex["_runtime_token_env_key"] = runtime_env_key
+    codex["_runtime_token"] = token
+    return codex
+
+
+def _run_agent_node_worker(
+    *,
+    store: SessionStore,
+    session_id: str,
+    job_id: Optional[str],
+    last_msg: str,
+    provider: dict,
+    runner: str,
+    agent_resume_id: Optional[str],
+    sys_prompt: str,
+    workspace: str,
+    quota_used: int,
+    quota_limit: int,
+    quota_remaining: int,
+    append_event,
+    set_status,
+    all_events: List[dict],
+) -> None:
+    if not AGENT_NODE_URL:
+        raise RuntimeError("AI_WORKER_EXECUTION_BACKEND=agent-node 但 AGENT_NODE_URL 未配置")
+
+    parse_line = parse_codex_line if runner == "codex" else parse_cli_line
+    runtime_workspace = "/workspace"
+    if runner == "codex":
+        codex = _agent_node_codex_config(provider)
+        env = _agent_node_provider_env(provider)
+        runtime_token_env_key = codex.pop("_runtime_token_env_key", "")
+        runtime_token = codex.pop("_runtime_token", "")
+        if runtime_token_env_key and runtime_token:
+            env[runtime_token_env_key] = runtime_token
+        prompt = _build_codex_prompt(last_msg, sys_prompt, workspace=runtime_workspace)
+        resume_id = agent_resume_id or ""
+    else:
+        codex = {}
+        env = _agent_node_provider_env(provider)
+        prompt = _build_user_turn_prompt(last_msg, workspace=runtime_workspace)
+        resume_id = agent_resume_id or ""
+
+    run_id = _safe_path_part(job_id or uuid.uuid4().hex, "job")
+    payload = {
+        "run_id": run_id,
+        "session_id": session_id,
+        "job_id": job_id or run_id,
+        "user_id": store.get_meta(session_id).get("user_id") or "user",
+        "provider_id": provider.get("id"),
+        "agent_id": runner,
+        "resume_id": resume_id,
+        "prompt": prompt,
+        "system_prompt": sys_prompt if runner == "claude" and not resume_id else "",
+        "env": env,
+        "codex": codex,
+    }
+
+    _append_cli_log(session_id, "meta", json.dumps({
+        "event": "agent_node_submit",
+        "url": AGENT_NODE_URL,
+        "run_id": run_id,
+        "provider": provider.get("id"),
+        "agent": runner,
+        "resume": bool(resume_id),
+    }, ensure_ascii=False))
+    response = requests.post(
+        f"{AGENT_NODE_URL}/v1/runs",
+        headers=_agent_node_headers(),
+        json=payload,
+        timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"agent-node create run failed {response.status_code}: {response.text[:500]}")
+
+    line_count = 0
+    final_text: Optional[str] = None
+    final_thinking: Optional[str] = None
+    stderr_tail: List[str] = []
+    remote_client_actions: List[dict] = []
+    returncode: Optional[int] = None
+    status = "failed"
+    with requests.get(
+        f"{AGENT_NODE_URL}/v1/runs/{run_id}/events",
+        headers=_agent_node_headers(),
+        params={"follow": "1", "timeout": str(AGENT_NODE_EVENT_TIMEOUT_SECONDS)},
+        stream=True,
+        timeout=(AGENT_NODE_CONNECT_TIMEOUT_SECONDS, AGENT_NODE_EVENT_TIMEOUT_SECONDS + 30),
+    ) as events_response:
+        if events_response.status_code >= 400:
+            raise RuntimeError(
+                f"agent-node events failed {events_response.status_code}: {events_response.text[:500]}"
+            )
+        for raw_line in events_response.iter_lines(decode_unicode=True):
+            if store.is_aborted(session_id):
+                try:
+                    requests.post(
+                        f"{AGENT_NODE_URL}/v1/runs/{run_id}/abort",
+                        headers=_agent_node_headers(),
+                        timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
+                    )
+                except Exception:
+                    pass
+                set_status(STATUS_ABORTED)
+                return
+            if not raw_line:
+                continue
+            try:
+                item = json.loads(raw_line)
+            except json.JSONDecodeError:
+                continue
+            item_type = item.get("type")
+            if item_type == "stdout":
+                line = str(item.get("line") or "")
+                _append_cli_log(session_id, "stdout", line)
+                if runner == "codex":
+                    thread_id = _extract_codex_thread_id(line)
+                    if thread_id:
+                        store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+                for ev in parse_line(line):
+                    if not append_event(ev):
+                        return
+                    all_events.append(ev)
+                    line_count += 1
+            elif item_type == "stderr":
+                line = str(item.get("line") or "")
+                stderr_tail.append(line)
+                stderr_tail = stderr_tail[-20:]
+                _append_cli_log(session_id, "stderr", line)
+            elif item_type == "client_actions":
+                payload = item.get("payload")
+                if isinstance(payload, dict):
+                    raw_actions = payload.get("client_actions")
+                elif isinstance(payload, list):
+                    raw_actions = payload
+                else:
+                    raw_actions = []
+                if isinstance(raw_actions, list):
+                    wants_upload_current_app = False
+                    last_json_app_ready: Optional[dict] = None
+                    for raw_action in raw_actions[:20]:
+                        action = _normalize_client_action(raw_action, session_id)
+                        if not action:
+                            continue
+                        if action["type"] == "request_upload_current_app":
+                            wants_upload_current_app = True
+                        elif action["type"] == "json_app_ready":
+                            last_json_app_ready = action
+                    remote_client_actions = []
+                    if wants_upload_current_app:
+                        remote_client_actions.append({"type": "request_upload_current_app"})
+                    if last_json_app_ready:
+                        remote_client_actions.append(last_json_app_ready)
+            elif item_type == "stop":
+                returncode = item.get("returncode")
+                status = str(item.get("status") or "failed")
+                break
+            else:
+                _append_cli_log(session_id, "meta", json.dumps(item, ensure_ascii=False))
+
+    if store.is_aborted(session_id):
+        set_status(STATUS_ABORTED)
+        return
+    if status != "done" or returncode not in (0, None):
+        err_text = "".join(stderr_tail)[-2000:]
+        err_msg = f"agent-node run failed status={status} returncode={returncode}: {err_text}"
+        append_event({"error": err_msg, "needs_retry": True})
+        set_status(STATUS_FAILED, error=err_msg)
+        return
+
+    final_text, final_thinking = extract_final_texts(all_events)
+    protocol_warnings = _final_protocol_warnings(final_text)
+    if protocol_warnings:
+        _append_cli_log(session_id, "meta", json.dumps({
+            "event": "final_protocol_warning",
+            "warnings": protocol_warnings,
+            "tail": (final_text or "")[-500:],
+        }, ensure_ascii=False))
+    client_actions = remote_client_actions or _load_client_actions(workspace, session_id)
+    for action in client_actions:
+        if append_event({"client_action": action}):
+            all_events.append({"client_action": action})
+    append_event({"quota": {"used": quota_used, "limit": quota_limit, "remaining": quota_remaining}})
+    set_status(
+        STATUS_DONE,
+        final_text=final_text or "",
+        final_thinking=final_thinking or "",
+        client_actions=client_actions,
+    )
+    _append_cli_log(session_id, "meta", json.dumps({
+        "event": "agent_node_worker_done",
+        "run_id": run_id,
+        "lines": line_count,
+        "final_text_len": len(final_text or ""),
+        "final_thinking_len": len(final_thinking or ""),
+        "client_actions": client_actions,
+    }, ensure_ascii=False))
+
+
 def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                  agent_id: Optional[str], agent_resume_id: Optional[str],
                  quota_used: int, quota_limit: int, quota_remaining: int,
@@ -1283,11 +1516,34 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             "event": "worker_start",
             "provider": provider.get("id"),
             "agent": runner,
+            "execution_backend": AI_WORKER_EXECUTION_BACKEND,
             "agent_resume_id": agent_resume_id or "",
             "user_msg_len": len(last_msg),
             "workspace": workspace,
             "ts": int(time.time() * 1000),
         }, ensure_ascii=False))
+
+        if AI_WORKER_EXECUTION_BACKEND == "agent-node":
+            _run_agent_node_worker(
+                store=store,
+                session_id=session_id,
+                job_id=job_id,
+                last_msg=last_msg,
+                provider=provider,
+                runner=runner,
+                agent_resume_id=agent_resume_id,
+                sys_prompt=sys_prompt,
+                workspace=workspace,
+                quota_used=quota_used,
+                quota_limit=quota_limit,
+                quota_remaining=quota_remaining,
+                append_event=append_event,
+                set_status=set_status,
+                all_events=all_events,
+            )
+            return
+        if AI_WORKER_EXECUTION_BACKEND != "local":
+            raise ValueError(f"未知 AI_WORKER_EXECUTION_BACKEND: {AI_WORKER_EXECUTION_BACKEND}")
 
         if runner == "codex":
             _, env = _codex_env(provider, workspace)
@@ -1308,15 +1564,19 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             proc.stdin.close()
             first_lines = []
         else:
-            # Claude 先尝试 resume
+            # Claude 有历史时 resume；首次会话直接指定 session-id 创建，避免无意义 fallback。
+            resume_first = bool(agent_resume_id)
             cmd = _build_cli_cmd(
                 session_id,
                 last_msg,
                 sys_prompt,
-                is_resume=True,
+                is_resume=resume_first,
                 workspace=workspace,
             )
-            logger.info(f"[WORKER] sid={session_id} 起 Claude CLI (resume): {cmd[0]}...")
+            logger.info(
+                f"[WORKER] sid={session_id} 起 Claude CLI "
+                f"({'resume' if resume_first else 'new'}): {cmd[0]}..."
+            )
 
             proc = subprocess.Popen(
                 cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -1362,7 +1622,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                               proc.stdout.read().decode("utf-8", errors="replace")
                 full_err = stderr_text + "\n" + stdout_text
 
-                if "No conversation found" in full_err or "requires a valid session ID" in full_err:
+                if resume_first and ("No conversation found" in full_err or "requires a valid session ID" in full_err):
                     logger.info(f"[WORKER] sid={session_id} resume 失败，fallback 新会话")
                     _unregister_proc(session_id, proc)
                     cmd = _build_cli_cmd(
