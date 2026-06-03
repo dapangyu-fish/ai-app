@@ -27,9 +27,9 @@ The flagship use case: **a user opens the app → chats with AI → AI returns a
 ## Why is this interesting?
 
 - **Server-driven** — ship UI and behavior data through a fixed, precompiled runtime boundary. See [App Store compliance notes](docs/APP_STORE_COMPLIANCE.md).
-- **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat (Claude / DeepSeek / GLM) generates apps that actually render.
+- **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat (Claude / DeepSeek / MiniMax) generates apps that actually render.
 - **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, user center, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
-- **Self-hostable** — one-command `bootstrap.sh` spins up the full stack in Docker (Supabase + OpenIM + backend + registry + 4 admin services = 26 containers, all healthchecked).
+- **Self-hostable** — `myapp-ctl deploy` manages the backend stack, agent runtime, registry, config center, and service secrets from one host-level CLI.
 - **Cross-platform** — same JSON-DSL renders on iOS, Android, Web, macOS, Linux, Windows.
 
 ---
@@ -78,19 +78,26 @@ assets are checked first and regenerated when needed:
 ### Self-host the full backend stack (20 minutes)
 
 ```bash
-cd deploy/test-env
-./bootstrap.sh
-# Interactive prompts for DeepSeek API key, test user, IP address...
+cd deploy/production
+./install_ctl.sh
+myapp-ctl secret set ai-providers DEEPSEEK_ANTHROPIC_AUTH_TOKEN
+myapp-ctl deploy --pull
 ```
 
-This boots **26 containers** locally / on a VPS:
-- Full Supabase (DB + auth + storage + studio + etc.)
-- Full OpenIM (IM server + Mongo + MySQL + Redis + Kafka)
-- App backend + Registry + Config center + User center + MinIO
+For a development/test host that builds images from this checkout:
+
+```bash
+myapp-ctl deploy --build
+```
+
+This boots the MyApp backend stack locally / on a VPS:
+- JSON app Postgres + AI session Redis + App MinIO
+- Agent node + isolated Ubuntu agent runtime
+- App backend + AI worker + Registry + Config center + User center
 
 After deploy, the client's built-in **Environment Switcher** (tap brand 7 times on login page) lets you point to your own stack.
 
-See [`deploy/test-env/README.md`](deploy/test-env/) for detailed steps and the [13 pitfalls we hit](deploy/test-env/) along the way.
+See [`deploy/production/README.md`](deploy/production/) for detailed `myapp-ctl` commands.
 
 ---
 
@@ -161,24 +168,24 @@ Planned:
 | Web Runtime Assets | `web/`, `web_openim_bridge/` | OpenIM Web WASM bridge and build assets used by Flutter Web |
 | Backend API | `backend/app.py`, `backend/claude_chat.py` | Flask API for auth-gated AI chat, SSE streaming, media upload, push, provider config, and client-facing backend endpoints |
 | AI Queue / Sessions | `backend/ai_session.py` + Redis | Durable-ish AI task metadata, bounded worker queue, resumable SSE event stream, abort/retry status |
-| AI Worker Pool | `backend/ai_worker_daemon.py` | Runs external AI coding agents/CLI processes. Claude Code CLI is the current runtime; Codex-style agents are planned |
+| AI Worker Pool | `backend/ai_worker_daemon.py`, `backend/agent_node_service.py` | Runs Claude/Codex-style coding agents inside isolated Docker runtime containers through agent-node |
 | Registry | `backend/registry_server.py` | Package registry for JSON-APPs/components: semver, namespaces, search, pagination, publish API, mirror, catalog enrichment |
 | Object Storage | MinIO / OSS | Public JSON packages, component files, asset packs, app media, and temporary AI-generated JSON URLs |
-| OpenIM | `backend/openim/`, `deploy/test-env/openim/` | IM backend. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
-| Supabase | `deploy/test-env/supabase/` | Auth, database, storage-compatible services, and local Studio for test environments |
+| OpenIM | `backend/openim/` | IM backend bridge. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
+| Supabase | external service / production config | Auth, database, and storage-compatible services configured through host-local secrets |
 | Config Center | `config_center/` | Remote config flags and environment-specific client configuration |
 | User Center | `user_center/` | Admin UI for user roles, bans, reset flows, and account operations |
 | Templates / Libraries | `templates/` | Published example apps and reusable JSON libraries: IM, launcher, OpenAI chat, games, controls, profile, utilities |
 | Website | `website/` | TS/Vite marketing and demo site, including the embedded web client preview |
-| Test Environment | `deploy/test-env/` | One-command self-host stack: Supabase, OpenIM, backend, registry, config/user center, MinIO, QR environment export |
+| Control Plane | `deploy/production/`, `scripts/myapp_ctl.py` | `myapp-ctl` status/log/secret/domain/image/deploy management for test and production hosts |
 | Future FaaS | planned | AI-created backend functions for JSON-APPs that need server-side compute, secrets, scheduled jobs, or integrations beyond client-only DSL |
 
 Core flows:
 
-1. **AI app generation**: client sends a chat task -> Backend writes queue/meta to Redis -> worker runs the configured AI coding agent -> generated JSON is uploaded to OSS -> client receives `[json_app_url]` through the resumable SSE stream.
+1. **AI app generation**: client sends a chat task -> Backend writes queue/meta to Redis -> worker submits to agent-node -> isolated runtime runs the configured AI coding agent -> backend uploads generated JSON to OSS -> client receives a structured `json_app_ready` event through resumable SSE.
 2. **Package install**: client queries Registry with pagination/search -> Registry returns package metadata and download URLs -> client downloads JSON from OSS -> dependency loader resolves libraries and caches them locally.
 3. **IM**: mobile uses the native OpenIM SDK path; Web uses `openim/wasm-client-sdk` through `web_openim_bridge`, with framework-level compatibility so JSON IM apps call one API shape.
-4. **Self-host test env**: `deploy/test-env/bootstrap.sh` generates secrets, starts all containers, creates buckets/users, exports a QR/JSON environment config, and can mirror the production Registry.
+4. **Self-host backend**: `myapp-ctl secret` manages host-local credentials; `myapp-ctl deploy --pull` or `myapp-ctl deploy --build` starts the backend stack and agent runtime.
 
 ---
 
@@ -228,7 +235,7 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 
 ### Backend
 - Supabase auth integration
-- AI chat with multi-provider fallback (Claude / DeepSeek / GLM)
+- AI chat with provider-scoped queues and isolated agent execution (Claude-compatible providers / DeepSeek / MiniMax)
 - Channel-agnostic push (APNs + FCM, easy to add more)
 - Package registry with namespaces + semver + dependency resolution
 - **Cross-instance mirror** — self-hosted instance can mirror packages from upstream (lazy file proxy + 10-minute index sync)
@@ -236,10 +243,11 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 - Audit log
 
 ### Deploy
-- One-script bootstrap (interactive Q&A → 26 containers in Docker Compose)
+- `myapp-ctl deploy` for full-stack or component-level backend deployment
+- `myapp-ctl secret` for host-local provider, push, OSS, and backend secrets
+- Isolated agent-node + Docker runtime for AI workers
 - Built-in MinIO for media uploads
-- Healthchecks, port offsets for running multiple envs side-by-side
-- `./redeploy.sh` for code-only updates (data preserved)
+- Healthchecks, logs, restart, status, and agent inspection commands
 
 ---
 

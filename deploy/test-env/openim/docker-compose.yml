@@ -2,7 +2,7 @@
 #
 # 与生产差异：
 # 1. 容器名加 testenv- 前缀，避免和生产 docker daemon 上的 OpenIM 冲突
-# 2. 端口跟 PORT_OFFSET 走，bootstrap.sh 渲染
+# 2. 端口仍保留 PORT_OFFSET 模板变量；新部署入口由 myapp-ctl 管理
 # 3. afterSendSingleMsg / beforeOfflinePush webhook URL 留空 → push 链路自然
 #    断掉，但消息收发完全正常
 # 4. Kafka heap 限制到 512m，2GB 小机能跑
@@ -157,7 +157,7 @@ services:
     volumes:
       - openim_logs:/openim-server/logs
       # OpenIM v3.8 不读 env 变量，只读 /openim-server/config/*.yml
-      # bootstrap.sh 从镜像 extract 默认 config 到 config-rendered/，然后 sed 替换
+      # 旧测试环境曾从镜像 extract 默认 config 到 config-rendered/，然后 sed 替换
       # 关键字段（mongodb/redis/kafka/etcd/minio 的 address + 凭据）→ mount 进来
       - ./config-rendered:/openim-server/config:ro
 

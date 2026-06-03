@@ -34,17 +34,16 @@ If you run agent-node outside this compose project, set both `AGENT_NODE_DOCKER_
 On `77.237.233.229`:
 
 ```bash
-cd /opt/myapp/current
+cd /opt/myapp/current-agent-control-plane
 ./deploy/production/install_ctl.sh
 
 export PUBLIC_HOST=77.237.233.229
 export MYAPP_IMAGE_TAG=agent-control-plane
 
 myapp-ctl status
-myapp-ctl deploy agent-runtime
-myapp-ctl deploy agent-node
-myapp-ctl status agent-node
-myapp-ctl log agent-node -n 80
+myapp-ctl deploy --plan
+myapp-ctl deploy --build
+myapp-ctl status
 ```
 
 Backend services need real host-local secrets before they should be started:
@@ -60,16 +59,45 @@ myapp-ctl secret set push APNS_KEY_ID APNS_TEAM_ID FCM_PROJECT_ID
 Secret values are stored under `/etc/myapp/secrets.d/*.env` with mode `600`.
 `myapp-ctl secret ls` prints only redacted digests.
 
-## Build And Push
+## Deployment Commands
+
+One-command local-source deployment on a test host:
 
 ```bash
-docker build -f deploy/production/Dockerfile.agent-runtime -t dapangyufish/myapp-agent-runtime:agent-control-plane .
-docker build -f deploy/production/Dockerfile.agent-node -t dapangyufish/myapp-agent-node:agent-control-plane .
-docker build -f deploy/production/Dockerfile.backend -t dapangyufish/myapp-backend:agent-control-plane .
+myapp-ctl deploy --build
+```
 
-docker push dapangyufish/myapp-agent-runtime:agent-control-plane
-docker push dapangyufish/myapp-agent-node:agent-control-plane
-docker push dapangyufish/myapp-backend:agent-control-plane
+One-command Docker Hub deployment on a clean host:
+
+```bash
+myapp-ctl deploy --pull
+```
+
+Deploy one group:
+
+```bash
+myapp-ctl deploy --group infra --pull
+myapp-ctl deploy --group agent --pull
+myapp-ctl deploy --group core --pull
+```
+
+Deploy one component:
+
+```bash
+myapp-ctl deploy backend --pull
+myapp-ctl deploy ai-worker --pull
+myapp-ctl deploy agent-node --build
+myapp-ctl restart backend
+myapp-ctl log backend -f -n 120
+```
+
+Manage images directly:
+
+```bash
+myapp-ctl image ls
+myapp-ctl image build
+myapp-ctl image push
+myapp-ctl image pull backend
 ```
 
 ## Multi-Host Direction

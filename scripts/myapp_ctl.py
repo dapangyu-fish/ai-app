@@ -25,6 +25,25 @@ from urllib.request import Request, urlopen
 CONFIG_PATH = Path(os.environ.get("MYAPP_CTL_CONFIG", "/etc/myapp/ctl.json"))
 SERVICES_PATH = Path(os.environ.get("MYAPP_CTL_SERVICES", "/etc/myapp/services.json"))
 
+DEPLOY_ORDER = [
+    "agent-runtime",
+    "jsonapp-postgres",
+    "ai-session-redis",
+    "app-minio",
+    "agent-node",
+    "registry",
+    "backend",
+    "ai-worker",
+    "config-center",
+    "user-center",
+]
+IMAGE_TARGETS = {
+    "agent-runtime": ("agent_runtime", "deploy/production/Dockerfile.agent-runtime"),
+    "agent-node": ("agent_node", "deploy/production/Dockerfile.agent-node"),
+    "backend": ("backend", "deploy/production/Dockerfile.backend"),
+}
+BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center"}
+
 
 def _load_json(path: Path, default: dict) -> dict:
     try:
@@ -110,6 +129,92 @@ def _http_json(url: str, *, token: str = "", timeout: float = 3.0) -> dict | Non
 
 def _image_exists(image: str) -> bool:
     return _run(["docker", "image", "inspect", image]).returncode == 0
+
+
+def _source_dir() -> Path:
+    cfg = _cfg()
+    candidates = [
+        os.environ.get("MYAPP_SOURCE_DIR"),
+        cfg.get("paths", {}).get("source"),
+        str(Path(cfg.get("paths", {}).get("root", "/opt/myapp")) / "current"),
+        "/opt/myapp/current-agent-control-plane",
+        os.getcwd(),
+    ]
+    for raw in candidates:
+        if not raw:
+            continue
+        path = Path(str(raw))
+        if (path / "deploy/production").is_dir() and (path / "backend").is_dir():
+            return path
+    return Path(os.getcwd())
+
+
+def _configured_image(target: str) -> str:
+    cfg_images = _cfg().get("images", {})
+    key, _ = IMAGE_TARGETS[target]
+    default = f"dapangyufish/myapp-{target}:agent-control-plane"
+    return str(cfg_images.get(key) or default)
+
+
+def _image_targets_for_names(names: list[str]) -> list[str]:
+    targets: list[str] = []
+    if "agent-runtime" in names:
+        targets.append("agent-runtime")
+    if "agent-node" in names:
+        targets.append("agent-node")
+    if any(name in BACKEND_IMAGE_SERVICES for name in names):
+        targets.append("backend")
+    return [target for target in IMAGE_TARGETS if target in targets]
+
+
+def _ordered_service_names(names: list[str]) -> list[str]:
+    known = set(_services())
+    seen = set()
+    out: list[str] = []
+    for name in DEPLOY_ORDER + names:
+        if name in known and name in names and name not in seen:
+            out.append(name)
+            seen.add(name)
+    for name in names:
+        if name in known and name not in seen:
+            out.append(name)
+            seen.add(name)
+    return out
+
+
+def _service_names_for_target(target: str | None, group: str | None = None) -> list[str]:
+    services = _services()
+    if group:
+        names = [name for name, spec in services.items() if spec.get("group") == group]
+        if not names:
+            raise KeyError(f"unknown group: {group}")
+        return _ordered_service_names(names)
+    normalized = (target or "all").strip()
+    if normalized in {"", "all"}:
+        return _ordered_service_names([name for name in DEPLOY_ORDER if name in services])
+    if normalized in {spec.get("group") for spec in services.values()}:
+        names = [name for name, spec in services.items() if spec.get("group") == normalized]
+        return _ordered_service_names(names)
+    if normalized not in services:
+        raise KeyError(f"unknown service or group: {normalized}")
+    return [normalized]
+
+
+def _compose_command(spec: dict, command: list[str]) -> list[str]:
+    project_dir = Path(spec.get("project_dir", "."))
+    files = spec.get("compose_files") or []
+    cmd = ["docker", "compose"]
+    for name in files:
+        cmd.extend(["-f", str(project_dir / name)])
+    cmd.extend(command)
+    return [part for part in cmd if part]
+
+
+def _run_or_print(cmd: list[str], *, dry_run: bool) -> int:
+    print("+ " + " ".join(cmd))
+    if dry_run:
+        return 0
+    return _run(cmd, capture=False).returncode
 
 
 def _process_status(spec: dict) -> dict:
@@ -221,61 +326,148 @@ def _compose_cmd(spec: dict, action: str) -> int:
     if not files:
         print("compose_files is empty", file=sys.stderr)
         return 1
-    cmd = ["docker", "compose"]
-    for name in files:
-        cmd.extend(["-f", str(project_dir / name)])
     if action == "deploy":
-        cmd.extend(["up", "-d", spec.get("compose_service", "")])
+        cmd = _compose_command(spec, ["up", "-d", spec.get("compose_service", "")])
     else:
-        cmd.extend(["restart", spec.get("compose_service", "")])
-    return _run([part for part in cmd if part], capture=False).returncode
+        cmd = _compose_command(spec, ["restart", spec.get("compose_service", "")])
+    return _run(cmd, capture=False).returncode
+
+
+def _deploy_images(targets: list[str], *, action: str, dry_run: bool) -> int:
+    source_dir = _source_dir()
+    for target in targets:
+        image = _configured_image(target)
+        if action == "build":
+            _, dockerfile = IMAGE_TARGETS[target]
+            cmd = ["docker", "build", "-f", str(source_dir / dockerfile), "-t", image, str(source_dir)]
+        elif action == "push":
+            cmd = ["docker", "push", image]
+        elif action == "pull":
+            cmd = ["docker", "pull", image]
+        else:
+            raise ValueError(action)
+        rc = _run_or_print(cmd, dry_run=dry_run)
+        if rc != 0:
+            return rc
+    return 0
+
+
+def _ensure_images(targets: list[str], *, dry_run: bool) -> int:
+    if dry_run:
+        return 0
+    missing = [target for target in targets if not _image_exists(_configured_image(target))]
+    if missing:
+        for target in missing:
+            print(f"missing image: {_configured_image(target)}", file=sys.stderr)
+        print("run with --pull to pull images or --build to build them locally", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _deploy_compose_services(names: list[str], *, dry_run: bool) -> int:
+    services = _services()
+    groups: dict[tuple[str, tuple[str, ...]], list[str]] = {}
+    specs: dict[tuple[str, tuple[str, ...]], dict] = {}
+    docker_names: list[str] = []
+    for name in names:
+        spec = services[name]
+        kind = spec.get("kind")
+        if kind == "docker":
+            docker_names.append(spec.get("container") or name)
+            continue
+        if kind != "compose":
+            continue
+        project_dir = str(spec.get("project_dir", "."))
+        compose_files = tuple(spec.get("compose_files") or [])
+        key = (project_dir, compose_files)
+        groups.setdefault(key, []).append(str(spec.get("compose_service") or name))
+        specs[key] = spec
+    for key, compose_services in groups.items():
+        spec = specs[key]
+        cmd = _compose_command(spec, ["up", "-d", *compose_services])
+        rc = _run_or_print(cmd, dry_run=dry_run)
+        if rc != 0:
+            return rc
+    for container in docker_names:
+        rc = _run_or_print(["docker", "start", container], dry_run=dry_run)
+        if rc != 0:
+            return rc
+    return 0
 
 
 def cmd_deploy(args) -> int:
-    spec = _services().get(args.service)
-    if not spec:
-        print(f"unknown service: {args.service}", file=sys.stderr)
+    if args.build and args.pull:
+        print("--build and --pull cannot be used together", file=sys.stderr)
         return 2
-    kind = spec.get("kind", "docker")
-    if kind == "compose":
-        return _compose_cmd(spec, "deploy")
-    if kind == "image":
-        image = spec.get("image", "")
-        if "/" in image:
-            return _run(["docker", "pull", image], capture=False).returncode
-        print(f"image present locally: {image}" if _image_exists(image) else f"local image missing: {image}")
-        return 0 if _image_exists(image) else 1
-    if kind == "process":
-        print(f"{args.service} is a process service; using restart")
-        return cmd_restart(args)
-    print(f"{args.service} has no deploy plan yet; add compose/image metadata first", file=sys.stderr)
-    return 1
+    try:
+        names = _service_names_for_target(args.target, args.group)
+    except KeyError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    image_targets = _image_targets_for_names(names)
+    if args.plan:
+        services = _services()
+        compose_names = [name for name in names if services[name].get("kind") == "compose"]
+        docker_names = [name for name in names if services[name].get("kind") == "docker"]
+        print("deploy plan:")
+        if image_targets:
+            print("  images: " + ", ".join(image_targets))
+        if compose_names:
+            print("  compose services: " + ", ".join(compose_names))
+        if docker_names:
+            print("  docker containers: " + ", ".join(docker_names))
+        return 0
+    if args.build:
+        rc = _deploy_images(image_targets, action="build", dry_run=args.dry_run)
+        if rc != 0:
+            return rc
+    elif args.pull:
+        rc = _deploy_images(image_targets, action="pull", dry_run=args.dry_run)
+        if rc != 0:
+            return rc
+    else:
+        rc = _ensure_images(image_targets, dry_run=args.dry_run)
+        if rc != 0:
+            return rc
+    return _deploy_compose_services(names, dry_run=args.dry_run)
 
 
 def cmd_restart(args) -> int:
-    spec = _services().get(args.service)
-    if not spec:
-        print(f"unknown service: {args.service}", file=sys.stderr)
+    try:
+        names = _service_names_for_target(args.target, args.group)
+    except KeyError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
-    kind = spec.get("kind", "docker")
-    if kind == "compose":
-        return _compose_cmd(spec, "restart")
-    if kind == "process":
+    for name in names:
+        spec = _services()[name]
+        kind = spec.get("kind", "docker")
+        if kind == "compose":
+            rc = _compose_cmd(spec, "restart")
+            if rc != 0:
+                return rc
+            continue
+        if kind == "image":
+            print(f"skip image target {name}; use myapp-ctl image build/pull/push {name}")
+            continue
+        if kind != "process":
+            rc = _run(["docker", "restart", spec.get("container") or name], capture=False).returncode
+            if rc != 0:
+                return rc
+            continue
         status = _process_status(spec)
         if status.get("pid") and status.get("state") == "running":
             os.kill(int(status["pid"]), signal.SIGTERM)
             time.sleep(1)
         command = spec.get("command")
         if not command:
-            print(f"{args.service} has no command", file=sys.stderr)
+            print(f"{name} has no command", file=sys.stderr)
             return 1
-        log_file = spec.get("log_file") or f"/var/log/myapp/{args.service}.log"
+        log_file = spec.get("log_file") or f"/var/log/myapp/{name}.log"
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
         with open(log_file, "ab") as out:
             subprocess.Popen(command, stdout=out, stderr=out, stdin=subprocess.DEVNULL, start_new_session=True)
-        print(f"restarted process {args.service}")
-        return 0
-    return _run(["docker", "restart", spec.get("container") or args.service], capture=False).returncode
+        print(f"restarted process {name}")
+    return 0
 
 
 def cmd_log(args) -> int:
@@ -388,6 +580,35 @@ def cmd_domain(args) -> int:
         print(f"removed domain {args.name}")
         return 0
     return 2
+
+
+def _image_targets_for_arg(target: str) -> list[str]:
+    normalized = (target or "all").strip()
+    if normalized in {"", "all"}:
+        return list(IMAGE_TARGETS)
+    if normalized not in IMAGE_TARGETS:
+        raise KeyError(f"unknown image target: {normalized}")
+    return [normalized]
+
+
+def cmd_image(args) -> int:
+    if args.image_cmd == "ls":
+        rows = []
+        for target in IMAGE_TARGETS:
+            image = _configured_image(target)
+            rows.append({
+                "target": target,
+                "image": image,
+                "state": "present" if _image_exists(image) else "missing",
+            })
+        _print_table(rows, [("target", "TARGET"), ("state", "STATE"), ("image", "IMAGE")])
+        return 0
+    try:
+        targets = _image_targets_for_arg(args.target)
+    except KeyError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    return _deploy_images(targets, action=args.image_cmd, dry_run=args.dry_run)
 
 
 def _run_log_summary(path: Path) -> dict:
@@ -562,11 +783,25 @@ def build_parser() -> argparse.ArgumentParser:
     log.add_argument("-n", "--lines", type=int, default=80)
     log.add_argument("-f", "--follow", action="store_true")
     log.set_defaults(func=cmd_log)
+    image = sub.add_parser("image")
+    image_sub = image.add_subparsers(dest="image_cmd", required=True)
+    image_sub.add_parser("ls").set_defaults(func=cmd_image)
+    for action in ("build", "pull", "push"):
+        image_action = image_sub.add_parser(action)
+        image_action.add_argument("target", nargs="?", default="all", choices=["all", *IMAGE_TARGETS.keys()])
+        image_action.add_argument("--dry-run", action="store_true")
+        image_action.set_defaults(func=cmd_image)
     deploy = sub.add_parser("deploy")
-    deploy.add_argument("service")
+    deploy.add_argument("target", nargs="?", default="all", help="service, group, or all")
+    deploy.add_argument("--group", choices=["infra", "agent", "core", "openim", "supabase"])
+    deploy.add_argument("--build", action="store_true", help="build required images from the local source tree before deploy")
+    deploy.add_argument("--pull", action="store_true", help="pull required images before deploy")
+    deploy.add_argument("--plan", action="store_true", help="print deployment plan only")
+    deploy.add_argument("--dry-run", action="store_true")
     deploy.set_defaults(func=cmd_deploy)
     restart = sub.add_parser("restart")
-    restart.add_argument("service")
+    restart.add_argument("target", nargs="?", default="all", help="service, group, or all")
+    restart.add_argument("--group", choices=["infra", "agent", "core", "openim", "supabase"])
     restart.set_defaults(func=cmd_restart)
     secret = sub.add_parser("secret")
     secret_sub = secret.add_subparsers(dest="secret_cmd", required=True)

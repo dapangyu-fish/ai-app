@@ -7,6 +7,7 @@
   },
   "paths": {
     "root": "/opt/myapp",
+    "source": "/opt/myapp/current-agent-control-plane",
     "state": "/var/lib/myapp",
     "logs": "/var/log/myapp",
     "secrets_dir": "/etc/myapp/secrets.d",

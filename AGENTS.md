@@ -9,7 +9,7 @@ This repository contains a Flutter client, Python backend services, JSON-DSL app
 - `templates/`: JSON-DSL demo apps and reusable examples. `templates/bacsase/anti_patterns_and_pitfalls.md` documents generation pitfalls.
 - `assets/`, `web/`, `web_openim_bridge/`: bundled app assets and Flutter Web/OpenIM WASM bridge files.
 - `website/`: React + TypeScript marketing/demo site.
-- `deploy/test-env/`: one-click local/test deployment scripts and Docker Compose files.
+- `deploy/production/`: production/test-host control-plane scripts, Docker Compose files, and `myapp-ctl` install assets.
 - `test/`: Flutter tests.
 
 ## Build, Test, and Development Commands
@@ -23,7 +23,7 @@ This repository contains a Flutter client, Python backend services, JSON-DSL app
 - `cd website && npm install && npm run dev`: run the website locally.
 - `cd website && npm run build`: type-check and build the website.
 - `python3 backend/validate_json_app.py templates/<app>.json`: validate a JSON-DSL app before publishing.
-- `cd deploy/test-env && ./bootstrap.sh`: start a full test environment.
+- `cd deploy/production && ./install_ctl.sh && myapp-ctl deploy --build`: install the host control CLI and deploy the backend stack from local source.
 
 ## Coding Style & Naming Conventions
 
@@ -39,4 +39,4 @@ Recent commits use short imperative subjects such as `fix: ...`, `chore: ...`, o
 
 ## Security & Configuration Tips
 
-Do not commit production secrets, `.env` files, signed URLs, or server-local credentials. Backend production config lives outside Git; test-env scripts generate local secrets. JSON app generation must use asset manifest URLs rather than hand-built paths.
+Do not commit production secrets, `.env` files, signed URLs, or server-local credentials. Backend production config lives outside Git and should be managed with `myapp-ctl secret`. JSON app generation must use asset manifest URLs rather than hand-built paths.

@@ -70,12 +70,12 @@ const copy = {
     trustTitle: '产品可信边界',
     trustPoints: [
       ['声明式 JSON', 'AI 不下发原生代码或二进制'],
-      ['自部署后端', '测试环境 bootstrap 一键拉起核心服务'],
+      ['自部署后端', 'myapp-ctl 一键部署核心服务'],
       ['跨端运行时', 'Flutter Web、iOS、Android 共用能力层'],
     ],
     docsTitle: '开发者入口',
     docsLinks: [
-      ['部署文档', '从 bootstrap 到客户端切换环境'],
+      ['部署文档', '从 myapp-ctl 部署到客户端切换环境'],
       ['架构图', '理解运行时、AI Worker 与 Registry'],
       ['GitHub', '查看仓库、部署脚本和合规边界'],
     ],
@@ -86,13 +86,13 @@ const copy = {
     backendDeployTitle: '1. 部署后端测试环境',
     clientBuildTitle: '2. 构建客户端',
     switchEnvTitle: '3. 客户端切换环境',
-    switchEnvBody: '打开客户端的 Service Environment 页面，扫码 bootstrap 输出的二维码，或粘贴整段 JSON。保存后重新登录，客户端就会连接到你的后端。',
+    switchEnvBody: '打开客户端的 Service Environment 页面，扫码或粘贴后端环境 JSON。保存后重新登录，客户端就会连接到你的后端。',
     usageTitle: '4. 怎么使用',
     usageBody: '登录测试账号后，可以打开应用库安装 JSON App，也可以用悬浮 AI 入口描述需求，让 AI 生成应用，再继续通过对话迭代。',
     howTitle: '从想法到应用',
     howSubtitle: '完整流程是部署后端、构建或打开客户端、切换环境、安装或生成应用。',
     steps: [
-      ['准备环境', '先运行 bootstrap，拿到服务地址、测试账号和环境 JSON。'],
+      ['准备环境', '安装 myapp-ctl，配置密钥，然后部署后端服务。'],
       ['连接客户端', 'Web / iOS / Android 都通过环境切换页连接到你的后端。'],
       ['生成或安装 App', '在应用库安装 JSON App，或让 AI 生成新的应用。'],
     ],
@@ -113,7 +113,7 @@ const copy = {
       ['内置 IM', '好友、群聊、消息同步和 Web OpenIM 兼容层。'],
       ['应用库', '包索引、版本、搜索、分页和组件复用。'],
       ['服务端驱动', 'UI 和业务配置可作为数据更新，但不能扩展客户端原生能力。'],
-      ['可自部署', '测试环境 bootstrap 一条链路拉起核心服务。'],
+      ['可自部署', 'myapp-ctl 支持整套部署和按组件部署。'],
     ],
     downloadTitle: '开始体验 MyApp',
     downloadBody: 'Web 版可直接打开；iOS 已开放 TestFlight Public Group 1（2500 人）；Android 可下载 APK，Google Play 正在准备中。',
@@ -149,12 +149,12 @@ const copy = {
     trustTitle: 'Trust boundary',
     trustPoints: [
       ['Declarative JSON', 'AI does not ship native code or binaries'],
-      ['Self-hostable backend', 'test-env bootstrap starts the core services'],
+      ['Self-hostable backend', 'myapp-ctl deploy starts the core services'],
       ['Cross-client runtime', 'Flutter Web, iOS and Android share one capability layer'],
     ],
     docsTitle: 'Developer entry points',
     docsLinks: [
-      ['Deployment docs', 'Bootstrap backend, then switch client environment'],
+      ['Deployment docs', 'Deploy backend with myapp-ctl, then switch client environment'],
       ['Architecture diagram', 'Runtime, AI Worker and Registry in one view'],
       ['GitHub', 'Inspect repo, scripts and review boundary'],
     ],
@@ -165,13 +165,13 @@ const copy = {
     backendDeployTitle: '1. Deploy backend test environment',
     clientBuildTitle: '2. Build clients',
     switchEnvTitle: '3. Switch client environment',
-    switchEnvBody: 'Open Service Environment in the client, scan the QR code from bootstrap, or paste the full JSON. Save and sign in again to connect to your backend.',
+    switchEnvBody: 'Open Service Environment in the client, then paste or scan the backend environment JSON. Save and sign in again to connect to your backend.',
     usageTitle: '4. How to use it',
     usageBody: 'After signing in with the test account, install JSON Apps from the app library or use the floating AI entry to describe an app and iterate through chat.',
     howTitle: 'Idea to app',
-    howSubtitle: 'The full flow is backend bootstrap, client build/open, environment switch, then install or generate apps.',
+    howSubtitle: 'The full flow is myapp-ctl backend deployment, client build/open, environment switch, then install or generate apps.',
     steps: [
-      ['Prepare environment', 'Run bootstrap to get service URLs, test account and environment JSON.'],
+      ['Prepare environment', 'Use myapp-ctl to deploy services and manage backend secrets.'],
       ['Connect client', 'Web / iOS / Android all connect through the environment switch page.'],
       ['Generate or install apps', 'Install JSON Apps from the app library or ask AI to generate new ones.'],
     ],
@@ -192,7 +192,7 @@ const copy = {
       ['Built-in IM', 'Friends, groups, sync and the OpenIM compatibility layer for Web.'],
       ['App library', 'Package index, versions, search, pagination and component reuse.'],
       ['Server-driven', 'Ship UI and behavior data without extending native client capabilities.'],
-      ['Self-hostable', 'The test-env bootstrap brings up the core services end to end.'],
+      ['Self-hostable', 'myapp-ctl deploy brings up the core services end to end.'],
     ],
     downloadTitle: 'Start using MyApp',
     downloadBody: 'Open the Web app now. iOS is available through TestFlight Public Group 1 with 2,500 seats. Android APK download is available while Google Play is being prepared.',
@@ -232,13 +232,13 @@ const copy = {
     backendDeployTitle: '1. Backend-Testumgebung starten',
     clientBuildTitle: '2. Clients bauen',
     switchEnvTitle: '3. Client-Umgebung wechseln',
-    switchEnvBody: 'Öffne im Client Service Environment, scanne den QR-Code aus bootstrap oder füge das vollständige JSON ein. Danach speichern und neu anmelden.',
+    switchEnvBody: 'Öffne im Client Service Environment, scanne oder füge das vollständige Environment-JSON ein. Danach speichern und neu anmelden.',
     usageTitle: '4. Nutzung',
     usageBody: 'Nach dem Login mit dem Testkonto kannst du Apps aus der App-Bibliothek installieren oder über den schwebenden KI-Einstieg neue Apps beschreiben und iterieren.',
     howTitle: 'Von der Idee zur App',
     howSubtitle: 'Der Ablauf: Backend starten, Client bauen oder öffnen, Umgebung wechseln, App installieren oder generieren.',
     steps: [
-      ['Umgebung vorbereiten', 'bootstrap liefert Service-URLs, Testkonto und Umgebungs-JSON.'],
+      ['Umgebung vorbereiten', 'myapp-ctl installieren, Secrets konfigurieren und Backend-Services bereitstellen.'],
       ['Client verbinden', 'Web / iOS / Android verbinden sich über die Environment-Seite.'],
       ['Apps nutzen', 'Apps aus der App-Bibliothek installieren oder per KI generieren.'],
     ],
@@ -259,7 +259,7 @@ const copy = {
       ['Integriertes IM', 'Freunde, Gruppen, Sync und OpenIM-Kompatibilität für Web.'],
       ['App-Bibliothek', 'Paketindex, Versionen, Suche, Pagination und Komponenten-Wiederverwendung.'],
       ['Server-driven', 'UI- und Verhaltensdaten ausliefern, ohne native Client-Faehigkeiten zu erweitern.'],
-      ['Self-hostable', 'test-env bootstrap startet die Kernservices Ende zu Ende.'],
+      ['Self-hostable', 'myapp-ctl stellt die Services komplett oder pro Komponente bereit.'],
     ],
     downloadTitle: 'MyApp jetzt starten',
     downloadBody: 'Die Web-App ist direkt verfügbar. iOS läuft über TestFlight Public Group 1 mit 2.500 Plätzen. Der Android-APK-Download ist verfügbar, Google Play folgt.',
@@ -299,13 +299,13 @@ const copy = {
     backendDeployTitle: '1. Desplegar backend de prueba',
     clientBuildTitle: '2. Compilar clientes',
     switchEnvTitle: '3. Cambiar entorno del cliente',
-    switchEnvBody: 'Abre Service Environment en el cliente, escanea el QR de bootstrap o pega el JSON completo. Guarda e inicia sesión de nuevo.',
+    switchEnvBody: 'Abre Service Environment en el cliente, escanea o pega el JSON completo del entorno. Guarda e inicia sesión de nuevo.',
     usageTitle: '4. Cómo usarlo',
     usageBody: 'Después de iniciar sesión con la cuenta de prueba, instala JSON Apps desde la biblioteca o usa la entrada flotante de IA para describir una app e iterar por chat.',
     howTitle: 'De idea a app',
-    howSubtitle: 'El flujo completo: bootstrap del backend, abrir o compilar cliente, cambiar entorno y luego instalar o generar apps.',
+    howSubtitle: 'El flujo completo: desplegar backend, abrir o compilar cliente, cambiar entorno y luego instalar o generar apps.',
     steps: [
-      ['Preparar entorno', 'bootstrap entrega URLs, cuenta de prueba y JSON de entorno.'],
+      ['Preparar entorno', 'Instala myapp-ctl, configura secretos y despliega los servicios backend.'],
       ['Conectar cliente', 'Web / iOS / Android se conectan desde la página de entorno.'],
       ['Crear o instalar apps', 'Instala desde la biblioteca o pide a la IA que genere una nueva app.'],
     ],
@@ -326,7 +326,7 @@ const copy = {
       ['IM integrado', 'Amigos, grupos, sincronización y compatibilidad OpenIM para Web.'],
       ['Biblioteca de apps', 'Índice, versiones, búsqueda, paginación y reutilización de componentes.'],
       ['Server-driven', 'Envía datos de UI y comportamiento sin ampliar las capacidades nativas del cliente.'],
-      ['Autoalojable', 'test-env bootstrap levanta los servicios centrales de punta a punta.'],
+      ['Autoalojable', 'myapp-ctl despliega todo el backend o componentes individuales.'],
     ],
     downloadTitle: 'Empieza con MyApp',
     downloadBody: 'La Web app está disponible ahora. iOS está en TestFlight Public Group 1 con 2.500 plazas. La descarga APK de Android está disponible mientras Google Play se prepara.',
@@ -515,12 +515,12 @@ function DocsPage({ lang }: { lang: Lang }) {
       : 'Start the backend first, then point the hosted Web app, TestFlight build or APK client to that backend.',
     backendTitle: zh ? '1. 启动后端测试环境' : '1. Start the backend test environment',
     backendBody: zh
-      ? 'bootstrap 会生成服务地址、测试账号、环境 JSON 和二维码。生产密钥、供应商 token、OSS 凭证都放在服务器环境变量或专用 env 文件中，不进入 Git。'
-      : 'bootstrap prints service URLs, a test account, environment JSON and a QR code. Production tokens, provider keys and OSS credentials stay in server env files, not Git.',
+      ? 'myapp-ctl 负责安装控制入口、管理密钥、部署服务并查看状态。生产密钥、供应商 token、OSS 凭证都放在服务器环境变量或专用 env 文件中，不进入 Git。'
+      : 'myapp-ctl installs the control entrypoint, manages secrets, deploys services and shows status. Production tokens, provider keys and OSS credentials stay in server env files, not Git.',
     clientTitle: zh ? '2. 接入客户端' : '2. Connect clients',
     clientBody: zh
-      ? '打开客户端的 Service Environment 页面，扫码或粘贴 bootstrap 输出的整段 JSON，保存后重新登录。Web 版、iOS TestFlight 和 Android APK 都走同一套环境切换逻辑。'
-      : 'Open Service Environment in the client, scan or paste the full bootstrap JSON, save it and sign in again. Web, iOS TestFlight and Android APK use the same environment switch flow.',
+      ? '打开客户端的 Service Environment 页面，扫码或粘贴后端环境 JSON，保存后重新登录。Web 版、iOS TestFlight 和 Android APK 都走同一套环境切换逻辑。'
+      : 'Open Service Environment in the client, scan or paste the backend environment JSON, save it and sign in again. Web, iOS TestFlight and Android APK use the same environment switch flow.',
     buildTitle: zh ? '3. 构建客户端' : '3. Build clients',
     websiteTitle: zh ? '官网发布' : 'Website deployment',
     releaseTitle: zh ? '4. 发布和分发' : '4. Release and distribution',
@@ -558,8 +558,9 @@ function DocsPage({ lang }: { lang: Lang }) {
           <TerminalBox
             lines={[
               '$ git clone https://github.com/dapangyu-fish/ai-app.git',
-              '$ cd ai-app/deploy/test-env',
-              '$ ./bootstrap.sh',
+              '$ cd ai-app/deploy/production',
+              '$ ./install_ctl.sh',
+              '$ myapp-ctl deploy --pull',
               '# scan Service Environment QR in the client',
             ]}
           />
@@ -591,8 +592,8 @@ function DocsPage({ lang }: { lang: Lang }) {
                 <ShieldCheck size={18} />
                 <p>
                   {zh
-                    ? '官网、Flutter Web 客户端和后端是三条不同发布路径：官网构建 website/dist，Flutter Web 客户端构建 build/web，后端通过 deploy/test-env 或生产服务部署。'
-                    : 'The website, Flutter Web client and backend are three separate release paths: website builds website/dist, Flutter Web client builds build/web, and backend deployment runs through deploy/test-env or production services.'}
+                    ? '官网、Flutter Web 客户端和后端是三条不同发布路径：官网构建 website/dist，Flutter Web 客户端构建 build/web，后端通过 deploy/production 和 myapp-ctl 部署。'
+                    : 'The website, Flutter Web client and backend are three separate release paths: website builds website/dist, Flutter Web client builds build/web, and backend deployment runs through deploy/production and myapp-ctl.'}
                 </p>
               </div>
             </article>
@@ -609,8 +610,9 @@ function DocsPage({ lang }: { lang: Lang }) {
                   <TerminalBox
                     lines={[
                       '$ git clone https://github.com/dapangyu-fish/ai-app.git',
-                      '$ cd ai-app/deploy/test-env',
-                      '$ ./bootstrap.sh',
+                      '$ cd ai-app/deploy/production',
+                      '$ ./install_ctl.sh',
+                      '$ myapp-ctl deploy --pull',
                     ]}
                   />
                 </div>
@@ -678,7 +680,7 @@ function App() {
       ? t.trustPoints
       : [
           [lang === 'de' ? 'Deklaratives JSON' : 'JSON declarativo', lang === 'de' ? 'Keine nativen Code- oder Binär-Downloads' : 'Sin código nativo ni binarios enviados por IA'],
-          [lang === 'de' ? 'Self-hostable Backend' : 'Backend autoalojable', lang === 'de' ? 'test-env bootstrap startet Kernservices' : 'test-env bootstrap inicia los servicios centrales'],
+          [lang === 'de' ? 'Self-hostable Backend' : 'Backend autoalojable', lang === 'de' ? 'myapp-ctl stellt die Kernservices bereit' : 'myapp-ctl despliega los servicios centrales'],
           [lang === 'de' ? 'Cross-client Runtime' : 'Runtime multiplataforma', lang === 'de' ? 'Web, iOS und Android teilen Fähigkeiten' : 'Web, iOS y Android comparten capacidades'],
         ];
   const docsTitle = 'docsTitle' in t ? t.docsTitle : docsLabel;
@@ -1083,7 +1085,7 @@ function App() {
             <article className="deployCard">
               <div className="deployIcon"><Server size={20} /></div>
               <h3>{t.backendDeployTitle}</h3>
-              <p>{zh ? '用 bootstrap 拉起测试环境，获得服务地址、测试账号和环境 JSON。' : 'Run bootstrap to start the test environment and get service URLs, a test account and environment JSON.'}</p>
+              <p>{zh ? '用 myapp-ctl 部署后端，管理密钥、服务状态和组件发布。' : 'Use myapp-ctl to deploy the backend, manage secrets, inspect status and ship components.'}</p>
               <span className="deployMeta">{zh ? '后端优先' : 'Backend first'}</span>
             </article>
             <article className="deployCard">

@@ -1,8 +1,8 @@
 # 主 compose —— 起 app 自有服务：
 #   jsonapp-postgres / app-minio / backend-redis / backend / ai-worker / registry / config-center
 #
-# Supabase 全栈 + OpenIM 全栈走独立 compose project 起（分别 supabase / testenv-openim），
-# bootstrap.sh 会按顺序 docker compose -f ... up -d。
+# Supabase 全栈 + OpenIM 全栈曾经走独立 compose project 起（分别 supabase / testenv-openim）。
+# bootstrap.sh 已移除；新测试/生产主入口是 myapp-ctl。
 
 name: testenv-app
 

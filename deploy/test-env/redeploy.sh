@@ -3,7 +3,7 @@
 # 数据卷（Postgres / Redis / MinIO）一律不动 —— 它们挂在其他容器上
 #
 # === git 和容器的边界（看脚本前先理清楚）===
-# 1) git pull 跑在 *宿主机* 的 /root/ai-app（bootstrap.sh 时已经 clone 过），
+# 1) git pull 跑在 *宿主机* 的仓库目录（新部署入口是 myapp-ctl；本脚本仅作 legacy 参考），
 #    用宿主机的 ssh key 拉私有仓库，容器里没有 git、也不需要 git 凭据
 # 2) rebuild 时 Dockerfile 用 `context: ../../`，docker daemon 把 *宿主机*
 #    刚 pull 下来的 backend/ 目录 COPY 进新镜像
