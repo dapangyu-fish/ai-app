@@ -82,7 +82,7 @@ class _Strings {
   final String homeAppTitle;
   final String homeWelcome; // "Hi, {name}"
   final String homeSubtitle; // 探索和运行你的应用
-  final String homeMarket; // 应用市场
+  final String homeMarket; // 探索
   final String homeMarketSubtitle; // 发现精彩应用
   final String homeMyApps; // 我的 APP
   final String homeMyAppsSubtitle; // 历史记录
@@ -102,7 +102,7 @@ class _Strings {
   final String onboardingStep1Body;
   final String onboardingStep2Title; // 用户菜单
   final String onboardingStep2Body;
-  final String onboardingStep3Title; // 应用市场
+  final String onboardingStep3Title; // 探索
   final String onboardingStep3Body;
   final String onboardingStep4Title; // 我的 APP
   final String onboardingStep4Body;
@@ -129,7 +129,7 @@ class _Strings {
   final String roleAdmin;
   final String roleProUser;
 
-  // ── 应用市场 ──
+  // ── 探索 ──
   final String marketTitle;
   final String marketEmpty;
   final String marketLoadFailed;
@@ -1079,7 +1079,7 @@ const _Strings _zhCN = _Strings(
   homeAppTitle: 'MyApp',
   homeWelcome: '你好，{name}',
   homeSubtitle: '探索和运行你的应用',
-  homeMarket: '应用市场',
+  homeMarket: '探索',
   homeMarketSubtitle: '发现精彩应用',
   homeMyApps: '我的 APP',
   homeMyAppsSubtitle: '历史记录',
@@ -1098,8 +1098,8 @@ const _Strings _zhCN = _Strings(
       '长按 3 秒进入 AI 对话——跟它说"做一个 todo list"就能生成完整 APP，还能反复改。可拖动到屏幕任意位置；双击回到上次对话。',
   onboardingStep2Title: '账号与语言',
   onboardingStep2Body: '在这里查看个人资料、切换语言，或退出登录。新手引导也能从这里再看一遍。',
-  onboardingStep3Title: '应用市场',
-  onboardingStep3Body: '浏览社区分享的 JSON-APP，一键下载试用。',
+  onboardingStep3Title: '探索',
+  onboardingStep3Body: '浏览不同空间里的 JSON-APP，一键下载试用。',
   onboardingStep4Title: '我的 APP',
   onboardingStep4Body: '你保存或 AI 生成过的 APP 都在这里，离线也能用。',
   onboardingStep5Title: '私信',
@@ -1117,7 +1117,7 @@ const _Strings _zhCN = _Strings(
   roleUser: '普通用户',
   roleAdmin: '管理员',
   roleProUser: '高级用户',
-  marketTitle: '应用市场',
+  marketTitle: '探索',
   marketEmpty: '暂无应用',
   marketLoadFailed: '加载失败',
   marketRunButton: '运行',
@@ -1147,7 +1147,7 @@ const _Strings _zhCN = _Strings(
   settingsAbout: '关于',
   settingsVersion: '版本',
   addToMyAppsTitle: '添加到我的 APP',
-  addToMyAppsContent: '是否将此应用添加到"我的 APP"列表？\n\n添加后可以方便地复用和发布到市场。',
+  addToMyAppsContent: '是否将此应用添加到"我的 APP"列表？\n\n添加后可以方便地复用和发布到探索。',
   addToMyAppsAdded: '已添加到我的 APP',
   saveFailedWith: '保存失败：{msg}',
   marketDeleteConfirmTitle: '确认下架',
@@ -1159,10 +1159,10 @@ const _Strings _zhCN = _Strings(
   marketUnpublishTooltip: '下架',
   marketAuthor: '作者：{author}',
   myAppsEmptyHint: '长按悬浮球，用语音让 AI 帮你生成',
-  myAppsUploadTooltip: '上传到市场',
-  myAppsUploading: '正在上传到市场…',
+  myAppsUploadTooltip: '上传到探索',
+  myAppsUploading: '正在上传到探索…',
   myAppsPublishSuccess: '发布成功 🎉',
-  publishDialogTitle: '发布到市场',
+  publishDialogTitle: '发布到探索',
   publishCreateNamespace: '创建空间',
   publishCreateNamespaceTitle: '创建命名空间',
   publishNamespaceName: '空间名称',
@@ -1297,9 +1297,9 @@ const _Strings _zhCN = _Strings(
   defaultStartupTitle: '默认启动 App',
   defaultStartupHint: '设置后，打开 App 会直接进入选中的应用；通过悬浮球菜单"回到主页"返回 MyApp 首页',
   defaultStartupNoneOption: '不设置（启动到 MyApp 首页）',
-  defaultStartupTabMarket: '市场',
+  defaultStartupTabMarket: '探索',
   defaultStartupTabLocal: '本地',
-  defaultStartupEmptyMarket: '市场暂无 App',
+  defaultStartupEmptyMarket: '探索暂无 App',
   defaultStartupEmptyLocal: '本地还没有保存的 App',
   defaultStartupSavedToast: '已设置',
   defaultStartupSetAsStartup: '设为启动 App',
@@ -1546,7 +1546,7 @@ const _Strings _enUS = _Strings(
   homeAppTitle: 'MyApp',
   homeWelcome: 'Hi, {name}',
   homeSubtitle: 'Explore and run your apps',
-  homeMarket: 'App store',
+  homeMarket: 'Explore',
   homeMarketSubtitle: 'Discover apps',
   homeMyApps: 'My apps',
   homeMyAppsSubtitle: 'History',
@@ -1566,8 +1566,9 @@ const _Strings _enUS = _Strings(
   onboardingStep2Title: 'Account & language',
   onboardingStep2Body:
       'View your profile, switch language, or sign out here. You can also replay this onboarding from this menu.',
-  onboardingStep3Title: 'App marketplace',
-  onboardingStep3Body: 'Browse community JSON apps and try them in one tap.',
+  onboardingStep3Title: 'Explore',
+  onboardingStep3Body:
+      'Browse JSON apps across spaces and try them in one tap.',
   onboardingStep4Title: 'My apps',
   onboardingStep4Body:
       'All your saved or AI-generated apps live here, also available offline.',
@@ -1587,7 +1588,7 @@ const _Strings _enUS = _Strings(
   roleUser: 'User',
   roleAdmin: 'Admin',
   roleProUser: 'Pro user',
-  marketTitle: 'App store',
+  marketTitle: 'Explore',
   marketEmpty: 'No apps yet',
   marketLoadFailed: 'Load failed',
   marketRunButton: 'Run',
@@ -1618,7 +1619,7 @@ const _Strings _enUS = _Strings(
   settingsVersion: 'Version',
   addToMyAppsTitle: 'Add to My Apps',
   addToMyAppsContent:
-      'Add this app to "My Apps"?\n\nYou can then reuse it and publish it to the marketplace.',
+      'Add this app to "My Apps"?\n\nYou can then reuse it and publish it to Explore.',
   addToMyAppsAdded: 'Added to My Apps',
   saveFailedWith: 'Save failed: {msg}',
   marketDeleteConfirmTitle: 'Confirm unpublish',
@@ -1632,10 +1633,10 @@ const _Strings _enUS = _Strings(
   marketAuthor: 'Author: {author}',
   myAppsEmptyHint:
       'Long-press the floating button and speak — AI will generate one',
-  myAppsUploadTooltip: 'Upload to marketplace',
-  myAppsUploading: 'Uploading to marketplace…',
+  myAppsUploadTooltip: 'Upload to Explore',
+  myAppsUploading: 'Uploading to Explore…',
   myAppsPublishSuccess: 'Published 🎉',
-  publishDialogTitle: 'Publish to marketplace',
+  publishDialogTitle: 'Publish to Explore',
   publishCreateNamespace: 'Create namespace',
   publishCreateNamespaceTitle: 'Create namespace',
   publishNamespaceName: 'Namespace',
@@ -1771,9 +1772,9 @@ const _Strings _enUS = _Strings(
   defaultStartupHint:
       'When set, the app launches directly into your chosen app. Use the floating ball menu "Back to home" to return to MyApp home.',
   defaultStartupNoneOption: 'Unset (open to MyApp home)',
-  defaultStartupTabMarket: 'Market',
+  defaultStartupTabMarket: 'Explore',
   defaultStartupTabLocal: 'Local',
-  defaultStartupEmptyMarket: 'No apps in market yet',
+  defaultStartupEmptyMarket: 'No apps in Explore yet',
   defaultStartupEmptyLocal: 'No saved local apps yet',
   defaultStartupSavedToast: 'Saved',
   defaultStartupSetAsStartup: 'Set as startup',
@@ -2030,7 +2031,7 @@ const _Strings _deDE = _Strings(
   homeAppTitle: 'MyApp',
   homeWelcome: 'Hallo, {name}',
   homeSubtitle: 'Entdecke und starte deine Apps',
-  homeMarket: 'App-Store',
+  homeMarket: 'Entdecken',
   homeMarketSubtitle: 'Apps entdecken',
   homeMyApps: 'Meine Apps',
   homeMyAppsSubtitle: 'Verlauf',
@@ -2051,9 +2052,9 @@ const _Strings _deDE = _Strings(
   onboardingStep2Title: 'Konto & Sprache',
   onboardingStep2Body:
       'Hier siehst du dein Profil, wechselst die Sprache oder meldest dich ab. Die Einführung kannst du von hier auch erneut starten.',
-  onboardingStep3Title: 'App-Marktplatz',
+  onboardingStep3Title: 'Entdecken',
   onboardingStep3Body:
-      'Stöbere durch Community-JSON-Apps und teste sie mit einem Tipp.',
+      'Entdecke JSON-Apps in verschiedenen Spaces und teste sie mit einem Tipp.',
   onboardingStep4Title: 'Meine Apps',
   onboardingStep4Body:
       'Alle deine gespeicherten oder per KI generierten Apps findest du hier, auch offline.',
@@ -2073,7 +2074,7 @@ const _Strings _deDE = _Strings(
   roleUser: 'Nutzer',
   roleAdmin: 'Admin',
   roleProUser: 'Pro-Nutzer',
-  marketTitle: 'App-Store',
+  marketTitle: 'Entdecken',
   marketEmpty: 'Noch keine Apps',
   marketLoadFailed: 'Laden fehlgeschlagen',
   marketRunButton: 'Starten',
@@ -2104,7 +2105,7 @@ const _Strings _deDE = _Strings(
   settingsVersion: 'Version',
   addToMyAppsTitle: 'Zu „Meine Apps" hinzufügen',
   addToMyAppsContent:
-      'Diese App zu „Meine Apps" hinzufügen?\n\nDu kannst sie dann wiederverwenden und im Marktplatz veröffentlichen.',
+      'Diese App zu „Meine Apps" hinzufügen?\n\nDu kannst sie dann wiederverwenden und in Entdecken veröffentlichen.',
   addToMyAppsAdded: 'Zu „Meine Apps" hinzugefügt',
   saveFailedWith: 'Speichern fehlgeschlagen: {msg}',
   marketDeleteConfirmTitle: 'Veröffentlichung zurückziehen',
@@ -2118,10 +2119,10 @@ const _Strings _deDE = _Strings(
   marketAuthor: 'Autor: {author}',
   myAppsEmptyHint:
       'Halte den Floating-Button gedrückt und sprich — die KI generiert eine für dich',
-  myAppsUploadTooltip: 'In den Marktplatz hochladen',
-  myAppsUploading: 'Wird in den Marktplatz hochgeladen…',
+  myAppsUploadTooltip: 'In Entdecken hochladen',
+  myAppsUploading: 'Wird in Entdecken hochgeladen…',
   myAppsPublishSuccess: 'Veröffentlicht 🎉',
-  publishDialogTitle: 'Im Marktplatz veröffentlichen',
+  publishDialogTitle: 'In Entdecken veröffentlichen',
   publishCreateNamespace: 'Namespace erstellen',
   publishCreateNamespaceTitle: 'Namespace erstellen',
   publishNamespaceName: 'Namespace',
@@ -2257,9 +2258,9 @@ const _Strings _deDE = _Strings(
   defaultStartupHint:
       'Wenn festgelegt, startet die App direkt in der gewählten App. Nutze im Floating-Ball-Menü „Zur Startseite", um zur MyApp-Startseite zurückzukehren.',
   defaultStartupNoneOption: 'Nicht festgelegt (öffnet MyApp-Startseite)',
-  defaultStartupTabMarket: 'Markt',
+  defaultStartupTabMarket: 'Entdecken',
   defaultStartupTabLocal: 'Lokal',
-  defaultStartupEmptyMarket: 'Noch keine Apps im Markt',
+  defaultStartupEmptyMarket: 'Noch keine Apps in Entdecken',
   defaultStartupEmptyLocal: 'Noch keine gespeicherten lokalen Apps',
   defaultStartupSavedToast: 'Gespeichert',
   defaultStartupSetAsStartup: 'Als Start-App festlegen',
@@ -2520,7 +2521,7 @@ const _Strings _esES = _Strings(
   homeAppTitle: 'MyApp',
   homeWelcome: 'Hola, {name}',
   homeSubtitle: 'Explora y ejecuta tus apps',
-  homeMarket: 'Tienda de apps',
+  homeMarket: 'Explorar',
   homeMarketSubtitle: 'Descubre apps',
   homeMyApps: 'Mis apps',
   homeMyAppsSubtitle: 'Historial',
@@ -2540,9 +2541,9 @@ const _Strings _esES = _Strings(
   onboardingStep2Title: 'Cuenta e idioma',
   onboardingStep2Body:
       'Aquí puedes ver tu perfil, cambiar idioma o cerrar sesión. También puedes repetir el tutorial desde este menú.',
-  onboardingStep3Title: 'Tienda de apps',
+  onboardingStep3Title: 'Explorar',
   onboardingStep3Body:
-      'Explora las apps JSON de la comunidad y pruébalas con un toque.',
+      'Explora apps JSON en distintos espacios y pruébalas con un toque.',
   onboardingStep4Title: 'Mis apps',
   onboardingStep4Body:
       'Todas tus apps guardadas o generadas por IA están aquí, disponibles también sin conexión.',
@@ -2562,7 +2563,7 @@ const _Strings _esES = _Strings(
   roleUser: 'Usuario',
   roleAdmin: 'Admin',
   roleProUser: 'Usuario Pro',
-  marketTitle: 'Tienda de apps',
+  marketTitle: 'Explorar',
   marketEmpty: 'Aún no hay apps',
   marketLoadFailed: 'Error al cargar',
   marketRunButton: 'Ejecutar',
@@ -2593,7 +2594,7 @@ const _Strings _esES = _Strings(
   settingsVersion: 'Versión',
   addToMyAppsTitle: 'Añadir a Mis Apps',
   addToMyAppsContent:
-      '¿Añadir esta app a «Mis Apps»?\n\nPodrás reutilizarla y publicarla en la tienda.',
+      '¿Añadir esta app a «Mis Apps»?\n\nPodrás reutilizarla y publicarla en Explorar.',
   addToMyAppsAdded: 'Añadida a Mis Apps',
   saveFailedWith: 'Error al guardar: {msg}',
   marketDeleteConfirmTitle: 'Confirmar retirada',
@@ -2607,10 +2608,10 @@ const _Strings _esES = _Strings(
   marketAuthor: 'Autor: {author}',
   myAppsEmptyHint:
       'Mantén pulsado el botón flotante y habla — la IA generará una',
-  myAppsUploadTooltip: 'Subir a la tienda',
-  myAppsUploading: 'Subiendo a la tienda…',
+  myAppsUploadTooltip: 'Subir a Explorar',
+  myAppsUploading: 'Subiendo a Explorar…',
   myAppsPublishSuccess: 'Publicada 🎉',
-  publishDialogTitle: 'Publicar en la tienda',
+  publishDialogTitle: 'Publicar en Explorar',
   publishCreateNamespace: 'Crear espacio',
   publishCreateNamespaceTitle: 'Crear espacio',
   publishNamespaceName: 'Espacio de nombres',
@@ -2746,9 +2747,9 @@ const _Strings _esES = _Strings(
   defaultStartupHint:
       'Cuando se define, la app abre directamente la elegida. Usa «Volver al inicio» en el menú del botón flotante para volver a la página de MyApp.',
   defaultStartupNoneOption: 'Sin definir (abre la página de MyApp)',
-  defaultStartupTabMarket: 'Mercado',
+  defaultStartupTabMarket: 'Explorar',
   defaultStartupTabLocal: 'Local',
-  defaultStartupEmptyMarket: 'Aún no hay apps en el mercado',
+  defaultStartupEmptyMarket: 'Aún no hay apps en Explorar',
   defaultStartupEmptyLocal: 'Aún no hay apps locales guardadas',
   defaultStartupSavedToast: 'Guardado',
   defaultStartupSetAsStartup: 'Establecer como inicio',

@@ -63,7 +63,12 @@ class _DefaultStartupPageState extends State<DefaultStartupPage>
       final resp = await http
           .get(
             Uri.parse('${AppConfig.registryUrl}/packages').replace(
-              queryParameters: {'type': 'app', 'page': '1', 'per_page': '100'},
+              queryParameters: {
+                'type': 'app',
+                'page': '1',
+                'per_page': '100',
+                'namespace': '/',
+              },
             ),
           )
           .timeout(const Duration(seconds: 10));

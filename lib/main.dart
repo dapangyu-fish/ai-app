@@ -1405,7 +1405,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                     child: KeyedSubtree(
                       key: OnboardingKeys.marketCard,
                       child: _buildEntryCard(
-                        icon: Icons.store_outlined,
+                        icon: Icons.travel_explore_outlined,
                         title: t.homeMarket,
                         subtitle: t.homeMarketSubtitle,
                         onTap: _loading ? null : _openMarket,
@@ -1678,7 +1678,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 }
 
 // ============================================================
-// 应用市场页面
+// 探索页面
 // ============================================================
 
 class _MarketPage extends StatefulWidget {
@@ -1700,12 +1700,18 @@ class _MarketPageState extends State<_MarketPage> {
   int _page = 1;
   String? _error;
   int _selectedTabIndex = 0; // 0: App, 1: Library
+  List<Map<String, dynamic>> _namespaces = const [
+    {'name': '/', 'display_name': 'Official', 'package_count': 0},
+  ];
+  bool _namespacesLoading = true;
+  String _selectedNamespace = '/';
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
+    _fetchNamespaces();
     _fetchApps();
   }
 
@@ -1714,6 +1720,42 @@ class _MarketPageState extends State<_MarketPage> {
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchNamespaces() async {
+    try {
+      final resp = await http
+          .get(Uri.parse('${AppConfig.registryUrl}/namespaces'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final list = (data['namespaces'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      final hasOfficial = list.any((ns) => ns['name']?.toString() == '/');
+      final namespaces = [
+        if (!hasOfficial)
+          <String, dynamic>{
+            'name': '/',
+            'display_name': 'Official',
+            'package_count': 0,
+          },
+        ...list,
+      ];
+      if (!mounted) return;
+      setState(() {
+        _namespaces = namespaces;
+        _namespacesLoading = false;
+        if (!_namespaces.any(
+          (ns) => ns['name']?.toString() == _selectedNamespace,
+        )) {
+          _selectedNamespace = '/';
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _namespacesLoading = false);
+    }
   }
 
   Future<void> _fetchApps({bool reset = true}) async {
@@ -1771,6 +1813,7 @@ class _MarketPageState extends State<_MarketPage> {
           'type': type,
           'page': nextPage.toString(),
           'per_page': _pageSize.toString(),
+          'namespace': _selectedNamespace,
           if (query.isNotEmpty) 'q': query,
         },
       );
@@ -1822,6 +1865,67 @@ class _MarketPageState extends State<_MarketPage> {
       });
       _fetchApps();
     }
+  }
+
+  bool _isZh(BuildContext context) =>
+      Localizations.localeOf(context).languageCode.startsWith('zh');
+
+  String _spaceLabel(BuildContext context) => _isZh(context) ? '空间' : 'Space';
+
+  String _officialSpaceLabel(BuildContext context) =>
+      _isZh(context) ? '官方' : 'Official';
+
+  String _namespaceLabel(BuildContext context, Map<String, dynamic> ns) {
+    final name = ns['name']?.toString() ?? '/';
+    final displayName = name == '/'
+        ? _officialSpaceLabel(context)
+        : (ns['display_name']?.toString().isNotEmpty == true
+              ? ns['display_name'].toString()
+              : name);
+    final count = ns['package_count'];
+    final suffix = count is num ? ' · ${count.toInt()}' : '';
+    return name == '/' ? '$displayName /$suffix' : '$displayName$suffix';
+  }
+
+  void _onNamespaceChanged(String? namespace) {
+    if (namespace == null || namespace == _selectedNamespace) return;
+    setState(() => _selectedNamespace = namespace);
+    if (_selectedTabIndex != 2) {
+      _fetchApps();
+    }
+  }
+
+  Widget _buildNamespaceSelector(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return DropdownMenu<String>(
+          key: ValueKey(_selectedNamespace),
+          width: constraints.maxWidth,
+          initialSelection: _selectedNamespace,
+          enabled: !_namespacesLoading && _selectedTabIndex != 2,
+          enableFilter: true,
+          requestFocusOnTap: true,
+          leadingIcon: const Icon(Icons.travel_explore_outlined),
+          label: Text(_spaceLabel(context)),
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+          ),
+          dropdownMenuEntries: _namespaces.map((ns) {
+            final name = ns['name']?.toString() ?? '/';
+            return DropdownMenuEntry<String>(
+              value: name,
+              label: _namespaceLabel(context, ns),
+            );
+          }).toList(),
+          onSelected: _onNamespaceChanged,
+        );
+      },
+    );
   }
 
   @override
@@ -1975,6 +2079,10 @@ class _MarketPageState extends State<_MarketPage> {
                 isDense: true,
               ),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: _buildNamespaceSelector(context),
           ),
           Expanded(child: _buildMarketBody(context, cs, t)),
         ],

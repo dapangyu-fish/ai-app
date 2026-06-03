@@ -396,10 +396,12 @@ def resolve():
 def list_packages():
     """
     列出所有可用的包
-    GET /packages?type=app&page=1&per_page=20&q=chat
+    GET /packages?type=app&page=1&per_page=20&q=chat&namespace=/
     """
     filter_type = request.args.get('type', '').strip()
     query = (request.args.get('q') or request.args.get('search') or '').strip().lower()
+    namespace_arg = request.args.get('namespace')
+    namespace = namespace_arg.strip() if namespace_arg is not None else None
     page = _parse_positive_int(request.args.get('page'), 1)
     per_page = _parse_positive_int(request.args.get('per_page'), 20, max_value=100)
 
@@ -408,6 +410,13 @@ def list_packages():
 
     packages = []
     for name, info in index['packages'].items():
+        if namespace is not None:
+            if namespace in ('', '/', '_official_'):
+                if '/' in name:
+                    continue
+            elif not name.startswith(f"{namespace}/"):
+                continue
+
         # 获取最新版本的元数据
         latest_version = info.get('latest', info['versions'][0] if info['versions'] else '1.0.0')
         path = info['path']
@@ -473,6 +482,7 @@ def list_packages():
         "total_pages": (total + per_page - 1) // per_page if total else 0,
         "has_more": end < total,
         "q": query,
+        "namespace": namespace,
     })
 
 
@@ -527,6 +537,54 @@ def my_namespaces():
     except Exception as e:
         print(f"[Registry] Error fetching namespaces: {e}")
         return jsonify({"error": "获取命名空间失败"}), 500
+
+
+@app.route('/namespaces', methods=['GET'])
+def list_public_namespaces():
+    """
+    列出探索页可切换的公开空间（从包索引归纳）。
+    GET /namespaces?q=gsy
+    """
+    query = (request.args.get('q') or request.args.get('search') or '').strip().lower()
+    index = _load_index()
+    buckets = {
+        '/': {
+            'name': '/',
+            'display_name': 'Official',
+            'package_count': 0,
+            'latest_created_at': '',
+        }
+    }
+
+    for name, info in (index.get('packages') or {}).items():
+        namespace = name.split('/', 1)[0] if '/' in name else '/'
+        bucket = buckets.setdefault(namespace, {
+            'name': namespace,
+            'display_name': namespace,
+            'package_count': 0,
+            'latest_created_at': '',
+        })
+        bucket['package_count'] += 1
+        created_at = info.get('created_at') or ''
+        if created_at > (bucket.get('latest_created_at') or ''):
+            bucket['latest_created_at'] = created_at
+
+    namespaces = list(buckets.values())
+    if query:
+        namespaces = [
+            ns for ns in namespaces
+            if query in ns['name'].lower()
+            or query in ns.get('display_name', '').lower()
+        ]
+
+    namespaces.sort(
+        key=lambda ns: (
+            0 if ns['name'] == '/' else 1,
+            -(ns.get('package_count') or 0),
+            ns['name'],
+        )
+    )
+    return jsonify({"namespaces": namespaces, "total": len(namespaces), "q": query})
 
 
 @app.route('/namespace/check', methods=['GET'])
