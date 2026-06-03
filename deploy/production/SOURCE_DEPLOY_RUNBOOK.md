@@ -10,14 +10,14 @@ Validated on `77.237.233.229` with:
 
 - local source tree at `/opt/myapp/current-agent-control-plane`
 - Docker + Docker Compose already installed
-- production AI provider, Supabase, OpenIM, APNs, FCM, ASR, and Getui secrets
-  imported into host-local env files
-- newly generated database, Redis, MinIO, Flask, Registry, Agent, Config Center,
-  and User Center secrets
+- production AI provider, APNs, FCM, ASR, and Getui secrets imported into
+  host-local env files
+- newly generated Supabase, OpenIM, database, Redis, MinIO, Flask, Registry,
+  Agent, Config Center, and User Center secrets
 
-OpenIM and Supabase are listed in `services.json` as external Docker containers
-for status/log visibility. The `deploy --build` flow deploys MyApp infra,
-agent-node, backend, ai-worker, registry, config-center, and user-center.
+Supabase and OpenIM are first-class `myapp-ctl` compose groups. A full
+`deploy all` starts MyApp infra, Supabase, OpenIM, agent-node, backend,
+ai-worker, registry, config-center, and user-center.
 
 ## Clean Host Flow
 
@@ -38,49 +38,19 @@ myapp-ctl uninstall --yes --purge
 Generate host-local secrets that do not need human-provided values:
 
 ```bash
-myapp-ctl secret generate backend \
-  JSONAPP_DB_PASSWORD BACKEND_REDIS_PASSWORD \
-  APP_MINIO_ACCESS_KEY APP_MINIO_SECRET_KEY \
-  REGISTRY_ADMIN_TOKEN FLASK_SECRET_KEY
-
-myapp-ctl secret set backend \
-  PUBLIC_HOST=<public-ip-or-domain> \
-  MYAPP_IMAGE_TAG=agent-control-plane \
-  JSONAPP_DB_USER=jsonapp \
-  JSONAPP_DB_NAME=jsonapp \
-  AI_WORKER_MAX_CONCURRENCY=20 \
-  AI_WORKER_QUEUE_MAX=100 \
-  DEEPSEEK_AI_WORKER_MAX_CONCURRENCY=20 \
-  DEEPSEEK_AI_WORKER_QUEUE_MAX=100 \
-  MINIMAX_AI_WORKER_MAX_CONCURRENCY=5 \
-  MINIMAX_AI_WORKER_QUEUE_MAX=20
-
-myapp-ctl secret generate agent AGENT_NODE_TOKEN AGENT_NODE_REGISTRATION_TOKEN
-myapp-ctl secret set agent \
-  AGENT_NODE_ID=<stable-node-id> \
-  AGENT_NODE_CONTAINER_CPUS=2 \
-  AGENT_NODE_CONTAINER_MEMORY=2g
-
-myapp-ctl secret generate config-center \
-  CONFIG_CENTER_ADMIN_PASSWORD CONFIG_CENTER_SESSION_SECRET
-myapp-ctl secret set config-center CONFIG_CENTER_ADMIN_USERNAME=admin
-
-myapp-ctl secret generate user-center \
-  USER_CENTER_ADMIN_PASSWORD USER_CENTER_SESSION_SECRET
-myapp-ctl secret set user-center USER_CENTER_ADMIN_USERNAME=admin
+myapp-ctl secret init-stack --host <public-ip-or-domain>
 ```
 
 Import or set human-provided production secrets into these groups:
 
 - `ai-providers.env`: `AI_PROVIDER_IDS`, `AI_DEFAULT_PROVIDER`,
   `AI_DEFAULT_AGENT`, `DEEPSEEK_*`, `MINIMAX_*`.
-- `backend.env`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-  `SUPABASE_SERVICE_KEY`, `OPENIM_API_URL`, `OPENIM_WS_URL`,
-  `OPENIM_SECRET`, `OPENIM_WEBHOOK_SECRET`, `BYTEDANCE_ASR_*`.
+- `backend.env`: `BYTEDANCE_ASR_*`. Supabase/OpenIM URLs and keys are generated
+  by `secret init-stack` for the local managed stack unless you intentionally
+  override them.
 - `push.env`: `APNS_KEY_PATH`, `APNS_KEY_ID`, `APNS_TEAM_ID`,
   `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`, `FCM_SERVICE_ACCOUNT_PATH`,
   `FCM_PROJECT_ID`, `GETUI_*`.
-- `user-center.env`: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`.
 
 Install push credential files outside Git:
 
@@ -112,6 +82,8 @@ myapp-ctl status
 curl -fsS http://127.0.0.1:5566/api/ai/providers
 curl -fsS http://127.0.0.1:3254/health
 curl -fsS http://127.0.0.1:5000/api/v1/public
+curl -fsS -H "apikey: $(myapp-ctl secret get supabase ANON_KEY --show)" \
+  http://127.0.0.1:18000/auth/v1/health
 myapp-ctl agent ls
 ```
 
@@ -125,6 +97,10 @@ Expected MyApp services after a successful source deployment:
 - `registry`: running, health `healthy`
 - `config-center`: running, health `ok`
 - `ai-worker`, `app-minio`, `user-center`: running
+- `supabase-*`: running, with Docker health `healthy` where the upstream image
+  defines a healthcheck
+- `openim-*`: running; `openim-server` may return HTTP 400/401/404 at `/`, which
+  is still enough to prove the API process is reachable
 
 Expected provider API shape:
 
@@ -150,10 +126,20 @@ For a runtime smoke test, submit a tiny agent-node run with a real UUID
 - Dockerfile backend used unquoted pip version constraints. They are now quoted.
 - `myapp-ctl secret ls` no longer shows any token suffix; it only prints length
   and a short SHA-256 digest.
+- Supabase and OpenIM are no longer `docker start` placeholders. They are
+  deployed by `myapp-ctl` as real compose groups.
+- `myapp-ctl secret init-stack` generates the local Supabase JWTs, OpenIM
+  credentials, backend DB/Redis/MinIO secrets, and control-plane admin secrets.
+- OpenIM v3.8 config extraction and patching is now a deploy hook, so
+  `openim-server` receives the generated Mongo/Redis/Kafka/Etcd/MinIO/secret
+  settings instead of ignoring env vars.
+- `deploy all` now executes compose in ordered batches: MyApp infra, Supabase,
+  OpenIM, then agent/core services.
 
 ## Validated Result
 
-After a purge and fresh secret import, `myapp-ctl deploy --build` completed in
-one pass on `77.237.233.229`. Health checks passed for backend, registry,
-config-center, PostgreSQL, Redis, and agent-node. A direct DeepSeek/Claude
-agent-node smoke run completed with `returncode=0`.
+After a purge and fresh secret import, `myapp-ctl deploy --build` should
+complete in one pass on `77.237.233.229`. Health checks must pass for backend,
+registry, config-center, PostgreSQL, Redis, agent-node, Supabase, and OpenIM.
+A direct DeepSeek/Claude agent-node smoke run should complete with
+`returncode=0`.

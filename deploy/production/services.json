@@ -82,23 +82,165 @@
       "compose_service": "jsonapp-postgres",
       "container": "myapp-jsonapp-postgres"
     },
-    "supabase-auth": {"group": "supabase", "kind": "docker", "container": "supabase-auth"},
-    "supabase-db": {"group": "supabase", "kind": "docker", "container": "supabase-db"},
-    "supabase-kong": {"group": "supabase", "kind": "docker", "container": "supabase-kong"},
-    "supabase-rest": {"group": "supabase", "kind": "docker", "container": "supabase-rest"},
-    "supabase-storage": {"group": "supabase", "kind": "docker", "container": "supabase-storage"},
-    "supabase-realtime": {"group": "supabase", "kind": "docker", "container": "realtime-dev.supabase-realtime"},
-    "supabase-studio": {"group": "supabase", "kind": "docker", "container": "supabase-studio"},
-    "supabase-pooler": {"group": "supabase", "kind": "docker", "container": "supabase-pooler"},
-    "supabase-analytics": {"group": "supabase", "kind": "docker", "container": "supabase-analytics"},
-    "openim-server": {"group": "openim", "kind": "docker", "container": "openim-server"},
-    "openim-chat": {"group": "openim", "kind": "docker", "container": "openim-chat"},
-    "openim-web-front": {"group": "openim", "kind": "docker", "container": "openim-web-front"},
-    "openim-admin-front": {"group": "openim", "kind": "docker", "container": "openim-admin-front"},
-    "mongo": {"group": "openim", "kind": "docker", "container": "mongo"},
-    "redis": {"group": "openim", "kind": "docker", "container": "redis"},
-    "kafka": {"group": "openim", "kind": "docker", "container": "kafka"},
-    "etcd": {"group": "openim", "kind": "docker", "container": "etcd"},
-    "minio": {"group": "openim", "kind": "docker", "container": "minio"}
+    "supabase-studio": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "studio",
+      "container": "supabase-studio"
+    },
+    "supabase-kong": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "kong",
+      "container": "supabase-kong"
+    },
+    "supabase-auth": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "auth",
+      "container": "supabase-auth"
+    },
+    "supabase-rest": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "rest",
+      "container": "supabase-rest"
+    },
+    "supabase-realtime": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "realtime",
+      "container": "realtime-dev.supabase-realtime"
+    },
+    "supabase-storage": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "storage",
+      "container": "supabase-storage"
+    },
+    "supabase-imgproxy": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "imgproxy",
+      "container": "supabase-imgproxy"
+    },
+    "supabase-meta": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "meta",
+      "container": "supabase-meta"
+    },
+    "supabase-edge-functions": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "functions",
+      "container": "supabase-edge-functions"
+    },
+    "supabase-analytics": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "analytics",
+      "container": "supabase-analytics"
+    },
+    "supabase-db": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "db",
+      "container": "supabase-db"
+    },
+    "supabase-vector": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "vector",
+      "container": "supabase-vector"
+    },
+    "supabase-pooler": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "supavisor",
+      "container": "supabase-pooler"
+    },
+    "openim-mysql": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "mysql",
+      "container": "myapp-openim-mysql"
+    },
+    "openim-mongo": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "mongodb",
+      "container": "myapp-openim-mongo"
+    },
+    "openim-redis": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "redis",
+      "container": "myapp-openim-redis"
+    },
+    "openim-kafka": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "kafka",
+      "container": "myapp-openim-kafka"
+    },
+    "openim-etcd": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "etcd",
+      "container": "myapp-openim-etcd"
+    },
+    "openim-minio": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "minio",
+      "container": "myapp-openim-minio"
+    },
+    "openim-server": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "openim-server",
+      "container": "myapp-openim-server"
+    }
   }
 }

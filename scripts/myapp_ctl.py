@@ -9,8 +9,10 @@ actual process management.
 from __future__ import annotations
 
 import argparse
+import base64
 import getpass
 import hashlib
+import hmac
 import json
 import os
 import secrets as py_secrets
@@ -20,6 +22,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -32,6 +35,26 @@ DEPLOY_ORDER = [
     "jsonapp-postgres",
     "ai-session-redis",
     "app-minio",
+    "supabase-db",
+    "supabase-analytics",
+    "supabase-studio",
+    "supabase-kong",
+    "supabase-auth",
+    "supabase-rest",
+    "supabase-realtime",
+    "supabase-imgproxy",
+    "supabase-storage",
+    "supabase-meta",
+    "supabase-edge-functions",
+    "supabase-vector",
+    "supabase-pooler",
+    "openim-mysql",
+    "openim-mongo",
+    "openim-redis",
+    "openim-kafka",
+    "openim-etcd",
+    "openim-minio",
+    "openim-server",
     "agent-node",
     "registry",
     "backend",
@@ -46,6 +69,16 @@ IMAGE_TARGETS = {
 }
 BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center"}
 DEFAULT_NETWORKS = ["myapp_default", "myapp_agent_runtime"]
+COMPOSE_ENV_FILE_NAMES = [
+    "backend.env",
+    "supabase.env",
+    "openim.env",
+    "ai-providers.env",
+    "agent.env",
+    "push.env",
+    "config-center.env",
+    "user-center.env",
+]
 
 
 def _load_json(path: Path, default: dict) -> dict:
@@ -216,16 +249,8 @@ def _compose_command(spec: dict, command: list[str]) -> list[str]:
 
 
 def _compose_env_files() -> list[Path]:
-    names = [
-        "backend.env",
-        "ai-providers.env",
-        "agent.env",
-        "push.env",
-        "config-center.env",
-        "user-center.env",
-    ]
     secret_dir = _secret_dir()
-    return [secret_dir / name for name in names if (secret_dir / name).exists()]
+    return [secret_dir / name for name in COMPOSE_ENV_FILE_NAMES if (secret_dir / name).exists()]
 
 
 def _run_or_print(cmd: list[str], *, dry_run: bool) -> int:
@@ -370,6 +395,100 @@ def _deploy_images(targets: list[str], *, action: str, dry_run: bool) -> int:
     return 0
 
 
+def _group_in_names(names: list[str], group: str) -> bool:
+    services = _services()
+    return any(services.get(name, {}).get("group") == group for name in names)
+
+
+def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
+    project_dir = Path(spec.get("project_dir", "."))
+    cfg_dir = project_dir / "config-rendered"
+    env = _parse_env(_secret_path("openim"))
+    required = [
+        "HOST_IP",
+        "OPENIM_MONGO_PASSWORD",
+        "OPENIM_REDIS_PASSWORD",
+        "OPENIM_MINIO_ACCESS_KEY",
+        "OPENIM_MINIO_SECRET_KEY",
+        "OPENIM_MINIO_PORT",
+        "OPENIM_SECRET",
+    ]
+    missing = [key for key in required if not env.get(key)]
+    if missing:
+        print("missing OpenIM env keys: " + ", ".join(missing), file=sys.stderr)
+        print("run: myapp-ctl secret init-stack", file=sys.stderr)
+        return 1
+    image = "openim/openim-server:v3.8.3-patch.12"
+    print(f"+ render OpenIM config: {cfg_dir}")
+    if dry_run:
+        return 0
+    if not project_dir.exists():
+        print(f"compose project missing: {project_dir}", file=sys.stderr)
+        return 1
+    if cfg_dir.exists():
+        shutil.rmtree(cfg_dir)
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    rc = _run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "--entrypoint",
+            "sh",
+            "-v",
+            f"{cfg_dir}:/host",
+            image,
+            "-c",
+            "cp -a /openim-server/config/. /host/ && chmod -R a+rwX /host/",
+        ],
+        capture=False,
+    ).returncode
+    if rc != 0:
+        return rc
+    replacements = {
+        "mongodb.yml": [
+            ("localhost:37017", "mongodb:27017"),
+            ("username: openIM", "username: openim"),
+            ("password: openIM123", f"password: {env['OPENIM_MONGO_PASSWORD']}"),
+            ("authSource: openim_v3", "authSource: admin"),
+        ],
+        "redis.yml": [
+            ("localhost:16379", "redis:6379"),
+            ("password: openIM123", f"password: {env['OPENIM_REDIS_PASSWORD']}"),
+        ],
+        "kafka.yml": [("localhost:19094", "kafka:9092")],
+        "discovery.yml": [("localhost:12379", "etcd:2379")],
+        "minio.yml": [
+            ("accessKeyID: root", f"accessKeyID: {env['OPENIM_MINIO_ACCESS_KEY']}"),
+            ("secretAccessKey: openIM123", f"secretAccessKey: {env['OPENIM_MINIO_SECRET_KEY']}"),
+            ("localhost:10005", "minio:9000"),
+            ("http://external_ip:10005", f"http://{env['HOST_IP']}:{env['OPENIM_MINIO_PORT']}"),
+        ],
+        "share.yml": [("secret: openIM123", f"secret: {env['OPENIM_SECRET']}")],
+    }
+    for rel, pairs in replacements.items():
+        path = cfg_dir / rel
+        if not path.exists():
+            print(f"OpenIM config file missing after extract: {path}", file=sys.stderr)
+            return 1
+        text = path.read_text(encoding="utf-8")
+        for old, new in pairs:
+            text = text.replace(old, new)
+        path.write_text(text, encoding="utf-8")
+    return 0
+
+
+def _prepare_deploy(names: list[str], *, dry_run: bool) -> int:
+    if not _group_in_names(names, "openim"):
+        return 0
+    services = _services()
+    for name in names:
+        spec = services.get(name, {})
+        if spec.get("group") == "openim" and spec.get("kind") == "compose":
+            return _prepare_openim_config(spec, dry_run=dry_run)
+    return 0
+
+
 def _ensure_images(targets: list[str], *, dry_run: bool) -> int:
     if dry_run:
         return 0
@@ -384,33 +503,51 @@ def _ensure_images(targets: list[str], *, dry_run: bool) -> int:
 
 def _deploy_compose_services(names: list[str], *, dry_run: bool) -> int:
     services = _services()
-    groups: dict[tuple[str, tuple[str, ...]], list[str]] = {}
-    specs: dict[tuple[str, tuple[str, ...]], dict] = {}
-    docker_names: list[str] = []
+    current_key: tuple[str, tuple[str, ...]] | None = None
+    current_spec: dict | None = None
+    current_services: list[str] = []
+
+    def flush() -> int:
+        nonlocal current_key, current_spec, current_services
+        if not current_spec or not current_services:
+            current_key = None
+            current_spec = None
+            current_services = []
+            return 0
+        cmd = _compose_command(current_spec, ["up", "-d", *current_services])
+        rc = _run_or_print(cmd, dry_run=dry_run)
+        current_key = None
+        current_spec = None
+        current_services = []
+        return rc
+
     for name in names:
         spec = services[name]
         kind = spec.get("kind")
         if kind == "docker":
-            docker_names.append(spec.get("container") or name)
+            rc = flush()
+            if rc != 0:
+                return rc
+            rc = _run_or_print(["docker", "start", spec.get("container") or name], dry_run=dry_run)
+            if rc != 0:
+                return rc
             continue
         if kind != "compose":
+            rc = flush()
+            if rc != 0:
+                return rc
             continue
         project_dir = str(spec.get("project_dir", "."))
         compose_files = tuple(spec.get("compose_files") or [])
         key = (project_dir, compose_files)
-        groups.setdefault(key, []).append(str(spec.get("compose_service") or name))
-        specs[key] = spec
-    for key, compose_services in groups.items():
-        spec = specs[key]
-        cmd = _compose_command(spec, ["up", "-d", *compose_services])
-        rc = _run_or_print(cmd, dry_run=dry_run)
-        if rc != 0:
-            return rc
-    for container in docker_names:
-        rc = _run_or_print(["docker", "start", container], dry_run=dry_run)
-        if rc != 0:
-            return rc
-    return 0
+        if current_key is not None and key != current_key:
+            rc = flush()
+            if rc != 0:
+                return rc
+        current_key = key
+        current_spec = spec
+        current_services.append(str(spec.get("compose_service") or name))
+    return flush()
 
 
 def _compose_specs_for_names(names: list[str]) -> list[dict]:
@@ -565,6 +702,11 @@ def cmd_deploy(args) -> int:
         rc = _ensure_images(image_targets, dry_run=args.dry_run)
         if rc != 0:
             return rc
+    if not args.dry_run:
+        _init_stack_secrets(quiet=True)
+    rc = _prepare_deploy(names, dry_run=args.dry_run)
+    if rc != 0:
+        return rc
     return _deploy_compose_services(names, dry_run=args.dry_run)
 
 
@@ -655,6 +797,261 @@ def _write_env(path: Path, data: dict[str, str]) -> None:
     os.chmod(path, 0o600)
 
 
+def _rand_hex(bytes_len: int) -> str:
+    return py_secrets.token_hex(bytes_len)
+
+
+def _rand_token(length: int = 32) -> str:
+    token = py_secrets.token_urlsafe(length)
+    return token.replace("-", "").replace("_", "")[:length]
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _mint_supabase_jwt(secret: str, role: str) -> str:
+    now = int(time.time())
+    payload = {
+        "role": role,
+        "iss": "supabase",
+        "iat": now,
+        "exp": now + 5 * 365 * 24 * 3600,
+    }
+    header_b64 = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+    payload_b64 = _b64url(json.dumps(payload, separators=(",", ":")).encode())
+    signing_input = f"{header_b64}.{payload_b64}".encode()
+    sig = hmac.new(secret.encode(), signing_input, hashlib.sha256).digest()
+    return f"{header_b64}.{payload_b64}.{_b64url(sig)}"
+
+
+def _public_host(explicit: str | None = None) -> str:
+    if explicit:
+        return explicit
+    cfg = _cfg()
+    node_ip = cfg.get("node", {}).get("public_ip")
+    if node_ip:
+        return str(node_ip)
+    backend = str(cfg.get("domains", {}).get("backend") or "")
+    parsed = urlparse(backend)
+    if parsed.hostname:
+        return parsed.hostname
+    return "127.0.0.1"
+
+
+def _merge_env_group(group: str, values: dict[str, str], *, force: bool = False) -> list[str]:
+    path = _secret_path(group)
+    data = _parse_env(path)
+    changed: list[str] = []
+    for key, value in values.items():
+        if force or not data.get(key):
+            data[key] = value
+            changed.append(key)
+    if changed:
+        _write_env(path, data)
+    return changed
+
+
+def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: bool = False) -> int:
+    public_host = _public_host(host)
+    secret_dir = _secret_dir()
+    secret_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_backend = _parse_env(_secret_path("backend"))
+    existing_supabase = _parse_env(_secret_path("supabase"))
+    existing_openim = _parse_env(_secret_path("openim"))
+
+    jwt_secret = existing_supabase.get("JWT_SECRET") if not force else ""
+    jwt_secret = jwt_secret or _rand_hex(32)
+    anon_key = existing_supabase.get("ANON_KEY") if not force else ""
+    service_role_key = existing_supabase.get("SERVICE_ROLE_KEY") if not force else ""
+    anon_key = anon_key or _mint_supabase_jwt(jwt_secret, "anon")
+    service_role_key = service_role_key or _mint_supabase_jwt(jwt_secret, "service_role")
+
+    openim_secret = existing_openim.get("OPENIM_SECRET") if not force else ""
+    openim_secret = openim_secret or _rand_hex(32)
+    openim_webhook_secret = existing_backend.get("OPENIM_WEBHOOK_SECRET") if not force else ""
+    openim_webhook_secret = openim_webhook_secret or existing_openim.get("OPENIM_WEBHOOK_SECRET", "")
+    openim_webhook_secret = openim_webhook_secret or _rand_hex(32)
+
+    backend_defaults = {
+        "PUBLIC_HOST": public_host,
+        "BACKEND_PORT": "5566",
+        "REGISTRY_PORT": "3254",
+        "CONFIG_CENTER_PORT": "5000",
+        "USER_CENTER_PORT": "5567",
+        "JSONAPP_DB_USER": "jsonapp",
+        "JSONAPP_DB_NAME": "jsonapp",
+        "JSONAPP_DB_PASSWORD": _rand_token(32),
+        "BACKEND_REDIS_PASSWORD": _rand_token(32),
+        "APP_MINIO_ACCESS_KEY": "app" + _rand_hex(8),
+        "APP_MINIO_SECRET_KEY": _rand_token(40),
+        "APP_MINIO_PORT": "9000",
+        "APP_MINIO_CONSOLE_PORT": "9090",
+        "SUPABASE_URL": f"http://{public_host}:18000",
+        "SUPABASE_ANON_KEY": anon_key,
+        "SUPABASE_SERVICE_KEY": service_role_key,
+        "OPENIM_API_URL": f"http://{public_host}:10002",
+        "OPENIM_WS_URL": f"ws://{public_host}:10001",
+        "OPENIM_SECRET": openim_secret,
+        "OPENIM_WEBHOOK_SECRET": openim_webhook_secret,
+        "FLASK_SECRET_KEY": _rand_hex(32),
+        "REGISTRY_ADMIN_TOKEN": _rand_hex(32),
+        "REGISTRY_ADMIN_AUTHOR_EMAIL": "2501808198@qq.com",
+        "REGISTRY_ADMIN_AUTHOR_NAME": "fish",
+        "REGISTRY_ADMIN_AUTHOR_ID": "2501808198@qq.com",
+        "AI_WORKER_MAX_CONCURRENCY": "20",
+        "AI_WORKER_QUEUE_MAX": "100",
+        "DEEPSEEK_AI_WORKER_MAX_CONCURRENCY": "20",
+        "DEEPSEEK_AI_WORKER_QUEUE_MAX": "100",
+        "MINIMAX_AI_WORKER_MAX_CONCURRENCY": "5",
+        "MINIMAX_AI_WORKER_QUEUE_MAX": "20",
+    }
+    supabase_defaults = {
+        "HOST_IP": public_host,
+        "POSTGRES_PASSWORD": _rand_token(32),
+        "JWT_SECRET": jwt_secret,
+        "ANON_KEY": anon_key,
+        "SERVICE_ROLE_KEY": service_role_key,
+        "SUPABASE_PUBLISHABLE_KEY": anon_key,
+        "SUPABASE_SECRET_KEY": service_role_key,
+        "DASHBOARD_USERNAME": "admin",
+        "DASHBOARD_PASSWORD": _rand_token(24),
+        "SECRET_KEY_BASE": _rand_hex(32),
+        "VAULT_ENC_KEY": _rand_hex(16),
+        "PG_META_CRYPTO_KEY": _rand_hex(32),
+        "LOGFLARE_PUBLIC_ACCESS_TOKEN": _rand_hex(24),
+        "LOGFLARE_PRIVATE_ACCESS_TOKEN": _rand_hex(24),
+        "ANON_KEY_ASYMMETRIC": "",
+        "SERVICE_ROLE_KEY_ASYMMETRIC": "",
+        "JWT_KEYS": "[]",
+        "JWT_JWKS": "{\"keys\":[]}",
+        "POSTGRES_HOST": "db",
+        "POSTGRES_DB": "postgres",
+        "POSTGRES_PORT": "15432",
+        "POOLER_TENANT_ID": "myapp" + _rand_hex(4),
+        "POOLER_PROXY_PORT_TRANSACTION": "6543",
+        "POOLER_DEFAULT_POOL_SIZE": "20",
+        "POOLER_MAX_CLIENT_CONN": "100",
+        "POOLER_DB_POOL_SIZE": "5",
+        "KONG_HTTP_PORT": "18000",
+        "KONG_HTTPS_PORT": "18443",
+        "API_EXTERNAL_URL": f"http://{public_host}:18000",
+        "SUPABASE_PUBLIC_URL": f"http://{public_host}:18000",
+        "SITE_URL": f"http://{public_host}:18000",
+        "SAML_EXTERNAL_URL": "",
+        "ADDITIONAL_REDIRECT_URLS": "",
+        "DISABLE_SIGNUP": "false",
+        "ENABLE_EMAIL_SIGNUP": "true",
+        "ENABLE_EMAIL_AUTOCONFIRM": "true",
+        "ENABLE_PHONE_SIGNUP": "false",
+        "ENABLE_PHONE_AUTOCONFIRM": "false",
+        "ENABLE_ANONYMOUS_USERS": "false",
+        "JWT_EXPIRY": "3600",
+        "MAILER_URLPATHS_CONFIRMATION": "/auth/v1/verify",
+        "MAILER_URLPATHS_EMAIL_CHANGE": "/auth/v1/verify",
+        "MAILER_URLPATHS_INVITE": "/auth/v1/verify",
+        "MAILER_URLPATHS_RECOVERY": "/auth/v1/verify",
+        "SMTP_ADMIN_EMAIL": "noreply@example.local",
+        "SMTP_HOST": "localhost",
+        "SMTP_PORT": "587",
+        "SMTP_USER": "",
+        "SMTP_PASS": "",
+        "SMTP_SENDER_NAME": "myapp",
+        "GITHUB_ENABLED": "false",
+        "GITHUB_CLIENT_ID": "",
+        "GITHUB_SECRET": "",
+        "GOOGLE_ENABLED": "false",
+        "GOOGLE_CLIENT_ID": "",
+        "GOOGLE_SECRET": "",
+        "GOOGLE_PROJECT_ID": "",
+        "GOOGLE_PROJECT_NUMBER": "",
+        "AZURE_ENABLED": "false",
+        "AZURE_CLIENT_ID": "",
+        "AZURE_SECRET": "",
+        "MFA_PHONE_ENROLL_ENABLED": "false",
+        "MFA_PHONE_VERIFY_ENABLED": "false",
+        "MFA_TOTP_ENROLL_ENABLED": "false",
+        "MFA_TOTP_VERIFY_ENABLED": "false",
+        "MFA_MAX_ENROLLED_FACTORS": "10",
+        "SAML_ENABLED": "false",
+        "SAML_PRIVATE_KEY": "",
+        "SAML_ALLOW_ENCRYPTED_ASSERTIONS": "false",
+        "SAML_RELAY_STATE_VALIDITY_PERIOD": "300",
+        "SAML_RATE_LIMIT_ASSERTION": "",
+        "SMS_PROVIDER": "",
+        "SMS_OTP_EXP": "60",
+        "SMS_OTP_LENGTH": "6",
+        "SMS_MAX_FREQUENCY": "",
+        "SMS_TWILIO_ACCOUNT_SID": "",
+        "SMS_TWILIO_AUTH_TOKEN": "",
+        "SMS_TWILIO_MESSAGE_SERVICE_SID": "",
+        "SMS_TEMPLATE": "",
+        "SMS_TEST_OTP": "",
+        "PGRST_DB_SCHEMAS": "public,storage,graphql_public",
+        "PGRST_DB_EXTRA_SEARCH_PATH": "public,extensions",
+        "PGRST_DB_MAX_ROWS": "1000",
+        "FUNCTIONS_VERIFY_JWT": "false",
+        "STUDIO_DEFAULT_ORGANIZATION": "Default Organization",
+        "STUDIO_DEFAULT_PROJECT": "Default Project",
+        "OPENAI_API_KEY": "",
+        "STORAGE_TENANT_ID": "stub",
+        "GLOBAL_S3_BUCKET": "stub",
+        "IMGPROXY_AUTO_WEBP": "true",
+        "S3_PROTOCOL_ACCESS_KEY_ID": "s3" + _rand_hex(8),
+        "S3_PROTOCOL_ACCESS_KEY_SECRET": _rand_token(32),
+        "REGION": "local",
+        "DOCKER_SOCKET_LOCATION": "/var/run/docker.sock",
+    }
+    openim_defaults = {
+        "HOST_IP": public_host,
+        "OPENIM_MYSQL_ROOT_PASSWORD": _rand_token(32),
+        "OPENIM_MYSQL_PASSWORD": _rand_token(32),
+        "OPENIM_MONGO_PASSWORD": _rand_token(32),
+        "OPENIM_REDIS_PASSWORD": _rand_token(32),
+        "OPENIM_MINIO_ACCESS_KEY": "openim" + _rand_hex(4),
+        "OPENIM_MINIO_SECRET_KEY": _rand_token(32),
+        "OPENIM_SECRET": openim_secret,
+        "OPENIM_WEBHOOK_SECRET": openim_webhook_secret,
+        "OPENIM_MYSQL_PORT": "13306",
+        "OPENIM_MONGO_PORT": "37017",
+        "OPENIM_REDIS_PORT": "16379",
+        "OPENIM_MINIO_PORT": "10005",
+        "OPENIM_MINIO_CONSOLE_PORT": "10006",
+        "OPENIM_WS_PORT": "10001",
+        "OPENIM_API_PORT": "10002",
+        "OPENIM_ADMIN_PORT": "10009",
+    }
+    agent_defaults = {
+        "AGENT_NODE_TOKEN": _rand_hex(24),
+        "AGENT_NODE_REGISTRATION_TOKEN": _rand_hex(24),
+        "AGENT_NODE_ID": _cfg().get("node", {}).get("id", os.uname().nodename),
+    }
+    config_center_defaults = {
+        "CONFIG_CENTER_ADMIN_USERNAME": "admin",
+        "CONFIG_CENTER_ADMIN_PASSWORD": _rand_token(24),
+        "CONFIG_CENTER_SESSION_SECRET": _rand_hex(32),
+    }
+    user_center_defaults = {
+        "USER_CENTER_ADMIN_USERNAME": "admin",
+        "USER_CENTER_ADMIN_PASSWORD": _rand_token(24),
+        "USER_CENTER_SESSION_SECRET": _rand_hex(32),
+    }
+
+    changed = {
+        "backend": _merge_env_group("backend", backend_defaults, force=force),
+        "supabase": _merge_env_group("supabase", supabase_defaults, force=force),
+        "openim": _merge_env_group("openim", openim_defaults, force=force),
+        "agent": _merge_env_group("agent", agent_defaults, force=force),
+        "config-center": _merge_env_group("config-center", config_center_defaults, force=force),
+        "user-center": _merge_env_group("user-center", user_center_defaults, force=force),
+    }
+    if not quiet:
+        rows = [{"group": group, "keys": len(keys)} for group, keys in changed.items()]
+        _print_table(rows, [("group", "GROUP"), ("keys", "CHANGED_KEYS")])
+    return 0
+
+
 def _redact(value: str) -> str:
     digest = hashlib.sha256(value.encode()).hexdigest()[:8]
     return f"<redacted len={len(value)} sha256:{digest}>"
@@ -662,6 +1059,8 @@ def _redact(value: str) -> str:
 
 def cmd_secret(args) -> int:
     _secret_dir().mkdir(parents=True, exist_ok=True)
+    if args.secret_cmd == "init-stack":
+        return _init_stack_secrets(host=args.host, force=args.force)
     if args.secret_cmd == "ls":
         rows = []
         for path in sorted(_secret_dir().glob("*.env")):
@@ -962,6 +1361,10 @@ def build_parser() -> argparse.ArgumentParser:
     secret = sub.add_parser("secret")
     secret_sub = secret.add_subparsers(dest="secret_cmd", required=True)
     secret_sub.add_parser("ls").set_defaults(func=cmd_secret)
+    secret_init = secret_sub.add_parser("init-stack")
+    secret_init.add_argument("--host", help="public host/IP used in generated local service URLs")
+    secret_init.add_argument("--force", action="store_true", help="regenerate stack secrets managed by myapp-ctl")
+    secret_init.set_defaults(func=cmd_secret)
     secret_set = secret_sub.add_parser("set")
     secret_set.add_argument("group")
     secret_set.add_argument("items", nargs="+")

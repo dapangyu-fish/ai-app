@@ -9,6 +9,8 @@ It is designed for a single host first, then can grow into multiple agent hosts.
 - `myapp-backend`: shared image for backend, ai-worker, registry, config-center, and user-center.
 - `myapp-agent-node`: per-host service that owns Docker and starts isolated agent runtime containers.
 - `myapp-agent-runtime`: Ubuntu 24.04 execution image used for Claude/Codex runs.
+- `supabase`: local self-hosted Supabase compose group for auth/profile/storage API support.
+- `openim`: local OpenIM compose group for IM credentials and message transport.
 
 ## Important Security Boundary
 
@@ -40,19 +42,18 @@ cd /opt/myapp/current-agent-control-plane
 export PUBLIC_HOST=77.237.233.229
 export MYAPP_IMAGE_TAG=agent-control-plane
 
+myapp-ctl secret init-stack --host "$PUBLIC_HOST"
 myapp-ctl status
 myapp-ctl deploy --plan
 myapp-ctl deploy --build
 myapp-ctl status
 ```
 
-Backend services need real host-local secrets before they should be started:
+AI provider and push services need real host-local secrets before they should be
+used:
 
 ```bash
-myapp-ctl secret set backend FLASK_SECRET_KEY
-myapp-ctl secret set backend SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_KEY
 myapp-ctl secret set ai-providers DEEPSEEK_ANTHROPIC_AUTH_TOKEN MINIMAX_ANTHROPIC_AUTH_TOKEN
-myapp-ctl secret set agent AGENT_NODE_REGISTRATION_TOKEN
 myapp-ctl secret set push APNS_KEY_ID APNS_TEAM_ID FCM_PROJECT_ID
 ```
 
@@ -72,8 +73,7 @@ myapp-ctl uninstall --yes --purge
 Generate host-local random secrets:
 
 ```bash
-myapp-ctl secret generate backend JSONAPP_DB_PASSWORD BACKEND_REDIS_PASSWORD APP_MINIO_ACCESS_KEY APP_MINIO_SECRET_KEY REGISTRY_ADMIN_TOKEN FLASK_SECRET_KEY
-myapp-ctl secret generate agent AGENT_NODE_TOKEN AGENT_NODE_REGISTRATION_TOKEN
+myapp-ctl secret init-stack --host <public-ip-or-domain>
 ```
 
 One-command local-source deployment on a test host:
@@ -92,6 +92,8 @@ Deploy one group:
 
 ```bash
 myapp-ctl deploy --group infra --pull
+myapp-ctl deploy --group supabase --pull
+myapp-ctl deploy --group openim --pull
 myapp-ctl deploy --group agent --pull
 myapp-ctl deploy --group core --pull
 ```

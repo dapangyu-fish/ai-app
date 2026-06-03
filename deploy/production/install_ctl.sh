@@ -15,7 +15,13 @@ install -m 644 "$ROOT_DIR/deploy/production/services.json" /etc/myapp/services.j
 install -d -m 755 "$INSTALL_ROOT/deploy/production"
 install -m 644 "$ROOT_DIR/deploy/production/docker-compose.core.yml" "$INSTALL_ROOT/deploy/production/docker-compose.core.yml"
 install -m 644 "$ROOT_DIR/backend/schema.sql" "$INSTALL_ROOT/deploy/production/schema.sql"
+rm -rf "$INSTALL_ROOT/deploy/production/supabase" "$INSTALL_ROOT/deploy/production/openim"
+mkdir -p "$INSTALL_ROOT/deploy/production/supabase" "$INSTALL_ROOT/deploy/production/openim"
+cp -a "$ROOT_DIR/deploy/production/supabase/." "$INSTALL_ROOT/deploy/production/supabase/"
+cp -a "$ROOT_DIR/deploy/production/openim/." "$INSTALL_ROOT/deploy/production/openim/"
 
 echo "installed myapp-ctl to /opt/myapp/bin/myapp-ctl"
 echo "config: /etc/myapp/ctl.json /etc/myapp/services.json"
 echo "compose: $INSTALL_ROOT/deploy/production/docker-compose.core.yml"
+echo "compose: $INSTALL_ROOT/deploy/production/supabase/docker-compose.yml"
+echo "compose: $INSTALL_ROOT/deploy/production/openim/docker-compose.yml"
