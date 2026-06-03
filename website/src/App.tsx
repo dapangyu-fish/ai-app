@@ -341,7 +341,7 @@ const copy = {
 
 function PhonePreview({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp generated app preview">
+    <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp live web preview">
       <div className="phoneGlow" />
       <div className="phoneShell">
         <div className="sideButton sideButtonPower" />
@@ -349,44 +349,13 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
         <div className="sideButton sideButtonVolumeDown" />
         <div className="phoneSpeaker" />
         <div className="phoneScreen">
-          <div className="generatedAppMock" aria-hidden="true">
-            <div className="mockStatusBar">
-              <span>9:41</span>
-              <span>JSON App</span>
-            </div>
-            <div className="mockHeroCard">
-              <div>
-                <small>AI generated</small>
-                <strong>Camping Kit</strong>
-                <span>18 items · 3 trips</span>
-              </div>
-              <Sparkles size={24} />
-            </div>
-            <div className="mockPromptBubble">
-              <small>Prompt</small>
-              <span>“Build a camping packing app with checklist, weather and shared notes.”</span>
-            </div>
-            <div className="mockSegment">
-              <span className="active">Checklist</span>
-              <span>Weather</span>
-              <span>Notes</span>
-            </div>
-            <div className="mockChecklist">
-              {['Tent packed', 'Food planned', 'First aid checked'].map((item) => (
-                <div key={item}>
-                  <CheckCircle2 size={16} />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mockBottomSheet">
-              <div>
-                <strong>Runs on Web, iOS, Android</strong>
-                <span>Declarative JSON · precompiled runtime</span>
-              </div>
-              <ChevronRight size={18} />
-            </div>
-          </div>
+          <iframe
+            title="MyApp live Web client"
+            src={WEB_APP_URL}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            allow="clipboard-read; clipboard-write; camera; microphone"
+          />
         </div>
       </div>
     </div>
