@@ -42,7 +42,8 @@
       "project_dir": "/opt/myapp/deploy/production",
       "compose_files": ["docker-compose.core.yml"],
       "compose_service": "user-center",
-      "container": "myapp-user-center"
+      "container": "myapp-user-center",
+      "health": {"type": "http", "url": "http://127.0.0.1:5567/healthz"}
     },
     "agent-node": {
       "group": "agent",
@@ -72,7 +73,8 @@
       "project_dir": "/opt/myapp/deploy/production",
       "compose_files": ["docker-compose.core.yml"],
       "compose_service": "app-minio",
-      "container": "myapp-app-minio"
+      "container": "myapp-app-minio",
+      "health": {"type": "http", "url": "http://127.0.0.1:9000/minio/health/ready"}
     },
     "jsonapp-postgres": {
       "group": "infra",
@@ -240,7 +242,8 @@
       "project_dir": "/opt/myapp/deploy/production/openim",
       "compose_files": ["docker-compose.yml"],
       "compose_service": "openim-server",
-      "container": "myapp-openim-server"
+      "container": "myapp-openim-server",
+      "health": {"type": "tcp", "host": "127.0.0.1", "port": 10002}
     }
   }
 }

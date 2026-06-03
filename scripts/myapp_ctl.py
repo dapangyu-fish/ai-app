@@ -18,6 +18,7 @@ import os
 import secrets as py_secrets
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -139,16 +140,26 @@ def _docker_ps_all() -> list[dict]:
 
 
 def _health(spec: dict | None) -> str:
-    if not spec or spec.get("type") != "http":
+    if not spec:
         return "-"
-    try:
-        req = Request(str(spec.get("url") or ""), headers={"User-Agent": "myapp-ctl/1"})
-        with urlopen(req, timeout=1.2) as resp:
-            return "ok" if 200 <= getattr(resp, "status", 0) < 400 else f"http-{resp.status}"
-    except HTTPError as exc:
-        return f"http-{exc.code}"
-    except (URLError, ValueError, OSError):
-        return "down"
+    if spec.get("type") == "http":
+        try:
+            req = Request(str(spec.get("url") or ""), headers={"User-Agent": "myapp-ctl/1"})
+            with urlopen(req, timeout=1.2) as resp:
+                return "ok" if 200 <= getattr(resp, "status", 0) < 400 else f"http-{resp.status}"
+        except HTTPError as exc:
+            return f"http-{exc.code}"
+        except (URLError, ValueError, OSError):
+            return "down"
+    if spec.get("type") == "tcp":
+        host = str(spec.get("host") or "127.0.0.1")
+        try:
+            port = int(spec.get("port"))
+            with socket.create_connection((host, port), timeout=1.2):
+                return "ok"
+        except (TypeError, ValueError, OSError):
+            return "down"
+    return "-"
 
 
 def _http_json(url: str, *, token: str = "", timeout: float = 3.0) -> dict | None:
