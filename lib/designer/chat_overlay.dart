@@ -120,6 +120,41 @@ class _ChatOverlayState extends State<ChatOverlay> {
   SessionMeta? _deleteConfirmSession;
   SessionMeta? _renameSession;
   TextEditingController? _renameController;
+  bool _liveTranscriptScrollScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleLiveTranscriptScrollIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.liveTranscript != oldWidget.liveTranscript ||
+        widget.isListening != oldWidget.isListening) {
+      _scheduleLiveTranscriptScrollIfNeeded();
+    }
+  }
+
+  bool get _shouldFollowLiveTranscript =>
+      widget.isListening && (widget.liveTranscript?.isNotEmpty ?? false);
+
+  void _scheduleLiveTranscriptScrollIfNeeded() {
+    if (!_shouldFollowLiveTranscript || _liveTranscriptScrollScheduled) return;
+    _liveTranscriptScrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _liveTranscriptScrollScheduled = false;
+      if (!mounted || !_shouldFollowLiveTranscript) return;
+      final controller = widget.scrollController;
+      if (!controller.hasClients || !controller.position.hasContentDimensions) {
+        _scheduleLiveTranscriptScrollIfNeeded();
+        return;
+      }
+      final target = controller.position.maxScrollExtent;
+      if (target.isFinite) controller.jumpTo(target);
+    });
+  }
 
   String _currentSessionTitle() {
     final defaultTitle = T.of(context).chatSessionDefaultTitle;
