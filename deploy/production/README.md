@@ -13,16 +13,21 @@ It is designed for a single host first, then can grow into multiple agent hosts.
 ## Important Security Boundary
 
 `AI_WORKER_EXECUTION_BACKEND=agent-node` keeps backend, FCM/APNs, Supabase, OpenIM, and registry
-secrets out of the agent runtime container. The runtime container receives only the structured run
-payload and the AI-provider CLI environment required for the selected agent.
+secrets out of the agent runtime container. The runtime receives a structured run payload and
+per-run proxy tokens only.
 
-Provider-key proxying is still the next security milestone. Until that proxy exists, any provider
-token passed to Claude/Codex is visible to that agent process and can still be printed by that
-agent. Do not treat containerization alone as a complete provider-key leak fix.
+Provider keys are held by backend/agent-node and rewritten by the agent-node provider proxy before
+the runtime starts. Claude/Codex see `http://agent-node:5590/proxy/<token>` and a short-lived proxy
+token; the real DeepSeek/MiniMax token is not written to payload files and is revoked from
+agent-node memory when the run exits.
 
-The default agent runtime network is `bridge` so Claude/Codex can reach DeepSeek/MiniMax during the
-current transition. After a local provider proxy exists on each agent node, switch
-`AGENT_NODE_DOCKER_NETWORK=none` and point provider base URLs at that proxy.
+The default runtime network is `myapp_agent_runtime`, a dedicated Docker network shared only with
+`agent-node`. Runtime containers can reach `agent-node` by Docker DNS for provider proxying, but do
+not join the backend/Postgres/Redis compose network. They still have normal outbound access for OSS
+upload URLs. `host.docker.internal` is not exposed unless `AGENT_NODE_ALLOW_HOST_GATEWAY=1`.
+
+If you run agent-node outside this compose project, set both `AGENT_NODE_DOCKER_NETWORK` and
+`AGENT_NODE_PROVIDER_PROXY_BASE_URL`.
 
 ## Single-Host IP Test
 
@@ -48,6 +53,7 @@ Backend services need real host-local secrets before they should be started:
 myapp-ctl secret set backend FLASK_SECRET_KEY
 myapp-ctl secret set backend SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_KEY
 myapp-ctl secret set ai-providers DEEPSEEK_ANTHROPIC_AUTH_TOKEN MINIMAX_ANTHROPIC_AUTH_TOKEN
+myapp-ctl secret set agent AGENT_NODE_REGISTRATION_TOKEN
 myapp-ctl secret set push APNS_KEY_ID APNS_TEAM_ID FCM_PROJECT_ID
 ```
 
@@ -68,6 +74,9 @@ docker push dapangyufish/myapp-backend:agent-control-plane
 
 ## Multi-Host Direction
 
-The backend should eventually schedule jobs to registered agent nodes instead of one static
-`AGENT_NODE_URL`. `myapp-ctl agent register` is reserved for a GitLab Runner-like registration
-flow: node id, node token, capacity, running sessions, and heartbeat.
+Worker scheduling combines static `AGENT_NODE_URLS` with registered Redis records and persists a
+session-to-node assignment key so later turns keep using the same node.
+
+```bash
+myapp-ctl agent register --url http://agent-node:5590 --capacity 4 --label gpu=false
+```

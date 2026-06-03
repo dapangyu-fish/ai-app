@@ -67,6 +67,8 @@ services:
         required: false
       - path: /etc/myapp/secrets.d/ai-providers.env
         required: false
+      - path: /etc/myapp/secrets.d/agent.env
+        required: false
       - path: /etc/myapp/secrets.d/push.env
         required: false
     environment:
@@ -81,7 +83,9 @@ services:
       AI_SESSION_REDIS_TTL_SECONDS: "${AI_SESSION_REDIS_TTL_SECONDS:-86400}"
       AI_WORKER_EXECUTION_BACKEND: "${AI_WORKER_EXECUTION_BACKEND:-agent-node}"
       AGENT_NODE_URL: "http://agent-node:5590"
+      AGENT_NODE_URLS: "${AGENT_NODE_URLS:-http://agent-node:5590}"
       AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
+      AGENT_NODE_REGISTRATION_TOKEN: "${AGENT_NODE_REGISTRATION_TOKEN:-}"
       AI_WORKER_MAX_CONCURRENCY: "${AI_WORKER_MAX_CONCURRENCY:-20}"
       AI_WORKER_QUEUE_MAX: "${AI_WORKER_QUEUE_MAX:-100}"
       DEEPSEEK_AI_WORKER_MAX_CONCURRENCY: "${DEEPSEEK_AI_WORKER_MAX_CONCURRENCY:-20}"
@@ -126,6 +130,8 @@ services:
         required: false
       - path: /etc/myapp/secrets.d/ai-providers.env
         required: false
+      - path: /etc/myapp/secrets.d/agent.env
+        required: false
     environment:
       AI_SESSION_REDIS_HOST: ai-session-redis
       AI_SESSION_REDIS_PORT: "6379"
@@ -133,7 +139,9 @@ services:
       AI_SESSION_REDIS_TTL_SECONDS: "${AI_SESSION_REDIS_TTL_SECONDS:-86400}"
       AI_WORKER_EXECUTION_BACKEND: "${AI_WORKER_EXECUTION_BACKEND:-agent-node}"
       AGENT_NODE_URL: "http://agent-node:5590"
+      AGENT_NODE_URLS: "${AGENT_NODE_URLS:-http://agent-node:5590}"
       AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
+      AGENT_NODE_REGISTRATION_TOKEN: "${AGENT_NODE_REGISTRATION_TOKEN:-}"
       AI_WORKER_MAX_CONCURRENCY: "${AI_WORKER_MAX_CONCURRENCY:-20}"
       AI_WORKER_QUEUE_MAX: "${AI_WORKER_QUEUE_MAX:-100}"
       DEEPSEEK_AI_WORKER_MAX_CONCURRENCY: "${DEEPSEEK_AI_WORKER_MAX_CONCURRENCY:-20}"
@@ -221,11 +229,16 @@ services:
     image: "dapangyufish/myapp-agent-node:${MYAPP_IMAGE_TAG:-agent-control-plane}"
     container_name: myapp-agent-node
     restart: unless-stopped
+    env_file:
+      - path: /etc/myapp/secrets.d/agent.env
+        required: false
     environment:
       AGENT_NODE_ID: "${AGENT_NODE_ID:-myapp-agent-77-237-233-229}"
       AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
       AGENT_NODE_RUNTIME_IMAGE: "dapangyufish/myapp-agent-runtime:${MYAPP_IMAGE_TAG:-agent-control-plane}"
-      AGENT_NODE_DOCKER_NETWORK: "${AGENT_NODE_DOCKER_NETWORK:-bridge}"
+      AGENT_NODE_DOCKER_NETWORK: "${AGENT_NODE_DOCKER_NETWORK:-myapp_agent_runtime}"
+      AGENT_NODE_ALLOW_HOST_GATEWAY: "${AGENT_NODE_ALLOW_HOST_GATEWAY:-0}"
+      AGENT_NODE_PROVIDER_PROXY_BASE_URL: "${AGENT_NODE_PROVIDER_PROXY_BASE_URL:-http://agent-node:5590}"
       AGENT_NODE_STATE_ROOT: "/var/lib/myapp/agent-node/state"
       AGENT_NODE_WORKSPACE_ROOT: "/var/lib/myapp/agent-node/workspaces"
       AGENT_NODE_LOG_DIR: "/var/log/myapp/agent-node"
@@ -237,9 +250,18 @@ services:
       - /var/log/myapp/agent-node:/var/log/myapp/agent-node
     ports:
       - "127.0.0.1:${AGENT_NODE_PORT:-5590}:5590"
+    networks:
+      - default
+      - agent-runtime
 
 volumes:
   jsonapp_pg_data:
   ai_session_redis_data:
   app_minio_data:
   config_center_data:
+
+networks:
+  default:
+    name: myapp_default
+  agent-runtime:
+    name: myapp_agent_runtime

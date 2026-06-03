@@ -448,9 +448,18 @@ AI_WORKER_EXECUTION_BACKEND = (
     or "local"
 )
 AGENT_NODE_URL = os.environ.get("AGENT_NODE_URL", "").rstrip("/")
+AGENT_NODE_URLS = [
+    item.rstrip("/")
+    for item in _split_csv(os.environ.get("AGENT_NODE_URLS", ""))
+    if item.rstrip("/")
+]
+if not AGENT_NODE_URLS and AGENT_NODE_URL:
+    AGENT_NODE_URLS = [AGENT_NODE_URL]
 AGENT_NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
 AGENT_NODE_CONNECT_TIMEOUT_SECONDS = _env_int("AGENT_NODE_CONNECT_TIMEOUT_SECONDS", 10)
 AGENT_NODE_EVENT_TIMEOUT_SECONDS = _env_int("AGENT_NODE_EVENT_TIMEOUT_SECONDS", 7200)
+AGENT_NODE_ASSIGNMENT_TTL_SECONDS = _env_int("AGENT_NODE_ASSIGNMENT_TTL_SECONDS", 86400)
+AGENT_NODE_REGISTRATION_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", AGENT_NODE_TOKEN)
 
 
 def _provider_worker_env_int(provider_id: str, key: str, default: int) -> int:

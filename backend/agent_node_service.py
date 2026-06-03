@@ -11,13 +11,16 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
 import subprocess
 import threading
 import time
 import uuid
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urljoin
 
+import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 
 
@@ -32,12 +35,24 @@ PROJECT_ROOT = os.environ.get("AGENT_NODE_PROJECT_ROOT", "/app")
 CONTAINER_CPUS = os.environ.get("AGENT_NODE_CONTAINER_CPUS", "2")
 CONTAINER_MEMORY = os.environ.get("AGENT_NODE_CONTAINER_MEMORY", "2g")
 CONTAINER_PIDS_LIMIT = os.environ.get("AGENT_NODE_CONTAINER_PIDS_LIMIT", "512")
-DOCKER_NETWORK = os.environ.get("AGENT_NODE_DOCKER_NETWORK", "none")
+DOCKER_NETWORK = os.environ.get("AGENT_NODE_DOCKER_NETWORK", "myapp_default")
+ALLOW_HOST_GATEWAY = os.environ.get("AGENT_NODE_ALLOW_HOST_GATEWAY", "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+PROVIDER_PROXY_BASE_URL = os.environ.get("AGENT_NODE_PROVIDER_PROXY_BASE_URL", "http://agent-node:5590").rstrip("/")
+PROVIDER_PROXY_TOKEN_TTL_SECONDS = int(os.environ.get("AGENT_NODE_PROVIDER_PROXY_TOKEN_TTL_SECONDS", "21600"))
+PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS", "30"))
+PROVIDER_PROXY_READ_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_READ_TIMEOUT_SECONDS", "900"))
 NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
 RUN_RETENTION_SECONDS = int(os.environ.get("AGENT_NODE_RUN_RETENTION_SECONDS", "604800"))
 
 _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
+_PROXY_TOKENS: dict[str, dict] = {}
+_PROXY_LOCK = threading.Lock()
 
 
 def _now_ms() -> int:
@@ -65,7 +80,7 @@ def _auth_ok() -> bool:
 
 @APP.before_request
 def _require_auth():
-    if request.path == "/health":
+    if request.path == "/health" or request.path.startswith("/proxy/"):
         return None
     if not _auth_ok():
         return jsonify({"error": "unauthorized"}), 401
@@ -92,6 +107,82 @@ def _session_paths(user_id: str, session_id: str, job_id: str) -> dict[str, Path
     }
 
 
+def _issue_proxy_token(run_id: str, upstream_base_url: str, upstream_token: str, *, provider_id: str, agent_id: str) -> str:
+    token = secrets.token_urlsafe(32)
+    with _PROXY_LOCK:
+        _PROXY_TOKENS[token] = {
+            "run_id": run_id,
+            "provider_id": provider_id,
+            "agent_id": agent_id,
+            "upstream_base_url": upstream_base_url.rstrip("/"),
+            "upstream_token": upstream_token,
+            "created_at": time.time(),
+            "expires_at": time.time() + PROVIDER_PROXY_TOKEN_TTL_SECONDS,
+        }
+    return token
+
+
+def _revoke_proxy_tokens(tokens: list[str]) -> None:
+    if not tokens:
+        return
+    with _PROXY_LOCK:
+        for token in tokens:
+            _PROXY_TOKENS.pop(token, None)
+
+
+def _cleanup_proxy_tokens() -> None:
+    now = time.time()
+    with _PROXY_LOCK:
+        expired = [token for token, data in _PROXY_TOKENS.items() if float(data.get("expires_at") or 0) <= now]
+        for token in expired:
+            _PROXY_TOKENS.pop(token, None)
+
+
+def _prepare_provider_proxy(payload: dict) -> list[str]:
+    """Replace real provider tokens with per-run proxy tokens before runtime launch."""
+    _cleanup_proxy_tokens()
+    env = dict(payload.get("env") or {})
+    codex = dict(payload.get("codex") or {})
+    run_id = str(payload.get("run_id") or "")
+    provider_id = str(payload.get("provider_id") or "")
+    agent_id = str(payload.get("agent_id") or "")
+    issued: list[str] = []
+
+    anthropic_base_url = str(env.get("ANTHROPIC_BASE_URL") or "").strip()
+    anthropic_token = str(env.get("ANTHROPIC_AUTH_TOKEN") or "").strip()
+    if anthropic_base_url and anthropic_token:
+        token = _issue_proxy_token(
+            run_id,
+            anthropic_base_url,
+            anthropic_token,
+            provider_id=provider_id,
+            agent_id=agent_id,
+        )
+        issued.append(token)
+        env["ANTHROPIC_BASE_URL"] = f"{PROVIDER_PROXY_BASE_URL}/proxy/{token}"
+        env["ANTHROPIC_AUTH_TOKEN"] = token
+
+    codex_base_url = str(codex.get("base_url") or "").strip()
+    codex_env_key = str(codex.get("env_key") or "").strip()
+    codex_token = str(env.get(codex_env_key) or "").strip() if codex_env_key else ""
+    if codex_base_url and codex_env_key and codex_token:
+        token = _issue_proxy_token(
+            run_id,
+            codex_base_url,
+            codex_token,
+            provider_id=provider_id,
+            agent_id=agent_id,
+        )
+        issued.append(token)
+        codex["base_url"] = f"{PROVIDER_PROXY_BASE_URL}/proxy/{token}"
+        env[codex_env_key] = token
+
+    payload["env"] = env
+    payload["codex"] = codex
+    payload["_proxy_tokens"] = issued
+    return issued
+
+
 def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str, Path]) -> tuple[list[str], dict]:
     container_name = f"myapp-agent-{_safe_part(run_id, uuid.uuid4().hex)}"
     for path in paths.values():
@@ -105,6 +196,7 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
     }
     payload_without_env = dict(payload)
     payload_without_env["env"] = {}
+    payload_without_env.pop("_proxy_tokens", None)
     payload_path.write_text(json.dumps(payload_without_env, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     cmd = [
@@ -140,6 +232,8 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         "-e",
         f"AI_APP_PROJECT_ROOT={PROJECT_ROOT}",
     ]
+    if ALLOW_HOST_GATEWAY:
+        cmd.extend(["--add-host", "host.docker.internal:host-gateway"])
     for key in sorted(runtime_env):
         cmd.extend(["-e", key])
     if DOCKER_NETWORK:
@@ -179,6 +273,7 @@ def _start_run_thread(
     docker_env: dict,
     log_path: Path,
     paths: dict[str, Path],
+    proxy_tokens: list[str],
 ) -> None:
     def target() -> None:
         proc: Optional[subprocess.Popen] = None
@@ -213,6 +308,7 @@ def _start_run_thread(
             _json_line(log_path, {"type": "error", "message": str(exc), "ts": _now_ms()})
             status = "failed"
         finally:
+            _revoke_proxy_tokens(proxy_tokens)
             try:
                 _emit_client_actions(log_path, paths["workspace"])
             except Exception as exc:
@@ -280,7 +376,111 @@ def _load_run_from_log(run_id: str) -> dict:
 def health():
     with _RUNS_LOCK:
         running = sum(1 for run in _RUNS.values() if run.get("status") == "running")
-    return jsonify({"ok": True, "node_id": NODE_ID, "image": RUNTIME_IMAGE, "running": running})
+    _cleanup_proxy_tokens()
+    with _PROXY_LOCK:
+        proxy_tokens = len(_PROXY_TOKENS)
+    return jsonify({"ok": True, "node_id": NODE_ID, "image": RUNTIME_IMAGE, "running": running, "proxy_tokens": proxy_tokens})
+
+
+def _proxy_lookup(token: str) -> Optional[dict]:
+    _cleanup_proxy_tokens()
+    with _PROXY_LOCK:
+        data = _PROXY_TOKENS.get(token)
+        if not data:
+            return None
+        return dict(data)
+
+
+def _upstream_headers(proxy_token: str, upstream_token: str) -> dict:
+    hop_by_hop = {
+        "host",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailer",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
+        "content-length",
+    }
+    headers = {}
+    auth_seen = False
+    for key, value in request.headers.items():
+        lower = key.lower()
+        if lower in hop_by_hop:
+            continue
+        text = str(value)
+        if proxy_token and proxy_token in text:
+            text = text.replace(proxy_token, upstream_token)
+        if lower in {"authorization", "x-api-key", "api-key", "anthropic-auth-token"}:
+            auth_seen = True
+        headers[key] = text
+    if not auth_seen:
+        headers["Authorization"] = f"Bearer {upstream_token}"
+    return headers
+
+
+def _response_headers(upstream_response: requests.Response) -> list[tuple[str, str]]:
+    excluded = {
+        "content-encoding",
+        "content-length",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailer",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
+    }
+    return [
+        (key, value)
+        for key, value in upstream_response.headers.items()
+        if key.lower() not in excluded
+    ]
+
+
+@APP.route("/proxy/<token>", defaults={"subpath": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+@APP.route("/proxy/<token>/<path:subpath>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+def provider_proxy(token: str, subpath: str):
+    proxy = _proxy_lookup(token)
+    if not proxy:
+        return jsonify({"error": "provider proxy token expired or invalid"}), 401
+    upstream_base = str(proxy.get("upstream_base_url") or "").rstrip("/")
+    upstream_token = str(proxy.get("upstream_token") or "")
+    if not upstream_base or not upstream_token:
+        return jsonify({"error": "provider proxy is misconfigured"}), 502
+    upstream_url = urljoin(f"{upstream_base}/", subpath)
+    if request.query_string:
+        upstream_url = f"{upstream_url}?{request.query_string.decode('utf-8', errors='replace')}"
+    try:
+        upstream = requests.request(
+            request.method,
+            upstream_url,
+            headers=_upstream_headers(token, upstream_token),
+            data=request.get_data(),
+            stream=True,
+            timeout=(PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS, PROVIDER_PROXY_READ_TIMEOUT_SECONDS),
+        )
+    except requests.RequestException as exc:
+        return jsonify({"error": "provider proxy upstream request failed", "detail": str(exc)}), 502
+
+    def generate():
+        try:
+            for chunk in upstream.iter_content(chunk_size=65536):
+                if chunk:
+                    yield chunk
+        finally:
+            upstream.close()
+
+    return Response(
+        stream_with_context(generate()),
+        status=upstream.status_code,
+        headers=_response_headers(upstream),
+    )
 
 
 @APP.post("/v1/runs")
@@ -308,6 +508,7 @@ def create_run():
     }
     paths = _session_paths(user_id, session_id, job_id)
     payload_path = _run_payload_path(run_id)
+    proxy_tokens = _prepare_provider_proxy(payload)
     cmd, docker_env = _docker_cmd(run_id, payload, payload_path, paths)
     log_path = _run_log_path(run_id)
     _json_line(log_path, _redacted_start_payload(payload, cmd))
@@ -322,8 +523,9 @@ def create_run():
             "status": "starting",
             "created_at": _now_ms(),
             "log_path": str(log_path),
+            "proxy_tokens": len(proxy_tokens),
         }
-    _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths)
+    _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths, proxy_tokens)
     return jsonify({"run_id": run_id, "status": "starting", "events_url": f"/v1/runs/{run_id}/events"}), 202
 
 

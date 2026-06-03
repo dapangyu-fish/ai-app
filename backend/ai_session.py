@@ -20,6 +20,7 @@ Redis 数据：
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 import re
@@ -46,10 +47,12 @@ from config import (
     AI_WORKER_MAX_CONCURRENCY,
     AI_WORKER_QUEUE_MAX,
     AI_WORKER_EXECUTION_BACKEND,
+    AGENT_NODE_ASSIGNMENT_TTL_SECONDS,
     AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
     AGENT_NODE_EVENT_TIMEOUT_SECONDS,
     AGENT_NODE_TOKEN,
     AGENT_NODE_URL,
+    AGENT_NODE_URLS,
     CLAUDE_BIN,
     CODEX_BIN,
     CODEX_HOME,
@@ -198,6 +201,15 @@ def _stream_key(session_id: str) -> str:
 
 def _abort_key(session_id: str) -> str:
     return f"ai:session:{session_id}:abort"
+
+
+def _agent_node_assignment_key(session_id: str) -> str:
+    return f"ai:session:{session_id}:agent_node"
+
+
+def _agent_node_registry_key(node_id: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(node_id or "")).strip("._") or "node"
+    return f"ai:agent_node:{safe}"
 
 
 def _normalize_provider_id(provider_id: Optional[str]) -> str:
@@ -1239,6 +1251,53 @@ def _agent_node_headers() -> dict:
     return headers
 
 
+def _registered_agent_node_urls() -> List[str]:
+    try:
+        r = get_redis()
+        urls: List[str] = []
+        for key in r.scan_iter("ai:agent_node:*", count=100):
+            data = r.hgetall(key)
+            raw_url = data.get(b"url") or data.get("url")
+            if not raw_url:
+                continue
+            url = raw_url.decode("utf-8", errors="replace") if isinstance(raw_url, bytes) else str(raw_url)
+            url = url.rstrip("/")
+            if url:
+                urls.append(url)
+        return sorted(set(urls))
+    except Exception as exc:
+        logger.warning("[AGENT_NODE] 读取注册节点失败: %s", exc)
+        return []
+
+
+def _configured_agent_node_urls() -> List[str]:
+    urls = [url.rstrip("/") for url in AGENT_NODE_URLS if url.rstrip()]
+    if not urls and AGENT_NODE_URL:
+        urls = [AGENT_NODE_URL.rstrip("/")]
+    for url in _registered_agent_node_urls():
+        if url not in urls:
+            urls.append(url)
+    return urls
+
+
+def _select_agent_node_url(session_id: str) -> str:
+    urls = _configured_agent_node_urls()
+    if not urls:
+        raise RuntimeError("AI_WORKER_EXECUTION_BACKEND=agent-node 但 AGENT_NODE_URL/AGENT_NODE_URLS 未配置")
+    r = get_redis()
+    key = _agent_node_assignment_key(session_id)
+    assigned = r.get(key)
+    if isinstance(assigned, bytes):
+        assigned = assigned.decode("utf-8", errors="replace")
+    if assigned and assigned in urls:
+        r.expire(key, AGENT_NODE_ASSIGNMENT_TTL_SECONDS)
+        return assigned
+    digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()
+    selected = urls[int(digest[:12], 16) % len(urls)]
+    r.set(key, selected, ex=AGENT_NODE_ASSIGNMENT_TTL_SECONDS)
+    return selected
+
+
 def _agent_node_provider_env(provider: dict) -> dict:
     """Only send the agent CLI env, never the backend process env."""
     env = dict(provider.get("cli_env") or {})
@@ -1253,8 +1312,8 @@ def _agent_node_codex_config(provider: dict) -> dict:
     codex = dict(provider.get("codex") or {})
     if not codex:
         return {}
-    # The token itself is passed through the env map with a runtime-only env key.
-    # Long term this should be a one-run token issued by the provider proxy.
+    # The real token is placed in the submit payload under a runtime-only env key;
+    # agent-node rewrites it to a per-run proxy token before starting the container.
     env_key = str(codex.get("env_key") or "").strip()
     token = os.environ.get(env_key, "") if env_key else ""
     runtime_env_key = "MYAPP_CODEX_AUTH_TOKEN"
@@ -1283,14 +1342,21 @@ def _run_agent_node_worker(
     set_status,
     all_events: List[dict],
 ) -> None:
-    if not AGENT_NODE_URL:
-        raise RuntimeError("AI_WORKER_EXECUTION_BACKEND=agent-node 但 AGENT_NODE_URL 未配置")
+    agent_node_url = _select_agent_node_url(session_id)
+    try:
+        store.r.hset(_meta_key(session_id), "agent_node_url", agent_node_url)
+        store.r.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
+    except Exception:
+        pass
 
     parse_line = parse_codex_line if runner == "codex" else parse_cli_line
     runtime_workspace = "/workspace"
     if runner == "codex":
         codex = _agent_node_codex_config(provider)
         env = _agent_node_provider_env(provider)
+        for key in list(env.keys()):
+            if key.startswith("ANTHROPIC_") or key.startswith("CLAUDE_CODE_") or key == "API_TIMEOUT_MS":
+                env.pop(key, None)
         runtime_token_env_key = codex.pop("_runtime_token_env_key", "")
         runtime_token = codex.pop("_runtime_token", "")
         if runtime_token_env_key and runtime_token:
@@ -1320,14 +1386,14 @@ def _run_agent_node_worker(
 
     _append_cli_log(session_id, "meta", json.dumps({
         "event": "agent_node_submit",
-        "url": AGENT_NODE_URL,
+        "url": agent_node_url,
         "run_id": run_id,
         "provider": provider.get("id"),
         "agent": runner,
         "resume": bool(resume_id),
     }, ensure_ascii=False))
     response = requests.post(
-        f"{AGENT_NODE_URL}/v1/runs",
+        f"{agent_node_url}/v1/runs",
         headers=_agent_node_headers(),
         json=payload,
         timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
@@ -1343,7 +1409,7 @@ def _run_agent_node_worker(
     returncode: Optional[int] = None
     status = "failed"
     with requests.get(
-        f"{AGENT_NODE_URL}/v1/runs/{run_id}/events",
+        f"{agent_node_url}/v1/runs/{run_id}/events",
         headers=_agent_node_headers(),
         params={"follow": "1", "timeout": str(AGENT_NODE_EVENT_TIMEOUT_SECONDS)},
         stream=True,
@@ -1357,7 +1423,7 @@ def _run_agent_node_worker(
             if store.is_aborted(session_id):
                 try:
                     requests.post(
-                        f"{AGENT_NODE_URL}/v1/runs/{run_id}/abort",
+                        f"{agent_node_url}/v1/runs/{run_id}/abort",
                         headers=_agent_node_headers(),
                         timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
                     )

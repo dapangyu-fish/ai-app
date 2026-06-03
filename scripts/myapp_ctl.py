@@ -96,6 +96,18 @@ def _health(spec: dict | None) -> str:
         return "down"
 
 
+def _http_json(url: str, *, token: str = "", timeout: float = 3.0) -> dict | None:
+    headers = {"User-Agent": "myapp-ctl/1"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    try:
+        req = Request(url, headers=headers)
+        with urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+    except (HTTPError, URLError, OSError, json.JSONDecodeError, ValueError):
+        return None
+
+
 def _image_exists(image: str) -> bool:
     return _run(["docker", "image", "inspect", image]).returncode == 0
 
@@ -379,7 +391,16 @@ def cmd_domain(args) -> int:
 
 
 def _run_log_summary(path: Path) -> dict:
-    row = {"run_id": path.stem, "status": "unknown", "returncode": "-", "duration": "-", "lines": 0}
+    row = {
+        "run_id": path.stem,
+        "session_id": "-",
+        "agent_id": "-",
+        "provider_id": "-",
+        "status": "unknown",
+        "returncode": "-",
+        "duration": "-",
+        "lines": 0,
+    }
     started = None
     stopped = None
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -391,6 +412,9 @@ def _run_log_summary(path: Path) -> dict:
         if event.get("type") == "start":
             started = event.get("ts")
             row["run_id"] = event.get("run_id") or row["run_id"]
+            row["session_id"] = event.get("session_id") or "-"
+            row["agent_id"] = event.get("agent_id") or "-"
+            row["provider_id"] = event.get("provider_id") or "-"
             row["status"] = "started"
         elif event.get("type") == "stop":
             stopped = event.get("ts")
@@ -401,10 +425,108 @@ def _run_log_summary(path: Path) -> dict:
     return row
 
 
+def _duration_ms(started, finished=None) -> str:
+    try:
+        start = int(started)
+        end = int(finished) if finished else int(time.time() * 1000)
+        return f"{max(0, int((end - start) / 1000))}s"
+    except (TypeError, ValueError):
+        return "-"
+
+
 def cmd_agent(args) -> int:
     if args.agent_cmd == "register":
-        print("agent register: not wired to backend control plane yet")
+        cfg = _cfg()
+        backend_url = (args.backend or cfg.get("domains", {}).get("backend") or "").rstrip("/")
+        node_url = (args.url or cfg.get("domains", {}).get("agent_node") or "").rstrip("/")
+        node_id = args.node_id or cfg.get("node", {}).get("id") or os.uname().nodename
+        if not backend_url:
+            print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
+            return 2
+        if not node_url:
+            print("agent node url is required; pass --url or set domains.agent_node", file=sys.stderr)
+            return 2
+        token = (
+            args.token
+            or os.environ.get("AGENT_NODE_REGISTRATION_TOKEN")
+            or _parse_env(_secret_path("agent")).get("AGENT_NODE_REGISTRATION_TOKEN", "")
+            or _parse_env(_secret_path("backend")).get("AGENT_NODE_REGISTRATION_TOKEN", "")
+        )
+        payload = json.dumps(
+            {
+                "node_id": node_id,
+                "url": node_url,
+                "capacity": args.capacity,
+                "ttl_seconds": args.ttl,
+                "labels": args.label or [],
+            },
+            ensure_ascii=False,
+        ).encode("utf-8")
+        headers = {"Content-Type": "application/json", "User-Agent": "myapp-ctl/1"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = Request(f"{backend_url}/api/ai/agent_nodes/register", data=payload, headers=headers, method="POST")
+        try:
+            with urlopen(req, timeout=8) as resp:
+                body = resp.read().decode("utf-8", errors="replace")
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            print(f"register failed: http {exc.code} {detail}", file=sys.stderr)
+            return 1
+        except (URLError, OSError) as exc:
+            print(f"register failed: {exc}", file=sys.stderr)
+            return 1
+        print(body)
         return 0
+    if args.agent_cmd == "ls":
+        cfg = _cfg()
+        node_url = (args.url or "http://127.0.0.1:5590").rstrip("/")
+        token = os.environ.get("AGENT_NODE_TOKEN") or _parse_env(_secret_path("agent")).get("AGENT_NODE_TOKEN", "")
+        data = _http_json(f"{node_url}/v1/runs", token=token)
+        if data and isinstance(data.get("runs"), list):
+            rows = []
+            for item in data["runs"]:
+                started = item.get("created_at") or item.get("started_at")
+                finished = item.get("finished_at")
+                rows.append({
+                    "run_id": item.get("run_id", "-"),
+                    "session_id": item.get("session_id", "-"),
+                    "agent_id": item.get("agent_id", "-"),
+                    "provider_id": item.get("provider_id", "-"),
+                    "status": item.get("status", "-"),
+                    "returncode": item.get("returncode", "-"),
+                    "duration": _duration_ms(started, finished),
+                })
+            active = [row for row in rows if row["status"] in {"starting", "running"}]
+            print(f"active agent runs: {len(active)}")
+            if active:
+                _print_table(
+                    active,
+                    [
+                        ("run_id", "RUN"),
+                        ("session_id", "SESSION"),
+                        ("agent_id", "AGENT"),
+                        ("provider_id", "PROVIDER"),
+                        ("status", "STATUS"),
+                        ("duration", "DURATION"),
+                    ],
+                )
+            history = [row for row in rows if row["status"] not in {"starting", "running"}]
+            print(f"historical runs: {len(history)}")
+            if history:
+                _print_table(
+                    history[:50],
+                    [
+                        ("run_id", "RUN"),
+                        ("session_id", "SESSION"),
+                        ("agent_id", "AGENT"),
+                        ("provider_id", "PROVIDER"),
+                        ("status", "STATUS"),
+                        ("returncode", "RC"),
+                        ("duration", "DURATION"),
+                    ],
+                )
+            return 0
     rows = []
     proc = _run(["docker", "ps", "-a", "--filter", "name=myapp-agent-", "--format", "{{json .}}"])
     if proc.returncode == 0:
@@ -474,8 +596,18 @@ def build_parser() -> argparse.ArgumentParser:
     domain_rm.set_defaults(func=cmd_domain)
     agent = sub.add_parser("agent")
     agent_sub = agent.add_subparsers(dest="agent_cmd", required=True)
-    agent_sub.add_parser("ls").set_defaults(func=cmd_agent)
-    agent_sub.add_parser("register").set_defaults(func=cmd_agent)
+    agent_ls = agent_sub.add_parser("ls")
+    agent_ls.add_argument("--url")
+    agent_ls.set_defaults(func=cmd_agent)
+    agent_register = agent_sub.add_parser("register")
+    agent_register.add_argument("--backend")
+    agent_register.add_argument("--url")
+    agent_register.add_argument("--node-id")
+    agent_register.add_argument("--capacity", type=int, default=1)
+    agent_register.add_argument("--ttl", type=int, default=120)
+    agent_register.add_argument("--token")
+    agent_register.add_argument("--label", action="append")
+    agent_register.set_defaults(func=cmd_agent)
     return parser
 
 

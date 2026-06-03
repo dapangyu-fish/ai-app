@@ -27,6 +27,6 @@
     "registry": "http://77.237.233.229:3254",
     "oss": "http://77.237.233.229:9000",
     "config_center": "http://77.237.233.229:5000",
-    "agent_node": "http://127.0.0.1:5590"
+    "agent_node": "http://agent-node:5590"
   }
 }
