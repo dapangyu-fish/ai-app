@@ -67,9 +67,21 @@ const List<String> _localJsonDebugParamNames = [
   'json_app',
 ];
 
+const List<String> _webAppIdParamNames = ['appid', 'app_id'];
+
 String? _localJsonDebugSource() {
   final params = Uri.base.queryParameters;
   for (final name in _localJsonDebugParamNames) {
+    final value = params[name]?.trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+String? _webAppIdSource() {
+  if (!kIsWeb) return null;
+  final params = Uri.base.queryParameters;
+  for (final name in _webAppIdParamNames) {
     final value = params[name]?.trim();
     if (value != null && value.isNotEmpty) return value;
   }
@@ -636,6 +648,7 @@ class JsonDslApp extends ConsumerWidget {
       },
       home:
           _LocalJsonDebugLoader.maybeBuild() ??
+          _WebAppIdStartupLoader.maybeBuild() ??
           const _SplashGate(child: _AuthGate()),
     );
   }
@@ -772,6 +785,167 @@ class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
     }
     return JsonScreenView(
       fileName: _fileName ?? 'Local JSON',
+      isStartupRoot: true,
+    );
+  }
+}
+
+class _WebAppIdStartupLoader extends ConsumerStatefulWidget {
+  final String appid;
+
+  const _WebAppIdStartupLoader({required this.appid});
+
+  static Widget? maybeBuild() {
+    final appid = _webAppIdSource();
+    if (appid == null) return null;
+    return _WebAppIdStartupLoader(appid: appid);
+  }
+
+  @override
+  ConsumerState<_WebAppIdStartupLoader> createState() =>
+      _WebAppIdStartupLoaderState();
+}
+
+class _WebAppIdStartupLoaderState
+    extends ConsumerState<_WebAppIdStartupLoader> {
+  bool _loading = true;
+  String? _error;
+  String? _fileName;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  bool _isValidUuid(String value) {
+    return RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(value);
+  }
+
+  Future<Map<String, dynamic>> _resolveApp() async {
+    final appid = widget.appid.trim();
+    if (!_isValidUuid(appid)) {
+      throw Exception('Invalid appid: $appid');
+    }
+
+    final uri = Uri.parse(
+      '${AppConfig.registryUrl}/resolve_appid',
+    ).replace(queryParameters: {'appid': appid});
+    final resp = await http.get(uri).timeout(const Duration(seconds: 20));
+    final data = json.decode(resp.body) as Map<String, dynamic>;
+    if (resp.statusCode != 200) {
+      throw Exception(data['error']?.toString() ?? 'HTTP ${resp.statusCode}');
+    }
+    return data;
+  }
+
+  Future<Map<String, dynamic>> _downloadConfig(
+    Map<String, dynamic> resolved,
+  ) async {
+    final downloadUrl = resolved['download_url']?.toString() ?? '';
+    if (downloadUrl.isEmpty) {
+      final name = resolved['name']?.toString() ?? '';
+      final version = resolved['version']?.toString() ?? '*';
+      if (name.isEmpty) {
+        throw Exception(T.current.mainCantResolveAppConfigError);
+      }
+      final config = await CacheManager.instance.getResource(
+        name,
+        VersionConstraint.parse(version),
+        type: 'app',
+      );
+      if (config == null) {
+        throw Exception(T.current.mainCantResolveAppConfigError);
+      }
+      return config;
+    }
+
+    final resp = await http
+        .get(Uri.parse(downloadUrl))
+        .timeout(const Duration(seconds: 30));
+    if (resp.statusCode != 200) {
+      throw Exception('Download HTTP ${resp.statusCode}');
+    }
+    return json.decode(resp.body) as Map<String, dynamic>;
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final resolved = await _resolveApp();
+      final config = await _downloadConfig(resolved);
+      final interpreter = ref.read(interpreterProvider);
+      interpreter.loadConfig(config);
+      await interpreter.executeSteps();
+
+      final meta = config['meta'] as Map<String, dynamic>?;
+      final fallback =
+          resolved['displayName']?.toString() ??
+          resolved['name']?.toString() ??
+          widget.appid;
+      final fileName = resolveDisplayName(meta, fallback: fallback);
+      if (!mounted) return;
+      setState(() {
+        _fileName = fileName;
+        _loading = false;
+      });
+    } catch (e, stack) {
+      debugPrint('[WebAppIdStartup] load failed: $e\n$stack');
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('web_appid_startup');
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_error != null) {
+      final cs = Theme.of(context).colorScheme;
+      return Scaffold(
+        appBar: AppBar(title: const Text('MyApp')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Failed to open app',
+                  style: TextStyle(
+                    color: cs.error,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(widget.appid),
+                const SizedBox(height: 12),
+                SelectableText(_error!, style: TextStyle(color: cs.error)),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return JsonScreenView(
+      fileName: _fileName ?? widget.appid,
       isStartupRoot: true,
     );
   }

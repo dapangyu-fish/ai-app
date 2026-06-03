@@ -167,6 +167,44 @@ def _download_url_for_version(name, version, package_info, path):
     return f"{REGISTRY_BASE_URL.rstrip('/')}/mirror/file/{name}/{version}"
 
 
+def _resolve_appid_payload(appid):
+    """按 appid 解析公开包。只读接口，用于 Web 分享链接直达 JSON-APP。"""
+    appid = (appid or "").strip()
+    uuid_pattern = re.compile(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    )
+    if not uuid_pattern.match(appid):
+        return {"error": "appid 格式必须是标准 UUID（带连字符）"}, 400
+
+    index = _load_index()
+    for name, info in index.get('packages', {}).items():
+        if str(info.get('appid', '')).lower() != appid.lower():
+            continue
+
+        versions = info.get('versions') or []
+        version = info.get('latest') or (versions[0] if versions else None)
+        if not version:
+            return {"error": f"appid '{appid}' 对应的包没有可用版本"}, 404
+
+        path = info.get('path') or name
+        download_url = _download_url_for_version(name, version, info, path)
+        return {
+            "appid": info.get('appid') or appid,
+            "name": name,
+            "version": version,
+            "download_url": download_url,
+            "displayName": info.get('displayName') or info.get('display_name'),
+            "description": info.get('description', ''),
+            "author": info.get('author', ''),
+            "type": info.get('meta_type', 'app'),
+            "registry_type": info.get('type', 'user'),
+            "latest": info.get('latest'),
+            "source": get_version_source(info, version),
+        }, 200
+
+    return {"error": f"appid '{appid}' 不存在"}, 404
+
+
 def _validate_namespace_name(name):
     """
     验证命名空间名称格式
@@ -357,7 +395,12 @@ def resolve():
     GET /resolve?name=common-ui&version=^1.0.0
     """
     name = request.args.get('name', '').strip()
+    appid = request.args.get('appid', '').strip() or request.args.get('app_id', '').strip()
     version_constraint = request.args.get('version', '*').strip()
+
+    if appid and not name:
+        payload, status = _resolve_appid_payload(appid)
+        return jsonify(payload), status
 
     if not name:
         return jsonify({"error": "缺少 name 参数"}), 400
@@ -386,10 +429,22 @@ def resolve():
         "name": name,
         "version": best_version,
         "download_url": download_url,
+        "appid": package_info.get('appid'),
         "type": package_info.get('type', 'user'),
         "latest": package_info.get('latest'),
         "source": get_version_source(package_info, best_version),
     })
+
+
+@app.route('/resolve_appid', methods=['GET'])
+def resolve_appid():
+    """
+    按 appid 解析公开 JSON-APP。
+    GET /resolve_appid?appid=08ad186c-...
+    """
+    appid = request.args.get('appid', '').strip() or request.args.get('app_id', '').strip()
+    payload, status = _resolve_appid_payload(appid)
+    return jsonify(payload), status
 
 
 @app.route('/packages', methods=['GET'])
@@ -455,6 +510,7 @@ def list_packages():
         pkg = {
             "name": name,
             "version": latest_version,
+            "appid": info.get('appid'),
             "displayName": display_name,
             "description": description,
             "author": author,

@@ -139,6 +139,7 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Toast 重叠显示管理 ============
   final List<OverlayEntry> _activeToasts = [];
   static const int _maxOverlappingToasts = 20;
+  DateTime? _lastLoginRequiredToastAt;
 
   // ============ IM 反应式订阅 ============
   // @im_subscribe_inbox 第一次被调用时挂上 IMService.newMessageStream 监听，
@@ -1244,6 +1245,21 @@ class JsonInterpreter extends ChangeNotifier {
     }
 
     final resolvedArgs = _resolveArgs(args);
+
+    if (_requiresLoggedIn(callTarget) && !AuthService.isLoggedIn) {
+      _showLoginRequiredToast();
+      return _loginRequiredFallback(callTarget, resolvedArgs);
+    }
+
+    if (callTarget.startsWith('@im_') && !IMService.instance.isLoggedIn) {
+      return IMService.instance.login().then<dynamic>((ok) {
+        if (!ok) {
+          _showToast(T.current.homeImLoginFailed);
+          return _loginRequiredFallback(callTarget, resolvedArgs);
+        }
+        return _executeCall(callTarget, args);
+      });
+    }
 
     // 自定义全局函数: @global.funcName
     if (callTarget.startsWith('@global.')) {
@@ -3086,6 +3102,73 @@ class JsonInterpreter extends ChangeNotifier {
       debugPrint('[JSON DSL] json_encode 失败: $e');
       return '';
     }
+  }
+
+  bool _requiresLoggedIn(String callTarget) {
+    if (callTarget.startsWith('@im_')) return true;
+    switch (callTarget) {
+      case '@refresh_user':
+      case '@update_profile':
+      case '@upload_avatar':
+        return true;
+    }
+    return false;
+  }
+
+  dynamic _loginRequiredFallback(
+    String callTarget,
+    Map<String, dynamic> resolvedArgs,
+  ) {
+    dynamic bindAndReturn(dynamic value) {
+      final bindPath = resolvedArgs['bind'] as String?;
+      if (bindPath != null) setVariable(bindPath, value);
+      return value;
+    }
+
+    switch (callTarget) {
+      case '@im_search_users':
+      case '@im_friend_applications':
+      case '@im_friend_list':
+      case '@im_conversations':
+      case '@im_history':
+        return bindAndReturn(const []);
+      case '@im_total_unread':
+        return bindAndReturn(0);
+      case '@im_current_user_id':
+      case '@refresh_user':
+      case '@upload_avatar':
+        return bindAndReturn(null);
+      case '@im_subscribe_inbox':
+        setVariable('global._im', {
+          'tick': 0,
+          'last_message': null,
+          'current_user_id': null,
+          'logged_in': false,
+        });
+        return false;
+      case '@im_send_friend_request':
+      case '@im_accept_friend':
+      case '@im_reject_friend':
+      case '@im_mark_read':
+        return false;
+      case '@update_profile':
+        return {
+          'error': 'login_required',
+          'message': T.current.chatErrPleaseLogin,
+        };
+      default:
+        return null;
+    }
+  }
+
+  void _showLoginRequiredToast() {
+    final now = DateTime.now();
+    final last = _lastLoginRequiredToastAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastLoginRequiredToastAt = now;
+    _showToast(T.current.chatErrPleaseLogin);
   }
 
   // ============ UI 反馈 ============

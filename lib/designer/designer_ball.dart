@@ -912,6 +912,10 @@ class _DesignerBallState extends State<DesignerBall>
   /// 真正恢复会话的逻辑（之前 _onDoubleTap 直接干的事）。
   /// 从快捷菜单的"恢复会话"按钮调过来。
   Future<void> _restoreSession() async {
+    if (!AuthService.isLoggedIn) {
+      _showLoginRequired();
+      return;
+    }
     if (_chatMode || _messages.isEmpty) return;
     setState(() => _chatMode = true);
     _startSessionReconcileTimer(immediate: true);
@@ -1026,8 +1030,24 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
+  void _showLoginRequired() {
+    final ctx = JsonDslApp.navigatorKey.currentContext ?? context;
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text(T.current.chatErrPleaseLogin),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
+    if (!AuthService.isLoggedIn) {
+      _showLoginRequired();
+      return;
+    }
 
     // 进入对话模式的重震动反馈：双击 heavyImpact，间隔 ~70ms。
     // Flutter SDK 的 heavyImpact 已是单次最强，要更明显只能连击。
