@@ -64,12 +64,18 @@ def _post_openim(path: str, body: dict, *, admin_token: str = None, timeout: int
         headers["token"] = admin_token
 
     url = f"{OPENIM_API_URL.rstrip('/')}{path}"
-    resp = requests.post(url, json=body, headers=headers, timeout=timeout)
+    try:
+        resp = requests.post(url, json=body, headers=headers, timeout=timeout)
+    except requests.RequestException as e:
+        raise RuntimeError(f"OpenIM {path} request failed: {e}") from e
 
     if resp.status_code != 200:
         raise RuntimeError(f"OpenIM {path} HTTP {resp.status_code}: {resp.text[:200]}")
 
-    data = resp.json()
+    try:
+        data = resp.json()
+    except ValueError as e:
+        raise RuntimeError(f"OpenIM {path} returned non-JSON: {resp.text[:200]}") from e
     if data.get("errCode", -1) != 0:
         raise RuntimeError(f"OpenIM {path} errCode={data.get('errCode')} errMsg={data.get('errMsg')}")
 
