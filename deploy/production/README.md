@@ -49,6 +49,16 @@ myapp-ctl deploy --build
 myapp-ctl status
 ```
 
+Generate the client Service Environment import payload:
+
+```bash
+myapp-ctl client-env --host "$PUBLIC_HOST" --name "MyApp Test $PUBLIC_HOST"
+```
+
+This writes `/var/lib/myapp/client-environment.json`, generates
+`/var/lib/myapp/client-environment.png` when `qrencode` is installed, and prints
+the copyable JSON. The payload contains URLs only, no secrets.
+
 AI provider and push services need real host-local secrets before they should be
 used:
 

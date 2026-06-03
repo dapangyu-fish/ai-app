@@ -87,6 +87,18 @@ curl -fsS -H "apikey: $(myapp-ctl secret get supabase ANON_KEY --show)" \
 myapp-ctl agent ls
 ```
 
+Generate a client environment import JSON and QR code:
+
+```bash
+myapp-ctl client-env --host <public-ip-or-domain> --name "MyApp Test"
+cat /var/lib/myapp/client-environment.json
+```
+
+The JSON matches the client Service Environment import format used by the old
+test-env bootstrap. If `qrencode` is installed, the command also writes
+`/var/lib/myapp/client-environment.png`; otherwise it still writes and prints
+the JSON.
+
 Expected MyApp services after a successful source deployment:
 
 - `agent-node`: running, health `ok`

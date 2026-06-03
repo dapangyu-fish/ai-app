@@ -1136,6 +1136,121 @@ def cmd_domain(args) -> int:
     return 2
 
 
+def _strip_trailing_slash(value: str) -> str:
+    return value.rstrip("/")
+
+
+def _host_port_url(scheme: str, host: str, port: str | int) -> str:
+    return f"{scheme}://{host}:{port}"
+
+
+def _client_env_payload(*, host: str | None = None, name: str | None = None) -> dict:
+    cfg = _cfg()
+    domains = cfg.get("domains", {}) or {}
+    backend_env = _parse_env(_secret_path("backend"))
+    supabase_env = _parse_env(_secret_path("supabase"))
+    openim_env = _parse_env(_secret_path("openim"))
+    public_host = _public_host(host)
+    host_was_explicit = bool(host)
+
+    def from_domain_or_port(domain_key: str, port_key: str, default_port: str, *, scheme: str = "http") -> str:
+        if not host_was_explicit:
+            domain_value = str(domains.get(domain_key) or "").strip()
+            if domain_value:
+                return _strip_trailing_slash(domain_value)
+        return _host_port_url(scheme, public_host, backend_env.get(port_key) or default_port)
+
+    backend_url = from_domain_or_port("backend", "BACKEND_PORT", "5566")
+    registry_url = from_domain_or_port("registry", "REGISTRY_PORT", "3254")
+    minio_url = from_domain_or_port("oss", "APP_MINIO_PORT", "9000")
+    config_center_url = from_domain_or_port("config_center", "CONFIG_CENTER_PORT", "5000")
+
+    if host_was_explicit:
+        supabase_url = _host_port_url("http", public_host, supabase_env.get("KONG_HTTP_PORT") or "18000")
+        im_api_url = _host_port_url("http", public_host, openim_env.get("OPENIM_API_PORT") or "10002")
+        im_ws_url = _host_port_url("ws", public_host, openim_env.get("OPENIM_WS_PORT") or "10001")
+    else:
+        supabase_url = backend_env.get("SUPABASE_URL") or _host_port_url("http", public_host, supabase_env.get("KONG_HTTP_PORT") or "18000")
+        im_api_url = backend_env.get("OPENIM_API_URL") or _host_port_url("http", public_host, openim_env.get("OPENIM_API_PORT") or "10002")
+        im_ws_url = backend_env.get("OPENIM_WS_URL") or _host_port_url("ws", public_host, openim_env.get("OPENIM_WS_PORT") or "10001")
+
+    env_name = name or f"MyApp {public_host}"
+    return {
+        "type": "myapp.environment",
+        "version": 1,
+        "name": env_name,
+        "backendUrl": _strip_trailing_slash(backend_url),
+        "supabaseUrl": _strip_trailing_slash(supabase_url),
+        "minioUrl": _strip_trailing_slash(minio_url),
+        "registryUrl": _strip_trailing_slash(registry_url),
+        "imApiUrl": _strip_trailing_slash(im_api_url),
+        "imWsUrl": _strip_trailing_slash(im_ws_url),
+        "configCenterUrl": _strip_trailing_slash(config_center_url),
+    }
+
+
+def _default_client_env_path() -> Path:
+    return Path(_cfg().get("paths", {}).get("state", "/var/lib/myapp")) / "client-environment.json"
+
+
+def _write_qr_png(data: str, path: Path) -> tuple[bool, str]:
+    qrencode = shutil.which("qrencode")
+    if not qrencode:
+        return False, "qrencode not found; install qrencode or rerun with --no-qr"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    proc = subprocess.run([qrencode, "-o", str(path)], input=data, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0:
+        return False, proc.stderr.strip() or f"qrencode exited {proc.returncode}"
+    return True, str(path)
+
+
+def _print_terminal_qr(data: str) -> int:
+    qrencode = shutil.which("qrencode")
+    if not qrencode:
+        print("qrencode not found; cannot print terminal QR", file=sys.stderr)
+        return 1
+    return subprocess.run([qrencode, "-t", "ANSIUTF8"], input=data, text=True).returncode
+
+
+def cmd_client_env(args) -> int:
+    payload = _client_env_payload(host=args.host, name=args.name)
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    out_path = Path(args.out) if args.out else (None if args.json else _default_client_env_path())
+
+    if out_path:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(body + "\n", encoding="utf-8")
+        os.chmod(out_path, 0o644)
+
+    qr_path = None
+    if not args.no_qr:
+        if args.qr:
+            qr_path = Path(args.qr)
+        elif out_path and not args.json:
+            qr_path = out_path.with_suffix(".png")
+        if qr_path:
+            ok, detail = _write_qr_png(body, qr_path)
+            if not ok:
+                print(f"warning: QR PNG not generated: {detail}", file=sys.stderr)
+            elif not args.json:
+                print(f"QR PNG: {detail}")
+
+    if args.terminal_qr:
+        rc = _print_terminal_qr(body)
+        if rc != 0:
+            return rc
+
+    if args.json:
+        print(body)
+        return 0
+
+    if out_path:
+        print(f"Environment JSON: {out_path}")
+    print("Copy JSON:")
+    print(body)
+    return 0
+
+
 def _image_targets_for_arg(target: str) -> list[str]:
     normalized = (target or "all").strip()
     if normalized in {"", "all"}:
@@ -1404,6 +1519,15 @@ def build_parser() -> argparse.ArgumentParser:
     domain_rm = domain_sub.add_parser("rm")
     domain_rm.add_argument("name")
     domain_rm.set_defaults(func=cmd_domain)
+    client_env = sub.add_parser("client-env", help="generate client Service Environment import JSON and QR")
+    client_env.add_argument("--host", help="public host/IP to use in generated URLs")
+    client_env.add_argument("--name", help="environment name shown in the client")
+    client_env.add_argument("--out", help="JSON output path; default is /var/lib/myapp/client-environment.json")
+    client_env.add_argument("--qr", help="QR PNG output path; default follows --out with .png")
+    client_env.add_argument("--no-qr", action="store_true", help="do not generate QR PNG")
+    client_env.add_argument("--terminal-qr", action="store_true", help="also print an ANSI QR code in the terminal")
+    client_env.add_argument("--json", action="store_true", help="print raw JSON only")
+    client_env.set_defaults(func=cmd_client_env)
     agent = sub.add_parser("agent")
     agent_sub = agent.add_subparsers(dest="agent_cmd", required=True)
     agent_ls = agent_sub.add_parser("ls")
