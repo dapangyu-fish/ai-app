@@ -64,6 +64,12 @@ This writes `/var/lib/myapp/client-environment.json`, generates
 `/var/lib/myapp/client-environment.png` when `qrencode` is installed, and prints
 the copyable JSON. The payload contains URLs only, no secrets.
 
+When a deploy includes Supabase auth, `myapp-ctl deploy` also asks whether to
+create or update a test account. The default is yes. It uses
+`test@example.com`, username `test`, confirms the email through the Supabase
+Admin API, and prompts you to enter the password interactively. The password is
+not stored in env files. Use `--no-test-user` to skip this prompt.
+
 `myapp-ctl setup` generates local stack secrets, then interactively configures
 the required AI provider credentials. DeepSeek and MiniMax are built-in choices;
 custom Anthropic-compatible providers can be added without code changes.

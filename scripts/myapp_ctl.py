@@ -284,6 +284,66 @@ _MESSAGES = {
         "de": "config import ueberschreibt lokale Konfiguration und Secrets; mit --yes bestaetigen",
         "es": "config import sobrescribe configuracion y secretos locales; usa --yes para confirmar",
     },
+    "create_test_user_prompt": {
+        "zh": "创建/更新测试用户 test@example.com？",
+        "en": "create/update test user test@example.com?",
+        "de": "Testbenutzer test@example.com erstellen/aktualisieren?",
+        "es": "crear/actualizar usuario de prueba test@example.com?",
+    },
+    "test_user_password_prompt": {
+        "zh": "测试用户密码",
+        "en": "test user password",
+        "de": "Testbenutzer-Passwort",
+        "es": "contrasena del usuario de prueba",
+    },
+    "test_user_password_confirm_prompt": {
+        "zh": "再次输入测试用户密码",
+        "en": "confirm test user password",
+        "de": "Testbenutzer-Passwort bestaetigen",
+        "es": "confirma la contrasena del usuario de prueba",
+    },
+    "password_too_short": {
+        "zh": "密码至少需要 {min_len} 位",
+        "en": "password must be at least {min_len} characters",
+        "de": "Passwort muss mindestens {min_len} Zeichen lang sein",
+        "es": "la contrasena debe tener al menos {min_len} caracteres",
+    },
+    "password_mismatch": {
+        "zh": "两次输入的密码不一致",
+        "en": "passwords do not match",
+        "de": "Passwoerter stimmen nicht ueberein",
+        "es": "las contrasenas no coinciden",
+    },
+    "test_user_skipped_noninteractive": {
+        "zh": "跳过测试用户创建：当前不是交互式终端",
+        "en": "skipped test user creation: stdin is not interactive",
+        "de": "Testbenutzer uebersprungen: stdin ist nicht interaktiv",
+        "es": "usuario de prueba omitido: stdin no es interactivo",
+    },
+    "test_user_skipped": {
+        "zh": "已跳过测试用户创建",
+        "en": "test user creation skipped",
+        "de": "Testbenutzer-Erstellung uebersprungen",
+        "es": "creacion de usuario de prueba omitida",
+    },
+    "test_user_created": {
+        "zh": "已创建测试用户: {email}",
+        "en": "created test user: {email}",
+        "de": "Testbenutzer erstellt: {email}",
+        "es": "usuario de prueba creado: {email}",
+    },
+    "test_user_updated": {
+        "zh": "已更新测试用户密码/资料: {email}",
+        "en": "updated test user password/profile: {email}",
+        "de": "Testbenutzer-Passwort/Profil aktualisiert: {email}",
+        "es": "contrasena/perfil del usuario de prueba actualizado: {email}",
+    },
+    "test_user_missing_supabase": {
+        "zh": "缺少 Supabase 管理配置，无法创建测试用户",
+        "en": "missing Supabase admin config; cannot create test user",
+        "de": "Supabase-Admin-Konfiguration fehlt; Testbenutzer kann nicht erstellt werden",
+        "es": "falta configuracion admin de Supabase; no se puede crear usuario de prueba",
+    },
 }
 
 
@@ -1028,6 +1088,10 @@ def cmd_deploy(args) -> int:
     rc = _deploy_compose_services(names, dry_run=args.dry_run)
     if rc != 0:
         return rc
+    if not args.dry_run and not args.no_test_user and _deploy_can_seed_test_user(names):
+        rc = _maybe_seed_test_user(args)
+        if rc != 0:
+            return rc
     if not args.dry_run and not args.no_client_env and _is_full_deploy(args):
         _emit_client_env_summary(
             host=args.client_env_host or args.host,
@@ -1745,6 +1809,10 @@ def _deploy_requires_ai_config(names: list[str]) -> bool:
     return any(name in {"backend", "ai-worker", "agent-node"} for name in names)
 
 
+def _deploy_can_seed_test_user(names: list[str]) -> bool:
+    return "supabase-auth" in names
+
+
 def _ensure_human_config_for_deploy(args, names: list[str]) -> int:
     if args.dry_run:
         return 0
@@ -1761,6 +1829,175 @@ def _ensure_human_config_for_deploy(args, names: list[str]) -> int:
         return 1
     print("AI provider config is missing; starting first-run setup.")
     return _run_setup_wizard(host=getattr(args, "host", None), include_ai=True, include_push=True)
+
+
+def _prompt_secret(prompt: str) -> str:
+    label = f"{prompt}: "
+    if sys.stdin.isatty():
+        return getpass.getpass(label).strip()
+    return input(label).strip()
+
+
+def _prompt_password_twice(prompt: str, confirm_prompt: str, *, min_len: int = 6) -> str:
+    while True:
+        password = _prompt_secret(prompt)
+        if len(password) < min_len:
+            print(_t("password_too_short", min_len=min_len), file=sys.stderr)
+            continue
+        confirm = _prompt_secret(confirm_prompt)
+        if password != confirm:
+            print(_t("password_mismatch"), file=sys.stderr)
+            continue
+        return password
+
+
+def _supabase_admin_base_url(supabase_env: dict[str, str]) -> str:
+    port = supabase_env.get("KONG_HTTP_PORT") or "18000"
+    return f"http://127.0.0.1:{port}".rstrip("/")
+
+
+def _supabase_admin_request(
+    *,
+    method: str,
+    base_url: str,
+    service_key: str,
+    path: str,
+    body: dict | None = None,
+    timeout: float = 15.0,
+) -> tuple[int, dict | list | None, str]:
+    raw: bytes | None = None
+    if body is not None:
+        raw = json.dumps(body).encode("utf-8")
+    req = Request(
+        base_url.rstrip("/") + path,
+        data=raw,
+        method=method,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {service_key}",
+            "apikey": service_key,
+        },
+    )
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            text = resp.read().decode("utf-8", errors="replace")
+            return resp.status, json.loads(text) if text.strip() else None, text
+    except HTTPError as exc:
+        text = exc.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(text) if text.strip() else None
+        except json.JSONDecodeError:
+            parsed = None
+        return exc.code, parsed, text
+
+
+def _wait_supabase_auth(base_url: str, *, timeout_s: float = 90.0) -> bool:
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        try:
+            req = Request(base_url.rstrip("/") + "/auth/v1/health", headers={"User-Agent": "myapp-ctl/1"})
+            with urlopen(req, timeout=3) as resp:
+                if 200 <= resp.status < 500:
+                    return True
+        except (HTTPError, URLError, OSError):
+            pass
+        time.sleep(2)
+    return False
+
+
+def _find_supabase_user_by_email(base_url: str, service_key: str, email: str) -> dict | None:
+    wanted = email.strip().lower()
+    page = 1
+    while page <= 20:
+        status, data, text = _supabase_admin_request(
+            method="GET",
+            base_url=base_url,
+            service_key=service_key,
+            path=f"/auth/v1/admin/users?page={page}&per_page=1000",
+            timeout=20,
+        )
+        if status >= 400:
+            raise RuntimeError(f"list users HTTP {status}: {text[:300]}")
+        users = data.get("users", []) if isinstance(data, dict) else []
+        for user in users:
+            if str(user.get("email") or "").strip().lower() == wanted:
+                return user
+        if len(users) < 1000:
+            return None
+        page += 1
+    return None
+
+
+def _create_or_update_supabase_test_user(*, email: str, username: str, password: str) -> tuple[str, dict]:
+    supabase_env = _parse_env(_secret_path("supabase"))
+    service_key = supabase_env.get("SERVICE_ROLE_KEY")
+    if not service_key:
+        raise RuntimeError(_t("test_user_missing_supabase"))
+    base_url = _supabase_admin_base_url(supabase_env)
+    _wait_supabase_auth(base_url)
+    existing = _find_supabase_user_by_email(base_url, service_key, email)
+    if existing:
+        user_metadata = dict(existing.get("user_metadata") or {})
+        user_metadata["username"] = username
+        app_metadata = dict(existing.get("app_metadata") or {})
+        app_metadata.setdefault("role", "user")
+        status, data, text = _supabase_admin_request(
+            method="PUT",
+            base_url=base_url,
+            service_key=service_key,
+            path=f"/auth/v1/admin/users/{existing.get('id')}",
+            body={
+                "password": password,
+                "email_confirm": True,
+                "user_metadata": user_metadata,
+                "app_metadata": app_metadata,
+            },
+        )
+        if status >= 400:
+            raise RuntimeError(f"update user HTTP {status}: {text[:300]}")
+        return "updated", data if isinstance(data, dict) else {}
+    status, data, text = _supabase_admin_request(
+        method="POST",
+        base_url=base_url,
+        service_key=service_key,
+        path="/auth/v1/admin/users",
+        body={
+            "email": email,
+            "password": password,
+            "email_confirm": True,
+            "user_metadata": {"username": username},
+            "app_metadata": {"role": "user"},
+        },
+    )
+    if status >= 400:
+        raise RuntimeError(f"create user HTTP {status}: {text[:300]}")
+    return "created", data if isinstance(data, dict) else {}
+
+
+def _maybe_seed_test_user(args) -> int:
+    if not sys.stdin.isatty():
+        print(_t("test_user_skipped_noninteractive"))
+        return 0
+    email = getattr(args, "test_user_email", None) or "test@example.com"
+    username = getattr(args, "test_user_username", None) or "test"
+    if not _prompt_bool(_t("create_test_user_prompt"), default=True):
+        print(_t("test_user_skipped"))
+        return 0
+    password = _prompt_password_twice(
+        _t("test_user_password_prompt"),
+        _t("test_user_password_confirm_prompt"),
+        min_len=6,
+    )
+    try:
+        action, _ = _create_or_update_supabase_test_user(email=email, username=username, password=password)
+    except Exception as exc:
+        print(f"test user setup failed: {exc}", file=sys.stderr)
+        return 1
+    if action == "created":
+        print(_t("test_user_created", email=email))
+    else:
+        print(_t("test_user_updated", email=email))
+    return 0
 
 
 def _rand_hex(bytes_len: int) -> str:
@@ -2597,6 +2834,9 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--client-env-host", help="host/IP to use in the post-deploy client environment JSON")
     deploy.add_argument("--client-env-name", help="name shown in the post-deploy client environment JSON")
     deploy.add_argument("--no-terminal-qr", action="store_true", help="do not print an ANSI QR code after a full deploy")
+    deploy.add_argument("--no-test-user", action="store_true", help="skip the interactive test@example.com user prompt")
+    deploy.add_argument("--test-user-email", default="test@example.com", help="email for the optional deploy-time test user")
+    deploy.add_argument("--test-user-username", default="test", help="username for the optional deploy-time test user")
     deploy.set_defaults(func=cmd_deploy)
     setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional channels")
     setup.add_argument("--host", help="public host/IP used in generated local service URLs")

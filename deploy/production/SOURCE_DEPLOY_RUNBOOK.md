@@ -99,6 +99,20 @@ generate `/var/lib/myapp/client-environment.png` when `qrencode` is installed,
 print the JSON, and print a terminal QR code in interactive terminals. Long
 Docker/Compose steps print a heartbeat while running.
 
+If the deploy includes Supabase auth, the CLI asks whether to create or update
+the default test user:
+
+- email: `test@example.com`
+- username: `test`
+- password: entered interactively by the deploy operator
+
+The password is sent directly to Supabase Admin API and is not written to env
+files. For unattended deploys or hosts that should not have a test account, run:
+
+```bash
+myapp-ctl deploy --build --no-test-user
+```
+
 ## Verification
 
 Run:
