@@ -166,6 +166,10 @@ curl -fsS -H "apikey: $(myapp-ctl secret get supabase ANON_KEY --show)" \
 myapp-ctl agent ls
 ```
 
+`myapp-ctl agent ls` only shows active runs by default. Use
+`myapp-ctl agent ls --history --limit 20` when you need recent completed or failed
+agent runs.
+
 Generate a client environment import JSON and QR code:
 
 ```bash

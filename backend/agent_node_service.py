@@ -12,6 +12,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import subprocess
 import threading
 import time
@@ -55,6 +56,9 @@ _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
 _PROXY_TOKENS: dict[str, dict] = {}
 _PROXY_LOCK = threading.Lock()
+_CLEANUP_THREAD_STARTED = False
+_CLEANUP_THREAD_LOCK = threading.Lock()
+_ACTIVE_RUN_STATUSES = {"starting", "running"}
 
 
 def _now_ms() -> int:
@@ -601,15 +605,38 @@ def create_run():
 
 @APP.get("/v1/runs")
 def list_runs():
-    rows = []
+    include_history = request.args.get("history") in {"1", "true", "yes"}
+    try:
+        limit = int(request.args.get("limit", "20") or "20")
+    except ValueError:
+        limit = 20
+    limit = max(1, min(limit, 500))
     with _RUNS_LOCK:
-        rows.extend(_RUNS.values())
-    known = {row["run_id"] for row in rows}
-    for path in sorted(LOG_DIR.glob("*.jsonl")):
-        if path.stem not in known:
-            rows.append(_load_run_from_log(path.stem))
-    rows.sort(key=lambda item: str(item.get("created_at") or item.get("started_at") or ""), reverse=True)
-    return jsonify({"runs": rows[:200]})
+        memory_rows = [dict(row) for row in _RUNS.values()]
+    active_rows = [row for row in memory_rows if row.get("status") in _ACTIVE_RUN_STATUSES]
+    history_rows = [row for row in memory_rows if row.get("status") not in _ACTIVE_RUN_STATUSES]
+    history_total = len(history_rows)
+    if include_history:
+        history_paths = []
+        known = {str(row.get("run_id") or "") for row in memory_rows}
+        for path in LOG_DIR.glob("*.jsonl"):
+            if path.stem in known:
+                continue
+            history_total += 1
+            history_paths.append(path)
+        history_paths.sort(key=lambda item: item.stat().st_mtime if item.exists() else 0, reverse=True)
+        for path in history_paths[:limit]:
+            history_rows.append(_load_run_from_log(path.stem))
+        history_rows.sort(
+            key=lambda item: int(item.get("finished_at") or item.get("created_at") or item.get("started_at") or 0),
+            reverse=True,
+        )
+    rows = active_rows + (history_rows[:limit] if include_history else [])
+    rows.sort(
+        key=lambda item: int(item.get("created_at") or item.get("started_at") or item.get("finished_at") or 0),
+        reverse=True,
+    )
+    return jsonify({"runs": rows, "history_total": history_total})
 
 
 @APP.get("/v1/runs/<run_id>")
@@ -675,8 +702,18 @@ def run_events(run_id: str):
     return Response(stream_with_context(generate()), mimetype="application/x-ndjson")
 
 
-def _cleanup_old_logs() -> None:
+def _cleanup_old_runs() -> None:
     cutoff = time.time() - RUN_RETENTION_SECONDS
+    cutoff_ms = int(cutoff * 1000)
+    with _RUNS_LOCK:
+        expired_run_ids = [
+            run_id
+            for run_id, run in _RUNS.items()
+            if run.get("status") not in _ACTIVE_RUN_STATUSES
+            and int(run.get("finished_at") or run.get("created_at") or 0) < cutoff_ms
+        ]
+        for run_id in expired_run_ids:
+            _RUNS.pop(run_id, None)
     for root in (LOG_DIR, WORKSPACE_ROOT / "_payloads"):
         if not root.exists():
             continue
@@ -686,9 +723,47 @@ def _cleanup_old_logs() -> None:
                     path.unlink()
             except OSError:
                 pass
+    if WORKSPACE_ROOT.exists():
+        for session_dir in WORKSPACE_ROOT.iterdir():
+            if not session_dir.is_dir() or session_dir.name == "_payloads":
+                continue
+            for job_dir in session_dir.iterdir():
+                try:
+                    if job_dir.is_dir() and job_dir.stat().st_mtime < cutoff:
+                        shutil.rmtree(job_dir)
+                except OSError:
+                    pass
+            try:
+                next(session_dir.iterdir())
+            except StopIteration:
+                try:
+                    session_dir.rmdir()
+                except OSError:
+                    pass
+
+
+def _cleanup_loop() -> None:
+    while True:
+        try:
+            _cleanup_old_runs()
+        except Exception as exc:
+            _json_line(_run_log_path("agent-node-cleanup"), {"type": "cleanup_error", "message": str(exc), "ts": _now_ms()})
+        time.sleep(max(60, min(RUN_RETENTION_SECONDS // 4, 3600)))
+
+
+def _start_cleanup_thread_once() -> None:
+    global _CLEANUP_THREAD_STARTED
+    with _CLEANUP_THREAD_LOCK:
+        if _CLEANUP_THREAD_STARTED:
+            return
+        _CLEANUP_THREAD_STARTED = True
+        thread = threading.Thread(target=_cleanup_loop, name="agent-node-cleanup", daemon=True)
+        thread.start()
+
+
+_start_cleanup_thread_once()
 
 
 if __name__ == "__main__":
-    _cleanup_old_logs()
     port = int(os.environ.get("AGENT_NODE_PORT", "5590"))
     APP.run(host=os.environ.get("AGENT_NODE_HOST", "0.0.0.0"), port=port, threaded=True)

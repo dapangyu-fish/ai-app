@@ -3243,7 +3243,9 @@ def cmd_agent(args) -> int:
         cfg = _cfg()
         node_url = (args.url or "http://127.0.0.1:5590").rstrip("/")
         token = os.environ.get("AGENT_NODE_TOKEN") or _parse_env(_secret_path("agent")).get("AGENT_NODE_TOKEN", "")
-        data = _http_json(f"{node_url}/v1/runs", token=token)
+        history_limit = max(1, min(int(getattr(args, "limit", 20) or 20), 500))
+        query = f"history={'1' if getattr(args, 'history', False) else '0'}&limit={history_limit}"
+        data = _http_json(f"{node_url}/v1/runs?{query}", token=token)
         if data and isinstance(data.get("runs"), list):
             rows = []
             for item in data["runs"]:
@@ -3273,10 +3275,15 @@ def cmd_agent(args) -> int:
                     ],
                 )
             history = [row for row in rows if row["status"] not in {"starting", "running"}]
-            print(f"historical runs: {len(history)}")
-            if history:
+            if getattr(args, "history", False):
+                history_total = data.get("history_total")
+                suffix = f" total={history_total}" if history_total is not None else ""
+                print(f"historical runs: {len(history)} shown{suffix}")
+            else:
+                print("historical runs: hidden (use --history --limit N)")
+            if getattr(args, "history", False) and history:
                 _print_table(
-                    history[:50],
+                    history[:history_limit],
                     [
                         ("run_id", "RUN"),
                         ("session_id", "SESSION"),
@@ -3303,11 +3310,16 @@ def cmd_agent(args) -> int:
     print(f"running agent containers: {sum('Up ' in row['status'] for row in rows)}")
     if rows:
         _print_table(rows, [("container", "CONTAINER"), ("status", "STATUS")])
+    if not getattr(args, "history", False):
+        print("historical runs: hidden (use --history --limit N)")
+        return 0
+    history_limit = max(1, min(int(getattr(args, "limit", 20) or 20), 500))
     log_dir = Path(_cfg().get("paths", {}).get("agent_log_dir", "/var/log/myapp/agent-node"))
-    history = [_run_log_summary(path) for path in sorted(log_dir.glob("*.jsonl"))]
-    print(f"historical runs: {len(history)}")
+    paths = sorted(log_dir.glob("*.jsonl"), key=lambda path: path.stat().st_mtime if path.exists() else 0, reverse=True)
+    history = [_run_log_summary(path) for path in paths[:history_limit]]
+    print(f"historical runs: {len(history)} shown total={len(paths)}")
     if history:
-        _print_table(history[-50:], [("run_id", "RUN"), ("status", "STATUS"), ("returncode", "RC"), ("duration", "DURATION"), ("lines", "LINES")])
+        _print_table(history, [("run_id", "RUN"), ("status", "STATUS"), ("returncode", "RC"), ("duration", "DURATION"), ("lines", "LINES")])
     return 0
 
 
@@ -3445,6 +3457,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_sub = agent.add_subparsers(dest="agent_cmd", required=True)
     agent_ls = agent_sub.add_parser("ls")
     agent_ls.add_argument("--url")
+    agent_ls.add_argument("--history", action="store_true", help="show recent completed agent runs")
+    agent_ls.add_argument("--limit", type=int, default=20, help="completed run rows to show with --history")
     agent_ls.set_defaults(func=cmd_agent)
     agent_register = agent_sub.add_parser("register")
     agent_register.add_argument("--backend")
