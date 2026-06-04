@@ -1134,6 +1134,23 @@ def _deploy_compose_services(names: list[str], *, dry_run: bool) -> int:
     return flush()
 
 
+def _deploy_needs_supabase_auth_migration(names: list[str]) -> bool:
+    services = _services()
+    return any(services.get(name, {}).get("group") == "supabase" for name in names)
+
+
+def _run_supabase_auth_migrations(*, dry_run: bool) -> int:
+    cmd = ["docker", "exec", "supabase-auth", "gotrue", "migrate"]
+    print("+ " + " ".join(cmd))
+    if dry_run:
+        return 0
+    info = _docker_inspect("supabase-auth")
+    if not info or info.get("State", {}).get("Status") != "running":
+        print("supabase-auth is not running; cannot run GoTrue migrations", file=sys.stderr)
+        return 1
+    return _run(cmd, capture=False).returncode
+
+
 def _compose_specs_for_names(names: list[str]) -> list[dict]:
     services = _services()
     seen: set[tuple[str, tuple[str, ...]]] = set()
@@ -1297,6 +1314,10 @@ def cmd_deploy(args) -> int:
     rc = _deploy_compose_services(names, dry_run=args.dry_run)
     if rc != 0:
         return rc
+    if _deploy_needs_supabase_auth_migration(names):
+        rc = _run_supabase_auth_migrations(dry_run=args.dry_run)
+        if rc != 0:
+            return rc
     if not args.dry_run and not args.no_test_user and _deploy_can_seed_test_user(names):
         rc = _maybe_seed_test_user(args)
         if rc != 0:

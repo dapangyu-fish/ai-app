@@ -47,10 +47,25 @@ fi
 install -d -m 755 "$INSTALL_ROOT/deploy/production"
 install -m 644 "$ROOT_DIR/deploy/production/docker-compose.core.yml" "$INSTALL_ROOT/deploy/production/docker-compose.core.yml"
 install -m 644 "$ROOT_DIR/backend/schema.sql" "$INSTALL_ROOT/deploy/production/schema.sql"
-rm -rf "$INSTALL_ROOT/deploy/production/supabase" "$INSTALL_ROOT/deploy/production/openim"
-mkdir -p "$INSTALL_ROOT/deploy/production/supabase" "$INSTALL_ROOT/deploy/production/openim"
-cp -a "$ROOT_DIR/deploy/production/supabase/." "$INSTALL_ROOT/deploy/production/supabase/"
-cp -a "$ROOT_DIR/deploy/production/openim/." "$INSTALL_ROOT/deploy/production/openim/"
+
+SUPABASE_INSTALL="$INSTALL_ROOT/deploy/production/supabase"
+OPENIM_INSTALL="$INSTALL_ROOT/deploy/production/openim"
+
+if [ -d "$SUPABASE_INSTALL" ]; then
+  # Keep runtime data mounted by the self-hosted Supabase compose file.
+  # Reinstalling myapp-ctl must never remove Postgres PGDATA or file storage.
+  find "$SUPABASE_INSTALL" -mindepth 1 -maxdepth 1 ! -name volumes -exec rm -rf {} +
+  mkdir -p "$SUPABASE_INSTALL/volumes/db" "$SUPABASE_INSTALL/volumes/storage"
+  find "$SUPABASE_INSTALL/volumes" -mindepth 1 -maxdepth 1 ! -name db ! -name storage -exec rm -rf {} +
+  find "$SUPABASE_INSTALL/volumes/db" -mindepth 1 -maxdepth 1 ! -name data -exec rm -rf {} +
+else
+  mkdir -p "$SUPABASE_INSTALL"
+fi
+
+rm -rf "$OPENIM_INSTALL"
+mkdir -p "$OPENIM_INSTALL"
+cp -a "$ROOT_DIR/deploy/production/supabase/." "$SUPABASE_INSTALL/"
+cp -a "$ROOT_DIR/deploy/production/openim/." "$OPENIM_INSTALL/"
 
 echo "installed myapp-ctl to /opt/myapp/bin/myapp-ctl"
 echo "config: /etc/myapp/ctl.json /etc/myapp/services.json"
