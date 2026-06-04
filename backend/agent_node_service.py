@@ -56,11 +56,13 @@ RUN_SNAPSHOT_MAX_FILES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILES",
 
 _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
+_ABORT_MARKERS: dict[str, int] = {}
 _PROXY_TOKENS: dict[str, dict] = {}
 _PROXY_LOCK = threading.Lock()
 _CLEANUP_THREAD_STARTED = False
 _CLEANUP_THREAD_LOCK = threading.Lock()
 _ACTIVE_RUN_STATUSES = {"starting", "running"}
+_ABORT_MARKER_TTL_MS = 5 * 60 * 1000
 _SNAPSHOT_SKIP_DIRS = {
     ".cache",
     ".git",
@@ -391,6 +393,10 @@ def _start_run_thread(
     paths: dict[str, Path],
     proxy_tokens: list[str],
 ) -> None:
+    def abort_requested() -> bool:
+        with _RUNS_LOCK:
+            return bool((_RUNS.get(run_id) or {}).get("abort_requested"))
+
     def target() -> None:
         proc: Optional[subprocess.Popen] = None
         status = "failed"
@@ -410,6 +416,11 @@ def _start_run_thread(
                     _RUNS[run_id]["pid"] = proc.pid
                     _RUNS[run_id]["status"] = "running"
             _json_line(log_path, {"type": "container_started", "pid": proc.pid, "ts": _now_ms()})
+            if abort_requested():
+                container = cmd[cmd.index("--name") + 1] if "--name" in cmd else ""
+                if container:
+                    subprocess.run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    _json_line(log_path, {"type": "abort_applied", "container": container, "ts": _now_ms()})
             threads = [
                 threading.Thread(target=_pump_stream, args=(log_path, "stdout", proc.stdout), daemon=True),
                 threading.Thread(target=_pump_stream, args=(log_path, "stderr", proc.stderr), daemon=True),
@@ -419,7 +430,12 @@ def _start_run_thread(
             returncode = proc.wait()
             for thread in threads:
                 thread.join(timeout=1)
-            status = "done" if returncode == 0 else "failed"
+            if returncode == 0:
+                status = "done"
+            elif abort_requested():
+                status = "aborted"
+            else:
+                status = "failed"
         except Exception as exc:
             _json_line(log_path, {"type": "error", "message": str(exc), "ts": _now_ms()})
             status = "failed"
@@ -540,10 +556,66 @@ def _newest_mtime(path: Path) -> float:
     return newest
 
 
+def _docker_active_agent_containers() -> dict[str, dict]:
+    proc = subprocess.run(
+        ["docker", "ps", "--filter", "name=myapp-agent-", "--format", "{{json .}}"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    rows: dict[str, dict] = {}
+    if proc.returncode != 0:
+        return rows
+    for line in proc.stdout.splitlines():
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        name = str(item.get("Names") or item.get("Name") or "").strip()
+        if not name or name == "myapp-agent-node" or not name.startswith("myapp-agent-"):
+            continue
+        run_id = _safe_part(name.removeprefix("myapp-agent-"), "run")
+        rows[run_id] = {
+            "run_id": run_id,
+            "container": name,
+            "docker_status": item.get("Status", ""),
+        }
+    return rows
+
+
+def _run_start_metadata(run_id: str) -> dict:
+    log_path = _run_log_path(run_id)
+    if not log_path.exists():
+        return {}
+    try:
+        with log_path.open("r", encoding="utf-8", errors="replace") as handle:
+            for _ in range(20):
+                line = handle.readline()
+                if not line:
+                    break
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if item.get("type") == "start":
+                    return {
+                        "run_id": item.get("run_id") or run_id,
+                        "session_id": item.get("session_id") or "",
+                        "job_id": item.get("job_id") or "",
+                        "user_id": item.get("user_id") or "",
+                        "provider_id": item.get("provider_id") or "",
+                        "agent_id": item.get("agent_id") or "",
+                        "created_at": item.get("ts") or 0,
+                    }
+    except OSError:
+        return {}
+    return {}
+
+
 @APP.get("/health")
 def health():
-    with _RUNS_LOCK:
-        running = sum(1 for run in _RUNS.values() if run.get("status") == "running")
+    running = len(_docker_active_agent_containers())
     _cleanup_proxy_tokens()
     with _PROXY_LOCK:
         proxy_tokens = len(_PROXY_TOKENS)
@@ -707,6 +779,8 @@ def create_run():
     log_path = _run_log_path(run_id)
     _json_line(log_path, _redacted_start_payload(payload, cmd))
     with _RUNS_LOCK:
+        abort_until = _ABORT_MARKERS.pop(run_id, 0)
+        abort_requested = abort_until > _now_ms()
         _RUNS[run_id] = {
             "run_id": run_id,
             "session_id": session_id,
@@ -721,7 +795,10 @@ def create_run():
             "workspace_path": str(paths["workspace"]),
             "run_workspace_path": str(paths["run_workspace"]),
             "proxy_tokens": len(proxy_tokens),
+            "abort_requested": abort_requested,
         }
+    if abort_requested:
+        _json_line(log_path, {"type": "abort_requested", "reason": "pre_start", "ts": _now_ms()})
     _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths, proxy_tokens)
     return jsonify({"run_id": run_id, "status": "starting", "events_url": f"/v1/runs/{run_id}/events"}), 202
 
@@ -734,9 +811,32 @@ def list_runs():
     except ValueError:
         limit = 20
     limit = max(1, min(limit, 500))
+    docker_active = _docker_active_agent_containers()
     with _RUNS_LOCK:
         memory_rows = [dict(row) for row in _RUNS.values()]
-    active_rows = [row for row in memory_rows if row.get("status") in _ACTIVE_RUN_STATUSES]
+        for row in _RUNS.values():
+            run_id = str(row.get("run_id") or "")
+            if row.get("status") == "running" and run_id and run_id not in docker_active:
+                row["status"] = "failed"
+                row["returncode"] = row.get("returncode", "-")
+                row["finished_at"] = _now_ms()
+        memory_rows = [dict(row) for row in _RUNS.values()]
+    active_rows = [
+        row for row in memory_rows
+        if row.get("status") == "starting"
+        or (row.get("status") == "running" and str(row.get("run_id") or "") in docker_active)
+    ]
+    known_active = {str(row.get("run_id") or "") for row in active_rows}
+    for run_id, docker_row in docker_active.items():
+        if run_id in known_active:
+            continue
+        row = _run_start_metadata(run_id)
+        row.update(docker_row)
+        row.setdefault("session_id", "")
+        row.setdefault("agent_id", "")
+        row.setdefault("provider_id", "")
+        row["status"] = "running"
+        active_rows.append(row)
     history_rows = [row for row in memory_rows if row.get("status") not in _ACTIVE_RUN_STATUSES]
     history_total = len(history_rows)
     if include_history:
@@ -790,9 +890,23 @@ def abort_run(run_id: str):
     run_id = _safe_part(run_id, "run")
     with _RUNS_LOCK:
         run = _RUNS.get(run_id) or {}
+        if run:
+            run["abort_requested"] = True
+        else:
+            _ABORT_MARKERS[run_id] = _now_ms() + _ABORT_MARKER_TTL_MS
     container = run.get("container")
     if not container:
-        return jsonify({"run_id": run_id, "aborted": False, "reason": "container not found"}), 404
+        fallback_container = f"myapp-agent-{run_id}"
+        removed = subprocess.run(
+            ["docker", "rm", "-f", fallback_container],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode == 0
+        if removed:
+            _json_line(_run_log_path(run_id), {"type": "abort", "container": fallback_container, "ts": _now_ms()})
+            return jsonify({"run_id": run_id, "aborted": True, "fallback_container": True})
+        _json_line(_run_log_path(run_id), {"type": "abort_requested", "reason": "container not found", "ts": _now_ms()})
+        return jsonify({"run_id": run_id, "aborted": False, "abort_requested": True}), 202
     subprocess.run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     _json_line(_run_log_path(run_id), {"type": "abort", "container": container, "ts": _now_ms()})
     return jsonify({"run_id": run_id, "aborted": True})
@@ -839,6 +953,13 @@ def _cleanup_old_runs() -> None:
         ]
         for run_id in expired_run_ids:
             _RUNS.pop(run_id, None)
+        now_ms = _now_ms()
+        expired_abort_markers = [
+            run_id for run_id, until_ms in _ABORT_MARKERS.items()
+            if until_ms <= now_ms
+        ]
+        for run_id in expired_abort_markers:
+            _ABORT_MARKERS.pop(run_id, None)
         active_session_paths = {
             Path(str(run.get("session_workspace_path")))
             for run in _RUNS.values()

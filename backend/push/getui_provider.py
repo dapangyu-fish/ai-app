@@ -1,7 +1,8 @@
 """GeTui RestAPI V2 推送 provider.
 
 服务端使用 AppKey + MasterSecret 换取接口 token，再按 CID 单推。
-真实凭证只允许放在 /etc/ai-app/backend.env 或进程环境变量中，不进入仓库。
+真实凭证只允许通过 myapp-ctl 写入 /etc/myapp/secrets.d/push.env
+或由进程环境变量注入，不进入仓库。
 """
 
 import hashlib

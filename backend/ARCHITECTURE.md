@@ -1,30 +1,37 @@
 # Backend Architecture
 
-最后更新：Redis 队列 + 独立 AI worker daemon 改造。
+最后更新：`myapp-ctl` 生产控制面 + agent-node 隔离执行架构。
 
 ## 0. 服务概览
 
-后端由 Flask API 进程和独立 AI worker daemon 组成，通过 supervisor 管理：
+生产后端由 `myapp-ctl` 管理，运行在 Docker Compose 服务组中：
 
 ```
-supervisor
-├─ ai-app    → gunicorn -k eventlet -w <N> -b 0.0.0.0:5566 app:app
-├─ ai-worker → cd backend && python ai_worker_daemon.py
-└─ registry → 独立的 registry_server.py（包发布服务，不在本文档范围）
+myapp-ctl
+├─ backend       → gunicorn -k eventlet -w <N> -b 0.0.0.0:5566 app:app
+├─ ai-worker     → python ai_worker_daemon.py
+├─ registry      → registry_server.py
+├─ config-center → config_center/app.py
+├─ user-center   → user_center/app.py
+├─ agent-node    → owns Docker and starts isolated runtime containers
+├─ infra         → JSON app Postgres + AI session Redis + App MinIO
+├─ supabase      → self-hosted Supabase compose group
+└─ openim        → OpenIM compose group
 ```
 
 供应链：
 
 ```
-客户端 ─HTTPS─▶ nginx ─▶ ai-app:5566
+客户端 ─HTTPS/SSE/WSS─▶ backend:5566
                        │
                        ├─ Supabase（鉴权 + 用户数据）       127.0.0.1:18000
                        ├─ OpenIM HTTP/WS                  10001-10002
-                       ├─ MinIO                            127.0.0.1:19000
-                       ├─ Postgres（业务库）                127.0.0.1:5433
-                       ├─ Redis (OpenIM 专用)              docker 内网 only
-                       ├─ AI session Redis                 127.0.0.1:16379
-                       └─ ai-worker → claude CLI            /root/.nvm/.../claude
+                       ├─ App MinIO                        app-minio:9000
+                       ├─ JSON app Postgres                jsonapp-postgres:5432
+                       ├─ AI session Redis                 ai-session-redis:6379
+                       └─ ai-worker → agent-node → runtime container
+
+runtime container ─▶ agent-node provider proxy ─▶ DeepSeek / MiniMax
 ```
 
 ## 1. 模块划分（backend/*.py）
@@ -195,52 +202,35 @@ sendMessage(text):
 3. **Redis 连接池**：用 `redis.Redis(host=..., decode_responses=False)` 单例，按需连接
 4. **客户端 abort**：abort 时调 `POST /chat/<id>/abort`，后端 worker 看到 abort flag 杀 CLI 进程
 
-## 4. 部署流程（改动相关）
+## 4. 部署流程（当前生产路径）
 
-```
-本机：
-1. backend/ 改代码 → commit + push 到 feat/ai-background-push
-2. 验证测试（本地起 redis 6379 + python app.py）
-
-服务器：
-1. ssh + cd /root/ai-app
-2. 编辑 backend/.env 加 AI_SESSION_REDIS_PASSWORD
-3. docker run ai-session-redis（详见 4.1）
-4. git checkout feat/ai-background-push && git pull
-5. /opt/ai-app-venv/bin/pip install -r backend/requirements.txt
-6. supervisorctl restart ai-app
-7. supervisorctl tail -f ai-app stdout 看启动日志
-```
-
-### 4.1 启动 ai-session-redis
+生产部署以 `deploy/production/README.md` 为准。旧的 supervisor、手工 Redis
+容器、仓库内生产 env 文件路径已经废弃。
 
 ```bash
-source /root/ai-app/backend/.env  # 拿到 AI_SESSION_REDIS_PASSWORD
-docker run -d \
-  --name ai-session-redis \
-  --restart unless-stopped \
-  -p 127.0.0.1:16379:6379 \
-  redis:7.4-alpine \
-  redis-server \
-    --requirepass "$AI_SESSION_REDIS_PASSWORD" \
-    --maxmemory 256mb \
-    --maxmemory-policy allkeys-lru \
-    --appendonly yes
+cd /opt/myapp/current-agent-control-plane
+./deploy/production/install_ctl.sh
+myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
+myapp-ctl deploy --build   # source-built host
+myapp-ctl deploy --pull    # image-based host
 ```
 
-回滚：`docker rm -f ai-session-redis` —— 不会影响 OpenIM 的 redis。
-
-### 4.2 启动 AI worker daemon
-
-生产必须在启动 Flask/gunicorn 之外，再启动一个 daemon 消费 Redis 队列：
+日常后端改动不要全量重启基础设施：
 
 ```bash
-cd /root/ai-app/backend
-BACKEND_ENV_PATH=/etc/ai-app/backend.env /opt/ai-app-venv/bin/python ai_worker_daemon.py
+myapp-ctl update
+myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user
 ```
 
-确认 daemon 已经启动后，`ai-app` 的 gunicorn worker 数可以按普通 API 吞吐调整。
-AI 总并发由 Redis 全局 lease 上的 `AI_WORKER_MAX_CONCURRENCY` 控制，供应商并发由各自 provider lease 控制，不再乘以 gunicorn worker 数。
+Agent 执行层改动：
+
+```bash
+myapp-ctl agent ls
+myapp-ctl deploy agent-node agent-runtime --build --no-setup --no-test-user
+```
+
+`ai-session-redis`、JSON app Postgres、Supabase、OpenIM、MinIO 都由
+`myapp-ctl` compose 组管理，持久化数据位于 `/mnt/myapp`。
 
 ## 5. 后续阶段（不在本次范围）
 

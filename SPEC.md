@@ -10,7 +10,7 @@
   - Supabase PostgreSQL（用户认证、用户信息）
   - 独立 PostgreSQL（业务数据）
 - **对象存储**：MinIO
-- **AI 服务**：DeepSeek / GLM / CC（通过 Anthropic API 兼容接口）
+- **AI 服务**：DeepSeek / MiniMax / 自定义 Anthropic-compatible provider
 
 ### 1.2 目录结构
 

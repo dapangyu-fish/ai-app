@@ -8,13 +8,12 @@ import shutil
 from dotenv import load_dotenv
 
 # .env 加载顺序（首个存在的文件生效）：
-#   1. $BACKEND_ENV_PATH 环境变量指定的路径（生产环境用 supervisor 注入）
-#   2. /etc/ai-app/backend.env （系统标准位置，root:root 600）
-#   3. backend/.env             （仓库内位置，仅本地开发兜底）
-# 这样 prod 的 secret 不放在 git 工作树里，git pull / checkout 都不会受影响。
+#   1. $BACKEND_ENV_PATH 环境变量指定的路径（本地/临时调试用）
+#   2. backend/.env             （仓库内位置，仅本地开发兜底）
+# 当前 myapp-ctl 生产部署通过 Docker Compose env_file 注入
+# /etc/myapp/secrets.d/*.env，不依赖这里的文件加载。
 _env_candidates = [
     os.environ.get("BACKEND_ENV_PATH"),
-    "/etc/ai-app/backend.env",
     os.path.join(os.path.dirname(__file__), ".env"),
 ]
 for _p in _env_candidates:
@@ -37,7 +36,7 @@ SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 #   MY_PROVIDER_ANTHROPIC_MODEL=my-model
 #
 # 如果没有配置 AI_PROVIDER_IDS，系统默认保留 deepseek，并自动发现带有
-# <PREFIX>_ANTHROPIC_AUTH_TOKEN 的 provider。GLM/CC 是已下线旧 provider，即使
+# <PREFIX>_ANTHROPIC_AUTH_TOKEN 的 provider。已下线的旧 provider 即使
 # 旧环境文件里残留变量也不会被自动注册。
 _LEGACY_DISABLED_PROVIDER_IDS = {"glm", "cc"}
 _ANTHROPIC_PROVIDER_SUFFIXES = (
@@ -279,7 +278,7 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 PORT = int(os.environ.get("PORT", "5566"))
 
 # Flask SECRET_KEY —— 给 session/CSRF 等扩展签名用（当前业务没用 session，
-# 但保留以防未来加扩展时埋雷）。生产从 /etc/ai-app/backend.env 注入。
+# 但保留以防未来加扩展时埋雷）。生产由 myapp-ctl compose env_file 注入。
 # 空值时 app.py 会生成临时随机值并打 WARNING（仅本地开发兜底，重启后失效）。
 FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "")
 
@@ -464,6 +463,7 @@ AGENT_NODE_CONNECT_TIMEOUT_SECONDS = _env_int("AGENT_NODE_CONNECT_TIMEOUT_SECOND
 AGENT_NODE_EVENT_TIMEOUT_SECONDS = _env_int("AGENT_NODE_EVENT_TIMEOUT_SECONDS", 7200)
 AGENT_NODE_ASSIGNMENT_TTL_SECONDS = _env_int("AGENT_NODE_ASSIGNMENT_TTL_SECONDS", 86400)
 AGENT_NODE_REGISTRATION_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", AGENT_NODE_TOKEN)
+AI_SERVER_REPAIR_MAX_ATTEMPTS = max(0, _env_int("AI_SERVER_REPAIR_MAX_ATTEMPTS", 3))
 
 
 def _provider_worker_env_int(provider_id: str, key: str, default: int) -> int:
@@ -541,7 +541,8 @@ FCM_SERVICE_ACCOUNT_PATH = os.environ.get("FCM_SERVICE_ACCOUNT_PATH", "/etc/fcm/
 FCM_PROJECT_ID = os.environ.get("FCM_PROJECT_ID", "")
 
 # GeTui 配置（国内 Android / 可选 iOS 推送）
-# 真实 AppID/AppKey/AppSecret/MasterSecret 只放 /etc/ai-app/backend.env，不进 git。
+# 真实 AppID/AppKey/AppSecret/MasterSecret 由 myapp-ctl 写入
+# /etc/myapp/secrets.d/push.env，不进 git。
 GETUI_BASE_URL = os.environ.get("GETUI_BASE_URL", "https://restapi.getui.com/v2")
 GETUI_APP_ID = os.environ.get("GETUI_APP_ID", "")
 GETUI_APP_KEY = os.environ.get("GETUI_APP_KEY", "")

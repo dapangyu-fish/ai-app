@@ -38,8 +38,8 @@ services:
     environment:
       MINIO_ROOT_USER: "${APP_MINIO_ACCESS_KEY:-myappminio}"
       MINIO_ROOT_PASSWORD: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
-      MINIO_SERVER_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
-      MINIO_BROWSER_REDIRECT_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_CONSOLE_PORT:-9090}"
+      MINIO_SERVER_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${APP_MINIO_PORT:-9000}"
+      MINIO_BROWSER_REDIRECT_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${APP_MINIO_CONSOLE_PORT:-9090}"
     command: server /data --console-address ":9090"
     volumes:
       - ${MYAPP_DATA_ROOT:-/mnt/myapp}/app-minio/data:/data
@@ -48,7 +48,7 @@ services:
       - "${APP_MINIO_CONSOLE_PORT:-9090}:9090"
 
   backend:
-    image: "dapangyufish/myapp-backend:${MYAPP_IMAGE_TAG:-agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
     container_name: myapp-backend
     restart: unless-stopped
     depends_on:
@@ -88,6 +88,7 @@ services:
       AGENT_NODE_REGISTRATION_TOKEN: "${AGENT_NODE_REGISTRATION_TOKEN:-}"
       AI_WORKER_MAX_CONCURRENCY: "${AI_WORKER_MAX_CONCURRENCY:-20}"
       AI_WORKER_QUEUE_MAX: "${AI_WORKER_QUEUE_MAX:-100}"
+      AI_SERVER_REPAIR_MAX_ATTEMPTS: "${AI_SERVER_REPAIR_MAX_ATTEMPTS:-3}"
       DEEPSEEK_AI_WORKER_MAX_CONCURRENCY: "${DEEPSEEK_AI_WORKER_MAX_CONCURRENCY:-20}"
       DEEPSEEK_AI_WORKER_QUEUE_MAX: "${DEEPSEEK_AI_WORKER_QUEUE_MAX:-100}"
       MINIMAX_AI_WORKER_MAX_CONCURRENCY: "${MINIMAX_AI_WORKER_MAX_CONCURRENCY:-5}"
@@ -95,12 +96,12 @@ services:
       SUPABASE_URL: "${SUPABASE_URL:-}"
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-}"
       SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_KEY:-}"
-      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${APP_MINIO_PORT:-9000}"
       MINIO_ENDPOINT: "app-minio:9000"
       MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
-      REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${REGISTRY_PORT:-3254}"
+      REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${REGISTRY_PORT:-3254}"
       OPENIM_API_URL: "${OPENIM_API_URL:-}"
       OPENIM_WS_URL: "${OPENIM_WS_URL:-}"
       OPENIM_SECRET: "${OPENIM_SECRET:-}"
@@ -119,7 +120,7 @@ services:
       start_period: 30s
 
   ai-worker:
-    image: "dapangyufish/myapp-backend:${MYAPP_IMAGE_TAG:-agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
     container_name: myapp-ai-worker
     restart: unless-stopped
     depends_on:
@@ -148,19 +149,20 @@ services:
       AGENT_NODE_REGISTRATION_TOKEN: "${AGENT_NODE_REGISTRATION_TOKEN:-}"
       AI_WORKER_MAX_CONCURRENCY: "${AI_WORKER_MAX_CONCURRENCY:-20}"
       AI_WORKER_QUEUE_MAX: "${AI_WORKER_QUEUE_MAX:-100}"
+      AI_SERVER_REPAIR_MAX_ATTEMPTS: "${AI_SERVER_REPAIR_MAX_ATTEMPTS:-3}"
       DEEPSEEK_AI_WORKER_MAX_CONCURRENCY: "${DEEPSEEK_AI_WORKER_MAX_CONCURRENCY:-20}"
       DEEPSEEK_AI_WORKER_QUEUE_MAX: "${DEEPSEEK_AI_WORKER_QUEUE_MAX:-100}"
       MINIMAX_AI_WORKER_MAX_CONCURRENCY: "${MINIMAX_AI_WORKER_MAX_CONCURRENCY:-5}"
       MINIMAX_AI_WORKER_QUEUE_MAX: "${MINIMAX_AI_WORKER_QUEUE_MAX:-20}"
-      REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${REGISTRY_PORT:-3254}"
-      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${REGISTRY_PORT:-3254}"
+      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${APP_MINIO_PORT:-9000}"
       MINIO_ENDPOINT: "app-minio:9000"
       MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
 
   registry:
-    image: "dapangyufish/myapp-backend:${MYAPP_IMAGE_TAG:-agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
     container_name: myapp-registry
     restart: unless-stopped
     depends_on:
@@ -179,12 +181,12 @@ services:
       DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
       DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
       DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
-      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${APP_MINIO_PORT:-9000}"
       MINIO_ENDPOINT: "app-minio:9000"
       MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
-      REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${REGISTRY_PORT:-3254}"
+      REGISTRY_BASE_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${REGISTRY_PORT:-3254}"
       REGISTRY_ADMIN_TOKEN: "${REGISTRY_ADMIN_TOKEN:-}"
       FLASK_SECRET_KEY: "${FLASK_SECRET_KEY:-}"
     ports:
@@ -197,7 +199,7 @@ services:
       start_period: 20s
 
   config-center:
-    image: "dapangyufish/myapp-backend:${MYAPP_IMAGE_TAG:-agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
     container_name: myapp-config-center
     restart: unless-stopped
     working_dir: /app/config_center
@@ -209,7 +211,7 @@ services:
       ADMIN_USERNAME: "${CONFIG_CENTER_ADMIN_USERNAME:-admin}"
       ADMIN_PASSWORD: "${CONFIG_CENTER_ADMIN_PASSWORD:-}"
       SESSION_SECRET: "${CONFIG_CENTER_SESSION_SECRET:-}"
-      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_PORT:-9000}"
+      MINIO_PUBLIC_URL: "http://${PUBLIC_HOST:-127.0.0.1}:${APP_MINIO_PORT:-9000}"
       MINIO_ENDPOINT: "app-minio:9000"
       MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
@@ -223,7 +225,7 @@ services:
       - "${CONFIG_CENTER_PORT:-5000}:5000"
 
   user-center:
-    image: "dapangyufish/myapp-backend:${MYAPP_IMAGE_TAG:-agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
     container_name: myapp-user-center
     restart: unless-stopped
     working_dir: /app/user_center
@@ -237,20 +239,21 @@ services:
       ADMIN_USERNAME: "${USER_CENTER_ADMIN_USERNAME:-admin}"
       ADMIN_PASSWORD: "${USER_CENTER_ADMIN_PASSWORD:-}"
       SESSION_SECRET: "${USER_CENTER_SESSION_SECRET:-}"
+      COOKIE_SECURE: "${USER_CENTER_COOKIE_SECURE:-false}"
     ports:
       - "${USER_CENTER_PORT:-5567}:5567"
 
   agent-node:
-    image: "dapangyufish/myapp-agent-node:${MYAPP_IMAGE_TAG:-agent-control-plane}"
+    image: "${MYAPP_AGENT_NODE_IMAGE:-dapangyufish/myapp-agent-node:agent-control-plane}"
     container_name: myapp-agent-node
     restart: unless-stopped
     env_file:
       - path: /etc/myapp/secrets.d/agent.env
         required: false
     environment:
-      AGENT_NODE_ID: "${AGENT_NODE_ID:-myapp-agent-77-237-233-229}"
+      AGENT_NODE_ID: "${AGENT_NODE_ID:-myapp-agent-local}"
       AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
-      AGENT_NODE_RUNTIME_IMAGE: "dapangyufish/myapp-agent-runtime:${MYAPP_IMAGE_TAG:-agent-control-plane}"
+      AGENT_NODE_RUNTIME_IMAGE: "${MYAPP_AGENT_RUNTIME_IMAGE:-dapangyufish/myapp-agent-runtime:agent-control-plane}"
       AGENT_NODE_DOCKER_NETWORK: "${AGENT_NODE_DOCKER_NETWORK:-myapp_agent_runtime}"
       AGENT_NODE_ALLOW_HOST_GATEWAY: "${AGENT_NODE_ALLOW_HOST_GATEWAY:-0}"
       AGENT_NODE_PROVIDER_PROXY_BASE_URL: "${AGENT_NODE_PROVIDER_PROXY_BASE_URL:-http://agent-node:5590}"

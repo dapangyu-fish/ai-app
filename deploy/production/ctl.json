@@ -1,9 +1,9 @@
 {
   "version": 1,
   "node": {
-    "id": "myapp-prod-77-237-233-229",
+    "id": "myapp-local",
     "role": "single-node-lab",
-    "public_ip": "77.237.233.229"
+    "public_ip": "127.0.0.1"
   },
   "paths": {
     "root": "/opt/myapp",
@@ -27,10 +27,10 @@
     "agent_runtime": "dapangyufish/myapp-agent-runtime:agent-control-plane"
   },
   "domains": {
-    "backend": "http://77.237.233.229:5566",
-    "registry": "http://77.237.233.229:3254",
-    "oss": "http://77.237.233.229:9000",
-    "config_center": "http://77.237.233.229:5000",
+    "backend": "http://127.0.0.1:5566",
+    "registry": "http://127.0.0.1:3254",
+    "oss": "http://127.0.0.1:9000",
+    "config_center": "http://127.0.0.1:5000",
     "agent_node": "http://agent-node:5590"
   }
 }

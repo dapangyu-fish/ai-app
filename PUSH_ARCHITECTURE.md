@@ -190,7 +190,7 @@ OpenIM v3.8 有 6+ 个 webhook。我们曾试过 `beforeOfflinePush`，**实测�
 
 ### 6. GeTui provider（`backend/push/getui_provider.py`）✅ 已实现
 
-- 服务端环境变量：`GETUI_APP_ID` / `GETUI_APP_KEY` / `GETUI_MASTER_SECRET`，真实值只放 `/etc/ai-app/backend.env`
+- 服务端环境变量：`GETUI_APP_ID` / `GETUI_APP_KEY` / `GETUI_MASTER_SECRET`，真实值只放 `myapp-ctl` 管理的 `/etc/myapp/secrets.d/push.env`
 - 先调 `POST /v2/{appId}/auth` 换接口 token，provider 内存缓存并在失效时刷新
 - `POST /v2/{appId}/push/single/cid` 推单个 CID；`device_tokens.token` 在该通道下就是 GeTui ClientID
 - `GETUI_APP_SECRET` 作为控制台凭证保留在服务端环境变量；当前 Android 原生桥只需要构建时注入 AppID，MasterSecret 严禁进入客户端
@@ -273,16 +273,17 @@ Body: { "channel": "apns", "token": "<token>" }
 
 ## 配置参考
 
-服务端 `/etc/ai-app/backend.env` 只放运行时 secret，权限建议 `600 root:root`：
+服务端推送 secret 由 `myapp-ctl setup` 写入 `/etc/myapp/secrets.d/push.env`
+和 `/etc/myapp/secrets.d/files/**`，权限建议 `600 root:root`：
 
 ```bash
-APNS_KEY_PATH=/etc/apns/AuthKey_XXXXXXXXXX.p8
+APNS_KEY_PATH=/etc/myapp/secrets.d/files/apns/AuthKey_XXXXXXXXXX.p8
 APNS_KEY_ID=XXXXXXXXXX
 APNS_TEAM_ID=XXXXXXXXXX
 APNS_BUNDLE_ID=dapangyu.fish.myapp
 APNS_USE_SANDBOX=true
 
-FCM_SERVICE_ACCOUNT_PATH=/etc/fcm/service-account.json
+FCM_SERVICE_ACCOUNT_PATH=/etc/myapp/secrets.d/files/fcm/service-account.json
 FCM_PROJECT_ID=
 
 GETUI_BASE_URL=https://restapi.getui.com/v2

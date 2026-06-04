@@ -109,7 +109,9 @@ Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notif
 
 - 服务器内网地址: `127.0.0.1:19000`（仅服务器本地访问）
 - 公网地址: `https://myapp-oss-endpoint.dapangyu.work`
-- Access Key / Secret Key: 见 `/root/ai-app/backend/.env` 中的 `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`
+- Access Key / Secret Key: 见宿主机 `/etc/myapp/secrets.d/backend.env`
+  中的 `APP_MINIO_ACCESS_KEY` / `APP_MINIO_SECRET_KEY`，或用
+  `myapp-ctl secret get backend <KEY> --show` 查看
 - Bucket 列表: `json-app`、`json-component`、`models`、`ai-chat-temp`
 
 > ⚠️ git 历史里曾出现过的老 key（`m3wZkIA5...` / `m9M7M70F...`）只对老机 `app-backend.dapangyu.work` 有效，老机下线后即作废。新机使用全新轮换 key。
@@ -121,15 +123,15 @@ Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notif
 ```bash
 ssh root@myapp-backend.dapangyu.work
 
-# 从 .env 读取 key（避免明文写在脚本里）
-source /root/ai-app/backend/.env
-/opt/ai-app-venv/bin/python3 << EOF
+# 从 myapp-ctl 管理的 env 读取 key（避免明文写在脚本里）
+set -a && source /etc/myapp/secrets.d/backend.env && set +a
+python3 << EOF
 from minio import Minio
 import os
 
-c = Minio('127.0.0.1:19000',
-          access_key=os.environ['MINIO_ACCESS_KEY'],
-          secret_key=os.environ['MINIO_SECRET_KEY'],
+c = Minio('127.0.0.1:9000',
+          access_key=os.environ['APP_MINIO_ACCESS_KEY'],
+          secret_key=os.environ['APP_MINIO_SECRET_KEY'],
           secure=False)
 
 # 上传单个文件

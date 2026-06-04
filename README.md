@@ -113,7 +113,8 @@ This boots the MyApp backend stack locally / on a VPS:
 
 After deploy, the client's built-in **Environment Switcher** (tap brand 7 times on login page) lets you point to your own stack.
 
-See [`deploy/production/README.md`](deploy/production/) for detailed `myapp-ctl` commands.
+See [`deploy/production/README.md`](deploy/production/README.md) for the
+authoritative deployment guide.
 
 ---
 
@@ -155,8 +156,8 @@ and AI generation are all served by the backend stack.
                                     v
                           +-------------------+
                           | LLM providers     |
-                          | DeepSeek / GLM /  |
-                          | Claude-compatible |
+                          | DeepSeek / MiniMax|
+                          | Anthropic-compat  |
                           +-------------------+
 
 +--------------------------+     +-------------------------+     +-------------+
@@ -188,7 +189,7 @@ Planned:
 | Registry | `backend/registry_server.py` | Package registry for JSON-APPs/components: semver, namespaces, search, pagination, publish API, mirror, catalog enrichment |
 | Object Storage | MinIO / OSS | Public JSON packages, component files, asset packs, app media, and temporary AI-generated JSON URLs |
 | OpenIM | `backend/openim/` | IM backend bridge. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
-| Supabase | external service / production config | Auth, database, and storage-compatible services configured through host-local secrets |
+| Supabase | `deploy/production/supabase/` | Self-hosted auth, database, and storage-compatible services configured through host-local secrets |
 | Config Center | `config_center/` | Remote config flags and environment-specific client configuration |
 | User Center | `user_center/` | Admin UI for user roles, bans, reset flows, and account operations |
 | Templates / Libraries | `templates/` | Published example apps and reusable JSON libraries: IM, launcher, OpenAI chat, games, controls, profile, utilities |
@@ -274,7 +275,7 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 | Engine (Dart) | Production. 34k LOC. Powering a real app. |
 | Backend (Python) | Production. 7k LOC. Running real users. |
 | Tests | Widget smoke test plus JSON regression suite (`templates/regression-test.json`). PRs adding coverage very welcome. |
-| Docs | Mid (CLAUDE.md, JSON-DSL.md, REGISTRY_README.md, BACKEND_DEPLOY.md). Improving. |
+| Docs | Mid (`JSON-DSL.md`, `deploy/production/README.md`, backend architecture notes). Improving. |
 | API stability | DSL v3.3 — minor breaking changes possible until v4. Backend HTTP API stable. |
 | Public hosted? | Yes (subject to fair use, see Terms) |
 

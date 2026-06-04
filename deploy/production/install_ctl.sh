@@ -27,21 +27,56 @@ install -d -m 700 /etc/myapp/secrets.d /etc/myapp/secrets.d/files /etc/myapp/sec
 install -m 755 "$ROOT_DIR/scripts/myapp_ctl.py" /opt/myapp/bin/myapp-ctl
 ln -sf /opt/myapp/bin/myapp-ctl /usr/local/bin/myapp-ctl
 
-install -m 644 "$ROOT_DIR/deploy/production/ctl.json" /etc/myapp/ctl.json
-install -m 644 "$ROOT_DIR/deploy/production/services.json" /etc/myapp/services.json
-if [[ "$EXISTING_LANGUAGE" =~ ^(zh|en|de|es)$ ]]; then
-  printf '%s\n' "$EXISTING_LANGUAGE" > "$LANGUAGE_FILE"
-  chmod 644 "$LANGUAGE_FILE"
-  python3 - "$EXISTING_LANGUAGE" <<'PY'
+python3 - "$ROOT_DIR/deploy/production/ctl.json" "$ROOT_DIR/deploy/production/services.json" "$EXISTING_LANGUAGE" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-path = Path("/etc/myapp/ctl.json")
-data = json.loads(path.read_text(encoding="utf-8"))
-data["language"] = sys.argv[1]
-path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+default_ctl_path = Path(sys.argv[1])
+default_services_path = Path(sys.argv[2])
+existing_language = sys.argv[3]
+ctl_path = Path("/etc/myapp/ctl.json")
+services_path = Path("/etc/myapp/services.json")
+
+
+def load_json(path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return default
+
+
+def deep_merge(default, existing):
+    if not isinstance(default, dict) or not isinstance(existing, dict):
+        return existing if existing not in (None, "") else default
+    out = dict(default)
+    for key, value in existing.items():
+        out[key] = deep_merge(out.get(key), value) if key in out else value
+    return out
+
+
+default_ctl = load_json(default_ctl_path, {})
+existing_ctl = load_json(ctl_path, {})
+merged_ctl = deep_merge(default_ctl, existing_ctl)
+if existing_language in {"zh", "en", "de", "es"}:
+    merged_ctl["language"] = existing_language
+ctl_path.write_text(json.dumps(merged_ctl, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+ctl_path.chmod(0o644)
+
+default_services = load_json(default_services_path, {"services": {}})
+existing_services = load_json(services_path, {"services": {}})
+merged_services = dict(default_services)
+merged_service_rows = dict(default_services.get("services") or {})
+for name, spec in (existing_services.get("services") or {}).items():
+    if name not in merged_service_rows:
+        merged_service_rows[name] = spec
+merged_services["services"] = merged_service_rows
+services_path.write_text(json.dumps(merged_services, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+services_path.chmod(0o644)
 PY
+if [[ "$EXISTING_LANGUAGE" =~ ^(zh|en|de|es)$ ]]; then
+  printf '%s\n' "$EXISTING_LANGUAGE" > "$LANGUAGE_FILE"
+  chmod 644 "$LANGUAGE_FILE"
 fi
 
 install -d -m 755 "$INSTALL_ROOT/deploy/production"

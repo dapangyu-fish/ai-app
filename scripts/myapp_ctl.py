@@ -9,6 +9,7 @@ actual process management.
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
 import getpass
 import hashlib
@@ -662,16 +663,22 @@ def _ensure_data_root_layout(data_root: Path | None = None) -> Path:
         os.chmod(root, 0o755)
     except OSError:
         pass
-    dirs: set[Path] = set()
+    parent_dirs: set[Path] = set()
+    leaf_dirs: set[Path] = set()
     for rel in DATA_ROOT_DIRS:
         path = root / rel
         path.mkdir(parents=True, exist_ok=True)
-        dirs.add(path)
+        leaf_dirs.add(path)
         parent = path.parent
         while parent != root and root in parent.parents:
-            dirs.add(parent)
+            parent_dirs.add(parent)
             parent = parent.parent
-    for path in sorted(dirs, key=lambda p: len(p.parts)):
+    for path in sorted(parent_dirs - leaf_dirs, key=lambda p: len(p.parts)):
+        try:
+            os.chmod(path, 0o755)
+        except OSError:
+            pass
+    for path in sorted(leaf_dirs, key=lambda p: len(p.parts)):
         try:
             os.chmod(path, 0o777)
         except OSError:
@@ -987,6 +994,24 @@ def _service_names_for_target(target: str | None, group: str | None = None) -> l
     return [normalized]
 
 
+def _service_names_for_targets(targets: list[str] | None, group: str | None = None) -> list[str]:
+    raw_targets = [str(target).strip() for target in (targets or []) if str(target).strip()]
+    if group:
+        if raw_targets and raw_targets != ["all"]:
+            raise KeyError("--group cannot be combined with explicit service targets")
+        return _service_names_for_target(None, group)
+    if not raw_targets:
+        return _service_names_for_target("all")
+    if len(raw_targets) == 1:
+        return _service_names_for_target(raw_targets[0])
+    if any(target in {"all", ""} for target in raw_targets):
+        raise KeyError("'all' cannot be combined with other deploy targets")
+    names: list[str] = []
+    for target in raw_targets:
+        names.extend(_service_names_for_target(target))
+    return _ordered_service_names(names)
+
+
 def _compose_command(spec: dict, command: list[str]) -> list[str]:
     project_dir = Path(spec.get("project_dir", "."))
     files = spec.get("compose_files") or []
@@ -1035,7 +1060,7 @@ def _service_status(name: str, spec: dict) -> dict:
     if kind == "process":
         return {"name": name, "group": spec.get("group", "-"), "kind": kind, **_process_status(spec)}
     if kind == "image":
-        image = spec.get("image", name)
+        image = _configured_image(name) if name in IMAGE_TARGETS else spec.get("image", name)
         return {
             "name": name,
             "group": spec.get("group", "-"),
@@ -1079,14 +1104,15 @@ def _print_table(rows: list[dict], columns: list[tuple[str, str]]) -> None:
 
 def cmd_status(args) -> int:
     services = _services()
-    names = [args.service] if args.service else sorted(services)
+    requested = getattr(args, "services", None) or []
+    names = requested if requested else sorted(services)
     rows = []
     for name in names:
         if name not in services:
             print(f"unknown service: {name}", file=sys.stderr)
             return 2
         rows.append(_service_status(name, services[name]))
-    if not args.service:
+    if not requested:
         declared = {spec.get("container") or name for name, spec in services.items()}
         for item in _docker_ps_all():
             name = item.get("Names") or item.get("Name")
@@ -1474,7 +1500,7 @@ def cmd_deploy(args) -> int:
         return 1
     _ensure_data_root_layout(data_root)
     try:
-        names = _service_names_for_target(args.target, args.group)
+        names = _service_names_for_targets(args.targets, args.group)
     except KeyError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -1534,8 +1560,8 @@ def cmd_deploy(args) -> int:
 
 
 def _is_full_deploy(args) -> bool:
-    target = (args.target or "all").strip()
-    return not args.group and target in {"", "all"}
+    targets = [str(target).strip() for target in (getattr(args, "targets", None) or []) if str(target).strip()]
+    return not args.group and (not targets or targets == ["all"])
 
 
 def cmd_setup(args) -> int:
@@ -1572,9 +1598,12 @@ def cmd_update(args) -> int:
         return 1
     print(_t("update_running", source=str(source)))
     if not args.no_pull:
-        rc = _run(["git", "-C", str(source), "pull", "--ff-only"], capture=False).returncode
-        if rc != 0:
-            return rc
+        if (source / ".git").exists():
+            rc = _run(["git", "-C", str(source), "pull", "--ff-only"], capture=False).returncode
+            if rc != 0:
+                return rc
+        else:
+            print(f"source is not a git checkout; skipping git pull: {source}")
     rc = _run(["bash", str(install_script)], capture=False).returncode
     if rc != 0:
         return rc
@@ -1584,7 +1613,7 @@ def cmd_update(args) -> int:
 
 def cmd_restart(args) -> int:
     try:
-        names = _service_names_for_target(args.target, args.group)
+        names = _service_names_for_targets(args.targets, args.group)
     except KeyError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -1646,6 +1675,30 @@ def _secret_path(group: str) -> Path:
     return _secret_dir() / f"{group.replace('/', '_').replace('..', '_')}.env"
 
 
+def _decode_env_value(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        try:
+            decoded = ast.literal_eval(value)
+            return str(decoded)
+        except (SyntaxError, ValueError):
+            return value[1:-1]
+    return value
+
+
+def _quote_env_value(value: object) -> str:
+    text = "" if value is None else str(value)
+    if text and re.fullmatch(r"[A-Za-z0-9_./:@%+=,\-\[\]]+", text):
+        return text
+    escaped = (
+        text.replace("\\", "\\\\")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace('"', '\\"')
+    )
+    return f'"{escaped}"'
+
+
 def _parse_env(path: Path) -> dict[str, str]:
     if not path.exists():
         return {}
@@ -1655,12 +1708,12 @@ def _parse_env(path: Path) -> dict[str, str]:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        data[key.strip()] = value.strip()
+        data[key.strip()] = _decode_env_value(value)
     return data
 
 
 def _write_env(path: Path, data: dict[str, str]) -> None:
-    body = "".join(f"{key}={value}\n" for key, value in sorted(data.items()))
+    body = "".join(f"{key}={_quote_env_value(value)}\n" for key, value in sorted(data.items()))
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(body, encoding="utf-8")
@@ -2444,19 +2497,34 @@ def _create_or_update_supabase_test_user(*, email: str, username: str, password:
 
 
 def _maybe_seed_test_user(args) -> int:
-    if not sys.stdin.isatty():
+    password = ""
+    password_file = getattr(args, "test_user_password_file", "") or ""
+    password_env = getattr(args, "test_user_password_env", "") or ""
+    if password_file:
+        try:
+            password = Path(password_file).expanduser().read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            print(f"test user password file read failed: {exc}", file=sys.stderr)
+            return 1
+    if not password and password_env:
+        password = os.environ.get(password_env, "").strip()
+    if not sys.stdin.isatty() and not password:
         print(_t("test_user_skipped_noninteractive"))
         return 0
     email = getattr(args, "test_user_email", None) or "test@example.com"
     username = getattr(args, "test_user_username", None) or "test"
-    if not _prompt_bool(_t("create_test_user_prompt"), default=True):
+    if sys.stdin.isatty() and not _prompt_bool(_t("create_test_user_prompt"), default=True):
         print(_t("test_user_skipped"))
         return 0
-    password = _prompt_password_twice(
-        _t("test_user_password_prompt"),
-        _t("test_user_password_confirm_prompt"),
-        min_len=6,
-    )
+    if not password:
+        password = _prompt_password_twice(
+            _t("test_user_password_prompt"),
+            _t("test_user_password_confirm_prompt"),
+            min_len=6,
+        )
+    if len(password) < 6:
+        print(_t("password_too_short", min_len=6), file=sys.stderr)
+        return 1
     try:
         action, _ = _create_or_update_supabase_test_user(email=email, username=username, password=password)
     except Exception as exc:
@@ -2511,6 +2579,38 @@ def _public_host(explicit: str | None = None) -> str:
     return "127.0.0.1"
 
 
+def _is_replaceable_default_url(value: object, *, previous_host: str = "") -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return True
+    parsed = urlparse(text)
+    hostname = (parsed.hostname or "").lower()
+    if hostname in {"127.0.0.1", "localhost"}:
+        return True
+    return bool(previous_host and hostname == previous_host.lower())
+
+
+def _persist_public_host_if_explicit(host: str | None, public_host: str) -> None:
+    if not host:
+        return
+    cfg = _cfg()
+    node = cfg.setdefault("node", {})
+    previous_host = str(node.get("public_ip") or "").strip()
+    node["public_ip"] = public_host
+    domains = cfg.setdefault("domains", {})
+    default_domains = {
+        "backend": f"http://{public_host}:5566",
+        "registry": f"http://{public_host}:3254",
+        "oss": f"http://{public_host}:9000",
+        "config_center": f"http://{public_host}:5000",
+    }
+    for key, value in default_domains.items():
+        if _is_replaceable_default_url(domains.get(key), previous_host=previous_host):
+            domains[key] = value
+    domains.setdefault("agent_node", "http://agent-node:5590")
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+
+
 def _merge_env_group(group: str, values: dict[str, str], *, force: bool = False) -> list[str]:
     path = _secret_path(group)
     data = _parse_env(path)
@@ -2526,6 +2626,7 @@ def _merge_env_group(group: str, values: dict[str, str], *, force: bool = False)
 
 def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: bool = False) -> int:
     public_host = _public_host(host)
+    _persist_public_host_if_explicit(host, public_host)
     data_root = _ensure_data_root_layout(_data_root_from_cfg())
     secret_dir = _secret_dir()
     secret_dir.mkdir(parents=True, exist_ok=True)
@@ -2548,6 +2649,9 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
     openim_webhook_secret = openim_webhook_secret or _rand_hex(32)
 
     backend_defaults = {
+        "MYAPP_BACKEND_IMAGE": _configured_image("backend"),
+        "MYAPP_AGENT_NODE_IMAGE": _configured_image("agent-node"),
+        "MYAPP_AGENT_RUNTIME_IMAGE": _configured_image("agent-runtime"),
         "MYAPP_DATA_ROOT": str(data_root),
         "PUBLIC_HOST": public_host,
         "BACKEND_PORT": "5566",
@@ -2712,6 +2816,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "USER_CENTER_ADMIN_USERNAME": "admin",
         "USER_CENTER_ADMIN_PASSWORD": _rand_token(24),
         "USER_CENTER_SESSION_SECRET": _rand_hex(32),
+        "USER_CENTER_COOKIE_SECURE": "false",
     }
 
     changed = {
@@ -2722,6 +2827,17 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "config-center": _merge_env_group("config-center", config_center_defaults, force=force),
         "user-center": _merge_env_group("user-center", user_center_defaults, force=force),
     }
+    image_changed = _merge_env_group(
+        "backend",
+        {
+            "MYAPP_BACKEND_IMAGE": _configured_image("backend"),
+            "MYAPP_AGENT_NODE_IMAGE": _configured_image("agent-node"),
+            "MYAPP_AGENT_RUNTIME_IMAGE": _configured_image("agent-runtime"),
+        },
+        force=True,
+    )
+    if image_changed:
+        changed["backend"].extend(key for key in image_changed if key not in changed["backend"])
     if not quiet:
         rows = [{"group": group, "keys": len(keys)} for group, keys in changed.items()]
         _print_table(rows, [("group", "GROUP"), ("keys", "CHANGED_KEYS")])
@@ -2774,8 +2890,26 @@ def _config_bundle(*, redacted: bool = True) -> dict:
     }
 
 
-def _write_config_bundle(path: Path, bundle: dict) -> None:
-    body = json.dumps(bundle, indent=2, ensure_ascii=False) + "\n"
+def _serialize_config_bundle(bundle: dict, *, fmt: str = "json") -> str:
+    if fmt == "yaml":
+        try:
+            import yaml  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError("YAML export requires PyYAML; use --format json") from exc
+        return yaml.safe_dump(bundle, allow_unicode=True, sort_keys=False)
+    return json.dumps(bundle, indent=2, ensure_ascii=False) + "\n"
+
+
+def _config_bundle_format(path: Path, requested: str = "auto") -> str:
+    if requested != "auto":
+        return requested
+    if str(path) != "-" and path.suffix.lower() in {".yaml", ".yml"}:
+        return "yaml"
+    return "json"
+
+
+def _write_config_bundle(path: Path, bundle: dict, *, fmt: str = "json") -> None:
+    body = _serialize_config_bundle(bundle, fmt=fmt)
     if str(path) == "-":
         print(body, end="")
         return
@@ -2793,7 +2927,19 @@ def _write_default_config_snapshot() -> None:
 
 
 def _load_config_bundle(path: Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        if path.suffix.lower() not in {".yaml", ".yml"}:
+            raise
+        try:
+            import yaml  # type: ignore
+        except ImportError as exc:
+            raise ValueError("YAML import requires PyYAML") from exc
+        data = yaml.safe_load(text)
+    if not isinstance(data, dict):
+        raise ValueError("config bundle must be a mapping")
     if data.get("type") != "myapp.config.bundle":
         raise ValueError("not a myapp config bundle")
     return data
@@ -2875,7 +3021,11 @@ def cmd_config(args) -> int:
             return 2
         bundle = _config_bundle(redacted=args.redacted)
         out = Path(args.out)
-        _write_config_bundle(out, bundle)
+        try:
+            _write_config_bundle(out, bundle, fmt=_config_bundle_format(out, args.format))
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
         if str(out) != "-":
             print(_t("config_exported", path=str(out)))
         return 0
@@ -3247,12 +3397,11 @@ def cmd_agent(args) -> int:
         print(body)
         return 0
     if args.agent_cmd == "ls":
-        cfg = _cfg()
-        node_url = (args.url or "http://127.0.0.1:5590").rstrip("/")
+        agent_env = _parse_env(_secret_path("agent"))
+        default_node_url = f"http://127.0.0.1:{agent_env.get('AGENT_NODE_PORT', '5590') or '5590'}"
+        node_url = (args.url or default_node_url).rstrip("/")
         token = os.environ.get("AGENT_NODE_TOKEN") or _parse_env(_secret_path("agent")).get("AGENT_NODE_TOKEN", "")
-        history_limit = max(1, min(int(getattr(args, "limit", 20) or 20), 500))
-        query = f"history={'1' if getattr(args, 'history', False) else '0'}&limit={history_limit}"
-        data = _http_json(f"{node_url}/v1/runs?{query}", token=token)
+        data = _http_json(f"{node_url}/v1/runs?history=0", token=token)
         if data and isinstance(data.get("runs"), list):
             rows = []
             for item in data["runs"]:
@@ -3281,29 +3430,9 @@ def cmd_agent(args) -> int:
                         ("duration", "DURATION"),
                     ],
                 )
-            history = [row for row in rows if row["status"] not in {"starting", "running"}]
-            if getattr(args, "history", False):
-                history_total = data.get("history_total")
-                suffix = f" total={history_total}" if history_total is not None else ""
-                print(f"historical runs: {len(history)} shown{suffix}")
-            else:
-                print("historical runs: hidden (use --history --limit N)")
-            if getattr(args, "history", False) and history:
-                _print_table(
-                    history[:history_limit],
-                    [
-                        ("run_id", "RUN"),
-                        ("session_id", "SESSION"),
-                        ("agent_id", "AGENT"),
-                        ("provider_id", "PROVIDER"),
-                        ("status", "STATUS"),
-                        ("returncode", "RC"),
-                        ("duration", "DURATION"),
-                    ],
-                )
             return 0
     rows = []
-    proc = _run(["docker", "ps", "-a", "--filter", "name=myapp-agent-", "--format", "{{json .}}"])
+    proc = _run(["docker", "ps", "--filter", "name=myapp-agent-", "--format", "{{json .}}"])
     if proc.returncode == 0:
         for line in proc.stdout.splitlines():
             try:
@@ -3317,16 +3446,6 @@ def cmd_agent(args) -> int:
     print(f"running agent containers: {sum('Up ' in row['status'] for row in rows)}")
     if rows:
         _print_table(rows, [("container", "CONTAINER"), ("status", "STATUS")])
-    if not getattr(args, "history", False):
-        print("historical runs: hidden (use --history --limit N)")
-        return 0
-    history_limit = max(1, min(int(getattr(args, "limit", 20) or 20), 500))
-    log_dir = Path(_cfg().get("paths", {}).get("agent_log_dir", "/var/log/myapp/agent-node"))
-    paths = sorted(log_dir.glob("*.jsonl"), key=lambda path: path.stat().st_mtime if path.exists() else 0, reverse=True)
-    history = [_run_log_summary(path) for path in paths[:history_limit]]
-    print(f"historical runs: {len(history)} shown total={len(paths)}")
-    if history:
-        _print_table(history, [("run_id", "RUN"), ("status", "STATUS"), ("returncode", "RC"), ("duration", "DURATION"), ("lines", "LINES")])
     return 0
 
 
@@ -3335,7 +3454,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lang", choices=["zh", "en", "de", "es"], help="override CLI language for this command")
     sub = parser.add_subparsers(dest="cmd")
     status = sub.add_parser("status")
-    status.add_argument("service", nargs="?")
+    status.add_argument("services", nargs="*", help="optional service names; omitted means all services")
     status.add_argument("--json", action="store_true")
     status.set_defaults(func=cmd_status)
     log = sub.add_parser("log")
@@ -3352,7 +3471,7 @@ def build_parser() -> argparse.ArgumentParser:
         image_action.add_argument("--dry-run", action="store_true")
         image_action.set_defaults(func=cmd_image)
     deploy = sub.add_parser("deploy")
-    deploy.add_argument("target", nargs="?", default="all", help="service, group, or all")
+    deploy.add_argument("targets", nargs="*", help="service/group names; omitted means all")
     deploy.add_argument("--group", choices=["infra", "agent", "core", "openim", "supabase"])
     deploy.add_argument("--build", action="store_true", help="build required images from the local source tree before deploy")
     deploy.add_argument("--pull", action="store_true", help="pull required images before deploy")
@@ -3368,6 +3487,8 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--no-test-user", action="store_true", help="skip the interactive test@example.com user prompt")
     deploy.add_argument("--test-user-email", default="test@example.com", help="email for the optional deploy-time test user")
     deploy.add_argument("--test-user-username", default="test", help="username for the optional deploy-time test user")
+    deploy.add_argument("--test-user-password-env", default="MYAPP_TEST_USER_PASSWORD", help="environment variable used for non-interactive test user password")
+    deploy.add_argument("--test-user-password-file", help="file containing the non-interactive test user password")
     deploy.set_defaults(func=cmd_deploy)
     setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional channels")
     setup.add_argument("--host", help="public host/IP used in generated local service URLs")
@@ -3395,7 +3516,7 @@ def build_parser() -> argparse.ArgumentParser:
     uninstall.add_argument("--dry-run", action="store_true")
     uninstall.set_defaults(func=cmd_uninstall)
     restart = sub.add_parser("restart")
-    restart.add_argument("target", nargs="?", default="all", help="service, group, or all")
+    restart.add_argument("targets", nargs="*", help="service/group names; omitted means all")
     restart.add_argument("--group", choices=["infra", "agent", "core", "openim", "supabase"])
     restart.set_defaults(func=cmd_restart)
     secret = sub.add_parser("secret")
@@ -3431,7 +3552,7 @@ def build_parser() -> argparse.ArgumentParser:
     config_view.set_defaults(func=cmd_config)
     config_export = config_sub.add_parser("export")
     config_export.add_argument("--out", required=True, help="output file path; use .json or .yaml extension as preferred")
-    config_export.add_argument("--format", choices=["json", "yaml"], default="json", help="serialization format; yaml is JSON-compatible YAML")
+    config_export.add_argument("--format", choices=["auto", "json", "yaml"], default="auto", help="serialization format; default infers from .json/.yaml output extension")
     config_export.add_argument("--redacted", action="store_true", help="export a non-restorable redacted bundle")
     config_export.set_defaults(func=cmd_config)
     config_import = config_sub.add_parser("import")
@@ -3464,8 +3585,10 @@ def build_parser() -> argparse.ArgumentParser:
     agent_sub = agent.add_subparsers(dest="agent_cmd", required=True)
     agent_ls = agent_sub.add_parser("ls")
     agent_ls.add_argument("--url")
-    agent_ls.add_argument("--history", action="store_true", help="show recent completed agent runs")
-    agent_ls.add_argument("--limit", type=int, default=20, help="completed run rows to show with --history")
+    # Deprecated no-op flags kept so older shell snippets do not fail, but
+    # agent ls is intentionally current-local-runs only.
+    agent_ls.add_argument("--history", action="store_true", help=argparse.SUPPRESS)
+    agent_ls.add_argument("--limit", type=int, default=20, help=argparse.SUPPRESS)
     agent_ls.set_defaults(func=cmd_agent)
     agent_register = agent_sub.add_parser("register")
     agent_register.add_argument("--backend")

@@ -1,193 +1,216 @@
-# MyApp Production Control Plane
+# MyApp Deployment Guide
 
-This directory is the first production-grade slice of the backend control plane.
-It is designed for a single host first, then can grow into multiple agent hosts.
+This is the only supported backend deployment guide. Older supervisor,
+standalone IM, test-environment, and one-off migration paths have been removed
+from the documentation.
 
-## Components
+The supported entrypoint is `myapp-ctl`, installed from this directory.
 
-- `myapp-ctl`: host-level control CLI for backend, infra, OpenIM, Supabase, and agent services.
-- `myapp-backend`: shared image for backend, ai-worker, registry, config-center, and user-center.
-- `myapp-agent-node`: per-host service that owns Docker and starts isolated agent runtime containers.
-- `myapp-agent-runtime`: Ubuntu 24.04 execution image used for Claude/Codex runs. It includes
-  the Flutter client source needed for JSON-DSL inspection, but not git history or build outputs.
-- `supabase`: local self-hosted Supabase compose group for auth/profile/storage API support.
-- `openim`: local OpenIM compose group for IM credentials and message transport.
+## What It Deploys
 
-## Important Security Boundary
+`myapp-ctl` manages one single-host stack:
 
-`AI_WORKER_EXECUTION_BACKEND=agent-node` keeps backend, FCM/APNs, Supabase, OpenIM, and registry
-secrets out of the agent runtime container. The runtime receives a structured run payload and
-per-run proxy tokens only.
+- MyApp core: backend API, AI worker, Registry, Config Center, User Center
+- Infra: JSON app Postgres, AI session Redis, App MinIO
+- Auth/storage: self-hosted Supabase compose group
+- IM: OpenIM compose group
+- AI execution: agent-node plus isolated Ubuntu agent runtime containers
 
-The runtime image includes `lib/`, `assets/`, `test/`, `pubspec.yaml`, and validation/generation
-helpers so agents can inspect the real JSON-DSL client runtime. It does not include `.git`,
-platform build directories, Flutter web build outputs, website sources, or server-local secret
-files.
+The backend image is shared by `backend`, `ai-worker`, `registry`,
+`config-center`, and `user-center`. Agent execution is split into:
 
-Provider keys are held by backend/agent-node and rewritten by the agent-node provider proxy before
-the runtime starts. Claude/Codex see `http://agent-node:5590/proxy/<token>` and a short-lived proxy
-token; the real DeepSeek/MiniMax token is not written to payload files and is revoked from
-agent-node memory when the run exits.
+- `myapp-agent-node`: host service that owns Docker and starts runtime containers
+- `myapp-agent-runtime`: Ubuntu 24.04 image used for Claude/Codex runs
 
-The default runtime network is `myapp_agent_runtime`, a dedicated Docker network shared only with
-`agent-node`. Runtime containers can reach `agent-node` by Docker DNS for provider proxying, but do
-not join the backend/Postgres/Redis compose network. They still have normal outbound access for OSS
-upload URLs. `host.docker.internal` is not exposed unless `AGENT_NODE_ALLOW_HOST_GATEWAY=1`.
+## Security Model
 
-If you run agent-node outside this compose project, set both `AGENT_NODE_DOCKER_NETWORK` and
-`AGENT_NODE_PROVIDER_PROXY_BASE_URL`.
+Host and service secrets live outside Git:
 
-## Single-Host IP Test
+- `/etc/myapp/ctl.json`: host-local control configuration
+- `/etc/myapp/services.json`: service inventory installed by `install_ctl.sh`
+- `/etc/myapp/secrets.d/*.env`: service secrets, mode `600`
+- `/etc/myapp/secrets.d/files/**`: APNs/FCM file secrets copied by setup
+- `<data-root>/myapp-config.json`: restorable encrypted-by-permission bundle,
+  mode `600`
 
-On `77.237.233.229`:
+The default data root is `/mnt/myapp`.
+
+Agent runtime containers do not receive backend, Supabase, OpenIM, push, or real
+provider keys. They receive a run payload and short-lived provider-proxy tokens.
+Claude/Codex talk to `http://agent-node:5590/proxy/<token>`; agent-node rewrites
+that request to DeepSeek/MiniMax and revokes the proxy token after the run.
+
+The runtime image includes the source needed for JSON-DSL inspection:
+`backend/`, `lib/`, `assets/`, `test/`, `templates/`, `docs/`, `scripts/`,
+`JSON-DSL.md`, and Flutter metadata. It does not include `.git`, build outputs,
+website sources, or host-local secrets.
+
+## First Install
+
+Start from a source checkout on the host:
 
 ```bash
 cd /opt/myapp/current-agent-control-plane
 ./deploy/production/install_ctl.sh
-
-export PUBLIC_HOST=77.237.233.229
-export MYAPP_IMAGE_TAG=agent-control-plane
-export MYAPP_DATA_ROOT=/mnt/myapp
-
-# First interactive run asks for the CLI language once: zh / en / de / es.
-myapp-ctl setup --host "$PUBLIC_HOST" --data-root "$MYAPP_DATA_ROOT"
-myapp-ctl status
-myapp-ctl deploy --plan
-myapp-ctl deploy --build
-myapp-ctl status
 ```
 
-Refresh the source checkout, `myapp-ctl`, and installed compose/config files:
+First interactive use asks for the CLI language once: `zh`, `en`, `de`, or
+`es`. Change it later with:
 
 ```bash
-myapp-ctl update
-```
-
-The language preference is stored in `/etc/myapp/ctl-language` and survives
-`install_ctl.sh` refreshes. Change it explicitly with `myapp-ctl config lang zh`
-or `en` / `de` / `es`.
-
-After a full `myapp-ctl deploy --build` / `--pull`, the CLI writes and prints the
-client Service Environment import payload automatically. It also generates a QR
-PNG, and prints an ANSI QR code when the terminal supports it. You can view or
-regenerate the same payload later:
-
-```bash
-myapp-ctl client-env --host "$PUBLIC_HOST" --name "MyApp Test $PUBLIC_HOST"
-myapp-ctl client-env --host "$PUBLIC_HOST" --terminal-qr
-```
-
-This writes `<data-root>/state/client-environment.json`, generates
-`<data-root>/state/client-environment.png` when `qrencode` is installed, and prints
-the copyable JSON. The payload contains URLs only, no secrets.
-
-When a deploy includes Supabase auth, `myapp-ctl deploy` also asks whether to
-create or update a test account. The default is yes. It uses
-`test@example.com`, username `test`, confirms the email through the Supabase
-Admin API, and prompts you to enter the password interactively. The password is
-not stored in env files. Use `--no-test-user` to skip this prompt.
-
-`myapp-ctl setup` generates local stack secrets, then interactively configures
-the required AI provider credentials. DeepSeek and MiniMax are built-in choices;
-custom Anthropic-compatible providers can be added without code changes.
-ByteDance ASR, Supabase SMTP email, APNs, FCM, and GeTui are optional channels.
-If you skip them, the core app and AI generation path still deploy; only speech
-recognition, auth email delivery, or push delivery is unavailable.
-
-You can also run setup separately at any time:
-
-```bash
-myapp-ctl setup --host "$PUBLIC_HOST"
-myapp-ctl setup --no-ai       # only revisit optional ASR/email/push config
-myapp-ctl setup --no-asr      # skip optional speech recognition config
-myapp-ctl setup --no-ai --no-asr --no-push  # only revisit SMTP email config
-myapp-ctl setup --no-asr --no-email --no-push  # only revisit AI provider config
-```
-
-Secret values are stored under `/etc/myapp/secrets.d/*.env` with mode `600`.
-SMTP email settings are written into `supabase.env` (`ENABLE_EMAIL_SIGNUP`,
-`ENABLE_EMAIL_AUTOCONFIRM`, `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`,
-`SMTP_USER`, `SMTP_PASS`, `SMTP_SENDER_NAME`). After changing SMTP on an
-existing cluster, apply it with `myapp-ctl deploy --group supabase` so compose
-recreates services with the new env file.
-For APNs and FCM you can either paste the secret content or enter a server-local
-file path, for example `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` copies
-the file into `/etc/myapp/secrets.d/files/` and writes the container-visible
-path into `push.env`.
-`myapp-ctl secret ls` prints only redacted digests.
-
-Host configuration can be inspected, backed up, and restored:
-
-```bash
-myapp-ctl config view
-myapp-ctl config export --out /mnt/myapp/myapp-config.json
-myapp-ctl config export --out /root/myapp-config.json
-myapp-ctl config export --format yaml --out /root/myapp-config.yaml
-myapp-ctl config import /root/myapp-config.json --yes
 myapp-ctl config lang zh
 ```
 
-The restorable export contains host-local secrets and is written with mode
-`600`. Use `myapp-ctl config export --redacted --out ...` for review-only
-bundles.
-
-`/mnt/myapp/myapp-config.json` is the default restorable configuration snapshot.
-If `/etc/myapp` is missing on a rebuilt host, running
-`myapp-ctl deploy --data-root /mnt/myapp ...` imports this file before starting
-services. Persistent service data is also bind-mounted from the same data root;
-Docker named volumes are not used for MyApp databases or object stores.
-During the first Supabase deploy, `myapp-ctl` also seeds
-`/mnt/myapp/supabase-db/config` from the Supabase Postgres image's built-in
-`/etc/postgresql-custom` directory so the bind mount preserves required database
-custom config instead of hiding it with an empty directory.
-
-## Deployment Commands
-
-Clean all managed services, legacy named volumes, host-local secrets, installed
-compose/config files, and MyApp images while preserving the data root:
-
-```bash
-myapp-ctl uninstall --yes --purge
-./deploy/production/install_ctl.sh
-```
-
-The uninstall command prints the exact `rm -rf -- <data-root>` command to run
-manually if you intentionally want to delete all local service data and the
-restorable config snapshot.
-
-Run the first-run setup wizard. It generates local random secrets, asks for AI
-provider credentials, and optionally accepts APNs, FCM, and GeTui push config:
+Run setup:
 
 ```bash
 myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
 ```
 
-One-command local-source deployment on a test host:
+Setup generates local stack secrets, then asks for human-provided values:
+
+- AI providers: DeepSeek, MiniMax, or custom Anthropic-compatible providers
+- Optional ASR: ByteDance/Doubao speech recognition
+- Optional email: Supabase SMTP/auth email settings
+- Optional push: APNs, FCM, and GeTui
+
+AI provider config is required for app generation. ASR, email, and push are
+optional; skipping them only disables those channels.
+
+For APNs and FCM, either paste the secret content or enter a server-local file
+path such as `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` copies files into
+`/etc/myapp/secrets.d/files/` and writes container-visible paths into `push.env`.
+
+Inspect configured keys without revealing values:
 
 ```bash
+myapp-ctl secret ls
+```
+
+## Full Deploy
+
+Build images from local source:
+
+```bash
+myapp-ctl deploy --plan
 myapp-ctl deploy --build
 ```
 
-If AI provider config is missing, `deploy` starts the same setup wizard when run
-from an interactive terminal. In non-interactive shells it fails with a clear
-message instead of silently starting without an AI provider.
-Long Docker/Compose steps print a heartbeat while running so SSH sessions do not
-look idle.
-
-One-command Docker Hub deployment on a clean host:
+Or pull images on an image-based host:
 
 ```bash
 myapp-ctl deploy --pull
 ```
 
-Update a deployed host before pulling images:
+If AI provider config is missing, interactive deploy starts the setup wizard. In
+non-interactive shells it fails and tells you to run setup explicitly.
+
+A full deploy:
+
+- creates the complete data-root directory tree up front
+- starts infra, Supabase, OpenIM, agent-node, backend, worker, Registry, Config
+  Center, and User Center
+- writes `<data-root>/state/client-environment.json`
+- writes `<data-root>/state/client-environment.png` if `qrencode` is installed
+- prints a copyable client environment JSON and terminal QR code
+- can create/update a test user
+
+Default test user:
+
+- email: `test@example.com`
+- username: `test`
+- password: entered interactively by the deploy operator
+
+Skip test user creation:
+
+```bash
+myapp-ctl deploy --build --no-test-user
+```
+
+Use a non-interactive password without putting it in shell history:
+
+```bash
+MYAPP_TEST_USER_PASSWORD='change-me' myapp-ctl deploy --build
+myapp-ctl deploy --build --test-user-password-file /root/test-user-password.txt
+```
+
+Show the client import payload again:
+
+```bash
+myapp-ctl client-env --host <public-ip-or-domain> --name "MyApp Test"
+myapp-ctl client-env --host <public-ip-or-domain> --terminal-qr
+cat /mnt/myapp/state/client-environment.json
+```
+
+## Routine Updates
+
+Refresh installed control files first:
 
 ```bash
 myapp-ctl update
-myapp-ctl deploy --pull
 ```
 
-Deploy one group:
+`install_ctl.sh` refreshes managed compose/service definitions but preserves
+host-local values such as public IP, data root, domains, image names, and
+language preference.
+
+Then redeploy only the changed runtime surface. Do not use a full deploy for
+ordinary backend or agent code changes.
+
+Backend HTTP routes only:
+
+```bash
+myapp-ctl deploy backend --build --no-setup --no-test-user
+```
+
+AI worker, prompts, validators, upload helpers, or shared backend helpers:
+
+```bash
+myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user
+```
+
+Agent-node control service:
+
+```bash
+myapp-ctl agent ls
+myapp-ctl deploy agent-node --build --no-setup --no-test-user
+```
+
+Agent runtime image, including Claude/Codex tooling, `agent_runner.py`, or files
+the isolated runtime needs under `/app`:
+
+```bash
+myapp-ctl deploy agent-runtime --build --no-setup --no-test-user
+```
+
+Both agent-node and runtime changed:
+
+```bash
+myapp-ctl agent ls
+myapp-ctl deploy agent-node agent-runtime --build --no-setup --no-test-user
+```
+
+For image-based hosts, use `--pull` after pushing images:
+
+```bash
+myapp-ctl update
+myapp-ctl deploy backend ai-worker --pull --no-setup --no-test-user
+myapp-ctl deploy agent-node agent-runtime --pull --no-setup --no-test-user
+```
+
+Auth, Redis, Postgres, OpenIM, Supabase, and MinIO should stay up unless their
+own config, image, schema, or persistent storage layout changed.
+
+## Component Operations
+
+Inspect status:
+
+```bash
+myapp-ctl status
+myapp-ctl status backend ai-worker agent-node
+```
+
+Deploy one group only when that group really changed:
 
 ```bash
 myapp-ctl deploy --group infra --pull
@@ -197,32 +220,149 @@ myapp-ctl deploy --group agent --pull
 myapp-ctl deploy --group core --pull
 ```
 
-Deploy one component:
+Restart without rebuilding:
 
 ```bash
-myapp-ctl deploy backend --pull
-myapp-ctl deploy ai-worker --pull
-myapp-ctl deploy agent-node --build
-myapp-ctl restart backend
+myapp-ctl restart backend ai-worker
+```
+
+Logs:
+
+```bash
+myapp-ctl log backend -n 120
 myapp-ctl log backend -f -n 120
 ```
 
-Manage images directly:
+Images:
 
 ```bash
 myapp-ctl image ls
-myapp-ctl image build
-myapp-ctl image push
+myapp-ctl image build backend
+myapp-ctl image push backend
 myapp-ctl image pull backend
 ```
 
-For a full clean source deployment checklist, see
-[`SOURCE_DEPLOY_RUNBOOK.md`](SOURCE_DEPLOY_RUNBOOK.md).
+Agent runs:
+
+```bash
+myapp-ctl agent ls
+myapp-ctl agent ls --history --limit 20
+```
+
+`agent ls` hides historical runs by default so a busy host does not print a
+large table for every completed chat turn.
+
+## Configuration Backup And Restore
+
+View config:
+
+```bash
+myapp-ctl config view
+```
+
+Export restorable config:
+
+```bash
+myapp-ctl config export --out /mnt/myapp/myapp-config.json
+myapp-ctl config export --out /root/myapp-config.json
+myapp-ctl config export --out /root/myapp-config.yaml
+```
+
+Export redacted config for review:
+
+```bash
+myapp-ctl config export --redacted --out /root/myapp-config.redacted.json
+```
+
+Restore:
+
+```bash
+myapp-ctl config import /root/myapp-config.json --yes
+```
+
+If `/etc/myapp` is missing but `/mnt/myapp/myapp-config.json` exists,
+`myapp-ctl deploy --data-root /mnt/myapp ...` imports the bundle before starting
+services. If service data under `/mnt/myapp` is still present, the cluster starts
+from the same local state.
+
+Persistent service data is bind-mounted from the data root. Docker named volumes
+are not used for MyApp databases or object stores.
+
+Important paths:
+
+- `/mnt/myapp/jsonapp-postgres/data`
+- `/mnt/myapp/ai-session-redis/data`
+- `/mnt/myapp/app-minio/data`
+- `/mnt/myapp/config-center/data`
+- `/mnt/myapp/agent-node/{state,workspaces,logs}`
+- `/mnt/myapp/supabase-db/{data,config}`
+- `/mnt/myapp/supabase-storage/data`
+- `/mnt/myapp/openim-*`
+
+Agent runtime workspaces:
+
+- editable current workspace:
+  `<data-root>/agent-node/workspaces/<user-id>/<session-id>/current`
+- per-turn snapshots:
+  `<data-root>/agent-node/workspaces/<user-id>/<session-id>/runs/<job-id>`
+
+## Verification
+
+After deploy or update:
+
+```bash
+myapp-ctl status
+curl -fsS http://127.0.0.1:5566/api/ai/providers
+curl -fsS http://127.0.0.1:3254/health
+curl -fsS http://127.0.0.1:5000/api/v1/public
+curl -fsS http://127.0.0.1:5590/health
+curl -fsS -H "apikey: $(myapp-ctl secret get supabase ANON_KEY --show)" \
+  http://127.0.0.1:18000/auth/v1/health
+myapp-ctl agent ls
+```
+
+Expected MyApp state:
+
+- `backend`: running, health `healthy`
+- `ai-worker`: running
+- `registry`: running, health `healthy`
+- `config-center`: running, health `ok`
+- `user-center`: running
+- `agent-node`: running, health `ok`
+- `agent-runtime`: image present
+- `jsonapp-postgres`: running, health `healthy`
+- `ai-session-redis`: running, health `healthy`
+- `app-minio`: running
+- `supabase-*`: running; healthy where upstream images define checks
+- `openim-*`: running; `openim-server` should be reachable
+
+Provider API expectations:
+
+- `deepseek`: configured when available, usually supports `claude`
+- `minimax`: configured when available, supports `claude` and `codex`
+- DeepSeek default worker limits: `20/100`
+- MiniMax default worker limits: `5/20`
+
+## Uninstall
+
+Stop and remove managed services while preserving data root:
+
+```bash
+myapp-ctl uninstall --yes --purge
+```
+
+This removes containers, legacy named volumes, host-local `/etc/myapp` runtime
+files, installed compose/config files, and MyApp images. It does not delete the
+persistent data root. The command prints the explicit `rm -rf -- <data-root>`
+line to run manually if you intentionally want to destroy all local data.
 
 ## Multi-Host Direction
 
-Worker scheduling combines static `AGENT_NODE_URLS` with registered Redis records and persists a
-session-to-node assignment key so later turns keep using the same node.
+The current stack is single-host first. Worker scheduling already supports a
+future multi-node shape through static `AGENT_NODE_URLS`, registered Redis
+records, and session-to-node assignment so later turns keep using the same node.
+
+Register an agent node:
 
 ```bash
 myapp-ctl agent register --url http://agent-node:5590 --capacity 4 --label gpu=false

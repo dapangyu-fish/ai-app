@@ -1,4 +1,4 @@
-# 防止 deploy/test-env/Dockerfile.backend build 时把 repo 全量打包传给 docker daemon
+# 防止生产 Dockerfile build 时把 repo 全量打包传给 docker daemon
 # 同时防止本地 backend/.env / secrets 文件意外进入镜像
 #
 # 注意：这是 repo 根的 .dockerignore，影响 build context 为 repo 根的所有 Dockerfile

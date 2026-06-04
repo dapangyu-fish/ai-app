@@ -31,7 +31,7 @@
 | - `calculator.json` | 1,426 | 完整计算器 |
 | - `demo_im.json` | 700 | 用 DSL 写的 IM 客户端 |
 | Docs | | 11 个 md 文件（JSON-DSL.md 1,778 行规范） |
-| Deploy | | bootstrap.sh 一键起 26 容器；supervisor + nginx prod 模板齐 |
+| Deploy | | `myapp-ctl` 管理生产/测试栈；支持全量部署、组件级更新、密钥配置和健康检查 |
 
 ### Built-in 函数数量
 
@@ -71,9 +71,9 @@ text / button / input / list / container / divider / image / image_picker / spac
 2. **AI 流程闭环了** —— 生成 → MinIO 临时 URL → 下载 → 跑 → 失败重试 → 上传"当前 app" 给 AI 改。这条链路目前在跑你 prod
 3. **跨实例 Registry mirror** —— 我们一起加的，但**架构提前 6 个月就为它留好了通道无关 dispatcher 这种设计**。你提前一步设计了扩展点，这是好的工程师特征
 4. **环境切换 + 7 连击隐藏入口** —— 这个细节我没见过其他 OSS 项目做。它是 OSS-with-managed-service 模型的杀手锏（用户体验上能无缝从你 hosted 切到自己部署，不锁定）
-5. **bootstrap.sh 把 13 个部署坑都修过** —— 这是**事实上的 OSS 友好度证据**。绝大多数 OSS 项目卡在 step 3 没人能跑通
+5. **`myapp-ctl` 把部署坑收敛成一个控制面** —— 全量部署、组件级更新、密钥配置、健康检查、日志和 agent 状态都能从同一个 CLI 管理
 6. **Push 通道无关 dispatcher** —— APNs/FCM 互不感知，加 geTui / 华为推送只要新写一个 provider 注册一行。比 Twilio 早期都干净
-7. **审计 / Config Center / User Center / Registry / Backend 五个独立 web 服务**全自研全 supervisor 化部署 —— 你已经在做 SaaS 的事，只是没意识到
+7. **审计 / Config Center / User Center / Registry / Backend 五个独立 web 服务**全自研，并已收敛到容器化控制面部署
 
 ### 客观弱项：
 
@@ -201,7 +201,7 @@ text / button / input / list / container / divider / image / image_picker / spac
 **不在必须清单的**（可以以后做，别 launch 卡这上面）：
 - ❌ 加 CI（没人提 PR 之前无所谓）
 - ❌ 写 unit tests（接 PR 之前再说）
-- ❌ docker-compose-only 完全 mock 部署（bootstrap.sh 已够）
+- ❌ 旧 bootstrap/test-env 文档（生产入口已经统一到 `myapp-ctl`）
 - ❌ 文档完整化（先有人来再补）
 - ❌ 性能优化 / DSL v4 设计（产品-市场契合之前别投资）
 - ❌ 法律 / 商标注册（流量起来再说）
@@ -307,7 +307,7 @@ Hi HN,
 
 I've been building MyApp for the past year. It's a Flutter runtime that interprets
 JSON-DSL into native cross-platform UI + business logic. The twist: you describe
-what app you want to an LLM (Claude/DeepSeek/GLM), it emits a JSON config, and
+what app you want to an LLM (Claude/DeepSeek/MiniMax), it emits a JSON config, and
 the app loads + runs it instantly. No recompile, no app store review cycle.
 
 Three things that make this different from FlutterFlow / Bolt / v0:

@@ -34,6 +34,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
     pip install --no-cache-dir "pyjwt>=2.8.0" "httpx>=0.27.0" "flask-caching>=2.1.0"
 
 COPY backend/ /app/backend/
+COPY lib/json_ui/widgets/icon_registry.dart /app/lib/json_ui/widgets/icon_registry.dart
 COPY config_center/ /app/config_center/
 COPY user_center/ /app/user_center/
 
