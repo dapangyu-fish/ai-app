@@ -1196,13 +1196,16 @@ class AiChatService {
       final data = json.decode(resp.body) as Map<String, dynamic>;
       final finalText = data['final_text'] as String? ?? '';
       final thinking = data['final_thinking'] as String? ?? '';
-      if (finalText.isEmpty && thinking.isEmpty) return const ResumeNothing();
+      final clientActions = _parseClientActions(data['client_actions']);
+      if (finalText.isEmpty && thinking.isEmpty && clientActions.isEmpty) {
+        return const ResumeNothing();
+      }
 
       return ResumeCompleted(
         userMessage: active.lastUserMessage,
         assistantText: finalText,
         thinking: thinking.isEmpty ? null : thinking,
-        clientActions: _parseClientActions(data['client_actions']),
+        clientActions: clientActions,
       );
     } catch (e) {
       debugPrint('[AI_CHAT] _fetchCompletedResult 异常: $e');

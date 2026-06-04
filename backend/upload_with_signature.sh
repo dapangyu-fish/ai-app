@@ -91,7 +91,7 @@ if command -v mc &> /dev/null; then
     mc cp "$FILE_PATH" "myminio/${BUCKET}/${OBJECT_NAME}" &> /dev/null
 
     # 生成预签名 URL
-    SIGNED_URL="$(mc share download --expire="${EXPIRY_HOURS}h" "myminio/${BUCKET}/${OBJECT_NAME}" 2>/dev/null | grep -o 'https://[^[:space:]]*' | head -n 1)"
+    SIGNED_URL="$(mc share download --expire="${EXPIRY_HOURS}h" "myminio/${BUCKET}/${OBJECT_NAME}" 2>/dev/null | grep -Eo 'https?://[^[:space:]]*' | head -n 1)"
 else
     # 使用 Python 生成预签名 URL
     SIGNED_URL="$(python3 - "$FILE_PATH" "$BUCKET" "$OBJECT_NAME" "$EXPIRY_HOURS" <<'PYTHON'
@@ -114,7 +114,12 @@ with open(file_path, 'rb') as f:
 # MinIO 配置
 public_url = os.environ.get('MINIO_PUBLIC_URL', 'https://myapp-oss-endpoint.dapangyu.work')
 internal_endpoint = os.environ.get('MINIO_ENDPOINT') or public_url.split('://')[-1]
-internal_secure = os.environ.get('MINIO_SECURE', '').lower() in ('1', 'true', 'yes', 'on')
+internal_secure_raw = os.environ.get('MINIO_SECURE')
+internal_secure = (
+    internal_secure_raw.lower() in ('1', 'true', 'yes', 'on')
+    if internal_secure_raw is not None
+    else public_url.startswith('https://')
+)
 access_key = os.environ.get('MINIO_ACCESS_KEY', '')
 secret_key = os.environ.get('MINIO_SECRET_KEY', '')
 
