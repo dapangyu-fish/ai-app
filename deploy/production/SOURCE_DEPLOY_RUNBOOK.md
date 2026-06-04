@@ -170,6 +170,13 @@ myapp-ctl agent ls
 `myapp-ctl agent ls --history --limit 20` when you need recent completed or failed
 agent runs.
 
+Agent runtime workspaces are persisted under the configured data root. Each
+session keeps a shared editable workspace at
+`<data-root>/agent-node/workspaces/<user-id>/<session-id>/current`, mounted into
+the runtime container as `/workspace`. Completed turns are snapshotted under
+`<data-root>/agent-node/workspaces/<user-id>/<session-id>/runs/<job-id>` for
+artifact upload and debugging.
+
 Generate a client environment import JSON and QR code:
 
 ```bash

@@ -51,6 +51,8 @@ PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVID
 PROVIDER_PROXY_READ_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_READ_TIMEOUT_SECONDS", "900"))
 NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
 RUN_RETENTION_SECONDS = int(os.environ.get("AGENT_NODE_RUN_RETENTION_SECONDS", "604800"))
+RUN_SNAPSHOT_MAX_FILE_BYTES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES", "52428800"))
+RUN_SNAPSHOT_MAX_FILES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILES", "5000"))
 
 _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
@@ -59,6 +61,18 @@ _PROXY_LOCK = threading.Lock()
 _CLEANUP_THREAD_STARTED = False
 _CLEANUP_THREAD_LOCK = threading.Lock()
 _ACTIVE_RUN_STATUSES = {"starting", "running"}
+_SNAPSHOT_SKIP_DIRS = {
+    ".cache",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "node_modules",
+}
+_RUN_MARKER_FILES = {"client_actions.json"}
 
 
 def _now_ms() -> int:
@@ -118,12 +132,84 @@ def _session_paths(user_id: str, session_id: str, job_id: str) -> dict[str, Path
     safe_session = _safe_part(session_id, "session")
     safe_job = _safe_part(job_id, "job")
     session_root = STATE_ROOT / safe_user / safe_session
+    workspace_session_root = WORKSPACE_ROOT / safe_user / safe_session
     return {
         "claude": session_root / "claude",
         "claude_config": session_root / ".claude.json",
         "codex": session_root / "codex",
-        "workspace": WORKSPACE_ROOT / safe_session / safe_job,
+        "session_workspace": workspace_session_root,
+        "runs_root": workspace_session_root / "runs",
+        "workspace": workspace_session_root / "current",
+        "run_workspace": workspace_session_root / "runs" / safe_job,
     }
+
+
+def _clear_run_markers(workspace: Path) -> None:
+    for name in _RUN_MARKER_FILES:
+        path = workspace / name
+        try:
+            if path.is_file() or path.is_symlink():
+                path.unlink()
+        except OSError:
+            pass
+
+
+def _copy_workspace_snapshot(source: Path, target: Path, log_path: Path) -> None:
+    if not source.exists():
+        return
+    tmp = target.with_name(f".{target.name}.tmp-{uuid.uuid4().hex[:8]}")
+    if tmp.exists():
+        shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir(parents=True, exist_ok=True)
+    copied_files = 0
+    copied_bytes = 0
+    skipped_files = 0
+    try:
+        for root, dirs, files in os.walk(source):
+            root_path = Path(root)
+            dirs[:] = [
+                name
+                for name in dirs
+                if name not in _SNAPSHOT_SKIP_DIRS and not name.startswith(".tmp-")
+            ]
+            rel_root = root_path.relative_to(source)
+            for name in files:
+                if copied_files >= RUN_SNAPSHOT_MAX_FILES:
+                    skipped_files += 1
+                    continue
+                src = root_path / name
+                try:
+                    if src.is_symlink() or not src.is_file():
+                        skipped_files += 1
+                        continue
+                    size = src.stat().st_size
+                    if size > RUN_SNAPSHOT_MAX_FILE_BYTES:
+                        skipped_files += 1
+                        continue
+                    dst = tmp / rel_root / name
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dst)
+                    copied_files += 1
+                    copied_bytes += size
+                except OSError:
+                    skipped_files += 1
+        if target.exists():
+            shutil.rmtree(target)
+        tmp.replace(target)
+        _json_line(
+            log_path,
+            {
+                "type": "workspace_snapshot",
+                "path": str(target),
+                "files": copied_files,
+                "bytes": copied_bytes,
+                "skipped": skipped_files,
+                "ts": _now_ms(),
+            },
+        )
+    except Exception:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
 
 
 def _issue_proxy_token(run_id: str, upstream_base_url: str, upstream_token: str, *, provider_id: str, agent_id: str) -> str:
@@ -213,6 +299,8 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
             path.chmod(0o666)
             continue
         path.mkdir(parents=True, exist_ok=True)
+        if key == "workspace":
+            _clear_run_markers(path)
         path.chmod(0o777)
     payload_path.parent.mkdir(parents=True, exist_ok=True)
     runtime_env = {
@@ -338,7 +426,11 @@ def _start_run_thread(
         finally:
             _revoke_proxy_tokens(proxy_tokens)
             try:
-                _emit_client_actions(log_path, paths["workspace"])
+                _copy_workspace_snapshot(paths["workspace"], paths["run_workspace"], log_path)
+            except Exception as exc:
+                _json_line(log_path, {"type": "workspace_snapshot_error", "message": str(exc), "ts": _now_ms()})
+            try:
+                _emit_client_actions(log_path, paths["run_workspace"])
             except Exception as exc:
                 _json_line(log_path, {"type": "client_actions_error", "message": str(exc), "ts": _now_ms()})
             with _RUNS_LOCK:
@@ -400,11 +492,23 @@ def _load_run_from_log(run_id: str) -> dict:
     return state
 
 
-def _run_workspace(run_id: str) -> Optional[Path]:
+def _run_artifact_workspaces(run_id: str) -> list[Path]:
+    workspaces: list[Path] = []
     with _RUNS_LOCK:
         run = _RUNS.get(run_id) or {}
-    raw = run.get("workspace_path")
-    return Path(str(raw)) if raw else None
+    for key in ("run_workspace_path", "workspace_path"):
+        raw = run.get(key)
+        if raw:
+            workspaces.append(Path(str(raw)))
+    if workspaces:
+        return workspaces
+    state = _load_run_from_log(run_id)
+    session_id = str(state.get("session_id") or "")
+    job_id = str(state.get("job_id") or "")
+    if not session_id or not job_id:
+        return []
+    paths = _session_paths(str(state.get("user_id") or "user"), session_id, job_id)
+    return [paths["run_workspace"], paths["workspace"]]
 
 
 def _safe_artifact_path(workspace: Path, relative_path: str) -> Optional[Path]:
@@ -417,6 +521,23 @@ def _safe_artifact_path(workspace: Path, relative_path: str) -> Optional[Path]:
     if not candidate.is_file():
         return None
     return candidate
+
+
+def _newest_mtime(path: Path) -> float:
+    try:
+        newest = path.stat().st_mtime
+    except OSError:
+        return 0
+    if not path.is_dir():
+        return newest
+    for root, dirs, files in os.walk(path):
+        root_path = Path(root)
+        for name in dirs + files:
+            try:
+                newest = max(newest, (root_path / name).stat().st_mtime)
+            except OSError:
+                continue
+    return newest
 
 
 @APP.get("/health")
@@ -596,7 +717,9 @@ def create_run():
             "status": "starting",
             "created_at": _now_ms(),
             "log_path": str(log_path),
+            "session_workspace_path": str(paths["session_workspace"]),
             "workspace_path": str(paths["workspace"]),
+            "run_workspace_path": str(paths["run_workspace"]),
             "proxy_tokens": len(proxy_tokens),
         }
     _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths, proxy_tokens)
@@ -651,13 +774,15 @@ def get_run(run_id: str):
 @APP.get("/v1/runs/<run_id>/artifact")
 def get_run_artifact(run_id: str):
     run_id = _safe_part(run_id, "run")
-    workspace = _run_workspace(run_id)
-    if not workspace:
+    workspaces = _run_artifact_workspaces(run_id)
+    if not workspaces:
         return jsonify({"error": "workspace not found"}), 404
-    path = _safe_artifact_path(workspace, request.args.get("path", "app.json"))
-    if not path:
-        return jsonify({"error": "artifact not found"}), 404
-    return send_file(path, mimetype="application/json", as_attachment=False)
+    relative_path = request.args.get("path", "app.json")
+    for workspace in workspaces:
+        path = _safe_artifact_path(workspace, relative_path)
+        if path:
+            return send_file(path, mimetype="application/json", as_attachment=False)
+    return jsonify({"error": "artifact not found"}), 404
 
 
 @APP.post("/v1/runs/<run_id>/abort")
@@ -714,6 +839,16 @@ def _cleanup_old_runs() -> None:
         ]
         for run_id in expired_run_ids:
             _RUNS.pop(run_id, None)
+        active_session_paths = {
+            Path(str(run.get("session_workspace_path")))
+            for run in _RUNS.values()
+            if run.get("status") in _ACTIVE_RUN_STATUSES and run.get("session_workspace_path")
+        }
+        active_run_paths = {
+            Path(str(run.get("run_workspace_path")))
+            for run in _RUNS.values()
+            if run.get("status") in _ACTIVE_RUN_STATUSES and run.get("run_workspace_path")
+        }
     for root in (LOG_DIR, WORKSPACE_ROOT / "_payloads"):
         if not root.exists():
             continue
@@ -724,20 +859,32 @@ def _cleanup_old_runs() -> None:
             except OSError:
                 pass
     if WORKSPACE_ROOT.exists():
-        for session_dir in WORKSPACE_ROOT.iterdir():
-            if not session_dir.is_dir() or session_dir.name == "_payloads":
+        for user_dir in WORKSPACE_ROOT.iterdir():
+            if not user_dir.is_dir() or user_dir.name == "_payloads":
                 continue
-            for job_dir in session_dir.iterdir():
+            for session_dir in user_dir.iterdir():
+                if not session_dir.is_dir():
+                    continue
+                runs_root = session_dir / "runs"
+                if runs_root.exists():
+                    for run_dir in runs_root.iterdir():
+                        try:
+                            if run_dir in active_run_paths:
+                                continue
+                            if run_dir.is_dir() and _newest_mtime(run_dir) < cutoff:
+                                shutil.rmtree(run_dir)
+                        except OSError:
+                            pass
                 try:
-                    if job_dir.is_dir() and job_dir.stat().st_mtime < cutoff:
-                        shutil.rmtree(job_dir)
+                    if session_dir not in active_session_paths and _newest_mtime(session_dir) < cutoff:
+                        shutil.rmtree(session_dir)
                 except OSError:
                     pass
             try:
-                next(session_dir.iterdir())
+                next(user_dir.iterdir())
             except StopIteration:
                 try:
-                    session_dir.rmdir()
+                    user_dir.rmdir()
                 except OSError:
                     pass
 

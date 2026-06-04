@@ -2353,15 +2353,22 @@ def _supabase_admin_request(
         return exc.code, parsed, text
 
 
-def _wait_supabase_auth(base_url: str, *, timeout_s: float = 90.0) -> bool:
+def _wait_supabase_auth(base_url: str, *, api_key: str = "", timeout_s: float = 90.0) -> bool:
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         try:
-            req = Request(base_url.rstrip("/") + "/auth/v1/health", headers={"User-Agent": "myapp-ctl/1"})
+            headers = {"User-Agent": "myapp-ctl/1"}
+            if api_key:
+                headers["apikey"] = api_key
+                headers["Authorization"] = f"Bearer {api_key}"
+            req = Request(base_url.rstrip("/") + "/auth/v1/health", headers=headers)
             with urlopen(req, timeout=3) as resp:
                 if 200 <= resp.status < 500:
                     return True
-        except (HTTPError, URLError, OSError):
+        except HTTPError as exc:
+            if 400 <= exc.code < 500:
+                return True
+        except (URLError, OSError):
             pass
         time.sleep(2)
     return False
@@ -2396,7 +2403,7 @@ def _create_or_update_supabase_test_user(*, email: str, username: str, password:
     if not service_key:
         raise RuntimeError(_t("test_user_missing_supabase"))
     base_url = _supabase_admin_base_url(supabase_env)
-    _wait_supabase_auth(base_url)
+    _wait_supabase_auth(base_url, api_key=service_key)
     existing = _find_supabase_user_by_email(base_url, service_key, email)
     if existing:
         user_metadata = dict(existing.get("user_metadata") or {})
