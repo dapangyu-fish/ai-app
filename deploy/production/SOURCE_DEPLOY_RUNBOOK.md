@@ -41,6 +41,13 @@ Run the first-run setup wizard:
 myapp-ctl setup --host <public-ip-or-domain>
 ```
 
+On the first interactive `myapp-ctl` run, choose the CLI language (`zh`, `en`,
+`de`, or `es`). Change it later with:
+
+```bash
+myapp-ctl config lang zh
+```
+
 The wizard generates local stack secrets, then asks for human-provided
 production secrets:
 
@@ -55,10 +62,11 @@ production secrets:
 
 AI provider config is required for the generation path. ByteDance ASR, APNs,
 FCM, and GeTui are optional; skip them on hosts that do not need speech
-recognition or push delivery. For APNs and FCM, paste the `.p8` private key or
-Firebase service-account JSON directly into the wizard. `myapp-ctl` stores
-those files under `/etc/myapp/secrets.d/files/` and writes the
-container-visible paths into `push.env`.
+recognition or push delivery. For APNs and FCM, either paste the `.p8` private
+key / Firebase service-account JSON, or enter a server-local file path such as
+`/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` stores those files under
+`/etc/myapp/secrets.d/files/` and writes the container-visible paths into
+`push.env`.
 
 If you skip setup and run `myapp-ctl deploy --build` from an interactive fresh
 host, deploy launches the same wizard when AI provider config is missing. In
@@ -76,6 +84,11 @@ Deploy from source:
 myapp-ctl deploy --plan
 myapp-ctl deploy --build
 ```
+
+Full deploys automatically write `/var/lib/myapp/client-environment.json`,
+generate `/var/lib/myapp/client-environment.png` when `qrencode` is installed,
+print the JSON, and print a terminal QR code in interactive terminals. Long
+Docker/Compose steps print a heartbeat while running.
 
 ## Verification
 
@@ -95,6 +108,7 @@ Generate a client environment import JSON and QR code:
 
 ```bash
 myapp-ctl client-env --host <public-ip-or-domain> --name "MyApp Test"
+myapp-ctl client-env --host <public-ip-or-domain> --terminal-qr
 cat /var/lib/myapp/client-environment.json
 ```
 
@@ -102,6 +116,22 @@ The JSON matches the client Service Environment import format used by the old
 test-env bootstrap. If `qrencode` is installed, the command also writes
 `/var/lib/myapp/client-environment.png`; otherwise it still writes and prints
 the JSON.
+
+## Configuration Backup
+
+Inspect, export, and restore host-local configuration:
+
+```bash
+myapp-ctl config view
+myapp-ctl config export --out /root/myapp-config.json
+myapp-ctl config export --format yaml --out /root/myapp-config.yaml
+myapp-ctl config import /root/myapp-config.json --yes
+```
+
+The restorable export includes `/etc/myapp/ctl.json`,
+`/etc/myapp/services.json`, `/etc/myapp/secrets.d/*.env`, and
+`/etc/myapp/secrets.d/files/**`. It is written with mode `600`. Use
+`--redacted` for review-only bundles that should not restore secrets.
 
 Expected MyApp services after a successful source deployment:
 

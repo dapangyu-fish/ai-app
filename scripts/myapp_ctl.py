@@ -22,6 +22,7 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlparse
@@ -83,6 +84,135 @@ COMPOSE_ENV_FILE_NAMES = [
 ]
 _SETUP_SECRET_FILE_CONTAINER_ROOT = "/etc/myapp/secret-files"
 _SETUP_SECRET_FILE_HOST_DIR = "files"
+_LANG = "en"
+_LANGUAGES = {
+    "zh": "中文",
+    "en": "English",
+    "de": "Deutsch",
+    "es": "Español",
+}
+_MESSAGES = {
+    "language_prompt": {
+        "zh": "请选择 myapp-ctl 语言",
+        "en": "Choose the myapp-ctl language",
+        "de": "Sprache fuer myapp-ctl waehlen",
+        "es": "Elige el idioma de myapp-ctl",
+    },
+    "language_saved": {
+        "zh": "已保存语言: {language}",
+        "en": "Saved language: {language}",
+        "de": "Sprache gespeichert: {language}",
+        "es": "Idioma guardado: {language}",
+    },
+    "required_value": {
+        "zh": "必填，请输入一个值",
+        "en": "required; please enter a value",
+        "de": "Pflichtfeld; bitte einen Wert eingeben",
+        "es": "obligatorio; introduce un valor",
+    },
+    "enter_yes_no": {
+        "zh": "请输入 y 或 n",
+        "en": "enter y or n",
+        "de": "bitte y oder n eingeben",
+        "es": "introduce y o n",
+    },
+    "input_file_or_paste_keep": {
+        "zh": "输入服务器上的文件路径，或粘贴新内容后输入 EOF 结束。第一行直接回车表示保留现有值。",
+        "en": "Enter a server file path, or paste new content and finish with EOF. Press Enter on the first line to keep existing.",
+        "de": "Server-Dateipfad eingeben oder neuen Inhalt einfuegen und mit EOF beenden. Enter in der ersten Zeile behaelt den bestehenden Wert.",
+        "es": "Introduce una ruta de archivo del servidor, o pega contenido nuevo y termina con EOF. Pulsa Enter en la primera linea para conservar el valor actual.",
+    },
+    "input_file_or_paste_required": {
+        "zh": "输入服务器上的文件路径，或粘贴内容后输入 EOF 结束。",
+        "en": "Enter a server file path, or paste content and finish with EOF.",
+        "de": "Server-Dateipfad eingeben oder Inhalt einfuegen und mit EOF beenden.",
+        "es": "Introduce una ruta de archivo del servidor, o pega contenido y termina con EOF.",
+    },
+    "input_file_or_paste_skip": {
+        "zh": "输入服务器上的文件路径，或粘贴内容后输入 EOF 结束。第一行直接回车表示跳过。",
+        "en": "Enter a server file path, or paste content and finish with EOF. Press Enter on the first line to skip.",
+        "de": "Server-Dateipfad eingeben oder Inhalt einfuegen und mit EOF beenden. Enter in der ersten Zeile ueberspringt.",
+        "es": "Introduce una ruta de archivo del servidor, o pega contenido y termina con EOF. Pulsa Enter en la primera linea para omitir.",
+    },
+    "file_read_error": {
+        "zh": "无法读取文件 {path}: {error}",
+        "en": "cannot read file {path}: {error}",
+        "de": "Datei {path} kann nicht gelesen werden: {error}",
+        "es": "no se puede leer el archivo {path}: {error}",
+    },
+    "required_multiline": {
+        "zh": "必填；请输入文件路径，或粘贴内容并用 EOF 结束",
+        "en": "required; enter a file path, or paste content and finish with EOF",
+        "de": "Pflichtfeld; Dateipfad eingeben oder Inhalt einfuegen und mit EOF beenden",
+        "es": "obligatorio; introduce una ruta o pega contenido y termina con EOF",
+    },
+    "running": {
+        "zh": "仍在运行",
+        "en": "still running",
+        "de": "laeuft noch",
+        "es": "sigue ejecutandose",
+    },
+    "setup_ai_title": {
+        "zh": "AI 供应商配置",
+        "en": "AI provider setup",
+        "de": "KI-Anbieter einrichten",
+        "es": "Configuracion del proveedor de IA",
+    },
+    "optional_push_title": {
+        "zh": "可选推送配置。不需要的通道可以跳过。",
+        "en": "Optional push setup. Skip a channel if it is not needed now.",
+        "de": "Optionale Push-Konfiguration. Nicht benoetigte Kanaele koennen uebersprungen werden.",
+        "es": "Configuracion opcional de push. Omite los canales que no necesites ahora.",
+    },
+    "optional_asr_title": {
+        "zh": "可选语音识别配置。",
+        "en": "Optional speech recognition setup.",
+        "de": "Optionale Spracherkennung einrichten.",
+        "es": "Configuracion opcional de reconocimiento de voz.",
+    },
+    "client_env_json": {
+        "zh": "环境 JSON: {path}",
+        "en": "Environment JSON: {path}",
+        "de": "Umgebungs-JSON: {path}",
+        "es": "JSON de entorno: {path}",
+    },
+    "client_env_qr": {
+        "zh": "二维码 PNG: {path}",
+        "en": "QR PNG: {path}",
+        "de": "QR-PNG: {path}",
+        "es": "PNG QR: {path}",
+    },
+    "copy_json": {
+        "zh": "复制 JSON:",
+        "en": "Copy JSON:",
+        "de": "JSON kopieren:",
+        "es": "Copiar JSON:",
+    },
+    "client_env_summary": {
+        "zh": "客户端环境导入信息",
+        "en": "Client environment import",
+        "de": "Client-Umgebungsimport",
+        "es": "Importacion de entorno del cliente",
+    },
+    "config_exported": {
+        "zh": "已导出配置: {path}",
+        "en": "Exported config: {path}",
+        "de": "Konfiguration exportiert: {path}",
+        "es": "Configuracion exportada: {path}",
+    },
+    "config_imported": {
+        "zh": "已恢复配置: {path}",
+        "en": "Imported config: {path}",
+        "de": "Konfiguration importiert: {path}",
+        "es": "Configuracion importada: {path}",
+    },
+    "refuse_import_without_yes": {
+        "zh": "恢复配置会覆盖本机配置和密钥；请添加 --yes 确认",
+        "en": "config import overwrites local config and secrets; pass --yes to confirm",
+        "de": "config import ueberschreibt lokale Konfiguration und Secrets; mit --yes bestaetigen",
+        "es": "config import sobrescribe configuracion y secretos locales; usa --yes para confirmar",
+    },
+}
 
 
 def _load_json(path: Path, default: dict) -> dict:
@@ -107,15 +237,114 @@ def _cfg() -> dict:
     return _load_json(CONFIG_PATH, {"paths": {"secrets_dir": "/etc/myapp/secrets.d"}, "domains": {}})
 
 
+def _t(key: str, **kwargs) -> str:
+    row = _MESSAGES.get(key, {})
+    text = row.get(_LANG) or row.get("en") or key
+    return text.format(**kwargs) if kwargs else text
+
+
+def _normalize_lang(value: str | None) -> str | None:
+    if not value:
+        return None
+    value = value.strip().lower()
+    aliases = {
+        "cn": "zh",
+        "zh-cn": "zh",
+        "chinese": "zh",
+        "deutsch": "de",
+        "german": "de",
+        "spanish": "es",
+        "espanol": "es",
+        "español": "es",
+        "english": "en",
+    }
+    value = aliases.get(value, value)
+    return value if value in _LANGUAGES else None
+
+
+def _set_runtime_language(lang: str | None) -> None:
+    global _LANG
+    normalized = _normalize_lang(lang)
+    if normalized:
+        _LANG = normalized
+
+
+def _choose_language_interactive() -> str:
+    print(_MESSAGES["language_prompt"]["en"])
+    for index, (code, name) in enumerate(_LANGUAGES.items(), start=1):
+        print(f"  {index}) {code} - {name}")
+    while True:
+        value = input("language [1]: ").strip()
+        if not value:
+            return "zh"
+        if value.isdigit():
+            idx = int(value)
+            codes = list(_LANGUAGES)
+            if 1 <= idx <= len(codes):
+                return codes[idx - 1]
+        normalized = _normalize_lang(value)
+        if normalized:
+            return normalized
+        print("please choose zh, en, de, or es")
+
+
+def _initialize_language(args) -> None:
+    env_lang = _normalize_lang(os.environ.get("MYAPP_CTL_LANG") or os.environ.get("MYAPP_LANG"))
+    cli_lang = _normalize_lang(getattr(args, "lang", None))
+    cfg = _cfg()
+    saved_lang = _normalize_lang(str(cfg.get("language") or cfg.get("lang") or ""))
+    lang = cli_lang or env_lang or saved_lang
+    if not lang and sys.stdin.isatty():
+        lang = _choose_language_interactive()
+        cfg["language"] = lang
+        _save_json(CONFIG_PATH, cfg)
+        _set_runtime_language(lang)
+        print(_t("language_saved", language=f"{lang} - {_LANGUAGES[lang]}"))
+        return
+    _set_runtime_language(lang or "zh")
+
+
 def _services() -> dict:
     return _load_json(SERVICES_PATH, {"services": {}}).get("services", {})
+
+
+def _run_with_heartbeat(cmd: list[str]) -> subprocess.CompletedProcess:
+    proc = subprocess.Popen(cmd)
+    done = threading.Event()
+
+    def beat() -> None:
+        spinner = "|/-\\"
+        started = time.time()
+        index = 0
+        while not done.wait(10):
+            elapsed = int(time.time() - started)
+            marker = spinner[index % len(spinner)]
+            index += 1
+            if sys.stderr.isatty():
+                print(f"\r# {_t('running')} {marker} {elapsed}s: {cmd[0]}", end="", file=sys.stderr, flush=True)
+            else:
+                print(f"# {_t('running')} {elapsed}s: {' '.join(cmd[:4])}", file=sys.stderr, flush=True)
+        if sys.stderr.isatty():
+            print("\r" + " " * 80 + "\r", end="", file=sys.stderr, flush=True)
+
+    thread = threading.Thread(target=beat, daemon=True)
+    thread.start()
+    returncode = proc.wait()
+    done.set()
+    thread.join(timeout=1)
+    return subprocess.CompletedProcess(cmd, returncode)
 
 
 def _run(cmd: list[str], *, capture: bool = True) -> subprocess.CompletedProcess:
     kwargs = {"text": True}
     if capture:
         kwargs.update({"stdout": subprocess.PIPE, "stderr": subprocess.PIPE})
-    return subprocess.run(cmd, **kwargs)
+        return subprocess.run(cmd, **kwargs)
+    return _run_with_heartbeat(cmd)
+
+
+def _run_capture_text(cmd: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, input=input_text, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def _docker_inspect(name: str) -> dict | None:
@@ -724,7 +953,21 @@ def cmd_deploy(args) -> int:
     rc = _prepare_deploy(names, dry_run=args.dry_run)
     if rc != 0:
         return rc
-    return _deploy_compose_services(names, dry_run=args.dry_run)
+    rc = _deploy_compose_services(names, dry_run=args.dry_run)
+    if rc != 0:
+        return rc
+    if not args.dry_run and not args.no_client_env and _is_full_deploy(args):
+        _emit_client_env_summary(
+            host=args.client_env_host or args.host,
+            name=args.client_env_name,
+            terminal_qr=not args.no_terminal_qr,
+        )
+    return 0
+
+
+def _is_full_deploy(args) -> bool:
+    target = (args.target or "all").strip()
+    return not args.group and target in {"", "all"}
 
 
 def cmd_setup(args) -> int:
@@ -876,7 +1119,7 @@ def _prompt_line(prompt: str, *, default: str = "", required: bool = False, secr
             return default
         if not required:
             return ""
-        print("required; please enter a value", file=sys.stderr)
+        print(_t("required_value"), file=sys.stderr)
 
 
 def _prompt_bool(prompt: str, *, default: bool = False) -> bool:
@@ -889,19 +1132,51 @@ def _prompt_bool(prompt: str, *, default: bool = False) -> bool:
             return True
         if value in {"n", "no", "0", "false"}:
             return False
-        print("enter y or n", file=sys.stderr)
+        print(_t("enter_yes_no"), file=sys.stderr)
 
 
 def _prompt_multiline(prompt: str, *, default: str = "", required: bool = False) -> str:
     print(prompt)
     if default:
-        print("Paste new content and end with a single line 'EOF'. Press Enter on the first line to keep existing.")
+        print(_t("input_file_or_paste_keep"))
     elif required:
-        print("Paste content and end with a single line 'EOF'.")
+        print(_t("input_file_or_paste_required"))
     else:
-        print("Paste content and end with a single line 'EOF'. Press Enter on the first line to skip.")
+        print(_t("input_file_or_paste_skip"))
     while True:
+        try:
+            first = input()
+        except EOFError:
+            first = ""
+        if first == "" and (default or not required):
+            return default
+        if first.strip() == "EOF":
+            if default:
+                return default
+            if not required:
+                return ""
+            print(_t("required_multiline"), file=sys.stderr)
+            continue
+
+        candidate = first.strip()
+        path_text = candidate[1:] if candidate.startswith("@") else candidate
+        looks_like_path = candidate.startswith("@") or path_text.startswith(("/", "~", "./", "../"))
+        if looks_like_path:
+            path = Path(path_text).expanduser()
+            try:
+                return path.read_text(encoding="utf-8").strip()
+            except OSError as exc:
+                print(_t("file_read_error", path=str(path), error=exc), file=sys.stderr)
+                if required:
+                    continue
+                return default
+
+        if not first and required:
+            print(_t("required_multiline"), file=sys.stderr)
+            continue
         lines: list[str] = []
+        if first:
+            lines.append(first)
         while True:
             try:
                 line = input()
@@ -909,8 +1184,6 @@ def _prompt_multiline(prompt: str, *, default: str = "", required: bool = False)
                 line = "EOF"
             if line == "EOF":
                 break
-            if not lines and line == "" and (default or not required):
-                return default
             lines.append(line)
         value = "\n".join(lines).strip()
         if value:
@@ -919,7 +1192,7 @@ def _prompt_multiline(prompt: str, *, default: str = "", required: bool = False)
             return default
         if not required:
             return ""
-        print("required; paste content and finish with EOF", file=sys.stderr)
+        print(_t("required_multiline"), file=sys.stderr)
 
 
 def _normalize_provider_id(value: str) -> str:
@@ -1600,6 +1873,151 @@ def _redact(value: str) -> str:
     return f"<redacted len={len(value)} sha256:{digest}>"
 
 
+def _bundle_secret_files(*, redacted: bool) -> list[dict]:
+    root = _setup_secret_host_root()
+    if not root.exists():
+        return []
+    rows = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = str(path.relative_to(_secret_dir()))
+        stat = path.stat()
+        if redacted:
+            content_b64 = _redact(path.read_bytes().hex())
+        else:
+            content_b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+        rows.append({"path": rel, "mode": oct(stat.st_mode & 0o777), "content_b64": content_b64})
+    return rows
+
+
+def _config_bundle(*, redacted: bool = True) -> dict:
+    secrets: dict[str, dict[str, str]] = {}
+    secret_dir = _secret_dir()
+    if secret_dir.exists():
+        for path in sorted(secret_dir.glob("*.env")):
+            data = _parse_env(path)
+            secrets[path.stem] = {key: (_redact(value) if redacted else value) for key, value in sorted(data.items())}
+    return {
+        "type": "myapp.config.bundle",
+        "version": 1,
+        "exported_at": int(time.time()),
+        "host": socket.gethostname(),
+        "language": _LANG,
+        "config_path": str(CONFIG_PATH),
+        "services_path": str(SERVICES_PATH),
+        "config": _load_json(CONFIG_PATH, {}),
+        "services": _load_json(SERVICES_PATH, {}),
+        "secrets": secrets,
+        "secret_files": _bundle_secret_files(redacted=redacted),
+    }
+
+
+def _write_config_bundle(path: Path, bundle: dict) -> None:
+    body = json.dumps(bundle, indent=2, ensure_ascii=False) + "\n"
+    if str(path) == "-":
+        print(body, end="")
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(body, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(path)
+    os.chmod(path, 0o600)
+
+
+def _load_config_bundle(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("type") != "myapp.config.bundle":
+        raise ValueError("not a myapp config bundle")
+    return data
+
+
+def cmd_config(args) -> int:
+    if args.config_cmd == "view":
+        bundle = _config_bundle(redacted=not args.show_secrets)
+        print(json.dumps(bundle, indent=2, ensure_ascii=False))
+        return 0
+    if args.config_cmd == "export":
+        if args.out == "-" and not args.redacted:
+            print("refusing to print restorable secrets to stdout; pass --redacted or use --out <file>", file=sys.stderr)
+            return 2
+        bundle = _config_bundle(redacted=args.redacted)
+        out = Path(args.out)
+        _write_config_bundle(out, bundle)
+        if str(out) != "-":
+            print(_t("config_exported", path=str(out)))
+        return 0
+    if args.config_cmd == "import":
+        if not args.yes:
+            print(_t("refuse_import_without_yes"), file=sys.stderr)
+            return 2
+        path = Path(args.path)
+        try:
+            bundle = _load_config_bundle(path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"config import failed: {exc}", file=sys.stderr)
+            return 1
+        if isinstance(bundle.get("config"), dict):
+            _save_json(CONFIG_PATH, bundle["config"], mode=0o644)
+        if isinstance(bundle.get("services"), dict):
+            _save_json(SERVICES_PATH, bundle["services"], mode=0o644)
+        secret_dir = _secret_dir()
+        secret_dir.mkdir(parents=True, exist_ok=True)
+        os.chmod(secret_dir, 0o700)
+        for group, data in (bundle.get("secrets") or {}).items():
+            if not isinstance(data, dict):
+                continue
+            if any(str(value).startswith("<redacted") for value in data.values()):
+                print(f"skip redacted secret group: {group}", file=sys.stderr)
+                continue
+            _write_env(_secret_path(str(group)), {str(key): str(value) for key, value in data.items()})
+        for item in bundle.get("secret_files") or []:
+            rel = str(item.get("path") or "")
+            if not rel or rel.startswith("/") or ".." in Path(rel).parts:
+                continue
+            content = str(item.get("content_b64") or "")
+            if content.startswith("<redacted"):
+                print(f"skip redacted secret file: {rel}", file=sys.stderr)
+                continue
+            try:
+                raw = base64.b64decode(content.encode("ascii"))
+            except Exception as exc:
+                print(f"skip invalid secret file {rel}: {exc}", file=sys.stderr)
+                continue
+            target = secret_dir / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            tmp = target.with_suffix(target.suffix + ".tmp")
+            tmp.write_bytes(raw)
+            mode_text = str(item.get("mode") or "0o600")
+            try:
+                mode = int(mode_text, 8)
+            except ValueError:
+                mode = 0o600
+            os.chmod(tmp, mode)
+            tmp.replace(target)
+            os.chmod(target, mode)
+        print(_t("config_imported", path=str(path)))
+        return 0
+    if args.config_cmd == "lang":
+        if not args.language:
+            cfg = _cfg()
+            lang = _normalize_lang(str(cfg.get("language") or "")) or _LANG
+            print(f"{lang} - {_LANGUAGES.get(lang, lang)}")
+            return 0
+        lang = _normalize_lang(args.language)
+        if not lang:
+            print("language must be one of: zh, en, de, es", file=sys.stderr)
+            return 2
+        cfg = _cfg()
+        cfg["language"] = lang
+        _save_json(CONFIG_PATH, cfg)
+        _set_runtime_language(lang)
+        print(_t("language_saved", language=f"{lang} - {_LANGUAGES[lang]}"))
+        return 0
+    return 2
+
+
 def cmd_secret(args) -> int:
     _secret_dir().mkdir(parents=True, exist_ok=True)
     if args.secret_cmd == "init-stack":
@@ -1765,7 +2183,7 @@ def cmd_client_env(args) -> int:
             if not ok:
                 print(f"warning: QR PNG not generated: {detail}", file=sys.stderr)
             elif not args.json:
-                print(f"QR PNG: {detail}")
+                print(_t("client_env_qr", path=detail))
 
     if args.terminal_qr:
         rc = _print_terminal_qr(body)
@@ -1777,10 +2195,33 @@ def cmd_client_env(args) -> int:
         return 0
 
     if out_path:
-        print(f"Environment JSON: {out_path}")
-    print("Copy JSON:")
+        print(_t("client_env_json", path=str(out_path)))
+    print(_t("copy_json"))
     print(body)
     return 0
+
+
+def _emit_client_env_summary(*, host: str | None = None, name: str | None = None, terminal_qr: bool = True) -> None:
+    payload = _client_env_payload(host=host, name=name)
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    out_path = _default_client_env_path()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(body + "\n", encoding="utf-8")
+    os.chmod(out_path, 0o644)
+
+    print("")
+    print("== " + _t("client_env_summary") + " ==")
+    print(_t("client_env_json", path=str(out_path)))
+    qr_path = out_path.with_suffix(".png")
+    ok, detail = _write_qr_png(body, qr_path)
+    if ok:
+        print(_t("client_env_qr", path=detail))
+    else:
+        print(f"warning: QR PNG not generated: {detail}", file=sys.stderr)
+    print(_t("copy_json"))
+    print(body)
+    if terminal_qr and sys.stdout.isatty():
+        _print_terminal_qr(body)
 
 
 def _image_targets_for_arg(target: str) -> list[str]:
@@ -1974,6 +2415,7 @@ def cmd_agent(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="myapp-ctl")
+    parser.add_argument("--lang", choices=["zh", "en", "de", "es"], help="override CLI language for this command")
     sub = parser.add_subparsers(dest="cmd", required=True)
     status = sub.add_parser("status")
     status.add_argument("service", nargs="?")
@@ -2001,6 +2443,10 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--dry-run", action="store_true")
     deploy.add_argument("--host", help="public host/IP used when first-run stack secrets must be generated")
     deploy.add_argument("--no-setup", action="store_true", help="fail instead of launching first-run interactive setup")
+    deploy.add_argument("--no-client-env", action="store_true", help="do not print client environment JSON/QR after a full deploy")
+    deploy.add_argument("--client-env-host", help="host/IP to use in the post-deploy client environment JSON")
+    deploy.add_argument("--client-env-name", help="name shown in the post-deploy client environment JSON")
+    deploy.add_argument("--no-terminal-qr", action="store_true", help="do not print an ANSI QR code after a full deploy")
     deploy.set_defaults(func=cmd_deploy)
     setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional push channels")
     setup.add_argument("--host", help="public host/IP used in generated local service URLs")
@@ -2050,6 +2496,23 @@ def build_parser() -> argparse.ArgumentParser:
     secret_rm.add_argument("group")
     secret_rm.add_argument("keys", nargs="+")
     secret_rm.set_defaults(func=cmd_secret)
+    config = sub.add_parser("config", help="view, export, import, or set myapp-ctl host configuration")
+    config_sub = config.add_subparsers(dest="config_cmd", required=True)
+    config_view = config_sub.add_parser("view")
+    config_view.add_argument("--show-secrets", action="store_true", help="print real secret values instead of redacted values")
+    config_view.set_defaults(func=cmd_config)
+    config_export = config_sub.add_parser("export")
+    config_export.add_argument("--out", required=True, help="output file path; use .json or .yaml extension as preferred")
+    config_export.add_argument("--format", choices=["json", "yaml"], default="json", help="serialization format; yaml is JSON-compatible YAML")
+    config_export.add_argument("--redacted", action="store_true", help="export a non-restorable redacted bundle")
+    config_export.set_defaults(func=cmd_config)
+    config_import = config_sub.add_parser("import")
+    config_import.add_argument("path", help="bundle created by myapp-ctl config export")
+    config_import.add_argument("--yes", action="store_true", help="confirm overwriting local config and secrets")
+    config_import.set_defaults(func=cmd_config)
+    config_lang = config_sub.add_parser("lang")
+    config_lang.add_argument("language", nargs="?", help="zh, en, de, or es")
+    config_lang.set_defaults(func=cmd_config)
     domain = sub.add_parser("domain")
     domain_sub = domain.add_subparsers(dest="domain_cmd", required=True)
     domain_sub.add_parser("ls").set_defaults(func=cmd_domain)
@@ -2088,6 +2551,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    _initialize_language(args)
     return int(args.func(args) or 0)
 
 

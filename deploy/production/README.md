@@ -42,6 +42,7 @@ cd /opt/myapp/current-agent-control-plane
 export PUBLIC_HOST=77.237.233.229
 export MYAPP_IMAGE_TAG=agent-control-plane
 
+# First interactive run asks for the CLI language: zh / en / de / es.
 myapp-ctl setup --host "$PUBLIC_HOST"
 myapp-ctl status
 myapp-ctl deploy --plan
@@ -49,10 +50,14 @@ myapp-ctl deploy --build
 myapp-ctl status
 ```
 
-Generate the client Service Environment import payload:
+After a full `myapp-ctl deploy --build` / `--pull`, the CLI writes and prints the
+client Service Environment import payload automatically. It also generates a QR
+PNG, and prints an ANSI QR code when the terminal supports it. You can view or
+regenerate the same payload later:
 
 ```bash
 myapp-ctl client-env --host "$PUBLIC_HOST" --name "MyApp Test $PUBLIC_HOST"
+myapp-ctl client-env --host "$PUBLIC_HOST" --terminal-qr
 ```
 
 This writes `/var/lib/myapp/client-environment.json`, generates
@@ -76,9 +81,25 @@ myapp-ctl setup --no-asr --no-push  # only revisit AI provider config
 ```
 
 Secret values are stored under `/etc/myapp/secrets.d/*.env` with mode `600`.
-Pasted APNs `.p8` and FCM service-account JSON are stored under
-`/etc/myapp/secrets.d/files/` and mounted read-only into backend containers.
+For APNs and FCM you can either paste the secret content or enter a server-local
+file path, for example `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` copies
+the file into `/etc/myapp/secrets.d/files/` and writes the container-visible
+path into `push.env`.
 `myapp-ctl secret ls` prints only redacted digests.
+
+Host configuration can be inspected, backed up, and restored:
+
+```bash
+myapp-ctl config view
+myapp-ctl config export --out /root/myapp-config.json
+myapp-ctl config export --format yaml --out /root/myapp-config.yaml
+myapp-ctl config import /root/myapp-config.json --yes
+myapp-ctl config lang zh
+```
+
+The restorable export contains host-local secrets and is written with mode
+`600`. Use `myapp-ctl config export --redacted --out ...` for review-only
+bundles.
 
 ## Deployment Commands
 
@@ -106,6 +127,8 @@ myapp-ctl deploy --build
 If AI provider config is missing, `deploy` starts the same setup wizard when run
 from an interactive terminal. In non-interactive shells it fails with a clear
 message instead of silently starting without an AI provider.
+Long Docker/Compose steps print a heartbeat while running so SSH sessions do not
+look idle.
 
 One-command Docker Hub deployment on a clean host:
 
