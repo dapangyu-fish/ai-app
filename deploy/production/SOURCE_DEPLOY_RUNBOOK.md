@@ -10,8 +10,8 @@ Validated on `77.237.233.229` with:
 
 - local source tree at `/opt/myapp/current-agent-control-plane`
 - Docker + Docker Compose already installed
-- production AI provider, APNs, FCM, ASR, and Getui secrets imported into
-  host-local env files
+- production AI provider, SMTP email, APNs, FCM, ASR, and Getui secrets
+  imported into host-local env files
 - newly generated Supabase, OpenIM, database, Redis, MinIO, Flask, Registry,
   Agent, Config Center, and User Center secrets
 
@@ -56,17 +56,26 @@ production secrets:
 - `backend.env`: `BYTEDANCE_ASR_*`. Supabase/OpenIM URLs and keys are generated
   by `secret init-stack` for the local managed stack unless you intentionally
   override them.
+- `supabase.env`: SMTP/auth email values such as `ENABLE_EMAIL_SIGNUP`,
+  `ENABLE_EMAIL_AUTOCONFIRM`, `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`,
+  `SMTP_USER`, `SMTP_PASS`, and `SMTP_SENDER_NAME`.
 - `push.env`: `APNS_KEY_PATH`, `APNS_KEY_ID`, `APNS_TEAM_ID`,
   `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`, `FCM_SERVICE_ACCOUNT_PATH`,
   `FCM_PROJECT_ID`, `GETUI_*`.
 
-AI provider config is required for the generation path. ByteDance ASR, APNs,
-FCM, and GeTui are optional; skip them on hosts that do not need speech
-recognition or push delivery. For APNs and FCM, either paste the `.p8` private
-key / Firebase service-account JSON, or enter a server-local file path such as
-`/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` stores those files under
-`/etc/myapp/secrets.d/files/` and writes the container-visible paths into
-`push.env`.
+AI provider config is required for the generation path. ByteDance ASR, SMTP
+email, APNs, FCM, and GeTui are optional; skip them on hosts that do not need
+speech recognition, auth email delivery, or push delivery. For APNs and FCM,
+either paste the `.p8` private key / Firebase service-account JSON, or enter a
+server-local file path such as `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl`
+stores those files under `/etc/myapp/secrets.d/files/` and writes the
+container-visible paths into `push.env`.
+
+If SMTP email is changed after Supabase is already running, apply it with:
+
+```bash
+myapp-ctl deploy --group supabase --pull
+```
 
 If you skip setup and run `myapp-ctl deploy --build` from an interactive fresh
 host, deploy launches the same wizard when AI provider config is missing. In

@@ -85,7 +85,9 @@ myapp-ctl deploy --pull
 ```
 
 The first interactive `myapp-ctl` run asks for a CLI language (`zh`, `en`,
-`de`, `es`). A full deploy prints the client environment JSON and QR; rerun
+`de`, `es`). The setup wizard asks for AI provider credentials and optional
+ASR, SMTP email, APNs, FCM, and GeTui config. A full deploy prints the client
+environment JSON and QR; rerun
 `myapp-ctl client-env --terminal-qr` to show it again.
 
 For a development/test host that builds images from this checkout:

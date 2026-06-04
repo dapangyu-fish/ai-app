@@ -67,20 +67,26 @@ the copyable JSON. The payload contains URLs only, no secrets.
 `myapp-ctl setup` generates local stack secrets, then interactively configures
 the required AI provider credentials. DeepSeek and MiniMax are built-in choices;
 custom Anthropic-compatible providers can be added without code changes.
-ByteDance ASR, APNs, FCM, and GeTui are optional channels. If you skip them, the
-core app and AI generation path still deploy; only speech recognition or push
-delivery is unavailable.
+ByteDance ASR, Supabase SMTP email, APNs, FCM, and GeTui are optional channels.
+If you skip them, the core app and AI generation path still deploy; only speech
+recognition, auth email delivery, or push delivery is unavailable.
 
 You can also run setup separately at any time:
 
 ```bash
 myapp-ctl setup --host "$PUBLIC_HOST"
-myapp-ctl setup --no-ai       # only revisit optional ASR/push config
+myapp-ctl setup --no-ai       # only revisit optional ASR/email/push config
 myapp-ctl setup --no-asr      # skip optional speech recognition config
-myapp-ctl setup --no-asr --no-push  # only revisit AI provider config
+myapp-ctl setup --no-ai --no-asr --no-push  # only revisit SMTP email config
+myapp-ctl setup --no-asr --no-email --no-push  # only revisit AI provider config
 ```
 
 Secret values are stored under `/etc/myapp/secrets.d/*.env` with mode `600`.
+SMTP email settings are written into `supabase.env` (`ENABLE_EMAIL_SIGNUP`,
+`ENABLE_EMAIL_AUTOCONFIRM`, `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_USER`, `SMTP_PASS`, `SMTP_SENDER_NAME`). After changing SMTP on an
+existing cluster, apply it with `myapp-ctl deploy --group supabase --pull` or
+restart the Supabase auth service.
 For APNs and FCM you can either paste the secret content or enter a server-local
 file path, for example `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` copies
 the file into `/etc/myapp/secrets.d/files/` and writes the container-visible

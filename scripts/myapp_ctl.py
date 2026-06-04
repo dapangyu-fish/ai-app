@@ -170,6 +170,78 @@ _MESSAGES = {
         "de": "Optionale Spracherkennung einrichten.",
         "es": "Configuracion opcional de reconocimiento de voz.",
     },
+    "optional_email_title": {
+        "zh": "可选邮箱 SMTP 配置。用于注册验证、找回密码等邮件能力。",
+        "en": "Optional SMTP email setup. Used for signup verification, password recovery, and auth mail.",
+        "de": "Optionale SMTP-E-Mail-Konfiguration fuer Registrierung, Passwort-Wiederherstellung und Auth-Mails.",
+        "es": "Configuracion SMTP opcional para verificacion de registro, recuperacion de contrasena y correo de auth.",
+    },
+    "configure_smtp_prompt": {
+        "zh": "配置 SMTP 邮箱服务器？",
+        "en": "configure SMTP email server?",
+        "de": "SMTP-Mailserver konfigurieren?",
+        "es": "configurar servidor SMTP?",
+    },
+    "enable_email_signup_prompt": {
+        "zh": "启用邮箱注册？",
+        "en": "enable email signup?",
+        "de": "E-Mail-Registrierung aktivieren?",
+        "es": "activar registro por correo?",
+    },
+    "email_autoconfirm_prompt": {
+        "zh": "自动确认邮箱注册并跳过邮件验证？",
+        "en": "auto-confirm email signup and skip verification mail?",
+        "de": "E-Mail-Registrierung automatisch bestaetigen und Verifizierungs-Mail ueberspringen?",
+        "es": "confirmar automaticamente el registro por correo y omitir verificacion?",
+    },
+    "smtp_admin_email_prompt": {
+        "zh": "SMTP 发件邮箱",
+        "en": "SMTP admin/from email",
+        "de": "SMTP Absender-E-Mail",
+        "es": "correo remitente SMTP",
+    },
+    "smtp_host_prompt": {
+        "zh": "SMTP 服务器地址",
+        "en": "SMTP host",
+        "de": "SMTP-Host",
+        "es": "host SMTP",
+    },
+    "smtp_port_prompt": {
+        "zh": "SMTP 端口",
+        "en": "SMTP port",
+        "de": "SMTP-Port",
+        "es": "puerto SMTP",
+    },
+    "smtp_user_prompt": {
+        "zh": "SMTP 用户名",
+        "en": "SMTP user",
+        "de": "SMTP-Benutzer",
+        "es": "usuario SMTP",
+    },
+    "smtp_pass_prompt": {
+        "zh": "SMTP 密码或授权码",
+        "en": "SMTP password/app password",
+        "de": "SMTP-Passwort/App-Passwort",
+        "es": "contrasena SMTP o de aplicacion",
+    },
+    "smtp_sender_name_prompt": {
+        "zh": "SMTP 发件人名称",
+        "en": "SMTP sender name",
+        "de": "SMTP-Absendername",
+        "es": "nombre del remitente SMTP",
+    },
+    "smtp_config_skipped": {
+        "zh": "已跳过 SMTP 邮箱配置",
+        "en": "SMTP email config skipped",
+        "de": "SMTP-E-Mail-Konfiguration uebersprungen",
+        "es": "configuracion SMTP omitida",
+    },
+    "smtp_config_updated": {
+        "zh": "已更新 SMTP 邮箱配置",
+        "en": "updated optional SMTP email config",
+        "de": "Optionale SMTP-E-Mail-Konfiguration aktualisiert",
+        "es": "configuracion SMTP opcional actualizada",
+    },
     "client_env_json": {
         "zh": "环境 JSON: {path}",
         "en": "Environment JSON: {path}",
@@ -971,14 +1043,15 @@ def _is_full_deploy(args) -> bool:
 
 
 def cmd_setup(args) -> int:
-    if args.no_ai and args.no_asr and args.no_push:
-        print("nothing to configure: --no-ai, --no-asr, and --no-push were all passed", file=sys.stderr)
+    if args.no_ai and args.no_asr and args.no_email and args.no_push:
+        print("nothing to configure: --no-ai, --no-asr, --no-email, and --no-push were all passed", file=sys.stderr)
         return 2
     return _run_setup_wizard(
         host=args.host,
         force=args.force,
         include_ai=not args.no_ai,
         include_asr=not args.no_asr,
+        include_email=not args.no_email,
         include_push=not args.no_push,
     )
 
@@ -1565,12 +1638,85 @@ def _setup_asr_provider(*, force: bool = False) -> int:
     return 0
 
 
+def _smtp_already_configured(existing: dict[str, str]) -> bool:
+    host = existing.get("SMTP_HOST", "").strip().lower()
+    return bool(host and host != "localhost" and existing.get("SMTP_ADMIN_EMAIL"))
+
+
+def _prompt_port(prompt: str, *, default: str) -> str:
+    while True:
+        value = _prompt_line(prompt, default=default, required=True)
+        try:
+            port = int(value)
+        except ValueError:
+            print("port must be a number", file=sys.stderr)
+            continue
+        if 1 <= port <= 65535:
+            return str(port)
+        print("port must be between 1 and 65535", file=sys.stderr)
+
+
+def _setup_email_provider(*, force: bool = False) -> int:
+    path = _secret_path("supabase")
+    existing = _parse_env(path)
+    data = dict(existing)
+    default_enabled = _smtp_already_configured(existing)
+    print(_t("optional_email_title"))
+    if not _prompt_bool(_t("configure_smtp_prompt"), default=default_enabled):
+        print(_t("smtp_config_skipped"))
+        return 0
+    data["ENABLE_EMAIL_SIGNUP"] = "true" if _prompt_bool(
+        _t("enable_email_signup_prompt"),
+        default=_truthy_env(existing.get("ENABLE_EMAIL_SIGNUP", "true")),
+    ) else "false"
+    autoconfirm_default = _truthy_env(existing.get("ENABLE_EMAIL_AUTOCONFIRM", "false")) if default_enabled else False
+    data["ENABLE_EMAIL_AUTOCONFIRM"] = "true" if _prompt_bool(
+        _t("email_autoconfirm_prompt"),
+        default=autoconfirm_default,
+    ) else "false"
+    data["SMTP_ADMIN_EMAIL"] = _prompt_line(
+        _t("smtp_admin_email_prompt"),
+        default=existing.get("SMTP_ADMIN_EMAIL", "noreply@example.local"),
+        required=True,
+    )
+    data["SMTP_HOST"] = _prompt_line(
+        _t("smtp_host_prompt"),
+        default="" if existing.get("SMTP_HOST") == "localhost" else existing.get("SMTP_HOST", ""),
+        required=True,
+    )
+    data["SMTP_PORT"] = _prompt_port(
+        _t("smtp_port_prompt"),
+        default=existing.get("SMTP_PORT", "587"),
+    )
+    data["SMTP_USER"] = _prompt_line(
+        _t("smtp_user_prompt"),
+        default=existing.get("SMTP_USER", ""),
+    )
+    data["SMTP_PASS"] = _prompt_line(
+        _t("smtp_pass_prompt"),
+        default=existing.get("SMTP_PASS", ""),
+        secret=True,
+    )
+    data["SMTP_SENDER_NAME"] = _prompt_line(
+        _t("smtp_sender_name_prompt"),
+        default=existing.get("SMTP_SENDER_NAME", "myapp"),
+    )
+    data.setdefault("MAILER_URLPATHS_CONFIRMATION", "/auth/v1/verify")
+    data.setdefault("MAILER_URLPATHS_EMAIL_CHANGE", "/auth/v1/verify")
+    data.setdefault("MAILER_URLPATHS_INVITE", "/auth/v1/verify")
+    data.setdefault("MAILER_URLPATHS_RECOVERY", "/auth/v1/verify")
+    _write_env(path, data)
+    print(_t("smtp_config_updated"))
+    return 0
+
+
 def _run_setup_wizard(
     *,
     host: str | None = None,
     force: bool = False,
     include_ai: bool = True,
     include_asr: bool = True,
+    include_email: bool = True,
     include_push: bool = True,
 ) -> int:
     rc = _init_stack_secrets(host=host, force=False, quiet=True)
@@ -1582,6 +1728,10 @@ def _run_setup_wizard(
             return rc
     if include_asr:
         rc = _setup_asr_provider(force=force)
+        if rc != 0:
+            return rc
+    if include_email:
+        rc = _setup_email_provider(force=force)
         if rc != 0:
             return rc
     if include_push:
@@ -2448,11 +2598,12 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--client-env-name", help="name shown in the post-deploy client environment JSON")
     deploy.add_argument("--no-terminal-qr", action="store_true", help="do not print an ANSI QR code after a full deploy")
     deploy.set_defaults(func=cmd_deploy)
-    setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional push channels")
+    setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional channels")
     setup.add_argument("--host", help="public host/IP used in generated local service URLs")
-    setup.add_argument("--force", action="store_true", help="replace existing AI/push config instead of offering to keep it")
+    setup.add_argument("--force", action="store_true", help="replace existing setup config instead of offering to keep it")
     setup.add_argument("--no-ai", action="store_true", help="skip AI provider setup")
     setup.add_argument("--no-asr", action="store_true", help="skip optional ByteDance ASR setup")
+    setup.add_argument("--no-email", action="store_true", help="skip optional Supabase SMTP email setup")
     setup.add_argument("--no-push", action="store_true", help="skip optional APNs/FCM/GeTui setup")
     setup.set_defaults(func=cmd_setup)
     uninstall = sub.add_parser("uninstall")
