@@ -70,7 +70,7 @@ def _minio_presigned_get(bucket, key, expires_hours=TEMP_JSON_EXPIRY_HOURS):
     if not _minio_client.bucket_exists(bucket):
         _minio_client.make_bucket(bucket)
     url = _minio_presign_client().presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
-    print(f"[MinIO] Generated presigned GET URL: {url}")
+    print(f"[MinIO] Generated presigned GET URL for bucket={bucket} key={key}")
     return url
 
 
