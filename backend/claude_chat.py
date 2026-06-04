@@ -773,8 +773,20 @@ def chat_start():
 
     store = ai_session.SessionStore()
     existing = store.get_meta(session_id)
+    existing_user_id = existing.get("user_id") if existing else None
+    same_session_owner = bool(existing and (not existing_user_id or existing_user_id == user_id))
 
-    if existing and existing.get("status") in (ai_session.STATUS_RUNNING, ai_session.STATUS_QUEUED):
+    if existing and not same_session_owner and existing.get("status") not in ai_session.TERMINAL_STATUSES:
+        logger.warning(
+            f"[CHAT_START] sid={session_id} belongs to another user and is still active; "
+            "refuse to overwrite"
+        )
+        return jsonify({
+            "error": "该会话正在其他登录状态下运行，请新建会话后重试",
+            "code": "AI_SESSION_OWNER_MISMATCH",
+        }), 409
+
+    if same_session_owner and existing and existing.get("status") in (ai_session.STATUS_RUNNING, ai_session.STATUS_QUEUED):
         if force_restart:
             # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的
             # 关键不变量：必须确认旧 worker 已经写完 STATUS_ABORTED 才能 create_meta，
@@ -820,18 +832,22 @@ def chat_start():
 
     new_remaining = remaining - 1
     agent_resume_id = None
+    can_resume_existing = bool(
+        same_session_owner
+        and existing
+        and existing.get("status") == ai_session.STATUS_DONE
+        and existing.get("provider") == provider_id
+    )
     if (
         agent_id == "codex"
-        and existing
+        and can_resume_existing
         and existing.get("agent") == "codex"
-        and existing.get("provider") == provider_id
     ):
         agent_resume_id = existing.get("agent_thread_id") or None
     elif (
         agent_id == "claude"
-        and existing
+        and can_resume_existing
         and existing.get("agent") == "claude"
-        and existing.get("provider") == provider_id
     ):
         # Claude Code uses the session id as its conversation id. First turns
         # create a new CLI session; later turns resume the same id.

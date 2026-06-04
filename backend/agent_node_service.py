@@ -102,6 +102,7 @@ def _session_paths(user_id: str, session_id: str, job_id: str) -> dict[str, Path
     session_root = STATE_ROOT / safe_user / safe_session
     return {
         "claude": session_root / "claude",
+        "claude_config": session_root / ".claude.json",
         "codex": session_root / "codex",
         "workspace": WORKSPACE_ROOT / safe_session / safe_job,
     }
@@ -185,7 +186,14 @@ def _prepare_provider_proxy(payload: dict) -> list[str]:
 
 def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str, Path]) -> tuple[list[str], dict]:
     container_name = f"myapp-agent-{_safe_part(run_id, uuid.uuid4().hex)}"
-    for path in paths.values():
+    for key, path in paths.items():
+        if key == "claude_config":
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if not path.exists():
+                first_start = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+                path.write_text(json.dumps({"firstStartTime": first_start}) + "\n", encoding="utf-8")
+            path.chmod(0o666)
+            continue
         path.mkdir(parents=True, exist_ok=True)
         path.chmod(0o777)
     payload_path.parent.mkdir(parents=True, exist_ok=True)
@@ -221,6 +229,8 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         PROJECT_ROOT,
         "-v",
         f"{paths['claude']}:/home/agent/.claude:rw",
+        "-v",
+        f"{paths['claude_config']}:/home/agent/.claude.json:rw",
         "-v",
         f"{paths['codex']}:/home/agent/.codex:rw",
         "-v",
