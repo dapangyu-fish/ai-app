@@ -256,6 +256,8 @@ services:
       AGENT_NODE_PROVIDER_PROXY_BASE_URL: "${AGENT_NODE_PROVIDER_PROXY_BASE_URL:-http://agent-node:5590}"
       AGENT_NODE_STATE_ROOT: "/var/lib/myapp/agent-node/state"
       AGENT_NODE_WORKSPACE_ROOT: "/var/lib/myapp/agent-node/workspaces"
+      AGENT_NODE_HOST_STATE_ROOT: "${MYAPP_DATA_ROOT:-/mnt/myapp}/agent-node/state"
+      AGENT_NODE_HOST_WORKSPACE_ROOT: "${MYAPP_DATA_ROOT:-/mnt/myapp}/agent-node/workspaces"
       AGENT_NODE_LOG_DIR: "/var/lib/myapp/agent-node/logs"
       AGENT_NODE_CONTAINER_CPUS: "${AGENT_NODE_CONTAINER_CPUS:-2}"
       AGENT_NODE_CONTAINER_MEMORY: "${AGENT_NODE_CONTAINER_MEMORY:-2g}"

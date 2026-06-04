@@ -30,6 +30,8 @@ NODE_ID = os.environ.get("AGENT_NODE_ID", os.uname().nodename)
 RUNTIME_IMAGE = os.environ.get("AGENT_NODE_RUNTIME_IMAGE", "dapangyufish/myapp-agent-runtime:latest")
 STATE_ROOT = Path(os.environ.get("AGENT_NODE_STATE_ROOT", "/var/lib/myapp/agent-node/state"))
 WORKSPACE_ROOT = Path(os.environ.get("AGENT_NODE_WORKSPACE_ROOT", "/var/lib/myapp/agent-node/workspaces"))
+HOST_STATE_ROOT = Path(os.environ.get("AGENT_NODE_HOST_STATE_ROOT", str(STATE_ROOT)))
+HOST_WORKSPACE_ROOT = Path(os.environ.get("AGENT_NODE_HOST_WORKSPACE_ROOT", str(WORKSPACE_ROOT)))
 LOG_DIR = Path(os.environ.get("AGENT_NODE_LOG_DIR", "/var/log/myapp/agent-node"))
 PROJECT_ROOT = os.environ.get("AGENT_NODE_PROJECT_ROOT", "/app")
 CONTAINER_CPUS = os.environ.get("AGENT_NODE_CONTAINER_CPUS", "2")
@@ -93,6 +95,18 @@ def _run_log_path(run_id: str) -> Path:
 
 def _run_payload_path(run_id: str) -> Path:
     return WORKSPACE_ROOT / "_payloads" / f"{_safe_part(run_id, 'run')}.json"
+
+
+def _docker_bind_source(path: Path) -> Path:
+    """Translate agent-node container paths to host paths for Docker bind mounts."""
+    try:
+        return HOST_STATE_ROOT / path.relative_to(STATE_ROOT)
+    except ValueError:
+        pass
+    try:
+        return HOST_WORKSPACE_ROOT / path.relative_to(WORKSPACE_ROOT)
+    except ValueError:
+        return path
 
 
 def _session_paths(user_id: str, session_id: str, job_id: str) -> dict[str, Path]:
@@ -228,15 +242,15 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         "--workdir",
         PROJECT_ROOT,
         "-v",
-        f"{paths['claude']}:/home/agent/.claude:rw",
+        f"{_docker_bind_source(paths['claude'])}:/home/agent/.claude:rw",
         "-v",
-        f"{paths['claude_config']}:/home/agent/.claude.json:rw",
+        f"{_docker_bind_source(paths['claude_config'])}:/home/agent/.claude.json:rw",
         "-v",
-        f"{paths['codex']}:/home/agent/.codex:rw",
+        f"{_docker_bind_source(paths['codex'])}:/home/agent/.codex:rw",
         "-v",
-        f"{paths['workspace']}:/workspace:rw",
+        f"{_docker_bind_source(paths['workspace'])}:/workspace:rw",
         "-v",
-        f"{payload_path}:/run/myapp-agent/payload.json:ro",
+        f"{_docker_bind_source(payload_path)}:/run/myapp-agent/payload.json:ro",
         "-e",
         "AI_APP_WORKSPACE=/workspace",
         "-e",
