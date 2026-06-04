@@ -8,7 +8,8 @@ It is designed for a single host first, then can grow into multiple agent hosts.
 - `myapp-ctl`: host-level control CLI for backend, infra, OpenIM, Supabase, and agent services.
 - `myapp-backend`: shared image for backend, ai-worker, registry, config-center, and user-center.
 - `myapp-agent-node`: per-host service that owns Docker and starts isolated agent runtime containers.
-- `myapp-agent-runtime`: Ubuntu 24.04 execution image used for Claude/Codex runs.
+- `myapp-agent-runtime`: Ubuntu 24.04 execution image used for Claude/Codex runs. It includes
+  the Flutter client source needed for JSON-DSL inspection, but not git history or build outputs.
 - `supabase`: local self-hosted Supabase compose group for auth/profile/storage API support.
 - `openim`: local OpenIM compose group for IM credentials and message transport.
 
@@ -17,6 +18,11 @@ It is designed for a single host first, then can grow into multiple agent hosts.
 `AI_WORKER_EXECUTION_BACKEND=agent-node` keeps backend, FCM/APNs, Supabase, OpenIM, and registry
 secrets out of the agent runtime container. The runtime receives a structured run payload and
 per-run proxy tokens only.
+
+The runtime image includes `lib/`, `assets/`, `test/`, `pubspec.yaml`, and validation/generation
+helpers so agents can inspect the real JSON-DSL client runtime. It does not include `.git`,
+platform build directories, Flutter web build outputs, website sources, or server-local secret
+files.
 
 Provider keys are held by backend/agent-node and rewritten by the agent-node provider proxy before
 the runtime starts. Claude/Codex see `http://agent-node:5590/proxy/<token>` and a short-lived proxy

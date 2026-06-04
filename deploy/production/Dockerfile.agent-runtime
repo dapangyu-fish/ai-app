@@ -64,10 +64,14 @@ COPY backend/requirements.txt /tmp/requirements.txt
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY backend/ /app/backend/
+COPY lib/ /app/lib/
+COPY assets/ /app/assets/
+COPY test/ /app/test/
 COPY templates/ /app/templates/
 COPY docs/ /app/docs/
 COPY scripts/ /app/scripts/
 COPY JSON-DSL.md /app/JSON-DSL.md
+COPY pubspec.yaml pubspec.lock analysis_options.yaml /app/
 COPY deploy/production/agent_runner.py /opt/myapp/agent_runner.py
 
 RUN useradd -m -u 10001 -s /bin/bash agent \
