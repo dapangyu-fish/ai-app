@@ -17,6 +17,7 @@ import json
 import os
 import re
 import secrets as py_secrets
+import shlex
 import shutil
 import signal
 import socket
@@ -33,6 +34,46 @@ from urllib.request import Request, urlopen
 CONFIG_PATH = Path(os.environ.get("MYAPP_CTL_CONFIG", "/etc/myapp/ctl.json"))
 SERVICES_PATH = Path(os.environ.get("MYAPP_CTL_SERVICES", "/etc/myapp/services.json"))
 LANGUAGE_PATH = Path(os.environ.get("MYAPP_CTL_LANGUAGE_PATH", "/etc/myapp/ctl-language"))
+DEFAULT_DATA_ROOT = "/mnt/myapp"
+SUPABASE_POSTGRES_IMAGE = "supabase/postgres:15.8.1.085"
+
+DATA_ROOT_DIRS = [
+    "state",
+    "logs",
+    "backend",
+    "ai-worker",
+    "registry",
+    "config-center/data",
+    "user-center",
+    "agent-runtime",
+    "agent-node/state",
+    "agent-node/workspaces",
+    "agent-node/logs",
+    "jsonapp-postgres/data",
+    "ai-session-redis/data",
+    "app-minio/data",
+    "supabase-studio",
+    "supabase-kong",
+    "supabase-auth",
+    "supabase-rest",
+    "supabase-realtime",
+    "supabase-storage/data",
+    "supabase-imgproxy",
+    "supabase-meta",
+    "supabase-edge-functions/deno-cache",
+    "supabase-analytics",
+    "supabase-db/data",
+    "supabase-db/config",
+    "supabase-vector",
+    "supabase-pooler",
+    "openim-mysql/data",
+    "openim-mongo/data",
+    "openim-redis/data",
+    "openim-kafka/data",
+    "openim-etcd/data",
+    "openim-minio/data",
+    "openim-server/logs",
+]
 
 DEPLOY_ORDER = [
     "agent-runtime",
@@ -370,7 +411,7 @@ _MESSAGES = {
 镜像与 Agent:
   image ls|build|pull|push      管理 Docker 镜像
   agent ls|register             查看或注册 Agent 节点
-  uninstall --yes [--purge]     停止并清理本机部署
+  uninstall --yes [--purge]     停止部署；保留 data root 数据
 
 示例:
   myapp-ctl status
@@ -407,7 +448,7 @@ Configuration and secrets:
 Images and agents:
   image ls|build|pull|push      Manage Docker images
   agent ls|register             Inspect or register agent nodes
-  uninstall --yes [--purge]     Stop and remove this host deployment
+  uninstall --yes [--purge]     Stop deployment; preserve data root
 
 Examples:
   myapp-ctl status
@@ -444,7 +485,7 @@ Konfiguration und Secrets:
 Images und Agents:
   image ls|build|pull|push      Docker-Images verwalten
   agent ls|register             Agent-Knoten anzeigen oder registrieren
-  uninstall --yes [--purge]     Deployment auf diesem Host entfernen
+  uninstall --yes [--purge]     Deployment stoppen; data root behalten
 
 Beispiele:
   myapp-ctl status
@@ -481,7 +522,7 @@ Configuracion y secretos:
 Imagenes y agentes:
   image ls|build|pull|push      Gestiona imagenes Docker
   agent ls|register             Consulta o registra nodos agent
-  uninstall --yes [--purge]     Detiene y elimina este despliegue
+  uninstall --yes [--purge]     Detiene el despliegue; conserva data root
 
 Ejemplos:
   myapp-ctl status
@@ -540,8 +581,134 @@ def _save_json(path: Path, data: dict, mode: int | None = None) -> None:
         os.chmod(path, mode)
 
 
+def _default_cfg() -> dict:
+    return {
+        "paths": {
+            "root": "/opt/myapp",
+            "source": "/opt/myapp/current-agent-control-plane",
+            "data_root": DEFAULT_DATA_ROOT,
+            "state": f"{DEFAULT_DATA_ROOT}/state",
+            "logs": f"{DEFAULT_DATA_ROOT}/logs",
+            "secrets_dir": "/etc/myapp/secrets.d",
+            "agent_log_dir": f"{DEFAULT_DATA_ROOT}/agent-node/logs",
+            "config_bundle": f"{DEFAULT_DATA_ROOT}/myapp-config.json",
+        },
+        "domains": {},
+    }
+
+
 def _cfg() -> dict:
-    return _load_json(CONFIG_PATH, {"paths": {"secrets_dir": "/etc/myapp/secrets.d"}, "domains": {}})
+    return _load_json(CONFIG_PATH, _default_cfg())
+
+
+def _data_root_from_cfg(cfg: dict | None = None) -> Path:
+    cfg = cfg or _cfg()
+    raw = (
+        os.environ.get("MYAPP_DATA_ROOT")
+        or cfg.get("paths", {}).get("data_root")
+        or DEFAULT_DATA_ROOT
+    )
+    path = Path(str(raw)).expanduser()
+    if not path.is_absolute():
+        path = (Path.cwd() / path).resolve()
+    return path
+
+
+def _apply_data_root_to_cfg(cfg: dict, data_root: Path) -> dict:
+    root = str(data_root)
+    paths = cfg.setdefault("paths", {})
+    paths["data_root"] = root
+    paths.setdefault("root", "/opt/myapp")
+    paths.setdefault("source", "/opt/myapp/current-agent-control-plane")
+    paths["state"] = str(data_root / "state")
+    paths["logs"] = str(data_root / "logs")
+    paths.setdefault("secrets_dir", "/etc/myapp/secrets.d")
+    paths["agent_log_dir"] = str(data_root / "agent-node" / "logs")
+    paths["config_bundle"] = str(data_root / "myapp-config.json")
+    return cfg
+
+
+def _default_config_bundle_path(cfg: dict | None = None) -> Path:
+    cfg = cfg or _cfg()
+    configured = cfg.get("paths", {}).get("config_bundle")
+    if configured:
+        return Path(str(configured)).expanduser()
+    return _data_root_from_cfg(cfg) / "myapp-config.json"
+
+
+def _ensure_data_root_config(data_root: str | None = None, *, interactive: bool = False) -> Path:
+    cfg = _cfg()
+    existing = str(cfg.get("paths", {}).get("data_root") or "").strip()
+    selected = data_root or os.environ.get("MYAPP_DATA_ROOT") or existing or DEFAULT_DATA_ROOT
+    if interactive and sys.stdin.isatty():
+        should_prompt = not data_root and not cfg.get("paths", {}).get("data_root_prompted")
+        if should_prompt:
+            selected = _prompt_line("MyApp data root", default=selected or DEFAULT_DATA_ROOT, required=True)
+    root = Path(str(selected)).expanduser()
+    if not root.is_absolute():
+        root = (Path.cwd() / root).resolve()
+    if str(root) in {"/", "/mnt", "/var", "/opt", "/etc"}:
+        raise ValueError(f"unsafe MyApp data root: {root}")
+    _apply_data_root_to_cfg(cfg, root)
+    cfg.setdefault("paths", {})["data_root_prompted"] = True
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+    return root
+
+
+def _ensure_data_root_layout(data_root: Path | None = None) -> Path:
+    root = data_root or _data_root_from_cfg()
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(root, 0o755)
+    except OSError:
+        pass
+    dirs: set[Path] = set()
+    for rel in DATA_ROOT_DIRS:
+        path = root / rel
+        path.mkdir(parents=True, exist_ok=True)
+        dirs.add(path)
+        parent = path.parent
+        while parent != root and root in parent.parents:
+            dirs.add(parent)
+            parent = parent.parent
+    for path in sorted(dirs, key=lambda p: len(p.parts)):
+        try:
+            os.chmod(path, 0o777)
+        except OSError:
+            pass
+    return root
+
+
+def _seed_supabase_postgres_custom_config(*, dry_run: bool) -> int:
+    """Seed Supabase Postgres custom config into the local data root.
+
+    The Supabase Postgres image ships required files in /etc/postgresql-custom.
+    Once that path is a bind mount, an empty host directory hides those files and
+    Postgres fails before the health check. Preserve the directory after first
+    seed because it also stores database-local custom configuration.
+    """
+    target = _data_root_from_cfg() / "supabase-db" / "config"
+    target.mkdir(parents=True, exist_ok=True)
+    try:
+        if any(target.iterdir()):
+            return 0
+    except OSError as exc:
+        print(f"cannot inspect Supabase Postgres custom config dir {target}: {exc}", file=sys.stderr)
+        return 1
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--user",
+        "0:0",
+        "-v",
+        f"{target}:/host",
+        SUPABASE_POSTGRES_IMAGE,
+        "sh",
+        "-lc",
+        "cp -a /etc/postgresql-custom/. /host/ && chmod -R a+rwX /host",
+    ]
+    return _run_or_print(cmd, dry_run=dry_run)
 
 
 def _t(key: str, **kwargs) -> str:
@@ -1063,6 +1230,10 @@ def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
 
 
 def _prepare_deploy(names: list[str], *, dry_run: bool) -> int:
+    if _group_in_names(names, "supabase"):
+        rc = _seed_supabase_postgres_custom_config(dry_run=dry_run)
+        if rc != 0:
+            return rc
     if not _group_in_names(names, "openim"):
         return 0
     services = _services()
@@ -1182,6 +1353,13 @@ def _remove_installed_config_path(path: Path, *, dry_run: bool) -> int:
     if not path.is_absolute():
         print(f"# skip non-installed config path: {path}")
         return 0
+    data_root = _data_root_from_cfg()
+    try:
+        path.resolve().relative_to(data_root.resolve())
+        print(f"# preserve data-root config path: {path}")
+        return 0
+    except (OSError, ValueError):
+        pass
     return _remove_path(path, dry_run=dry_run)
 
 
@@ -1205,6 +1383,7 @@ def cmd_uninstall(args) -> int:
     purge = bool(args.purge)
     remove_images = bool(args.images or purge)
     dry_run = bool(args.dry_run)
+    data_root = _data_root_from_cfg()
 
     for spec in _compose_specs_for_names(names):
         project_dir = Path(spec.get("project_dir", "."))
@@ -1251,11 +1430,15 @@ def cmd_uninstall(args) -> int:
                 return rc
 
     if purge or args.state:
-        _remove_path(Path(_cfg().get("paths", {}).get("state", "/var/lib/myapp")), dry_run=dry_run)
+        print(f"# preserve MyApp data/state under {data_root}")
     if purge or args.logs:
-        _remove_path(Path(_cfg().get("paths", {}).get("logs", "/var/log/myapp")), dry_run=dry_run)
+        print(f"# preserve MyApp data/logs under {data_root}")
     if purge or args.secrets:
-        _remove_path(_secret_dir(), dry_run=dry_run)
+        try:
+            _secret_dir().resolve().relative_to(data_root.resolve())
+            print(f"# preserve data-root secrets dir: {_secret_dir()}")
+        except (OSError, ValueError):
+            _remove_path(_secret_dir(), dry_run=dry_run)
     if purge or args.install_files:
         cfg = _cfg()
         root = Path(cfg.get("paths", {}).get("root", "/opt/myapp"))
@@ -1266,6 +1449,9 @@ def cmd_uninstall(args) -> int:
         _remove_path(Path("/usr/local/bin/myapp-ctl"), dry_run=dry_run)
         _remove_path(Path("/opt/myapp/bin/myapp-ctl"), dry_run=dry_run)
     print("uninstall completed" if not dry_run else "uninstall dry-run completed")
+    print(f"data root preserved: {data_root}")
+    print("to permanently delete all MyApp local data and the restorable config snapshot, run manually:")
+    print(f"  rm -rf -- {shlex.quote(str(data_root))}")
     return 0
 
 
@@ -1273,6 +1459,20 @@ def cmd_deploy(args) -> int:
     if args.build and args.pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
         return 2
+    try:
+        data_root = _ensure_data_root_config(
+            getattr(args, "data_root", None),
+            interactive=not getattr(args, "no_setup", False),
+        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    try:
+        _restore_data_root_config_if_needed(data_root)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"data root config restore failed: {exc}", file=sys.stderr)
+        return 1
+    _ensure_data_root_layout(data_root)
     try:
         names = _service_names_for_target(args.target, args.group)
     except KeyError as exc:
@@ -1328,6 +1528,8 @@ def cmd_deploy(args) -> int:
             name=args.client_env_name,
             terminal_qr=not args.no_terminal_qr,
         )
+    if not args.dry_run:
+        _safe_write_default_config_snapshot()
     return 0
 
 
@@ -1340,7 +1542,13 @@ def cmd_setup(args) -> int:
     if args.no_ai and args.no_asr and args.no_email and args.no_push:
         print("nothing to configure: --no-ai, --no-asr, --no-email, and --no-push were all passed", file=sys.stderr)
         return 2
-    return _run_setup_wizard(
+    try:
+        data_root = _ensure_data_root_config(getattr(args, "data_root", None), interactive=True)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    _ensure_data_root_layout(data_root)
+    rc = _run_setup_wizard(
         host=args.host,
         force=args.force,
         include_ai=not args.no_ai,
@@ -1348,6 +1556,9 @@ def cmd_setup(args) -> int:
         include_email=not args.no_email,
         include_push=not args.no_push,
     )
+    if rc == 0:
+        _safe_write_default_config_snapshot()
+    return rc
 
 
 def cmd_update(args) -> int:
@@ -2308,6 +2519,7 @@ def _merge_env_group(group: str, values: dict[str, str], *, force: bool = False)
 
 def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: bool = False) -> int:
     public_host = _public_host(host)
+    data_root = _ensure_data_root_layout(_data_root_from_cfg())
     secret_dir = _secret_dir()
     secret_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2329,6 +2541,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
     openim_webhook_secret = openim_webhook_secret or _rand_hex(32)
 
     backend_defaults = {
+        "MYAPP_DATA_ROOT": str(data_root),
         "PUBLIC_HOST": public_host,
         "BACKEND_PORT": "5566",
         "REGISTRY_PORT": "3254",
@@ -2362,6 +2575,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "MINIMAX_AI_WORKER_QUEUE_MAX": "20",
     }
     supabase_defaults = {
+        "MYAPP_DATA_ROOT": str(data_root),
         "HOST_IP": public_host,
         "POSTGRES_PASSWORD": _rand_token(32),
         "JWT_SECRET": jwt_secret,
@@ -2458,6 +2672,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "DOCKER_SOCKET_LOCATION": "/var/run/docker.sock",
     }
     openim_defaults = {
+        "MYAPP_DATA_ROOT": str(data_root),
         "HOST_IP": public_host,
         "OPENIM_MYSQL_ROOT_PASSWORD": _rand_token(32),
         "OPENIM_MYSQL_PASSWORD": _rand_token(32),
@@ -2503,6 +2718,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
     if not quiet:
         rows = [{"group": group, "keys": len(keys)} for group, keys in changed.items()]
         _print_table(rows, [("group", "GROUP"), ("keys", "CHANGED_KEYS")])
+    _safe_write_default_config_snapshot()
     return 0
 
 
@@ -2564,11 +2780,81 @@ def _write_config_bundle(path: Path, bundle: dict) -> None:
     os.chmod(path, 0o600)
 
 
+def _write_default_config_snapshot() -> None:
+    path = _default_config_bundle_path()
+    _write_config_bundle(path, _config_bundle(redacted=False))
+
+
 def _load_config_bundle(path: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("type") != "myapp.config.bundle":
         raise ValueError("not a myapp config bundle")
     return data
+
+
+def _import_config_bundle_data(bundle: dict) -> None:
+    if isinstance(bundle.get("config"), dict):
+        _save_json(CONFIG_PATH, bundle["config"], mode=0o644)
+    if isinstance(bundle.get("services"), dict):
+        _save_json(SERVICES_PATH, bundle["services"], mode=0o644)
+    secret_dir = _secret_dir()
+    secret_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(secret_dir, 0o700)
+    for group, data in (bundle.get("secrets") or {}).items():
+        if not isinstance(data, dict):
+            continue
+        if any(str(value).startswith("<redacted") for value in data.values()):
+            print(f"skip redacted secret group: {group}", file=sys.stderr)
+            continue
+        _write_env(_secret_path(str(group)), {str(key): str(value) for key, value in data.items()})
+    for item in bundle.get("secret_files") or []:
+        rel = str(item.get("path") or "")
+        if not rel or rel.startswith("/") or ".." in Path(rel).parts:
+            continue
+        content = str(item.get("content_b64") or "")
+        if content.startswith("<redacted"):
+            print(f"skip redacted secret file: {rel}", file=sys.stderr)
+            continue
+        try:
+            raw = base64.b64decode(content.encode("ascii"))
+        except Exception as exc:
+            print(f"skip invalid secret file {rel}: {exc}", file=sys.stderr)
+            continue
+        target = secret_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        tmp.write_bytes(raw)
+        mode_text = str(item.get("mode") or "0o600")
+        try:
+            mode = int(mode_text, 8)
+        except ValueError:
+            mode = 0o600
+        os.chmod(tmp, mode)
+        tmp.replace(target)
+        os.chmod(target, mode)
+
+
+def _restore_data_root_config_if_needed(data_root: Path, *, force: bool = False) -> bool:
+    bundle_path = data_root / "myapp-config.json"
+    if not bundle_path.exists():
+        return False
+    if not force and CONFIG_PATH.exists() and any(_secret_dir().glob("*.env")):
+        return False
+    bundle = _load_config_bundle(bundle_path)
+    _import_config_bundle_data(bundle)
+    cfg = _cfg()
+    _apply_data_root_to_cfg(cfg, data_root)
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+    _ensure_data_root_layout(data_root)
+    print(_t("config_imported", path=str(bundle_path)))
+    return True
+
+
+def _safe_write_default_config_snapshot() -> None:
+    try:
+        _write_default_config_snapshot()
+    except Exception as exc:
+        print(f"warning: myapp-config.json snapshot not written: {exc}", file=sys.stderr)
 
 
 def cmd_config(args) -> int:
@@ -2596,45 +2882,8 @@ def cmd_config(args) -> int:
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             print(f"config import failed: {exc}", file=sys.stderr)
             return 1
-        if isinstance(bundle.get("config"), dict):
-            _save_json(CONFIG_PATH, bundle["config"], mode=0o644)
-        if isinstance(bundle.get("services"), dict):
-            _save_json(SERVICES_PATH, bundle["services"], mode=0o644)
-        secret_dir = _secret_dir()
-        secret_dir.mkdir(parents=True, exist_ok=True)
-        os.chmod(secret_dir, 0o700)
-        for group, data in (bundle.get("secrets") or {}).items():
-            if not isinstance(data, dict):
-                continue
-            if any(str(value).startswith("<redacted") for value in data.values()):
-                print(f"skip redacted secret group: {group}", file=sys.stderr)
-                continue
-            _write_env(_secret_path(str(group)), {str(key): str(value) for key, value in data.items()})
-        for item in bundle.get("secret_files") or []:
-            rel = str(item.get("path") or "")
-            if not rel or rel.startswith("/") or ".." in Path(rel).parts:
-                continue
-            content = str(item.get("content_b64") or "")
-            if content.startswith("<redacted"):
-                print(f"skip redacted secret file: {rel}", file=sys.stderr)
-                continue
-            try:
-                raw = base64.b64decode(content.encode("ascii"))
-            except Exception as exc:
-                print(f"skip invalid secret file {rel}: {exc}", file=sys.stderr)
-                continue
-            target = secret_dir / rel
-            target.parent.mkdir(parents=True, exist_ok=True)
-            tmp = target.with_suffix(target.suffix + ".tmp")
-            tmp.write_bytes(raw)
-            mode_text = str(item.get("mode") or "0o600")
-            try:
-                mode = int(mode_text, 8)
-            except ValueError:
-                mode = 0o600
-            os.chmod(tmp, mode)
-            tmp.replace(target)
-            os.chmod(target, mode)
+        _import_config_bundle_data(bundle)
+        _safe_write_default_config_snapshot()
         print(_t("config_imported", path=str(path)))
         return 0
     if args.config_cmd == "lang":
@@ -2650,15 +2899,22 @@ def cmd_config(args) -> int:
         cfg = _cfg()
         _write_language_preference(lang, cfg)
         _set_runtime_language(lang)
+        _safe_write_default_config_snapshot()
         print(_t("language_saved", language=f"{lang} - {_LANGUAGES[lang]}"))
         return 0
     return 2
 
 
 def cmd_secret(args) -> int:
-    _secret_dir().mkdir(parents=True, exist_ok=True)
     if args.secret_cmd == "init-stack":
+        try:
+            data_root = _ensure_data_root_config(getattr(args, "data_root", None), interactive=False)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        _ensure_data_root_layout(data_root)
         return _init_stack_secrets(host=args.host, force=args.force)
+    _secret_dir().mkdir(parents=True, exist_ok=True)
     if args.secret_cmd == "ls":
         rows = []
         for path in sorted(_secret_dir().glob("*.env")):
@@ -2679,6 +2935,7 @@ def cmd_secret(args) -> int:
             data[key] = value
             changed.append(key)
         _write_env(path, data)
+        _safe_write_default_config_snapshot()
         print(f"updated {args.group}: {', '.join(changed)}")
         return 0
     if args.secret_cmd == "generate":
@@ -2687,6 +2944,7 @@ def cmd_secret(args) -> int:
             data[key] = py_secrets.token_urlsafe(args.bytes)
             changed.append(key)
         _write_env(path, data)
+        _safe_write_default_config_snapshot()
         print(f"generated {args.group}: {', '.join(changed)}")
         return 0
     if args.secret_cmd == "get":
@@ -2699,6 +2957,7 @@ def cmd_secret(args) -> int:
         for key in args.keys:
             data.pop(key, None)
         _write_env(path, data)
+        _safe_write_default_config_snapshot()
         print(f"updated {args.group}")
         return 0
     return 2
@@ -2713,11 +2972,13 @@ def cmd_domain(args) -> int:
     if args.domain_cmd == "set":
         domains[args.name] = args.value
         _save_json(CONFIG_PATH, data)
+        _safe_write_default_config_snapshot()
         print(f"set domain {args.name}={args.value}")
         return 0
     if args.domain_cmd == "rm":
         domains.pop(args.name, None)
         _save_json(CONFIG_PATH, data)
+        _safe_write_default_config_snapshot()
         print(f"removed domain {args.name}")
         return 0
     return 2
@@ -3079,6 +3340,7 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("--plan", action="store_true", help="print deployment plan only")
     deploy.add_argument("--dry-run", action="store_true")
     deploy.add_argument("--host", help="public host/IP used when first-run stack secrets must be generated")
+    deploy.add_argument("--data-root", help="local persistent data root, for example /mnt/myapp")
     deploy.add_argument("--no-setup", action="store_true", help="fail instead of launching first-run interactive setup")
     deploy.add_argument("--no-client-env", action="store_true", help="do not print client environment JSON/QR after a full deploy")
     deploy.add_argument("--client-env-host", help="host/IP to use in the post-deploy client environment JSON")
@@ -3090,6 +3352,7 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.set_defaults(func=cmd_deploy)
     setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional channels")
     setup.add_argument("--host", help="public host/IP used in generated local service URLs")
+    setup.add_argument("--data-root", help="local persistent data root, for example /mnt/myapp")
     setup.add_argument("--force", action="store_true", help="replace existing setup config instead of offering to keep it")
     setup.add_argument("--no-ai", action="store_true", help="skip AI provider setup")
     setup.add_argument("--no-asr", action="store_true", help="skip optional ByteDance ASR setup")
@@ -3102,10 +3365,10 @@ def build_parser() -> argparse.ArgumentParser:
     update.set_defaults(func=cmd_update)
     uninstall = sub.add_parser("uninstall")
     uninstall.add_argument("--yes", action="store_true", help="required confirmation for destructive cleanup")
-    uninstall.add_argument("--purge", action="store_true", help="remove containers, compose volumes, state, logs, secrets, install config, and app images")
-    uninstall.add_argument("--volumes", action="store_true", help="remove compose volumes while stopping services")
-    uninstall.add_argument("--state", action="store_true", help="remove state directory")
-    uninstall.add_argument("--logs", action="store_true", help="remove log directory")
+    uninstall.add_argument("--purge", action="store_true", help="remove containers, legacy compose volumes, secrets, install config, and app images; preserve data root")
+    uninstall.add_argument("--volumes", action="store_true", help="remove legacy compose named volumes while stopping services; bind-path data is preserved")
+    uninstall.add_argument("--state", action="store_true", help="deprecated; data-root state is always preserved")
+    uninstall.add_argument("--logs", action="store_true", help="deprecated; data-root logs are always preserved")
     uninstall.add_argument("--secrets", action="store_true", help="remove /etc/myapp/secrets.d")
     uninstall.add_argument("--install-files", action="store_true", help="remove installed compose/config files")
     uninstall.add_argument("--images", action="store_true", help="remove configured MyApp Docker images")
@@ -3121,6 +3384,7 @@ def build_parser() -> argparse.ArgumentParser:
     secret_sub.add_parser("ls").set_defaults(func=cmd_secret)
     secret_init = secret_sub.add_parser("init-stack")
     secret_init.add_argument("--host", help="public host/IP used in generated local service URLs")
+    secret_init.add_argument("--data-root", help="local persistent data root, for example /mnt/myapp")
     secret_init.add_argument("--force", action="store_true", help="regenerate stack secrets managed by myapp-ctl")
     secret_init.set_defaults(func=cmd_secret)
     secret_set = secret_sub.add_parser("set")
@@ -3171,7 +3435,7 @@ def build_parser() -> argparse.ArgumentParser:
     client_env = sub.add_parser("client-env", help="generate client Service Environment import JSON and QR")
     client_env.add_argument("--host", help="public host/IP to use in generated URLs")
     client_env.add_argument("--name", help="environment name shown in the client")
-    client_env.add_argument("--out", help="JSON output path; default is /var/lib/myapp/client-environment.json")
+    client_env.add_argument("--out", help="JSON output path; default is <data-root>/state/client-environment.json")
     client_env.add_argument("--qr", help="QR PNG output path; default follows --out with .png")
     client_env.add_argument("--no-qr", action="store_true", help="do not generate QR PNG")
     client_env.add_argument("--terminal-qr", action="store_true", help="also print an ANSI QR code in the terminal")

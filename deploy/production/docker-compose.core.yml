@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
       POSTGRES_DB: "${JSONAPP_DB_NAME:-jsonapp}"
     volumes:
-      - jsonapp_pg_data:/var/lib/postgresql/data
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/jsonapp-postgres/data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
     command: redis-server --requirepass "${BACKEND_REDIS_PASSWORD:-redis-dev-password}" --appendonly yes
     volumes:
-      - ai_session_redis_data:/data
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/ai-session-redis/data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${BACKEND_REDIS_PASSWORD:-redis-dev-password}", "ping"]
       interval: 10s
@@ -42,7 +42,7 @@ services:
       MINIO_BROWSER_REDIRECT_URL: "http://${PUBLIC_HOST:-77.237.233.229}:${APP_MINIO_CONSOLE_PORT:-9090}"
     command: server /data --console-address ":9090"
     volumes:
-      - app_minio_data:/data
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/app-minio/data:/data
     ports:
       - "${APP_MINIO_PORT:-9000}:9000"
       - "${APP_MINIO_CONSOLE_PORT:-9090}:9090"
@@ -218,7 +218,7 @@ services:
       LISTEN_PORT: "5000"
       DB_PATH: "/data/config.db"
     volumes:
-      - config_center_data:/data
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/config-center/data:/data
     ports:
       - "${CONFIG_CENTER_PORT:-5000}:5000"
 
@@ -256,24 +256,17 @@ services:
       AGENT_NODE_PROVIDER_PROXY_BASE_URL: "${AGENT_NODE_PROVIDER_PROXY_BASE_URL:-http://agent-node:5590}"
       AGENT_NODE_STATE_ROOT: "/var/lib/myapp/agent-node/state"
       AGENT_NODE_WORKSPACE_ROOT: "/var/lib/myapp/agent-node/workspaces"
-      AGENT_NODE_LOG_DIR: "/var/log/myapp/agent-node"
+      AGENT_NODE_LOG_DIR: "/var/lib/myapp/agent-node/logs"
       AGENT_NODE_CONTAINER_CPUS: "${AGENT_NODE_CONTAINER_CPUS:-2}"
       AGENT_NODE_CONTAINER_MEMORY: "${AGENT_NODE_CONTAINER_MEMORY:-2g}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/myapp/agent-node:/var/lib/myapp/agent-node
-      - /var/log/myapp/agent-node:/var/log/myapp/agent-node
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/agent-node:/var/lib/myapp/agent-node
     ports:
       - "127.0.0.1:${AGENT_NODE_PORT:-5590}:5590"
     networks:
       - default
       - agent-runtime
-
-volumes:
-  jsonapp_pg_data:
-  ai_session_redis_data:
-  app_minio_data:
-  config_center_data:
 
 networks:
   default:

@@ -8,10 +8,13 @@
   "paths": {
     "root": "/opt/myapp",
     "source": "/opt/myapp/current-agent-control-plane",
-    "state": "/var/lib/myapp",
-    "logs": "/var/log/myapp",
+    "data_root": "/mnt/myapp",
+    "data_root_prompted": false,
+    "state": "/mnt/myapp/state",
+    "logs": "/mnt/myapp/logs",
     "secrets_dir": "/etc/myapp/secrets.d",
-    "agent_log_dir": "/var/log/myapp/agent-node"
+    "agent_log_dir": "/mnt/myapp/agent-node/logs",
+    "config_bundle": "/mnt/myapp/myapp-config.json"
   },
   "registries": {
     "docker_hub": {

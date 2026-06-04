@@ -22,7 +22,7 @@ PY
 )"
 fi
 
-install -d -m 755 /opt/myapp/bin /etc/myapp /var/lib/myapp /var/log/myapp/agent-node
+install -d -m 755 /opt/myapp/bin /etc/myapp /mnt/myapp /mnt/myapp/state /mnt/myapp/logs /mnt/myapp/agent-node/logs
 install -d -m 700 /etc/myapp/secrets.d /etc/myapp/secrets.d/files /etc/myapp/secrets.d/files/apns /etc/myapp/secrets.d/files/fcm
 install -m 755 "$ROOT_DIR/scripts/myapp_ctl.py" /opt/myapp/bin/myapp-ctl
 ln -sf /opt/myapp/bin/myapp-ctl /usr/local/bin/myapp-ctl

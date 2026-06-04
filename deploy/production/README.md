@@ -41,9 +41,10 @@ cd /opt/myapp/current-agent-control-plane
 
 export PUBLIC_HOST=77.237.233.229
 export MYAPP_IMAGE_TAG=agent-control-plane
+export MYAPP_DATA_ROOT=/mnt/myapp
 
 # First interactive run asks for the CLI language once: zh / en / de / es.
-myapp-ctl setup --host "$PUBLIC_HOST"
+myapp-ctl setup --host "$PUBLIC_HOST" --data-root "$MYAPP_DATA_ROOT"
 myapp-ctl status
 myapp-ctl deploy --plan
 myapp-ctl deploy --build
@@ -70,8 +71,8 @@ myapp-ctl client-env --host "$PUBLIC_HOST" --name "MyApp Test $PUBLIC_HOST"
 myapp-ctl client-env --host "$PUBLIC_HOST" --terminal-qr
 ```
 
-This writes `/var/lib/myapp/client-environment.json`, generates
-`/var/lib/myapp/client-environment.png` when `qrencode` is installed, and prints
+This writes `<data-root>/state/client-environment.json`, generates
+`<data-root>/state/client-environment.png` when `qrencode` is installed, and prints
 the copyable JSON. The payload contains URLs only, no secrets.
 
 When a deploy includes Supabase auth, `myapp-ctl deploy` also asks whether to
@@ -113,6 +114,7 @@ Host configuration can be inspected, backed up, and restored:
 
 ```bash
 myapp-ctl config view
+myapp-ctl config export --out /mnt/myapp/myapp-config.json
 myapp-ctl config export --out /root/myapp-config.json
 myapp-ctl config export --format yaml --out /root/myapp-config.yaml
 myapp-ctl config import /root/myapp-config.json --yes
@@ -123,21 +125,35 @@ The restorable export contains host-local secrets and is written with mode
 `600`. Use `myapp-ctl config export --redacted --out ...` for review-only
 bundles.
 
+`/mnt/myapp/myapp-config.json` is the default restorable configuration snapshot.
+If `/etc/myapp` is missing on a rebuilt host, running
+`myapp-ctl deploy --data-root /mnt/myapp ...` imports this file before starting
+services. Persistent service data is also bind-mounted from the same data root;
+Docker named volumes are not used for MyApp databases or object stores.
+During the first Supabase deploy, `myapp-ctl` also seeds
+`/mnt/myapp/supabase-db/config` from the Supabase Postgres image's built-in
+`/etc/postgresql-custom` directory so the bind mount preserves required database
+custom config instead of hiding it with an empty directory.
+
 ## Deployment Commands
 
-Clean all managed services, volumes, state, logs, host-local secrets, installed
-compose/config files, and MyApp images:
+Clean all managed services, legacy named volumes, host-local secrets, installed
+compose/config files, and MyApp images while preserving the data root:
 
 ```bash
 myapp-ctl uninstall --yes --purge
 ./deploy/production/install_ctl.sh
 ```
 
+The uninstall command prints the exact `rm -rf -- <data-root>` command to run
+manually if you intentionally want to delete all local service data and the
+restorable config snapshot.
+
 Run the first-run setup wizard. It generates local random secrets, asks for AI
 provider credentials, and optionally accepts APNs, FCM, and GeTui push config:
 
 ```bash
-myapp-ctl setup --host <public-ip-or-domain>
+myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
 ```
 
 One-command local-source deployment on a test host:

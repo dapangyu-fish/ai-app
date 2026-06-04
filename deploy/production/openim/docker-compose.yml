@@ -15,7 +15,7 @@ services:
       MYSQL_USER: openim
       MYSQL_PASSWORD: "${OPENIM_MYSQL_PASSWORD}"
     volumes:
-      - openim_mysql_data:/var/lib/mysql
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/openim-mysql/data:/var/lib/mysql
     ports:
       - "${OPENIM_MYSQL_PORT}:3306"
     healthcheck:
@@ -32,7 +32,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: openim
       MONGO_INITDB_ROOT_PASSWORD: "${OPENIM_MONGO_PASSWORD}"
     volumes:
-      - openim_mongo_data:/data/db
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/openim-mongo/data:/data/db
     ports:
       - "${OPENIM_MONGO_PORT}:27017"
     healthcheck:
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
     command: redis-server --requirepass "${OPENIM_REDIS_PASSWORD}" --appendonly yes
     volumes:
-      - openim_redis_data:/data
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/openim-redis/data:/data
     ports:
       - "${OPENIM_REDIS_PORT}:6379"
     healthcheck:
@@ -72,7 +72,7 @@ services:
       # 小机省内存
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
     volumes:
-      - openim_kafka_data:/bitnami/kafka
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/openim-kafka/data:/bitnami/kafka
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 15s
@@ -95,7 +95,7 @@ services:
       ETCD_INITIAL_CLUSTER_TOKEN: openim-etcd
       ALLOW_NONE_AUTHENTICATION: "yes"   # bitnamilegacy 必须显式 opt-out 才允许无密码访问
     volumes:
-      - openim_etcd_data:/etcd-data
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/openim-etcd/data:/etcd-data
 
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z   # 与 prod minio 一致
@@ -106,7 +106,7 @@ services:
       MINIO_ROOT_PASSWORD: "${OPENIM_MINIO_SECRET_KEY}"
     command: server /data --console-address ":9090"
     volumes:
-      - openim_minio_data:/data
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/openim-minio/data:/data
     ports:
       - "${OPENIM_MINIO_PORT}:9000"
       - "${OPENIM_MINIO_CONSOLE_PORT}:9090"
@@ -150,7 +150,7 @@ services:
       - "${OPENIM_API_PORT}:10002"     # HTTP API → 客户端 imApiUrl
       - "${OPENIM_ADMIN_PORT}:10009"   # Admin API（后端建用户/查用户用）
     volumes:
-      - openim_logs:/openim-server/logs
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/openim-server/logs:/openim-server/logs
       # OpenIM v3.8 不读 env 变量，只读 /openim-server/config/*.yml
       # 旧测试环境曾从镜像 extract 默认 config 到 config-rendered/，然后 sed 替换
       # 关键字段（mongodb/redis/kafka/etcd/minio 的 address + 凭据）→ mount 进来
@@ -159,12 +159,3 @@ services:
   # 已删 openim-chat：backend/im.py 只用 openim-server（端口 10002）直接走 token / 用户接口，
   # 不依赖 openim-chat 的注册/登录/好友模块。openim-chat v1.8.4-patch.3 还跟 v3.8 server
   # 的 mageutil 版本不兼容，会 'too many arguments in call to mageutil.Build' 重启循环。
-
-volumes:
-  openim_mysql_data:
-  openim_mongo_data:
-  openim_redis_data:
-  openim_kafka_data:
-  openim_etcd_data:
-  openim_minio_data:
-  openim_logs:

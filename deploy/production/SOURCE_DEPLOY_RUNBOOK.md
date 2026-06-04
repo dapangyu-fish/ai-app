@@ -9,6 +9,7 @@ values into this file, shell history, or Git.
 Validated on `77.237.233.229` with:
 
 - local source tree at `/opt/myapp/current-agent-control-plane`
+- persistent data root at `/mnt/myapp` by default
 - Docker + Docker Compose already installed
 - production AI provider, SMTP email, APNs, FCM, ASR, and Getui secrets
   imported into host-local env files
@@ -42,11 +43,41 @@ myapp-ctl uninstall --yes --purge
 ./deploy/production/install_ctl.sh
 ```
 
+`uninstall --purge` stops and removes containers, legacy named volumes, images,
+host-local `/etc/myapp` runtime files, and installed control files. It does not
+delete the persistent data root. The command prints the explicit `rm -rf -- ...`
+line to run manually if you really want to destroy local data.
+
 Run the first-run setup wizard:
 
 ```bash
-myapp-ctl setup --host <public-ip-or-domain>
+myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
 ```
+
+`myapp-ctl deploy` and `myapp-ctl setup` create the complete data-root directory
+tree up front, even for services not deployed in the current command. All
+service-owned persistent data is bind-mounted from this root rather than Docker
+named volumes. Important paths include:
+
+- `/mnt/myapp/myapp-config.json`: restorable ctl config bundle, mode `600`
+- `/mnt/myapp/jsonapp-postgres/data`
+- `/mnt/myapp/ai-session-redis/data`
+- `/mnt/myapp/app-minio/data`
+- `/mnt/myapp/config-center/data`
+- `/mnt/myapp/agent-node/{state,workspaces,logs}`
+- `/mnt/myapp/supabase-db/{data,config}`
+- `/mnt/myapp/supabase-storage/data`
+- `/mnt/myapp/openim-*`
+
+`/mnt/myapp/supabase-db/config` is not an empty placeholder. On first Supabase
+deploy, `myapp-ctl` seeds it from the Supabase Postgres image's
+`/etc/postgresql-custom` directory, then keeps it as local persistent data.
+
+If `/etc/myapp` is missing but `/mnt/myapp/myapp-config.json` exists,
+`myapp-ctl deploy --data-root /mnt/myapp ...` restores the runtime config and
+secrets from that bundle before starting services. If the service data under
+`/mnt/myapp` is still present, the cluster is restarted from the same local
+state.
 
 On the first interactive `myapp-ctl` run, choose the CLI language once (`zh`,
 `en`, `de`, or `es`). The preference is stored in `/etc/myapp/ctl-language` and
@@ -102,8 +133,8 @@ myapp-ctl deploy --plan
 myapp-ctl deploy --build
 ```
 
-Full deploys automatically write `/var/lib/myapp/client-environment.json`,
-generate `/var/lib/myapp/client-environment.png` when `qrencode` is installed,
+Full deploys automatically write `<data-root>/state/client-environment.json`,
+generate `<data-root>/state/client-environment.png` when `qrencode` is installed,
 print the JSON, and print a terminal QR code in interactive terminals. Long
 Docker/Compose steps print a heartbeat while running.
 
@@ -140,12 +171,12 @@ Generate a client environment import JSON and QR code:
 ```bash
 myapp-ctl client-env --host <public-ip-or-domain> --name "MyApp Test"
 myapp-ctl client-env --host <public-ip-or-domain> --terminal-qr
-cat /var/lib/myapp/client-environment.json
+cat /mnt/myapp/state/client-environment.json
 ```
 
 The JSON matches the client Service Environment import format used by the old
 test-env bootstrap. If `qrencode` is installed, the command also writes
-`/var/lib/myapp/client-environment.png`; otherwise it still writes and prints
+`<data-root>/state/client-environment.png`; otherwise it still writes and prints
 the JSON.
 
 ## Configuration Backup
@@ -154,6 +185,7 @@ Inspect, export, and restore host-local configuration:
 
 ```bash
 myapp-ctl config view
+myapp-ctl config export --out /mnt/myapp/myapp-config.json
 myapp-ctl config export --out /root/myapp-config.json
 myapp-ctl config export --format yaml --out /root/myapp-config.yaml
 myapp-ctl config import /root/myapp-config.json --yes

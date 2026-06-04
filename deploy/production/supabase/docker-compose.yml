@@ -393,14 +393,14 @@ services:
       S3_PROTOCOL_ACCESS_KEY_ID: ${S3_PROTOCOL_ACCESS_KEY_ID}
       S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET}
     volumes:
-      - ./volumes/storage:/var/lib/storage:z
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/supabase-storage/data:/var/lib/storage:z
 
   imgproxy:
     container_name: supabase-imgproxy
     image: darthsim/imgproxy:v3.30.1
     restart: unless-stopped
     volumes:
-      - ./volumes/storage:/var/lib/storage:z
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/supabase-storage/data:/var/lib/storage:z
     healthcheck:
       test:
         [
@@ -441,7 +441,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./volumes/functions:/home/deno/functions:Z
-      - deno-cache:/root/.cache/deno
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/supabase-edge-functions/deno-cache:/root/.cache/deno
     depends_on:
       kong:
         condition: service_healthy
@@ -527,7 +527,7 @@ services:
       # Initialize the database settings with JWT_SECRET and JWT_EXP
       - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
       # PGDATA directory is persisted between restarts
-      - ./volumes/db/data:/var/lib/postgresql/data:Z
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/supabase-db/data:/var/lib/postgresql/data:Z
       # Changes required for internal supabase data such as _analytics
       - ./volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
       # Changes required for Analytics support
@@ -535,7 +535,7 @@ services:
       # Changes required for Pooler support
       - ./volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
       # Use named volume to persist pgsodium decryption key between restarts
-      - db-config:/etc/postgresql-custom
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/supabase-db/config:/etc/postgresql-custom:Z
     healthcheck:
       test:
         [
@@ -650,7 +650,3 @@ services:
         "-c",
         "/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server"
       ]
-
-volumes:
-  db-config:
-  deno-cache:
