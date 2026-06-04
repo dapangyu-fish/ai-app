@@ -74,7 +74,7 @@ container-visible paths into `push.env`.
 If SMTP email is changed after Supabase is already running, apply it with:
 
 ```bash
-myapp-ctl deploy --group supabase --pull
+myapp-ctl deploy --group supabase
 ```
 
 If you skip setup and run `myapp-ctl deploy --build` from an interactive fresh

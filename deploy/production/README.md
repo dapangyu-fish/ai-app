@@ -85,8 +85,8 @@ Secret values are stored under `/etc/myapp/secrets.d/*.env` with mode `600`.
 SMTP email settings are written into `supabase.env` (`ENABLE_EMAIL_SIGNUP`,
 `ENABLE_EMAIL_AUTOCONFIRM`, `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`,
 `SMTP_USER`, `SMTP_PASS`, `SMTP_SENDER_NAME`). After changing SMTP on an
-existing cluster, apply it with `myapp-ctl deploy --group supabase --pull` or
-restart the Supabase auth service.
+existing cluster, apply it with `myapp-ctl deploy --group supabase` so compose
+recreates services with the new env file.
 For APNs and FCM you can either paste the secret content or enter a server-local
 file path, for example `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` copies
 the file into `/etc/myapp/secrets.d/files/` and writes the container-visible
