@@ -8,6 +8,7 @@ import json
 import os
 import uuid
 from datetime import timedelta
+from urllib.parse import urlparse
 from flask import request, jsonify, send_from_directory
 from minio import Minio
 from config import TEMPLATES_DIR, MINIO_PUBLIC_URL, MINIO_ENDPOINT, MINIO_SECURE, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
@@ -26,6 +27,20 @@ _minio_client = Minio(
 )
 
 
+def _minio_presign_client():
+    public_base = (MINIO_PUBLIC_URL or "").rstrip("/")
+    if public_base:
+        parsed = urlparse(public_base)
+        if parsed.netloc:
+            return Minio(
+                parsed.netloc,
+                access_key=MINIO_ACCESS_KEY,
+                secret_key=MINIO_SECRET_KEY,
+                secure=parsed.scheme == "https",
+            )
+    return _minio_client
+
+
 def _minio_upload(bucket, key, data, content_type="application/json"):
     """上传文件到 MinIO 并返回预签名 GET URL（有效期 TEMP_JSON_EXPIRY_HOURS）"""
     if isinstance(data, dict):
@@ -40,7 +55,7 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
         content_type=content_type,
     )
 
-    return _minio_client.presigned_get_object(
+    return _minio_presign_client().presigned_get_object(
         bucket, key, expires=timedelta(hours=TEMP_JSON_EXPIRY_HOURS)
     )
 
@@ -48,13 +63,13 @@ def _minio_upload(bucket, key, data, content_type="application/json"):
 def _minio_presigned_put(bucket, key, expires_hours=TEMP_JSON_EXPIRY_HOURS):
     if not _minio_client.bucket_exists(bucket):
         _minio_client.make_bucket(bucket)
-    return _minio_client.presigned_put_object(bucket, key, expires=timedelta(hours=expires_hours))
+    return _minio_presign_client().presigned_put_object(bucket, key, expires=timedelta(hours=expires_hours))
 
 
 def _minio_presigned_get(bucket, key, expires_hours=TEMP_JSON_EXPIRY_HOURS):
     if not _minio_client.bucket_exists(bucket):
         _minio_client.make_bucket(bucket)
-    url = _minio_client.presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
+    url = _minio_presign_client().presigned_get_object(bucket, key, expires=timedelta(hours=expires_hours))
     print(f"[MinIO] Generated presigned GET URL: {url}")
     return url
 

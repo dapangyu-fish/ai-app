@@ -37,6 +37,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, List, Optional, Tuple
+from urllib.parse import urlparse
 
 from minio import Minio
 import redis
@@ -616,19 +617,22 @@ def _upload_temp_json_app(data: bytes) -> str:
         len(data),
         content_type="application/json",
     )
-    url = client.presigned_get_object(
+    presign_client = client
+    public_base = MINIO_PUBLIC_URL.rstrip("/")
+    if public_base:
+        parsed = urlparse(public_base)
+        if parsed.netloc:
+            presign_client = Minio(
+                parsed.netloc,
+                access_key=MINIO_ACCESS_KEY,
+                secret_key=MINIO_SECRET_KEY,
+                secure=parsed.scheme == "https",
+            )
+    return presign_client.presigned_get_object(
         _TEMP_JSON_BUCKET,
         object_name,
         expires=timedelta(hours=_TEMP_JSON_EXPIRY_HOURS),
     )
-    public_base = MINIO_PUBLIC_URL.rstrip("/")
-    if public_base:
-        # minio-python signs against MINIO_ENDPOINT; when the endpoint is an internal
-        # host, rewrite only the origin, preserving the signed path/query.
-        match = re.match(r"^https?://[^/]+", url)
-        if match:
-            url = public_base + url[match.end():]
-    return url
 
 
 def _resolve_server_upload_actions(

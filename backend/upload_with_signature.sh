@@ -100,6 +100,7 @@ import os
 from datetime import timedelta
 from minio import Minio
 import io
+from urllib.parse import urlparse
 
 file_path = sys.argv[1]
 bucket = sys.argv[2]
@@ -112,17 +113,17 @@ with open(file_path, 'rb') as f:
 
 # MinIO 配置
 public_url = os.environ.get('MINIO_PUBLIC_URL', 'https://myapp-oss-endpoint.dapangyu.work')
-endpoint = public_url.split('://')[-1]
-secure = public_url.startswith('https://')
+internal_endpoint = os.environ.get('MINIO_ENDPOINT') or public_url.split('://')[-1]
+internal_secure = os.environ.get('MINIO_SECURE', '').lower() in ('1', 'true', 'yes', 'on')
 access_key = os.environ.get('MINIO_ACCESS_KEY', '')
 secret_key = os.environ.get('MINIO_SECRET_KEY', '')
 
 # 创建 MinIO 客户端
 client = Minio(
-    endpoint,
+    internal_endpoint,
     access_key=access_key,
     secret_key=secret_key,
-    secure=secure,
+    secure=internal_secure,
 )
 
 # 确保 bucket 存在
@@ -138,8 +139,17 @@ client.put_object(
     content_type='application/json',
 )
 
-# 生成预签名 URL
-url = client.presigned_get_object(bucket, object_name, expires=timedelta(hours=expiry_hours))
+# 生成预签名 URL。签名包含 Host，所以不能先按内部 endpoint 签名再替换成公网 host。
+parsed_public = urlparse(public_url)
+presign_client = client
+if parsed_public.netloc:
+    presign_client = Minio(
+        parsed_public.netloc,
+        access_key=access_key,
+        secret_key=secret_key,
+        secure=parsed_public.scheme == 'https',
+    )
+url = presign_client.presigned_get_object(bucket, object_name, expires=timedelta(hours=expiry_hours))
 print(url)
 PYTHON
 )"

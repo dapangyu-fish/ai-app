@@ -716,6 +716,12 @@ class AiChatService {
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
         return;
       }
+      final completed = await _fetchCompletedResult(sessionId);
+      if (completed is ResumeCompleted) {
+        debugPrint('[AI_CHAT] stream interrupted after completion; replay /result');
+        yield* _eventsFromCompleted(completed);
+        return;
+      }
       // alive 或 unknown → 继续重连（真活着 / 网络问题；都不该烧重试按钮）
 
       reconnectCount++;
@@ -985,6 +991,12 @@ class AiChatService {
       if (alive == _AliveCheck.confirmedDead) {
         debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
+        return;
+      }
+      final completed = await _fetchCompletedResult(sessionId);
+      if (completed is ResumeCompleted) {
+        debugPrint('[AI_CHAT] Web EventSource interrupted after completion; replay /result');
+        yield* _eventsFromCompleted(completed);
         return;
       }
 
