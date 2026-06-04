@@ -3,6 +3,24 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INSTALL_ROOT="${MYAPP_INSTALL_ROOT:-/opt/myapp}"
+LANGUAGE_FILE="/etc/myapp/ctl-language"
+EXISTING_LANGUAGE=""
+if [ -f "$LANGUAGE_FILE" ]; then
+  EXISTING_LANGUAGE="$(tr -d '[:space:]' < "$LANGUAGE_FILE" || true)"
+elif [ -f /etc/myapp/ctl.json ]; then
+  EXISTING_LANGUAGE="$(python3 - <<'PY' 2>/dev/null || true
+import json
+from pathlib import Path
+
+try:
+    data = json.loads(Path("/etc/myapp/ctl.json").read_text(encoding="utf-8"))
+except Exception:
+    data = {}
+lang = str(data.get("language") or data.get("lang") or "").strip().lower()
+print(lang if lang in {"zh", "en", "de", "es"} else "")
+PY
+)"
+fi
 
 install -d -m 755 /opt/myapp/bin /etc/myapp /var/lib/myapp /var/log/myapp/agent-node
 install -d -m 700 /etc/myapp/secrets.d /etc/myapp/secrets.d/files /etc/myapp/secrets.d/files/apns /etc/myapp/secrets.d/files/fcm
@@ -11,6 +29,20 @@ ln -sf /opt/myapp/bin/myapp-ctl /usr/local/bin/myapp-ctl
 
 install -m 644 "$ROOT_DIR/deploy/production/ctl.json" /etc/myapp/ctl.json
 install -m 644 "$ROOT_DIR/deploy/production/services.json" /etc/myapp/services.json
+if [[ "$EXISTING_LANGUAGE" =~ ^(zh|en|de|es)$ ]]; then
+  printf '%s\n' "$EXISTING_LANGUAGE" > "$LANGUAGE_FILE"
+  chmod 644 "$LANGUAGE_FILE"
+  python3 - "$EXISTING_LANGUAGE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path("/etc/myapp/ctl.json")
+data = json.loads(path.read_text(encoding="utf-8"))
+data["language"] = sys.argv[1]
+path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+PY
+fi
 
 install -d -m 755 "$INSTALL_ROOT/deploy/production"
 install -m 644 "$ROOT_DIR/deploy/production/docker-compose.core.yml" "$INSTALL_ROOT/deploy/production/docker-compose.core.yml"

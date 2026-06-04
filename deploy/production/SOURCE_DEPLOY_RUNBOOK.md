@@ -41,8 +41,9 @@ Run the first-run setup wizard:
 myapp-ctl setup --host <public-ip-or-domain>
 ```
 
-On the first interactive `myapp-ctl` run, choose the CLI language (`zh`, `en`,
-`de`, or `es`). Change it later with:
+On the first interactive `myapp-ctl` run, choose the CLI language once (`zh`,
+`en`, `de`, or `es`). The preference is stored in `/etc/myapp/ctl-language` and
+survives `install_ctl.sh` refreshes. Change it later with:
 
 ```bash
 myapp-ctl config lang zh

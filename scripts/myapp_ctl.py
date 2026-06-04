@@ -32,6 +32,7 @@ from urllib.request import Request, urlopen
 
 CONFIG_PATH = Path(os.environ.get("MYAPP_CTL_CONFIG", "/etc/myapp/ctl.json"))
 SERVICES_PATH = Path(os.environ.get("MYAPP_CTL_SERVICES", "/etc/myapp/services.json"))
+LANGUAGE_PATH = Path(os.environ.get("MYAPP_CTL_LANGUAGE_PATH", "/etc/myapp/ctl-language"))
 
 DEPLOY_ORDER = [
     "agent-runtime",
@@ -401,6 +402,32 @@ def _set_runtime_language(lang: str | None) -> None:
         _LANG = normalized
 
 
+def _read_language_preference_file() -> str | None:
+    try:
+        return _normalize_lang(LANGUAGE_PATH.read_text(encoding="utf-8").strip())
+    except OSError:
+        return None
+
+
+def _write_language_preference(lang: str, cfg: dict | None = None) -> None:
+    normalized = _normalize_lang(lang)
+    if not normalized:
+        return
+    try:
+        LANGUAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = LANGUAGE_PATH.with_suffix(LANGUAGE_PATH.suffix + ".tmp")
+        tmp.write_text(normalized + "\n", encoding="utf-8")
+        os.chmod(tmp, 0o644)
+        tmp.replace(LANGUAGE_PATH)
+        os.chmod(LANGUAGE_PATH, 0o644)
+    except OSError:
+        pass
+    if cfg is None:
+        cfg = _cfg()
+    cfg["language"] = normalized
+    _save_json(CONFIG_PATH, cfg)
+
+
 def _choose_language_interactive() -> str:
     print(_MESSAGES["language_prompt"]["en"])
     for index, (code, name) in enumerate(_LANGUAGES.items(), start=1):
@@ -420,16 +447,20 @@ def _choose_language_interactive() -> str:
         print("please choose zh, en, de, or es")
 
 
+def _is_config_lang_command(args) -> bool:
+    return getattr(args, "cmd", None) == "config" and getattr(args, "config_cmd", None) == "lang"
+
+
 def _initialize_language(args) -> None:
     env_lang = _normalize_lang(os.environ.get("MYAPP_CTL_LANG") or os.environ.get("MYAPP_LANG"))
     cli_lang = _normalize_lang(getattr(args, "lang", None))
     cfg = _cfg()
+    file_lang = _read_language_preference_file()
     saved_lang = _normalize_lang(str(cfg.get("language") or cfg.get("lang") or ""))
-    lang = cli_lang or env_lang or saved_lang
-    if not lang and sys.stdin.isatty():
+    lang = cli_lang or env_lang or file_lang or saved_lang
+    if not lang and sys.stdin.isatty() and not _is_config_lang_command(args):
         lang = _choose_language_interactive()
-        cfg["language"] = lang
-        _save_json(CONFIG_PATH, cfg)
+        _write_language_preference(lang, cfg)
         _set_runtime_language(lang)
         print(_t("language_saved", language=f"{lang} - {_LANGUAGES[lang]}"))
         return
@@ -2389,7 +2420,7 @@ def cmd_config(args) -> int:
     if args.config_cmd == "lang":
         if not args.language:
             cfg = _cfg()
-            lang = _normalize_lang(str(cfg.get("language") or "")) or _LANG
+            lang = _read_language_preference_file() or _normalize_lang(str(cfg.get("language") or "")) or _LANG
             print(f"{lang} - {_LANGUAGES.get(lang, lang)}")
             return 0
         lang = _normalize_lang(args.language)
@@ -2397,8 +2428,7 @@ def cmd_config(args) -> int:
             print("language must be one of: zh, en, de, es", file=sys.stderr)
             return 2
         cfg = _cfg()
-        cfg["language"] = lang
-        _save_json(CONFIG_PATH, cfg)
+        _write_language_preference(lang, cfg)
         _set_runtime_language(lang)
         print(_t("language_saved", language=f"{lang} - {_LANGUAGES[lang]}"))
         return 0

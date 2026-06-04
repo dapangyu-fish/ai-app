@@ -42,13 +42,17 @@ cd /opt/myapp/current-agent-control-plane
 export PUBLIC_HOST=77.237.233.229
 export MYAPP_IMAGE_TAG=agent-control-plane
 
-# First interactive run asks for the CLI language: zh / en / de / es.
+# First interactive run asks for the CLI language once: zh / en / de / es.
 myapp-ctl setup --host "$PUBLIC_HOST"
 myapp-ctl status
 myapp-ctl deploy --plan
 myapp-ctl deploy --build
 myapp-ctl status
 ```
+
+The language preference is stored in `/etc/myapp/ctl-language` and survives
+`install_ctl.sh` refreshes. Change it explicitly with `myapp-ctl config lang zh`
+or `en` / `de` / `es`.
 
 After a full `myapp-ctl deploy --build` / `--pull`, the CLI writes and prints the
 client Service Environment import payload automatically. It also generates a QR
