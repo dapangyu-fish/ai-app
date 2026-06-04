@@ -345,6 +345,180 @@ _MESSAGES = {
         "de": "Supabase-Admin-Konfiguration fehlt; Testbenutzer kann nicht erstellt werden",
         "es": "falta configuracion admin de Supabase; no se puede crear usuario de prueba",
     },
+    "main_help": {
+        "zh": """MyApp 后端控制台
+
+用法:
+  myapp-ctl <命令> [参数]
+  myapp-ctl --lang zh <命令> [参数]
+
+常用命令:
+  status [service]              查看所有服务或单个服务状态
+  deploy [all|service|group]    部署全部、某个组件或某个分组
+  update                        从 Git 仓库拉取最新代码并刷新 myapp-ctl
+  log <service> [-f]            查看服务日志
+  restart [service|group]       重启组件或分组
+  client-env [--terminal-qr]    生成客户端环境 JSON 和二维码
+
+配置与密钥:
+  setup                         首次交互配置 AI/SMTP/推送等
+  secret ls|get|set|generate    管理本机密钥文件
+  config view|export|import     查看、备份、恢复 ctl 配置
+  config lang <zh|en|de|es>     切换 CLI 语言
+  domain ls|set|rm              管理服务域名覆盖
+
+镜像与 Agent:
+  image ls|build|pull|push      管理 Docker 镜像
+  agent ls|register             查看或注册 Agent 节点
+  uninstall --yes [--purge]     停止并清理本机部署
+
+示例:
+  myapp-ctl status
+  myapp-ctl update
+  myapp-ctl deploy --pull
+  myapp-ctl deploy --group core --build
+  myapp-ctl log backend -f -n 120
+  myapp-ctl config lang zh
+
+查看命令详情:
+  myapp-ctl <命令> --help
+""",
+        "en": """MyApp backend control console
+
+Usage:
+  myapp-ctl <command> [options]
+  myapp-ctl --lang en <command> [options]
+
+Common commands:
+  status [service]              Show all service status or one service
+  deploy [all|service|group]    Deploy all, one component, or one group
+  update                        Pull latest Git source and refresh myapp-ctl
+  log <service> [-f]            Show service logs
+  restart [service|group]       Restart a component or group
+  client-env [--terminal-qr]    Generate client environment JSON and QR
+
+Configuration and secrets:
+  setup                         First-run AI/SMTP/push setup wizard
+  secret ls|get|set|generate    Manage host-local secret files
+  config view|export|import     View, back up, or restore ctl config
+  config lang <zh|en|de|es>     Change CLI language
+  domain ls|set|rm              Manage service domain overrides
+
+Images and agents:
+  image ls|build|pull|push      Manage Docker images
+  agent ls|register             Inspect or register agent nodes
+  uninstall --yes [--purge]     Stop and remove this host deployment
+
+Examples:
+  myapp-ctl status
+  myapp-ctl update
+  myapp-ctl deploy --pull
+  myapp-ctl deploy --group core --build
+  myapp-ctl log backend -f -n 120
+  myapp-ctl config lang en
+
+Command help:
+  myapp-ctl <command> --help
+""",
+        "de": """MyApp Backend-Steuerkonsole
+
+Verwendung:
+  myapp-ctl <Befehl> [Optionen]
+  myapp-ctl --lang de <Befehl> [Optionen]
+
+Wichtige Befehle:
+  status [service]              Status aller Dienste oder eines Dienstes
+  deploy [all|service|group]    Alles, eine Komponente oder Gruppe deployen
+  update                        Neueste Git-Quelle holen und myapp-ctl aktualisieren
+  log <service> [-f]            Dienst-Logs anzeigen
+  restart [service|group]       Komponente oder Gruppe neu starten
+  client-env [--terminal-qr]    Client-Umgebungs-JSON und QR erzeugen
+
+Konfiguration und Secrets:
+  setup                         Ersteinrichtung fuer AI/SMTP/Push
+  secret ls|get|set|generate    Host-lokale Secret-Dateien verwalten
+  config view|export|import     ctl-Konfiguration anzeigen/sichern/wiederherstellen
+  config lang <zh|en|de|es>     CLI-Sprache wechseln
+  domain ls|set|rm              Domain-Overrides verwalten
+
+Images und Agents:
+  image ls|build|pull|push      Docker-Images verwalten
+  agent ls|register             Agent-Knoten anzeigen oder registrieren
+  uninstall --yes [--purge]     Deployment auf diesem Host entfernen
+
+Beispiele:
+  myapp-ctl status
+  myapp-ctl update
+  myapp-ctl deploy --pull
+  myapp-ctl deploy --group core --build
+  myapp-ctl log backend -f -n 120
+  myapp-ctl config lang de
+
+Hilfe zu Befehlen:
+  myapp-ctl <Befehl> --help
+""",
+        "es": """Consola de control del backend MyApp
+
+Uso:
+  myapp-ctl <comando> [opciones]
+  myapp-ctl --lang es <comando> [opciones]
+
+Comandos comunes:
+  status [service]              Muestra el estado de servicios
+  deploy [all|service|group]    Despliega todo, un componente o un grupo
+  update                        Hace git pull y actualiza myapp-ctl
+  log <service> [-f]            Muestra logs del servicio
+  restart [service|group]       Reinicia un componente o grupo
+  client-env [--terminal-qr]    Genera JSON de entorno del cliente y QR
+
+Configuracion y secretos:
+  setup                         Configuracion inicial de AI/SMTP/push
+  secret ls|get|set|generate    Gestiona secretos locales del host
+  config view|export|import     Ver, respaldar o restaurar config de ctl
+  config lang <zh|en|de|es>     Cambia el idioma del CLI
+  domain ls|set|rm              Gestiona dominios de servicios
+
+Imagenes y agentes:
+  image ls|build|pull|push      Gestiona imagenes Docker
+  agent ls|register             Consulta o registra nodos agent
+  uninstall --yes [--purge]     Detiene y elimina este despliegue
+
+Ejemplos:
+  myapp-ctl status
+  myapp-ctl update
+  myapp-ctl deploy --pull
+  myapp-ctl deploy --group core --build
+  myapp-ctl log backend -f -n 120
+  myapp-ctl config lang es
+
+Ayuda de un comando:
+  myapp-ctl <comando> --help
+""",
+    },
+    "update_running": {
+        "zh": "更新 myapp-ctl：{source}",
+        "en": "Updating myapp-ctl: {source}",
+        "de": "Aktualisiere myapp-ctl: {source}",
+        "es": "Actualizando myapp-ctl: {source}",
+    },
+    "update_done": {
+        "zh": "myapp-ctl 已更新",
+        "en": "myapp-ctl updated",
+        "de": "myapp-ctl aktualisiert",
+        "es": "myapp-ctl actualizado",
+    },
+    "update_missing_source": {
+        "zh": "找不到源码目录: {source}",
+        "en": "source directory not found: {source}",
+        "de": "Quellverzeichnis nicht gefunden: {source}",
+        "es": "directorio de codigo no encontrado: {source}",
+    },
+    "update_missing_install": {
+        "zh": "找不到安装脚本: {path}",
+        "en": "install script not found: {path}",
+        "de": "Installationsskript nicht gefunden: {path}",
+        "es": "script de instalacion no encontrado: {path}",
+    },
 }
 
 
@@ -451,6 +625,10 @@ def _is_config_lang_command(args) -> bool:
     return getattr(args, "cmd", None) == "config" and getattr(args, "config_cmd", None) == "lang"
 
 
+def _is_help_command(args) -> bool:
+    return getattr(args, "cmd", None) == "help"
+
+
 def _initialize_language(args) -> None:
     env_lang = _normalize_lang(os.environ.get("MYAPP_CTL_LANG") or os.environ.get("MYAPP_LANG"))
     cli_lang = _normalize_lang(getattr(args, "lang", None))
@@ -458,7 +636,7 @@ def _initialize_language(args) -> None:
     file_lang = _read_language_preference_file()
     saved_lang = _normalize_lang(str(cfg.get("language") or cfg.get("lang") or ""))
     lang = cli_lang or env_lang or file_lang or saved_lang
-    if not lang and sys.stdin.isatty() and not _is_config_lang_command(args):
+    if not lang and sys.stdin.isatty() and not _is_config_lang_command(args) and not _is_help_command(args):
         lang = _choose_language_interactive()
         _write_language_preference(lang, cfg)
         _set_runtime_language(lang)
@@ -1149,6 +1327,27 @@ def cmd_setup(args) -> int:
         include_email=not args.no_email,
         include_push=not args.no_push,
     )
+
+
+def cmd_update(args) -> int:
+    source = Path(args.source).expanduser() if args.source else _source_dir()
+    if not source.exists():
+        print(_t("update_missing_source", source=str(source)), file=sys.stderr)
+        return 1
+    install_script = source / "deploy/production/install_ctl.sh"
+    if not install_script.exists():
+        print(_t("update_missing_install", path=str(install_script)), file=sys.stderr)
+        return 1
+    print(_t("update_running", source=str(source)))
+    if not args.no_pull:
+        rc = _run(["git", "-C", str(source), "pull", "--ff-only"], capture=False).returncode
+        if rc != 0:
+            return rc
+    rc = _run(["bash", str(install_script)], capture=False).returncode
+    if rc != 0:
+        return rc
+    print(_t("update_done"))
+    return 0
 
 
 def cmd_restart(args) -> int:
@@ -2833,7 +3032,7 @@ def cmd_agent(args) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="myapp-ctl")
     parser.add_argument("--lang", choices=["zh", "en", "de", "es"], help="override CLI language for this command")
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    sub = parser.add_subparsers(dest="cmd")
     status = sub.add_parser("status")
     status.add_argument("service", nargs="?")
     status.add_argument("--json", action="store_true")
@@ -2876,6 +3075,10 @@ def build_parser() -> argparse.ArgumentParser:
     setup.add_argument("--no-email", action="store_true", help="skip optional Supabase SMTP email setup")
     setup.add_argument("--no-push", action="store_true", help="skip optional APNs/FCM/GeTui setup")
     setup.set_defaults(func=cmd_setup)
+    update = sub.add_parser("update", help="pull the source repository and refresh myapp-ctl")
+    update.add_argument("--source", help="source checkout path; default reads ctl config or /opt/myapp/current-agent-control-plane")
+    update.add_argument("--no-pull", action="store_true", help="skip git pull and only reinstall from the local checkout")
+    update.set_defaults(func=cmd_update)
     uninstall = sub.add_parser("uninstall")
     uninstall.add_argument("--yes", action="store_true", help="required confirmation for destructive cleanup")
     uninstall.add_argument("--purge", action="store_true", help="remove containers, compose volumes, state, logs, secrets, install config, and app images")
@@ -2970,9 +3173,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _print_main_help() -> None:
+    print(_t("main_help").rstrip())
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw_args = list(sys.argv[1:] if argv is None else argv)
+    if not raw_args:
+        class _HelpArgs:
+            lang = None
+            cmd = "help"
+            config_cmd = None
+
+        _initialize_language(_HelpArgs())
+        _print_main_help()
+        return 0
+    args = build_parser().parse_args(raw_args)
     _initialize_language(args)
+    if not hasattr(args, "func"):
+        _print_main_help()
+        return 0
     return int(args.func(args) or 0)
 
 

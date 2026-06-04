@@ -28,6 +28,13 @@ cd /opt/myapp/current-agent-control-plane
 ./deploy/production/install_ctl.sh
 ```
 
+After the first install, refresh the source checkout and installed control files
+with:
+
+```bash
+myapp-ctl update
+```
+
 Optional destructive cleanup:
 
 ```bash

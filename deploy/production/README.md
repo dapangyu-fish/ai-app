@@ -50,6 +50,12 @@ myapp-ctl deploy --build
 myapp-ctl status
 ```
 
+Refresh the source checkout, `myapp-ctl`, and installed compose/config files:
+
+```bash
+myapp-ctl update
+```
+
 The language preference is stored in `/etc/myapp/ctl-language` and survives
 `install_ctl.sh` refreshes. Change it explicitly with `myapp-ctl config lang zh`
 or `en` / `de` / `es`.
@@ -149,6 +155,13 @@ look idle.
 One-command Docker Hub deployment on a clean host:
 
 ```bash
+myapp-ctl deploy --pull
+```
+
+Update a deployed host before pulling images:
+
+```bash
+myapp-ctl update
 myapp-ctl deploy --pull
 ```
 

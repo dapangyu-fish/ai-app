@@ -92,6 +92,13 @@ environment JSON and QR, and can create/update an interactive
 `test@example.com` test account; rerun
 `myapp-ctl client-env --terminal-qr` to show it again.
 
+Update the installed control CLI and production deploy files from the Git
+checkout:
+
+```bash
+myapp-ctl update
+```
+
 For a development/test host that builds images from this checkout:
 
 ```bash
