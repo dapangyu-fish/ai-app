@@ -27,7 +27,7 @@ install -d -m 700 /etc/myapp/secrets.d /etc/myapp/secrets.d/files /etc/myapp/sec
 install -m 755 "$ROOT_DIR/scripts/myapp_ctl.py" /opt/myapp/bin/myapp-ctl
 ln -sf /opt/myapp/bin/myapp-ctl /usr/local/bin/myapp-ctl
 
-python3 - "$ROOT_DIR/deploy/production/ctl.json" "$ROOT_DIR/deploy/production/services.json" "$EXISTING_LANGUAGE" <<'PY'
+python3 - "$ROOT_DIR/deploy/production/ctl.json" "$ROOT_DIR/deploy/production/services.json" "$EXISTING_LANGUAGE" "$ROOT_DIR" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -35,6 +35,7 @@ from pathlib import Path
 default_ctl_path = Path(sys.argv[1])
 default_services_path = Path(sys.argv[2])
 existing_language = sys.argv[3]
+source_root = Path(sys.argv[4]).resolve()
 ctl_path = Path("/etc/myapp/ctl.json")
 services_path = Path("/etc/myapp/services.json")
 
@@ -60,6 +61,8 @@ existing_ctl = load_json(ctl_path, {})
 merged_ctl = deep_merge(default_ctl, existing_ctl)
 if existing_language in {"zh", "en", "de", "es"}:
     merged_ctl["language"] = existing_language
+paths = merged_ctl.setdefault("paths", {})
+paths["source"] = str(source_root)
 ctl_path.write_text(json.dumps(merged_ctl, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 ctl_path.chmod(0o644)
 

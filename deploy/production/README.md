@@ -50,9 +50,13 @@ website sources, or host-local secrets.
 Start from a source checkout on the host:
 
 ```bash
-cd /opt/myapp/current-agent-control-plane
+cd ~/ai-app  # or any real git checkout of this repository
 ./deploy/production/install_ctl.sh
 ```
+
+`install_ctl.sh` records the checkout path in `/etc/myapp/ctl.json` as
+`paths.source`; later `myapp-ctl deploy --build` uses that path as the Docker
+build context.
 
 First interactive use asks for the CLI language once: `zh`, `en`, `de`, or
 `es`. Change it later with:
