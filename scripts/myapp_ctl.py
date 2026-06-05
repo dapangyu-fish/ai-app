@@ -3623,11 +3623,7 @@ def _join_agent_node(args) -> int:
         return rc
 
     if args.no_timer:
-        _run(["systemctl", "disable", "--now", "myapp-agent-register.timer"], capture=False)
-        Path("/etc/systemd/system/myapp-agent-register.timer").unlink(missing_ok=True)
-        Path("/etc/systemd/system/myapp-agent-register.service").unlink(missing_ok=True)
-        Path("/etc/myapp/agent-node-register.sh").unlink(missing_ok=True)
-        _run(["systemctl", "daemon-reload"], capture=False)
+        _remove_agent_register_timer()
         register_args = argparse.Namespace(
             backend=backend_url,
             url=node_url,
@@ -3771,6 +3767,19 @@ def _local_agent_node_register_command() -> list[str]:
     ]
 
 
+def _remove_agent_register_timer() -> None:
+    if shutil.which("systemctl"):
+        _run(["systemctl", "disable", "--now", "myapp-agent-register.timer"], capture=True)
+    for path in (
+        Path("/etc/myapp/agent-node-register.sh"),
+        Path("/etc/systemd/system/myapp-agent-register.service"),
+        Path("/etc/systemd/system/myapp-agent-register.timer"),
+    ):
+        path.unlink(missing_ok=True)
+    if shutil.which("systemctl"):
+        _run(["systemctl", "daemon-reload"], capture=True)
+
+
 def _ensure_local_agent_node_registration_timer(*, dry_run: bool) -> int:
     agent_env = _parse_env(_secret_path("agent"))
     pull_enabled = str(agent_env.get("AGENT_NODE_PULL_ENABLED", "1")).strip().lower() in {"1", "true", "yes", "on"}
@@ -3782,11 +3791,7 @@ def _ensure_local_agent_node_registration_timer(*, dry_run: bool) -> int:
         print("+ pull-mode agent-node registers itself through backend acquire; disable host register timer")
         if dry_run:
             return 0
-        _run(["systemctl", "disable", "--now", "myapp-agent-register.timer"], capture=False)
-        script_path.unlink(missing_ok=True)
-        service_path.unlink(missing_ok=True)
-        timer_path.unlink(missing_ok=True)
-        _run(["systemctl", "daemon-reload"], capture=False)
+        _remove_agent_register_timer()
         return 0
     script = "#!/usr/bin/env bash\nset -euo pipefail\n" + " ".join(shlex.quote(part) for part in cmd) + "\n"
     service = """[Unit]
