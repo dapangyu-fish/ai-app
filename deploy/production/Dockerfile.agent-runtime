@@ -49,6 +49,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && npm install -g @anthropic-ai/claude-code @openai/codex@0.136.0 \
     && ln -sf "$(command -v claude)" /usr/local/bin/claude \
     && ln -sf "$(command -v codex)" /usr/local/bin/codex \
+    && claude --version \
+    && codex --version \
     && python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
     && npm_config_cache=/tmp/codex-npm-cache npx -y @openai/codex@0.136.0 --version \
