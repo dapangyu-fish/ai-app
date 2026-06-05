@@ -382,21 +382,29 @@ myapp-ctl agent-node register \
   --label host=<agent-hostname-or-ip>
 ```
 
-Generate a bootstrap script for a new agent host from the master backend host:
+Generate a join command for a new agent host from the master backend host:
 
 ```bash
 myapp-ctl agent-node add \
   --backend http://<master-host>:5566 \
+  --host <new-agent-host-ip-or-name> \
   --node-id myapp-agent-2 \
   --capacity 2 \
   --mode pull \
   --provider-mode master
 ```
 
-This prints a one-shot script for the new host. It installs only the agent-node
-and agent-runtime services, writes the shared registration token, enables pull
-mode, registers `pull://myapp-agent-2`, and starts polling the backend. The new
-host only needs outbound HTTP access to `<master-host>:5566`.
+This prints a single `myapp-ctl agent-node join ...` command for the new host.
+The command writes the agent-node secret config, installs only the agent-node
+and agent-runtime services, enables pull mode, registers
+`pull://myapp-agent-2`, and starts polling the backend. The new host only needs
+outbound HTTP access to `<master-host>:5566`.
+
+Image handling is explicit:
+
+- no image flag: require the agent images to already exist locally
+- `--pull`: pull the configured agent-node/runtime images during join
+- `--build`: build the configured agent-node/runtime images from local source
 
 If you intentionally want the old backend-to-agent direct path, opt in:
 
