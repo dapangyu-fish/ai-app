@@ -1587,11 +1587,16 @@ def _registered_agent_node_records() -> List[dict]:
                 capacity = max(1, min(100, int(item.get("capacity") or 1)))
             except (TypeError, ValueError):
                 capacity = 1
+            try:
+                queue_max = max(0, min(10000, int(item.get("queue_max") or capacity)))
+            except (TypeError, ValueError):
+                queue_max = capacity
             labels = item.get("labels") if isinstance(item.get("labels"), list) else []
             records.append(
                 {
                     "url": url,
                     "capacity": capacity,
+                    "queue_max": queue_max,
                     "provider_mode": _agent_node_label_mode(labels),
                 }
             )
@@ -1616,6 +1621,11 @@ def _registered_agent_node_records() -> List[dict]:
                 capacity = max(1, min(100, int(_decode_redis_text(raw_capacity, "1"))))
             except (TypeError, ValueError):
                 capacity = 1
+            raw_queue_max = data.get(b"queue_max") or data.get("queue_max") or str(capacity).encode()
+            try:
+                queue_max = max(0, min(10000, int(_decode_redis_text(raw_queue_max, str(capacity)))))
+            except (TypeError, ValueError):
+                queue_max = capacity
             raw_labels = data.get(b"labels") or data.get("labels") or b"[]"
             try:
                 labels = json.loads(_decode_redis_text(raw_labels, "[]") or "[]")
@@ -1628,6 +1638,7 @@ def _registered_agent_node_records() -> List[dict]:
                 {
                     "url": url,
                     "capacity": capacity,
+                    "queue_max": queue_max,
                     "provider_mode": _agent_node_label_mode(labels),
                 }
             )
@@ -1808,6 +1819,10 @@ def _agent_pull_enqueue_run(
         "created_at": now_ms,
     }
     r = get_redis()
+    _wait_for_agent_pull_queue_slot(
+        r,
+        timeout_seconds=float(os.environ.get("AGENT_PULL_QUEUE_WAIT_SECONDS", "30")),
+    )
     pipe = r.pipeline()
     pipe.hset(
         _agent_pull_job_key(run_id),
@@ -1914,6 +1929,34 @@ def _wait_for_agent_pull_node(timeout_seconds: float = 5.0) -> bool:
         time.sleep(0.5)
 
 
+def _agent_pull_total_queue_max() -> int:
+    total = 0
+    for record in _registered_agent_node_records():
+        try:
+            total += max(0, int(record.get("queue_max") or 0))
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def _wait_for_agent_pull_queue_slot(r: redis.Redis, *, timeout_seconds: float = 30.0) -> None:
+    limit = _agent_pull_total_queue_max()
+    if limit <= 0:
+        return
+    deadline = time.time() + max(0.0, timeout_seconds)
+    while True:
+        try:
+            queued = int(r.llen(_agent_pull_pending_key()) or 0)
+        except redis.exceptions.RedisError as exc:
+            logger.warning("[AGENT_PULL] queue length check failed: %s", exc)
+            return
+        if queued < limit:
+            return
+        if time.time() >= deadline:
+            raise RuntimeError(f"agent-node queue is full: queued={queued} queue_max={limit}")
+        time.sleep(0.2)
+
+
 def agent_pull_acquire():
     if not _agent_pull_auth_ok():
         return jsonify({"error": "unauthorized"}), 401
@@ -1927,6 +1970,10 @@ def agent_pull_acquire():
         capacity = max(1, min(100, int(body.get("capacity") or 1)))
     except (TypeError, ValueError):
         capacity = 1
+    try:
+        queue_max = max(0, min(10000, int(body.get("queue_max") if body.get("queue_max") is not None else capacity)))
+    except (TypeError, ValueError):
+        queue_max = capacity
     try:
         timeout_seconds = max(0.0, min(10.0, float(body.get("timeout_seconds") or 5)))
     except (TypeError, ValueError):
@@ -1944,6 +1991,7 @@ def agent_pull_acquire():
             node_id=node_id,
             url=str(body.get("url") or f"pull://{node_id}").strip() or f"pull://{node_id}",
             capacity=capacity,
+            queue_max=queue_max,
             labels=labels,
             ttl_seconds=max(30, int(body.get("ttl_seconds") or 120)),
         )

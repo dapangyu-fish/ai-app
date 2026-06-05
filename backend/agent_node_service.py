@@ -63,6 +63,10 @@ try:
     NODE_CAPACITY = max(1, int(os.environ.get("AGENT_NODE_CAPACITY", "1")))
 except ValueError:
     NODE_CAPACITY = 1
+try:
+    NODE_QUEUE_MAX = max(0, int(os.environ.get("AGENT_NODE_QUEUE_MAX", str(NODE_CAPACITY))))
+except ValueError:
+    NODE_QUEUE_MAX = NODE_CAPACITY
 RUN_RETENTION_SECONDS = int(os.environ.get("AGENT_NODE_RUN_RETENTION_SECONDS", "604800"))
 RUN_SNAPSHOT_MAX_FILE_BYTES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES", "52428800"))
 RUN_SNAPSHOT_MAX_FILES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILES", "5000"))
@@ -711,7 +715,15 @@ def health():
     _cleanup_proxy_tokens()
     with _PROXY_LOCK:
         proxy_tokens = len(_PROXY_TOKENS)
-    return jsonify({"ok": True, "node_id": NODE_ID, "image": RUNTIME_IMAGE, "running": running, "proxy_tokens": proxy_tokens})
+    return jsonify({
+        "ok": True,
+        "node_id": NODE_ID,
+        "image": RUNTIME_IMAGE,
+        "running": running,
+        "proxy_tokens": proxy_tokens,
+        "capacity": NODE_CAPACITY,
+        "queue_max": NODE_QUEUE_MAX,
+    })
 
 
 def _proxy_lookup(token: str) -> Optional[dict]:
@@ -1254,6 +1266,7 @@ def _pull_loop() -> None:
                 json={
                     "node_id": NODE_ID,
                     "capacity": capacity,
+                    "queue_max": NODE_QUEUE_MAX,
                     "provider_mode": PROVIDER_MODE or "master",
                     "labels": _pull_labels(),
                     "url": os.environ.get("AGENT_NODE_SELF_REGISTER_URL") or f"pull://{NODE_ID}",

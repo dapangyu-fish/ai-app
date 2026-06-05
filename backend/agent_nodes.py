@@ -92,6 +92,7 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         "url": url,
         "host": label_host or parsed.hostname or "",
         "capacity": get_int("capacity", 1),
+        "queue_max": get_int("queue_max", 0),
         "labels": labels,
         "provider_mode": provider_mode,
         "last_seen": get_int("last_seen", 0),
@@ -160,6 +161,8 @@ def _probe_agent_node(row: dict) -> dict:
             "reachable": True,
             "health": "ok" if payload.get("ok", True) else "error",
             "active_runs": int(payload.get("running") or 0),
+            "capacity": int(payload.get("capacity") or row.get("capacity") or 1),
+            "queue_max": int(payload.get("queue_max") or row.get("queue_max") or 0),
             "runtime_image": payload.get("image", ""),
             "proxy_tokens": int(payload.get("proxy_tokens") or 0),
             "detail": "",
@@ -171,6 +174,21 @@ def _probe_agent_node(row: dict) -> dict:
             "active_runs": 0,
             "detail": str(exc),
         }
+
+
+def _agent_pull_queue_depth() -> int:
+    try:
+        return int(get_redis().llen("ai:agent_pull:pending") or 0)
+    except Exception:
+        return 0
+
+
+def _with_queue_depth(row: dict, queued: int | None = None) -> dict:
+    row = dict(row)
+    if queued is None:
+        queued = _agent_pull_queue_depth()
+    row["queue_depth"] = queued if str(row.get("url") or "").startswith("pull://") and row.get("status") == "online" else 0
+    return row
 
 
 def _decorate_node(row: dict, *, probe: bool, include_runs: bool = False) -> dict:
@@ -237,6 +255,10 @@ def register_agent_node():
     except (TypeError, ValueError):
         capacity = 1
     try:
+        queue_max = max(0, min(10000, int(body.get("queue_max") if body.get("queue_max") is not None else capacity)))
+    except (TypeError, ValueError):
+        queue_max = capacity
+    try:
         ttl_seconds = max(30, int(body.get("ttl_seconds") or 120))
     except (TypeError, ValueError):
         ttl_seconds = 120
@@ -246,6 +268,7 @@ def register_agent_node():
         "node_id": node_id,
         "url": url,
         "capacity": capacity,
+        "queue_max": queue_max,
         "labels": labels,
         "last_seen": now_ms,
         "ttl_seconds": ttl_seconds,
@@ -254,6 +277,7 @@ def register_agent_node():
         node_id=node_id,
         url=url,
         capacity=capacity,
+        queue_max=queue_max,
         labels=labels,
         ttl_seconds=ttl_seconds,
     )
@@ -261,6 +285,7 @@ def register_agent_node():
         "node_id": node_id,
         "url": url,
         "capacity": str(capacity),
+        "queue_max": str(queue_max),
         "labels": json.dumps(labels, ensure_ascii=False),
         "last_seen": str(now_ms),
         "ttl_seconds": str(ttl_seconds),
@@ -285,6 +310,9 @@ def list_agent_nodes():
     for item in agent_node_registry.list_nodes():
         rows.append(_decorate_node(_node_row(item.get("node_id"), item), probe=probe))
     rows.sort(key=lambda item: item.get("node_id", ""))
+    queued = _agent_pull_queue_depth()
+    for row in rows:
+        row.update(_with_queue_depth(row, queued))
     summary = {
         "total": len(rows),
         "online": sum(1 for row in rows if row.get("status") == "online"),
@@ -292,10 +320,17 @@ def list_agent_nodes():
         "registered": sum(1 for row in rows if row.get("status") == "registered"),
         "down": sum(1 for row in rows if row.get("status") == "down"),
         "stale": sum(1 for row in rows if row.get("status") == "stale"),
+        "queued": queued,
         "active_runs": sum(int(row.get("active_runs") or 0) for row in rows),
         "capacity": sum(int(row.get("capacity") or 0) for row in rows),
+        "queue_max": sum(int(row.get("queue_max") or 0) for row in rows),
         "available_capacity": sum(
             int(row.get("capacity") or 0)
+            for row in rows
+            if row.get("status") == "online"
+        ),
+        "available_queue_max": sum(
+            int(row.get("queue_max") or 0)
             for row in rows
             if row.get("status") == "online"
         ),
@@ -311,7 +346,7 @@ def get_agent_node(node_id: str):
     if not data:
         return jsonify({"error": "agent node not found", "node_id": safe_node_id}), 404
     include_runs = request.args.get("runs", "1").lower() not in {"0", "false", "no"}
-    row = _decorate_node(_node_row(safe_node_id, data), probe=True, include_runs=include_runs)
+    row = _with_queue_depth(_decorate_node(_node_row(safe_node_id, data), probe=True, include_runs=include_runs))
     return jsonify({"node": row})
 
 
@@ -340,7 +375,7 @@ def pause_agent_node(node_id: str):
         get_redis().hset(_registry_key(safe_node_id), mapping={"paused": "1", "pause_reason": reason})
     except Exception:
         pass
-    return jsonify({"ok": True, "node": _decorate_node(_node_row(safe_node_id, data), probe=True)})
+    return jsonify({"ok": True, "node": _with_queue_depth(_decorate_node(_node_row(safe_node_id, data), probe=True))})
 
 
 def resume_agent_node(node_id: str):
@@ -354,4 +389,4 @@ def resume_agent_node(node_id: str):
         get_redis().hset(_registry_key(safe_node_id), mapping={"paused": "0", "pause_reason": ""})
     except Exception:
         pass
-    return jsonify({"ok": True, "node": _decorate_node(_node_row(safe_node_id, data), probe=True)})
+    return jsonify({"ok": True, "node": _with_queue_depth(_decorate_node(_node_row(safe_node_id, data), probe=True))})

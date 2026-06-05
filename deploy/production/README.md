@@ -456,8 +456,9 @@ backend does not assign new runs to them. Existing runs are not aborted.
 Change the local pull-node concurrency:
 
 ```bash
-# Run on the agent host. This writes AGENT_NODE_CAPACITY and restarts agent-node.
-myapp-ctl agent-node capacity 3
+# Run on the agent host. This writes local limits and restarts agent-node.
+myapp-ctl agent-node capacity 3 --queue-max 20
+myapp-ctl agent-node limits --capacity 3 --queue-max 20
 ```
 
 The command refuses to restart while local agent runs are active unless
@@ -466,9 +467,14 @@ The command refuses to restart while local agent runs are active unless
 ```bash
 myapp-ctl agent-node pause --reason "resize capacity"
 myapp-ctl agent ls
-myapp-ctl agent-node capacity 3
+myapp-ctl agent-node limits --capacity 3 --queue-max 20
 myapp-ctl agent-node resume
 ```
+
+In `myapp-ctl agent-node ls`, `RUNS` is the active runtime count, `CAP` is this
+node's max concurrency, `QUEUE` is the current backend pull queue depth visible
+to online pull nodes, and `QMAX` is the max pull queue capacity reported by the
+node. The summary prints `queued=<current>` and `qmax=<available>/<total>`.
 
 Cluster node operations:
 

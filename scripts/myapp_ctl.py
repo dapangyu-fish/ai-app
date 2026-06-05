@@ -3445,6 +3445,8 @@ def _print_agent_add_script(args) -> int:
         str(args.local_port),
         "--capacity",
         str(args.capacity),
+        "--queue-max",
+        str(args.queue_max if args.queue_max is not None else args.capacity),
         "--ttl",
         str(args.ttl),
         "--mode",
@@ -3548,6 +3550,7 @@ def _join_agent_node(args) -> int:
             "AGENT_NODE_BACKEND_URL": backend_url,
             "AGENT_NODE_SELF_REGISTER_URL": node_url,
             "AGENT_NODE_CAPACITY": str(args.capacity),
+            "AGENT_NODE_QUEUE_MAX": str(args.queue_max if args.queue_max is not None else args.capacity),
             "AGENT_NODE_REGISTRATION_TTL_SECONDS": str(args.ttl),
             "AGENT_NODE_LABELS": ",".join(labels),
             "AGENT_NODE_TOKEN": args.agent_token,
@@ -3711,6 +3714,7 @@ def _register_agent_node(args) -> int:
         "node_id": node_id,
         "url": node_url,
         "capacity": args.capacity,
+        "queue_max": getattr(args, "queue_max", None) if getattr(args, "queue_max", None) is not None else args.capacity,
         "ttl_seconds": args.ttl,
         "labels": args.label or [],
     }
@@ -3755,6 +3759,7 @@ def _local_agent_node_register_command() -> list[str]:
         or "master"
     )
     capacity = agent_env.get("AGENT_NODE_CAPACITY") or "1"
+    queue_max = agent_env.get("AGENT_NODE_QUEUE_MAX") or capacity
     ttl = agent_env.get("AGENT_NODE_REGISTRATION_TTL_SECONDS") or "180"
     return [
         "/usr/local/bin/myapp-ctl",
@@ -3768,6 +3773,8 @@ def _local_agent_node_register_command() -> list[str]:
         node_id,
         "--capacity",
         str(capacity),
+        "--queue-max",
+        str(queue_max),
         "--ttl",
         str(ttl),
         "--label",
@@ -3870,7 +3877,9 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
         f"stale={summary.get('stale', 0)} "
         f"active_runs={summary.get('active_runs', 0)} "
         f"capacity={summary.get('capacity', 0)} "
-        f"available={summary.get('available_capacity', summary.get('capacity', 0))}"
+        f"available={summary.get('available_capacity', summary.get('capacity', 0))} "
+        f"queued={summary.get('queued', 0)} "
+        f"qmax={summary.get('available_queue_max', summary.get('queue_max', 0))}/{summary.get('queue_max', 0)}"
     )
     rows = []
     for item in data.get("nodes") or []:
@@ -3881,6 +3890,8 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
                 "status": item.get("status", "-"),
                 "active_runs": item.get("active_runs", "-"),
                 "capacity": item.get("capacity", "-"),
+                "queue_depth": item.get("queue_depth", "-"),
+                "queue_max": item.get("queue_max", "-"),
                 "provider_mode": item.get("provider_mode", "-"),
                 "expires": _expires_label(item.get("expires_in_seconds")),
                 "url": item.get("url", "-"),
@@ -3894,6 +3905,8 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
             ("status", "STATUS"),
             ("active_runs", "RUNS"),
             ("capacity", "CAP"),
+            ("queue_depth", "QUEUE"),
+            ("queue_max", "QMAX"),
             ("provider_mode", "KEY_SRC"),
             ("expires", "EXPIRES"),
             ("url", "URL"),
@@ -3919,6 +3932,8 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
                 "health": node.get("health", "-"),
                 "active_runs": node.get("active_runs", "-"),
                 "capacity": node.get("capacity", "-"),
+                "queue_depth": node.get("queue_depth", "-"),
+                "queue_max": node.get("queue_max", "-"),
                 "provider_mode": node.get("provider_mode", "-"),
                 "expires": _expires_label(node.get("expires_in_seconds")),
                 "url": node.get("url", "-"),
@@ -3931,6 +3946,8 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
             ("health", "HEALTH"),
             ("active_runs", "RUNS"),
             ("capacity", "CAP"),
+            ("queue_depth", "QUEUE"),
+            ("queue_max", "QMAX"),
             ("provider_mode", "KEY_SRC"),
             ("expires", "EXPIRES"),
             ("url", "URL"),
@@ -3985,11 +4002,24 @@ def _active_local_agent_container_names() -> list[str]:
     ]
 
 
-def _set_local_agent_node_capacity(args) -> int:
+def _set_local_agent_node_limits(args) -> int:
+    agent_env = _parse_env(_secret_path("agent"))
+    current_capacity = agent_env.get("AGENT_NODE_CAPACITY", "1")
+    current_queue_max = agent_env.get("AGENT_NODE_QUEUE_MAX", current_capacity)
+    capacity_value = getattr(args, "capacity", None)
+    queue_max_value = getattr(args, "queue_max", None)
+    if capacity_value is None and queue_max_value is None:
+        print("pass --capacity and/or --queue-max", file=sys.stderr)
+        return 2
     try:
-        capacity = max(1, min(100, int(args.capacity)))
+        capacity = max(1, min(100, int(capacity_value if capacity_value is not None else current_capacity)))
     except (TypeError, ValueError):
         print("capacity must be an integer from 1 to 100", file=sys.stderr)
+        return 2
+    try:
+        queue_max = max(0, min(10000, int(queue_max_value if queue_max_value is not None else current_queue_max)))
+    except (TypeError, ValueError):
+        print("queue max must be an integer from 0 to 10000", file=sys.stderr)
         return 2
     active = _active_local_agent_container_names()
     if active and not args.force and not args.no_restart:
@@ -3999,12 +4029,15 @@ def _set_local_agent_node_capacity(args) -> int:
             file=sys.stderr,
         )
         return 1
-    agent_env = _parse_env(_secret_path("agent"))
-    previous = agent_env.get("AGENT_NODE_CAPACITY", "1")
     agent_env["AGENT_NODE_CAPACITY"] = str(capacity)
+    agent_env["AGENT_NODE_QUEUE_MAX"] = str(queue_max)
     _write_env(_secret_path("agent"), agent_env)
     _safe_write_default_config_snapshot()
-    print(f"updated local agent-node capacity: {previous} -> {capacity}", flush=True)
+    print(
+        f"updated local agent-node limits: "
+        f"capacity {current_capacity} -> {capacity}, queue_max {current_queue_max} -> {queue_max}",
+        flush=True,
+    )
     if args.no_restart:
         print("agent-node was not restarted; deploy/restart agent-node for this to take effect")
         return 0
@@ -4032,8 +4065,8 @@ def cmd_agent_node(args) -> int:
         return _join_agent_node(args)
     if args.agent_node_cmd == "register":
         return _register_agent_node(args)
-    if args.agent_node_cmd == "capacity":
-        return _set_local_agent_node_capacity(args)
+    if args.agent_node_cmd in {"capacity", "limits"}:
+        return _set_local_agent_node_limits(args)
 
     backend_url = _agent_node_backend_url(args)
     if not backend_url:
@@ -4321,6 +4354,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_register.add_argument("--url")
     agent_node_register.add_argument("--node-id")
     agent_node_register.add_argument("--capacity", type=int, default=1)
+    agent_node_register.add_argument("--queue-max", type=int)
     agent_node_register.add_argument("--ttl", type=int, default=120)
     agent_node_register.add_argument("--token")
     agent_node_register.add_argument("--label", action="append")
@@ -4345,12 +4379,22 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_resume.set_defaults(func=cmd_agent_node)
     agent_node_capacity = agent_node_sub.add_parser("capacity", help="set local pull agent capacity and restart agent-node")
     agent_node_capacity.add_argument("capacity", type=int)
+    agent_node_capacity.add_argument("--queue-max", type=int, help="local pull queue max reported by this agent node")
     agent_node_capacity.add_argument("--backend", help="master backend URL; defaults to AGENT_NODE_BACKEND_URL")
     agent_node_capacity.add_argument("--token")
-    agent_node_capacity.add_argument("--no-restart", action="store_true", help="only write AGENT_NODE_CAPACITY")
+    agent_node_capacity.add_argument("--no-restart", action="store_true", help="only write local limits")
     agent_node_capacity.add_argument("--force", action="store_true", help="restart even if local agent runs are active")
     agent_node_capacity.add_argument("--json", action="store_true")
     agent_node_capacity.set_defaults(func=cmd_agent_node)
+    agent_node_limits = agent_node_sub.add_parser("limits", help="set local pull agent capacity/queue limits and restart agent-node")
+    agent_node_limits.add_argument("--capacity", type=int)
+    agent_node_limits.add_argument("--queue-max", type=int)
+    agent_node_limits.add_argument("--backend", help="master backend URL; defaults to AGENT_NODE_BACKEND_URL")
+    agent_node_limits.add_argument("--token")
+    agent_node_limits.add_argument("--no-restart", action="store_true", help="only write local limits")
+    agent_node_limits.add_argument("--force", action="store_true", help="restart even if local agent runs are active")
+    agent_node_limits.add_argument("--json", action="store_true")
+    agent_node_limits.set_defaults(func=cmd_agent_node)
     agent_node_add = agent_node_sub.add_parser("add", help="print a join command for a new agent host")
     agent_node_add.add_argument("--backend", help="master backend URL, for example http://77.237.233.229:5566")
     agent_node_add.add_argument("--host", help="new agent host public IP or domain")
@@ -4360,6 +4404,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_add.add_argument("--local-port", type=int, default=5590)
     agent_node_add.add_argument("--public-port", type=int, default=5591)
     agent_node_add.add_argument("--capacity", type=int, default=1)
+    agent_node_add.add_argument("--queue-max", type=int)
     agent_node_add.add_argument("--ttl", type=int, default=180)
     agent_node_add.add_argument("--label", action="append")
     agent_node_add.add_argument("--mode", choices=["pull", "direct"], default="pull")
@@ -4379,6 +4424,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_join.add_argument("--local-port", type=int, default=5590)
     agent_node_join.add_argument("--public-port", type=int, default=5591)
     agent_node_join.add_argument("--capacity", type=int, default=1)
+    agent_node_join.add_argument("--queue-max", type=int)
     agent_node_join.add_argument("--ttl", type=int, default=180)
     agent_node_join.add_argument("--label", action="append")
     agent_node_join.add_argument("--mode", choices=["pull", "direct"], default="pull")
