@@ -3759,10 +3759,22 @@ def _local_agent_node_register_command() -> list[str]:
 
 
 def _ensure_local_agent_node_registration_timer(*, dry_run: bool) -> int:
+    agent_env = _parse_env(_secret_path("agent"))
+    pull_enabled = str(agent_env.get("AGENT_NODE_PULL_ENABLED", "1")).strip().lower() in {"1", "true", "yes", "on"}
     cmd = _local_agent_node_register_command()
     script_path = Path("/etc/myapp/agent-node-register.sh")
     service_path = Path("/etc/systemd/system/myapp-agent-register.service")
     timer_path = Path("/etc/systemd/system/myapp-agent-register.timer")
+    if pull_enabled:
+        print("+ pull-mode agent-node registers itself through backend acquire; disable host register timer")
+        if dry_run:
+            return 0
+        _run(["systemctl", "disable", "--now", "myapp-agent-register.timer"], capture=False)
+        script_path.unlink(missing_ok=True)
+        service_path.unlink(missing_ok=True)
+        timer_path.unlink(missing_ok=True)
+        _run(["systemctl", "daemon-reload"], capture=False)
+        return 0
     script = "#!/usr/bin/env bash\nset -euo pipefail\n" + " ".join(shlex.quote(part) for part in cmd) + "\n"
     service = """[Unit]
 Description=Register local MyApp agent node
