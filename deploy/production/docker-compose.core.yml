@@ -124,6 +124,8 @@ services:
     container_name: myapp-ai-worker
     restart: unless-stopped
     depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
       ai-session-redis:
         condition: service_healthy
       agent-node:
@@ -138,6 +140,11 @@ services:
       - path: /etc/myapp/secrets.d/agent.env
         required: false
     environment:
+      DB_HOST: jsonapp-postgres
+      DB_PORT: "5432"
+      DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
+      DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
+      DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
       AI_SESSION_REDIS_HOST: ai-session-redis
       AI_SESSION_REDIS_PORT: "6379"
       AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD:-redis-dev-password}"
