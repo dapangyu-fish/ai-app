@@ -3640,11 +3640,17 @@ def _join_agent_node(args) -> int:
     return 0
 
 def _agent_node_backend_url(args) -> str:
+    explicit = getattr(args, "backend", None)
+    if explicit:
+        return explicit.rstrip("/")
+    agent_backend = (_parse_env(_secret_path("agent")).get("AGENT_NODE_BACKEND_URL", "") or "").rstrip("/")
+    agent_backend_host = urlparse(agent_backend).hostname or ""
+    if agent_backend and agent_backend_host not in {"backend", "myapp-backend", "agent-node"}:
+        return agent_backend
     return (
-        getattr(args, "backend", None)
-        or _cfg().get("domains", {}).get("backend")
-        or _parse_env(_secret_path("agent")).get("AGENT_NODE_BACKEND_URL", "")
+        _cfg().get("domains", {}).get("backend")
         or _parse_env(_secret_path("backend")).get("BACKEND_PUBLIC_URL", "")
+        or agent_backend
         or ""
     ).rstrip("/")
 
