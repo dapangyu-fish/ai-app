@@ -3852,8 +3852,9 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
         "agent nodes: "
         f"total={summary.get('total', 0)} "
         f"online={summary.get('online', 0)} "
-        f"registered={summary.get('registered', 0)} "
+        f"pending={summary.get('registered', 0)} "
         f"down={summary.get('down', 0)} "
+        f"stale={summary.get('stale', 0)} "
         f"active_runs={summary.get('active_runs', 0)} "
         f"capacity={summary.get('capacity', 0)}"
     )
