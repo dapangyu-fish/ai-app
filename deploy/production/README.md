@@ -438,6 +438,21 @@ request.
 agent-node counts Docker runtime containers plus jobs it has just acquired but
 not fully started yet, so it does not over-pull during container startup.
 
+Pause or resume scheduling for a node without stopping existing runs:
+
+```bash
+# On the agent host itself; node id defaults to local AGENT_NODE_ID.
+myapp-ctl agent-node pause --reason "maintenance"
+myapp-ctl agent-node resume
+
+# From the master host, pass an explicit node id.
+myapp-ctl agent-node pause myapp-agent-2 --reason "maintenance"
+myapp-ctl agent-node resume myapp-agent-2
+```
+
+Paused pull nodes keep heartbeating and stay visible in `agent-node ls`, but the
+backend does not assign new runs to them. Existing runs are not aborted.
+
 Cluster node operations:
 
 ```bash
