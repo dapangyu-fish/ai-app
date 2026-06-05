@@ -1544,6 +1544,10 @@ def cmd_deploy(args) -> int:
     rc = _deploy_compose_services(names, dry_run=args.dry_run)
     if rc != 0:
         return rc
+    if "agent-node" in names:
+        rc = _ensure_local_agent_node_registration_timer(dry_run=args.dry_run)
+        if rc != 0:
+            return rc
     if _deploy_needs_supabase_auth_migration(names):
         rc = _run_supabase_auth_migrations(dry_run=args.dry_run)
         if rc != 0:
@@ -3451,6 +3455,9 @@ def _print_agent_add_script(args) -> int:
         f"AGENT_NODE_ID={shlex.quote(node_id)} "
         f"AGENT_NODE_PORT={int(args.local_port)} "
         f"AGENT_NODE_PROVIDER_MODE={shlex.quote(provider_mode)} "
+        f"AGENT_NODE_SELF_REGISTER_URL={shlex.quote(node_url)} "
+        f"AGENT_NODE_CAPACITY={int(args.capacity)} "
+        f"AGENT_NODE_REGISTRATION_TTL_SECONDS={int(args.ttl)} "
         f"AGENT_NODE_TOKEN={shlex.quote(agent_token)} "
         f"AGENT_NODE_REGISTRATION_TOKEN={shlex.quote(registration_token)}"
     )
@@ -3589,6 +3596,100 @@ def _register_agent_node(args) -> int:
         print(f"register failed: {status or '-'} {error}", file=sys.stderr)
         return 1
     print(json.dumps(data, ensure_ascii=False))
+    return 0
+
+
+def _local_agent_node_register_command() -> list[str]:
+    cfg = _cfg()
+    agent_env = _parse_env(_secret_path("agent"))
+    backend_env = _parse_env(_secret_path("backend"))
+    backend_port = backend_env.get("BACKEND_PORT") or "5566"
+    backend_url = f"http://127.0.0.1:{backend_port}"
+    node_url = (
+        agent_env.get("AGENT_NODE_SELF_REGISTER_URL")
+        or cfg.get("domains", {}).get("agent_node")
+        or "http://agent-node:5590"
+    ).rstrip("/")
+    node_id = (
+        agent_env.get("AGENT_NODE_ID")
+        or cfg.get("node", {}).get("id")
+        or os.uname().nodename
+    )
+    public_host = _public_host()
+    provider_mode = (
+        agent_env.get("AGENT_NODE_PROVIDER_MODE", "master")
+        .strip()
+        .lower()
+        .replace("_", "-")
+        or "master"
+    )
+    capacity = agent_env.get("AGENT_NODE_CAPACITY") or "1"
+    ttl = agent_env.get("AGENT_NODE_REGISTRATION_TTL_SECONDS") or "180"
+    return [
+        "/usr/local/bin/myapp-ctl",
+        "agent-node",
+        "register",
+        "--backend",
+        backend_url,
+        "--url",
+        node_url,
+        "--node-id",
+        node_id,
+        "--capacity",
+        str(capacity),
+        "--ttl",
+        str(ttl),
+        "--label",
+        f"host={public_host}",
+        "--label",
+        f"provider_mode={provider_mode}",
+        "--label",
+        "role=all-in-one",
+    ]
+
+
+def _ensure_local_agent_node_registration_timer(*, dry_run: bool) -> int:
+    cmd = _local_agent_node_register_command()
+    script_path = Path("/etc/myapp/agent-node-register.sh")
+    service_path = Path("/etc/systemd/system/myapp-agent-register.service")
+    timer_path = Path("/etc/systemd/system/myapp-agent-register.timer")
+    script = "#!/usr/bin/env bash\nset -euo pipefail\n" + " ".join(shlex.quote(part) for part in cmd) + "\n"
+    service = """[Unit]
+Description=Register local MyApp agent node
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /etc/myapp/agent-node-register.sh
+"""
+    timer = """[Unit]
+Description=Register local MyApp agent node periodically
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+Unit=myapp-agent-register.service
+
+[Install]
+WantedBy=timers.target
+"""
+    print("+ install local agent-node registration timer")
+    if dry_run:
+        print(script.rstrip())
+        return 0
+    script_path.parent.mkdir(parents=True, exist_ok=True)
+    script_path.write_text(script, encoding="utf-8")
+    os.chmod(script_path, 0o755)
+    service_path.write_text(service, encoding="utf-8")
+    timer_path.write_text(timer, encoding="utf-8")
+    rc = _run(["systemctl", "daemon-reload"], capture=False).returncode
+    if rc != 0:
+        return rc
+    rc = _run(["systemctl", "enable", "--now", "myapp-agent-register.timer"], capture=False).returncode
+    if rc != 0:
+        return rc
+    rc = _run(["systemctl", "start", "myapp-agent-register.service"], capture=False).returncode
+    if rc != 0:
+        print("warning: local agent-node immediate registration failed; systemd timer will retry", file=sys.stderr)
     return 0
 
 

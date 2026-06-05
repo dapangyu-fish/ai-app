@@ -358,9 +358,11 @@ line to run manually if you intentionally want to destroy all local data.
 
 ## Multi-Host Direction
 
-The current stack is single-host first. Worker scheduling already supports a
-future multi-node shape through static `AGENT_NODE_URLS`, registered Redis
+The current stack is single-host first. Worker scheduling supports a multi-node
+shape through static `AGENT_NODE_URLS`, registered Postgres `agent_nodes`
 records, and session-to-node assignment so later turns keep using the same node.
+Redis is not the source of truth for node registration; it is only a short-lived
+compatibility heartbeat cache.
 
 Register an agent node:
 
@@ -404,3 +406,9 @@ myapp-ctl agent-node rm myapp-agent-2
 
 `myapp-ctl agent ls` remains local-only: it shows the currently running agent
 containers on the machine where the command is executed.
+
+All-in-one hosts also self-register through the same registry path. Deploying
+`agent-node` installs `myapp-agent-register.timer`, which runs
+`myapp-ctl agent-node register` every 60 seconds. The registered URL is the
+backend-reachable service URL, for example `http://agent-node:5590`; the physical
+machine IP is stored as the `host=<ip>` label for display.

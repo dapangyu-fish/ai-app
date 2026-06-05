@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Agent node registry endpoints.
 
-This is deliberately small: registered nodes are heartbeat records in Redis.
-Workers combine these dynamic nodes with static AGENT_NODE_URLS when choosing
-where to run a session.
+Agent host configuration is persisted in Postgres so a Redis restart does not
+erase the cluster registry. Redis heartbeat records are still written as a
+short-lived compatibility cache, but workers and management commands should
+treat the database as the source of truth.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ import requests
 from flask import jsonify, request
 
 from config import AGENT_NODE_REGISTRATION_TOKEN, AGENT_NODE_TOKEN
+import agent_node_registry
 from ai_session import get_redis
 
 
@@ -38,13 +40,16 @@ def _auth_ok() -> bool:
 
 
 def _node_row(key, data: dict[Any, Any]) -> dict:
+    def raw(name: str):
+        return data.get(name) if name in data else data.get(name.encode())
+
     def get(name: str, default: str = "") -> str:
-        raw = data.get(name) if name in data else data.get(name.encode())
-        if raw is None:
+        value = raw(name)
+        if value is None:
             return default
-        if isinstance(raw, bytes):
-            return raw.decode("utf-8", errors="replace")
-        return str(raw)
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="replace")
+        return str(value)
 
     def get_int(name: str, default: int) -> int:
         try:
@@ -52,24 +57,30 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         except (TypeError, ValueError):
             return default
 
-    try:
-        labels = json.loads(get("labels", "[]") or "[]")
-    except json.JSONDecodeError:
-        labels = []
+    raw_labels = raw("labels")
+    if isinstance(raw_labels, list):
+        labels = raw_labels
+    else:
+        try:
+            labels = json.loads(get("labels", "[]") or "[]")
+        except json.JSONDecodeError:
+            labels = []
     if not isinstance(labels, list):
         labels = []
     provider_mode = "master"
+    label_host = ""
     for label in labels:
         text = str(label or "").strip().lower().replace("_", "-")
         if text in {"provider-mode=local", "mode=local", "local-provider=true"}:
             provider_mode = "local"
-            break
+        if text.startswith("host="):
+            label_host = str(label).split("=", 1)[1].strip()
     url = get("url")
     parsed = urlparse(url)
     return {
         "node_id": get("node_id", str(key).split(":")[-1]),
         "url": url,
-        "host": parsed.hostname or "",
+        "host": label_host or parsed.hostname or "",
         "capacity": get_int("capacity", 1),
         "labels": labels,
         "provider_mode": provider_mode,
@@ -207,17 +218,35 @@ def register_agent_node():
     data = {
         "node_id": node_id,
         "url": url,
+        "capacity": capacity,
+        "labels": labels,
+        "last_seen": now_ms,
+        "ttl_seconds": ttl_seconds,
+    }
+    agent_node_registry.upsert_node(
+        node_id=node_id,
+        url=url,
+        capacity=capacity,
+        labels=labels,
+        ttl_seconds=ttl_seconds,
+    )
+    redis_data = {
+        "node_id": node_id,
+        "url": url,
         "capacity": str(capacity),
         "labels": json.dumps(labels, ensure_ascii=False),
         "last_seen": str(now_ms),
         "ttl_seconds": str(ttl_seconds),
     }
-    r = get_redis()
     key = _registry_key(node_id)
-    pipe = r.pipeline()
-    pipe.hset(key, mapping=data)
-    pipe.expire(key, ttl_seconds)
-    pipe.execute()
+    try:
+        r = get_redis()
+        pipe = r.pipeline()
+        pipe.hset(key, mapping=redis_data)
+        pipe.expire(key, ttl_seconds)
+        pipe.execute()
+    except Exception:
+        pass
     return jsonify({"ok": True, "node": _node_row(key, data)})
 
 
@@ -225,12 +254,9 @@ def list_agent_nodes():
     if not _auth_ok():
         return jsonify({"error": "unauthorized"}), 401
     probe = request.args.get("probe", "1").lower() not in {"0", "false", "no"}
-    r = get_redis()
     rows = []
-    for key in r.scan_iter("ai:agent_node:*", count=100):
-        data = r.hgetall(key)
-        if data:
-            rows.append(_decorate_node(_node_row(key, data), probe=probe))
+    for item in agent_node_registry.list_nodes():
+        rows.append(_decorate_node(_node_row(item.get("node_id"), item), probe=probe))
     rows.sort(key=lambda item: item.get("node_id", ""))
     summary = {
         "total": len(rows),
@@ -247,20 +273,22 @@ def list_agent_nodes():
 def get_agent_node(node_id: str):
     if not _auth_ok():
         return jsonify({"error": "unauthorized"}), 401
-    r = get_redis()
-    key = _registry_key(node_id)
-    data = r.hgetall(key)
+    safe_node_id = _safe_node_id(node_id)
+    data = agent_node_registry.get_node(safe_node_id)
     if not data:
-        return jsonify({"error": "agent node not found", "node_id": _safe_node_id(node_id)}), 404
+        return jsonify({"error": "agent node not found", "node_id": safe_node_id}), 404
     include_runs = request.args.get("runs", "1").lower() not in {"0", "false", "no"}
-    row = _decorate_node(_node_row(key, data), probe=True, include_runs=include_runs)
+    row = _decorate_node(_node_row(safe_node_id, data), probe=True, include_runs=include_runs)
     return jsonify({"node": row})
 
 
 def delete_agent_node(node_id: str):
     if not _auth_ok():
         return jsonify({"error": "unauthorized"}), 401
-    r = get_redis()
-    key = _registry_key(node_id)
-    deleted = int(r.delete(key) or 0)
-    return jsonify({"ok": True, "node_id": _safe_node_id(node_id), "deleted": deleted > 0})
+    safe_node_id = _safe_node_id(node_id)
+    deleted = agent_node_registry.delete_node(safe_node_id)
+    try:
+        get_redis().delete(_registry_key(safe_node_id))
+    except Exception:
+        pass
+    return jsonify({"ok": True, "node_id": safe_node_id, "deleted": deleted})

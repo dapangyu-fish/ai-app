@@ -42,6 +42,19 @@ CREATE TABLE IF NOT EXISTS device_tokens (
     PRIMARY KEY (user_id, channel, token)
 );
 
+-- Agent 物理节点注册表。节点配置持久化在 Postgres；运行时在线状态由
+-- last_seen_ms + ttl_seconds 以及 agent-node /health 探测共同判断。
+CREATE TABLE IF NOT EXISTS agent_nodes (
+    node_id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    capacity INTEGER NOT NULL DEFAULT 1,
+    labels JSONB NOT NULL DEFAULT '[]'::jsonb,
+    last_seen_ms BIGINT NOT NULL DEFAULT 0,
+    ttl_seconds INTEGER NOT NULL DEFAULT 120,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Registry 包富化目录（AI summary / tech_stack / 检索元数据）。
 -- 附加表，不替代 MinIO _index.json；详见 migrations/003_registry_packages.sql + LAUNCH_NOTES Part 8
 CREATE TABLE IF NOT EXISTS registry_packages (

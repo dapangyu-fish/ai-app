@@ -1520,6 +1520,40 @@ def _decode_redis_text(value: Any, default: str = "") -> str:
 
 def _registered_agent_node_records() -> List[dict]:
     try:
+        from agent_node_registry import list_nodes
+
+        records: List[dict] = []
+        now_ms = int(time.time() * 1000)
+        for item in list_nodes():
+            url = str(item.get("url") or "").rstrip("/")
+            if not url:
+                continue
+            try:
+                last_seen = int(item.get("last_seen") or 0)
+                ttl_seconds = int(item.get("ttl_seconds") or 0)
+            except (TypeError, ValueError):
+                last_seen = 0
+                ttl_seconds = 0
+            if not last_seen or not ttl_seconds or last_seen + ttl_seconds * 1000 <= now_ms:
+                continue
+            try:
+                capacity = max(1, min(100, int(item.get("capacity") or 1)))
+            except (TypeError, ValueError):
+                capacity = 1
+            labels = item.get("labels") if isinstance(item.get("labels"), list) else []
+            records.append(
+                {
+                    "url": url,
+                    "capacity": capacity,
+                    "provider_mode": _agent_node_label_mode(labels),
+                }
+            )
+        if records:
+            return sorted(records, key=lambda item: item["url"])
+    except Exception as exc:
+        logger.warning("[AGENT_NODE] 读取数据库注册节点失败: %s", exc)
+
+    try:
         r = get_redis()
         records: List[dict] = []
         for key in r.scan_iter("ai:agent_node:*", count=100):
@@ -1554,15 +1588,21 @@ def _registered_agent_node_records() -> List[dict]:
 
 
 def _configured_agent_node_records() -> List[dict]:
-    records = [
+    by_url: dict[str, dict] = {}
+    static_records = [
         {"url": url.rstrip("/"), "capacity": 1, "provider_mode": "master"}
         for url in AGENT_NODE_URLS
         if url.rstrip("/")
     ]
-    if not records and AGENT_NODE_URL:
-        records = [{"url": AGENT_NODE_URL.rstrip("/"), "capacity": 1, "provider_mode": "master"}]
-    records.extend(_registered_agent_node_records())
-    return records
+    if not static_records and AGENT_NODE_URL:
+        static_records = [{"url": AGENT_NODE_URL.rstrip("/"), "capacity": 1, "provider_mode": "master"}]
+    for record in static_records:
+        by_url[record["url"]] = record
+    for record in _registered_agent_node_records():
+        url = str(record.get("url") or "").rstrip("/")
+        if url:
+            by_url[url] = {**record, "url": url}
+    return list(by_url.values())
 
 
 def _configured_agent_node_urls() -> List[str]:
