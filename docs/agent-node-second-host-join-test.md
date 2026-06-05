@@ -105,8 +105,8 @@ Final status on the master:
 
 ```text
 agent nodes: total=2 online=2 pending=0 down=0 stale=0 active_runs=0 capacity=2
-myapp-agent-103-233-254-179  host=103.233.254.179  online  cap=1  provider=master  url=pull://myapp-agent-103-233-254-179
-myapp-prod-77-237-233-229    host=77.237.233.229   online  cap=1  provider=master  url=pull://myapp-prod-77-237-233-229
+myapp-agent-103-233-254-179  host=103.233.254.179  online  cap=1  key_src=master  url=pull://myapp-agent-103-233-254-179
+myapp-prod-77-237-233-229    host=77.237.233.229   online  cap=1  key_src=master  url=pull://myapp-prod-77-237-233-229
 ```
 
 Final status on 103:

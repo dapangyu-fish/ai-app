@@ -430,6 +430,10 @@ Provider modes:
   registered with this mode do not receive the master provider token. Use this
   to split provider quota/keys by host.
 
+`myapp-ctl agent-node ls` displays this value as `KEY_SRC` because it is the
+source of provider keys, not the DeepSeek/MiniMax provider selected by a user
+request.
+
 `capacity` is both a scheduler weight and the pull-node local limit. The
 agent-node counts Docker runtime containers plus jobs it has just acquired but
 not fully started yet, so it does not over-pull during container startup.
