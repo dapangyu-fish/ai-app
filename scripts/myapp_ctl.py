@@ -3962,6 +3962,57 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
     return 0
 
 
+def _active_local_agent_container_names() -> list[str]:
+    proc = _run(["docker", "ps", "--filter", "name=myapp-agent-", "--format", "{{.Names}}"])
+    if proc.returncode != 0:
+        return []
+    return [
+        line.strip()
+        for line in proc.stdout.splitlines()
+        if line.strip() and line.strip() != "myapp-agent-node"
+    ]
+
+
+def _set_local_agent_node_capacity(args) -> int:
+    try:
+        capacity = max(1, min(100, int(args.capacity)))
+    except (TypeError, ValueError):
+        print("capacity must be an integer from 1 to 100", file=sys.stderr)
+        return 2
+    active = _active_local_agent_container_names()
+    if active and not args.force and not args.no_restart:
+        print(
+            f"refusing to restart agent-node while {len(active)} agent run(s) are active; "
+            "wait for them to finish, pause the node first, or pass --force",
+            file=sys.stderr,
+        )
+        return 1
+    agent_env = _parse_env(_secret_path("agent"))
+    previous = agent_env.get("AGENT_NODE_CAPACITY", "1")
+    agent_env["AGENT_NODE_CAPACITY"] = str(capacity)
+    _write_env(_secret_path("agent"), agent_env)
+    _safe_write_default_config_snapshot()
+    print(f"updated local agent-node capacity: {previous} -> {capacity}", flush=True)
+    if args.no_restart:
+        print("agent-node was not restarted; deploy/restart agent-node for this to take effect")
+        return 0
+    rc = _run(["myapp-ctl", "deploy", "agent-node", "--no-setup", "--no-test-user"], capture=False).returncode
+    if rc != 0:
+        return rc
+    backend_url = (args.backend or agent_env.get("AGENT_NODE_BACKEND_URL") or "").rstrip("/")
+    if backend_url:
+        time.sleep(2)
+        data, status, error = _agent_node_request_json(
+            backend_url,
+            "/api/ai/agent_nodes?probe=1",
+            token=_agent_node_registry_token(args),
+        )
+        if data:
+            return _print_agent_node_rows(data, as_json=args.json)
+        print(f"agent-node capacity updated, but status fetch failed: {status or '-'} {error}", file=sys.stderr)
+    return 0
+
+
 def cmd_agent_node(args) -> int:
     if args.agent_node_cmd == "add":
         return _print_agent_add_script(args)
@@ -3969,6 +4020,8 @@ def cmd_agent_node(args) -> int:
         return _join_agent_node(args)
     if args.agent_node_cmd == "register":
         return _register_agent_node(args)
+    if args.agent_node_cmd == "capacity":
+        return _set_local_agent_node_capacity(args)
 
     backend_url = _agent_node_backend_url(args)
     if not backend_url:
@@ -4278,6 +4331,14 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_resume.add_argument("--token")
     agent_node_resume.add_argument("--json", action="store_true")
     agent_node_resume.set_defaults(func=cmd_agent_node)
+    agent_node_capacity = agent_node_sub.add_parser("capacity", help="set local pull agent capacity and restart agent-node")
+    agent_node_capacity.add_argument("capacity", type=int)
+    agent_node_capacity.add_argument("--backend", help="master backend URL; defaults to AGENT_NODE_BACKEND_URL")
+    agent_node_capacity.add_argument("--token")
+    agent_node_capacity.add_argument("--no-restart", action="store_true", help="only write AGENT_NODE_CAPACITY")
+    agent_node_capacity.add_argument("--force", action="store_true", help="restart even if local agent runs are active")
+    agent_node_capacity.add_argument("--json", action="store_true")
+    agent_node_capacity.set_defaults(func=cmd_agent_node)
     agent_node_add = agent_node_sub.add_parser("add", help="print a join command for a new agent host")
     agent_node_add.add_argument("--backend", help="master backend URL, for example http://77.237.233.229:5566")
     agent_node_add.add_argument("--host", help="new agent host public IP or domain")

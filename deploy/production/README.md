@@ -453,6 +453,23 @@ myapp-ctl agent-node resume myapp-agent-2
 Paused pull nodes keep heartbeating and stay visible in `agent-node ls`, but the
 backend does not assign new runs to them. Existing runs are not aborted.
 
+Change the local pull-node concurrency:
+
+```bash
+# Run on the agent host. This writes AGENT_NODE_CAPACITY and restarts agent-node.
+myapp-ctl agent-node capacity 3
+```
+
+The command refuses to restart while local agent runs are active unless
+`--force` is passed. A safer maintenance sequence is:
+
+```bash
+myapp-ctl agent-node pause --reason "resize capacity"
+myapp-ctl agent ls
+myapp-ctl agent-node capacity 3
+myapp-ctl agent-node resume
+```
+
 Cluster node operations:
 
 ```bash
