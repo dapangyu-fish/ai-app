@@ -29,6 +29,10 @@ def _safe_node_id(value: object) -> str:
     return text[:96] or "agent-node"
 
 
+def _safe_build_text(value: object) -> str:
+    return str(value or "").strip()[:128]
+
+
 def _registry_key(node_id: str) -> str:
     return f"ai:agent_node:{_safe_node_id(node_id)}"
 
@@ -79,20 +83,31 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         labels = []
     provider_mode = "master"
     label_host = ""
+    label_build_commit = ""
+    label_build_version = ""
     for label in labels:
         text = str(label or "").strip().lower().replace("_", "-")
         if text in {"provider-mode=local", "mode=local", "local-provider=true"}:
             provider_mode = "local"
         if text.startswith("host="):
             label_host = str(label).split("=", 1)[1].strip()
+        if text.startswith("build-commit="):
+            label_build_commit = str(label).split("=", 1)[1].strip()
+        if text.startswith("build-version="):
+            label_build_version = str(label).split("=", 1)[1].strip()
     url = get("url")
     parsed = urlparse(url)
+    build_commit = _safe_build_text(get("build_commit") or label_build_commit)
+    build_version = _safe_build_text(get("build_version") or get("version") or label_build_version or build_commit)
     return {
         "node_id": get("node_id", str(key).split(":")[-1]),
         "url": url,
         "host": label_host or parsed.hostname or "",
         "capacity": get_int("capacity", 1),
         "queue_max": get_int("queue_max", 0),
+        "build_commit": build_commit,
+        "build_version": build_version,
+        "version": build_version or build_commit,
         "labels": labels,
         "provider_mode": provider_mode,
         "last_seen": get_int("last_seen", 0),
@@ -130,6 +145,9 @@ def _probe_agent_node(row: dict) -> dict:
             "reachable": True,
             "health": "pull",
             "active_runs": active_runs,
+            "build_commit": row.get("build_commit") or "",
+            "build_version": row.get("build_version") or row.get("version") or "",
+            "version": row.get("build_version") or row.get("version") or row.get("build_commit") or "",
             "detail": "",
         }
     if not url:
@@ -163,6 +181,21 @@ def _probe_agent_node(row: dict) -> dict:
             "active_runs": int(payload.get("running") or 0),
             "capacity": int(payload.get("capacity") or row.get("capacity") or 1),
             "queue_max": int(payload.get("queue_max") or row.get("queue_max") or 0),
+            "build_commit": _safe_build_text(payload.get("build_commit") or row.get("build_commit")),
+            "build_version": _safe_build_text(
+                payload.get("build_version")
+                or payload.get("version")
+                or row.get("build_version")
+                or row.get("version")
+                or row.get("build_commit")
+            ),
+            "version": _safe_build_text(
+                payload.get("build_version")
+                or payload.get("version")
+                or row.get("build_version")
+                or row.get("version")
+                or row.get("build_commit")
+            ),
             "runtime_image": payload.get("image", ""),
             "proxy_tokens": int(payload.get("proxy_tokens") or 0),
             "detail": "",
@@ -216,6 +249,11 @@ def _decorate_node(row: dict, *, probe: bool, include_runs: bool = False) -> dic
         row["status"] = "online"
     else:
         row["status"] = "unknown"
+    build_commit = _safe_build_text(row.get("build_commit"))
+    build_version = _safe_build_text(row.get("build_version") or row.get("version") or build_commit)
+    row["build_commit"] = build_commit
+    row["build_version"] = build_version
+    row["version"] = build_version or build_commit
     if include_runs:
         row["runs"] = _fetch_agent_node_runs(str(row.get("url") or ""))
     return row
@@ -263,12 +301,16 @@ def register_agent_node():
     except (TypeError, ValueError):
         ttl_seconds = 120
     labels = body.get("labels") if isinstance(body.get("labels"), list) else []
+    build_commit = _safe_build_text(body.get("build_commit") or body.get("commit"))
+    build_version = _safe_build_text(body.get("build_version") or body.get("version") or build_commit)
     now_ms = int(time.time() * 1000)
     data = {
         "node_id": node_id,
         "url": url,
         "capacity": capacity,
         "queue_max": queue_max,
+        "build_commit": build_commit,
+        "build_version": build_version,
         "labels": labels,
         "last_seen": now_ms,
         "ttl_seconds": ttl_seconds,
@@ -278,6 +320,8 @@ def register_agent_node():
         url=url,
         capacity=capacity,
         queue_max=queue_max,
+        build_commit=build_commit,
+        build_version=build_version,
         labels=labels,
         ttl_seconds=ttl_seconds,
     )
@@ -286,6 +330,8 @@ def register_agent_node():
         "url": url,
         "capacity": str(capacity),
         "queue_max": str(queue_max),
+        "build_commit": build_commit,
+        "build_version": build_version,
         "labels": json.dumps(labels, ensure_ascii=False),
         "last_seen": str(now_ms),
         "ttl_seconds": str(ttl_seconds),

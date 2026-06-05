@@ -51,6 +51,16 @@ PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVID
 PROVIDER_PROXY_READ_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_READ_TIMEOUT_SECONDS", "900"))
 NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
 REGISTRATION_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", NODE_TOKEN)
+BUILD_COMMIT = (
+    os.environ.get("MYAPP_BUILD_COMMIT")
+    or os.environ.get("AGENT_NODE_BUILD_COMMIT")
+    or "unknown"
+).strip()[:128] or "unknown"
+BUILD_VERSION = (
+    os.environ.get("MYAPP_BUILD_VERSION")
+    or os.environ.get("AGENT_NODE_BUILD_VERSION")
+    or BUILD_COMMIT
+).strip()[:128] or BUILD_COMMIT
 PULL_ENABLED = os.environ.get("AGENT_NODE_PULL_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
 PULL_BACKEND_URL = os.environ.get("AGENT_NODE_BACKEND_URL", "").rstrip("/")
 PULL_INTERVAL_SECONDS = float(os.environ.get("AGENT_NODE_POLL_INTERVAL_IDLE_SECONDS", "1"))
@@ -719,6 +729,9 @@ def health():
         "ok": True,
         "node_id": NODE_ID,
         "image": RUNTIME_IMAGE,
+        "build_commit": BUILD_COMMIT,
+        "build_version": BUILD_VERSION,
+        "version": BUILD_VERSION,
         "running": running,
         "proxy_tokens": proxy_tokens,
         "capacity": NODE_CAPACITY,
@@ -1267,6 +1280,8 @@ def _pull_loop() -> None:
                     "node_id": NODE_ID,
                     "capacity": capacity,
                     "queue_max": NODE_QUEUE_MAX,
+                    "build_commit": BUILD_COMMIT,
+                    "build_version": BUILD_VERSION,
                     "provider_mode": PROVIDER_MODE or "master",
                     "labels": _pull_labels(),
                     "url": os.environ.get("AGENT_NODE_SELF_REGISTER_URL") or f"pull://{NODE_ID}",

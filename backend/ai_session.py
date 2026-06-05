@@ -1995,6 +1995,8 @@ def agent_pull_acquire():
     body = request.get_json(silent=True) or {}
     node_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(body.get("node_id") or "agent-node")).strip("._") or "agent-node"
     labels = body.get("labels") if isinstance(body.get("labels"), list) else []
+    build_commit = str(body.get("build_commit") or body.get("commit") or "").strip()[:128]
+    build_version = str(body.get("build_version") or body.get("version") or build_commit or "").strip()[:128]
     provider_mode = str(body.get("provider_mode") or "master").strip().lower().replace("_", "-") or "master"
     if not any(str(label).replace("_", "-").startswith("provider-mode=") for label in labels):
         labels.append(f"provider_mode={provider_mode}")
@@ -2024,6 +2026,8 @@ def agent_pull_acquire():
             url=str(body.get("url") or f"pull://{node_id}").strip() or f"pull://{node_id}",
             capacity=capacity,
             queue_max=queue_max,
+            build_commit=build_commit,
+            build_version=build_version,
             labels=labels,
             ttl_seconds=max(30, int(body.get("ttl_seconds") or 120)),
         )

@@ -28,6 +28,8 @@ def ensure_agent_nodes_table() -> None:
                 url TEXT NOT NULL,
                 capacity INTEGER NOT NULL DEFAULT 1,
                 queue_max INTEGER NOT NULL DEFAULT 0,
+                build_commit TEXT NOT NULL DEFAULT '',
+                build_version TEXT NOT NULL DEFAULT '',
                 labels JSONB NOT NULL DEFAULT '[]'::jsonb,
                 last_seen_ms BIGINT NOT NULL DEFAULT 0,
                 ttl_seconds INTEGER NOT NULL DEFAULT 120,
@@ -40,6 +42,8 @@ def ensure_agent_nodes_table() -> None:
             """
         )
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS queue_max INTEGER NOT NULL DEFAULT 0")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS build_commit TEXT NOT NULL DEFAULT ''")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS build_version TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused BOOLEAN NOT NULL DEFAULT FALSE")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS pause_reason TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused_at_ms BIGINT NOT NULL DEFAULT 0")
@@ -57,11 +61,19 @@ def _normalize_row(row: dict | None) -> dict | None:
             labels = []
     if not isinstance(labels, list):
         labels = []
+    label_map = {}
+    for label in labels:
+        if not isinstance(label, str) or "=" not in label:
+            continue
+        key, value = label.split("=", 1)
+        label_map[key.strip().lower().replace("_", "-")] = value.strip()
     return {
         "node_id": row.get("node_id") or "",
         "url": row.get("url") or "",
         "capacity": int(row.get("capacity") or 1),
         "queue_max": int(row.get("queue_max") or 0),
+        "build_commit": row.get("build_commit") or label_map.get("build-commit", ""),
+        "build_version": row.get("build_version") or label_map.get("build-version", ""),
         "labels": labels,
         "last_seen": int(row.get("last_seen") or row.get("last_seen_ms") or 0),
         "ttl_seconds": int(row.get("ttl_seconds") or 120),
@@ -71,31 +83,47 @@ def _normalize_row(row: dict | None) -> dict | None:
     }
 
 
-def upsert_node(*, node_id: str, url: str, capacity: int, labels: list, ttl_seconds: int, queue_max: int = 0) -> dict:
+def upsert_node(
+    *,
+    node_id: str,
+    url: str,
+    capacity: int,
+    labels: list,
+    ttl_seconds: int,
+    queue_max: int = 0,
+    build_commit: str = "",
+    build_version: str = "",
+) -> dict:
     ensure_agent_nodes_table()
     now_ms = int(time.time() * 1000)
     labels_json = json.dumps(labels if isinstance(labels, list) else [], ensure_ascii=False)
     queue_max = max(0, int(queue_max or 0))
+    build_commit = str(build_commit or "").strip()[:128]
+    build_version = str(build_version or build_commit or "").strip()[:128]
     db_execute(
         """
-        INSERT INTO agent_nodes (node_id, url, capacity, queue_max, labels, last_seen_ms, ttl_seconds)
-        VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s)
+        INSERT INTO agent_nodes (node_id, url, capacity, queue_max, build_commit, build_version, labels, last_seen_ms, ttl_seconds)
+        VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
         ON CONFLICT (node_id) DO UPDATE SET
             url = EXCLUDED.url,
             capacity = EXCLUDED.capacity,
             queue_max = EXCLUDED.queue_max,
+            build_commit = COALESCE(NULLIF(EXCLUDED.build_commit, ''), agent_nodes.build_commit),
+            build_version = COALESCE(NULLIF(EXCLUDED.build_version, ''), agent_nodes.build_version),
             labels = EXCLUDED.labels,
             last_seen_ms = EXCLUDED.last_seen_ms,
             ttl_seconds = EXCLUDED.ttl_seconds,
             updated_at = NOW()
         """,
-        [node_id, url, capacity, queue_max, labels_json, now_ms, ttl_seconds],
+        [node_id, url, capacity, queue_max, build_commit, build_version, labels_json, now_ms, ttl_seconds],
     )
     return {
         "node_id": node_id,
         "url": url,
         "capacity": capacity,
         "queue_max": queue_max,
+        "build_commit": build_commit,
+        "build_version": build_version,
         "labels": labels if isinstance(labels, list) else [],
         "last_seen": now_ms,
         "ttl_seconds": ttl_seconds,
@@ -106,7 +134,8 @@ def list_nodes() -> list[dict]:
     ensure_agent_nodes_table()
     rows = db_query(
         """
-        SELECT node_id, url, capacity, queue_max, labels::text AS labels, last_seen_ms AS last_seen, ttl_seconds,
+        SELECT node_id, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
+               last_seen_ms AS last_seen, ttl_seconds,
                paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes
         ORDER BY node_id
@@ -125,7 +154,8 @@ def get_node(node_id: str) -> dict | None:
     ensure_agent_nodes_table()
     row = db_query(
         """
-        SELECT node_id, url, capacity, queue_max, labels::text AS labels, last_seen_ms AS last_seen, ttl_seconds,
+        SELECT node_id, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
+               last_seen_ms AS last_seen, ttl_seconds,
                paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes
         WHERE node_id = %s

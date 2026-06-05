@@ -1072,6 +1072,20 @@ def _source_dir() -> Path:
     return Path(os.getcwd())
 
 
+def _build_commit_for_source(source_dir: Path) -> str:
+    override = str(os.environ.get("MYAPP_BUILD_COMMIT") or "").strip()
+    if override:
+        return override[:128]
+    if not shutil.which("git"):
+        return "unknown"
+    proc = _run(["git", "-C", str(source_dir), "rev-parse", "--verify", "HEAD"])
+    if proc.returncode == 0:
+        commit = proc.stdout.strip()
+        if commit:
+            return commit[:128]
+    return "unknown"
+
+
 def _configured_image(target: str) -> str:
     cfg_images = _cfg().get("images", {})
     key, _ = IMAGE_TARGETS[target]
@@ -1284,11 +1298,28 @@ def _compose_cmd(spec: dict, action: str) -> int:
 
 def _deploy_images(targets: list[str], *, action: str, dry_run: bool) -> int:
     source_dir = _source_dir()
+    build_commit = ""
+    build_version = ""
     for target in targets:
         image = _configured_image(target)
         if action == "build":
+            if not build_commit:
+                build_commit = _build_commit_for_source(source_dir)
+                build_version = str(os.environ.get("MYAPP_BUILD_VERSION") or build_commit).strip()[:128] or build_commit
             _, dockerfile = IMAGE_TARGETS[target]
-            cmd = ["docker", "build", "-f", str(source_dir / dockerfile), "-t", image, str(source_dir)]
+            cmd = [
+                "docker",
+                "build",
+                "--build-arg",
+                f"MYAPP_BUILD_COMMIT={build_commit}",
+                "--build-arg",
+                f"MYAPP_BUILD_VERSION={build_version}",
+                "-f",
+                str(source_dir / dockerfile),
+                "-t",
+                image,
+                str(source_dir),
+            ]
         elif action == "push":
             cmd = ["docker", "push", image]
         elif action == "pull":
@@ -3990,6 +4021,15 @@ def _expires_label(value) -> str:
     return f"{seconds}s"
 
 
+def _version_label(item: dict) -> str:
+    value = str(item.get("build_version") or item.get("version") or item.get("build_commit") or "").strip()
+    if not value or value.lower() == "unknown":
+        return "-"
+    if len(value) >= 12 and all(ch in "0123456789abcdefABCDEF" for ch in value):
+        return value[:12]
+    return value[:24]
+
+
 def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
     if as_json:
         print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -4016,6 +4056,7 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
                 "node_id": item.get("node_id", "-"),
                 "host": item.get("host") or "-",
                 "status": item.get("status", "-"),
+                "version": _version_label(item),
                 "active_runs": item.get("active_runs", "-"),
                 "capacity": item.get("capacity", "-"),
                 "queue_depth": item.get("queue_depth", "-"),
@@ -4031,6 +4072,7 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
             ("node_id", "NODE"),
             ("host", "HOST"),
             ("status", "STATUS"),
+            ("version", "VERSION"),
             ("active_runs", "RUNS"),
             ("capacity", "CAP"),
             ("queue_depth", "QUEUE"),
@@ -4058,6 +4100,7 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
                 "host": node.get("host") or "-",
                 "status": node.get("status", "-"),
                 "health": node.get("health", "-"),
+                "version": _version_label(node),
                 "active_runs": node.get("active_runs", "-"),
                 "capacity": node.get("capacity", "-"),
                 "queue_depth": node.get("queue_depth", "-"),
@@ -4072,6 +4115,7 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
             ("host", "HOST"),
             ("status", "STATUS"),
             ("health", "HEALTH"),
+            ("version", "VERSION"),
             ("active_runs", "RUNS"),
             ("capacity", "CAP"),
             ("queue_depth", "QUEUE"),

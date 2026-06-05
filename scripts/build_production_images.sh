@@ -7,9 +7,13 @@ PUSH="${PUSH:-0}"
 
 cd "$ROOT_DIR"
 
-docker build -f deploy/production/Dockerfile.agent-runtime -t "dapangyufish/myapp-agent-runtime:${TAG}" .
-docker build -f deploy/production/Dockerfile.agent-node -t "dapangyufish/myapp-agent-node:${TAG}" .
-docker build -f deploy/production/Dockerfile.backend -t "dapangyufish/myapp-backend:${TAG}" .
+BUILD_COMMIT="${MYAPP_BUILD_COMMIT:-$(git rev-parse --verify HEAD 2>/dev/null || echo unknown)}"
+BUILD_VERSION="${MYAPP_BUILD_VERSION:-$BUILD_COMMIT}"
+BUILD_ARGS=(--build-arg "MYAPP_BUILD_COMMIT=${BUILD_COMMIT}" --build-arg "MYAPP_BUILD_VERSION=${BUILD_VERSION}")
+
+docker build "${BUILD_ARGS[@]}" -f deploy/production/Dockerfile.agent-runtime -t "dapangyufish/myapp-agent-runtime:${TAG}" .
+docker build "${BUILD_ARGS[@]}" -f deploy/production/Dockerfile.agent-node -t "dapangyufish/myapp-agent-node:${TAG}" .
+docker build "${BUILD_ARGS[@]}" -f deploy/production/Dockerfile.backend -t "dapangyufish/myapp-backend:${TAG}" .
 
 if [[ "$PUSH" == "1" ]]; then
   docker push "dapangyufish/myapp-agent-runtime:${TAG}"
