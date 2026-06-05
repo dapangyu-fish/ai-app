@@ -365,13 +365,13 @@ records, and session-to-node assignment so later turns keep using the same node.
 Register an agent node:
 
 ```bash
-myapp-ctl agent register --url http://agent-node:5590 --capacity 4 --label gpu=false
+myapp-ctl agent-node register --url http://agent-node:5590 --capacity 4 --label gpu=false
 ```
 
 Generate a bootstrap script for a new agent host from the master backend host:
 
 ```bash
-myapp-ctl agent add \
+myapp-ctl agent-node add \
   --backend http://<master-host>:5566 \
   --host <new-agent-host> \
   --node-id myapp-agent-2 \
@@ -393,3 +393,14 @@ Provider modes:
 `capacity` is a scheduler weight. Existing sessions keep their node assignment
 for later turns; new sessions are distributed across registered URLs according
 to weight.
+
+Cluster node operations:
+
+```bash
+myapp-ctl agent-node ls
+myapp-ctl agent-node status myapp-agent-2
+myapp-ctl agent-node rm myapp-agent-2
+```
+
+`myapp-ctl agent ls` remains local-only: it shows the currently running agent
+containers on the machine where the command is executed.

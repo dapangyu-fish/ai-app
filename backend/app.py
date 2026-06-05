@@ -78,6 +78,8 @@ def create_app():
     app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=claude_chat.list_providers)
     app.add_url_rule("/api/ai/agents", methods=["GET"], view_func=claude_chat.list_agents)
     app.add_url_rule("/api/ai/agent_nodes", methods=["GET"], view_func=agent_nodes.list_agent_nodes)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["GET"], view_func=agent_nodes.get_agent_node)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["DELETE"], view_func=agent_nodes.delete_agent_node)
     app.add_url_rule("/api/ai/agent_nodes/register", methods=["POST"], view_func=agent_nodes.register_agent_node)
     app.add_url_rule("/api/ai/upload_url", methods=["GET"], view_func=store.get_ai_upload_url)
     # Registry 富化用的单次结构化摘要（内部接口，registry enrich worker 调，REGISTRY_ADMIN_TOKEN 鉴权）

@@ -27,7 +27,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -411,7 +411,8 @@ _MESSAGES = {
 
 镜像与 Agent:
   image ls|build|pull|push      管理 Docker 镜像
-  agent ls|register             查看或注册 Agent 节点
+  agent ls                      查看当前机器正在运行的 Agent
+  agent-node ls|status|register 管理集群 Agent 物理节点
   uninstall --yes [--purge]     停止部署；保留 data root 数据
 
 示例:
@@ -448,7 +449,8 @@ Configuration and secrets:
 
 Images and agents:
   image ls|build|pull|push      Manage Docker images
-  agent ls|register             Inspect or register agent nodes
+  agent ls                      Inspect running agents on this host
+  agent-node ls|status|register Manage cluster agent hosts
   uninstall --yes [--purge]     Stop deployment; preserve data root
 
 Examples:
@@ -485,7 +487,8 @@ Konfiguration und Secrets:
 
 Images und Agents:
   image ls|build|pull|push      Docker-Images verwalten
-  agent ls|register             Agent-Knoten anzeigen oder registrieren
+  agent ls                      Laufende Agents auf diesem Host anzeigen
+  agent-node ls|status|register Cluster-Agent-Hosts verwalten
   uninstall --yes [--purge]     Deployment stoppen; data root behalten
 
 Beispiele:
@@ -522,7 +525,8 @@ Configuracion y secretos:
 
 Imagenes y agentes:
   image ls|build|pull|push      Gestiona imagenes Docker
-  agent ls|register             Consulta o registra nodos agent
+  agent ls                      Consulta agents activos en este host
+  agent-node ls|status|register Gestiona hosts agent del cluster
   uninstall --yes [--purge]     Detiene el despliegue; conserva data root
 
 Ejemplos:
@@ -3406,7 +3410,7 @@ def _print_agent_add_script(args) -> int:
         labels.append(f"provider_mode={provider_mode}")
     register_cmd = [
         "/usr/local/bin/myapp-ctl",
-        "agent",
+        "agent-node",
         "register",
         "--backend",
         backend_url,
@@ -3511,52 +3515,273 @@ def _print_agent_add_script(args) -> int:
     return 0
 
 
+def _agent_node_backend_url(args) -> str:
+    return (getattr(args, "backend", None) or _cfg().get("domains", {}).get("backend") or "").rstrip("/")
+
+
+def _agent_node_registry_token(args) -> str:
+    return (
+        getattr(args, "token", None)
+        or os.environ.get("AGENT_NODE_REGISTRATION_TOKEN")
+        or _parse_env(_secret_path("agent")).get("AGENT_NODE_REGISTRATION_TOKEN", "")
+        or _parse_env(_secret_path("backend")).get("AGENT_NODE_REGISTRATION_TOKEN", "")
+    )
+
+
+def _agent_node_request_json(
+    backend_url: str,
+    path: str,
+    *,
+    method: str = "GET",
+    token: str = "",
+    payload: dict | None = None,
+    timeout: float = 8.0,
+) -> tuple[dict | None, int, str]:
+    headers = {"User-Agent": "myapp-ctl/1"}
+    data = None
+    if payload is not None:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = Request(backend_url.rstrip("/") + path, data=data, headers=headers, method=method)
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            return json.loads(body) if body else {}, int(getattr(resp, "status", 200)), ""
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(detail)
+            detail = parsed.get("error") or detail
+        except (TypeError, ValueError, json.JSONDecodeError):
+            pass
+        return None, int(exc.code), detail
+    except (URLError, OSError, ValueError, json.JSONDecodeError) as exc:
+        return None, 0, str(exc)
+
+
+def _register_agent_node(args) -> int:
+    backend_url = _agent_node_backend_url(args)
+    node_url = (args.url or _cfg().get("domains", {}).get("agent_node") or "").rstrip("/")
+    node_id = args.node_id or _cfg().get("node", {}).get("id") or os.uname().nodename
+    if not backend_url:
+        print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
+        return 2
+    if not node_url:
+        print("agent node url is required; pass --url or set domains.agent_node", file=sys.stderr)
+        return 2
+    payload = {
+        "node_id": node_id,
+        "url": node_url,
+        "capacity": args.capacity,
+        "ttl_seconds": args.ttl,
+        "labels": args.label or [],
+    }
+    data, status, error = _agent_node_request_json(
+        backend_url,
+        "/api/ai/agent_nodes/register",
+        method="POST",
+        token=_agent_node_registry_token(args),
+        payload=payload,
+    )
+    if not data:
+        print(f"register failed: {status or '-'} {error}", file=sys.stderr)
+        return 1
+    print(json.dumps(data, ensure_ascii=False))
+    return 0
+
+
+def _expires_label(value) -> str:
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return "-"
+    if seconds <= 0:
+        return "expired"
+    return f"{seconds}s"
+
+
+def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
+    if as_json:
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        return 0
+    summary = data.get("summary") if isinstance(data.get("summary"), dict) else {}
+    print(
+        "agent nodes: "
+        f"total={summary.get('total', 0)} "
+        f"online={summary.get('online', 0)} "
+        f"registered={summary.get('registered', 0)} "
+        f"down={summary.get('down', 0)} "
+        f"active_runs={summary.get('active_runs', 0)} "
+        f"capacity={summary.get('capacity', 0)}"
+    )
+    rows = []
+    for item in data.get("nodes") or []:
+        rows.append(
+            {
+                "node_id": item.get("node_id", "-"),
+                "host": item.get("host") or "-",
+                "status": item.get("status", "-"),
+                "active_runs": item.get("active_runs", "-"),
+                "capacity": item.get("capacity", "-"),
+                "provider_mode": item.get("provider_mode", "-"),
+                "expires": _expires_label(item.get("expires_in_seconds")),
+                "url": item.get("url", "-"),
+            }
+        )
+    _print_table(
+        rows,
+        [
+            ("node_id", "NODE"),
+            ("host", "HOST"),
+            ("status", "STATUS"),
+            ("active_runs", "RUNS"),
+            ("capacity", "CAP"),
+            ("provider_mode", "PROVIDER"),
+            ("expires", "EXPIRES"),
+            ("url", "URL"),
+        ],
+    )
+    return 0
+
+
+def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
+    if as_json:
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        return 0
+    node = data.get("node") if isinstance(data.get("node"), dict) else {}
+    if not node:
+        print("(empty)")
+        return 0
+    _print_table(
+        [
+            {
+                "node_id": node.get("node_id", "-"),
+                "host": node.get("host") or "-",
+                "status": node.get("status", "-"),
+                "health": node.get("health", "-"),
+                "active_runs": node.get("active_runs", "-"),
+                "capacity": node.get("capacity", "-"),
+                "provider_mode": node.get("provider_mode", "-"),
+                "expires": _expires_label(node.get("expires_in_seconds")),
+                "url": node.get("url", "-"),
+            }
+        ],
+        [
+            ("node_id", "NODE"),
+            ("host", "HOST"),
+            ("status", "STATUS"),
+            ("health", "HEALTH"),
+            ("active_runs", "RUNS"),
+            ("capacity", "CAP"),
+            ("provider_mode", "PROVIDER"),
+            ("expires", "EXPIRES"),
+            ("url", "URL"),
+        ],
+    )
+    detail = node.get("detail")
+    if detail:
+        print(f"detail: {detail}")
+    runs = node.get("runs") if isinstance(node.get("runs"), list) else []
+    if runs:
+        run_rows = []
+        for item in runs:
+            started = item.get("created_at") or item.get("started_at")
+            finished = item.get("finished_at")
+            run_rows.append(
+                {
+                    "run_id": item.get("run_id", "-"),
+                    "session_id": item.get("session_id", "-"),
+                    "agent_id": item.get("agent_id", "-"),
+                    "provider_id": item.get("provider_id", "-"),
+                    "status": item.get("status", "-"),
+                    "duration": _duration_ms(started, finished),
+                }
+            )
+        print("")
+        print(f"active runs: {len(run_rows)}")
+        _print_table(
+            run_rows,
+            [
+                ("run_id", "RUN"),
+                ("session_id", "SESSION"),
+                ("agent_id", "AGENT"),
+                ("provider_id", "PROVIDER"),
+                ("status", "STATUS"),
+                ("duration", "DURATION"),
+            ],
+        )
+    return 0
+
+
+def cmd_agent_node(args) -> int:
+    if args.agent_node_cmd == "add":
+        return _print_agent_add_script(args)
+    if args.agent_node_cmd == "register":
+        return _register_agent_node(args)
+
+    backend_url = _agent_node_backend_url(args)
+    if not backend_url:
+        print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
+        return 2
+    token = _agent_node_registry_token(args)
+
+    if args.agent_node_cmd == "ls":
+        probe = "0" if args.no_probe else "1"
+        data, status, error = _agent_node_request_json(
+            backend_url,
+            f"/api/ai/agent_nodes?probe={probe}",
+            token=token,
+        )
+        if not data:
+            print(f"agent-node ls failed: {status or '-'} {error}", file=sys.stderr)
+            return 1
+        return _print_agent_node_rows(data, as_json=args.json)
+
+    if args.agent_node_cmd == "status":
+        if not args.node_id:
+            probe = "0" if args.no_probe else "1"
+            data, status, error = _agent_node_request_json(
+                backend_url,
+                f"/api/ai/agent_nodes?probe={probe}",
+                token=token,
+            )
+            if not data:
+                print(f"agent-node status failed: {status or '-'} {error}", file=sys.stderr)
+                return 1
+            return _print_agent_node_rows(data, as_json=args.json)
+        data, status, error = _agent_node_request_json(
+            backend_url,
+            f"/api/ai/agent_nodes/{quote(args.node_id, safe='')}?runs=1",
+            token=token,
+        )
+        if not data:
+            print(f"agent-node status failed: {status or '-'} {error}", file=sys.stderr)
+            return 1
+        return _print_agent_node_status(data, as_json=args.json)
+
+    if args.agent_node_cmd == "rm":
+        data, status, error = _agent_node_request_json(
+            backend_url,
+            f"/api/ai/agent_nodes/{quote(args.node_id, safe='')}",
+            method="DELETE",
+            token=token,
+        )
+        if not data:
+            print(f"agent-node rm failed: {status or '-'} {error}", file=sys.stderr)
+            return 1
+        print(json.dumps(data, ensure_ascii=False))
+        return 0
+
+    return 2
+
+
 def cmd_agent(args) -> int:
     if args.agent_cmd == "add":
         return _print_agent_add_script(args)
     if args.agent_cmd == "register":
-        cfg = _cfg()
-        backend_url = (args.backend or cfg.get("domains", {}).get("backend") or "").rstrip("/")
-        node_url = (args.url or cfg.get("domains", {}).get("agent_node") or "").rstrip("/")
-        node_id = args.node_id or cfg.get("node", {}).get("id") or os.uname().nodename
-        if not backend_url:
-            print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
-            return 2
-        if not node_url:
-            print("agent node url is required; pass --url or set domains.agent_node", file=sys.stderr)
-            return 2
-        token = (
-            args.token
-            or os.environ.get("AGENT_NODE_REGISTRATION_TOKEN")
-            or _parse_env(_secret_path("agent")).get("AGENT_NODE_REGISTRATION_TOKEN", "")
-            or _parse_env(_secret_path("backend")).get("AGENT_NODE_REGISTRATION_TOKEN", "")
-        )
-        payload = json.dumps(
-            {
-                "node_id": node_id,
-                "url": node_url,
-                "capacity": args.capacity,
-                "ttl_seconds": args.ttl,
-                "labels": args.label or [],
-            },
-            ensure_ascii=False,
-        ).encode("utf-8")
-        headers = {"Content-Type": "application/json", "User-Agent": "myapp-ctl/1"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        req = Request(f"{backend_url}/api/ai/agent_nodes/register", data=payload, headers=headers, method="POST")
-        try:
-            with urlopen(req, timeout=8) as resp:
-                body = resp.read().decode("utf-8", errors="replace")
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            print(f"register failed: http {exc.code} {detail}", file=sys.stderr)
-            return 1
-        except (URLError, OSError) as exc:
-            print(f"register failed: {exc}", file=sys.stderr)
-            return 1
-        print(body)
-        return 0
+        return _register_agent_node(args)
     if args.agent_cmd == "ls":
         agent_env = _parse_env(_secret_path("agent"))
         default_node_url = f"http://127.0.0.1:{agent_env.get('AGENT_NODE_PORT', '5590') or '5590'}"
@@ -3742,6 +3967,52 @@ def build_parser() -> argparse.ArgumentParser:
     client_env.add_argument("--terminal-qr", action="store_true", help="also print an ANSI QR code in the terminal")
     client_env.add_argument("--json", action="store_true", help="print raw JSON only")
     client_env.set_defaults(func=cmd_client_env)
+    agent_node = sub.add_parser("agent-node")
+    agent_node_sub = agent_node.add_subparsers(dest="agent_node_cmd", required=True)
+    agent_node_ls = agent_node_sub.add_parser("ls", help="list registered cluster agent hosts")
+    agent_node_ls.add_argument("--backend")
+    agent_node_ls.add_argument("--token")
+    agent_node_ls.add_argument("--no-probe", action="store_true", help="do not call each agent-node /health")
+    agent_node_ls.add_argument("--json", action="store_true")
+    agent_node_ls.set_defaults(func=cmd_agent_node)
+    agent_node_status = agent_node_sub.add_parser("status", help="show cluster agent host status")
+    agent_node_status.add_argument("node_id", nargs="?")
+    agent_node_status.add_argument("--backend")
+    agent_node_status.add_argument("--token")
+    agent_node_status.add_argument("--no-probe", action="store_true", help="only used when node_id is omitted")
+    agent_node_status.add_argument("--json", action="store_true")
+    agent_node_status.set_defaults(func=cmd_agent_node)
+    agent_node_register = agent_node_sub.add_parser("register", help="register this agent host to the master backend")
+    agent_node_register.add_argument("--backend")
+    agent_node_register.add_argument("--url")
+    agent_node_register.add_argument("--node-id")
+    agent_node_register.add_argument("--capacity", type=int, default=1)
+    agent_node_register.add_argument("--ttl", type=int, default=120)
+    agent_node_register.add_argument("--token")
+    agent_node_register.add_argument("--label", action="append")
+    agent_node_register.set_defaults(func=cmd_agent_node)
+    agent_node_rm = agent_node_sub.add_parser("rm", help="remove a registered agent host from the master registry")
+    agent_node_rm.add_argument("node_id")
+    agent_node_rm.add_argument("--backend")
+    agent_node_rm.add_argument("--token")
+    agent_node_rm.set_defaults(func=cmd_agent_node)
+    agent_node_add = agent_node_sub.add_parser("add", help="generate a bootstrap script for a new agent host")
+    agent_node_add.add_argument("--backend", help="master backend URL, for example http://77.237.233.229:5566")
+    agent_node_add.add_argument("--host", help="new agent host public IP or domain")
+    agent_node_add.add_argument("--url", help="full public agent-node URL; defaults to http://<host>:<public-port>")
+    agent_node_add.add_argument("--node-id")
+    agent_node_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
+    agent_node_add.add_argument("--local-port", type=int, default=5590)
+    agent_node_add.add_argument("--public-port", type=int, default=5591)
+    agent_node_add.add_argument("--capacity", type=int, default=1)
+    agent_node_add.add_argument("--ttl", type=int, default=180)
+    agent_node_add.add_argument("--label", action="append")
+    agent_node_add.add_argument("--provider-mode", choices=["master", "local"], default="master")
+    agent_node_add.add_argument("--pull", action="store_true", help="generate a pull-based deploy command instead of build")
+    agent_node_add.add_argument("--no-nginx", action="store_true")
+    agent_node_add.add_argument("--allow-from", help="optional source IP allowed through ufw for the public agent port")
+    agent_node_add.add_argument("--no-timer", action="store_true")
+    agent_node_add.set_defaults(func=cmd_agent_node)
     agent = sub.add_parser("agent")
     agent_sub = agent.add_subparsers(dest="agent_cmd", required=True)
     agent_add = agent_sub.add_parser("add")
