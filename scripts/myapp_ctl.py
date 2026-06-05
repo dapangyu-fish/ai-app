@@ -3556,7 +3556,7 @@ def _join_agent_node(args) -> int:
     )
     _write_env(_secret_path("agent"), agent_env)
     _safe_write_default_config_snapshot()
-    print(f"updated agent join config: {node_id} -> {node_url}")
+    print(f"updated agent join config: {node_id} -> {node_url}", flush=True)
 
     if mode == "direct" and not args.no_nginx:
         if shutil.which("apt-get"):
